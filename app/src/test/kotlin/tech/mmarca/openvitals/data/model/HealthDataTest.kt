@@ -122,7 +122,7 @@ class HealthDataTest {
         assertEquals(65.0, day.elevationGainedMeters!!, 0.01)
     }
 
-    // ─── DashboardData floorsClimbed ─────────────────────────────────────────
+    // ─── DashboardData floorsClimbed + elevationGainedMeters ────────────────────
 
     @Test fun `DashboardData defaults floorsClimbed to null`() {
         val data = DashboardData(date = LocalDate.of(2026, 1, 1))
@@ -132,6 +132,26 @@ class HealthDataTest {
     @Test fun `DashboardData stores floorsClimbed when provided`() {
         val data = DashboardData(date = LocalDate.of(2026, 1, 1), floorsClimbed = 8)
         assertEquals(8, data.floorsClimbed)
+    }
+
+    @Test fun `DashboardData defaults elevationGainedMeters to null`() {
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1))
+        assertNull(data.elevationGainedMeters)
+    }
+
+    @Test fun `DashboardData stores elevationGainedMeters when provided`() {
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1), elevationGainedMeters = 120.0)
+        assertEquals(120.0, data.elevationGainedMeters!!, 0.01)
+    }
+
+    @Test fun `DailySteps floorsClimbed zero is non-null — permission granted no data`() {
+        val day = DailySteps(date = LocalDate.of(2026, 1, 1), steps = 0L, distanceMeters = 0.0, floorsClimbed = 0)
+        assertEquals(0, day.floorsClimbed)
+    }
+
+    @Test fun `DailySteps elevationGainedMeters zero is non-null — permission granted no data`() {
+        val day = DailySteps(date = LocalDate.of(2026, 1, 1), steps = 0L, distanceMeters = 0.0, elevationGainedMeters = 0.0)
+        assertEquals(0.0, day.elevationGainedMeters!!, 0.0)
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

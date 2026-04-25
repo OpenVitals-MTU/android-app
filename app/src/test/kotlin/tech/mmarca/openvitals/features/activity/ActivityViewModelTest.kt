@@ -262,4 +262,82 @@ class ActivityViewModelTest {
         assertNull(days[0].floorsClimbed)
         assertEquals(7, days[1].floorsClimbed)
     }
+
+    // ─── Zero = permission granted, no data ───────────────────────────────────
+
+    @Test fun `floorsClimbed zero is non-null so chart visibility condition is true`() = runTest {
+        val steps = listOf(DailySteps(today, 5_000L, 4_000.0, floorsClimbed = 0))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        assertTrue(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
+    }
+
+    @Test fun `floorsClimbed null means permission not granted — chart visibility condition is false`() = runTest {
+        val steps = listOf(DailySteps(today, 5_000L, 4_000.0, floorsClimbed = null))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        assertFalse(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
+    }
+
+    @Test fun `elevationGainedMeters zero is non-null so chart visibility condition is true`() = runTest {
+        val steps = listOf(DailySteps(today, 5_000L, 4_000.0, elevationGainedMeters = 0.0))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        assertTrue(vm.uiState.value.dailySteps.any { it.elevationGainedMeters != null })
+    }
+
+    @Test fun `activeCaloriesKcal zero is non-null so chart visibility condition is true`() = runTest {
+        val steps = listOf(DailySteps(today, 5_000L, 4_000.0, activeCaloriesKcal = 0.0))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        assertTrue(vm.uiState.value.dailySteps.any { it.activeCaloriesKcal != null })
+    }
+
+    // ─── Hydration chart visibility ───────────────────────────────────────────
+
+    @Test fun `nutrition with positive hydration flows through state`() = runTest {
+        val nutrition = listOf(DailyNutrition(today, hydrationLiters = 1.5, caloriesBurnedKcal = 0.0))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
+
+        val vm = ActivityViewModel(repo)
+
+        assertEquals(1.5, vm.uiState.value.nutrition.single().hydrationLiters, 0.001)
+        assertTrue(vm.uiState.value.nutrition.any { it.hydrationLiters > 0 })
+    }
+
+    @Test fun `nutrition with zero hydration does not satisfy hydration chart condition`() = runTest {
+        val nutrition = listOf(DailyNutrition(today, hydrationLiters = 0.0, caloriesBurnedKcal = 500.0))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
+
+        val vm = ActivityViewModel(repo)
+
+        assertFalse(vm.uiState.value.nutrition.any { it.hydrationLiters > 0 })
+    }
+
+    @Test fun `hydration totals across multiple days sum correctly`() = runTest {
+        val nutrition = listOf(
+            DailyNutrition(today.minusDays(1), hydrationLiters = 1.2, caloriesBurnedKcal = 0.0),
+            DailyNutrition(today, hydrationLiters = 2.0, caloriesBurnedKcal = 0.0),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
+
+        val vm = ActivityViewModel(repo)
+
+        assertEquals(3.2, vm.uiState.value.nutrition.sumOf { it.hydrationLiters }, 0.001)
+    }
 }

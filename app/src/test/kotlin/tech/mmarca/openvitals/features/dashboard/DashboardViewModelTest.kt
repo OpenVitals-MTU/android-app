@@ -140,7 +140,7 @@ class DashboardViewModelTest {
         assertEquals(today, vm.uiState.value.selectedDate)
     }
 
-    // ─── A3: floorsClimbed in DashboardData ──────────────────────────────────
+    // ─── A3: floorsClimbed + elevationGainedMeters in DashboardData ──────────
 
     @Test fun `floorsClimbed is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = 12)
@@ -160,6 +160,36 @@ class DashboardViewModelTest {
         val vm = DashboardViewModel(repo, prefs())
 
         assertNull(vm.uiState.value.data?.floorsClimbed)
+    }
+
+    @Test fun `elevationGainedMeters is exposed through state when present`() = runTest {
+        val data = DashboardData(date = today, elevationGainedMeters = 85.0)
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertEquals(85.0, vm.uiState.value.data?.elevationGainedMeters!!, 0.01)
+    }
+
+    @Test fun `elevationGainedMeters is null in state when not reported`() = runTest {
+        val data = DashboardData(date = today, elevationGainedMeters = null)
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertNull(vm.uiState.value.data?.elevationGainedMeters)
+    }
+
+    @Test fun `floorsClimbed zero is non-null — permission granted no stair data`() = runTest {
+        val data = DashboardData(date = today, floorsClimbed = 0)
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertEquals(0, vm.uiState.value.data?.floorsClimbed)
     }
 
     // ─── Refresh ──────────────────────────────────────────────────────────────
