@@ -284,7 +284,9 @@ class HealthConnectManager(private val context: Context) {
     // ─── Calories ────────────────────────────────────────────────────────────
 
     suspend fun readCaloriesKcal(date: LocalDate): Double? {
-        val (start, end) = dayRange(date)
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
         return withNullableLogging("readCaloriesKcal[$date][$start..$end]") {
             client().aggregate(
                 AggregateRequest(
@@ -300,7 +302,9 @@ class HealthConnectManager(private val context: Context) {
     // ─── Hydration ───────────────────────────────────────────────────────────
 
     suspend fun readHydrationLiters(date: LocalDate): Double? {
-        val (start, end) = dayRange(date)
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
         return withNullableLogging("readHydrationLiters[$date][$start..$end]") {
             client().aggregate(
                 AggregateRequest(
