@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -37,6 +38,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
+    private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
 
     // ─── Availability + permissions ───────────────────────────────────────────
 
@@ -82,6 +84,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val heartRate = if (readHeartRatePermission in granted) async { hc.readAvgHeartRate(date) } else null
         val restingHR = if (readRestingHRPermission in granted) async { hc.readRestingHeartRate(date) } else null
         val floors = if (readFloorsPermission in granted) async { hc.readFloorsClimbed(date) } else null
+        val elevation = if (readElevationPermission in granted) async { hc.readElevationGained(date) } else null
 
         val missingPerms = hc.allPermissions.filterNot { it in granted }.toSet()
 
@@ -98,6 +101,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
             avgHeartRateBpm = heartRate?.await() ?: 0,
             restingHeartRateBpm = restingHR?.await() ?: 0,
             floorsClimbed = floors?.await(),
+            elevationGainedMeters = elevation?.await(),
             missingPermissions = missingPerms,
         )
     }

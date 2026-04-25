@@ -18,6 +18,7 @@ data class DashboardData(
     val restingHeartRateBpm: Long = 0,
     val bodyFatPercent: Double = 0.0,
     val floorsClimbed: Int? = null,
+    val elevationGainedMeters: Double? = null,
     val missingPermissions: Set<String> = emptySet(),
 )
 

@@ -32,6 +32,7 @@ import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
+import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
 import java.time.Duration
 import java.time.LocalDate
@@ -148,6 +149,19 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
+                }
+            }
+
+            if (state.selectedRange != TimeRange.DAY && state.nutrition.any { it.hydrationLiters > 0 }) {
+                item {
+                    HydrationBarChart(
+                        data = state.nutrition,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                 }
             }
 
@@ -309,6 +323,26 @@ private fun CaloriesBarChart(
             data.sumOf { it.caloriesBurnedKcal }.roundToInt(),
         ),
         accentColor = CaloriesColor,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun HydrationBarChart(
+    data: List<DailyNutrition>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    modifier: Modifier = Modifier,
+) {
+    MetricBarChartCard(
+        title = "Hydration",
+        values = data.map { it.hydrationLiters },
+        labels = data.map { dayFormatter.format(it.date) },
+        selectedRange = selectedRange,
+        summaryText = "${periodTitle(selectedRange, period)} · %.1f L".format(
+            data.sumOf { it.hydrationLiters },
+        ),
+        accentColor = HydrationColor,
         modifier = modifier,
     )
 }

@@ -218,23 +218,35 @@ class HealthConnectManager(private val context: Context) {
                     date = date,
                     steps = bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L,
                     distanceMeters = bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0,
-                    floorsClimbed = if (includeFloors) bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() else null,
-                    activeCaloriesKcal = if (includeActiveCalories) bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories else null,
-                    elevationGainedMeters = if (includeElevation) bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters else null,
+                    floorsClimbed = if (includeFloors) bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0 else null,
+                    activeCaloriesKcal = if (includeActiveCalories) bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0 else null,
+                    elevationGainedMeters = if (includeElevation) bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0 else null,
                 )
             }
         }
     }
 
-    suspend fun readFloorsClimbed(date: LocalDate): Int? {
+    suspend fun readFloorsClimbed(date: LocalDate): Int {
         val (start, end) = dayRange(date)
-        return withNullableLogging("readFloorsClimbed[$date][$start..$end]") {
+        return withLogging("readFloorsClimbed[$date][$start..$end]", 0) {
             client().aggregate(
                 AggregateRequest(
                     metrics = setOf(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL),
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                 )
-            )[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt()
+            )[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+        }
+    }
+
+    suspend fun readElevationGained(date: LocalDate): Double {
+        val (start, end) = dayRange(date)
+        return withLogging("readElevationGained[$date][$start..$end]", 0.0) {
+            client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(ElevationGainedRecord.ELEVATION_GAINED_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
         }
     }
 
