@@ -50,7 +50,7 @@ fun BodyScreen(viewModel: BodyViewModel) {
         onSelectDate = viewModel::selectDate,
     ) { _ ->
         val hasComposition = state.bmi != null || state.latestBodyFatPercent != null ||
-            state.leanMassKg != null || state.bmrKcal != null
+            state.leanMassKg != null || state.bmrKcal != null || state.boneMassKg != null
 
         if (state.weightEntries.isNotEmpty()) {
             item { SectionHeader("Weight") }
@@ -89,6 +89,7 @@ fun BodyScreen(viewModel: BodyViewModel) {
                     bodyFatPercent = state.latestBodyFatPercent,
                     leanMassKg = state.leanMassKg,
                     bmrKcal = state.bmrKcal,
+                    boneMassKg = state.boneMassKg,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -126,6 +127,7 @@ private fun BodyCompositionCard(
     bodyFatPercent: Double?,
     leanMassKg: Double?,
     bmrKcal: Double?,
+    boneMassKg: Double?,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -134,38 +136,51 @@ private fun BodyCompositionCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            bmi?.let {
-                CompositionStat(
-                    label = "BMI",
-                    value = "%.1f".format(it),
-                    modifier = Modifier.weight(1f),
-                )
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                bmi?.let {
+                    CompositionStat(
+                        label = "BMI",
+                        value = "%.1f".format(it),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                bodyFatPercent?.let {
+                    CompositionStat(
+                        label = "Body fat",
+                        value = "%.1f%%".format(it),
+                        color = BodyFatColor,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                leanMassKg?.let {
+                    CompositionStat(
+                        label = "Lean mass",
+                        value = "%.1f kg".format(it),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-            bodyFatPercent?.let {
-                CompositionStat(
-                    label = "Body fat",
-                    value = "%.1f%%".format(it),
-                    color = BodyFatColor,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            leanMassKg?.let {
-                CompositionStat(
-                    label = "Lean mass",
-                    value = "%.1f kg".format(it),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            bmrKcal?.let {
-                CompositionStat(
-                    label = "BMR",
-                    value = "%,d kcal".format(it.toInt()),
-                    modifier = Modifier.weight(1f),
-                )
+            if (bmrKcal != null || boneMassKg != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    bmrKcal?.let {
+                        CompositionStat(
+                            label = "BMR",
+                            value = "%,d kcal".format(it.toInt()),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    boneMassKg?.let {
+                        CompositionStat(
+                            label = "Bone mass",
+                            value = "%.2f kg".format(it),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (bmrKcal != null && boneMassKg != null) {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

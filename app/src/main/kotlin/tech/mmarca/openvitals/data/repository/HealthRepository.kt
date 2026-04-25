@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HydrationRecord
@@ -35,6 +36,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
     private val readBodyFatPermission = HealthPermission.getReadPermission(BodyFatRecord::class)
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
+    private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
 
     // ─── Availability + permissions ───────────────────────────────────────────
 
@@ -79,6 +81,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val bodyFat = if (readBodyFatPermission in granted) async { hc.readLatestBodyFat() } else null
         val heartRate = if (readHeartRatePermission in granted) async { hc.readAvgHeartRate(date) } else null
         val restingHR = if (readRestingHRPermission in granted) async { hc.readRestingHeartRate(date) } else null
+        val floors = if (readFloorsPermission in granted) async { hc.readFloorsClimbed(date) } else null
 
         val missingPerms = hc.phase1Permissions.filterNot { it in granted }.toSet()
 
@@ -94,6 +97,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
             bodyFatPercent = bodyFat?.await() ?: 0.0,
             avgHeartRateBpm = heartRate?.await() ?: 0,
             restingHeartRateBpm = restingHR?.await() ?: 0,
+            floorsClimbed = floors?.await(),
             missingPermissions = missingPerms,
         )
     }

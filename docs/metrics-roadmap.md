@@ -87,9 +87,9 @@ Resting HR and HRV are fully implemented: `HeartRepository` loads them, `HeartVi
 
 ---
 
-#### A2. Body screen: Height + BMI + body composition ✓ Done
+#### A2. Body screen: Height + BMI + body composition ✓ Done (BoneMassRecord added 2026-04-25)
 
-**New permissions:** `HeightRecord`, `BodyFatRecord`, `LeanBodyMassRecord`, `BasalMetabolicRateRecord`
+**New permissions:** `HeightRecord`, `BodyFatRecord`, `LeanBodyMassRecord`, `BasalMetabolicRateRecord`, `BoneMassRecord`
 
 `BodyRepository`:
 - `loadLatestHeight(): Double?` — cm
@@ -97,6 +97,7 @@ Resting HR and HRV are fully implemented: `HeartRepository` loads them, `HeartVi
 - `loadBodyFatEntries(start: LocalDate, end: LocalDate): List<BodyFatEntry>`
 - `loadLatestLeanBodyMass(): Double?` — kg
 - `loadLatestBMR(): Double?` — kcal/day
+- `loadLatestBoneMass(): Double?` — kg *(gap: not yet implemented)*
 
 New models:
 ```kotlin
@@ -105,9 +106,9 @@ data class BodyFatEntry(val time: Instant, val percent: Double, val source: Stri
 
 BMI computed in the ViewModel when both `heightCm` and `weightKg` are present: `weightKg / (heightCm/100)^2`.
 
-`BodyUiState` extended: `heightCm`, `bodyFatPercent`, `leanMassKg`, `bmrKcal`, `bmi` (derived).
+`BodyUiState` extended: `heightCm`, `bodyFatPercent`, `leanMassKg`, `bmrKcal`, `boneMassKg`, `bmi` (derived).
 
-`BodyScreen`: add composition tiles (BMI, body fat %, lean mass, BMR) below the weight chart. Body fat % gets its own mini trend chart if entries exist over the period.
+`BodyScreen`: add composition tiles (BMI, body fat %, lean mass, BMR, bone mass) below the weight chart. Body fat % gets its own mini trend chart if entries exist over the period.
 
 `DashboardData`: add `bodyFatPercent: Double?` for the Body dashboard card subtitle.
 
@@ -137,6 +138,26 @@ data class DailySteps(
 
 ---
 
+#### A4. Hydration detail screen
+
+**No new permissions needed** — `HydrationRecord` is already in phase2.
+
+Hydration is currently shown on the Dashboard only. It needs a dedicated detail screen consistent with the other metrics.
+
+`ActivityRepository` (or a dedicated `HydrationRepository`):
+- `loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration>`
+
+New model:
+```kotlin
+data class DailyHydration(val date: LocalDate, val liters: Double)
+```
+
+`HydrationScreen` (or fold into the Activity detail screen as a tab): daily bar chart, period summary, daily goal progress ring if a target is set.
+
+Navigation: add `Screen.Hydration` route; wire `onOpenHydration` callback from Dashboard.
+
+---
+
 ### Phase B — New feature screens
 
 Each follows the established feature pattern: `ViewModel` + `Screen` in `features/<name>/`, using `MetricDetailScaffold` from `ui/components/` for the period shell.
@@ -144,7 +165,7 @@ Each follows the established feature pattern: `ViewModel` + `Screen` in `feature
 #### B1. Vitals screen (`features/vitals/`)
 
 **New permissions (phase 3 — requested on first open of Vitals screen):**
-`BloodPressureRecord`, `OxygenSaturationRecord`, `RespiratoryRateRecord`, `BodyTemperatureRecord`
+`BloodPressureRecord`, `OxygenSaturationRecord`, `RespiratoryRateRecord`, `BodyTemperatureRecord`, `Vo2MaxRecord`
 
 New models:
 ```kotlin
@@ -152,15 +173,16 @@ data class BloodPressureEntry(val time: Instant, val systolicMmHg: Int, val dias
 data class SpO2Entry(val time: Instant, val percent: Double, val source: String)
 data class RespiratoryRateEntry(val time: Instant, val breathsPerMinute: Double, val source: String)
 data class BodyTempEntry(val time: Instant, val temperatureCelsius: Double, val source: String)
+data class Vo2MaxEntry(val time: Instant, val vo2MaxMlPerKgPerMin: Double, val source: String)
 ```
 
 `VitalsUiState`: holds lists of each type for the selected period.
 
-`VitalsScreen`: two sections — Cardiovascular (BP chart with systolic/diastolic bands, SpO2 line) and Respiratory (respiratory rate, body temperature).
+`VitalsScreen`: three sections — Cardiovascular (BP chart with systolic/diastolic bands, SpO2 line, VO2 max tile), Respiratory (respiratory rate, body temperature).
 
-`DashboardData`: add `latestSystolicMmHg: Int?`, `latestDiastolicMmHg: Int?`, `latestSpO2Percent: Double?`.
+`DashboardData`: add `latestSystolicMmHg: Int?`, `latestDiastolicMmHg: Int?`, `latestSpO2Percent: Double?`, `latestVo2Max: Double?`.
 
-Dashboard: new "Vitals" section with a `MetricCard` for BP and SpO2 (placeholder if no data).
+Dashboard: new "Vitals" section with a `MetricCard` for BP, SpO2, and VO2 max (placeholder if no data).
 
 Navigation: add `Screen.Vitals` route; wire `onOpenVitals` callback from Dashboard.
 
@@ -243,17 +265,35 @@ No dashboard card unless opt-in is enabled (avoids surfacing sensitive data unex
 
 ---
 
+### Cross-cutting concerns
+
+These are not tied to a single phase but must be decided before Phase B ships.
+
+#### Units / localization
+
+No unit preference layer currently exists. Required before B1 (temperature °C/°F), B2 (energy kcal/kJ), and any weight or distance fields that appear in new screens. Proposed approach: a `UserPreferences` datastore key `unitSystem: UnitSystem` (METRIC / IMPERIAL) read by a `UnitFormatter` singleton injected into ViewModels and composables. All stored values remain in SI units; conversion happens at display time only.
+
+#### Dashboard layout evolution
+
+The dashboard currently has a fixed card layout. As B1, B2, and B3 add new sections (Vitals, Nutrition, Mind), a plan is needed for:
+- ordering and collapsibility of sections
+- placeholder state when no data exists for a new metric
+- how the dashboard degrades gracefully when only phase 1 permissions are granted
+
+---
+
 ## Priority order
 
 | Priority | Phase | Effort | Rationale |
 |---|---|---|---|
 | 1 | ~~A1 — Resting HR + HRV~~ | ~~Low~~ | ✓ Done |
-| 2 | A3 — Floors + active calories + elevation | Low | Present on virtually all wearables; expands existing Activity screen |
+| 2 | ~~A3 — Floors + active calories + elevation~~ | ~~Low~~ | ✓ Done |
 | 3 | ~~A2 — Body composition~~ | ~~Medium~~ | ✓ Done |
-| 4 | B2 — Nutrition | Medium | High user value; enables calories in/out view |
-| 5 | B1 — Vitals | Medium | Requires new screen + phase 3 permissions flow |
-| 6 | B3 — Mindfulness | Low | Small scope; mirrors Activities pattern exactly |
-| 7 | C — Women's health | High | Niche but important; requires settings gate + dedicated permissions |
+| 4 | A4 — Hydration detail screen | Low | No new permissions needed; fills documented gap |
+| 5 | B2 — Nutrition | Medium | High user value; enables calories in/out view |
+| 6 | B1 — Vitals | Medium | Requires new screen + phase 3 permissions flow |
+| 7 | B3 — Mindfulness | Low | Small scope; mirrors Activities pattern exactly |
+| 8 | C — Women's health | High | Niche but important; requires settings gate + dedicated permissions |
 
 ---
 
@@ -262,6 +302,59 @@ No dashboard card unless opt-in is enabled (avoids surfacing sensitive data unex
 | Phase | Permissions | When requested |
 |---|---|---|
 | Phase 1 | Steps, Distance, Exercise, Sleep | First launch / onboarding |
-| Phase 2 | Heart rate, Resting HR, HRV, Weight, Calories, Hydration, Floors, Active calories, Elevation, Height, Body fat, Lean mass, BMR, Nutrition, Mindfulness | After onboarding |
-| Phase 3 | Blood pressure, SpO2, Respiratory rate, Body temperature | On first open of Vitals screen |
+| Phase 2 | Heart rate, Resting HR, HRV, Weight, Calories, Hydration, Floors, Active calories, Elevation, Height, Body fat, Lean mass, Bone mass, BMR, Nutrition, Mindfulness | After onboarding |
+| Phase 3 | Blood pressure, SpO2, Respiratory rate, Body temperature, VO2 max | On first open of Vitals screen |
 | Phase 4 | Menstruation, Ovulation, Cervical mucus, BBT | On opt-in in Settings |
+
+---
+
+## Implementation status
+
+Comparison between this roadmap and the actual codebase as of 2026-04-25.
+
+### Phase A
+
+| Item | Roadmap status | Code status | Notes |
+|---|---|---|---|
+| A1 — Resting HR + HRV | ✓ Done | ✓ Implemented | `HeartRepository`, `HeartScreen`, `HeartViewModel` all present. `restingHeartRateBpm` in `DashboardData`. HRV not in `DashboardData` (roadmap doesn't require it there). |
+| A2 — Body composition | ✓ Done | ✓ Implemented | `BodyRepository` reads Height, BodyFat, LeanMass, BMR, BoneMass. `BodyCompositionCard` shows all five. `DashboardData` includes `bodyFatPercent`. |
+| A3 — Floors + active cals + elevation | ✓ Done | ✓ Implemented | `DailySteps` extended with 3 optional fields. `HealthConnectManager.readDailySteps` takes permission flags. `ActivityRepository` passes flags. `HealthRepository.loadDashboard` wires `floorsClimbed`. `ActivityScreen` shows bar charts for all 3 metrics. |
+| A4 — Hydration detail screen | Not started | Not started | `HydrationRecord` is in phase2 permissions and `ActivityRepository`, but no `HydrationScreen` or `Screen.Hydration` route exists. |
+
+### Phase B
+
+| Item | Roadmap status | Code status | Notes |
+|---|---|---|---|
+| B1 — Vitals screen | Not started | Not started | No `VitalsRepository`, `VitalsViewModel`, or `VitalsScreen`. No phase 3 permissions. `Vo2MaxRecord` absent from all code. |
+| B2 — Nutrition screen | Not started | Not started | `NutritionRecord` not in any permission set. `DailyNutrition` model exists but only tracks calories burned + hydration — it is not `NutritionRecord`. No `NutritionScreen`. |
+| B3 — Mindfulness screen | Not started | Not started | No `MindfulnessSessionRecord` permission, no repository, no screen. |
+
+### Phase C
+
+| Item | Roadmap status | Code status | Notes |
+|---|---|---|---|
+| C — Women's health | Not started | Not started | No cycle-related records, permissions, or screens. |
+
+### DashboardData gaps
+
+Fields described in the roadmap as additions to `DashboardData` that are not yet present in `HealthData.kt`:
+
+| Field | Added by phase |
+|---|---|
+| `floorsClimbed: Int?` | A3 |
+| `caloriesInKcal: Double?` | B2 |
+| `mindfulnessMinutes: Int?` | B3 |
+| `latestSystolicMmHg: Int?` | B1 |
+| `latestDiastolicMmHg: Int?` | B1 |
+| `latestSpO2Percent: Double?` | B1 |
+| `latestVo2Max: Double?` | B1 |
+
+### Navigation gaps
+
+Routes described in the roadmap that are absent from `Screen.kt` and `AppNavigation.kt`:
+
+- `Screen.Hydration` (A4)
+- `Screen.Vitals` (B1)
+- `Screen.Nutrition` (B2)
+- `Screen.Mindfulness` (B3)
+- `Screen.Cycle` (C)

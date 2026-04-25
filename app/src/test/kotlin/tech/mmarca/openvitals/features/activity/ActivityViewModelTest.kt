@@ -193,4 +193,73 @@ class ActivityViewModelTest {
         assertTrue(vm.uiState.value.activityProgress.isEmpty())
         coVerify(exactly = 0) { repo.loadActivityProgress(any()) }
     }
+
+    // ─── A3: floors, active calories, elevation ───────────────────────────────
+
+    @Test fun `DailySteps with A3 fields flows through state unchanged`() = runTest {
+        val steps = listOf(
+            DailySteps(
+                date = today,
+                steps = 8_000L,
+                distanceMeters = 6_000.0,
+                floorsClimbed = 12,
+                activeCaloriesKcal = 350.0,
+                elevationGainedMeters = 42.0,
+            )
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        val day = vm.uiState.value.dailySteps.single()
+        assertEquals(12, day.floorsClimbed)
+        assertEquals(350.0, day.activeCaloriesKcal!!, 0.01)
+        assertEquals(42.0, day.elevationGainedMeters!!, 0.01)
+    }
+
+    @Test fun `DailySteps with null A3 fields flows through state as null`() = runTest {
+        val steps = listOf(DailySteps(today, 5_000L, 4_000.0))
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        val day = vm.uiState.value.dailySteps.single()
+        assertNull(day.floorsClimbed)
+        assertNull(day.activeCaloriesKcal)
+        assertNull(day.elevationGainedMeters)
+    }
+
+    @Test fun `A3 fields are preserved across multiple days`() = runTest {
+        val steps = listOf(
+            DailySteps(today.minusDays(1), 7_000L, 5_500.0, floorsClimbed = 5, activeCaloriesKcal = 200.0, elevationGainedMeters = 20.0),
+            DailySteps(today, 9_000L, 7_000.0, floorsClimbed = 10, activeCaloriesKcal = 400.0, elevationGainedMeters = 50.0),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        val days = vm.uiState.value.dailySteps
+        assertEquals(2, days.size)
+        assertEquals(15, days.sumOf { it.floorsClimbed ?: 0 })
+        assertEquals(600.0, days.sumOf { it.activeCaloriesKcal ?: 0.0 }, 0.01)
+        assertEquals(70.0, days.sumOf { it.elevationGainedMeters ?: 0.0 }, 0.01)
+    }
+
+    @Test fun `mixed A3 data — some days have fields some do not`() = runTest {
+        val steps = listOf(
+            DailySteps(today.minusDays(1), 6_000L, 4_800.0, floorsClimbed = null),
+            DailySteps(today, 8_000L, 6_400.0, floorsClimbed = 7),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = ActivityViewModel(repo)
+
+        val days = vm.uiState.value.dailySteps
+        assertNull(days[0].floorsClimbed)
+        assertEquals(7, days[1].floorsClimbed)
+    }
 }

@@ -17,6 +17,7 @@ data class DashboardData(
     val avgHeartRateBpm: Long = 0,
     val restingHeartRateBpm: Long = 0,
     val bodyFatPercent: Double = 0.0,
+    val floorsClimbed: Int? = null,
     val missingPermissions: Set<String> = emptySet(),
 )
 
@@ -40,6 +41,9 @@ data class DailySteps(
     val date: LocalDate,
     val steps: Long,
     val distanceMeters: Double,
+    val floorsClimbed: Int? = null,
+    val activeCaloriesKcal: Double? = null,
+    val elevationGainedMeters: Double? = null,
 )
 
 data class StepProgressPoint(

@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.data.model
 
 import java.time.Instant
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class HealthDataTest {
@@ -95,6 +97,41 @@ class HealthDataTest {
 
     @Test fun `displayName capitalizes single-segment package`() {
         assertEquals("Health", DataSource("health", null, null).displayName)
+    }
+
+    // ─── DailySteps optional A3 fields ───────────────────────────────────────
+
+    @Test fun `DailySteps defaults all optional fields to null`() {
+        val day = DailySteps(date = LocalDate.of(2026, 1, 1), steps = 1_000L, distanceMeters = 800.0)
+        assertNull(day.floorsClimbed)
+        assertNull(day.activeCaloriesKcal)
+        assertNull(day.elevationGainedMeters)
+    }
+
+    @Test fun `DailySteps stores all optional fields when provided`() {
+        val day = DailySteps(
+            date = LocalDate.of(2026, 1, 1),
+            steps = 10_000L,
+            distanceMeters = 7_500.0,
+            floorsClimbed = 15,
+            activeCaloriesKcal = 420.5,
+            elevationGainedMeters = 65.0,
+        )
+        assertEquals(15, day.floorsClimbed)
+        assertEquals(420.5, day.activeCaloriesKcal!!, 0.01)
+        assertEquals(65.0, day.elevationGainedMeters!!, 0.01)
+    }
+
+    // ─── DashboardData floorsClimbed ─────────────────────────────────────────
+
+    @Test fun `DashboardData defaults floorsClimbed to null`() {
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1))
+        assertNull(data.floorsClimbed)
+    }
+
+    @Test fun `DashboardData stores floorsClimbed when provided`() {
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1), floorsClimbed = 8)
+        assertEquals(8, data.floorsClimbed)
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
