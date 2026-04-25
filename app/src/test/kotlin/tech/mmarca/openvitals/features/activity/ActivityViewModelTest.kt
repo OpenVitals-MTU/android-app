@@ -265,54 +265,59 @@ class ActivityViewModelTest {
 
     // ─── Zero = permission granted, no data ───────────────────────────────────
 
-    @Test fun `floorsClimbed zero is non-null so chart visibility condition is true`() = runTest {
+    @Test fun `floorsClimbed zero is non-null so chart shows for any range including DAY`() = runTest {
         val steps = listOf(DailySteps(today, 5_000L, 4_000.0, floorsClimbed = 0))
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
         val vm = ActivityViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
 
         assertTrue(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
     }
 
-    @Test fun `floorsClimbed null means permission not granted — chart visibility condition is false`() = runTest {
+    @Test fun `floorsClimbed null means permission not granted — chart hidden for any range`() = runTest {
         val steps = listOf(DailySteps(today, 5_000L, 4_000.0, floorsClimbed = null))
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
         val vm = ActivityViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
 
         assertFalse(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
     }
 
-    @Test fun `elevationGainedMeters zero is non-null so chart visibility condition is true`() = runTest {
+    @Test fun `elevationGainedMeters zero is non-null so chart shows for any range including DAY`() = runTest {
         val steps = listOf(DailySteps(today, 5_000L, 4_000.0, elevationGainedMeters = 0.0))
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
         val vm = ActivityViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
 
         assertTrue(vm.uiState.value.dailySteps.any { it.elevationGainedMeters != null })
     }
 
-    @Test fun `activeCaloriesKcal zero is non-null so chart visibility condition is true`() = runTest {
+    @Test fun `activeCaloriesKcal zero is non-null so chart shows for any range including DAY`() = runTest {
         val steps = listOf(DailySteps(today, 5_000L, 4_000.0, activeCaloriesKcal = 0.0))
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
         val vm = ActivityViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
 
         assertTrue(vm.uiState.value.dailySteps.any { it.activeCaloriesKcal != null })
     }
 
     // ─── Hydration chart visibility ───────────────────────────────────────────
 
-    @Test fun `nutrition with positive hydration flows through state`() = runTest {
+    @Test fun `nutrition with positive hydration flows through state for any range including DAY`() = runTest {
         val nutrition = listOf(DailyNutrition(today, hydrationLiters = 1.5, caloriesBurnedKcal = 0.0))
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
         val vm = ActivityViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
 
         assertEquals(1.5, vm.uiState.value.nutrition.single().hydrationLiters, 0.001)
         assertTrue(vm.uiState.value.nutrition.any { it.hydrationLiters > 0 })

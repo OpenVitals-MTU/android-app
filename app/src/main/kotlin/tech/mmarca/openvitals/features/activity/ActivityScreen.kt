@@ -152,7 +152,7 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                 }
             }
 
-            if (state.selectedRange != TimeRange.DAY && state.nutrition.any { it.hydrationLiters > 0 }) {
+            if (state.nutrition.any { it.hydrationLiters > 0 }) {
                 item {
                     HydrationBarChart(
                         data = state.nutrition,
@@ -165,7 +165,7 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                 }
             }
 
-            if (state.selectedRange != TimeRange.DAY && state.dailySteps.any { it.floorsClimbed != null }) {
+            if (state.dailySteps.any { it.floorsClimbed != null }) {
                 item {
                     FloorsBarChart(
                         data = state.dailySteps,
@@ -178,7 +178,7 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                 }
             }
 
-            if (state.selectedRange != TimeRange.DAY && state.dailySteps.any { it.activeCaloriesKcal != null }) {
+            if (state.dailySteps.any { it.activeCaloriesKcal != null }) {
                 item {
                     ActiveCaloriesBarChart(
                         data = state.dailySteps,
@@ -191,7 +191,7 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                 }
             }
 
-            if (state.selectedRange != TimeRange.DAY && state.dailySteps.any { it.elevationGainedMeters != null }) {
+            if (state.dailySteps.any { it.elevationGainedMeters != null }) {
                 item {
                     ElevationBarChart(
                         data = state.dailySteps,
