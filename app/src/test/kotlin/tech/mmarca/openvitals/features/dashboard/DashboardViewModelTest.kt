@@ -2,9 +2,11 @@ package tech.mmarca.openvitals.features.dashboard
 
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
@@ -23,6 +25,11 @@ class DashboardViewModelTest {
 
     private val today = LocalDate.now()
     private val yesterday = today.minusDays(1)
+
+    private fun prefs() = mockk<PreferencesRepository>().also {
+        every { it.acknowledgedPermissions() } returns emptySet()
+        every { it.acknowledgePermissions(any()) } returns Unit
+    }
 
     // ─── Initial load ─────────────────────────────────────────────────────────
 
@@ -45,7 +52,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns data
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -57,7 +64,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } throws RuntimeException("network error")
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -69,7 +76,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } throws RuntimeException()
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals("Unknown error", vm.uiState.value.errorMessage)
     }
@@ -80,7 +87,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
         val futureDate = today.plusDays(10)
         vm.load(futureDate)
 
@@ -92,7 +99,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(today.plusDays(5))
 
         assertEquals(today, vm.uiState.value.selectedDate)
@@ -104,7 +111,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
         vm.previousDay()
 
         assertEquals(yesterday, vm.uiState.value.selectedDate)
@@ -114,7 +121,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
         vm.nextDay()
 
         assertEquals(today, vm.uiState.value.selectedDate)
@@ -126,11 +133,33 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(yesterday)
         vm.nextDay()
 
         assertEquals(today, vm.uiState.value.selectedDate)
+    }
+
+    // ─── A3: floorsClimbed in DashboardData ──────────────────────────────────
+
+    @Test fun `floorsClimbed is exposed through state when present`() = runTest {
+        val data = DashboardData(date = today, floorsClimbed = 12)
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertEquals(12, vm.uiState.value.data?.floorsClimbed)
+    }
+
+    @Test fun `floorsClimbed is null in state when not reported`() = runTest {
+        val data = DashboardData(date = today, floorsClimbed = null)
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertNull(vm.uiState.value.data?.floorsClimbed)
     }
 
     // ─── Refresh ──────────────────────────────────────────────────────────────
@@ -139,7 +168,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo)
+        val vm = DashboardViewModel(repo, prefs())
         vm.refresh()
 
         // init + refresh = 2 calls

@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.features.activity.ActivityScreen
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
@@ -50,6 +51,7 @@ fun AppNavigation(
     sleepRepository: SleepRepository,
     heartRepository: HeartRepository,
     bodyRepository: BodyRepository,
+    preferencesRepository: PreferencesRepository,
     startDestination: String,
     onOnboardingComplete: () -> Unit = {},
 ) {
@@ -122,7 +124,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Dashboard.route) {
-                val dashboardViewModel = remember(repository) { DashboardViewModel(repository) }
+                val dashboardViewModel = remember(repository) { DashboardViewModel(repository, preferencesRepository) }
                 DashboardScreen(
                     viewModel = dashboardViewModel,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },

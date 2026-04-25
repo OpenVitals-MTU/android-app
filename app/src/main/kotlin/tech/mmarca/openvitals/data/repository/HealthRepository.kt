@@ -83,7 +83,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val restingHR = if (readRestingHRPermission in granted) async { hc.readRestingHeartRate(date) } else null
         val floors = if (readFloorsPermission in granted) async { hc.readFloorsClimbed(date) } else null
 
-        val missingPerms = hc.phase1Permissions.filterNot { it in granted }.toSet()
+        val missingPerms = hc.allPermissions.filterNot { it in granted }.toSet()
 
         DashboardData(
             date = date,

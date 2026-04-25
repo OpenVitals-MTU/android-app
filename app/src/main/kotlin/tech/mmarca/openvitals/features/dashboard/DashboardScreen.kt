@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.LocalDrink
@@ -47,6 +48,7 @@ import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
+import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
@@ -89,10 +91,15 @@ fun DashboardScreen(
             dashboardData != null -> DashboardContent(
                 data = dashboardData,
                 canGoForward = state.selectedDate.isBefore(LocalDate.now()),
+                showPermissionsCallout = state.showPermissionsCallout,
                 onPreviousDay = viewModel::previousDay,
                 onNextDay = viewModel::nextDay,
                 onOpenCalendar = { showDatePicker = true },
-                onGrantPermissions = onGrantPermissions,
+                onGrantPermissions = {
+                    viewModel.acknowledgePermissionsCallout()
+                    onGrantPermissions()
+                },
+                onDismissPermissionsCallout = viewModel::acknowledgePermissionsCallout,
                 onOpenSteps = onOpenSteps,
                 onOpenActivities = onOpenActivities,
                 onOpenSleep = onOpenSleep,
@@ -120,10 +127,12 @@ fun DashboardScreen(
 private fun DashboardContent(
     data: DashboardData,
     canGoForward: Boolean,
+    showPermissionsCallout: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
     onGrantPermissions: () -> Unit,
+    onDismissPermissionsCallout: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenSleep: () -> Unit,
@@ -147,12 +156,13 @@ private fun DashboardContent(
             )
         }
 
-        if (data.missingPermissions.isNotEmpty()) {
+        if (showPermissionsCallout) {
             item {
                 PermissionCallout(
                     title = "Some permissions are missing",
                     body = "Grant the missing permissions to see a complete dashboard.",
                     onGrant = onGrantPermissions,
+                    onDismiss = onDismissPermissionsCallout,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -217,6 +227,29 @@ private fun DashboardContent(
                     accentColor = HydrationColor,
                     modifier = Modifier.weight(1f),
                 )
+            }
+        }
+
+        data.floorsClimbed?.let { floors ->
+            item {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    MetricCard(
+                        title = "Floors climbed",
+                        value = floors.toString(),
+                        unit = "floors",
+                        icon = Icons.Outlined.Stairs,
+                        accentColor = FloorsColor,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenSteps,
+                    )
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
 

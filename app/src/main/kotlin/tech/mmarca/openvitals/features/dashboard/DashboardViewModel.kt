@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,9 +16,13 @@ data class DashboardUiState(
     val data: DashboardData? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    val showPermissionsCallout: Boolean = false,
 )
 
-class DashboardViewModel(private val repository: HealthRepository) : ViewModel() {
+class DashboardViewModel(
+    private val repository: HealthRepository,
+    private val prefs: PreferencesRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -40,9 +45,11 @@ class DashboardViewModel(private val repository: HealthRepository) : ViewModel()
             )
             runCatching { repository.loadDashboard(clampedDate) }
                 .onSuccess { data ->
+                    val unacknowledged = data.missingPermissions - prefs.acknowledgedPermissions()
                     _uiState.value = _uiState.value.copy(
                         data = data,
                         isLoading = false,
+                        showPermissionsCallout = unacknowledged.isNotEmpty(),
                     )
                 }
                 .onFailure { error ->
@@ -68,5 +75,11 @@ class DashboardViewModel(private val repository: HealthRepository) : ViewModel()
 
     fun selectDate(date: LocalDate) {
         load(date)
+    }
+
+    fun acknowledgePermissionsCallout() {
+        val missing = _uiState.value.data?.missingPermissions ?: return
+        prefs.acknowledgePermissions(missing)
+        _uiState.value = _uiState.value.copy(showPermissionsCallout = false)
     }
 }

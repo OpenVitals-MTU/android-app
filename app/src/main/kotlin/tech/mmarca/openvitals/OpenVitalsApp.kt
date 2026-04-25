@@ -5,10 +5,15 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class OpenVitalsApp : Application() {
+
+    val preferencesRepository: PreferencesRepository by lazy {
+        PreferencesRepository(this)
+    }
 
     val healthConnectManager: HealthConnectManager by lazy {
         HealthConnectManager(this)
