@@ -57,6 +57,7 @@ import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.LocalDate
@@ -79,6 +80,7 @@ fun DashboardScreen(
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenVitals: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -113,6 +115,7 @@ fun DashboardScreen(
                 onOpenBody = onOpenBody,
                 onOpenHydration = onOpenHydration,
                 onOpenNutrition = onOpenNutrition,
+                onOpenVitals = onOpenVitals,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -148,6 +151,7 @@ private fun DashboardContent(
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenVitals: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -368,6 +372,82 @@ private fun DashboardContent(
                     accentColor = HeartColor,
                     modifier = Modifier.weight(1f),
                     onClick = onOpenHeart,
+                )
+            }
+        }
+
+        item { SectionHeader("Vitals") }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (data.latestSystolicMmHg != null && data.latestDiastolicMmHg != null) {
+                    MetricCard(
+                        title = "Blood pressure",
+                        value = "${data.latestSystolicMmHg}/${data.latestDiastolicMmHg}",
+                        unit = "mmHg",
+                        icon = Icons.Outlined.Favorite,
+                        accentColor = VitalsColor,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenVitals,
+                    )
+                } else {
+                    MetricCardPlaceholder(
+                        title = "Blood pressure",
+                        icon = Icons.Outlined.Favorite,
+                        accentColor = VitalsColor,
+                        message = "No blood pressure reading.",
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenVitals,
+                    )
+                }
+                if (data.latestSpO2Percent != null) {
+                    MetricCard(
+                        title = "SpO2",
+                        value = "%.1f".format(data.latestSpO2Percent),
+                        unit = "%",
+                        icon = Icons.Outlined.FavoriteBorder,
+                        accentColor = VitalsColor,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenVitals,
+                    )
+                } else {
+                    MetricCardPlaceholder(
+                        title = "SpO2",
+                        icon = Icons.Outlined.FavoriteBorder,
+                        accentColor = VitalsColor,
+                        message = "No oxygen reading.",
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenVitals,
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            if (data.latestVo2Max != null) {
+                MetricCard(
+                    title = "VO2 max",
+                    value = "%.1f".format(data.latestVo2Max),
+                    unit = "mL/kg/min",
+                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    accentColor = VitalsColor,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onClick = onOpenVitals,
+                )
+            } else {
+                MetricCardPlaceholder(
+                    title = "VO2 max",
+                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    accentColor = VitalsColor,
+                    message = "No VO2 max reading.",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onClick = onOpenVitals,
                 )
             }
         }

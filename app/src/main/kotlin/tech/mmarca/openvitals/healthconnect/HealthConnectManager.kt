@@ -12,8 +12,10 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -24,15 +26,20 @@ import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import tech.mmarca.openvitals.data.model.BloodPressureEntry
+import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.DailyMacros
@@ -46,9 +53,12 @@ import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
+import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Duration
@@ -97,7 +107,16 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(NutritionRecord::class),
     )
 
-    val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions
+    /** Phase 3 – vitals, requested when opening the Vitals screen */
+    val phase3Permissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(BloodPressureRecord::class),
+        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.getReadPermission(RespiratoryRateRecord::class),
+        HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(Vo2MaxRecord::class),
+    )
+
+    val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
 
     // ─── Availability ─────────────────────────────────────────────────────────
 
@@ -844,6 +863,114 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
         }
+
+    // ─── Vitals helpers ──────────────────────────────────────────────────────
+
+    suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
+        withLogging("readBloodPressureEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = BloodPressureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                BloodPressureEntry(
+                    time = record.time,
+                    systolicMmHg = record.systolic.inMillimetersOfMercury.toInt(),
+                    diastolicMmHg = record.diastolic.inMillimetersOfMercury.toInt(),
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestBloodPressure(date: LocalDate): BloodPressureEntry? {
+        val (start, end) = dayRange(date)
+        return readBloodPressureEntries(start, end).maxByOrNull { it.time }
+    }
+
+    suspend fun readSpO2Entries(start: Instant, end: Instant): List<SpO2Entry> =
+        withLogging("readSpO2Entries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = OxygenSaturationRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                SpO2Entry(
+                    time = record.time,
+                    percent = record.percentage.value,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestSpO2(date: LocalDate): SpO2Entry? {
+        val (start, end) = dayRange(date)
+        return readSpO2Entries(start, end).maxByOrNull { it.time }
+    }
+
+    suspend fun readRespiratoryRateEntries(start: Instant, end: Instant): List<RespiratoryRateEntry> =
+        withLogging("readRespiratoryRateEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = RespiratoryRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                RespiratoryRateEntry(
+                    time = record.time,
+                    breathsPerMinute = record.rate,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readBodyTemperatureEntries(start: Instant, end: Instant): List<BodyTempEntry> =
+        withLogging("readBodyTemperatureEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = BodyTemperatureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                BodyTempEntry(
+                    time = record.time,
+                    temperatureCelsius = record.temperature.inCelsius,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readVo2MaxEntries(start: Instant, end: Instant): List<Vo2MaxEntry> =
+        withLogging("readVo2MaxEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = Vo2MaxRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                Vo2MaxEntry(
+                    time = record.time,
+                    vo2MaxMlPerKgPerMin = record.vo2MillilitersPerMinuteKilogram,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestVo2Max(date: LocalDate): Vo2MaxEntry? {
+        val (start, end) = dayRange(date)
+        return readVo2MaxEntries(start, end).maxByOrNull { it.time }
+    }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 

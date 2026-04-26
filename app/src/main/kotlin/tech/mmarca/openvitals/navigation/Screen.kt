@@ -10,6 +10,7 @@ sealed class Screen(val route: String) {
     data object Body : Screen("body")
     data object Hydration : Screen("hydration")
     data object Nutrition : Screen("nutrition")
+    data object Vitals : Screen("vitals")
     data object Browse : Screen("browse")
     data object Settings : Screen("settings")
 }

@@ -19,12 +19,13 @@ Gap analysis between what the app currently shows and all Health Connect record 
 | Heart | Resting HR | `RestingHeartRateRecord` | Heart screen + Dashboard |
 | Heart | HRV RMSSD | `HeartRateVariabilityRmssdRecord` | Heart screen |
 | Body | Weight | `WeightRecord` | Body screen |
+| Vitals | Blood pressure, SpO2, respiratory rate, body temp, VO2 max | `BloodPressureRecord`, `OxygenSaturationRecord`, `RespiratoryRateRecord`, `BodyTemperatureRecord`, `Vo2MaxRecord` | Vitals screen + Dashboard |
 
 ---
 
 ## Missing data points
 
-### Vitals — widely available from wearables
+### Vitals — widely available from wearables ✓ Covered
 
 | HC Record type | Metric | Source examples |
 |---|---|---|
@@ -163,7 +164,7 @@ Navigation: `Screen.Hydration` route and `onOpenHydration` callback from Dashboa
 
 Each follows the established feature pattern: `ViewModel` + `Screen` in `features/<name>/`, using `MetricDetailScaffold` from `ui/components/` for the period shell.
 
-#### B1. Vitals screen (`features/vitals/`)
+#### B1. Vitals screen (`features/vitals/`) ✓ Done (2026-04-26)
 
 **New permissions (phase 3 — requested on first open of Vitals screen):**
 `BloodPressureRecord`, `OxygenSaturationRecord`, `RespiratoryRateRecord`, `BodyTemperatureRecord`, `Vo2MaxRecord`
@@ -185,7 +186,7 @@ data class Vo2MaxEntry(val time: Instant, val vo2MaxMlPerKgPerMin: Double, val s
 
 Dashboard: new "Vitals" section with a `MetricCard` for BP, SpO2, and VO2 max (placeholder if no data).
 
-Navigation: add `Screen.Vitals` route; wire `onOpenVitals` callback from Dashboard.
+Navigation: `Screen.Vitals` route and `onOpenVitals` callback from Dashboard.
 
 ---
 
@@ -292,7 +293,7 @@ The dashboard currently has a fixed card layout. As B1, B2, and B3 add new secti
 | 3 | ~~A2 — Body composition~~ | ~~Medium~~ | ✓ Done |
 | 4 | ~~A4 — Hydration detail screen~~ | ~~Low~~ | ✓ Done |
 | 5 | ~~B2 — Nutrition~~ | ~~Medium~~ | ✓ Done |
-| 6 | B1 — Vitals | Medium | Requires new screen + phase 3 permissions flow |
+| 6 | ~~B1 — Vitals~~ | ~~Medium~~ | ✓ Done |
 | 7 | B3 — Mindfulness | Low | Small scope; mirrors Activities pattern exactly |
 | 8 | C — Women's health | High | Niche but important; requires settings gate + dedicated permissions |
 
@@ -326,7 +327,7 @@ Comparison between this roadmap and the actual codebase as of 2026-04-26.
 
 | Item | Roadmap status | Code status | Notes |
 |---|---|---|---|
-| B1 — Vitals screen | Not started | Not started | No `VitalsRepository`, `VitalsViewModel`, or `VitalsScreen`. No phase 3 permissions. `Vo2MaxRecord` absent from all code. |
+| B1 — Vitals screen | ✓ Done | ✓ Implemented | `VitalsRepository`, `VitalsViewModel`, and `VitalsScreen` are present. Phase 3 permissions are requested from the Vitals screen. Dashboard shows BP, SpO2, and VO2 max cards. |
 | B2 — Nutrition screen | ✓ Done | ✓ Implemented | `NutritionRecord` is in phase2 permissions. `NutritionRepository`, `NutritionViewModel`, and `NutritionScreen` are present. Dashboard shows calories in/out and `Screen.Nutrition` is registered. |
 | B3 — Mindfulness screen | Not started | Not started | No `MindfulnessSessionRecord` permission, no repository, no screen. |
 
@@ -343,15 +344,10 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 | Field | Added by phase |
 |---|---|
 | `mindfulnessMinutes: Int?` | B3 |
-| `latestSystolicMmHg: Int?` | B1 |
-| `latestDiastolicMmHg: Int?` | B1 |
-| `latestSpO2Percent: Double?` | B1 |
-| `latestVo2Max: Double?` | B1 |
 
 ### Navigation gaps
 
 Routes described in the roadmap that are absent from `Screen.kt` and `AppNavigation.kt`:
 
-- `Screen.Vitals` (B1)
 - `Screen.Mindfulness` (B3)
 - `Screen.Cycle` (C)

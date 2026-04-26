@@ -202,6 +202,25 @@ class DashboardViewModelTest {
         assertEquals(1_850.0, vm.uiState.value.data?.caloriesInKcal!!, 0.01)
     }
 
+    @Test fun `vitals fields are exposed through dashboard state when present`() = runTest {
+        val data = DashboardData(
+            date = today,
+            latestSystolicMmHg = 120,
+            latestDiastolicMmHg = 78,
+            latestSpO2Percent = 97.5,
+            latestVo2Max = 42.1,
+        )
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertEquals(120, vm.uiState.value.data?.latestSystolicMmHg)
+        assertEquals(78, vm.uiState.value.data?.latestDiastolicMmHg)
+        assertEquals(97.5, vm.uiState.value.data?.latestSpO2Percent!!, 0.01)
+        assertEquals(42.1, vm.uiState.value.data?.latestVo2Max!!, 0.01)
+    }
+
     // ─── Refresh ──────────────────────────────────────────────────────────────
 
     @Test fun `refresh reloads current date`() = runTest {

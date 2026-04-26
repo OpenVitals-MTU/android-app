@@ -18,6 +18,10 @@ data class DashboardData(
     val restingHeartRateBpm: Long = 0,
     val bodyFatPercent: Double = 0.0,
     val caloriesInKcal: Double? = null,
+    val latestSystolicMmHg: Int? = null,
+    val latestDiastolicMmHg: Int? = null,
+    val latestSpO2Percent: Double? = null,
+    val latestVo2Max: Double? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val missingPermissions: Set<String> = emptySet(),
@@ -178,6 +182,39 @@ data class DailyMacros(
     val proteinGrams: Double,
     val carbsGrams: Double,
     val fatGrams: Double,
+)
+
+// ─── Vitals ──────────────────────────────────────────────────────────────────
+
+data class BloodPressureEntry(
+    val time: Instant,
+    val systolicMmHg: Int,
+    val diastolicMmHg: Int,
+    val source: String,
+)
+
+data class SpO2Entry(
+    val time: Instant,
+    val percent: Double,
+    val source: String,
+)
+
+data class RespiratoryRateEntry(
+    val time: Instant,
+    val breathsPerMinute: Double,
+    val source: String,
+)
+
+data class BodyTempEntry(
+    val time: Instant,
+    val temperatureCelsius: Double,
+    val source: String,
+)
+
+data class Vo2MaxEntry(
+    val time: Instant,
+    val vo2MaxMlPerKgPerMin: Double,
+    val source: String,
 )
 
 // ─── Source attribution ───────────────────────────────────────────────────────
