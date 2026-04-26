@@ -40,6 +40,8 @@ class MainActivity : ComponentActivity() {
                     mindfulnessRepository = app.mindfulnessRepository,
                     vitalsRepository = app.vitalsRepository,
                     preferencesRepository = app.preferencesRepository,
+                    unitFormatter = app.unitFormatter,
+                    dateTimeFormatterProvider = app.dateTimeFormatterProvider,
                     startDestination = startDestination,
                     onOnboardingComplete = {
                         app.preferencesRepository.onboardingDone = true

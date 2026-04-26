@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.TimeRange
@@ -37,16 +39,14 @@ import tech.mmarca.openvitals.ui.theme.StepsColor
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
-
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivityScreen(viewModel: ActivityViewModel) {
+fun ActivityScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -66,8 +66,9 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                     IntradayActivityChartCard(
                         selectedDate = state.selectedDate,
                         title = "Steps",
-                        valueText = "%,d steps".format(state.dailySteps.firstOrNull()?.steps ?: 0L),
+                        valueText = "${unitFormatter.count(state.dailySteps.firstOrNull()?.steps ?: 0L)} steps",
                         emptyText = "No step updates were recorded",
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         points = state.activityProgress.map { point ->
                             point.time to point.totalSteps.toDouble()
                         },
@@ -81,6 +82,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         data = state.dailySteps,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -95,12 +98,9 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
                             title = "Distance",
-                            valueText = if (distanceTotal >= 1000) {
-                                "%.1f km".format(distanceTotal / 1000)
-                            } else {
-                                "%d m".format(distanceTotal.roundToInt())
-                            },
+                            valueText = unitFormatter.distance(distanceTotal).text,
                             emptyText = "No distance updates were recorded",
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalDistanceMeters?.let { point.time to it }
                             },
@@ -114,6 +114,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                             data = state.dailySteps,
                             selectedRange = state.selectedRange,
                             period = period,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -129,8 +131,9 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
                             title = "Calories burned",
-                            valueText = "%,d kcal".format(caloriesTotal.roundToInt()),
+                            valueText = unitFormatter.energy(caloriesTotal).text,
                             emptyText = "No calories burned data was recorded",
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalCaloriesBurnedKcal?.let { point.time to it }
                             },
@@ -144,6 +147,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                             data = state.nutrition,
                             selectedRange = state.selectedRange,
                             period = period,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -158,6 +163,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         data = state.nutrition,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -171,6 +178,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         data = state.dailySteps,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -184,6 +193,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         data = state.dailySteps,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -197,6 +208,8 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                         data = state.dailySteps,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -212,9 +225,12 @@ fun StepsBarChart(
     data: List<DailySteps>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val maxSteps = data.maxOfOrNull { it.steps } ?: 1L
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val labelStride = when (selectedRange) {
         TimeRange.DAY,
         TimeRange.WEEK -> 1
@@ -275,7 +291,7 @@ fun StepsBarChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · %,d steps".format(data.sumOf { it.steps }),
+                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} steps",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -288,20 +304,17 @@ private fun DistanceBarChart(
     data: List<DailySteps>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Distance",
         values = data.map { it.distanceMeters },
         labels = data.map { dayFormatter.format(it.date) },
         selectedRange = selectedRange,
-        summaryText = "${periodTitle(selectedRange, period)} · ${
-            if (data.sumOf { it.distanceMeters } >= 1000) {
-                "%.1f km".format(data.sumOf { it.distanceMeters } / 1000)
-            } else {
-                "%d m".format(data.sumOf { it.distanceMeters }.roundToInt())
-            }
-        }",
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.distance(data.sumOf { it.distanceMeters }).text}",
         accentColor = DistanceColor,
         modifier = modifier,
     )
@@ -312,16 +325,17 @@ private fun CaloriesBarChart(
     data: List<DailyNutrition>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Calories burned",
         values = data.map { it.caloriesBurnedKcal },
         labels = data.map { dayFormatter.format(it.date) },
         selectedRange = selectedRange,
-        summaryText = "${periodTitle(selectedRange, period)} · %,d kcal".format(
-            data.sumOf { it.caloriesBurnedKcal }.roundToInt(),
-        ),
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.caloriesBurnedKcal }).text}",
         accentColor = CaloriesColor,
         modifier = modifier,
     )
@@ -332,16 +346,17 @@ private fun HydrationBarChart(
     data: List<DailyNutrition>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Hydration",
         values = data.map { it.hydrationLiters },
         labels = data.map { dayFormatter.format(it.date) },
         selectedRange = selectedRange,
-        summaryText = "${periodTitle(selectedRange, period)} · %.1f L".format(
-            data.sumOf { it.hydrationLiters },
-        ),
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.hydrationLiters }).text}",
         accentColor = HydrationColor,
         modifier = modifier,
     )
@@ -427,16 +442,17 @@ private fun FloorsBarChart(
     data: List<DailySteps>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Floors climbed",
         values = data.map { it.floorsClimbed?.toDouble() ?: 0.0 },
         labels = data.map { dayFormatter.format(it.date) },
         selectedRange = selectedRange,
-        summaryText = "${periodTitle(selectedRange, period)} · %,d floors".format(
-            data.sumOf { it.floorsClimbed ?: 0 },
-        ),
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.floorsClimbed ?: 0 })} floors",
         accentColor = FloorsColor,
         modifier = modifier,
     )
@@ -447,16 +463,17 @@ private fun ActiveCaloriesBarChart(
     data: List<DailySteps>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Active calories",
         values = data.map { it.activeCaloriesKcal ?: 0.0 },
         labels = data.map { dayFormatter.format(it.date) },
         selectedRange = selectedRange,
-        summaryText = "${periodTitle(selectedRange, period)} · %,d kcal".format(
-            data.sumOf { it.activeCaloriesKcal ?: 0.0 }.roundToInt(),
-        ),
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.activeCaloriesKcal ?: 0.0 }).text}",
         accentColor = ActiveCaloriesColor,
         modifier = modifier,
     )
@@ -467,19 +484,18 @@ private fun ElevationBarChart(
     data: List<DailySteps>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val totalMeters = data.sumOf { it.elevationGainedMeters ?: 0.0 }
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Elevation gained",
         values = data.map { it.elevationGainedMeters ?: 0.0 },
         labels = data.map { dayFormatter.format(it.date) },
         selectedRange = selectedRange,
-        summaryText = if (totalMeters >= 1000) {
-            "${periodTitle(selectedRange, period)} · %.1f km".format(totalMeters / 1000)
-        } else {
-            "${periodTitle(selectedRange, period)} · %d m".format(totalMeters.roundToInt())
-        },
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.elevation(totalMeters).text}",
         accentColor = ElevationColor,
         modifier = modifier,
     )
@@ -491,6 +507,7 @@ private fun IntradayActivityChartCard(
     title: String,
     valueText: String,
     emptyText: String,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     points: List<Pair<java.time.Instant, Double>>,
     accentColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier,
@@ -499,6 +516,8 @@ private fun IntradayActivityChartCard(
     val now = java.time.Instant.now()
     val dayStart = selectedDate.atStartOfDay(zone).toInstant()
     val isToday = selectedDate == LocalDate.now()
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
     val chartEnd = if (isToday) now else selectedDate.plusDays(1).atStartOfDay(zone).toInstant()
     val elapsedToday = Duration.between(dayStart, chartEnd).toMillis().coerceAtLeast(1L)
     val maxValue = points.lastOrNull()?.second?.coerceAtLeast(1.0) ?: 1.0

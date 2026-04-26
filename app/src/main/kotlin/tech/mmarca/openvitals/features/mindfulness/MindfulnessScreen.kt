@@ -22,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
@@ -31,14 +33,14 @@ import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-private val mindfulnessDateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val mindfulnessTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MindfulnessScreen(viewModel: MindfulnessViewModel) {
+fun MindfulnessScreen(
+    viewModel: MindfulnessViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -69,6 +71,7 @@ fun MindfulnessScreen(viewModel: MindfulnessViewModel) {
                 MindfulnessSummary(
                     state = state,
                     subtitle = periodTitle(state.selectedRange, period),
+                    unitFormatter = unitFormatter,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -76,6 +79,8 @@ fun MindfulnessScreen(viewModel: MindfulnessViewModel) {
             items(state.sessions) { session ->
                 MindfulnessSessionRow(
                     session = session,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -89,16 +94,18 @@ fun MindfulnessScreen(viewModel: MindfulnessViewModel) {
 private fun MindfulnessSummary(
     state: MindfulnessUiState,
     subtitle: String,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
+    val total = unitFormatter.minutes(state.totalMinutes)
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         MetricCard(
             title = "Total mindfulness",
-            value = "%,d".format(state.totalMinutes),
-            unit = "min",
+            value = total.value,
+            unit = total.unit,
             icon = Icons.Outlined.SelfImprovement,
             accentColor = MindfulnessColor,
             subtitle = subtitle,
@@ -106,7 +113,7 @@ private fun MindfulnessSummary(
         )
         MetricCard(
             title = "Sessions",
-            value = state.sessions.size.toString(),
+            value = unitFormatter.count(state.sessions.size),
             unit = "total",
             icon = Icons.Outlined.SelfImprovement,
             accentColor = MindfulnessColor,
@@ -117,9 +124,16 @@ private fun MindfulnessSummary(
 }
 
 @Composable
-private fun MindfulnessSessionRow(session: MindfulnessSession, modifier: Modifier = Modifier) {
+private fun MindfulnessSessionRow(
+    session: MindfulnessSession,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
     val zone = ZoneId.systemDefault()
     val start = session.startTime.atZone(zone)
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
         modifier = modifier,
@@ -143,17 +157,14 @@ private fun MindfulnessSessionRow(session: MindfulnessSession, modifier: Modifie
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = "${mindfulnessDateFormatter.format(start)}  ·  ${mindfulnessTimeFormatter.format(start)}",
+                    text = "${dateFormatter.format(start)}  ·  ${timeFormatter.format(start)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "%dh %02dm".format(
-                        session.durationMinutes / 60,
-                        session.durationMinutes % 60,
-                    ),
+                    text = unitFormatter.duration(session.durationMs),
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Spacer(Modifier.height(4.dp))

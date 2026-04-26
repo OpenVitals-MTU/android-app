@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.MealType
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.TimeRange
@@ -41,19 +43,19 @@ import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val proteinColor = Color(0xFF7E57C2)
 private val carbsColor = Color(0xFF26A69A)
 private val fatColor = Color(0xFFFFB300)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NutritionScreen(viewModel: NutritionViewModel) {
+fun NutritionScreen(
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -83,6 +85,7 @@ fun NutritionScreen(viewModel: NutritionViewModel) {
             item {
                 NutritionSummary(
                     state = state,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -91,6 +94,7 @@ fun NutritionScreen(viewModel: NutritionViewModel) {
                     proteinGrams = state.totalProteinGrams,
                     carbsGrams = state.totalCarbsGrams,
                     fatGrams = state.totalFatGrams,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -101,6 +105,8 @@ fun NutritionScreen(viewModel: NutritionViewModel) {
                     data = state.dailyMacros,
                     selectedRange = state.selectedRange,
                     period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -113,6 +119,8 @@ fun NutritionScreen(viewModel: NutritionViewModel) {
             items(state.entries) { entry ->
                 NutritionEntryRow(
                     entry = entry,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -125,24 +133,26 @@ fun NutritionScreen(viewModel: NutritionViewModel) {
 @Composable
 private fun NutritionSummary(
     state: NutritionUiState,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
+    val energy = unitFormatter.energy(state.totalEnergyKcal)
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         MetricCard(
             title = "Calories in",
-            value = "%,d".format(state.totalEnergyKcal.roundToInt()),
-            unit = "kcal",
+            value = energy.value,
+            unit = energy.unit,
             icon = Icons.Outlined.Restaurant,
             accentColor = NutritionColor,
-            subtitle = "%,d entries".format(state.entries.size),
+            subtitle = "${unitFormatter.count(state.entries.size)} entries",
             modifier = Modifier.weight(1f),
         )
         MetricCard(
             title = "Protein",
-            value = "%,d".format(state.totalProteinGrams.roundToInt()),
+            value = unitFormatter.count(state.totalProteinGrams.roundToInt()),
             unit = "g",
             icon = Icons.Outlined.Restaurant,
             accentColor = proteinColor,
@@ -157,6 +167,7 @@ private fun MacroSummaryCard(
     proteinGrams: Double,
     carbsGrams: Double,
     fatGrams: Double,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     val total = proteinGrams + carbsGrams + fatGrams
@@ -188,9 +199,9 @@ private fun MacroSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                MacroLegend("Protein", proteinGrams, proteinColor)
-                MacroLegend("Carbs", carbsGrams, carbsColor)
-                MacroLegend("Fat", fatGrams, fatColor)
+                MacroLegend("Protein", proteinGrams, proteinColor, unitFormatter)
+                MacroLegend("Carbs", carbsGrams, carbsColor, unitFormatter)
+                MacroLegend("Fat", fatGrams, fatColor, unitFormatter)
             }
         }
     }
@@ -213,7 +224,12 @@ private fun RowScope.MacroSegment(fraction: Double, color: Color) {
 }
 
 @Composable
-private fun MacroLegend(label: String, grams: Double, color: Color) {
+private fun MacroLegend(
+    label: String,
+    grams: Double,
+    color: Color,
+    unitFormatter: UnitFormatter,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,
@@ -222,7 +238,7 @@ private fun MacroLegend(label: String, grams: Double, color: Color) {
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "%,d g".format(grams.roundToInt()),
+            text = "${unitFormatter.count(grams.roundToInt())} g",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -234,9 +250,12 @@ private fun EnergyBarChart(
     data: List<DailyMacros>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val maxEnergy = data.maxOfOrNull { it.energyKcal }?.coerceAtLeast(1.0) ?: 1.0
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val labelStride = when (selectedRange) {
         TimeRange.DAY,
         TimeRange.WEEK -> 1
@@ -293,9 +312,7 @@ private fun EnergyBarChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · %,d kcal".format(
-                    data.sumOf { it.energyKcal }.roundToInt(),
-                ),
+                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.energyKcal }).text}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -304,8 +321,15 @@ private fun EnergyBarChart(
 }
 
 @Composable
-private fun NutritionEntryRow(entry: NutritionEntry, modifier: Modifier = Modifier) {
+private fun NutritionEntryRow(
+    entry: NutritionEntry,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
     val start = entry.time.atZone(ZoneId.systemDefault())
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
         modifier = modifier,
@@ -334,14 +358,14 @@ private fun NutritionEntryRow(entry: NutritionEntry, modifier: Modifier = Modifi
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = macroLine(entry),
+                    text = macroLine(entry, unitFormatter),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = entry.energyKcal?.let { "%,d kcal".format(it.roundToInt()) } ?: "No kcal",
+                    text = entry.energyKcal?.let { unitFormatter.energy(it).text } ?: "No kcal",
                     style = MaterialTheme.typography.labelLarge,
                     color = CaloriesColor,
                 )
@@ -352,13 +376,13 @@ private fun NutritionEntryRow(entry: NutritionEntry, modifier: Modifier = Modifi
     }
 }
 
-private fun macroLine(entry: NutritionEntry): String {
+private fun macroLine(entry: NutritionEntry, unitFormatter: UnitFormatter): String {
     val parts = buildList {
-        entry.proteinGrams?.let { add("P ${it.roundToInt()}g") }
-        entry.carbsGrams?.let { add("C ${it.roundToInt()}g") }
-        entry.fatGrams?.let { add("F ${it.roundToInt()}g") }
-        entry.fiberGrams?.let { add("fiber ${it.roundToInt()}g") }
-        entry.sugarGrams?.let { add("sugar ${it.roundToInt()}g") }
+        entry.proteinGrams?.let { add("P ${unitFormatter.count(it.roundToInt())}g") }
+        entry.carbsGrams?.let { add("C ${unitFormatter.count(it.roundToInt())}g") }
+        entry.fatGrams?.let { add("F ${unitFormatter.count(it.roundToInt())}g") }
+        entry.fiberGrams?.let { add("fiber ${unitFormatter.count(it.roundToInt())}g") }
+        entry.sugarGrams?.let { add("sugar ${unitFormatter.count(it.roundToInt())}g") }
     }
     return parts.ifEmpty { listOf(mealTypeLabel(entry.mealType)) }.joinToString(" · ")
 }

@@ -18,6 +18,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.WeightEntry
@@ -26,13 +28,14 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-private val dateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrowseScreen(viewModel: BrowseViewModel) {
+fun BrowseScreen(
+    viewModel: BrowseViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -76,6 +79,8 @@ fun BrowseScreen(viewModel: BrowseViewModel) {
                         items(state.workouts) { w ->
                             WorkoutBrowseRow(
                                 workout = w,
+                                unitFormatter = unitFormatter,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
@@ -90,6 +95,8 @@ fun BrowseScreen(viewModel: BrowseViewModel) {
                         items(state.sleepSessions) { s ->
                             SleepBrowseRow(
                                 session = s,
+                                unitFormatter = unitFormatter,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
@@ -104,6 +111,8 @@ fun BrowseScreen(viewModel: BrowseViewModel) {
                         items(state.weightEntries.sortedByDescending { it.time }) { w ->
                             WeightBrowseRow(
                                 entry = w,
+                                unitFormatter = unitFormatter,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
@@ -127,6 +136,8 @@ private fun EmptyState(message: String, modifier: Modifier = Modifier) {
 @Composable
 private fun WorkoutBrowseRow(
     workout: ExerciseData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -145,17 +156,14 @@ private fun WorkoutBrowseRow(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = dateTimeFormatter.format(workout.startTime.atZone(zone)),
+                    text = dateTimeFormatterProvider.mediumDateTime().format(workout.startTime.atZone(zone)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 SourceChip(source = workout.source)
             }
             Text(
-                text = "%dh %02dm".format(
-                    workout.durationMinutes / 60,
-                    workout.durationMinutes % 60,
-                ),
+                text = unitFormatter.duration(workout.durationMs),
                 style = MaterialTheme.typography.labelLarge,
             )
         }
@@ -165,6 +173,8 @@ private fun WorkoutBrowseRow(
 @Composable
 private fun SleepBrowseRow(
     session: SleepData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -179,7 +189,7 @@ private fun SleepBrowseRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = dateTimeFormatter.format(session.startTime.atZone(zone)),
+                    text = dateTimeFormatterProvider.mediumDateTime().format(session.startTime.atZone(zone)),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
@@ -190,7 +200,7 @@ private fun SleepBrowseRow(
                 SourceChip(source = session.source)
             }
             Text(
-                text = session.durationFormatted,
+                text = unitFormatter.duration(session.durationMs),
                 style = MaterialTheme.typography.labelLarge,
             )
         }
@@ -200,6 +210,8 @@ private fun SleepBrowseRow(
 @Composable
 private fun WeightBrowseRow(
     entry: WeightEntry,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -214,13 +226,13 @@ private fun WeightBrowseRow(
         ) {
             Column {
                 Text(
-                    text = dateTimeFormatter.format(entry.time.atZone(zone)),
+                    text = dateTimeFormatterProvider.mediumDateTime().format(entry.time.atZone(zone)),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 SourceChip(source = entry.source)
             }
             Text(
-                text = "%.1f kg".format(entry.weightKg),
+                text = unitFormatter.weight(entry.weightKg).text,
                 style = MaterialTheme.typography.titleSmall,
             )
         }

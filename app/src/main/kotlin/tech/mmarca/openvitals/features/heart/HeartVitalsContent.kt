@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
@@ -45,12 +47,8 @@ import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val oxygenColor = Color(0xFF00897B)
 private val respiratoryColor = Color(0xFF5E97F6)
 private val temperatureColor = Color(0xFFFF7043)
@@ -62,7 +60,10 @@ fun LazyListScope.HeartVitalsContent(
     onGrantPermissions: (Set<String>) -> Unit,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     if (state.missingVitalsPermissions.isNotEmpty()) {
         item {
             PermissionCallout(
@@ -93,10 +94,12 @@ fun LazyListScope.HeartVitalsContent(
             item {
                 VitalsSummaryRow(
                     first = state.latestBloodPressure?.let {
-                        SummaryMetric("Blood pressure", "${it.systolicMmHg}/${it.diastolicMmHg}", "mmHg", Icons.Outlined.Favorite, VitalsColor, it.source)
+                        val value = unitFormatter.bloodPressure(it.systolicMmHg, it.diastolicMmHg)
+                        SummaryMetric("Blood pressure", value.value, value.unit, Icons.Outlined.Favorite, VitalsColor, it.source)
                     },
                     second = state.latestSpO2?.let {
-                        SummaryMetric("SpO2", "%.1f".format(it.percent), "%", Icons.Outlined.Favorite, oxygenColor, it.source)
+                        val value = unitFormatter.percent(it.percent)
+                        SummaryMetric("SpO2", value.value, value.unit, Icons.Outlined.Favorite, oxygenColor, it.source)
                     },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -107,6 +110,7 @@ fun LazyListScope.HeartVitalsContent(
                         entries = state.bloodPressure,
                         selectedRange = selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -121,7 +125,7 @@ fun LazyListScope.HeartVitalsContent(
                         values = state.spO2.sortedBy { it.time }.map { it.percent },
                         labels = state.spO2.sortedBy { it.time }.map { dayFormatter.format(it.time.atZone(ZoneId.systemDefault())) },
                         accentColor = oxygenColor,
-                        summary = "${periodTitle(selectedRange, period)} · %.1f%% avg".format(state.spO2.map { it.percent }.average()),
+                        summary = "${periodTitle(selectedRange, period)} · ${unitFormatter.percent(state.spO2.map { it.percent }.average()).text} avg",
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -129,11 +133,12 @@ fun LazyListScope.HeartVitalsContent(
                 }
             }
             state.latestVo2Max?.let { latest ->
+                val vo2Max = unitFormatter.vo2Max(latest.vo2MaxMlPerKgPerMin)
                 item {
                     MetricCard(
                         title = "VO2 max",
-                        value = "%.1f".format(latest.vo2MaxMlPerKgPerMin),
-                        unit = "mL/kg/min",
+                        value = vo2Max.value,
+                        unit = vo2Max.unit,
                         icon = Icons.Outlined.Speed,
                         accentColor = vo2Color,
                         source = latest.source,
@@ -148,10 +153,12 @@ fun LazyListScope.HeartVitalsContent(
             item {
                 VitalsSummaryRow(
                     first = state.latestRespiratoryRate?.let {
-                        SummaryMetric("Respiratory rate", "%.1f".format(it.breathsPerMinute), "br/min", Icons.Outlined.Air, respiratoryColor, it.source)
+                        val value = unitFormatter.respiratoryRate(it.breathsPerMinute)
+                        SummaryMetric("Respiratory rate", value.value, value.unit, Icons.Outlined.Air, respiratoryColor, it.source)
                     },
                     second = state.latestBodyTemperature?.let {
-                        SummaryMetric("Body temp", "%.1f".format(it.temperatureCelsius), "deg C", Icons.Outlined.DeviceThermostat, temperatureColor, it.source)
+                        val value = unitFormatter.temperature(it.temperatureCelsius)
+                        SummaryMetric("Body temp", value.value, value.unit, Icons.Outlined.DeviceThermostat, temperatureColor, it.source)
                     },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -161,9 +168,10 @@ fun LazyListScope.HeartVitalsContent(
                     SimpleVitalsList(
                         title = "Respiratory rate readings",
                         entries = state.respiratoryRate,
-                        value = { "%.1f br/min".format(it.breathsPerMinute) },
+                        value = { unitFormatter.respiratoryRate(it.breathsPerMinute).text },
                         source = { it.source },
                         time = { it.time },
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
@@ -173,9 +181,10 @@ fun LazyListScope.HeartVitalsContent(
                     SimpleVitalsList(
                         title = "Body temperature readings",
                         entries = state.bodyTemperature,
-                        value = { "%.1f deg C".format(it.temperatureCelsius) },
+                        value = { unitFormatter.temperature(it.temperatureCelsius).text },
                         source = { it.source },
                         time = { it.time },
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
@@ -186,9 +195,10 @@ fun LazyListScope.HeartVitalsContent(
             item { SectionHeader("VO2 max history") }
             items(state.vo2Max.sortedByDescending { it.time }) { entry ->
                 VitalsReadingRow(
-                    label = "%.1f mL/kg/min".format(entry.vo2MaxMlPerKgPerMin),
+                    label = unitFormatter.vo2Max(entry.vo2MaxMlPerKgPerMin).text,
                     source = entry.source,
                     time = entry.time.atZone(ZoneId.systemDefault()),
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
@@ -247,6 +257,7 @@ private fun BloodPressureChart(
     entries: List<BloodPressureEntry>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.time }
@@ -285,7 +296,7 @@ private fun BloodPressureChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · ${sorted.size} readings",
+                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(sorted.size)} readings",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -378,6 +389,7 @@ private fun <T> SimpleVitalsList(
     value: (T) -> String,
     source: (T) -> String,
     time: (T) -> java.time.Instant,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -395,6 +407,7 @@ private fun <T> SimpleVitalsList(
                     label = value(entry),
                     source = source(entry),
                     time = time(entry).atZone(ZoneId.systemDefault()),
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 )
             }
@@ -407,6 +420,7 @@ private fun VitalsReadingRow(
     label: String,
     source: String,
     time: java.time.ZonedDateTime,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -416,7 +430,7 @@ private fun VitalsReadingRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleSmall)
             Text(
-                text = "${dateFormatter.format(time)} · ${timeFormatter.format(time)}",
+                text = "${dateTimeFormatterProvider.mediumDate().format(time)} · ${dateTimeFormatterProvider.shortTime().format(time)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

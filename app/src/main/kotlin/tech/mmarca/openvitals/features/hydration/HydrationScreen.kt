@@ -21,6 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.ui.components.DatePeriod
@@ -29,13 +31,14 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.HydrationColor
-import java.time.format.DateTimeFormatter
-
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HydrationScreen(viewModel: HydrationViewModel) {
+fun HydrationScreen(
+    viewModel: HydrationViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -64,6 +67,7 @@ fun HydrationScreen(viewModel: HydrationViewModel) {
                 HydrationSummary(
                     state = state,
                     period = period,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -72,6 +76,8 @@ fun HydrationScreen(viewModel: HydrationViewModel) {
                     data = state.dailyHydration,
                     selectedRange = state.selectedRange,
                     period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -85,14 +91,16 @@ fun HydrationScreen(viewModel: HydrationViewModel) {
 private fun HydrationSummary(
     state: HydrationUiState,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     val title = if (state.selectedRange == TimeRange.DAY) "Hydration" else "Total hydration"
     val subtitle = if (state.selectedRange == TimeRange.DAY) {
         periodTitle(state.selectedRange, period)
     } else {
-        "%.1f L daily average".format(state.averageLiters)
+        "${unitFormatter.hydration(state.averageLiters).text} daily average"
     }
+    val total = unitFormatter.hydration(state.totalLiters)
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -100,8 +108,8 @@ private fun HydrationSummary(
     ) {
         MetricCard(
             title = title,
-            value = "%.1f".format(state.totalLiters),
-            unit = "L",
+            value = total.value,
+            unit = total.unit,
             icon = Icons.Outlined.LocalDrink,
             accentColor = HydrationColor,
             subtitle = subtitle,
@@ -109,11 +117,11 @@ private fun HydrationSummary(
         )
         MetricCard(
             title = "Logged days",
-            value = state.dailyHydration.count { it.liters > 0.0 }.toString(),
+            value = unitFormatter.count(state.dailyHydration.count { it.liters > 0.0 }),
             unit = "days",
             icon = Icons.Outlined.LocalDrink,
             accentColor = HydrationColor,
-            subtitle = "${state.dailyHydration.size} days in range",
+            subtitle = "${unitFormatter.count(state.dailyHydration.size)} days in range",
             modifier = Modifier.weight(1f),
         )
     }
@@ -124,9 +132,12 @@ private fun HydrationBarChart(
     data: List<DailyHydration>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val maxLiters = data.maxOfOrNull { it.liters }?.coerceAtLeast(1.0) ?: 1.0
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val labelStride = when (selectedRange) {
         TimeRange.DAY,
         TimeRange.WEEK -> 1
@@ -183,7 +194,7 @@ private fun HydrationBarChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · %.1f L".format(data.sumOf { it.liters }),
+                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.liters }).text}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

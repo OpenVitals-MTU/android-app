@@ -8,13 +8,15 @@ This folder documents the target architecture for future feature work.
 2. [architecture.md](architecture.md)
 3. [feature-playbook.md](feature-playbook.md)
 4. [metrics-roadmap.md](metrics-roadmap.md)
-5. [../AGENTS.md](../AGENTS.md)
+5. [units-localization-plan.md](units-localization-plan.md)
+6. [../AGENTS.md](../AGENTS.md)
 
 ## What Each Doc Does
 
 - [architecture.md](architecture.md): target architecture, boundaries, and reusable patterns
 - [feature-playbook.md](feature-playbook.md): the checklist for implementing a new metric feature
 - [metrics-roadmap.md](metrics-roadmap.md): current Health Connect coverage gaps and future feature roadmap
+- [units-localization-plan.md](units-localization-plan.md): canonical-unit, display-unit, and localization migration plan
 
 ## Important Context
 

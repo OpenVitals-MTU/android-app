@@ -21,23 +21,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
-import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
-
-private val activityDateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val activityTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivitiesScreen(viewModel: ActivitiesViewModel) {
+fun ActivitiesScreen(
+    viewModel: ActivitiesViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -56,6 +56,8 @@ fun ActivitiesScreen(viewModel: ActivitiesViewModel) {
             items(state.workouts) { workout ->
                 WorkoutListItem(
                     workout = workout,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -75,9 +77,16 @@ fun ActivitiesScreen(viewModel: ActivitiesViewModel) {
 }
 
 @Composable
-private fun WorkoutListItem(workout: ExerciseData, modifier: Modifier = Modifier) {
+private fun WorkoutListItem(
+    workout: ExerciseData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
     val zone = ZoneId.systemDefault()
     val start = workout.startTime.atZone(zone)
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
         modifier = modifier,
@@ -101,13 +110,13 @@ private fun WorkoutListItem(workout: ExerciseData, modifier: Modifier = Modifier
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = "${activityDateFormatter.format(start)}  ·  ${activityTimeFormatter.format(start)}",
+                    text = "${dateFormatter.format(start)}  ·  ${timeFormatter.format(start)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 workout.totalDistanceMeters?.let { d ->
                     Text(
-                        text = if (d >= 1000) "%.2f km".format(d / 1000) else "%d m".format(d.roundToInt()),
+                        text = unitFormatter.distance(d).text,
                         style = MaterialTheme.typography.bodySmall,
                         color = DistanceColor,
                     )
@@ -115,10 +124,7 @@ private fun WorkoutListItem(workout: ExerciseData, modifier: Modifier = Modifier
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "%dh %02dm".format(
-                        workout.durationMinutes / 60,
-                        workout.durationMinutes % 60,
-                    ),
+                    text = unitFormatter.duration(workout.durationMs),
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Spacer(Modifier.height(4.dp))

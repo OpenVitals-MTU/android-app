@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals
 
 import android.app.Application
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
@@ -21,6 +23,14 @@ class OpenVitalsApp : Application() {
 
     val healthConnectManager: HealthConnectManager by lazy {
         HealthConnectManager(this)
+    }
+
+    val unitFormatter: UnitFormatter by lazy {
+        UnitFormatter(preferencesRepository)
+    }
+
+    val dateTimeFormatterProvider: DateTimeFormatterProvider by lazy {
+        DateTimeFormatterProvider()
     }
 
     val healthRepository: HealthRepository by lazy {

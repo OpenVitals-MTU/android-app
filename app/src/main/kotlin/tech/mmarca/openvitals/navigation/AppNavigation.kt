@@ -18,6 +18,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
@@ -66,6 +68,8 @@ fun AppNavigation(
     mindfulnessRepository: MindfulnessRepository,
     vitalsRepository: VitalsRepository,
     preferencesRepository: PreferencesRepository,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     startDestination: String,
     onOnboardingComplete: () -> Unit = {},
 ) {
@@ -144,6 +148,8 @@ fun AppNavigation(
                 val dashboardViewModel = remember(repository) { DashboardViewModel(repository, preferencesRepository) }
                 DashboardScreen(
                     viewModel = dashboardViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                     onOpenSteps = { navController.navigate(Screen.Steps.route) },
                     onOpenActivities = { navController.navigate(Screen.Activity.route) },
@@ -159,57 +165,95 @@ fun AppNavigation(
 
             composable(Screen.Steps.route) {
                 val activityViewModel = remember(activityRepository) { ActivityViewModel(activityRepository) }
-                ActivityScreen(viewModel = activityViewModel)
+                ActivityScreen(
+                    viewModel = activityViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Activity.route) {
                 val activitiesViewModel = remember(activityRepository) { ActivitiesViewModel(activityRepository) }
-                ActivitiesScreen(viewModel = activitiesViewModel)
+                ActivitiesScreen(
+                    viewModel = activitiesViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Sleep.route) {
                 val sleepViewModel = remember(sleepRepository) { SleepViewModel(sleepRepository) }
-                SleepScreen(viewModel = sleepViewModel)
+                SleepScreen(
+                    viewModel = sleepViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Heart.route) {
                 val heartViewModel = remember(heartRepository, vitalsRepository) {
                     HeartViewModel(heartRepository, vitalsRepository)
                 }
-                HeartScreen(viewModel = heartViewModel)
+                HeartScreen(
+                    viewModel = heartViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Body.route) {
                 val bodyViewModel = remember(bodyRepository) { BodyViewModel(bodyRepository) }
-                BodyScreen(viewModel = bodyViewModel)
+                BodyScreen(
+                    viewModel = bodyViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Hydration.route) {
                 val hydrationViewModel = remember(hydrationRepository) { HydrationViewModel(hydrationRepository) }
-                HydrationScreen(viewModel = hydrationViewModel)
+                HydrationScreen(
+                    viewModel = hydrationViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Nutrition.route) {
                 val nutritionViewModel = remember(nutritionRepository) { NutritionViewModel(nutritionRepository) }
-                NutritionScreen(viewModel = nutritionViewModel)
+                NutritionScreen(
+                    viewModel = nutritionViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Mindfulness.route) {
                 val mindfulnessViewModel = remember(mindfulnessRepository) {
                     MindfulnessViewModel(mindfulnessRepository)
                 }
-                MindfulnessScreen(viewModel = mindfulnessViewModel)
+                MindfulnessScreen(
+                    viewModel = mindfulnessViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Browse.route) {
                 val browseViewModel = remember(activityRepository, sleepRepository, bodyRepository) {
                     BrowseViewModel(activityRepository, sleepRepository, bodyRepository)
                 }
-                BrowseScreen(viewModel = browseViewModel)
+                BrowseScreen(
+                    viewModel = browseViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
             }
 
             composable(Screen.Settings.route) {
-                val settingsViewModel = remember(repository) { SettingsViewModel(repository) }
+                val settingsViewModel = remember(repository, preferencesRepository) {
+                    SettingsViewModel(repository, preferencesRepository)
+                }
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     onBack = { navController.popBackStack() },
