@@ -10,6 +10,12 @@ class DateTimeFormatterProvider(
     fun chartDay(): DateTimeFormatter =
         DateTimeFormatter.ofPattern("EEE d", localeProvider())
 
+    fun chartDayOfMonth(): DateTimeFormatter =
+        DateTimeFormatter.ofPattern("d", localeProvider())
+
+    fun chartMonth(): DateTimeFormatter =
+        DateTimeFormatter.ofPattern("LLL", localeProvider())
+
     fun mediumDate(): DateTimeFormatter =
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(localeProvider())
 

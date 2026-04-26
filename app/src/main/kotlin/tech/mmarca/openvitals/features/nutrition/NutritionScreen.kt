@@ -37,6 +37,8 @@ import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PeriodBarChart
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.periodTitle
@@ -254,70 +256,16 @@ private fun EnergyBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val maxEnergy = data.maxOfOrNull { it.energyKcal }?.coerceAtLeast(1.0) ?: 1.0
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
-    val labelStride = when (selectedRange) {
-        TimeRange.DAY,
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-    }
-
-    Card(
+    PeriodBarChart(
+        title = "Calories in",
+        values = data.map { PeriodChartValue(date = it.date, value = it.energyKcal) },
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = NutritionColor.copy(alpha = 0.85f),
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.energyKcal }).text}",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Calories in",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                data.forEachIndexed { index, day ->
-                    val fraction = if (maxEnergy > 0.0) (day.energyKcal / maxEnergy).toFloat() else 0f
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height((100 * fraction + 4).dp),
-                        ) {
-                            drawRoundRect(
-                                color = NutritionColor.copy(alpha = 0.85f),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
-                            )
-                        }
-                        if (index % labelStride == 0 || index == data.lastIndex) {
-                            Text(
-                                text = dayFormatter.format(day.date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        } else {
-                            Spacer(Modifier.height(20.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.energyKcal }).text}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    )
 }
 
 @Composable

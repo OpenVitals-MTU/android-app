@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -35,6 +34,7 @@ import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
@@ -214,16 +214,9 @@ private fun HeartRateChart(
     modifier: Modifier = Modifier,
 ) {
     val sorted = summaries.sortedBy { it.date }
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxBpm = sorted.maxOfOrNull { it.maxBpm } ?: 200L
     val minBpm = sorted.minOfOrNull { it.minBpm } ?: 40L
     val range = (maxBpm - minBpm).coerceAtLeast(1)
-    val labelStride = when (selectedRange) {
-        TimeRange.DAY,
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-    }
 
     Card(
         modifier = modifier,
@@ -277,29 +270,11 @@ private fun HeartRateChart(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                sorted.forEachIndexed { index, summary ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        if (index % labelStride == 0 || index == sorted.lastIndex) {
-                            Text(
-                                text = dayFormatter.format(summary.date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        } else {
-                            Spacer(Modifier.height(16.dp))
-                        }
-                    }
-                }
-            }
+            PeriodChartXAxis(
+                dates = sorted.map { it.date },
+                selectedRange = selectedRange,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
             Spacer(Modifier.height(8.dp))
             if (sorted.isNotEmpty()) {
                 val avgAll = sorted.map { it.avgBpm }.average().roundToInt()
@@ -606,16 +581,9 @@ private fun RestingHRChart(
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.date }
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxBpm = sorted.maxOfOrNull { it.bpm } ?: 80L
     val minBpm = sorted.minOfOrNull { it.bpm } ?: 40L
     val range = (maxBpm - minBpm).coerceAtLeast(1L)
-    val labelStride = when (selectedRange) {
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-        else -> 1
-    }
 
     Card(
         modifier = modifier,
@@ -645,29 +613,11 @@ private fun RestingHRChart(
                 points.forEach { pt -> drawCircle(color = HeartColor, radius = 4.dp.toPx(), center = pt) }
             }
             Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                sorted.forEachIndexed { index, entry ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        if (index % labelStride == 0 || index == sorted.lastIndex) {
-                            Text(
-                                text = dayFormatter.format(entry.date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        } else {
-                            Spacer(Modifier.height(16.dp))
-                        }
-                    }
-                }
-            }
+            PeriodChartXAxis(
+                dates = sorted.map { it.date },
+                selectedRange = selectedRange,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.bpm }.average().roundToInt()
             Text(
@@ -688,16 +638,9 @@ private fun HRVChart(
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.date }
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxMs = sorted.maxOfOrNull { it.rmssdMs } ?: 100.0
     val minMs = sorted.minOfOrNull { it.rmssdMs } ?: 0.0
     val range = (maxMs - minMs).coerceAtLeast(0.5)
-    val labelStride = when (selectedRange) {
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-        else -> 1
-    }
 
     Card(
         modifier = modifier,
@@ -727,29 +670,11 @@ private fun HRVChart(
                 points.forEach { pt -> drawCircle(color = HeartColor.copy(alpha = 0.7f), radius = 4.dp.toPx(), center = pt) }
             }
             Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                sorted.forEachIndexed { index, entry ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        if (index % labelStride == 0 || index == sorted.lastIndex) {
-                            Text(
-                                text = dayFormatter.format(entry.date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        } else {
-                            Spacer(Modifier.height(16.dp))
-                        }
-                    }
-                }
-            }
+            PeriodChartXAxis(
+                dates = sorted.map { it.date },
+                selectedRange = selectedRange,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.rmssdMs }.average()
             Text(

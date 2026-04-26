@@ -28,6 +28,8 @@ import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PeriodBarChart
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
@@ -229,74 +231,16 @@ fun StepsBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val maxSteps = data.maxOfOrNull { it.steps } ?: 1L
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
-    val labelStride = when (selectedRange) {
-        TimeRange.DAY,
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-    }
-
-    Card(
+    PeriodBarChart(
+        title = "Steps",
+        values = data.map { PeriodChartValue(date = it.date, value = it.steps.toDouble()) },
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = StepsColor.copy(alpha = 0.8f),
+        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} steps",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Steps",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                data.forEachIndexed { index, day ->
-                    val fraction = if (maxSteps > 0) day.steps.toFloat() / maxSteps else 0f
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height((100 * fraction + 4).dp),
-                        ) {
-                            drawRoundRect(
-                                color = StepsColor.copy(alpha = 0.8f),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
-                            )
-                        }
-                        if (
-                            selectedRange == TimeRange.DAY ||
-                            index % labelStride == 0 ||
-                            index == data.lastIndex
-                        ) {
-                            Text(
-                                text = dayFormatter.format(day.date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        } else {
-                            Spacer(Modifier.height(20.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} steps",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -308,14 +252,14 @@ private fun DistanceBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Distance",
-        values = data.map { it.distanceMeters },
-        labels = data.map { dayFormatter.format(it.date) },
+        values = data.map { PeriodChartValue(date = it.date, value = it.distanceMeters) },
         selectedRange = selectedRange,
+        period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.distance(data.sumOf { it.distanceMeters }).text}",
         accentColor = DistanceColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
 }
@@ -329,14 +273,14 @@ private fun CaloriesBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Calories burned",
-        values = data.map { it.caloriesBurnedKcal },
-        labels = data.map { dayFormatter.format(it.date) },
+        values = data.map { PeriodChartValue(date = it.date, value = it.caloriesBurnedKcal) },
         selectedRange = selectedRange,
+        period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.caloriesBurnedKcal }).text}",
         accentColor = CaloriesColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
 }
@@ -350,14 +294,14 @@ private fun HydrationBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Hydration",
-        values = data.map { it.hydrationLiters },
-        labels = data.map { dayFormatter.format(it.date) },
+        values = data.map { PeriodChartValue(date = it.date, value = it.hydrationLiters) },
         selectedRange = selectedRange,
+        period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.hydrationLiters }).text}",
         accentColor = HydrationColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
 }
@@ -365,76 +309,24 @@ private fun HydrationBarChart(
 @Composable
 private fun MetricBarChartCard(
     title: String,
-    values: List<Double>,
-    labels: List<String>,
+    values: List<PeriodChartValue>,
     selectedRange: TimeRange,
+    period: DatePeriod,
     summaryText: String,
     accentColor: androidx.compose.ui.graphics.Color,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val maxValue = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
-    val labelStride = when (selectedRange) {
-        TimeRange.DAY,
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-    }
-
-    Card(
+    PeriodBarChart(
+        title = title,
+        values = values,
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = accentColor.copy(alpha = 0.8f),
+        summaryText = summaryText,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                values.forEachIndexed { index, value ->
-                    val fraction = if (maxValue > 0) (value / maxValue).toFloat() else 0f
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height((100 * fraction + 4).dp),
-                        ) {
-                            drawRoundRect(
-                                color = accentColor.copy(alpha = 0.8f),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
-                            )
-                        }
-                        if (index % labelStride == 0 || index == values.lastIndex) {
-                            Text(
-                                text = labels[index],
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        } else {
-                            Spacer(Modifier.height(20.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = summaryText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -446,14 +338,14 @@ private fun FloorsBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Floors climbed",
-        values = data.map { it.floorsClimbed?.toDouble() ?: 0.0 },
-        labels = data.map { dayFormatter.format(it.date) },
+        values = data.map { PeriodChartValue(date = it.date, value = it.floorsClimbed?.toDouble() ?: 0.0) },
         selectedRange = selectedRange,
+        period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.floorsClimbed ?: 0 })} floors",
         accentColor = FloorsColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
 }
@@ -467,14 +359,14 @@ private fun ActiveCaloriesBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Active calories",
-        values = data.map { it.activeCaloriesKcal ?: 0.0 },
-        labels = data.map { dayFormatter.format(it.date) },
+        values = data.map { PeriodChartValue(date = it.date, value = it.activeCaloriesKcal ?: 0.0) },
         selectedRange = selectedRange,
+        period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.activeCaloriesKcal ?: 0.0 }).text}",
         accentColor = ActiveCaloriesColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
 }
@@ -489,14 +381,14 @@ private fun ElevationBarChart(
     modifier: Modifier = Modifier,
 ) {
     val totalMeters = data.sumOf { it.elevationGainedMeters ?: 0.0 }
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     MetricBarChartCard(
         title = "Elevation gained",
-        values = data.map { it.elevationGainedMeters ?: 0.0 },
-        labels = data.map { dayFormatter.format(it.date) },
+        values = data.map { PeriodChartValue(date = it.date, value = it.elevationGainedMeters ?: 0.0) },
         selectedRange = selectedRange,
+        period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.elevation(totalMeters).text}",
         accentColor = ElevationColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
 }
