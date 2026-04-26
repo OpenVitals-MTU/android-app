@@ -458,12 +458,15 @@ class HealthConnectManager(private val context: Context) {
         val start = date.atStartOfDay(zone).toInstant()
         val end = date.plusDays(1).atStartOfDay(zone).toInstant()
         return withNullableLogging("readHydrationLiters[$date][$start..$end]") {
-            client().aggregate(
+            val aggregateLiters = client().aggregate(
                 AggregateRequest(
                     metrics = setOf(HydrationRecord.VOLUME_TOTAL),
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                 )
             )[HydrationRecord.VOLUME_TOTAL]?.inLiters
+            aggregateLiters?.takeIf { it > 0.0 }
+                ?: readHydrationRecordsByDate(start, end, zone).values.sum().takeIf { it > 0.0 }
+                ?: aggregateLiters
         }
     }
 
@@ -474,7 +477,7 @@ class HealthConnectManager(private val context: Context) {
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return withLogging("readDailyHydration[$start..$end]", emptyList()) {
-            client().aggregateGroupByDuration(
+            val aggregateBuckets = client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
                     metrics = setOf(HydrationRecord.VOLUME_TOTAL),
                     timeRangeFilter = TimeRangeFilter.between(start, end),
@@ -486,6 +489,12 @@ class HealthConnectManager(private val context: Context) {
                     liters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
                 )
             }
+            val hydrationByDate = if (aggregateBuckets.any { it.liters > 0.0 }) {
+                aggregateBuckets.associate { it.date to it.liters }
+            } else {
+                readHydrationRecordsByDate(start, end, zone)
+            }
+            dailyHydrationSeries(startDate, endDate, hydrationByDate)
         }
     }
 
@@ -858,7 +867,7 @@ class HealthConnectManager(private val context: Context) {
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return withLogging("readDailyNutrition[$start..$end]", emptyList()) {
-            client().aggregateGroupByDuration(
+            val aggregateRows = client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
                     metrics = setOf(
                         HydrationRecord.VOLUME_TOTAL,
@@ -873,6 +882,18 @@ class HealthConnectManager(private val context: Context) {
                     hydrationLiters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
                     caloriesBurnedKcal = bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
                 )
+            }
+            if (aggregateRows.any { it.hydrationLiters > 0.0 }) {
+                aggregateRows
+            } else {
+                val hydrationByDate = readHydrationRecordsByDate(start, end, zone)
+                if (aggregateRows.isEmpty() && hydrationByDate.isNotEmpty()) {
+                    dailyNutritionSeries(startDate, endDate, hydrationByDate)
+                } else {
+                    aggregateRows.map { row ->
+                        row.copy(hydrationLiters = hydrationByDate[row.date] ?: row.hydrationLiters)
+                    }
+                }
             }
         }
     }
@@ -1163,6 +1184,51 @@ class HealthConnectManager(private val context: Context) {
         }
         return start to end
     }
+
+    private suspend fun readHydrationRecordsByDate(
+        start: Instant,
+        end: Instant,
+        zone: ZoneId,
+    ): Map<LocalDate, Double> =
+        client().readRecords(
+            ReadRecordsRequest(
+                recordType = HydrationRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+                pageSize = 1000,
+            )
+        ).records
+            .groupBy { record -> record.startTime.atZone(zone).toLocalDate() }
+            .mapValues { (_, records) -> records.sumOf { it.volume.inLiters } }
+
+    private fun dailyHydrationSeries(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        hydrationByDate: Map<LocalDate, Double>,
+    ): List<DailyHydration> =
+        generateSequence(startDate) { date ->
+            date.plusDays(1).takeUnless { it.isAfter(endDate) }
+        }.map { date ->
+            DailyHydration(
+                date = date,
+                liters = hydrationByDate[date] ?: 0.0,
+            )
+        }.toList()
+
+    private fun dailyNutritionSeries(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        hydrationByDate: Map<LocalDate, Double>,
+    ): List<DailyNutrition> =
+        generateSequence(startDate) { date ->
+            date.plusDays(1).takeUnless { it.isAfter(endDate) }
+        }.map { date ->
+            DailyNutrition(
+                date = date,
+                hydrationLiters = hydrationByDate[date] ?: 0.0,
+                caloriesBurnedKcal = 0.0,
+            )
+        }.toList()
 
     private fun ExerciseSessionRecord.toExerciseData() = ExerciseData(
         id = metadata.id,

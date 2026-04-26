@@ -23,6 +23,9 @@ data class SettingsUiState(
 ) {
     val visiblePermissions: Set<String>
         get() = allPermissions + if (trackCycle) cyclePermissions else emptySet()
+
+    val missingVisiblePermissions: Set<String>
+        get() = visiblePermissions - grantedPermissions
 }
 
 class SettingsViewModel(

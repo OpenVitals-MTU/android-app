@@ -33,6 +33,9 @@ import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
+import tech.mmarca.openvitals.ui.components.PeriodBarChart
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.periodTitle
@@ -133,72 +136,20 @@ private fun SleepDurationChart(
     modifier: Modifier = Modifier,
 ) {
     val points = sleepDurationPoints(sessions, period)
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
-    val maxHours = points.maxOfOrNull { it.hours }?.coerceAtLeast(1.0) ?: 1.0
-    val labelStride = when (selectedRange) {
-        TimeRange.DAY,
-        TimeRange.WEEK -> 1
-        TimeRange.MONTH -> 5
-        TimeRange.YEAR -> 30
-    }
     val nightsWithSleep = points.filter { it.hours > 0.0 }
     val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
 
-    Card(
+    PeriodBarChart(
+        title = "Sleep duration",
+        values = points.map { PeriodChartValue(date = it.date, value = it.hours) },
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = SleepColor.copy(alpha = 0.75f),
+        summaryText = "${periodTitle(selectedRange, period)} · Avg ${unitFormatter.decimal(averageHours, 1)}h · ${unitFormatter.count(nightsWithSleep.size)} nights",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Sleep duration",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                points.forEachIndexed { index, point ->
-                    val fraction = if (maxHours > 0) (point.hours / maxHours).toFloat() else 0f
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height((100 * fraction + 4).dp),
-                        ) {
-                            drawRoundRect(
-                                color = SleepColor.copy(alpha = 0.75f),
-                                cornerRadius = CornerRadius(4.dp.toPx()),
-                            )
-                        }
-                        if (index % labelStride == 0 || index == points.lastIndex) {
-                            Text(
-                                text = dayFormatter.format(point.date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        } else {
-                            Spacer(Modifier.height(20.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${periodTitle(selectedRange, period)} · Avg ${unitFormatter.decimal(averageHours, 1)}h · ${unitFormatter.count(nightsWithSleep.size)} nights",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
+    )
 }
 
 @Composable

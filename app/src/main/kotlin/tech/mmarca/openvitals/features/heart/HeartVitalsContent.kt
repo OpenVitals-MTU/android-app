@@ -40,12 +40,14 @@ import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
@@ -63,7 +65,6 @@ fun LazyListScope.HeartVitalsContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    val dayFormatter = dateTimeFormatterProvider.chartDay()
     if (state.missingVitalsPermissions.isNotEmpty()) {
         item {
             PermissionCallout(
@@ -121,9 +122,10 @@ fun LazyListScope.HeartVitalsContent(
                 item {
                     VitalsLineChart(
                         title = "Oxygen saturation",
-                        entries = state.spO2.sortedBy { it.time },
                         values = state.spO2.sortedBy { it.time }.map { it.percent },
-                        labels = state.spO2.sortedBy { it.time }.map { dayFormatter.format(it.time.atZone(ZoneId.systemDefault())) },
+                        dates = state.spO2.sortedBy { it.time }.map { it.time.atZone(ZoneId.systemDefault()).toLocalDate() },
+                        selectedRange = selectedRange,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         accentColor = oxygenColor,
                         summary = "${periodTitle(selectedRange, period)} · ${unitFormatter.percent(state.spO2.map { it.percent }.average()).text} avg",
                         modifier = Modifier
@@ -305,11 +307,12 @@ private fun BloodPressureChart(
 }
 
 @Composable
-private fun <T> VitalsLineChart(
+private fun VitalsLineChart(
     title: String,
-    entries: List<T>,
     values: List<Double>,
-    labels: List<String>,
+    dates: List<LocalDate>,
+    selectedRange: TimeRange,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     accentColor: Color,
     summary: String,
     modifier: Modifier = Modifier,
@@ -317,7 +320,6 @@ private fun <T> VitalsLineChart(
     val max = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
     val min = values.minOrNull()?.coerceAtMost(max - 1.0) ?: 0.0
     val range = (max - min).coerceAtLeast(1.0)
-    val stride = if (entries.size > 14) 5 else 1
 
     Card(
         modifier = modifier,
@@ -350,28 +352,11 @@ private fun <T> VitalsLineChart(
                 points.forEach { point -> drawCircle(color = accentColor, radius = 4.dp.toPx(), center = point) }
             }
             Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                labels.forEachIndexed { index, label ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        if (index % stride == 0 || index == labels.lastIndex) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            Spacer(Modifier.height(16.dp))
-                        }
-                    }
-                }
-            }
+            PeriodChartXAxis(
+                dates = dates,
+                selectedRange = selectedRange,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = summary,

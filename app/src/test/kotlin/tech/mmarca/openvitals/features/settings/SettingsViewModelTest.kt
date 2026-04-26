@@ -60,6 +60,24 @@ class SettingsViewModelTest {
         assertTrue(vm.uiState.value.trackCycle)
     }
 
+    @Test fun `missingVisiblePermissions excludes already granted visible permissions`() = runTest {
+        val vm = SettingsViewModel(
+            repository = repo(grantedPermissions = setOf("steps")),
+            preferencesRepository = prefs(trackCycle = true),
+        )
+
+        assertEquals(setOf("cycle"), vm.uiState.value.missingVisiblePermissions)
+    }
+
+    @Test fun `missingVisiblePermissions is empty when all visible permissions are granted`() = runTest {
+        val vm = SettingsViewModel(
+            repository = repo(grantedPermissions = setOf("steps", "cycle")),
+            preferencesRepository = prefs(trackCycle = true),
+        )
+
+        assertTrue(vm.uiState.value.missingVisiblePermissions.isEmpty())
+    }
+
     @Test fun `setTrackCycle persists preference and updates visible permissions`() = runTest {
         val prefs = prefs(trackCycle = false)
         val vm = SettingsViewModel(

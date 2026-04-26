@@ -45,6 +45,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val missingVisiblePermissions = state.missingVisiblePermissions
 
     val requestAllPermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
@@ -141,14 +142,20 @@ fun SettingsScreen(
         item {
             Spacer(Modifier.height(12.dp))
             FilledTonalButton(
-                onClick = { requestAllPermissions.launch(state.visiblePermissions) },
+                onClick = { requestAllPermissions.launch(missingVisiblePermissions) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 enabled = state.availability == HealthConnectAvailability.AVAILABLE &&
-                    state.visiblePermissions.isNotEmpty(),
+                    missingVisiblePermissions.isNotEmpty(),
             ) {
-                Text("Request not granted permissions")
+                Text(
+                    if (missingVisiblePermissions.isEmpty()) {
+                        "All visible permissions granted"
+                    } else {
+                        "Request not granted permissions"
+                    }
+                )
             }
         }
 
