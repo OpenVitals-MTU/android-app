@@ -1,0 +1,4 @@
+Added opt-in cycle tracking with a dedicated Cycle screen, calendar, flow markers, ovulation results, cervical mucus observations, and basal body temperature trend.
+Cycle permissions are requested only through an explicit onboarding or Settings opt-in.
+Added a separate dashboard Cycle section when enabled.
+Expanded tests and documentation for onboarding, cycle permissions, and cycle data loading.
