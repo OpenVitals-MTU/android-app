@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +52,7 @@ fun SleepScreen(
     viewModel: SleepViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenSleepSession: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     val primarySession = remember(state.sessions) {
@@ -74,6 +78,7 @@ fun SleepScreen(
                         selectedDate = state.selectedDate,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onClick = { onOpenSleepSession(primarySession.id) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -101,6 +106,7 @@ fun SleepScreen(
                         session = session,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onClick = { onOpenSleepSession(session.id) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -152,12 +158,14 @@ private fun SleepDurationChart(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SleepSessionTimelineCard(
     session: SleepData,
     selectedDate: LocalDate,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -167,6 +175,7 @@ private fun SleepSessionTimelineCard(
     val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
+        onClick = onClick,
         modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -232,15 +241,35 @@ private fun SleepSessionTimelineCard(
                 Spacer(Modifier.height(12.dp))
                 SleepStageLegend(stages = session.stages, unitFormatter = unitFormatter)
             }
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Details",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SleepSessionItem(
     session: SleepData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -250,6 +279,7 @@ private fun SleepSessionItem(
     val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
+        onClick = onClick,
         modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -261,7 +291,7 @@ private fun SleepSessionItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = dateFormatter.format(end),
                         style = MaterialTheme.typography.titleSmall,
@@ -280,6 +310,12 @@ private fun SleepSessionItem(
                     )
                     SourceChip(source = session.source)
                 }
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
 
             if (session.stages.isNotEmpty()) {
@@ -296,7 +332,7 @@ private fun SleepSessionItem(
 }
 
 @Composable
-private fun SleepStagesBar(
+internal fun SleepStagesBar(
     stages: List<SleepStage>,
     totalMs: Long,
     modifier: Modifier = Modifier,
@@ -319,7 +355,7 @@ private fun SleepStagesBar(
 }
 
 @Composable
-private fun SleepStageLegend(stages: List<SleepStage>, unitFormatter: UnitFormatter) {
+internal fun SleepStageLegend(stages: List<SleepStage>, unitFormatter: UnitFormatter) {
     val stageTotals = stages
         .groupBy { it.stageType }
         .mapValues { (_, list) -> list.sumOf { it.durationMs } }
@@ -373,11 +409,12 @@ private data class SleepDurationPoint(
     val hours: Double,
 )
 
-private fun stageColor(stageType: Int): Color = when (stageType) {
+internal fun stageColor(stageType: Int): Color = when (stageType) {
     SleepStage.STAGE_AWAKE -> Color(0xFFFFB74D)
     SleepStage.STAGE_LIGHT -> Color(0xFF90CAF9)
     SleepStage.STAGE_DEEP -> Color(0xFF3949AB)
     SleepStage.STAGE_REM -> Color(0xFF7E57C2)
+    SleepStage.STAGE_AWAKE_IN_BED -> Color(0xFFFFCC80)
     SleepStage.STAGE_SLEEPING -> Color(0xFF5C6BC0)
     SleepStage.STAGE_OUT_OF_BED -> Color(0xFFEF9A9A)
     else -> Color(0xFF90A4AE)

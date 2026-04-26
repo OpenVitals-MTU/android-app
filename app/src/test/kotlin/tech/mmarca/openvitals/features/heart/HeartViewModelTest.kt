@@ -5,6 +5,7 @@ import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.data.repository.HeartRepository
@@ -224,15 +225,21 @@ class HeartViewModelTest {
             BloodPressureEntry(Instant.ofEpochSecond(2_000), 122, 78, "test"),
         )
         val spO2 = listOf(SpO2Entry(Instant.ofEpochSecond(1_500), 97.5, "test"))
+        val respiratoryRate = listOf(
+            RespiratoryRateEntry(Instant.ofEpochSecond(1_200), 13.0, "test"),
+            RespiratoryRateEntry(Instant.ofEpochSecond(2_200), 15.0, "test"),
+        )
         val vitalsRepo = emptyVitalsRepo()
         coEvery { vitalsRepo.loadBloodPressure(any(), any()) } returns bloodPressure
         coEvery { vitalsRepo.loadSpO2(any(), any()) } returns spO2
+        coEvery { vitalsRepo.loadRespiratoryRate(any(), any()) } returns respiratoryRate
 
         val vm = HeartViewModel(emptyRepo(), vitalsRepo)
 
         assertTrue(vm.uiState.value.hasVitalsData)
         assertEquals(122, vm.uiState.value.latestBloodPressure?.systolicMmHg)
         assertEquals(97.5, vm.uiState.value.latestSpO2?.percent!!, 0.01)
+        assertEquals(15.0, vm.uiState.value.latestRespiratoryRate?.breathsPerMinute!!, 0.01)
     }
 
     // ─── Load failure ─────────────────────────────────────────────────────────

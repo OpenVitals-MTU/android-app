@@ -70,6 +70,7 @@ class HealthDataTest {
         assertEquals("Light", SleepStage.stageLabel(SleepStage.STAGE_LIGHT))
         assertEquals("Deep", SleepStage.stageLabel(SleepStage.STAGE_DEEP))
         assertEquals("REM", SleepStage.stageLabel(SleepStage.STAGE_REM))
+        assertEquals("Awake in bed", SleepStage.stageLabel(SleepStage.STAGE_AWAKE_IN_BED))
         assertEquals("Unknown", SleepStage.stageLabel(SleepStage.STAGE_UNKNOWN))
     }
 
@@ -120,6 +121,37 @@ class HealthDataTest {
         assertEquals(15, day.floorsClimbed)
         assertEquals(420.5, day.activeCaloriesKcal!!, 0.01)
         assertEquals(65.0, day.elevationGainedMeters!!, 0.01)
+    }
+
+    // ─── ActivityProgressPoint optional fields ───────────────────────────────
+
+    @Test fun `ActivityProgressPoint defaults detailed optional fields to null`() {
+        val point = ActivityProgressPoint(
+            time = Instant.EPOCH,
+            totalSteps = 1_000L,
+            totalDistanceMeters = null,
+            totalCaloriesBurnedKcal = null,
+        )
+
+        assertNull(point.totalActiveCaloriesKcal)
+        assertNull(point.totalFloorsClimbed)
+        assertNull(point.totalElevationGainedMeters)
+    }
+
+    @Test fun `ActivityProgressPoint stores detailed optional fields`() {
+        val point = ActivityProgressPoint(
+            time = Instant.EPOCH,
+            totalSteps = 1_000L,
+            totalDistanceMeters = 800.0,
+            totalCaloriesBurnedKcal = 120.0,
+            totalActiveCaloriesKcal = 80.0,
+            totalFloorsClimbed = 4,
+            totalElevationGainedMeters = 20.0,
+        )
+
+        assertEquals(80.0, point.totalActiveCaloriesKcal!!, 0.01)
+        assertEquals(4, point.totalFloorsClimbed)
+        assertEquals(20.0, point.totalElevationGainedMeters!!, 0.01)
     }
 
     // ─── DashboardData floorsClimbed + elevationGainedMeters ────────────────────

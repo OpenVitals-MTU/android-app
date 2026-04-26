@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -180,6 +181,7 @@ class OnboardingViewModelTest {
         assertEquals(
             listOf(
                 "Activity & sleep",
+                "Workout routes",
                 "Heart & recovery",
                 "Body",
                 "Activity extras",
@@ -193,6 +195,8 @@ class OnboardingViewModelTest {
         assertTrue(categories.first().required)
         assertEquals("activity_sleep", categories.first().id)
         assertEquals(setOf("steps"), categories.first().permissions)
+        assertEquals(PermissionGrantMode.MANUAL, categories.single { it.id == "workout_routes" }.grantMode)
+        assertEquals(setOf("route"), categories.single { it.id == "workout_routes" }.permissions)
         assertFalse(categories.drop(1).any { it.required })
         assertTrue(categories.last().optIn)
         assertEquals("cycle_tracking", categories.last().id)
@@ -213,6 +217,7 @@ class OnboardingViewModelTest {
         assertEquals(
             listOf(
                 "activity_sleep",
+                "workout_routes",
                 "heart_recovery",
                 "activity_extras",
                 "nutrition_hydration",
@@ -265,6 +270,19 @@ class OnboardingViewModelTest {
         assertTrue(cycle.optIn)
         assertEquals(setOf("cycle"), cycle.permissions)
         assertFalse("cycle" in vm.onboardingPermissions)
+    }
+
+    @Test fun `route category is manual-only and excluded from grant all request set`() = runTest {
+        val vm = OnboardingViewModel(
+            repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        val route = vm.permissionCategories.single { it.id == "workout_routes" }
+        assertEquals(PermissionGrantMode.MANUAL, route.grantMode)
+        assertEquals(setOf("route"), route.permissions)
+        assertFalse("route" in vm.onboardingPermissions)
     }
 
     @Test fun `cycle category is hidden when no cycle permissions are available`() = runTest {
@@ -331,6 +349,8 @@ class OnboardingViewModelTest {
         mindfulnessAvailable: Boolean = true,
         phase2Permissions: Set<String> = setOf("heart", "body", "activity", "nutrition", "mindfulness"),
         bodyPermissions: Set<String> = setOf("body"),
+        routePermissions: Set<String> = setOf("route"),
+        manualOnlyPermissions: Set<String> = routePermissions,
         mindfulnessPermissions: Set<String> = setOf("mindfulness"),
         cyclePermissions: Set<String> = setOf("cycle"),
         onboardingPermissions: Set<String> = standardPermissions,
@@ -342,6 +362,15 @@ class OnboardingViewModelTest {
             every { repo.phase3Permissions } returns setOf("vitals")
             every { repo.phase4Permissions } returns cyclePermissions
             every { repo.corePermissions } returns setOf("steps")
+            every { repo.routePermissions } returns routePermissions
+            every { repo.manualOnlyPermissions } returns manualOnlyPermissions
+            every { repo.grantModeFor(any()) } answers {
+                if (firstArg<String>() in manualOnlyPermissions) {
+                    PermissionGrantMode.MANUAL
+                } else {
+                    PermissionGrantMode.REQUESTABLE
+                }
+            }
             every { repo.heartPermissions } returns setOf("heart")
             every { repo.bodyPermissions } returns bodyPermissions
             every { repo.activityExtrasPermissions } returns setOf("activity")

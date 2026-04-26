@@ -44,6 +44,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
@@ -596,66 +597,4 @@ private fun SleepCard(
         modifier = modifier,
         onClick = onClick,
     )
-}
-
-private fun exerciseTypeLabel(type: Int): String = when (type) {
-    2 -> "Badminton"
-    4 -> "Baseball"
-    5 -> "Basketball"
-    8 -> "Biking"
-    9 -> "Biking (stationary)"
-    10 -> "Boot camp"
-    11 -> "Boxing"
-    13 -> "Cricket"
-    14 -> "Dancing"
-    16 -> "Elliptical"
-    17 -> "Exercise class"
-    18 -> "Fencing"
-    19 -> "Football (American)"
-    20 -> "Football (Australian)"
-    21 -> "Football (Soccer)"
-    22 -> "Frisbee disc"
-    23 -> "Golf"
-    24 -> "Gymnastics"
-    25 -> "Handball"
-    26 -> "High intensity interval training"
-    27 -> "Hiking"
-    28 -> "Ice hockey"
-    29 -> "Ice skating"
-    31 -> "Martial arts"
-    32 -> "Paddling"
-    33 -> "Paragliding"
-    34 -> "Pilates"
-    35 -> "Racquetball"
-    36 -> "Rock climbing"
-    37 -> "Roller hockey"
-    38 -> "Rowing"
-    39 -> "Rowing (machine)"
-    40 -> "Rugby"
-    41 -> "Running"
-    42 -> "Running (treadmill)"
-    44 -> "Sailing"
-    45 -> "Scuba diving"
-    46 -> "Skating"
-    47 -> "Skiing"
-    48 -> "Snowboarding"
-    49 -> "Snowshoeing"
-    50 -> "Softball"
-    51 -> "Squash"
-    52 -> "Stair climbing"
-    53 -> "Stair climbing (machine)"
-    54 -> "Strength training"
-    55 -> "Stretching"
-    56 -> "Surfing"
-    57 -> "Swimming (open water)"
-    58 -> "Swimming (pool)"
-    59 -> "Table tennis"
-    60 -> "Tennis"
-    61 -> "Volleyball"
-    62 -> "Walking"
-    63 -> "Water polo"
-    64 -> "Weightlifting"
-    65 -> "Wheelchair"
-    66 -> "Yoga"
-    else -> "Exercise"
 }

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +31,7 @@ data class OnboardingPermissionCategory(
     val permissions: Set<String>,
     val required: Boolean = false,
     val optIn: Boolean = false,
+    val grantMode: PermissionGrantMode = PermissionGrantMode.REQUESTABLE,
     val available: Boolean = true,
     val unavailableReason: String? = null,
 )
@@ -58,6 +60,13 @@ class OnboardingViewModel(
                 description = "Steps, distance, workouts, and sleep sessions for the dashboard.",
                 permissions = repository.corePermissions,
                 required = true,
+            ),
+            OnboardingPermissionCategory(
+                id = "workout_routes",
+                title = "Workout routes",
+                description = "Route previews require manual approval in Health Connect settings.",
+                permissions = repository.routePermissions,
+                grantMode = grantModeFor(repository.routePermissions),
             ),
             OnboardingPermissionCategory(
                 id = "heart_recovery",
@@ -105,6 +114,13 @@ class OnboardingViewModel(
                 optIn = true,
             ),
         ).filter { it.permissions.isNotEmpty() }
+
+    private fun grantModeFor(permissions: Set<String>): PermissionGrantMode =
+        if (permissions.isNotEmpty() && permissions.all { repository.grantModeFor(it) == PermissionGrantMode.MANUAL }) {
+            PermissionGrantMode.MANUAL
+        } else {
+            PermissionGrantMode.REQUESTABLE
+        }
 
     init {
         checkState()

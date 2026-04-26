@@ -22,6 +22,7 @@ import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -58,7 +59,13 @@ import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DataSource
+import tech.mmarca.openvitals.data.model.ExerciseDeviceData
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.data.model.ExerciseLapData
+import tech.mmarca.openvitals.data.model.ExerciseRouteData
+import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.data.model.ExerciseRouteStatus
+import tech.mmarca.openvitals.data.model.ExerciseSegmentData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
@@ -67,8 +74,10 @@ import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.OvulationTestEntry
+import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.model.SleepDeviceData
 import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
@@ -91,6 +100,7 @@ import java.time.ZoneId
 class HealthConnectManager(private val context: Context) {
     companion object {
         private const val TAG = "HealthConnectManager"
+        private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"
     }
 
     // ─── Permissions ─────────────────────────────────────────────────────────
@@ -100,6 +110,10 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
+    )
+
+    val routePermissions: Set<String> = setOf(
+        READ_EXERCISE_ROUTES_PERMISSION,
     )
 
     val heartPermissions: Set<String> = setOf(
@@ -166,9 +180,22 @@ class HealthConnectManager(private val context: Context) {
     /** Phase 4 – sensitive cycle tracking, requested only after explicit opt-in from Settings */
     val phase4Permissions: Set<String> = cyclePermissions
 
-    val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
+    val manualOnlyPermissions: Set<String> get() = routePermissions
 
-    val managedPermissions: Set<String> get() = allPermissions + phase4Permissions
+    val requestableAllPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
+
+    val requestableManagedPermissions: Set<String> get() = requestableAllPermissions + phase4Permissions
+
+    val allPermissions: Set<String> get() = requestableAllPermissions + manualOnlyPermissions
+
+    val managedPermissions: Set<String> get() = requestableManagedPermissions + manualOnlyPermissions
+
+    fun grantModeFor(permission: String): PermissionGrantMode =
+        if (permission in manualOnlyPermissions) {
+            PermissionGrantMode.MANUAL
+        } else {
+            PermissionGrantMode.REQUESTABLE
+        }
 
     // ─── Availability ─────────────────────────────────────────────────────────
 
@@ -365,6 +392,9 @@ class HealthConnectManager(private val context: Context) {
         date: LocalDate,
         includeDistance: Boolean,
         includeCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
     ): List<ActivityProgressPoint> {
         val zone = ZoneId.systemDefault()
         val start = date.atStartOfDay(zone).toInstant()
@@ -373,11 +403,17 @@ class HealthConnectManager(private val context: Context) {
             add(StepsRecord.COUNT_TOTAL)
             if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
             if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+            if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
         }
         return withLogging("readActivityProgress[$date][$start..$end]", emptyList()) {
             var cumulativeSteps = 0L
             var cumulativeDistance = 0.0
             var cumulativeCalories = 0.0
+            var cumulativeActiveCalories = 0.0
+            var cumulativeFloors = 0
+            var cumulativeElevation = 0.0
 
             client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
@@ -393,11 +429,23 @@ class HealthConnectManager(private val context: Context) {
                 if (includeCalories) {
                     cumulativeCalories += bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
                 }
+                if (includeActiveCalories) {
+                    cumulativeActiveCalories += bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                }
+                if (includeFloors) {
+                    cumulativeFloors += bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                }
+                if (includeElevation) {
+                    cumulativeElevation += bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                }
                 ActivityProgressPoint(
-                    time = bucket.startTime.plus(Duration.ofHours(1)),
+                    time = bucket.endTime,
                     totalSteps = cumulativeSteps,
                     totalDistanceMeters = if (includeDistance) cumulativeDistance else null,
                     totalCaloriesBurnedKcal = if (includeCalories) cumulativeCalories else null,
+                    totalActiveCaloriesKcal = if (includeActiveCalories) cumulativeActiveCalories else null,
+                    totalFloorsClimbed = if (includeFloors) cumulativeFloors else null,
+                    totalElevationGainedMeters = if (includeElevation) cumulativeElevation else null,
                 )
             }
         }
@@ -538,6 +586,70 @@ class HealthConnectManager(private val context: Context) {
             ).records.map { it.toExerciseData() }
         }
 
+    suspend fun readExerciseSession(
+        id: String,
+        includeSteps: Boolean,
+        includeDistance: Boolean,
+        includeTotalCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
+    ): ExerciseData? =
+        withNullableLogging("readExerciseSession[$id]") {
+            val record = client().readRecord(ExerciseSessionRecord::class, id).record
+            val metrics = buildSet {
+                if (includeSteps) add(StepsRecord.COUNT_TOTAL)
+                if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeTotalCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+                if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+            }
+            val aggregate = if (metrics.isEmpty()) {
+                null
+            } else {
+                runCatching {
+                    client().aggregate(
+                        AggregateRequest(
+                            metrics = metrics,
+                            timeRangeFilter = TimeRangeFilter.between(record.startTime, record.endTime),
+                        )
+                    )
+                }.onFailure {
+                    Log.e(TAG, "Failed readExerciseSession aggregate id=$id ${diagnosticsSummary()}", it)
+                }.getOrNull()
+            }
+
+            record.toExerciseData(
+                steps = if (includeSteps && aggregate != null) aggregate[StepsRecord.COUNT_TOTAL] ?: 0L else null,
+                totalDistanceMeters = if (includeDistance && aggregate != null) {
+                    aggregate[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+                } else {
+                    null
+                },
+                totalCaloriesKcal = if (includeTotalCalories && aggregate != null) {
+                    aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                },
+                activeCaloriesKcal = if (includeActiveCalories && aggregate != null) {
+                    aggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                },
+                floorsClimbed = if (includeFloors && aggregate != null) {
+                    aggregate[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                } else {
+                    null
+                },
+                elevationGainedMeters = if (includeElevation && aggregate != null) {
+                    aggregate[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                } else {
+                    null
+                },
+            )
+        }
+
     // ─── Sleep sessions ──────────────────────────────────────────────────────
 
     suspend fun readSleepSession(date: LocalDate): SleepData? {
@@ -579,6 +691,11 @@ class HealthConnectManager(private val context: Context) {
                     pageSize = 50,
                 )
             ).records.map { it.toSleepData() }
+        }
+
+    suspend fun readSleepSession(id: String): SleepData? =
+        withNullableLogging("readSleepSession[$id]") {
+            client().readRecord(SleepSessionRecord::class, id).record.toSleepData()
         }
 
     // ─── Heart rate ──────────────────────────────────────────────────────────
@@ -862,28 +979,34 @@ class HealthConnectManager(private val context: Context) {
 
     // ─── Nutrition helpers ────────────────────────────────────────────────────
 
-    suspend fun readDailyNutrition(startDate: LocalDate, endDate: LocalDate): List<DailyNutrition> {
+    suspend fun readDailyNutrition(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        includeHydration: Boolean = true,
+        includeCalories: Boolean = true,
+    ): List<DailyNutrition> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return withLogging("readDailyNutrition[$start..$end]", emptyList()) {
+            val metrics = buildSet {
+                if (includeHydration) add(HydrationRecord.VOLUME_TOTAL)
+                if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            }
             val aggregateRows = client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
-                    metrics = setOf(
-                        HydrationRecord.VOLUME_TOTAL,
-                        TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                    ),
+                    metrics = metrics,
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                     timeRangeSlicer = Duration.ofDays(1),
                 )
             ).map { bucket ->
                 DailyNutrition(
                     date = bucket.startTime.atZone(zone).toLocalDate(),
-                    hydrationLiters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
-                    caloriesBurnedKcal = bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
+                    hydrationLiters = if (includeHydration) bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0 else 0.0,
+                    caloriesBurnedKcal = if (includeCalories) bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0 else 0.0,
                 )
             }
-            if (aggregateRows.any { it.hydrationLiters > 0.0 }) {
+            if (!includeHydration || aggregateRows.any { it.hydrationLiters > 0.0 }) {
                 aggregateRows
             } else {
                 val hydrationByDate = readHydrationRecordsByDate(start, end, zone)
@@ -1115,14 +1238,23 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun readRespiratoryRateEntries(start: Instant, end: Instant): List<RespiratoryRateEntry> =
         withLogging("readRespiratoryRateEntries[$start..$end]", emptyList()) {
-            client().readRecords(
-                ReadRecordsRequest(
-                    recordType = RespiratoryRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    ascendingOrder = false,
-                    pageSize = 200,
+            val records = mutableListOf<RespiratoryRateRecord>()
+            var pageToken: String? = null
+            do {
+                val response = client().readRecords(
+                    ReadRecordsRequest(
+                        recordType = RespiratoryRateRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(start, end),
+                        ascendingOrder = true,
+                        pageSize = 1000,
+                        pageToken = pageToken,
+                    )
                 )
-            ).records.map { record ->
+                records += response.records
+                pageToken = response.pageToken
+            } while (pageToken != null)
+
+            records.map { record ->
                 RespiratoryRateEntry(
                     time = record.time,
                     breathsPerMinute = record.rate,
@@ -1230,7 +1362,14 @@ class HealthConnectManager(private val context: Context) {
             )
         }.toList()
 
-    private fun ExerciseSessionRecord.toExerciseData() = ExerciseData(
+    private fun ExerciseSessionRecord.toExerciseData(
+        steps: Long? = null,
+        totalDistanceMeters: Double? = null,
+        totalCaloriesKcal: Double? = null,
+        activeCaloriesKcal: Double? = null,
+        floorsClimbed: Int? = null,
+        elevationGainedMeters: Double? = null,
+    ) = ExerciseData(
         id = metadata.id,
         title = title,
         exerciseType = exerciseType,
@@ -1238,14 +1377,85 @@ class HealthConnectManager(private val context: Context) {
         endTime = endTime,
         durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
         source = metadata.dataOrigin.packageName,
+        totalDistanceMeters = totalDistanceMeters,
+        totalCaloriesKcal = totalCaloriesKcal,
+        activeCaloriesKcal = activeCaloriesKcal,
+        steps = steps,
+        floorsClimbed = floorsClimbed,
+        elevationGainedMeters = elevationGainedMeters,
+        notes = notes,
+        startZoneOffset = startZoneOffset,
+        endZoneOffset = endZoneOffset,
+        lastModifiedTime = metadata.lastModifiedTime,
+        clientRecordId = metadata.clientRecordId,
+        clientRecordVersion = metadata.clientRecordVersion,
+        recordingMethod = metadata.recordingMethod,
+        device = metadata.device?.let { device ->
+            ExerciseDeviceData(
+                type = device.type,
+                manufacturer = device.manufacturer,
+                model = device.model,
+            )
+        },
+        plannedExerciseSessionId = plannedExerciseSessionId,
+        segments = segments.map { segment ->
+            ExerciseSegmentData(
+                startTime = segment.startTime,
+                endTime = segment.endTime,
+                segmentType = segment.segmentType,
+                repetitions = segment.repetitions,
+            )
+        },
+        laps = laps.map { lap ->
+            ExerciseLapData(
+                startTime = lap.startTime,
+                endTime = lap.endTime,
+                lengthMeters = lap.length?.inMeters,
+            )
+        },
+        route = exerciseRouteResult.toExerciseRouteData(),
     )
+
+    private fun ExerciseRouteResult.toExerciseRouteData(): ExerciseRouteData = when (this) {
+        is ExerciseRouteResult.Data -> ExerciseRouteData(
+            status = ExerciseRouteStatus.DATA,
+            points = exerciseRoute.route.map { point ->
+                ExerciseRoutePoint(
+                    time = point.time,
+                    latitude = point.latitude,
+                    longitude = point.longitude,
+                    altitudeMeters = point.altitude?.inMeters,
+                    horizontalAccuracyMeters = point.horizontalAccuracy?.inMeters,
+                    verticalAccuracyMeters = point.verticalAccuracy?.inMeters,
+                )
+            },
+        )
+        is ExerciseRouteResult.ConsentRequired -> ExerciseRouteData(status = ExerciseRouteStatus.CONSENT_REQUIRED)
+        is ExerciseRouteResult.NoData -> ExerciseRouteData(status = ExerciseRouteStatus.NO_DATA)
+        else -> ExerciseRouteData(status = ExerciseRouteStatus.NO_DATA)
+    }
 
     private fun SleepSessionRecord.toSleepData() = SleepData(
         id = metadata.id,
+        title = title,
         startTime = startTime,
         endTime = endTime,
         durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
         source = metadata.dataOrigin.packageName,
+        notes = notes,
+        startZoneOffset = startZoneOffset,
+        endZoneOffset = endZoneOffset,
+        lastModifiedTime = metadata.lastModifiedTime,
+        clientRecordId = metadata.clientRecordId,
+        clientRecordVersion = metadata.clientRecordVersion,
+        recordingMethod = metadata.recordingMethod,
+        device = metadata.device?.let { device ->
+            SleepDeviceData(
+                type = device.type,
+                manufacturer = device.manufacturer,
+                model = device.model,
+            )
+        },
         stages = stages.map { stage ->
             SleepStage(
                 startTime = stage.startTime,

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.settings
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -31,11 +31,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
+import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +50,21 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
-    val missingVisiblePermissions = state.missingVisiblePermissions
+    val context = LocalContext.current
+    val missingRequestablePermissions = state.missingRequestableVisiblePermissions
+    val openManualPermissionSettings = {
+        if (!openHealthConnectPermissionSettings(context)) {
+            Toast.makeText(
+                context,
+                "Unable to open Health Connect permissions.",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refresh()
+    }
 
     val requestAllPermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
@@ -142,19 +161,31 @@ fun SettingsScreen(
         item {
             Spacer(Modifier.height(12.dp))
             FilledTonalButton(
-                onClick = { requestAllPermissions.launch(missingVisiblePermissions) },
+                onClick = { requestAllPermissions.launch(missingRequestablePermissions) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 enabled = state.availability == HealthConnectAvailability.AVAILABLE &&
-                    missingVisiblePermissions.isNotEmpty(),
+                    missingRequestablePermissions.isNotEmpty(),
             ) {
                 Text(
-                    if (missingVisiblePermissions.isEmpty()) {
-                        "All visible permissions granted"
+                    if (missingRequestablePermissions.isEmpty()) {
+                        "All requestable permissions granted"
                     } else {
                         "Request not granted permissions"
                     }
+                )
+            }
+        }
+
+        if (state.missingManualVisiblePermissions.isNotEmpty()) {
+            item {
+                PermissionCallout(
+                    title = "Manual permissions required",
+                    body = "Some Health Connect permissions cannot be granted from the normal request dialog. Open Health Connect and enable them for OpenVitals.",
+                    actionLabel = "Open Health Connect permissions",
+                    onGrant = openManualPermissionSettings,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         }

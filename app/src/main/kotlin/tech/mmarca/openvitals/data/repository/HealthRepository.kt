@@ -63,6 +63,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
     val phase3Permissions get() = hc.phase3Permissions
     val phase4Permissions get() = hc.phase4Permissions
     val corePermissions get() = hc.corePermissions
+    val routePermissions get() = hc.routePermissions
     val heartPermissions get() = hc.heartPermissions
     val bodyPermissions get() = hc.bodyPermissions
     val activityExtrasPermissions get() = hc.activityExtrasPermissions
@@ -70,9 +71,11 @@ class HealthRepository(private val hc: HealthConnectManager) {
     val mindfulnessPermissions get() = hc.mindfulnessPermissions
     val vitalsPermissions get() = hc.vitalsPermissions
     val cyclePermissions get() = hc.cyclePermissions
-    val onboardingPermissions get() = hc.allPermissions
+    val manualOnlyPermissions get() = hc.manualOnlyPermissions
+    val onboardingPermissions get() = hc.requestableAllPermissions
     val allPermissions get() = hc.allPermissions
     val managedPermissions get() = hc.managedPermissions
+    fun grantModeFor(permission: String) = hc.grantModeFor(permission)
 
     fun isMindfulnessAvailable(): Boolean = hc.isMindfulnessSessionAvailable()
 

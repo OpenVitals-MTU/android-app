@@ -7,7 +7,6 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
-import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
@@ -29,7 +28,6 @@ class ActivityRepository(private val hc: HealthConnectManager) {
     private val readDistancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
     private val readExercisePermission = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
-    private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readActiveCaloriesPermission = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
@@ -62,6 +60,9 @@ class ActivityRepository(private val hc: HealthConnectManager) {
             date = date,
             includeDistance = readDistancePermission in granted,
             includeCalories = readCaloriesPermission in granted,
+            includeActiveCalories = readActiveCaloriesPermission in granted,
+            includeFloors = readFloorsPermission in granted,
+            includeElevation = readElevationPermission in granted,
         )
     }
 
@@ -77,12 +78,29 @@ class ActivityRepository(private val hc: HealthConnectManager) {
         return hc.readExerciseSessions(startInstant, endInstant)
     }
 
+    suspend fun loadWorkout(id: String): ExerciseData? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readExercisePermission !in granted) {
+            Log.w(TAG, "Skipping loadWorkout id=$id missing=$readExercisePermission")
+            return null
+        }
+        return hc.readExerciseSession(
+            id = id,
+            includeSteps = readStepsPermission in granted,
+            includeDistance = readDistancePermission in granted,
+            includeTotalCalories = readCaloriesPermission in granted,
+            includeActiveCalories = readActiveCaloriesPermission in granted,
+            includeFloors = readFloorsPermission in granted,
+            includeElevation = readElevationPermission in granted,
+        )
+    }
+
     suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition> {
         val granted = grantedPermissionsIfAvailable()
-        if (readHydrationPermission !in granted && readCaloriesPermission !in granted) {
-            Log.w(TAG, "Skipping loadDailyNutrition start=$start end=$end missing both optional permissions")
+        if (readCaloriesPermission !in granted) {
+            Log.w(TAG, "Skipping loadDailyNutrition start=$start end=$end missing=$readCaloriesPermission")
             return emptyList()
         }
-        return hc.readDailyNutrition(start, end)
+        return hc.readDailyNutrition(start, end, includeHydration = false)
     }
 }

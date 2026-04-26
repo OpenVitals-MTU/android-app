@@ -28,6 +28,7 @@ fun PermissionCallout(
     body: String,
     onGrant: () -> Unit,
     modifier: Modifier = Modifier,
+    actionLabel: String = "Grant permission",
     onDismiss: (() -> Unit)? = null,
 ) {
     Card(
@@ -60,7 +61,7 @@ fun PermissionCallout(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(onClick = onGrant) {
-                    Text("Grant permission")
+                    Text(actionLabel)
                 }
                 if (onDismiss != null) {
                     TextButton(onClick = onDismiss) {
