@@ -45,7 +45,7 @@ fun HydrationScreen(
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
     ) { period ->
-        if (state.dailyHydration.isEmpty()) {
+        if (state.dailyHydration.none { it.liters > 0.0 }) {
             item {
                 MetricCardPlaceholder(
                     title = "Hydration",
