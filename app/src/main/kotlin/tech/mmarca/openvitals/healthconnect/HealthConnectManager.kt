@@ -107,7 +107,7 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(NutritionRecord::class),
     )
 
-    /** Phase 3 – vitals, requested when opening the Vitals screen */
+    /** Phase 3 – vitals, requested when opening Heart & Vitals */
     val phase3Permissions: Set<String> = setOf(
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(OxygenSaturationRecord::class),

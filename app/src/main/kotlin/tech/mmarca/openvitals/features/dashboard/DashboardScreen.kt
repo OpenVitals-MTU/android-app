@@ -80,7 +80,6 @@ fun DashboardScreen(
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
-    onOpenVitals: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -115,7 +114,6 @@ fun DashboardScreen(
                 onOpenBody = onOpenBody,
                 onOpenHydration = onOpenHydration,
                 onOpenNutrition = onOpenNutrition,
-                onOpenVitals = onOpenVitals,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -151,7 +149,6 @@ private fun DashboardContent(
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
-    onOpenVitals: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -182,7 +179,7 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Daily summary") }
+        item { SectionHeader("Activity & recovery") }
 
         item {
             Row(
@@ -214,48 +211,6 @@ private fun DashboardContent(
                     onClick = onOpenSteps,
                 )
             }
-        }
-
-        item {
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MetricCard(
-                    title = "Calories out",
-                    value = "%,d".format(data.caloriesKcal.roundToInt()),
-                    unit = "kcal",
-                    icon = Icons.Outlined.LocalFireDepartment,
-                    accentColor = CaloriesColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenSteps,
-                )
-                MetricCard(
-                    title = "Calories in",
-                    value = "%,d".format((data.caloriesInKcal ?: 0.0).roundToInt()),
-                    unit = "kcal",
-                    icon = Icons.Outlined.Restaurant,
-                    accentColor = NutritionColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenNutrition,
-                )
-            }
-        }
-
-        item {
-            Spacer(Modifier.height(12.dp))
-            MetricCard(
-                title = "Hydration",
-                value = "%.1f".format(data.hydrationLiters),
-                unit = "L",
-                icon = Icons.Outlined.LocalDrink,
-                accentColor = HydrationColor,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                onClick = onOpenHydration,
-            )
         }
 
         if (data.floorsClimbed != null || data.elevationGainedMeters != null) {
@@ -300,9 +255,8 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Highlights") }
-
         item {
+            Spacer(Modifier.height(12.dp))
             val workout = data.workout
             if (workout != null) {
                 WorkoutCard(
@@ -323,9 +277,8 @@ private fun DashboardContent(
             }
         }
 
-        item { Spacer(Modifier.height(12.dp)) }
-
         item {
+            Spacer(Modifier.height(12.dp))
             val sleep = data.sleep
             if (sleep != null) {
                 SleepCard(
@@ -344,6 +297,78 @@ private fun DashboardContent(
                     onClick = onOpenSleep,
                 )
             }
+        }
+
+        item { SectionHeader("Body & intake") }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    title = "Calories out",
+                    value = "%,d".format(data.caloriesKcal.roundToInt()),
+                    unit = "kcal",
+                    icon = Icons.Outlined.LocalFireDepartment,
+                    accentColor = CaloriesColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenSteps,
+                )
+                MetricCard(
+                    title = "Calories in",
+                    value = "%,d".format((data.caloriesInKcal ?: 0.0).roundToInt()),
+                    unit = "kcal",
+                    icon = Icons.Outlined.Restaurant,
+                    accentColor = NutritionColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenNutrition,
+                )
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    title = "Hydration",
+                    value = "%.1f".format(data.hydrationLiters),
+                    unit = "L",
+                    icon = Icons.Outlined.LocalDrink,
+                    accentColor = HydrationColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenHydration,
+                )
+                MetricCard(
+                    title = "Latest weight",
+                    value = "%.1f".format(data.weightKg),
+                    unit = "kg",
+                    icon = Icons.Outlined.MonitorWeight,
+                    accentColor = WeightColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenBody,
+                )
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            MetricCard(
+                title = "Body fat",
+                value = "%.1f".format(data.bodyFatPercent),
+                unit = "%",
+                icon = Icons.Outlined.MonitorWeight,
+                accentColor = BodyFatColor,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onClick = onOpenBody,
+            )
         }
 
         item { SectionHeader("Heart") }
@@ -376,9 +401,8 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Vitals") }
-
         item {
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -393,7 +417,7 @@ private fun DashboardContent(
                         icon = Icons.Outlined.Favorite,
                         accentColor = VitalsColor,
                         modifier = Modifier.weight(1f),
-                        onClick = onOpenVitals,
+                        onClick = onOpenHeart,
                     )
                 } else {
                     MetricCardPlaceholder(
@@ -402,7 +426,7 @@ private fun DashboardContent(
                         accentColor = VitalsColor,
                         message = "No blood pressure reading.",
                         modifier = Modifier.weight(1f),
-                        onClick = onOpenVitals,
+                        onClick = onOpenHeart,
                     )
                 }
                 if (data.latestSpO2Percent != null) {
@@ -413,7 +437,7 @@ private fun DashboardContent(
                         icon = Icons.Outlined.FavoriteBorder,
                         accentColor = VitalsColor,
                         modifier = Modifier.weight(1f),
-                        onClick = onOpenVitals,
+                        onClick = onOpenHeart,
                     )
                 } else {
                     MetricCardPlaceholder(
@@ -422,7 +446,7 @@ private fun DashboardContent(
                         accentColor = VitalsColor,
                         message = "No oxygen reading.",
                         modifier = Modifier.weight(1f),
-                        onClick = onOpenVitals,
+                        onClick = onOpenHeart,
                     )
                 }
             }
@@ -438,7 +462,7 @@ private fun DashboardContent(
                     icon = Icons.AutoMirrored.Outlined.DirectionsRun,
                     accentColor = VitalsColor,
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    onClick = onOpenVitals,
+                    onClick = onOpenHeart,
                 )
             } else {
                 MetricCardPlaceholder(
@@ -447,36 +471,7 @@ private fun DashboardContent(
                     accentColor = VitalsColor,
                     message = "No VO2 max reading.",
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    onClick = onOpenVitals,
-                )
-            }
-        }
-
-        item { SectionHeader("Body") }
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MetricCard(
-                    title = "Latest weight",
-                    value = "%.1f".format(data.weightKg),
-                    unit = "kg",
-                    icon = Icons.Outlined.MonitorWeight,
-                    accentColor = WeightColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenBody,
-                )
-                MetricCard(
-                    title = "Body fat",
-                    value = "%.1f".format(data.bodyFatPercent),
-                    unit = "%",
-                    icon = Icons.Outlined.MonitorWeight,
-                    accentColor = BodyFatColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenBody,
+                    onClick = onOpenHeart,
                 )
             }
         }

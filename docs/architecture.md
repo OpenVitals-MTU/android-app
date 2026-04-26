@@ -241,6 +241,13 @@ Shared pieces it uses:
 
 The dashboard should stay summary-first. It should not become a second copy of detail-screen logic.
 
+Current dashboard grouping is:
+
+- Activity & recovery: steps, distance, floors, elevation, workouts, sleep
+- Body & intake: calories, hydration, weight, body fat
+- Heart: heart rate plus vitals
+- Records: raw Health Connect browser
+
 ### Period-based detail/list screens
 
 The aligned detail/list screens are:

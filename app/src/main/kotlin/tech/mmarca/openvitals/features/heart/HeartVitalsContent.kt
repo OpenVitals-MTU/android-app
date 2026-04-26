@@ -1,6 +1,5 @@
-package tech.mmarca.openvitals.features.vitals
+package tech.mmarca.openvitals.features.heart
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Air
@@ -22,8 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
@@ -41,7 +38,6 @@ import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
-import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
@@ -60,50 +56,37 @@ private val respiratoryColor = Color(0xFF5E97F6)
 private val temperatureColor = Color(0xFFFF7043)
 private val vo2Color = Color(0xFF7E57C2)
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun VitalsScreen(viewModel: VitalsViewModel) {
-    val state by viewModel.uiState.collectAsState()
-    val requestPermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) { granted ->
-        viewModel.onPermissionsResult(granted)
+fun LazyListScope.HeartVitalsContent(
+    state: HeartUiState,
+    phase3Permissions: Set<String>,
+    onGrantPermissions: (Set<String>) -> Unit,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+) {
+    if (state.missingVitalsPermissions.isNotEmpty()) {
+        item {
+            PermissionCallout(
+                title = "Vitals permissions needed",
+                body = "Grant blood pressure, oxygen saturation, respiratory rate, temperature, and VO2 max permissions to fill this screen.",
+                onGrant = {
+                    onGrantPermissions(phase3Permissions)
+                },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
     }
 
-    MetricDetailScaffold(
-        isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        headerItems = {
-            if (state.missingPermissions.isNotEmpty()) {
-                item {
-                    PermissionCallout(
-                        title = "Vitals permissions needed",
-                        body = "Grant blood pressure, oxygen saturation, respiratory rate, temperature, and VO2 max permissions to fill this screen.",
-                        onGrant = { requestPermissions.launch(viewModel.phase3Permissions) },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-            }
-        },
-    ) { period ->
-        if (!state.hasData && !state.isLoading) {
-            item {
-                MetricCardPlaceholder(
-                    title = "Vitals",
-                    icon = Icons.Outlined.Favorite,
-                    accentColor = VitalsColor,
-                    message = "No vitals were recorded for this period.",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
+    if (!state.hasVitalsData && !state.isLoading) {
+        item {
+            MetricCardPlaceholder(
+                title = "Vitals",
+                icon = Icons.Outlined.Favorite,
+                accentColor = VitalsColor,
+                message = "No vitals were recorded for this period.",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
         }
+    }
 
         if (state.bloodPressure.isNotEmpty() || state.spO2.isNotEmpty() || state.vo2Max.isNotEmpty()) {
             item { SectionHeader("Cardiovascular") }
@@ -122,7 +105,7 @@ fun VitalsScreen(viewModel: VitalsViewModel) {
                 item {
                     BloodPressureChart(
                         entries = state.bloodPressure,
-                        selectedRange = state.selectedRange,
+                        selectedRange = selectedRange,
                         period = period,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -138,7 +121,7 @@ fun VitalsScreen(viewModel: VitalsViewModel) {
                         values = state.spO2.sortedBy { it.time }.map { it.percent },
                         labels = state.spO2.sortedBy { it.time }.map { dayFormatter.format(it.time.atZone(ZoneId.systemDefault())) },
                         accentColor = oxygenColor,
-                        summary = "${periodTitle(state.selectedRange, period)} · %.1f%% avg".format(state.spO2.map { it.percent }.average()),
+                        summary = "${periodTitle(selectedRange, period)} · %.1f%% avg".format(state.spO2.map { it.percent }.average()),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -210,7 +193,6 @@ fun VitalsScreen(viewModel: VitalsViewModel) {
                 )
             }
         }
-    }
 }
 
 private data class SummaryMetric(

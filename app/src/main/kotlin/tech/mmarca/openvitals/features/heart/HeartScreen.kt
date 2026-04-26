@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.heart
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
@@ -49,6 +51,11 @@ fun HeartScreen(viewModel: HeartViewModel) {
     val state by viewModel.uiState.collectAsState()
     val dayRestingBpm = state.dayRestingBpm
     val dayHrvMs = state.dayHrvMs
+    val requestVitalsPermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) { granted ->
+        viewModel.onVitalsPermissionsResult(granted)
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -169,6 +176,15 @@ fun HeartScreen(viewModel: HeartViewModel) {
                 )
             }
         }
+
+        item { SectionHeader("Vitals") }
+        HeartVitalsContent(
+            state = state,
+            phase3Permissions = viewModel.vitalsPermissions,
+            onGrantPermissions = requestVitalsPermissions::launch,
+            selectedRange = state.selectedRange,
+            period = period,
+        )
     }
 }
 
