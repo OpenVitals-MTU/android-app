@@ -1,0 +1,5 @@
+Add detailed workout and sleep record views from Activity, Browse, and Sleep screens.
+Add offline route previews for workouts with Health Connect route-consent handling.
+Improve Activity day charts so extras such as floors, active calories, and elevation use timelines.
+Keep hydration in Body & intake instead of duplicating it in Activity.
+Fix respiratory rate week/month/year views with period charts, averages, pagination, and daily breakdown rows.
