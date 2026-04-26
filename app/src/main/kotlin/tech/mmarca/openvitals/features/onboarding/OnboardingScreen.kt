@@ -181,7 +181,7 @@ fun OnboardingScreen(
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             ) {
-                Text("Grant all permissions")
+                Text("Grant all dashboard permissions")
             }
         }
 
@@ -201,8 +201,12 @@ fun OnboardingScreen(
             PermissionCategoryRow(
                 category = category,
                 grantedPermissions = state.grantedPermissions,
+                cycleTrackingEnabled = state.cycleTrackingEnabled,
                 onGrant = {
                     if (category.available) {
+                        if (category.optIn) {
+                            viewModel.enableCycleTracking()
+                        }
                         requestPermissions.launch(category.permissions)
                     }
                 },
@@ -250,15 +254,18 @@ private fun FeatureCard(icon: ImageVector, title: String, body: String) {
 private fun PermissionCategoryRow(
     category: OnboardingPermissionCategory,
     grantedPermissions: Set<String>,
+    cycleTrackingEnabled: Boolean,
     onGrant: () -> Unit,
 ) {
     val grantedCount = category.permissions.count { it in grantedPermissions }
-    val granted = category.available && grantedCount == category.permissions.size
-    val partial = category.available && grantedCount > 0 && !granted
+    val optInEnabled = !category.optIn || cycleTrackingEnabled
+    val granted = category.available && optInEnabled && grantedCount == category.permissions.size
+    val partial = category.available && optInEnabled && grantedCount > 0 && !granted
     val status = when {
         !category.available -> "Not supported"
         granted -> "Granted"
         partial -> "$grantedCount/${category.permissions.size} granted"
+        category.optIn && !cycleTrackingEnabled -> "Off"
         category.required -> "Required"
         else -> "Optional"
     }
@@ -311,7 +318,13 @@ private fun PermissionCategoryRow(
                 )
             } else {
                 FilledTonalButton(onClick = onGrant) {
-                    Text(if (partial) "Review" else "Grant")
+                    Text(
+                        when {
+                            category.optIn && !cycleTrackingEnabled -> "Enable"
+                            partial -> "Review"
+                            else -> "Grant"
+                        }
+                    )
                 }
             }
         }

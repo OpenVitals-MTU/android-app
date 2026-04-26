@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
                     nutritionRepository = app.nutritionRepository,
                     mindfulnessRepository = app.mindfulnessRepository,
                     vitalsRepository = app.vitalsRepository,
+                    cycleRepository = app.cycleRepository,
                     preferencesRepository = app.preferencesRepository,
                     unitFormatter = app.unitFormatter,
                     dateTimeFormatterProvider = app.dateTimeFormatterProvider,

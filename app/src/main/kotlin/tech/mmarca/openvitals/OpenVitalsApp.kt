@@ -5,6 +5,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
+import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
@@ -67,5 +68,9 @@ class OpenVitalsApp : Application() {
 
     val vitalsRepository: VitalsRepository by lazy {
         VitalsRepository(healthConnectManager)
+    }
+
+    val cycleRepository: CycleRepository by lazy {
+        CycleRepository(healthConnectManager)
     }
 }
