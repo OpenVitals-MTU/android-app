@@ -73,6 +73,7 @@ Health Connect platform notes:
 - On Android 13 and older, the Health Connect app must be installed separately
 - Health Connect is not supported in work profiles
 - Mindfulness sessions require a Health Connect provider version that supports `FEATURE_MINDFULNESS_SESSION`
+- The app uses `androidx.health.connect:connect-client` 1.1.0 or newer so AndroidX maps mindfulness sessions to the platform `android.permission.health.READ_MINDFULNESS` permission
 
 ## Build from source
 

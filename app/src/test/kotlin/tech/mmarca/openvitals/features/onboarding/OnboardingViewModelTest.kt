@@ -1,6 +1,9 @@
 package tech.mmarca.openvitals.features.onboarding
 
 import android.util.Log
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.MindfulnessSessionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -22,7 +25,7 @@ import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalMindfulnessSessionApi::class)
 class OnboardingViewModelTest {
 
     @get:Rule
@@ -232,6 +235,13 @@ class OnboardingViewModelTest {
         assertTrue(mindfulness.available)
         assertEquals(setOf("mindfulness"), mindfulness.permissions)
         assertTrue("mindfulness" in vm.onboardingPermissions)
+    }
+
+    @Test fun `androidx mindfulness permission matches platform permission`() {
+        assertEquals(
+            "android.permission.health.READ_MINDFULNESS",
+            HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+        )
     }
 
     private fun repo(

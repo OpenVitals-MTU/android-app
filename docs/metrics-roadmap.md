@@ -230,9 +230,9 @@ Navigation: `Screen.Nutrition` route.
 
 #### B3. Mindfulness screen (`features/mindfulness/`) ✓ Done (2026-04-26)
 
-**New permissions (phase 2):** `MindfulnessSessionRecord`
+**New permissions (phase 2):** `MindfulnessSessionRecord` / `android.permission.health.READ_MINDFULNESS`
 
-`MindfulnessSessionRecord` is behind `HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION`; onboarding shows the category as unsupported when the installed Health Connect provider does not expose that feature.
+`MindfulnessSessionRecord` is behind `HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION`; onboarding shows the category as unsupported when the installed Health Connect provider does not expose that feature. AndroidX Health Connect `1.1.0-rc02` updated the mindfulness permission string, so the app should stay on `connect-client` `1.1.0` or newer rather than `1.1.0-rc01`.
 
 New model:
 ```kotlin
@@ -286,6 +286,15 @@ The dashboard currently has a fixed card layout grouped by user mental model:
 - Records: raw Health Connect browser
 
 As B3 and later phases add new sections, a plan is still needed for ordering, collapsibility, placeholder states, and graceful degradation when only phase 1 permissions are granted.
+
+#### Health Connect dependency notes
+
+The app targets `androidx.health.connect:connect-client` `1.1.0` or newer. This matters because:
+
+- `1.1.0-rc02` updated the mindfulness permission string to the platform `android.permission.health.READ_MINDFULNESS`; `1.1.0-rc01` returns the old non-requestable session-suffixed permission.
+- `1.1.0-rc02` also added support for missing Health Connect device types. OpenVitals currently attributes records by `metadata.dataOrigin.packageName`, not by `metadata.device.type`, so no app-level mapping change is needed yet.
+- `1.1.0-rc03` fixed an aggregation crash around daylight saving time boundaries. OpenVitals benefits from this through the dependency bump because several screens use Health Connect aggregation APIs.
+- `1.2.0-alpha*` adds newer APIs such as matchmaking, activity intensity, skin temperature back-compatibility, and richer exercise fields. Those should be adopted only as explicit feature work because they require alpha dependency risk and new UI/repository scope.
 
 ---
 

@@ -163,6 +163,40 @@ fun OnboardingScreen(
                 .padding(bottom = 8.dp),
         )
 
+        Button(
+            onClick = {
+                if (state.phase1Granted) onOnboardingComplete()
+                else requiredCategory?.let { requestPermissions.launch(it.permissions) }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = state.phase1Granted || requiredCategory != null,
+        ) {
+            Text(if (state.phase1Granted) "Get started" else "Grant only core permissions")
+        }
+
+        if (!state.phase2Granted || !state.phase3Granted) {
+            FilledTonalButton(
+                onClick = { requestPermissions.launch(viewModel.onboardingPermissions) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                Text("Grant all permissions")
+            }
+        }
+
+        if (!state.phase1Granted) {
+            Text(
+                text = "Core permissions are required to show your dashboard.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+
         permissionCategories.forEach { category ->
             PermissionCategoryRow(
                 category = category,
@@ -174,29 +208,6 @@ fun OnboardingScreen(
                 },
             )
             Spacer(Modifier.height(8.dp))
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        Button(
-            onClick = {
-                if (state.phase1Granted) onOnboardingComplete()
-                else requiredCategory?.let { requestPermissions.launch(it.permissions) }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = state.phase1Granted || requiredCategory != null,
-        ) {
-            Text(if (state.phase1Granted) "Get started" else "Grant required permissions")
-        }
-
-        if (!state.phase1Granted) {
-            Text(
-                text = "Core permissions are required to show your dashboard.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp),
-            )
         }
 
         Spacer(Modifier.height(32.dp))

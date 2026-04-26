@@ -175,12 +175,19 @@ class HealthConnectManager(private val context: Context) {
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)
 
-    fun isMindfulnessSessionAvailable(): Boolean =
-        availability() == HealthConnectAvailability.AVAILABLE &&
-            withLogging("features.getFeatureStatus[mindfulness]", false) {
-                client().features.getFeatureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION) ==
-                    HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-            }
+    fun isMindfulnessSessionAvailable(): Boolean {
+        if (availability() != HealthConnectAvailability.AVAILABLE) return false
+
+        val status = withLogging(
+            "features.getFeatureStatus[mindfulness]",
+            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
+        ) {
+            client().features.getFeatureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION)
+        }
+        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        Log.d(TAG, "mindfulnessFeatureStatus=$status available=$available ${diagnosticsSummary()}")
+        return available
+    }
 
     // ─── Permission queries ───────────────────────────────────────────────────
 
