@@ -15,14 +15,14 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
-import tech.mmarca.openvitals.data.model.TimeRange
-import tech.mmarca.openvitals.ui.components.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.periodTitle
+import tech.mmarca.openvitals.core.period.periodTitle
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
 @OptIn(ExperimentalMaterial3Api::class)

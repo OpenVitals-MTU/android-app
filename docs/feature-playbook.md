@@ -128,7 +128,7 @@ Avoid inventing feature-specific date navigation rules unless the metric truly r
 
 ### 4. Add the data model
 
-Add new data classes to `data/model/HealthData.kt` under the relevant section.
+Add new data classes to the relevant feature-oriented file under `data/model`, such as `ActivityModels.kt`, `SleepModels.kt`, `VitalsModels.kt`, or `NutritionModels.kt`.
 
 If the metric also belongs on the dashboard, add a non-nullable field with a `0` default to `DashboardData` and set it in `HealthRepository.loadDashboard()`.
 
@@ -213,7 +213,7 @@ If the feature introduces a better reusable pattern:
 ### Reuse these
 
 - `MetricDetailScaffold` for the screen shell
-- `periodFor`, `periodTitle`, `periodSubtitle` from `ui/components/PeriodNavigator.kt`
+- `periodFor`, `periodTitle`, `periodSubtitle` from `core/period`
 - `SectionHeader`, `SourceChip`, `InlineLoading`, `ErrorMessage` from `ui/components/`
 - common loading/error/empty patterns
 

@@ -30,7 +30,7 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
-import tech.mmarca.openvitals.ui.components.periodTitle
+import tech.mmarca.openvitals.core.period.periodTitle
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import java.time.ZoneId
 

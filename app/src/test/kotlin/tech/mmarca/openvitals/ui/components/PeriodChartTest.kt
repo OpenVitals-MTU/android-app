@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.ui.components
 
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.period.TimeRange
 
 @Composable
 fun MetricCard(
@@ -192,8 +193,8 @@ fun SectionHeader(
 
 @Composable
 fun TimeRangeSelector(
-    selected: tech.mmarca.openvitals.data.model.TimeRange,
-    onSelect: (tech.mmarca.openvitals.data.model.TimeRange) -> Unit,
+    selected: TimeRange,
+    onSelect: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -202,7 +203,7 @@ fun TimeRangeSelector(
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        tech.mmarca.openvitals.data.model.TimeRange.entries.forEach { range ->
+        TimeRange.entries.forEach { range ->
             androidx.compose.material3.FilterChip(
                 selected = range == selected,
                 onClick = { onSelect(range) },

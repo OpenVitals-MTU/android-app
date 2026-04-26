@@ -354,7 +354,7 @@ Comparison between this roadmap and the actual codebase as of 2026-04-26.
 
 ### DashboardData gaps
 
-Fields described in the roadmap as additions to `DashboardData` that are not yet present in `HealthData.kt`:
+Fields described in the roadmap as additions to `DashboardData` that are not yet present in `DashboardData.kt`:
 
 | Field | Added by phase |
 |---|---|

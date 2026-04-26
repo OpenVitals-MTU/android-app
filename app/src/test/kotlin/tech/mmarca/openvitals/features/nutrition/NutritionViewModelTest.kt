@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.features.nutrition
 
 import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.NutritionEntry
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery

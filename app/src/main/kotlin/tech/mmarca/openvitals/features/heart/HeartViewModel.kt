@@ -10,11 +10,12 @@ import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
-import tech.mmarca.openvitals.ui.components.periodFor
+import tech.mmarca.openvitals.core.period.periodFor
 import java.time.LocalDate
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -69,40 +70,26 @@ class HeartViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        _uiState.value = _uiState.value.copy(
-            selectedRange = range,
-            selectedDate = _uiState.value.selectedDate.coerceAtMost(LocalDate.now()),
-        )
+        applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        _uiState.value = _uiState.value.copy(
-            selectedDate = when (_uiState.value.selectedRange) {
-                TimeRange.DAY -> _uiState.value.selectedDate.minusDays(1)
-                TimeRange.WEEK -> _uiState.value.selectedDate.minusWeeks(1)
-                TimeRange.MONTH -> _uiState.value.selectedDate.minusMonths(1)
-                TimeRange.YEAR -> _uiState.value.selectedDate.minusYears(1)
-            },
-        )
+        applyPeriodSelection(periodSelection.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val nextDate = when (_uiState.value.selectedRange) {
-            TimeRange.DAY -> _uiState.value.selectedDate.plusDays(1)
-            TimeRange.WEEK -> _uiState.value.selectedDate.plusWeeks(1)
-            TimeRange.MONTH -> _uiState.value.selectedDate.plusMonths(1)
-            TimeRange.YEAR -> _uiState.value.selectedDate.plusYears(1)
-        }
-        if (!periodFor(_uiState.value.selectedRange, nextDate).end.isAfter(LocalDate.now())) {
-            _uiState.value = _uiState.value.copy(selectedDate = nextDate)
+        val current = periodSelection
+        val next = current.nextPeriod()
+        if (next != current) {
+            applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        _uiState.value = _uiState.value.copy(selectedDate = date.coerceAtMost(LocalDate.now()))
+        applyPeriodSelection(periodSelection.selectDate(date))
         load()
     }
 
@@ -188,6 +175,16 @@ class HeartViewModel(
                 )
             }
         }
+    }
+
+    private val periodSelection: PeriodSelection
+        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
+
+    private fun applyPeriodSelection(selection: PeriodSelection) {
+        _uiState.value = _uiState.value.copy(
+            selectedRange = selection.selectedRange,
+            selectedDate = selection.selectedDate,
+        )
     }
 }
 
