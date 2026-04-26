@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.features.activity.ActivityScreen
@@ -39,6 +40,8 @@ import tech.mmarca.openvitals.features.heart.HeartScreen
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
+import tech.mmarca.openvitals.features.nutrition.NutritionScreen
+import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
 import tech.mmarca.openvitals.features.settings.SettingsScreen
@@ -55,6 +58,7 @@ fun AppNavigation(
     heartRepository: HeartRepository,
     bodyRepository: BodyRepository,
     hydrationRepository: HydrationRepository,
+    nutritionRepository: NutritionRepository,
     preferencesRepository: PreferencesRepository,
     startDestination: String,
     onOnboardingComplete: () -> Unit = {},
@@ -79,6 +83,7 @@ fun AppNavigation(
         Screen.Heart.route -> "Heart"
         Screen.Body.route -> "Body"
         Screen.Hydration.route -> "Hydration"
+        Screen.Nutrition.route -> "Nutrition"
         Screen.Browse.route -> "Browse"
         Screen.Settings.route -> "Settings"
         else -> ""
@@ -139,6 +144,7 @@ fun AppNavigation(
                     onOpenHeart = { navController.navigate(Screen.Heart.route) },
                     onOpenBody = { navController.navigate(Screen.Body.route) },
                     onOpenHydration = { navController.navigate(Screen.Hydration.route) },
+                    onOpenNutrition = { navController.navigate(Screen.Nutrition.route) },
                     onOpenBrowse = { navController.navigate(Screen.Browse.route) },
                 )
             }
@@ -171,6 +177,11 @@ fun AppNavigation(
             composable(Screen.Hydration.route) {
                 val hydrationViewModel = remember(hydrationRepository) { HydrationViewModel(hydrationRepository) }
                 HydrationScreen(viewModel = hydrationViewModel)
+            }
+
+            composable(Screen.Nutrition.route) {
+                val nutritionViewModel = remember(nutritionRepository) { NutritionViewModel(nutritionRepository) }
+                NutritionScreen(viewModel = nutritionViewModel)
             }
 
             composable(Screen.Browse.route) {

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MonitorWeight
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,7 @@ import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
@@ -76,6 +78,7 @@ fun DashboardScreen(
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
+    onOpenNutrition: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -109,6 +112,7 @@ fun DashboardScreen(
                 onOpenHeart = onOpenHeart,
                 onOpenBody = onOpenBody,
                 onOpenHydration = onOpenHydration,
+                onOpenNutrition = onOpenNutrition,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -143,6 +147,7 @@ private fun DashboardContent(
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
+    onOpenNutrition: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -216,7 +221,7 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Calories burned",
+                    title = "Calories out",
                     value = "%,d".format(data.caloriesKcal.roundToInt()),
                     unit = "kcal",
                     icon = Icons.Outlined.LocalFireDepartment,
@@ -225,15 +230,28 @@ private fun DashboardContent(
                     onClick = onOpenSteps,
                 )
                 MetricCard(
-                    title = "Hydration",
-                    value = "%.1f".format(data.hydrationLiters),
-                    unit = "L",
-                    icon = Icons.Outlined.LocalDrink,
-                    accentColor = HydrationColor,
+                    title = "Calories in",
+                    value = "%,d".format((data.caloriesInKcal ?: 0.0).roundToInt()),
+                    unit = "kcal",
+                    icon = Icons.Outlined.Restaurant,
+                    accentColor = NutritionColor,
                     modifier = Modifier.weight(1f),
-                    onClick = onOpenHydration,
+                    onClick = onOpenNutrition,
                 )
             }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            MetricCard(
+                title = "Hydration",
+                value = "%.1f".format(data.hydrationLiters),
+                unit = "L",
+                icon = Icons.Outlined.LocalDrink,
+                accentColor = HydrationColor,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onClick = onOpenHydration,
+            )
         }
 
         if (data.floorsClimbed != null || data.elevationGainedMeters != null) {

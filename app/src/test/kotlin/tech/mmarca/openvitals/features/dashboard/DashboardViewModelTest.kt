@@ -192,6 +192,16 @@ class DashboardViewModelTest {
         assertEquals(0, vm.uiState.value.data?.floorsClimbed)
     }
 
+    @Test fun `caloriesInKcal is exposed through state when present`() = runTest {
+        val data = DashboardData(date = today, caloriesInKcal = 1_850.0)
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns data
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertEquals(1_850.0, vm.uiState.value.data?.caloriesInKcal!!, 0.01)
+    }
+
     // ─── Refresh ──────────────────────────────────────────────────────────────
 
     @Test fun `refresh reloads current date`() = runTest {

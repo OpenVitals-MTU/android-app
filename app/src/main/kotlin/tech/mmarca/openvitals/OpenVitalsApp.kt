@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -42,5 +43,9 @@ class OpenVitalsApp : Application() {
 
     val hydrationRepository: HydrationRepository by lazy {
         HydrationRepository(healthConnectManager)
+    }
+
+    val nutritionRepository: NutritionRepository by lazy {
+        NutritionRepository(healthConnectManager)
     }
 }

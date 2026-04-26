@@ -9,6 +9,7 @@ import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -37,6 +38,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
     private val readBodyFatPermission = HealthPermission.getReadPermission(BodyFatRecord::class)
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
+    private val readNutritionPermission = HealthPermission.getReadPermission(NutritionRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
 
@@ -78,6 +80,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val workout = if (readExercisePermission in granted) async { hc.readLatestWorkout(date) } else null
         val sleep = if (readSleepPermission in granted) async { hc.readSleepSession(date) } else null
         val calories = if (readCaloriesPermission in granted) async { hc.readCaloriesKcal(date) } else null
+        val caloriesIn = if (readNutritionPermission in granted) async { hc.readCaloriesInKcal(date) } else null
         val hydration = if (readHydrationPermission in granted) async { hc.readHydrationLiters(date) } else null
         val weight = if (readWeightPermission in granted) async { hc.readLatestWeight(date) } else null
         val bodyFat = if (readBodyFatPermission in granted) async { hc.readLatestBodyFat() } else null
@@ -93,6 +96,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
             steps = steps?.await() ?: 0L,
             distanceMeters = distance?.await() ?: 0.0,
             caloriesKcal = calories?.await() ?: 0.0,
+            caloriesInKcal = caloriesIn?.await(),
             hydrationLiters = hydration?.await() ?: 0.0,
             workout = workout?.await(),
             sleep = sleep?.await(),

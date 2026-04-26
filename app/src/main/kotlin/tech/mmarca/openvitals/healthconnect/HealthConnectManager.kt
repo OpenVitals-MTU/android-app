@@ -23,6 +23,7 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -34,6 +35,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -43,6 +45,7 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.model.StepProgressPoint
@@ -91,6 +94,7 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(ElevationGainedRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(HydrationRecord::class),
+        HealthPermission.getReadPermission(NutritionRecord::class),
     )
 
     val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions
@@ -347,6 +351,20 @@ class HealthConnectManager(private val context: Context) {
     }
 
     suspend fun readTodayCaloriesKcal(): Double? = readCaloriesKcal(LocalDate.now())
+
+    suspend fun readCaloriesInKcal(date: LocalDate): Double? {
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return withNullableLogging("readCaloriesInKcal[$date][$start..$end]") {
+            client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(NutritionRecord.ENERGY_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[NutritionRecord.ENERGY_TOTAL]?.inKilocalories
+        }
+    }
 
     // ─── Hydration ───────────────────────────────────────────────────────────
 
@@ -773,6 +791,59 @@ class HealthConnectManager(private val context: Context) {
             }
         }
     }
+
+    suspend fun readDailyMacros(startDate: LocalDate, endDate: LocalDate): List<DailyMacros> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        return withLogging("readDailyMacros[$start..$end]", emptyList()) {
+            client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(
+                        NutritionRecord.ENERGY_TOTAL,
+                        NutritionRecord.PROTEIN_TOTAL,
+                        NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL,
+                        NutritionRecord.TOTAL_FAT_TOTAL,
+                    ),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofDays(1),
+                )
+            ).map { bucket ->
+                DailyMacros(
+                    date = bucket.startTime.atZone(zone).toLocalDate(),
+                    energyKcal = bucket.result[NutritionRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
+                    proteinGrams = bucket.result[NutritionRecord.PROTEIN_TOTAL]?.inGrams ?: 0.0,
+                    carbsGrams = bucket.result[NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL]?.inGrams ?: 0.0,
+                    fatGrams = bucket.result[NutritionRecord.TOTAL_FAT_TOTAL]?.inGrams ?: 0.0,
+                )
+            }
+        }
+    }
+
+    suspend fun readNutritionEntries(start: Instant, end: Instant): List<NutritionEntry> =
+        withLogging("readNutritionEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = NutritionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                NutritionEntry(
+                    time = record.startTime,
+                    mealType = record.mealType,
+                    name = record.name,
+                    energyKcal = record.energy?.inKilocalories,
+                    proteinGrams = record.protein?.inGrams,
+                    carbsGrams = record.totalCarbohydrate?.inGrams,
+                    fatGrams = record.totalFat?.inGrams,
+                    fiberGrams = record.dietaryFiber?.inGrams,
+                    sugarGrams = record.sugar?.inGrams,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 

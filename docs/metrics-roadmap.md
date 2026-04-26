@@ -12,6 +12,7 @@ Gap analysis between what the app currently shows and all Health Connect record 
 | Activity | Distance | `DistanceRecord` | Activity screen + Dashboard |
 | Activity | Total calories burned | `TotalCaloriesBurnedRecord` | Activity screen + Dashboard |
 | Activity | Hydration | `HydrationRecord` | Hydration screen + Dashboard |
+| Nutrition | Calories in + macros | `NutritionRecord` | Nutrition screen + Dashboard |
 | Exercise | Workout sessions | `ExerciseSessionRecord` | Activities screen |
 | Sleep | Duration + stages | `SleepSessionRecord` | Sleep screen |
 | Heart | Avg/min/max heart rate | `HeartRateRecord` | Heart screen + Dashboard |
@@ -51,7 +52,7 @@ Gap analysis between what the app currently shows and all Health Connect record 
 | `ActiveCaloriesBurnedRecord` | Active calories (distinct from total) |
 | `ElevationGainedRecord` | Elevation gain m |
 
-### Nutrition — food diary apps
+### Nutrition — food diary apps ✓ Covered
 
 | HC Record type | Metric |
 |---|---|
@@ -188,7 +189,7 @@ Navigation: add `Screen.Vitals` route; wire `onOpenVitals` callback from Dashboa
 
 ---
 
-#### B2. Nutrition screen (`features/nutrition/`)
+#### B2. Nutrition screen (`features/nutrition/`) ✓ Done (2026-04-26)
 
 **New permissions (phase 2):** `NutritionRecord`
 
@@ -222,7 +223,7 @@ data class DailyMacros(
 
 `DashboardData`: add `caloriesInKcal: Double?`; show alongside `caloriesKcal` (burned) as a calories in/out pair in the daily summary section.
 
-Navigation: add `Screen.Nutrition` route.
+Navigation: `Screen.Nutrition` route.
 
 ---
 
@@ -290,7 +291,7 @@ The dashboard currently has a fixed card layout. As B1, B2, and B3 add new secti
 | 2 | ~~A3 — Floors + active calories + elevation~~ | ~~Low~~ | ✓ Done |
 | 3 | ~~A2 — Body composition~~ | ~~Medium~~ | ✓ Done |
 | 4 | ~~A4 — Hydration detail screen~~ | ~~Low~~ | ✓ Done |
-| 5 | B2 — Nutrition | Medium | High user value; enables calories in/out view |
+| 5 | ~~B2 — Nutrition~~ | ~~Medium~~ | ✓ Done |
 | 6 | B1 — Vitals | Medium | Requires new screen + phase 3 permissions flow |
 | 7 | B3 — Mindfulness | Low | Small scope; mirrors Activities pattern exactly |
 | 8 | C — Women's health | High | Niche but important; requires settings gate + dedicated permissions |
@@ -326,7 +327,7 @@ Comparison between this roadmap and the actual codebase as of 2026-04-26.
 | Item | Roadmap status | Code status | Notes |
 |---|---|---|---|
 | B1 — Vitals screen | Not started | Not started | No `VitalsRepository`, `VitalsViewModel`, or `VitalsScreen`. No phase 3 permissions. `Vo2MaxRecord` absent from all code. |
-| B2 — Nutrition screen | Not started | Not started | `NutritionRecord` not in any permission set. `DailyNutrition` model exists but only tracks calories burned + hydration — it is not `NutritionRecord`. No `NutritionScreen`. |
+| B2 — Nutrition screen | ✓ Done | ✓ Implemented | `NutritionRecord` is in phase2 permissions. `NutritionRepository`, `NutritionViewModel`, and `NutritionScreen` are present. Dashboard shows calories in/out and `Screen.Nutrition` is registered. |
 | B3 — Mindfulness screen | Not started | Not started | No `MindfulnessSessionRecord` permission, no repository, no screen. |
 
 ### Phase C
@@ -341,7 +342,6 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 
 | Field | Added by phase |
 |---|---|
-| `caloriesInKcal: Double?` | B2 |
 | `mindfulnessMinutes: Int?` | B3 |
 | `latestSystolicMmHg: Int?` | B1 |
 | `latestDiastolicMmHg: Int?` | B1 |
@@ -353,6 +353,5 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 Routes described in the roadmap that are absent from `Screen.kt` and `AppNavigation.kt`:
 
 - `Screen.Vitals` (B1)
-- `Screen.Nutrition` (B2)
 - `Screen.Mindfulness` (B3)
 - `Screen.Cycle` (C)

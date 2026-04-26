@@ -17,6 +17,7 @@ data class DashboardData(
     val avgHeartRateBpm: Long = 0,
     val restingHeartRateBpm: Long = 0,
     val bodyFatPercent: Double = 0.0,
+    val caloriesInKcal: Double? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val missingPermissions: Set<String> = emptySet(),
@@ -156,6 +157,27 @@ data class DailyNutrition(
 data class DailyHydration(
     val date: LocalDate,
     val liters: Double,
+)
+
+data class NutritionEntry(
+    val time: Instant,
+    val mealType: Int,
+    val name: String?,
+    val energyKcal: Double?,
+    val proteinGrams: Double?,
+    val carbsGrams: Double?,
+    val fatGrams: Double?,
+    val fiberGrams: Double?,
+    val sugarGrams: Double?,
+    val source: String,
+)
+
+data class DailyMacros(
+    val date: LocalDate,
+    val energyKcal: Double,
+    val proteinGrams: Double,
+    val carbsGrams: Double,
+    val fatGrams: Double,
 )
 
 // ─── Source attribution ───────────────────────────────────────────────────────
