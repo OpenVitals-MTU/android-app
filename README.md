@@ -22,13 +22,13 @@ OpenVitals is still in an early stage, but the core product direction is already
 
 ## Features
 
-- Daily dashboard with cards for activity, recovery, intake, body, heart, vitals, mindfulness, and opt-in cycle data
+- Daily dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, records, and opt-in cycle data
 - Period-based detail screens with `Day / Week / Month / Year` navigation
 - Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Browse, Onboarding, and Settings
-- Categorized Health Connect onboarding permissions, with Activity & sleep required and other categories optional
+- Categorized Health Connect onboarding permissions, with Activity & sleep required, dashboard categories optional, and cycle tracking behind a separate explicit opt-in
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
-- Opt-in cycle tracking with period calendar, flow, ovulation, cervical mucus, and basal body temperature views
+- Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
 - Read-only access to Health Connect data; the app does not write health data back
@@ -56,11 +56,22 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Permissions are requested by clear Health Connect categories:
   - Activity & sleep: required for the dashboard
   - Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals: optional
-  - Cycle tracking: optional and requested only after explicitly enabling it during onboarding or in Settings
+  - Cycle tracking: sensitive optional access, requested only after explicitly enabling it during onboarding or in Settings
 - Permissions can be managed later in Settings
 - Health Connect remains the source of truth; OpenVitals reads only the data you choose to share
 
 The current manifest does not request the `INTERNET` permission.
+
+## Permission model
+
+OpenVitals keeps normal dashboard access separate from sensitive opt-in cycle tracking:
+
+| Phase | Health Connect access | When requested |
+|---|---|---|
+| Phase 1 | Steps, distance, exercise, sleep | Required onboarding category |
+| Phase 2 | Heart, recovery, body, activity extras, hydration, nutrition, mindfulness | Optional onboarding categories or Settings |
+| Phase 3 | Blood pressure, SpO2, respiratory rate, body temperature, VO2 max | Optional onboarding category or Heart & Vitals screen |
+| Phase 4 | Menstruation, ovulation, cervical mucus, basal body temperature | Explicit cycle-tracking opt-in during onboarding or Settings |
 
 ## Platform requirements
 
@@ -101,8 +112,9 @@ This checkout currently has `gradle/wrapper/gradle-wrapper.properties` but not `
 After launching the app:
 
 1. Complete onboarding
-2. Grant Activity & sleep, then optionally grant the Health Connect categories you want to expose
-3. Use the dashboard as the main entry point into detail screens
+2. Grant Activity & sleep, then optionally grant the dashboard categories you want to expose
+3. Enable Cycle tracking only if you want period, ovulation, cervical mucus, and basal temperature data shown
+4. Use the dashboard as the main entry point into detail screens
 
 ## Architecture at a glance
 
@@ -115,6 +127,7 @@ OpenVitals is intentionally simple today:
 - manual dependency wiring in `OpenVitalsApp`
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
+- local preferences for onboarding completion, acknowledged permissions, unit system, and cycle-tracking opt-in
 - shared presentation formatters for units and date/time labels
 
 The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).
