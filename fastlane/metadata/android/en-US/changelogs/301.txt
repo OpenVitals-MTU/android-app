@@ -1,0 +1,4 @@
+Fix chart rendering in month and year views across metrics.
+Fix hydration totals by reading synced Health Connect hydration records directly when aggregate data is incomplete.
+Update unit preference handling so Metric and Imperial changes apply immediately across the app.
+Disable the Settings permission request button when all visible permissions are already granted.
