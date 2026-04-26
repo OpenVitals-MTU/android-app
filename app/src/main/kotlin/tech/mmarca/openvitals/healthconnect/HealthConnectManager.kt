@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
@@ -25,6 +26,7 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
@@ -52,6 +54,7 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
@@ -73,6 +76,7 @@ import java.time.ZoneId
  * Methods degrade gracefully when called without the required permission —
  * they return empty collections rather than throwing.
  */
+@OptIn(ExperimentalMindfulnessSessionApi::class)
 class HealthConnectManager(private val context: Context) {
     companion object {
         private const val TAG = "HealthConnectManager"
@@ -105,6 +109,7 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(HydrationRecord::class),
         HealthPermission.getReadPermission(NutritionRecord::class),
+        HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
 
     /** Phase 3 – vitals, requested when opening Heart & Vitals */
@@ -864,6 +869,25 @@ class HealthConnectManager(private val context: Context) {
             }
         }
 
+    // ─── Mindfulness helpers ─────────────────────────────────────────────────
+
+    suspend fun readMindfulnessSessions(start: Instant, end: Instant): List<MindfulnessSession> =
+        withLogging("readMindfulnessSessions[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = MindfulnessSessionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { it.toMindfulnessSession() }
+        }
+
+    suspend fun readMindfulnessMinutes(date: LocalDate): Int {
+        val (start, end) = dayRange(date)
+        return readMindfulnessSessions(start, end).sumOf { it.durationMinutes }.toInt()
+    }
+
     // ─── Vitals helpers ──────────────────────────────────────────────────────
 
     suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
@@ -1008,5 +1032,14 @@ class HealthConnectManager(private val context: Context) {
                 stageType = stage.stage,
             )
         },
+    )
+
+    private fun MindfulnessSessionRecord.toMindfulnessSession() = MindfulnessSession(
+        id = metadata.id,
+        title = title,
+        startTime = startTime,
+        endTime = endTime,
+        durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
+        source = metadata.dataOrigin.packageName,
     )
 }

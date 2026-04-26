@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
                     bodyRepository = app.bodyRepository,
                     hydrationRepository = app.hydrationRepository,
                     nutritionRepository = app.nutritionRepository,
+                    mindfulnessRepository = app.mindfulnessRepository,
                     vitalsRepository = app.vitalsRepository,
                     preferencesRepository = app.preferencesRepository,
                     startDestination = startDestination,

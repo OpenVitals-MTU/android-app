@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +55,7 @@ import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
@@ -80,6 +82,7 @@ fun DashboardScreen(
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenMindfulness: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -114,6 +117,7 @@ fun DashboardScreen(
                 onOpenBody = onOpenBody,
                 onOpenHydration = onOpenHydration,
                 onOpenNutrition = onOpenNutrition,
+                onOpenMindfulness = onOpenMindfulness,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -149,6 +153,7 @@ private fun DashboardContent(
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenMindfulness: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -473,6 +478,27 @@ private fun DashboardContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenHeart,
                 )
+            }
+        }
+
+        item { SectionHeader("Mind") }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    title = "Mindfulness",
+                    value = (data.mindfulnessMinutes ?: 0).toString(),
+                    unit = "min",
+                    icon = Icons.Outlined.SelfImprovement,
+                    accentColor = MindfulnessColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenMindfulness,
+                )
+                Spacer(Modifier.weight(1f))
             }
         }
 

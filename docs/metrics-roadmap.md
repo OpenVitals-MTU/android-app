@@ -228,7 +228,7 @@ Navigation: `Screen.Nutrition` route.
 
 ---
 
-#### B3. Mindfulness screen (`features/mindfulness/`)
+#### B3. Mindfulness screen (`features/mindfulness/`) ✓ Done (2026-04-26)
 
 **New permissions (phase 2):** `MindfulnessSessionRecord`
 
@@ -297,7 +297,7 @@ As B3 and later phases add new sections, a plan is still needed for ordering, co
 | 4 | ~~A4 — Hydration detail screen~~ | ~~Low~~ | ✓ Done |
 | 5 | ~~B2 — Nutrition~~ | ~~Medium~~ | ✓ Done |
 | 6 | ~~B1 — Vitals~~ | ~~Medium~~ | ✓ Done |
-| 7 | B3 — Mindfulness | Low | Small scope; mirrors Activities pattern exactly |
+| 7 | ~~B3 — Mindfulness~~ | ~~Low~~ | ✓ Done |
 | 8 | C — Women's health | High | Niche but important; requires settings gate + dedicated permissions |
 
 ---
@@ -332,7 +332,7 @@ Comparison between this roadmap and the actual codebase as of 2026-04-26.
 |---|---|---|---|
 | B1 — Heart & Vitals screen | ✓ Done | ✓ Implemented | `VitalsRepository` remains feature-facing data access, while `HeartViewModel` and `HeartScreen` own the combined Heart & Vitals surface. Phase 3 permissions are requested from Heart & Vitals. Dashboard shows merged heart/vitals cards. |
 | B2 — Nutrition screen | ✓ Done | ✓ Implemented | `NutritionRecord` is in phase2 permissions. `NutritionRepository`, `NutritionViewModel`, and `NutritionScreen` are present. Dashboard shows calories in/out and `Screen.Nutrition` is registered. |
-| B3 — Mindfulness screen | Not started | Not started | No `MindfulnessSessionRecord` permission, no repository, no screen. |
+| B3 — Mindfulness screen | ✓ Done | ✓ Implemented | `MindfulnessSessionRecord` is in phase2 permissions. `MindfulnessRepository`, `MindfulnessViewModel`, and `MindfulnessScreen` are present. Dashboard shows a Mindfulness tile and `Screen.Mindfulness` is registered. |
 
 ### Phase C
 
@@ -346,11 +346,10 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 
 | Field | Added by phase |
 |---|---|
-| `mindfulnessMinutes: Int?` | B3 |
+| None | — |
 
 ### Navigation gaps
 
 Routes described in the roadmap that are absent from `Screen.kt` and `AppNavigation.kt`:
 
-- `Screen.Mindfulness` (B3)
 - `Screen.Cycle` (C)

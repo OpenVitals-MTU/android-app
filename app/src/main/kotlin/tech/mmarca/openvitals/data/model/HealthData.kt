@@ -24,6 +24,7 @@ data class DashboardData(
     val latestVo2Max: Double? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
+    val mindfulnessMinutes: Int? = null,
     val missingPermissions: Set<String> = emptySet(),
 )
 
@@ -183,6 +184,19 @@ data class DailyMacros(
     val carbsGrams: Double,
     val fatGrams: Double,
 )
+
+// ─── Mindfulness ─────────────────────────────────────────────────────────────
+
+data class MindfulnessSession(
+    val id: String,
+    val title: String?,
+    val startTime: Instant,
+    val endTime: Instant,
+    val durationMs: Long,
+    val source: String,
+) {
+    val durationMinutes: Long get() = durationMs / 60_000
+}
 
 // ─── Vitals ──────────────────────────────────────────────────────────────────
 

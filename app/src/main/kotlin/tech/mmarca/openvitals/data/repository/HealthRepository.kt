@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BloodPressureRecord
@@ -10,6 +11,7 @@ import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
@@ -25,6 +27,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.time.LocalDate
 
+@OptIn(ExperimentalMindfulnessSessionApi::class)
 class HealthRepository(private val hc: HealthConnectManager) {
 
     companion object {
@@ -47,6 +50,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
     private val readVo2MaxPermission = HealthPermission.getReadPermission(Vo2MaxRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
+    private val readMindfulnessPermission = HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
 
     // ─── Availability + permissions ───────────────────────────────────────────
 
@@ -98,6 +102,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val vo2Max = if (readVo2MaxPermission in granted) async { hc.readLatestVo2Max(date) } else null
         val floors = if (readFloorsPermission in granted) async { hc.readFloorsClimbed(date) } else null
         val elevation = if (readElevationPermission in granted) async { hc.readElevationGained(date) } else null
+        val mindfulnessMinutes = if (readMindfulnessPermission in granted) async { hc.readMindfulnessMinutes(date) } else null
 
         val missingPerms = (hc.phase1Permissions + hc.phase2Permissions).filterNot { it in granted }.toSet()
         val latestBloodPressure = bloodPressure?.await()
@@ -121,6 +126,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
             latestVo2Max = vo2Max?.await()?.vo2MaxMlPerKgPerMin,
             floorsClimbed = floors?.await(),
             elevationGainedMeters = elevation?.await(),
+            mindfulnessMinutes = mindfulnessMinutes?.await(),
             missingPermissions = missingPerms,
         )
     }

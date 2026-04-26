@@ -181,7 +181,7 @@ fun OnboardingScreen(
         Spacer(Modifier.height(8.dp))
 
         PermissionGroupRow(
-            label = "Heart Rate, Body, Calories, Hydration & Nutrition",
+            label = "Heart Rate, Body, Calories, Hydration, Nutrition & Mindfulness",
             granted = state.phase2Granted,
             onGrant = { requestPhase2.launch(viewModel.phase2Permissions) },
         )
