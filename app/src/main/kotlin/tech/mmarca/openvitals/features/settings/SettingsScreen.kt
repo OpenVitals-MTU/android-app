@@ -120,7 +120,7 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp),
                 enabled = state.availability == HealthConnectAvailability.AVAILABLE,
             ) {
-                Text("Manage all permissions")
+                Text("Request not granted permissions")
             }
         }
 
