@@ -1,0 +1,76 @@
+package tech.mmarca.openvitals.features.activity
+
+import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.util.MainDispatcherRule
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import java.time.Instant
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Rule
+import org.junit.Test
+
+class ActivityDetailViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @Test fun `initial load fetches selected activity`() = runTest {
+        val workout = workout(id = "activity-1")
+        val repo = mockk<ActivityRepository>()
+        coEvery { repo.loadWorkout("activity-1") } returns workout
+
+        val vm = ActivityDetailViewModel(repo, "activity-1")
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(workout, vm.uiState.value.workout)
+        assertNull(vm.uiState.value.error)
+        coVerify(exactly = 1) { repo.loadWorkout("activity-1") }
+    }
+
+    @Test fun `missing activity sets not found error`() = runTest {
+        val repo = mockk<ActivityRepository>()
+        coEvery { repo.loadWorkout("missing") } returns null
+
+        val vm = ActivityDetailViewModel(repo, "missing")
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertNull(vm.uiState.value.workout)
+        assertEquals("Activity not found.", vm.uiState.value.error)
+    }
+
+    @Test fun `blank activity id fails without calling repository`() = runTest {
+        val repo = mockk<ActivityRepository>(relaxed = true)
+
+        val vm = ActivityDetailViewModel(repo, "")
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals("Missing activity id.", vm.uiState.value.error)
+        coVerify(exactly = 0) { repo.loadWorkout(any()) }
+    }
+
+    @Test fun `load failure sets error and clears loading`() = runTest {
+        val repo = mockk<ActivityRepository>()
+        coEvery { repo.loadWorkout("activity-1") } throws RuntimeException("timeout")
+
+        val vm = ActivityDetailViewModel(repo, "activity-1")
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertNull(vm.uiState.value.workout)
+        assertEquals("timeout", vm.uiState.value.error)
+    }
+
+    private fun workout(id: String) = ExerciseData(
+        id = id,
+        title = "Morning run",
+        exerciseType = 56,
+        startTime = Instant.EPOCH,
+        endTime = Instant.EPOCH.plusSeconds(3_600),
+        durationMs = 3_600_000,
+        source = "test",
+    )
+}

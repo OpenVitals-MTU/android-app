@@ -77,6 +77,23 @@ class ActivityRepository(private val hc: HealthConnectManager) {
         return hc.readExerciseSessions(startInstant, endInstant)
     }
 
+    suspend fun loadWorkout(id: String): ExerciseData? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readExercisePermission !in granted) {
+            Log.w(TAG, "Skipping loadWorkout id=$id missing=$readExercisePermission")
+            return null
+        }
+        return hc.readExerciseSession(
+            id = id,
+            includeSteps = readStepsPermission in granted,
+            includeDistance = readDistancePermission in granted,
+            includeTotalCalories = readCaloriesPermission in granted,
+            includeActiveCalories = readActiveCaloriesPermission in granted,
+            includeFloors = readFloorsPermission in granted,
+            includeElevation = readElevationPermission in granted,
+        )
+    }
+
     suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition> {
         val granted = grantedPermissionsIfAvailable()
         if (readHydrationPermission !in granted && readCaloriesPermission !in granted) {

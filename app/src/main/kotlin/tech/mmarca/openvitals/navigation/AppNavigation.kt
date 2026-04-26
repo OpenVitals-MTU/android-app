@@ -14,10 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -31,6 +33,8 @@ import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
+import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
 import tech.mmarca.openvitals.features.activity.ActivityScreen
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
@@ -93,6 +97,7 @@ fun AppNavigation(
         Screen.Dashboard.route -> "Dashboard"
         Screen.Steps.route -> "Steps"
         Screen.Activity.route -> "Activities"
+        Screen.ActivityDetail.route -> "Activity detail"
         Screen.Sleep.route -> "Sleep"
         Screen.Heart.route -> "Heart & Vitals"
         Screen.Body.route -> "Body"
@@ -186,6 +191,24 @@ fun AppNavigation(
                     viewModel = activitiesViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenActivity = { activityId ->
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    },
+                )
+            }
+
+            composable(
+                route = Screen.ActivityDetail.route,
+                arguments = listOf(navArgument(ACTIVITY_DETAIL_ID_ARG) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val activityId = backStackEntry.arguments?.getString(ACTIVITY_DETAIL_ID_ARG).orEmpty()
+                val activityDetailViewModel = remember(activityRepository, activityId) {
+                    ActivityDetailViewModel(activityRepository, activityId)
+                }
+                ActivityDetailScreen(
+                    viewModel = activityDetailViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                 )
             }
 
@@ -266,6 +289,9 @@ fun AppNavigation(
                     viewModel = browseViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenActivity = { activityId ->
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    },
                 )
             }
 

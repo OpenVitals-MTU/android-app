@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.data.model
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 // ─── Dashboard snapshot ───────────────────────────────────────────────────────
 
@@ -40,9 +41,68 @@ data class ExerciseData(
     val source: String,
     val totalDistanceMeters: Double? = null,
     val totalCaloriesKcal: Double? = null,
+    val activeCaloriesKcal: Double? = null,
+    val steps: Long? = null,
+    val floorsClimbed: Int? = null,
+    val elevationGainedMeters: Double? = null,
+    val notes: String? = null,
+    val startZoneOffset: ZoneOffset? = null,
+    val endZoneOffset: ZoneOffset? = null,
+    val lastModifiedTime: Instant? = null,
+    val clientRecordId: String? = null,
+    val clientRecordVersion: Long? = null,
+    val recordingMethod: Int? = null,
+    val device: ExerciseDeviceData? = null,
+    val plannedExerciseSessionId: String? = null,
+    val segments: List<ExerciseSegmentData> = emptyList(),
+    val laps: List<ExerciseLapData> = emptyList(),
+    val route: ExerciseRouteData = ExerciseRouteData(),
 ) {
     val durationMinutes: Long get() = durationMs / 60_000
 }
+
+data class ExerciseDeviceData(
+    val type: Int,
+    val manufacturer: String?,
+    val model: String?,
+)
+
+data class ExerciseSegmentData(
+    val startTime: Instant,
+    val endTime: Instant,
+    val segmentType: Int,
+    val repetitions: Int,
+) {
+    val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
+}
+
+data class ExerciseLapData(
+    val startTime: Instant,
+    val endTime: Instant,
+    val lengthMeters: Double?,
+) {
+    val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
+}
+
+data class ExerciseRouteData(
+    val status: ExerciseRouteStatus = ExerciseRouteStatus.NO_DATA,
+    val points: List<ExerciseRoutePoint> = emptyList(),
+)
+
+enum class ExerciseRouteStatus {
+    DATA,
+    CONSENT_REQUIRED,
+    NO_DATA,
+}
+
+data class ExerciseRoutePoint(
+    val time: Instant,
+    val latitude: Double,
+    val longitude: Double,
+    val altitudeMeters: Double?,
+    val horizontalAccuracyMeters: Double?,
+    val verticalAccuracyMeters: Double?,
+)
 
 data class DailySteps(
     val date: LocalDate,

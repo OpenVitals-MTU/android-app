@@ -22,6 +22,7 @@ import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -58,7 +59,13 @@ import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DataSource
+import tech.mmarca.openvitals.data.model.ExerciseDeviceData
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.data.model.ExerciseLapData
+import tech.mmarca.openvitals.data.model.ExerciseRouteData
+import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.data.model.ExerciseRouteStatus
+import tech.mmarca.openvitals.data.model.ExerciseSegmentData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
@@ -536,6 +543,70 @@ class HealthConnectManager(private val context: Context) {
                     pageSize = 50,
                 )
             ).records.map { it.toExerciseData() }
+        }
+
+    suspend fun readExerciseSession(
+        id: String,
+        includeSteps: Boolean,
+        includeDistance: Boolean,
+        includeTotalCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
+    ): ExerciseData? =
+        withNullableLogging("readExerciseSession[$id]") {
+            val record = client().readRecord(ExerciseSessionRecord::class, id).record
+            val metrics = buildSet {
+                if (includeSteps) add(StepsRecord.COUNT_TOTAL)
+                if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeTotalCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+                if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+            }
+            val aggregate = if (metrics.isEmpty()) {
+                null
+            } else {
+                runCatching {
+                    client().aggregate(
+                        AggregateRequest(
+                            metrics = metrics,
+                            timeRangeFilter = TimeRangeFilter.between(record.startTime, record.endTime),
+                        )
+                    )
+                }.onFailure {
+                    Log.e(TAG, "Failed readExerciseSession aggregate id=$id ${diagnosticsSummary()}", it)
+                }.getOrNull()
+            }
+
+            record.toExerciseData(
+                steps = if (includeSteps && aggregate != null) aggregate[StepsRecord.COUNT_TOTAL] ?: 0L else null,
+                totalDistanceMeters = if (includeDistance && aggregate != null) {
+                    aggregate[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+                } else {
+                    null
+                },
+                totalCaloriesKcal = if (includeTotalCalories && aggregate != null) {
+                    aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                },
+                activeCaloriesKcal = if (includeActiveCalories && aggregate != null) {
+                    aggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                },
+                floorsClimbed = if (includeFloors && aggregate != null) {
+                    aggregate[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                } else {
+                    null
+                },
+                elevationGainedMeters = if (includeElevation && aggregate != null) {
+                    aggregate[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                } else {
+                    null
+                },
+            )
         }
 
     // ─── Sleep sessions ──────────────────────────────────────────────────────
@@ -1230,7 +1301,14 @@ class HealthConnectManager(private val context: Context) {
             )
         }.toList()
 
-    private fun ExerciseSessionRecord.toExerciseData() = ExerciseData(
+    private fun ExerciseSessionRecord.toExerciseData(
+        steps: Long? = null,
+        totalDistanceMeters: Double? = null,
+        totalCaloriesKcal: Double? = null,
+        activeCaloriesKcal: Double? = null,
+        floorsClimbed: Int? = null,
+        elevationGainedMeters: Double? = null,
+    ) = ExerciseData(
         id = metadata.id,
         title = title,
         exerciseType = exerciseType,
@@ -1238,7 +1316,63 @@ class HealthConnectManager(private val context: Context) {
         endTime = endTime,
         durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
         source = metadata.dataOrigin.packageName,
+        totalDistanceMeters = totalDistanceMeters,
+        totalCaloriesKcal = totalCaloriesKcal,
+        activeCaloriesKcal = activeCaloriesKcal,
+        steps = steps,
+        floorsClimbed = floorsClimbed,
+        elevationGainedMeters = elevationGainedMeters,
+        notes = notes,
+        startZoneOffset = startZoneOffset,
+        endZoneOffset = endZoneOffset,
+        lastModifiedTime = metadata.lastModifiedTime,
+        clientRecordId = metadata.clientRecordId,
+        clientRecordVersion = metadata.clientRecordVersion,
+        recordingMethod = metadata.recordingMethod,
+        device = metadata.device?.let { device ->
+            ExerciseDeviceData(
+                type = device.type,
+                manufacturer = device.manufacturer,
+                model = device.model,
+            )
+        },
+        plannedExerciseSessionId = plannedExerciseSessionId,
+        segments = segments.map { segment ->
+            ExerciseSegmentData(
+                startTime = segment.startTime,
+                endTime = segment.endTime,
+                segmentType = segment.segmentType,
+                repetitions = segment.repetitions,
+            )
+        },
+        laps = laps.map { lap ->
+            ExerciseLapData(
+                startTime = lap.startTime,
+                endTime = lap.endTime,
+                lengthMeters = lap.length?.inMeters,
+            )
+        },
+        route = exerciseRouteResult.toExerciseRouteData(),
     )
+
+    private fun ExerciseRouteResult.toExerciseRouteData(): ExerciseRouteData = when (this) {
+        is ExerciseRouteResult.Data -> ExerciseRouteData(
+            status = ExerciseRouteStatus.DATA,
+            points = exerciseRoute.route.map { point ->
+                ExerciseRoutePoint(
+                    time = point.time,
+                    latitude = point.latitude,
+                    longitude = point.longitude,
+                    altitudeMeters = point.altitude?.inMeters,
+                    horizontalAccuracyMeters = point.horizontalAccuracy?.inMeters,
+                    verticalAccuracyMeters = point.verticalAccuracy?.inMeters,
+                )
+            },
+        )
+        is ExerciseRouteResult.ConsentRequired -> ExerciseRouteData(status = ExerciseRouteStatus.CONSENT_REQUIRED)
+        is ExerciseRouteResult.NoData -> ExerciseRouteData(status = ExerciseRouteStatus.NO_DATA)
+        else -> ExerciseRouteData(status = ExerciseRouteStatus.NO_DATA)
+    }
 
     private fun SleepSessionRecord.toSleepData() = SleepData(
         id = metadata.id,

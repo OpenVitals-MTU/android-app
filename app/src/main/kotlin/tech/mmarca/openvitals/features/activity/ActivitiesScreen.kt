@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +39,7 @@ fun ActivitiesScreen(
     viewModel: ActivitiesViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenActivity: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -58,6 +61,7 @@ fun ActivitiesScreen(
                     workout = workout,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onClick = { onOpenActivity(workout.id) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -76,11 +80,13 @@ fun ActivitiesScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WorkoutListItem(
     workout: ExerciseData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -89,6 +95,7 @@ private fun WorkoutListItem(
     val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
+        onClick = onClick,
         modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -106,7 +113,7 @@ private fun WorkoutListItem(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = workout.title ?: exerciseTypeShortLabel(workout.exerciseType),
+                    text = workout.title ?: exerciseTypeLabel(workout.exerciseType),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
@@ -130,18 +137,12 @@ private fun WorkoutListItem(
                 Spacer(Modifier.height(4.dp))
                 SourceChip(source = workout.source)
             }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
-}
-
-private fun exerciseTypeShortLabel(type: Int): String = when (type) {
-    8, 9 -> "Biking"
-    27 -> "Hiking"
-    38, 39 -> "Rowing"
-    41, 42 -> "Running"
-    54 -> "Strength training"
-    57, 58 -> "Swimming"
-    62 -> "Walking"
-    66 -> "Yoga"
-    else -> "Exercise"
 }
