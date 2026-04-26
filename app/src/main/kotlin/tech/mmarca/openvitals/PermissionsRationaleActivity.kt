@@ -45,7 +45,7 @@ class PermissionsRationaleActivity : ComponentActivity() {
                                 style = MaterialTheme.typography.headlineSmall,
                             )
                             Text(
-                                text = "OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, and hydration on your device.",
+                                text = "OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 12.dp),

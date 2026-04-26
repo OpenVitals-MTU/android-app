@@ -36,7 +36,12 @@ class MainActivity : ComponentActivity() {
                     heartRepository = app.heartRepository,
                     bodyRepository = app.bodyRepository,
                     hydrationRepository = app.hydrationRepository,
+                    nutritionRepository = app.nutritionRepository,
+                    mindfulnessRepository = app.mindfulnessRepository,
+                    vitalsRepository = app.vitalsRepository,
                     preferencesRepository = app.preferencesRepository,
+                    unitFormatter = app.unitFormatter,
+                    dateTimeFormatterProvider = app.dateTimeFormatterProvider,
                     startDestination = startDestination,
                     onOnboardingComplete = {
                         app.preferencesRepository.onboardingDone = true

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.heart
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
@@ -37,18 +41,23 @@ import tech.mmarca.openvitals.ui.theme.HeartColor
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
-
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d")
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HeartScreen(viewModel: HeartViewModel) {
+fun HeartScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
     val dayRestingBpm = state.dayRestingBpm
     val dayHrvMs = state.dayHrvMs
+    val requestVitalsPermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) { granted ->
+        viewModel.onVitalsPermissionsResult(granted)
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -67,6 +76,8 @@ fun HeartScreen(viewModel: HeartViewModel) {
                     HeartRateTimelineCard(
                         date = state.selectedDate,
                         samples = state.daySamples,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -90,6 +101,8 @@ fun HeartScreen(viewModel: HeartViewModel) {
                         summaries = state.dailySummaries,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -103,6 +116,8 @@ fun HeartScreen(viewModel: HeartViewModel) {
                         summary = summary,
                         restingBpm = restingByDate[summary.date]?.bpm,
                         hrvMs = hrvByDate[summary.date]?.rmssdMs,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -126,6 +141,7 @@ fun HeartScreen(viewModel: HeartViewModel) {
             item {
                 RestingHRDayCard(
                     bpm = dayRestingBpm,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -137,6 +153,7 @@ fun HeartScreen(viewModel: HeartViewModel) {
             item {
                 HRVDayCard(
                     rmssdMs = dayHrvMs,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -150,6 +167,8 @@ fun HeartScreen(viewModel: HeartViewModel) {
                 RestingHRChart(
                     entries = state.dailyRestingHR,
                     selectedRange = state.selectedRange,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -163,12 +182,25 @@ fun HeartScreen(viewModel: HeartViewModel) {
                 HRVChart(
                     entries = state.dailyHrv,
                     selectedRange = state.selectedRange,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
         }
+
+        item { SectionHeader("Vitals") }
+        HeartVitalsContent(
+            state = state,
+            phase3Permissions = viewModel.vitalsPermissions,
+            onGrantPermissions = requestVitalsPermissions::launch,
+            selectedRange = state.selectedRange,
+            period = period,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
     }
 }
 
@@ -177,9 +209,12 @@ private fun HeartRateChart(
     summaries: List<HeartRateSummary>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val sorted = summaries.sortedBy { it.date }
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxBpm = sorted.maxOfOrNull { it.maxBpm } ?: 200L
     val minBpm = sorted.minOfOrNull { it.minBpm } ?: 40L
     val range = (maxBpm - minBpm).coerceAtLeast(1)
@@ -271,7 +306,7 @@ private fun HeartRateChart(
                 val overallMin = sorted.minOf { it.minBpm }
                 val overallMax = sorted.maxOf { it.maxBpm }
                 Text(
-                    text = "${periodTitle(selectedRange, period)} · Avg $avgAll bpm · range $overallMin-$overallMax bpm",
+                    text = "${periodTitle(selectedRange, period)} · Avg ${unitFormatter.heartRate(avgAll.toLong()).text} · range ${unitFormatter.heartRate(overallMin).text}-${unitFormatter.heartRate(overallMax).text}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -284,6 +319,8 @@ private fun HeartRateChart(
 private fun HeartRateTimelineCard(
     date: LocalDate,
     samples: List<HeartRateSample>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -299,6 +336,7 @@ private fun HeartRateTimelineCard(
     val dayDurationMillis = Duration.between(dayStart, dayEnd).toMillis().coerceAtLeast(1L)
     val firstSample = sorted.first().time.atZone(zone)
     val lastSample = sorted.last().time.atZone(zone)
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
         modifier = modifier,
@@ -313,17 +351,17 @@ private fun HeartRateTimelineCard(
             ) {
                 HeartRateStat(
                     label = "Avg",
-                    value = "$avgBpm bpm",
+                    value = unitFormatter.heartRate(avgBpm.toLong()).text,
                     modifier = Modifier.weight(1f),
                 )
                 HeartRateStat(
                     label = "Range",
-                    value = "$minBpm-$maxBpm bpm",
+                    value = "${unitFormatter.heartRate(minBpm).text}-${unitFormatter.heartRate(maxBpm).text}",
                     modifier = Modifier.weight(1f),
                 )
                 HeartRateStat(
                     label = "Samples",
-                    value = sorted.size.toString(),
+                    value = unitFormatter.count(sorted.size),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -442,10 +480,13 @@ private fun HeartRateEmptyDayCard(modifier: Modifier = Modifier) {
 @Composable
 private fun HeartRateDayRow(
     summary: HeartRateSummary,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     restingBpm: Long? = null,
     hrvMs: Double? = null,
 ) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
@@ -464,25 +505,25 @@ private fun HeartRateDayRow(
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "${summary.avgBpm} bpm avg",
+                    text = "${unitFormatter.heartRate(summary.avgBpm).text} avg",
                     style = MaterialTheme.typography.titleSmall,
                     color = HeartColor,
                 )
                 Text(
-                    text = "${summary.minBpm}-${summary.maxBpm} bpm",
+                    text = "${unitFormatter.heartRate(summary.minBpm).text}-${unitFormatter.heartRate(summary.maxBpm).text}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (restingBpm != null) {
                     Text(
-                        text = "Resting $restingBpm bpm",
+                        text = "Resting ${unitFormatter.heartRate(restingBpm).text}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (hrvMs != null) {
                     Text(
-                        text = "HRV ${"%.1f".format(hrvMs)} ms",
+                        text = "HRV ${unitFormatter.hrv(hrvMs).text}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -493,7 +534,11 @@ private fun HeartRateDayRow(
 }
 
 @Composable
-private fun RestingHRDayCard(bpm: Long, modifier: Modifier = Modifier) {
+private fun RestingHRDayCard(
+    bpm: Long,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -511,7 +556,7 @@ private fun RestingHRDayCard(bpm: Long, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "$bpm bpm",
+                    text = unitFormatter.heartRate(bpm).text,
                     style = MaterialTheme.typography.headlineSmall,
                     color = HeartColor,
                 )
@@ -521,7 +566,11 @@ private fun RestingHRDayCard(bpm: Long, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun HRVDayCard(rmssdMs: Double, modifier: Modifier = Modifier) {
+private fun HRVDayCard(
+    rmssdMs: Double,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -539,7 +588,7 @@ private fun HRVDayCard(rmssdMs: Double, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${"%.1f".format(rmssdMs)} ms RMSSD",
+                    text = "${unitFormatter.hrv(rmssdMs).text} RMSSD",
                     style = MaterialTheme.typography.headlineSmall,
                     color = HeartColor,
                 )
@@ -552,9 +601,12 @@ private fun HRVDayCard(rmssdMs: Double, modifier: Modifier = Modifier) {
 private fun RestingHRChart(
     entries: List<DailyRestingHR>,
     selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.date }
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxBpm = sorted.maxOfOrNull { it.bpm } ?: 80L
     val minBpm = sorted.minOfOrNull { it.bpm } ?: 40L
     val range = (maxBpm - minBpm).coerceAtLeast(1L)
@@ -619,7 +671,7 @@ private fun RestingHRChart(
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.bpm }.average().roundToInt()
             Text(
-                text = "Avg $avg bpm · range $minBpm-$maxBpm bpm",
+                text = "Avg ${unitFormatter.heartRate(avg.toLong()).text} · range ${unitFormatter.heartRate(minBpm).text}-${unitFormatter.heartRate(maxBpm).text}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -631,9 +683,12 @@ private fun RestingHRChart(
 private fun HRVChart(
     entries: List<DailyHrv>,
     selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.date }
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxMs = sorted.maxOfOrNull { it.rmssdMs } ?: 100.0
     val minMs = sorted.minOfOrNull { it.rmssdMs } ?: 0.0
     val range = (maxMs - minMs).coerceAtLeast(0.5)
@@ -698,7 +753,7 @@ private fun HRVChart(
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.rmssdMs }.average()
             Text(
-                text = "Avg ${"%.1f".format(avg)} ms · range ${"%.1f".format(minMs)}-${"%.1f".format(maxMs)} ms",
+                text = "Avg ${unitFormatter.hrv(avg).text} · range ${unitFormatter.hrv(minMs).text}-${unitFormatter.hrv(maxMs).text}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

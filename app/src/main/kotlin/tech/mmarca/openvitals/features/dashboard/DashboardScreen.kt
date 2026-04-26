@@ -21,6 +21,8 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MonitorWeight
+import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.SleepData
@@ -53,22 +57,22 @@ import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.MindfulnessColor
+import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
-
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     onGrantPermissions: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenActivities: () -> Unit,
@@ -76,6 +80,8 @@ fun DashboardScreen(
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
+    onOpenNutrition: () -> Unit,
+    onOpenMindfulness: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -93,6 +99,8 @@ fun DashboardScreen(
                 ErrorMessage(state.errorMessage ?: "Unknown error")
             dashboardData != null -> DashboardContent(
                 data = dashboardData,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 canGoForward = state.selectedDate.isBefore(LocalDate.now()),
                 showPermissionsCallout = state.showPermissionsCallout,
                 onPreviousDay = viewModel::previousDay,
@@ -109,6 +117,8 @@ fun DashboardScreen(
                 onOpenHeart = onOpenHeart,
                 onOpenBody = onOpenBody,
                 onOpenHydration = onOpenHydration,
+                onOpenNutrition = onOpenNutrition,
+                onOpenMindfulness = onOpenMindfulness,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -130,6 +140,8 @@ fun DashboardScreen(
 @Composable
 private fun DashboardContent(
     data: DashboardData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     canGoForward: Boolean,
     showPermissionsCallout: Boolean,
     onPreviousDay: () -> Unit,
@@ -143,9 +155,12 @@ private fun DashboardContent(
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
     onOpenHydration: () -> Unit,
+    onOpenNutrition: () -> Unit,
+    onOpenMindfulness: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
+    val distance = unitFormatter.distance(data.distanceMeters)
 
     androidx.compose.foundation.lazy.LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp),
@@ -173,7 +188,7 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Daily summary") }
+        item { SectionHeader("Activity & recovery") }
 
         item {
             Row(
@@ -184,7 +199,7 @@ private fun DashboardContent(
             ) {
                 MetricCard(
                     title = "Steps",
-                    value = "%,d".format(data.steps),
+                    value = unitFormatter.count(data.steps),
                     unit = "steps",
                     icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
                     accentColor = StepsColor,
@@ -193,45 +208,12 @@ private fun DashboardContent(
                 )
                 MetricCard(
                     title = "Distance",
-                    value = if (data.distanceMeters >= 1000) {
-                        "%.1f".format(data.distanceMeters / 1000)
-                    } else {
-                        "%d".format(data.distanceMeters.roundToInt())
-                    },
-                    unit = if (data.distanceMeters >= 1000) "km" else "m",
+                    value = distance.value,
+                    unit = distance.unit,
                     icon = Icons.Outlined.Straighten,
                     accentColor = DistanceColor,
                     modifier = Modifier.weight(1f),
                     onClick = onOpenSteps,
-                )
-            }
-        }
-
-        item {
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MetricCard(
-                    title = "Calories burned",
-                    value = "%,d".format(data.caloriesKcal.roundToInt()),
-                    unit = "kcal",
-                    icon = Icons.Outlined.LocalFireDepartment,
-                    accentColor = CaloriesColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenSteps,
-                )
-                MetricCard(
-                    title = "Hydration",
-                    value = "%.1f".format(data.hydrationLiters),
-                    unit = "L",
-                    icon = Icons.Outlined.LocalDrink,
-                    accentColor = HydrationColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenHydration,
                 )
             }
         }
@@ -257,14 +239,11 @@ private fun DashboardContent(
                         )
                     }
                     if (data.elevationGainedMeters != null) {
+                        val elevation = unitFormatter.elevation(data.elevationGainedMeters)
                         MetricCard(
                             title = "Elevation",
-                            value = if (data.elevationGainedMeters >= 1000) {
-                                "%.1f".format(data.elevationGainedMeters / 1000)
-                            } else {
-                                "%d".format(data.elevationGainedMeters.roundToInt())
-                            },
-                            unit = if (data.elevationGainedMeters >= 1000) "km" else "m",
+                            value = elevation.value,
+                            unit = elevation.unit,
                             icon = Icons.Outlined.Terrain,
                             accentColor = ElevationColor,
                             modifier = Modifier.weight(1f),
@@ -278,14 +257,15 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Highlights") }
-
         item {
+            Spacer(Modifier.height(12.dp))
             val workout = data.workout
             if (workout != null) {
                 WorkoutCard(
                     workout = workout,
                     zone = zone,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenActivities,
                 )
@@ -301,14 +281,15 @@ private fun DashboardContent(
             }
         }
 
-        item { Spacer(Modifier.height(12.dp)) }
-
         item {
+            Spacer(Modifier.height(12.dp))
             val sleep = data.sleep
             if (sleep != null) {
                 SleepCard(
                     sleep = sleep,
                     zone = zone,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenSleep,
                 )
@@ -324,6 +305,78 @@ private fun DashboardContent(
             }
         }
 
+        item { SectionHeader("Body & intake") }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    title = "Calories out",
+                    value = unitFormatter.energy(data.caloriesKcal).value,
+                    unit = unitFormatter.energy(data.caloriesKcal).unit,
+                    icon = Icons.Outlined.LocalFireDepartment,
+                    accentColor = CaloriesColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenSteps,
+                )
+                MetricCard(
+                    title = "Calories in",
+                    value = unitFormatter.energy(data.caloriesInKcal ?: 0.0).value,
+                    unit = unitFormatter.energy(data.caloriesInKcal ?: 0.0).unit,
+                    icon = Icons.Outlined.Restaurant,
+                    accentColor = NutritionColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenNutrition,
+                )
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    title = "Hydration",
+                    value = unitFormatter.hydration(data.hydrationLiters).value,
+                    unit = unitFormatter.hydration(data.hydrationLiters).unit,
+                    icon = Icons.Outlined.LocalDrink,
+                    accentColor = HydrationColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenHydration,
+                )
+                MetricCard(
+                    title = "Latest weight",
+                    value = unitFormatter.weight(data.weightKg).value,
+                    unit = unitFormatter.weight(data.weightKg).unit,
+                    icon = Icons.Outlined.MonitorWeight,
+                    accentColor = WeightColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenBody,
+                )
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            MetricCard(
+                title = "Body fat",
+                value = unitFormatter.percent(data.bodyFatPercent).value,
+                unit = unitFormatter.percent(data.bodyFatPercent).unit,
+                icon = Icons.Outlined.MonitorWeight,
+                accentColor = BodyFatColor,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onClick = onOpenBody,
+            )
+        }
+
         item { SectionHeader("Heart") }
 
         item {
@@ -335,8 +388,8 @@ private fun DashboardContent(
             ) {
                 MetricCard(
                     title = "Avg heart rate",
-                    value = data.avgHeartRateBpm.toString(),
-                    unit = "bpm",
+                    value = unitFormatter.heartRate(data.avgHeartRateBpm).value,
+                    unit = unitFormatter.heartRate(data.avgHeartRateBpm).unit,
                     icon = Icons.Outlined.Favorite,
                     accentColor = HeartColor,
                     modifier = Modifier.weight(1f),
@@ -344,8 +397,8 @@ private fun DashboardContent(
                 )
                 MetricCard(
                     title = "Resting heart rate",
-                    value = data.restingHeartRateBpm.toString(),
-                    unit = "bpm",
+                    value = unitFormatter.heartRate(data.restingHeartRateBpm).value,
+                    unit = unitFormatter.heartRate(data.restingHeartRateBpm).unit,
                     icon = Icons.Outlined.FavoriteBorder,
                     accentColor = HeartColor,
                     modifier = Modifier.weight(1f),
@@ -354,7 +407,88 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Body") }
+        item {
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (data.latestSystolicMmHg != null && data.latestDiastolicMmHg != null) {
+                    val bloodPressure = unitFormatter.bloodPressure(
+                        data.latestSystolicMmHg,
+                        data.latestDiastolicMmHg,
+                    )
+                    MetricCard(
+                        title = "Blood pressure",
+                        value = bloodPressure.value,
+                        unit = bloodPressure.unit,
+                        icon = Icons.Outlined.Favorite,
+                        accentColor = VitalsColor,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenHeart,
+                    )
+                } else {
+                    MetricCardPlaceholder(
+                        title = "Blood pressure",
+                        icon = Icons.Outlined.Favorite,
+                        accentColor = VitalsColor,
+                        message = "No blood pressure reading.",
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenHeart,
+                    )
+                }
+                if (data.latestSpO2Percent != null) {
+                    val spO2 = unitFormatter.percent(data.latestSpO2Percent)
+                    MetricCard(
+                        title = "SpO2",
+                        value = spO2.value,
+                        unit = spO2.unit,
+                        icon = Icons.Outlined.FavoriteBorder,
+                        accentColor = VitalsColor,
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenHeart,
+                    )
+                } else {
+                    MetricCardPlaceholder(
+                        title = "SpO2",
+                        icon = Icons.Outlined.FavoriteBorder,
+                        accentColor = VitalsColor,
+                        message = "No oxygen reading.",
+                        modifier = Modifier.weight(1f),
+                        onClick = onOpenHeart,
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            if (data.latestVo2Max != null) {
+                val vo2Max = unitFormatter.vo2Max(data.latestVo2Max)
+                MetricCard(
+                    title = "VO2 max",
+                    value = vo2Max.value,
+                    unit = vo2Max.unit,
+                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    accentColor = VitalsColor,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onClick = onOpenHeart,
+                )
+            } else {
+                MetricCardPlaceholder(
+                    title = "VO2 max",
+                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    accentColor = VitalsColor,
+                    message = "No VO2 max reading.",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onClick = onOpenHeart,
+                )
+            }
+        }
+
+        item { SectionHeader("Mind") }
         item {
             Row(
                 modifier = Modifier
@@ -363,23 +497,15 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Latest weight",
-                    value = "%.1f".format(data.weightKg),
-                    unit = "kg",
-                    icon = Icons.Outlined.MonitorWeight,
-                    accentColor = WeightColor,
+                    title = "Mindfulness",
+                    value = unitFormatter.minutes((data.mindfulnessMinutes ?: 0).toLong()).value,
+                    unit = unitFormatter.minutes((data.mindfulnessMinutes ?: 0).toLong()).unit,
+                    icon = Icons.Outlined.SelfImprovement,
+                    accentColor = MindfulnessColor,
                     modifier = Modifier.weight(1f),
-                    onClick = onOpenBody,
+                    onClick = onOpenMindfulness,
                 )
-                MetricCard(
-                    title = "Body fat",
-                    value = "%.1f".format(data.bodyFatPercent),
-                    unit = "%",
-                    icon = Icons.Outlined.MonitorWeight,
-                    accentColor = BodyFatColor,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenBody,
-                )
+                Spacer(Modifier.weight(1f))
             }
         }
 
@@ -403,20 +529,19 @@ private fun DashboardContent(
 private fun WorkoutCard(
     workout: ExerciseData,
     zone: ZoneId,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
     val start = workout.startTime.atZone(zone)
     MetricCard(
         title = "Workout",
-        value = "%dh %02dm".format(
-            workout.durationMinutes / 60,
-            workout.durationMinutes % 60,
-        ),
+        value = unitFormatter.duration(workout.durationMs),
         unit = exerciseTypeLabel(workout.exerciseType),
         icon = Icons.AutoMirrored.Outlined.DirectionsRun,
         accentColor = WorkoutColor,
-        subtitle = "${dateFormatter.format(start)} · ${timeFormatter.format(start)}",
+        subtitle = "${dateTimeFormatterProvider.mediumDate().format(start)} · ${dateTimeFormatterProvider.shortTime().format(start)}",
         source = workout.source,
         modifier = modifier,
         onClick = onClick,
@@ -427,17 +552,19 @@ private fun WorkoutCard(
 private fun SleepCard(
     sleep: SleepData,
     zone: ZoneId,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
     val end = sleep.endTime.atZone(zone)
     MetricCard(
         title = "Sleep",
-        value = sleep.durationFormatted,
+        value = unitFormatter.duration(sleep.durationMs),
         unit = "",
         icon = Icons.Outlined.Bed,
         accentColor = SleepColor,
-        subtitle = "${dateFormatter.format(end)} · ${timeFormatter.format(end)}",
+        subtitle = "${dateTimeFormatterProvider.mediumDate().format(end)} · ${dateTimeFormatterProvider.shortTime().format(end)}",
         source = sleep.source,
         modifier = modifier,
         onClick = onClick,

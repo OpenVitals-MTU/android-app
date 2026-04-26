@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -29,13 +31,14 @@ import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-private val dateTimeFormatter = DateTimeFormatter.ofPattern("d MMM HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BodyScreen(viewModel: BodyViewModel) {
+fun BodyScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
 
     MetricDetailScaffold(
@@ -58,6 +61,7 @@ fun BodyScreen(viewModel: BodyViewModel) {
                 WeightSummaryCard(
                     latestKg = state.latestWeightKg,
                     changeKg = state.weightChangKg,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
@@ -65,6 +69,7 @@ fun BodyScreen(viewModel: BodyViewModel) {
             item {
                 WeightLineChart(
                     entries = state.weightEntries,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -74,6 +79,8 @@ fun BodyScreen(viewModel: BodyViewModel) {
             items(state.weightEntries.sortedByDescending { it.time }) { entry ->
                 WeightEntryRow(
                     entry = entry,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -90,6 +97,7 @@ fun BodyScreen(viewModel: BodyViewModel) {
                     leanMassKg = state.leanMassKg,
                     bmrKcal = state.bmrKcal,
                     boneMassKg = state.boneMassKg,
+                    unitFormatter = unitFormatter,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -100,6 +108,7 @@ fun BodyScreen(viewModel: BodyViewModel) {
                 item {
                     BodyFatLineChart(
                         entries = state.bodyFatEntries,
+                        unitFormatter = unitFormatter,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
@@ -128,6 +137,7 @@ private fun BodyCompositionCard(
     leanMassKg: Double?,
     bmrKcal: Double?,
     boneMassKg: Double?,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -141,14 +151,14 @@ private fun BodyCompositionCard(
                 bmi?.let {
                     CompositionStat(
                         label = "BMI",
-                        value = "%.1f".format(it),
+                        value = unitFormatter.decimal(it, 1),
                         modifier = Modifier.weight(1f),
                     )
                 }
                 bodyFatPercent?.let {
                     CompositionStat(
                         label = "Body fat",
-                        value = "%.1f%%".format(it),
+                        value = unitFormatter.percent(it).text,
                         color = BodyFatColor,
                         modifier = Modifier.weight(1f),
                     )
@@ -156,7 +166,7 @@ private fun BodyCompositionCard(
                 leanMassKg?.let {
                     CompositionStat(
                         label = "Lean mass",
-                        value = "%.1f kg".format(it),
+                        value = unitFormatter.bodyMass(it).text,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -166,14 +176,14 @@ private fun BodyCompositionCard(
                     bmrKcal?.let {
                         CompositionStat(
                             label = "BMR",
-                            value = "%,d kcal".format(it.toInt()),
+                            value = unitFormatter.energy(it).text,
                             modifier = Modifier.weight(1f),
                         )
                     }
                     boneMassKg?.let {
                         CompositionStat(
                             label = "Bone mass",
-                            value = "%.2f kg".format(it),
+                            value = unitFormatter.bodyMass(it, decimals = 2).text,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -208,7 +218,11 @@ private fun CompositionStat(
 }
 
 @Composable
-private fun BodyFatLineChart(entries: List<BodyFatEntry>, modifier: Modifier = Modifier) {
+private fun BodyFatLineChart(
+    entries: List<BodyFatEntry>,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
     val sorted = entries.sortedBy { it.time }
     val maxPct = sorted.maxOfOrNull { it.percent } ?: 30.0
     val minPct = sorted.minOfOrNull { it.percent } ?: 0.0
@@ -247,7 +261,7 @@ private fun BodyFatLineChart(entries: List<BodyFatEntry>, modifier: Modifier = M
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "%.1f – %.1f%% · %d entries".format(minPct, maxPct, sorted.size),
+                text = "${unitFormatter.percent(minPct).text} - ${unitFormatter.percent(maxPct).text} · ${unitFormatter.count(sorted.size)} entries",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -259,6 +273,7 @@ private fun BodyFatLineChart(entries: List<BodyFatEntry>, modifier: Modifier = M
 private fun WeightSummaryCard(
     latestKg: Double?,
     changeKg: Double?,
+    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -279,7 +294,7 @@ private fun WeightSummaryCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = latestKg?.let { "%.1f kg".format(it) } ?: "–",
+                    text = latestKg?.let { unitFormatter.weight(it).text } ?: "-",
                     style = MaterialTheme.typography.headlineSmall,
                     color = WeightColor,
                 )
@@ -292,8 +307,9 @@ private fun WeightSummaryCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     val sign = if (changeKg >= 0) "+" else ""
+                    val change = unitFormatter.weight(kotlin.math.abs(changeKg))
                     Text(
-                        text = "$sign%.1f kg".format(changeKg),
+                        text = "$sign${change.text}",
                         style = MaterialTheme.typography.headlineSmall,
                         color = if (changeKg < 0) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error,
@@ -305,7 +321,11 @@ private fun WeightSummaryCard(
 }
 
 @Composable
-private fun WeightLineChart(entries: List<WeightEntry>, modifier: Modifier = Modifier) {
+private fun WeightLineChart(
+    entries: List<WeightEntry>,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
     val sorted = entries.sortedBy { it.time }
     val maxKg = sorted.maxOfOrNull { it.weightKg } ?: 100.0
     val minKg = sorted.minOfOrNull { it.weightKg } ?: 50.0
@@ -344,7 +364,7 @@ private fun WeightLineChart(entries: List<WeightEntry>, modifier: Modifier = Mod
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "%.1f – %.1f kg · %d entries".format(minKg, maxKg, sorted.size),
+                text = "${unitFormatter.weight(minKg).text} - ${unitFormatter.weight(maxKg).text} · ${unitFormatter.count(sorted.size)} entries",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -353,7 +373,12 @@ private fun WeightLineChart(entries: List<WeightEntry>, modifier: Modifier = Mod
 }
 
 @Composable
-private fun WeightEntryRow(entry: WeightEntry, modifier: Modifier = Modifier) {
+private fun WeightEntryRow(
+    entry: WeightEntry,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
     val zone = ZoneId.systemDefault()
     val time = entry.time.atZone(zone)
     Card(
@@ -369,13 +394,13 @@ private fun WeightEntryRow(entry: WeightEntry, modifier: Modifier = Modifier) {
         ) {
             Column {
                 Text(
-                    text = dateTimeFormatter.format(time),
+                    text = dateTimeFormatterProvider.mediumDateTime().format(time),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 SourceChip(source = entry.source)
             }
             Text(
-                text = "%.1f kg".format(entry.weightKg),
+                text = unitFormatter.weight(entry.weightKg).text,
                 style = MaterialTheme.typography.titleMedium,
                 color = WeightColor,
             )

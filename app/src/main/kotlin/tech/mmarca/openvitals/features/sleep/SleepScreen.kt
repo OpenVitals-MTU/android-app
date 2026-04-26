@@ -26,6 +26,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.model.TimeRange
@@ -37,15 +39,14 @@ import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SleepScreen(viewModel: SleepViewModel) {
+fun SleepScreen(
+    viewModel: SleepViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
     val state by viewModel.uiState.collectAsState()
     val primarySession = remember(state.sessions) {
         state.sessions.maxByOrNull { it.durationMs }
@@ -68,6 +69,8 @@ fun SleepScreen(viewModel: SleepViewModel) {
                     SleepSessionTimelineCard(
                         session = primarySession,
                         selectedDate = state.selectedDate,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -81,6 +84,8 @@ fun SleepScreen(viewModel: SleepViewModel) {
                         sessions = state.sessions,
                         selectedRange = state.selectedRange,
                         period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -91,6 +96,8 @@ fun SleepScreen(viewModel: SleepViewModel) {
                 items(state.sessions.sortedByDescending { it.endTime }) { session ->
                     SleepSessionItem(
                         session = session,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -121,9 +128,12 @@ private fun SleepDurationChart(
     sessions: List<SleepData>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val points = sleepDurationPoints(sessions, period)
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
     val maxHours = points.maxOfOrNull { it.hours }?.coerceAtLeast(1.0) ?: 1.0
     val labelStride = when (selectedRange) {
         TimeRange.DAY,
@@ -183,10 +193,7 @@ private fun SleepDurationChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · Avg %.1fh · %d nights".format(
-                    averageHours,
-                    nightsWithSleep.size,
-                ),
+                text = "${periodTitle(selectedRange, period)} · Avg ${unitFormatter.decimal(averageHours, 1)}h · ${unitFormatter.count(nightsWithSleep.size)} nights",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -198,11 +205,15 @@ private fun SleepDurationChart(
 private fun SleepSessionTimelineCard(
     session: SleepData,
     selectedDate: LocalDate,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
     val start = session.startTime.atZone(zone)
     val end = session.endTime.atZone(zone)
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
         modifier = modifier,
@@ -218,7 +229,7 @@ private fun SleepSessionTimelineCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = session.durationFormatted,
+                        text = unitFormatter.duration(session.durationMs),
                         style = MaterialTheme.typography.headlineMedium,
                         color = SleepColor,
                     )
@@ -268,17 +279,24 @@ private fun SleepSessionTimelineCard(
                     )
                 }
                 Spacer(Modifier.height(12.dp))
-                SleepStageLegend(stages = session.stages)
+                SleepStageLegend(stages = session.stages, unitFormatter = unitFormatter)
             }
         }
     }
 }
 
 @Composable
-private fun SleepSessionItem(session: SleepData, modifier: Modifier = Modifier) {
+private fun SleepSessionItem(
+    session: SleepData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
     val zone = ZoneId.systemDefault()
     val start = session.startTime.atZone(zone)
     val end = session.endTime.atZone(zone)
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     Card(
         modifier = modifier,
@@ -305,7 +323,7 @@ private fun SleepSessionItem(session: SleepData, modifier: Modifier = Modifier) 
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = session.durationFormatted,
+                        text = unitFormatter.duration(session.durationMs),
                         style = MaterialTheme.typography.titleMedium,
                         color = SleepColor,
                     )
@@ -320,7 +338,7 @@ private fun SleepSessionItem(session: SleepData, modifier: Modifier = Modifier) 
                     totalMs = session.durationMs,
                 )
                 Spacer(Modifier.height(8.dp))
-                SleepStageLegend(stages = session.stages)
+                SleepStageLegend(stages = session.stages, unitFormatter = unitFormatter)
             }
         }
     }
@@ -350,7 +368,7 @@ private fun SleepStagesBar(
 }
 
 @Composable
-private fun SleepStageLegend(stages: List<SleepStage>) {
+private fun SleepStageLegend(stages: List<SleepStage>, unitFormatter: UnitFormatter) {
     val stageTotals = stages
         .groupBy { it.stageType }
         .mapValues { (_, list) -> list.sumOf { it.durationMs } }
@@ -362,8 +380,6 @@ private fun SleepStageLegend(stages: List<SleepStage>) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         stageTotals.forEach { (stageType, durationMs) ->
-            val hours = durationMs / 3_600_000
-            val mins = (durationMs % 3_600_000) / 60_000
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Canvas(modifier = Modifier.height(8.dp).width(8.dp)) {
                     drawCircle(color = stageColor(stageType))
@@ -374,7 +390,7 @@ private fun SleepStageLegend(stages: List<SleepStage>) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = if (hours > 0) "${hours}h ${mins}m" else "${mins}m",
+                    text = unitFormatter.duration(durationMs),
                     style = MaterialTheme.typography.labelSmall,
                 )
             }

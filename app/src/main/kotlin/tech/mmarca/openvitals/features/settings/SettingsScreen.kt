@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -73,6 +75,17 @@ fun SettingsScreen(
             )
         }
 
+        // ─── Display preferences ─────────────────────────────────────────
+        item { SectionHeader("Display") }
+
+        item {
+            UnitSystemCard(
+                selected = state.unitSystem,
+                onSelect = viewModel::selectUnitSystem,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
         // ─── Permissions ─────────────────────────────────────────────────
         item { SectionHeader("Permissions") }
 
@@ -107,7 +120,7 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp),
                 enabled = state.availability == HealthConnectAvailability.AVAILABLE,
             ) {
-                Text("Manage all permissions")
+                Text("Request not granted permissions")
             }
         }
 
@@ -153,6 +166,49 @@ fun SettingsScreen(
         }
 
         item { Spacer(Modifier.height(32.dp)) }
+    }
+}
+
+@Composable
+private fun UnitSystemCard(
+    selected: UnitSystem,
+    onSelect: (UnitSystem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "Units", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "Choose how distances, weights, hydration, and temperature are displayed.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(
+                modifier = Modifier.padding(top = 12.dp),
+            ) {
+                UnitSystem.entries.forEach { unitSystem ->
+                    FilterChip(
+                        selected = selected == unitSystem,
+                        onClick = { onSelect(unitSystem) },
+                        label = {
+                            Text(
+                                when (unitSystem) {
+                                    UnitSystem.METRIC -> "Metric"
+                                    UnitSystem.IMPERIAL -> "Imperial"
+                                }
+                            )
+                        },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+        }
     }
 }
 

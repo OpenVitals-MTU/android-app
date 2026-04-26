@@ -3,8 +3,10 @@ package tech.mmarca.openvitals.features.settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,9 +17,13 @@ data class SettingsUiState(
     val availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val grantedPermissions: Set<String> = emptySet(),
     val allPermissions: Set<String> = emptySet(),
+    val unitSystem: UnitSystem = UnitSystem.METRIC,
 )
 
-class SettingsViewModel(private val repository: HealthRepository) : ViewModel() {
+class SettingsViewModel(
+    private val repository: HealthRepository,
+    private val preferencesRepository: PreferencesRepository,
+) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
     }
@@ -42,8 +48,14 @@ class SettingsViewModel(private val repository: HealthRepository) : ViewModel() 
                 availability = avail,
                 grantedPermissions = granted,
                 allPermissions = repository.allPermissions,
+                unitSystem = preferencesRepository.unitSystem,
             )
         }
+    }
+
+    fun selectUnitSystem(unitSystem: UnitSystem) {
+        preferencesRepository.unitSystem = unitSystem
+        _uiState.value = _uiState.value.copy(unitSystem = unitSystem)
     }
 
     fun onPermissionsResult(granted: Set<String>) {

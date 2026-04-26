@@ -8,12 +8,16 @@ import android.os.UserManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -23,17 +27,25 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import tech.mmarca.openvitals.data.model.BloodPressureEntry
+import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -43,9 +55,14 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
+import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Duration
@@ -60,6 +77,7 @@ import java.time.ZoneId
  * Methods degrade gracefully when called without the required permission —
  * they return empty collections rather than throwing.
  */
+@OptIn(ExperimentalMindfulnessSessionApi::class)
 class HealthConnectManager(private val context: Context) {
     companion object {
         private const val TAG = "HealthConnectManager"
@@ -67,33 +85,67 @@ class HealthConnectManager(private val context: Context) {
 
     // ─── Permissions ─────────────────────────────────────────────────────────
 
-    /** Phase 1 – core metrics requested on first launch */
-    val phase1Permissions: Set<String> = setOf(
+    val corePermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
     )
 
-    /** Phase 2 – extended metrics, requested after onboarding */
-    val phase2Permissions: Set<String> = setOf(
+    val heartPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+    )
+
+    val bodyPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(WeightRecord::class),
         HealthPermission.getReadPermission(HeightRecord::class),
         HealthPermission.getReadPermission(BodyFatRecord::class),
         HealthPermission.getReadPermission(LeanBodyMassRecord::class),
         HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
         HealthPermission.getReadPermission(BoneMassRecord::class),
+    )
+
+    val activityExtrasPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(FloorsClimbedRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(ElevationGainedRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(HydrationRecord::class),
     )
 
-    val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions
+    val nutritionHydrationPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(HydrationRecord::class),
+        HealthPermission.getReadPermission(NutritionRecord::class),
+    )
+
+    val mindfulnessPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+    )
+
+    val vitalsPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(BloodPressureRecord::class),
+        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.getReadPermission(RespiratoryRateRecord::class),
+        HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(Vo2MaxRecord::class),
+    )
+
+    /** Phase 1 – core metrics requested on first launch */
+    val phase1Permissions: Set<String> = corePermissions
+
+    /** Phase 2 – extended metrics requested by category during onboarding */
+    val phase2Permissions: Set<String>
+        get() = heartPermissions +
+            bodyPermissions +
+            activityExtrasPermissions +
+            nutritionHydrationPermissions +
+            (if (isMindfulnessSessionAvailable()) mindfulnessPermissions else emptySet())
+
+    /** Phase 3 – vitals, requested by category during onboarding or when opening Heart & Vitals */
+    val phase3Permissions: Set<String> = vitalsPermissions
+
+    val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
 
     // ─── Availability ─────────────────────────────────────────────────────────
 
@@ -122,6 +174,20 @@ class HealthConnectManager(private val context: Context) {
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)
+
+    fun isMindfulnessSessionAvailable(): Boolean {
+        if (availability() != HealthConnectAvailability.AVAILABLE) return false
+
+        val status = withLogging(
+            "features.getFeatureStatus[mindfulness]",
+            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
+        ) {
+            client().features.getFeatureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION)
+        }
+        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        Log.d(TAG, "mindfulnessFeatureStatus=$status available=$available ${diagnosticsSummary()}")
+        return available
+    }
 
     // ─── Permission queries ───────────────────────────────────────────────────
 
@@ -347,6 +413,20 @@ class HealthConnectManager(private val context: Context) {
     }
 
     suspend fun readTodayCaloriesKcal(): Double? = readCaloriesKcal(LocalDate.now())
+
+    suspend fun readCaloriesInKcal(date: LocalDate): Double? {
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return withNullableLogging("readCaloriesInKcal[$date][$start..$end]") {
+            client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(NutritionRecord.ENERGY_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[NutritionRecord.ENERGY_TOTAL]?.inKilocalories
+        }
+    }
 
     // ─── Hydration ───────────────────────────────────────────────────────────
 
@@ -774,6 +854,186 @@ class HealthConnectManager(private val context: Context) {
         }
     }
 
+    suspend fun readDailyMacros(startDate: LocalDate, endDate: LocalDate): List<DailyMacros> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        return withLogging("readDailyMacros[$start..$end]", emptyList()) {
+            client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(
+                        NutritionRecord.ENERGY_TOTAL,
+                        NutritionRecord.PROTEIN_TOTAL,
+                        NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL,
+                        NutritionRecord.TOTAL_FAT_TOTAL,
+                    ),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofDays(1),
+                )
+            ).map { bucket ->
+                DailyMacros(
+                    date = bucket.startTime.atZone(zone).toLocalDate(),
+                    energyKcal = bucket.result[NutritionRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
+                    proteinGrams = bucket.result[NutritionRecord.PROTEIN_TOTAL]?.inGrams ?: 0.0,
+                    carbsGrams = bucket.result[NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL]?.inGrams ?: 0.0,
+                    fatGrams = bucket.result[NutritionRecord.TOTAL_FAT_TOTAL]?.inGrams ?: 0.0,
+                )
+            }
+        }
+    }
+
+    suspend fun readNutritionEntries(start: Instant, end: Instant): List<NutritionEntry> =
+        withLogging("readNutritionEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = NutritionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                NutritionEntry(
+                    time = record.startTime,
+                    mealType = record.mealType,
+                    name = record.name,
+                    energyKcal = record.energy?.inKilocalories,
+                    proteinGrams = record.protein?.inGrams,
+                    carbsGrams = record.totalCarbohydrate?.inGrams,
+                    fatGrams = record.totalFat?.inGrams,
+                    fiberGrams = record.dietaryFiber?.inGrams,
+                    sugarGrams = record.sugar?.inGrams,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    // ─── Mindfulness helpers ─────────────────────────────────────────────────
+
+    suspend fun readMindfulnessSessions(start: Instant, end: Instant): List<MindfulnessSession> =
+        withLogging("readMindfulnessSessions[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = MindfulnessSessionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { it.toMindfulnessSession() }
+        }
+
+    suspend fun readMindfulnessMinutes(date: LocalDate): Int {
+        val (start, end) = dayRange(date)
+        return readMindfulnessSessions(start, end).sumOf { it.durationMinutes }.toInt()
+    }
+
+    // ─── Vitals helpers ──────────────────────────────────────────────────────
+
+    suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
+        withLogging("readBloodPressureEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = BloodPressureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                BloodPressureEntry(
+                    time = record.time,
+                    systolicMmHg = record.systolic.inMillimetersOfMercury.toInt(),
+                    diastolicMmHg = record.diastolic.inMillimetersOfMercury.toInt(),
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestBloodPressure(date: LocalDate): BloodPressureEntry? {
+        val (start, end) = dayRange(date)
+        return readBloodPressureEntries(start, end).maxByOrNull { it.time }
+    }
+
+    suspend fun readSpO2Entries(start: Instant, end: Instant): List<SpO2Entry> =
+        withLogging("readSpO2Entries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = OxygenSaturationRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                SpO2Entry(
+                    time = record.time,
+                    percent = record.percentage.value,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestSpO2(date: LocalDate): SpO2Entry? {
+        val (start, end) = dayRange(date)
+        return readSpO2Entries(start, end).maxByOrNull { it.time }
+    }
+
+    suspend fun readRespiratoryRateEntries(start: Instant, end: Instant): List<RespiratoryRateEntry> =
+        withLogging("readRespiratoryRateEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = RespiratoryRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                RespiratoryRateEntry(
+                    time = record.time,
+                    breathsPerMinute = record.rate,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readBodyTemperatureEntries(start: Instant, end: Instant): List<BodyTempEntry> =
+        withLogging("readBodyTemperatureEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = BodyTemperatureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                BodyTempEntry(
+                    time = record.time,
+                    temperatureCelsius = record.temperature.inCelsius,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readVo2MaxEntries(start: Instant, end: Instant): List<Vo2MaxEntry> =
+        withLogging("readVo2MaxEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = Vo2MaxRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = false,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                Vo2MaxEntry(
+                    time = record.time,
+                    vo2MaxMlPerKgPerMin = record.vo2MillilitersPerMinuteKilogram,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestVo2Max(date: LocalDate): Vo2MaxEntry? {
+        val (start, end) = dayRange(date)
+        return readVo2MaxEntries(start, end).maxByOrNull { it.time }
+    }
+
     // ─── Private helpers ─────────────────────────────────────────────────────
 
     private fun dayRange(date: LocalDate): Pair<Instant, Instant> {
@@ -810,5 +1070,14 @@ class HealthConnectManager(private val context: Context) {
                 stageType = stage.stage,
             )
         },
+    )
+
+    private fun MindfulnessSessionRecord.toMindfulnessSession() = MindfulnessSession(
+        id = metadata.id,
+        title = title,
+        startTime = startTime,
+        endTime = endTime,
+        durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
+        source = metadata.dataOrigin.packageName,
     )
 }
