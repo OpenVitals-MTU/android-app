@@ -17,6 +17,7 @@ data class DashboardUiState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val showPermissionsCallout: Boolean = false,
+    val trackCycle: Boolean = false,
 )
 
 class DashboardViewModel(
@@ -35,6 +36,13 @@ class DashboardViewModel(
         load(_uiState.value.selectedDate)
     }
 
+    fun refreshPreferences() {
+        val trackCycle = prefs.trackCycle
+        if (_uiState.value.trackCycle != trackCycle) {
+            _uiState.value = _uiState.value.copy(trackCycle = trackCycle)
+        }
+    }
+
     fun load(date: LocalDate) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         viewModelScope.launch {
@@ -42,6 +50,7 @@ class DashboardViewModel(
                 selectedDate = clampedDate,
                 isLoading = true,
                 errorMessage = null,
+                trackCycle = prefs.trackCycle,
             )
             runCatching { repository.loadDashboard(clampedDate) }
                 .onSuccess { data ->
@@ -50,6 +59,7 @@ class DashboardViewModel(
                         data = data,
                         isLoading = false,
                         showPermissionsCallout = unacknowledged.isNotEmpty(),
+                        trackCycle = prefs.trackCycle,
                     )
                 }
                 .onFailure { error ->

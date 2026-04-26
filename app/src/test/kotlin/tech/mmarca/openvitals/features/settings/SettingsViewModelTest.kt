@@ -1,0 +1,107 @@
+package tech.mmarca.openvitals.features.settings
+
+import android.util.Log
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.runs
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.util.MainDispatcherRule
+
+class SettingsViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
+    }
+
+    @Test fun `refresh keeps cycle permissions hidden when cycle tracking is off`() = runTest {
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs(trackCycle = false),
+        )
+
+        assertEquals(setOf("steps"), vm.uiState.value.visiblePermissions)
+        assertFalse(vm.uiState.value.trackCycle)
+    }
+
+    @Test fun `refresh includes cycle permissions when cycle tracking is on`() = runTest {
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs(trackCycle = true),
+        )
+
+        assertEquals(setOf("steps", "cycle"), vm.uiState.value.visiblePermissions)
+        assertTrue(vm.uiState.value.trackCycle)
+    }
+
+    @Test fun `setTrackCycle persists preference and updates visible permissions`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.setTrackCycle(true)
+
+        verify { prefs.trackCycle = true }
+        assertTrue(vm.uiState.value.trackCycle)
+        assertEquals(setOf("steps", "cycle"), vm.uiState.value.visiblePermissions)
+    }
+
+    @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
+        val repository = repo(availability = HealthConnectAvailability.NOT_SUPPORTED)
+
+        val vm = SettingsViewModel(
+            repository = repository,
+            preferencesRepository = prefs(trackCycle = true),
+        )
+
+        assertEquals(HealthConnectAvailability.NOT_SUPPORTED, vm.uiState.value.availability)
+        assertTrue(vm.uiState.value.grantedPermissions.isEmpty())
+        coVerify(exactly = 0) { repository.grantedPermissions() }
+    }
+
+    private fun repo(
+        availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
+        grantedPermissions: Set<String> = emptySet(),
+    ): HealthRepository =
+        mockk<HealthRepository>().also { repo ->
+            every { repo.availability() } returns availability
+            every { repo.allPermissions } returns setOf("steps")
+            every { repo.cyclePermissions } returns setOf("cycle")
+            coEvery { repo.grantedPermissions() } returns grantedPermissions
+        }
+
+    private fun prefs(trackCycle: Boolean): PreferencesRepository =
+        mockk<PreferencesRepository>().also { prefs ->
+            every { prefs.unitSystem } returns UnitSystem.METRIC
+            every { prefs.trackCycle } returns trackCycle
+            every { prefs.trackCycle = any() } just runs
+        }
+}

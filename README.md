@@ -22,12 +22,13 @@ OpenVitals is still in an early stage, but the core product direction is already
 
 ## Features
 
-- Daily dashboard with cards for activity, recovery, intake, body, heart, vitals, and mindfulness data
+- Daily dashboard with cards for activity, recovery, intake, body, heart, vitals, mindfulness, and opt-in cycle data
 - Period-based detail screens with `Day / Week / Month / Year` navigation
-- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Browse, Onboarding, and Settings
+- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Browse, Onboarding, and Settings
 - Categorized Health Connect onboarding permissions, with Activity & sleep required and other categories optional
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
+- Opt-in cycle tracking with period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
 - Read-only access to Health Connect data; the app does not write health data back
@@ -42,6 +43,7 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Hydration: daily and period hydration totals
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect
+- Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when explicitly enabled during onboarding or in Settings
 - Browse: workout, sleep, and weight records by selected period
 
 ## Privacy
@@ -54,6 +56,7 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Permissions are requested by clear Health Connect categories:
   - Activity & sleep: required for the dashboard
   - Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals: optional
+  - Cycle tracking: optional and requested only after explicitly enabling it during onboarding or in Settings
 - Permissions can be managed later in Settings
 - Health Connect remains the source of truth; OpenVitals reads only the data you choose to share
 
@@ -111,7 +114,7 @@ OpenVitals is intentionally simple today:
 - `ViewModel` + `StateFlow`
 - manual dependency wiring in `OpenVitalsApp`
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
-- feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, and vitals
+- feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - shared presentation formatters for units and date/time labels
 
 The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).
@@ -138,7 +141,6 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 
 Most near-term metric expansion is already implemented. Remaining roadmap items tracked in [`docs/metrics-roadmap.md`](docs/metrics-roadmap.md) include:
 
-- opt-in cycle tracking
 - continued period/formatter cleanup
 - future localization pass for hardcoded UI text
 

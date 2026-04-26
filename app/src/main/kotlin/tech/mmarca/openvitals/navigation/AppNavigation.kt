@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
+import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
@@ -38,6 +39,8 @@ import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
 import tech.mmarca.openvitals.features.browse.BrowseScreen
 import tech.mmarca.openvitals.features.browse.BrowseViewModel
+import tech.mmarca.openvitals.features.cycle.CycleScreen
+import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.heart.HeartScreen
@@ -67,6 +70,7 @@ fun AppNavigation(
     nutritionRepository: NutritionRepository,
     mindfulnessRepository: MindfulnessRepository,
     vitalsRepository: VitalsRepository,
+    cycleRepository: CycleRepository,
     preferencesRepository: PreferencesRepository,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -95,6 +99,7 @@ fun AppNavigation(
         Screen.Hydration.route -> "Hydration"
         Screen.Nutrition.route -> "Nutrition"
         Screen.Mindfulness.route -> "Mindfulness"
+        Screen.Cycle.route -> "Cycle"
         Screen.Browse.route -> "Browse"
         Screen.Settings.route -> "Settings"
         else -> ""
@@ -132,7 +137,9 @@ fun AppNavigation(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(Screen.Onboarding.route) {
-                val onboardingViewModel = remember(repository) { OnboardingViewModel(repository) }
+                val onboardingViewModel = remember(repository, preferencesRepository) {
+                    OnboardingViewModel(repository, preferencesRepository)
+                }
                 OnboardingScreen(
                     viewModel = onboardingViewModel,
                     onOnboardingComplete = {
@@ -159,6 +166,7 @@ fun AppNavigation(
                     onOpenHydration = { navController.navigate(Screen.Hydration.route) },
                     onOpenNutrition = { navController.navigate(Screen.Nutrition.route) },
                     onOpenMindfulness = { navController.navigate(Screen.Mindfulness.route) },
+                    onOpenCycle = { navController.navigate(Screen.Cycle.route) },
                     onOpenBrowse = { navController.navigate(Screen.Browse.route) },
                 )
             }
@@ -234,6 +242,17 @@ fun AppNavigation(
                 }
                 MindfulnessScreen(
                     viewModel = mindfulnessViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
+
+            composable(Screen.Cycle.route) {
+                val cycleViewModel = remember(cycleRepository) {
+                    CycleViewModel(cycleRepository)
+                }
+                CycleScreen(
+                    viewModel = cycleViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                 )

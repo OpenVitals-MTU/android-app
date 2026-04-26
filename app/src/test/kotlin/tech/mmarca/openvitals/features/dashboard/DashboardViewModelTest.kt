@@ -26,9 +26,10 @@ class DashboardViewModelTest {
     private val today = LocalDate.now()
     private val yesterday = today.minusDays(1)
 
-    private fun prefs() = mockk<PreferencesRepository>().also {
+    private fun prefs(trackCycle: Boolean = false) = mockk<PreferencesRepository>().also {
         every { it.acknowledgedPermissions() } returns emptySet()
         every { it.acknowledgePermissions(any()) } returns Unit
+        every { it.trackCycle } returns trackCycle
     }
 
     // ─── Initial load ─────────────────────────────────────────────────────────
@@ -232,5 +233,27 @@ class DashboardViewModelTest {
 
         // init + refresh = 2 calls
         coVerify(exactly = 2) { repo.loadDashboard(today) }
+    }
+
+    @Test fun `trackCycle flag follows preferences`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs(trackCycle = true))
+
+        assertTrue(vm.uiState.value.trackCycle)
+    }
+
+    @Test fun `refreshPreferences updates trackCycle without loading dashboard`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any()) } returns DashboardData(date = today)
+        val prefs = prefs(trackCycle = false)
+        every { prefs.trackCycle } returnsMany listOf(false, true)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.refreshPreferences()
+
+        assertTrue(vm.uiState.value.trackCycle)
+        coVerify(exactly = 1) { repo.loadDashboard(today) }
     }
 }

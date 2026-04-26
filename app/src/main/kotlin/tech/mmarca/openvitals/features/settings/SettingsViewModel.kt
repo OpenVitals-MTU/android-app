@@ -17,8 +17,13 @@ data class SettingsUiState(
     val availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val grantedPermissions: Set<String> = emptySet(),
     val allPermissions: Set<String> = emptySet(),
+    val cyclePermissions: Set<String> = emptySet(),
+    val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
-)
+) {
+    val visiblePermissions: Set<String>
+        get() = allPermissions + if (trackCycle) cyclePermissions else emptySet()
+}
 
 class SettingsViewModel(
     private val repository: HealthRepository,
@@ -48,6 +53,8 @@ class SettingsViewModel(
                 availability = avail,
                 grantedPermissions = granted,
                 allPermissions = repository.allPermissions,
+                cyclePermissions = repository.cyclePermissions,
+                trackCycle = preferencesRepository.trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
             )
         }
@@ -56,6 +63,11 @@ class SettingsViewModel(
     fun selectUnitSystem(unitSystem: UnitSystem) {
         preferencesRepository.unitSystem = unitSystem
         _uiState.value = _uiState.value.copy(unitSystem = unitSystem)
+    }
+
+    fun setTrackCycle(enabled: Boolean) {
+        preferencesRepository.trackCycle = enabled
+        _uiState.value = _uiState.value.copy(trackCycle = enabled)
     }
 
     fun onPermissionsResult(granted: Set<String>) {

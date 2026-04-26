@@ -20,6 +20,7 @@ Gap analysis between what the app currently shows and all Health Connect record 
 | Heart | HRV RMSSD | `HeartRateVariabilityRmssdRecord` | Heart screen |
 | Body | Weight | `WeightRecord` | Body screen |
 | Heart / Vitals | Blood pressure, SpO2, respiratory rate, body temp, VO2 max | `BloodPressureRecord`, `OxygenSaturationRecord`, `RespiratoryRateRecord`, `BodyTemperatureRecord`, `Vo2MaxRecord` | Heart & Vitals screen + Dashboard |
+| Women's health | Cycle calendar, flow, ovulation, mucus, BBT | `MenstruationFlowRecord`, `MenstruationPeriodRecord`, `OvulationTestRecord`, `CervicalMucusRecord`, `BasalBodyTemperatureRecord` | Cycle screen, opt-in only |
 
 ---
 
@@ -65,7 +66,7 @@ Gap analysis between what the app currently shows and all Health Connect record 
 |---|---|
 | `MindfulnessSessionRecord` | Session title + duration |
 
-### Women's health (opt-in)
+### Women's health (opt-in) ✓ Covered
 
 | HC Record type | Metric |
 |---|---|
@@ -256,14 +257,14 @@ Navigation: add `Screen.Mindfulness` route.
 
 ---
 
-### Phase C — Women's health (opt-in)
+### Phase C — Women's health (opt-in) ✓ Done (2026-04-26)
 
-Gated behind `Settings` → "Track menstrual cycle" boolean pref. Off by default.
+Gated behind an explicit "Cycle tracking" opt-in during onboarding or `Settings` → "Track menstrual cycle". Off by default.
 
 **New permissions (phase 4, only requested when opted in):**
 `MenstruationFlowRecord`, `MenstruationPeriodRecord`, `OvulationTestRecord`, `CervicalMucusRecord`, `BasalBodyTemperatureRecord`
 
-`CycleScreen` (`features/cycle/`): monthly calendar view marking period days, flow levels, ovulation markers, and BBT trend.
+`CycleScreen` (`features/cycle/`): period-driven detail screen defaulting to month view, with a calendar that marks period days, flow levels, ovulation markers, and BBT readings. The screen also includes summary cards, a BBT trend card, and an entry list for period, flow, ovulation, and mucus observations.
 
 No dashboard card unless opt-in is enabled (avoids surfacing sensitive data unexpectedly).
 
@@ -309,7 +310,7 @@ The app targets `androidx.health.connect:connect-client` `1.1.0` or newer. This 
 | 5 | ~~B2 — Nutrition~~ | ~~Medium~~ | ✓ Done |
 | 6 | ~~B1 — Vitals~~ | ~~Medium~~ | ✓ Done |
 | 7 | ~~B3 — Mindfulness~~ | ~~Low~~ | ✓ Done |
-| 8 | C — Women's health | High | Niche but important; requires settings gate + dedicated permissions |
+| 8 | ~~C — Women's health~~ | ~~High~~ | ✓ Done |
 
 ---
 
@@ -320,7 +321,7 @@ The app targets `androidx.health.connect:connect-client` `1.1.0` or newer. This 
 | Phase 1 | Steps, Distance, Exercise, Sleep | Onboarding category: Activity & sleep; required to continue |
 | Phase 2 | Heart rate, Resting HR, HRV, Weight, Calories, Hydration, Floors, Active calories, Elevation, Height, Body fat, Lean mass, Bone mass, BMR, Nutrition, Mindfulness | Optional onboarding categories: Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness |
 | Phase 3 | Blood pressure, SpO2, Respiratory rate, Body temperature, VO2 max | Optional onboarding category: Vitals; requested again on first open of Heart & Vitals if skipped |
-| Phase 4 | Menstruation, Ovulation, Cervical mucus, BBT | On opt-in in Settings |
+| Phase 4 | Menstruation, Ovulation, Cervical mucus, BBT | Explicit cycle-tracking opt-in during onboarding or Settings |
 
 ---
 
@@ -349,7 +350,7 @@ Comparison between this roadmap and the actual codebase as of 2026-04-26.
 
 | Item | Roadmap status | Code status | Notes |
 |---|---|---|---|
-| C — Women's health | Not started | Not started | No cycle-related records, permissions, or screens. |
+| C — Women's health | ✓ Done | ✓ Implemented | `CycleRepository`, `CycleViewModel`, and `CycleScreen` are present. Phase 4 permissions stay out of required/default onboarding requests and are surfaced only through explicit cycle-tracking opt-in during onboarding or Settings. Dashboard shows a Cycle card only when `trackCycle` is enabled. |
 
 ### DashboardData gaps
 
@@ -363,4 +364,4 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 
 Routes described in the roadmap that are absent from `Screen.kt` and `AppNavigation.kt`:
 
-- `Screen.Cycle` (C)
+- None

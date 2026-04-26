@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +18,8 @@ data class OnboardingUiState(
     val phase1Granted: Boolean = false,
     val phase2Granted: Boolean = false,
     val phase3Granted: Boolean = false,
+    val phase4Granted: Boolean = false,
+    val cycleTrackingEnabled: Boolean = false,
     val isCheckingPermissions: Boolean = true,
 )
 
@@ -26,11 +29,15 @@ data class OnboardingPermissionCategory(
     val description: String,
     val permissions: Set<String>,
     val required: Boolean = false,
+    val optIn: Boolean = false,
     val available: Boolean = true,
     val unavailableReason: String? = null,
 )
 
-class OnboardingViewModel(private val repository: HealthRepository) : ViewModel() {
+class OnboardingViewModel(
+    private val repository: HealthRepository,
+    private val preferencesRepository: PreferencesRepository,
+) : ViewModel() {
     companion object {
         private const val TAG = "OnboardingViewModel"
     }
@@ -41,6 +48,7 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
     val phase1Permissions get() = repository.phase1Permissions
     val phase2Permissions get() = repository.phase2Permissions
     val phase3Permissions get() = repository.phase3Permissions
+    val phase4Permissions get() = repository.phase4Permissions
     val onboardingPermissions get() = repository.onboardingPermissions
     val permissionCategories: List<OnboardingPermissionCategory>
         get() = listOf(
@@ -89,6 +97,13 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
                 description = "Blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max.",
                 permissions = repository.vitalsPermissions,
             ),
+            OnboardingPermissionCategory(
+                id = "cycle_tracking",
+                title = "Cycle tracking",
+                description = "Optional sensitive cycle data: period dates, flow, ovulation, cervical mucus, and basal body temperature.",
+                permissions = repository.cyclePermissions,
+                optIn = true,
+            ),
         ).filter { it.permissions.isNotEmpty() }
 
     init {
@@ -116,9 +131,16 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
                 phase1Granted = repository.phase1Permissions.all { it in granted },
                 phase2Granted = repository.phase2Permissions.all { it in granted },
                 phase3Granted = repository.phase3Permissions.all { it in granted },
+                phase4Granted = repository.phase4Permissions.all { it in granted },
+                cycleTrackingEnabled = preferencesRepository.trackCycle,
                 isCheckingPermissions = false,
             )
         }
+    }
+
+    fun enableCycleTracking() {
+        preferencesRepository.trackCycle = true
+        _uiState.value = _uiState.value.copy(cycleTrackingEnabled = true)
     }
 
     fun onPermissionsResult(granted: Set<String>) {
@@ -131,6 +153,8 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
                 phase1Granted = repository.phase1Permissions.all { it in allGranted },
                 phase2Granted = repository.phase2Permissions.all { it in allGranted },
                 phase3Granted = repository.phase3Permissions.all { it in allGranted },
+                phase4Granted = repository.phase4Permissions.all { it in allGranted },
+                cycleTrackingEnabled = preferencesRepository.trackCycle,
             )
         }
     }

@@ -27,6 +27,7 @@ val FloorsColor = Color(0xFFFFC107)
 val ActiveCaloriesColor = Color(0xFFFF5722)
 val ElevationColor = Color(0xFF8BC34A)
 val MindfulnessColor = Color(0xFF8E6C8A)
+val CycleColor = Color(0xFFC35B7A)
 
 // Surface variants
 val SurfaceDark = Color(0xFF1A1C1E)

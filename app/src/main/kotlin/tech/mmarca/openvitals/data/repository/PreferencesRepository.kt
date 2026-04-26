@@ -20,6 +20,12 @@ class PreferencesRepository(context: Context) {
             prefs.edit().putString(KEY_UNIT_SYSTEM, value.name).apply()
         }
 
+    var trackCycle: Boolean
+        get() = prefs.getBoolean(KEY_TRACK_CYCLE, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_TRACK_CYCLE, value).apply()
+        }
+
     fun acknowledgedPermissions(): Set<String> =
         prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()
 
@@ -39,6 +45,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_ACKNOWLEDGED_PERMISSIONS = "acknowledged_permissions"
         private const val KEY_UNIT_SYSTEM = "unit_system"
+        private const val KEY_TRACK_CYCLE = "track_cycle"
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

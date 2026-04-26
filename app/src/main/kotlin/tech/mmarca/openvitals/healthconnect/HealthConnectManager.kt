@@ -14,10 +14,12 @@ import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -27,8 +29,11 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.MenstruationFlowRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -41,8 +46,10 @@ import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
+import tech.mmarca.openvitals.data.model.CervicalMucusEntry
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.DailyMacros
@@ -55,8 +62,11 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
+import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.data.model.OvulationTestEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
@@ -131,6 +141,14 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(Vo2MaxRecord::class),
     )
 
+    val cyclePermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(MenstruationFlowRecord::class),
+        HealthPermission.getReadPermission(MenstruationPeriodRecord::class),
+        HealthPermission.getReadPermission(OvulationTestRecord::class),
+        HealthPermission.getReadPermission(CervicalMucusRecord::class),
+        HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class),
+    )
+
     /** Phase 1 – core metrics requested on first launch */
     val phase1Permissions: Set<String> = corePermissions
 
@@ -145,7 +163,12 @@ class HealthConnectManager(private val context: Context) {
     /** Phase 3 – vitals, requested by category during onboarding or when opening Heart & Vitals */
     val phase3Permissions: Set<String> = vitalsPermissions
 
+    /** Phase 4 – sensitive cycle tracking, requested only after explicit opt-in from Settings */
+    val phase4Permissions: Set<String> = cyclePermissions
+
     val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
+
+    val managedPermissions: Set<String> get() = allPermissions + phase4Permissions
 
     // ─── Availability ─────────────────────────────────────────────────────────
 
@@ -220,7 +243,7 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun grantedPermissions(): Set<String> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            allPermissions.filterTo(mutableSetOf()) { permission ->
+            managedPermissions.filterTo(mutableSetOf()) { permission ->
                 ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
             }.also { granted ->
                 Log.d(TAG, "grantedPermissions(runtime) count=${granted.size} granted=${granted.sorted()} ${diagnosticsSummary()}")
@@ -925,6 +948,100 @@ class HealthConnectManager(private val context: Context) {
         val (start, end) = dayRange(date)
         return readMindfulnessSessions(start, end).sumOf { it.durationMinutes }.toInt()
     }
+
+    // ─── Cycle helpers ───────────────────────────────────────────────────────
+
+    suspend fun readMenstruationFlowEntries(start: Instant, end: Instant): List<MenstruationFlowEntry> =
+        withLogging("readMenstruationFlowEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = MenstruationFlowRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                MenstruationFlowEntry(
+                    time = record.time,
+                    flow = record.flow,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readMenstruationPeriods(start: Instant, end: Instant): List<MenstruationPeriodEntry> =
+        withLogging("readMenstruationPeriods[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = MenstruationPeriodRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 100,
+                )
+            ).records.map { record ->
+                MenstruationPeriodEntry(
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readOvulationTests(start: Instant, end: Instant): List<OvulationTestEntry> =
+        withLogging("readOvulationTests[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = OvulationTestRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                OvulationTestEntry(
+                    time = record.time,
+                    result = record.result,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readCervicalMucusEntries(start: Instant, end: Instant): List<CervicalMucusEntry> =
+        withLogging("readCervicalMucusEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = CervicalMucusRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                CervicalMucusEntry(
+                    time = record.time,
+                    appearance = record.appearance,
+                    sensation = record.sensation,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readBasalBodyTemperatureEntries(start: Instant, end: Instant): List<BasalBodyTemperatureEntry> =
+        withLogging("readBasalBodyTemperatureEntries[$start..$end]", emptyList()) {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = BasalBodyTemperatureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 200,
+                )
+            ).records.map { record ->
+                BasalBodyTemperatureEntry(
+                    time = record.time,
+                    temperatureCelsius = record.temperature.inCelsius,
+                    measurementLocation = record.measurementLocation,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
 
     // ─── Vitals helpers ──────────────────────────────────────────────────────
 

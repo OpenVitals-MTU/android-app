@@ -7,8 +7,10 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.runs
 import io.mockk.verify
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +25,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalMindfulnessSessionApi::class)
@@ -51,11 +54,14 @@ class OnboardingViewModelTest {
         assertFalse(state.phase1Granted)
         assertFalse(state.phase2Granted)
         assertFalse(state.phase3Granted)
+        assertFalse(state.phase4Granted)
+        assertFalse(state.cycleTrackingEnabled)
     }
 
     @Test fun `checkState tracks granted permissions and phases separately`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = setOf("steps", "vitals")),
+            preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
@@ -65,11 +71,13 @@ class OnboardingViewModelTest {
         assertTrue(vm.uiState.value.phase1Granted)
         assertFalse(vm.uiState.value.phase2Granted)
         assertTrue(vm.uiState.value.phase3Granted)
+        assertFalse(vm.uiState.value.phase4Granted)
     }
 
     @Test fun `checkState marks every phase granted when all permissions are granted`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = allPermissions),
+            preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
@@ -77,6 +85,7 @@ class OnboardingViewModelTest {
         assertTrue(vm.uiState.value.phase1Granted)
         assertTrue(vm.uiState.value.phase2Granted)
         assertTrue(vm.uiState.value.phase3Granted)
+        assertTrue(vm.uiState.value.phase4Granted)
     }
 
     @Test fun `checkState handles unsupported Health Connect without reading permissions`() = runTest {
@@ -85,7 +94,7 @@ class OnboardingViewModelTest {
             grantedPermissions = allPermissions,
         )
 
-        val vm = OnboardingViewModel(repository)
+        val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
 
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, vm.uiState.value.availability)
@@ -101,7 +110,7 @@ class OnboardingViewModelTest {
             grantedPermissions = allPermissions,
         )
 
-        val vm = OnboardingViewModel(repository)
+        val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
 
         assertEquals(HealthConnectAvailability.NEEDS_PROVIDER_UPDATE, vm.uiState.value.availability)
@@ -123,7 +132,7 @@ class OnboardingViewModelTest {
                 "vitals",
             ),
         )
-        val vm = OnboardingViewModel(repository)
+        val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
 
         vm.onPermissionsResult(setOf("vitals"))
@@ -137,7 +146,7 @@ class OnboardingViewModelTest {
     @Test fun `onPermissionsResult re-queries granted permissions instead of trusting callback`() = runTest {
         val repository = repo(grantedPermissions = emptySet())
         coEvery { repository.grantedPermissions() } returnsMany listOf(emptySet(), setOf("steps"))
-        val vm = OnboardingViewModel(repository)
+        val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
 
         vm.onPermissionsResult(emptySet())
@@ -150,6 +159,7 @@ class OnboardingViewModelTest {
     @Test fun `onboardingPermissions exposes the full selector request set`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
@@ -162,6 +172,7 @@ class OnboardingViewModelTest {
     @Test fun `permissionCategories exposes user-facing permission groups`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
@@ -175,6 +186,7 @@ class OnboardingViewModelTest {
                 "Nutrition & hydration",
                 "Mindfulness",
                 "Vitals",
+                "Cycle tracking",
             ),
             categories.map { it.title },
         )
@@ -182,6 +194,8 @@ class OnboardingViewModelTest {
         assertEquals("activity_sleep", categories.first().id)
         assertEquals(setOf("steps"), categories.first().permissions)
         assertFalse(categories.drop(1).any { it.required })
+        assertTrue(categories.last().optIn)
+        assertEquals("cycle_tracking", categories.last().id)
         assertTrue(categories.all { it.description.isNotBlank() })
     }
 
@@ -192,6 +206,7 @@ class OnboardingViewModelTest {
                 bodyPermissions = emptySet(),
                 mindfulnessPermissions = emptySet(),
             ),
+            preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
@@ -202,6 +217,7 @@ class OnboardingViewModelTest {
                 "activity_extras",
                 "nutrition_hydration",
                 "vitals",
+                "cycle_tracking",
             ),
             vm.permissionCategories.map { it.id },
         )
@@ -214,7 +230,7 @@ class OnboardingViewModelTest {
             phase2Permissions = setOf("heart", "body", "activity", "nutrition"),
             onboardingPermissions = setOf("steps", "heart", "body", "activity", "nutrition", "vitals"),
         )
-        val vm = OnboardingViewModel(repository)
+        val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
 
         val mindfulness = vm.permissionCategories.single { it.id == "mindfulness" }
@@ -228,6 +244,7 @@ class OnboardingViewModelTest {
     @Test fun `mindfulness category is grantable when Health Connect supports the feature`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet(), mindfulnessAvailable = true),
+            preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
@@ -235,6 +252,70 @@ class OnboardingViewModelTest {
         assertTrue(mindfulness.available)
         assertEquals(setOf("mindfulness"), mindfulness.permissions)
         assertTrue("mindfulness" in vm.onboardingPermissions)
+    }
+
+    @Test fun `cycle category is an explicit opt-in and excluded from grant all request set`() = runTest {
+        val vm = OnboardingViewModel(
+            repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        val cycle = vm.permissionCategories.single { it.id == "cycle_tracking" }
+        assertTrue(cycle.optIn)
+        assertEquals(setOf("cycle"), cycle.permissions)
+        assertFalse("cycle" in vm.onboardingPermissions)
+    }
+
+    @Test fun `cycle category is hidden when no cycle permissions are available`() = runTest {
+        val vm = OnboardingViewModel(
+            repository = repo(
+                grantedPermissions = emptySet(),
+                cyclePermissions = emptySet(),
+            ),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        assertFalse(vm.permissionCategories.any { it.id == "cycle_tracking" })
+    }
+
+    @Test fun `checkState reflects existing cycle opt-in preference`() = runTest {
+        val vm = OnboardingViewModel(
+            repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs(trackCycle = true),
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.cycleTrackingEnabled)
+    }
+
+    @Test fun `onPermissionsResult refreshes phase 4 permission state`() = runTest {
+        val repository = repo(grantedPermissions = emptySet())
+        coEvery { repository.grantedPermissions() } returnsMany listOf(emptySet(), setOf("cycle"))
+        val vm = OnboardingViewModel(repository, prefs(trackCycle = true))
+        advanceUntilIdle()
+
+        vm.onPermissionsResult(setOf("cycle"))
+        advanceUntilIdle()
+
+        assertEquals(setOf("cycle"), vm.uiState.value.grantedPermissions)
+        assertTrue(vm.uiState.value.phase4Granted)
+        assertTrue(vm.uiState.value.cycleTrackingEnabled)
+    }
+
+    @Test fun `enableCycleTracking persists opt-in before requesting permissions`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = OnboardingViewModel(
+            repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs,
+        )
+        advanceUntilIdle()
+
+        vm.enableCycleTracking()
+
+        verify { prefs.trackCycle = true }
+        assertTrue(vm.uiState.value.cycleTrackingEnabled)
     }
 
     @Test fun `androidx mindfulness permission matches platform permission`() {
@@ -251,13 +332,15 @@ class OnboardingViewModelTest {
         phase2Permissions: Set<String> = setOf("heart", "body", "activity", "nutrition", "mindfulness"),
         bodyPermissions: Set<String> = setOf("body"),
         mindfulnessPermissions: Set<String> = setOf("mindfulness"),
-        onboardingPermissions: Set<String> = allPermissions,
+        cyclePermissions: Set<String> = setOf("cycle"),
+        onboardingPermissions: Set<String> = standardPermissions,
     ): HealthRepository =
         mockk<HealthRepository>().also { repo ->
             every { repo.availability() } returns availability
             every { repo.phase1Permissions } returns setOf("steps")
             every { repo.phase2Permissions } returns phase2Permissions
             every { repo.phase3Permissions } returns setOf("vitals")
+            every { repo.phase4Permissions } returns cyclePermissions
             every { repo.corePermissions } returns setOf("steps")
             every { repo.heartPermissions } returns setOf("heart")
             every { repo.bodyPermissions } returns bodyPermissions
@@ -265,13 +348,20 @@ class OnboardingViewModelTest {
             every { repo.nutritionHydrationPermissions } returns setOf("nutrition")
             every { repo.mindfulnessPermissions } returns mindfulnessPermissions
             every { repo.vitalsPermissions } returns setOf("vitals")
+            every { repo.cyclePermissions } returns cyclePermissions
             every { repo.isMindfulnessAvailable() } returns mindfulnessAvailable
             every { repo.onboardingPermissions } returns onboardingPermissions
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 
+    private fun prefs(trackCycle: Boolean = false): PreferencesRepository =
+        mockk<PreferencesRepository>().also { prefs ->
+            every { prefs.trackCycle } returns trackCycle
+            every { prefs.trackCycle = any() } just runs
+        }
+
     companion object {
-        private val allPermissions = setOf(
+        private val standardPermissions = setOf(
             "steps",
             "heart",
             "body",
@@ -280,5 +370,6 @@ class OnboardingViewModelTest {
             "mindfulness",
             "vitals",
         )
+        private val allPermissions = standardPermissions + "cycle"
     }
 }

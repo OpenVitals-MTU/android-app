@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.Bed
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.Terrain
@@ -36,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DashboardData
@@ -52,6 +55,7 @@ import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
+import tech.mmarca.openvitals.ui.theme.CycleColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
@@ -82,11 +86,16 @@ fun DashboardScreen(
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
     onOpenMindfulness: () -> Unit,
+    onOpenCycle: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     val dashboardData = state.data
     var showDatePicker by remember { mutableStateOf(false) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshPreferences()
+    }
 
     PullToRefreshBox(
         isRefreshing = state.isLoading && dashboardData != null,
@@ -103,6 +112,7 @@ fun DashboardScreen(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 canGoForward = state.selectedDate.isBefore(LocalDate.now()),
                 showPermissionsCallout = state.showPermissionsCallout,
+                trackCycle = state.trackCycle,
                 onPreviousDay = viewModel::previousDay,
                 onNextDay = viewModel::nextDay,
                 onOpenCalendar = { showDatePicker = true },
@@ -119,6 +129,7 @@ fun DashboardScreen(
                 onOpenHydration = onOpenHydration,
                 onOpenNutrition = onOpenNutrition,
                 onOpenMindfulness = onOpenMindfulness,
+                onOpenCycle = onOpenCycle,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -144,6 +155,7 @@ private fun DashboardContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     canGoForward: Boolean,
     showPermissionsCallout: Boolean,
+    trackCycle: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
@@ -157,6 +169,7 @@ private fun DashboardContent(
     onOpenHydration: () -> Unit,
     onOpenNutrition: () -> Unit,
     onOpenMindfulness: () -> Unit,
+    onOpenCycle: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -506,6 +519,20 @@ private fun DashboardContent(
                     onClick = onOpenMindfulness,
                 )
                 Spacer(Modifier.weight(1f))
+            }
+        }
+
+        if (trackCycle) {
+            item { SectionHeader("Cycle") }
+            item {
+                MetricCardPlaceholder(
+                    title = "Cycle",
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = CycleColor,
+                    message = "View cycle calendar and readings.",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    onClick = onOpenCycle,
+                )
             }
         }
 
