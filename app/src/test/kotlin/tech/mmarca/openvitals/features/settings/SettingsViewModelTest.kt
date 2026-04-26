@@ -46,7 +46,7 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(trackCycle = false),
         )
 
-        assertEquals(setOf("steps"), vm.uiState.value.visiblePermissions)
+        assertEquals(setOf("steps", "route"), vm.uiState.value.visiblePermissions)
         assertFalse(vm.uiState.value.trackCycle)
     }
 
@@ -56,7 +56,7 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(trackCycle = true),
         )
 
-        assertEquals(setOf("steps", "cycle"), vm.uiState.value.visiblePermissions)
+        assertEquals(setOf("steps", "route", "cycle"), vm.uiState.value.visiblePermissions)
         assertTrue(vm.uiState.value.trackCycle)
     }
 
@@ -66,16 +66,20 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(trackCycle = true),
         )
 
-        assertEquals(setOf("cycle"), vm.uiState.value.missingVisiblePermissions)
+        assertEquals(setOf("route", "cycle"), vm.uiState.value.missingVisiblePermissions)
+        assertEquals(setOf("cycle"), vm.uiState.value.missingRequestableVisiblePermissions)
+        assertEquals(setOf("route"), vm.uiState.value.missingManualVisiblePermissions)
     }
 
     @Test fun `missingVisiblePermissions is empty when all visible permissions are granted`() = runTest {
         val vm = SettingsViewModel(
-            repository = repo(grantedPermissions = setOf("steps", "cycle")),
+            repository = repo(grantedPermissions = setOf("steps", "route", "cycle")),
             preferencesRepository = prefs(trackCycle = true),
         )
 
         assertTrue(vm.uiState.value.missingVisiblePermissions.isEmpty())
+        assertTrue(vm.uiState.value.missingRequestableVisiblePermissions.isEmpty())
+        assertTrue(vm.uiState.value.missingManualVisiblePermissions.isEmpty())
     }
 
     @Test fun `setTrackCycle persists preference and updates visible permissions`() = runTest {
@@ -89,7 +93,7 @@ class SettingsViewModelTest {
 
         verify { prefs.trackCycle = true }
         assertTrue(vm.uiState.value.trackCycle)
-        assertEquals(setOf("steps", "cycle"), vm.uiState.value.visiblePermissions)
+        assertEquals(setOf("steps", "route", "cycle"), vm.uiState.value.visiblePermissions)
     }
 
     @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
@@ -111,8 +115,9 @@ class SettingsViewModelTest {
     ): HealthRepository =
         mockk<HealthRepository>().also { repo ->
             every { repo.availability() } returns availability
-            every { repo.allPermissions } returns setOf("steps")
+            every { repo.allPermissions } returns setOf("steps", "route")
             every { repo.cyclePermissions } returns setOf("cycle")
+            every { repo.manualOnlyPermissions } returns setOf("route")
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 

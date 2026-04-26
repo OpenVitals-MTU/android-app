@@ -18,6 +18,7 @@ data class SettingsUiState(
     val grantedPermissions: Set<String> = emptySet(),
     val allPermissions: Set<String> = emptySet(),
     val cyclePermissions: Set<String> = emptySet(),
+    val manualOnlyPermissions: Set<String> = emptySet(),
     val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
 ) {
@@ -26,6 +27,12 @@ data class SettingsUiState(
 
     val missingVisiblePermissions: Set<String>
         get() = visiblePermissions - grantedPermissions
+
+    val missingRequestableVisiblePermissions: Set<String>
+        get() = missingVisiblePermissions - manualOnlyPermissions
+
+    val missingManualVisiblePermissions: Set<String>
+        get() = missingVisiblePermissions.intersect(manualOnlyPermissions)
 }
 
 class SettingsViewModel(
@@ -57,6 +64,7 @@ class SettingsViewModel(
                 grantedPermissions = granted,
                 allPermissions = repository.allPermissions,
                 cyclePermissions = repository.cyclePermissions,
+                manualOnlyPermissions = repository.manualOnlyPermissions,
                 trackCycle = preferencesRepository.trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
             )

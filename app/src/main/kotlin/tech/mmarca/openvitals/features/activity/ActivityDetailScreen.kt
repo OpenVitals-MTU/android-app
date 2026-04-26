@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -22,6 +23,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,7 +52,6 @@ fun ActivityDetailScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
     val state by viewModel.uiState.collectAsState()
-
     val error = state.error
     val workout = state.workout
 
@@ -345,18 +348,32 @@ private fun RouteCard(
     DetailSectionCard(title = "Route", modifier = modifier) {
         when (route.status) {
             ExerciseRouteStatus.DATA -> {
-                DetailRow("Status", "Available")
-                DetailRow("Points", route.points.size.toString())
-                route.points.minByOrNull { it.time }?.let { point ->
-                    DetailRow("Start point", formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
-                }
-                route.points.maxByOrNull { it.time }?.let { point ->
-                    DetailRow("End point", formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
+                if (route.points.isEmpty()) {
+                    Text(
+                        text = "No route points recorded.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    RoutePreview(
+                        points = route.points,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                    )
+                    DetailRow("Status", "Available")
+                    DetailRow("Points", route.points.size.toString())
+                    route.points.minByOrNull { it.time }?.let { point ->
+                        DetailRow("Start point", formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
+                    }
+                    route.points.maxByOrNull { it.time }?.let { point ->
+                        DetailRow("End point", formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
+                    }
                 }
             }
             ExerciseRouteStatus.CONSENT_REQUIRED -> {
                 Text(
-                    text = "Route data is available, but Health Connect requires separate route consent.",
+                    text = "Route data is available, but route access has not been granted yet. Open Health Connect permissions from Settings to enable route previews.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -369,6 +386,65 @@ private fun RouteCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun RoutePreview(
+    points: List<ExerciseRoutePoint>,
+    modifier: Modifier = Modifier,
+) {
+    val orderedPoints = points.sortedBy { it.time }
+    val routeColor = WorkoutColor
+    val startColor = MaterialTheme.colorScheme.primary
+    val endColor = MaterialTheme.colorScheme.tertiary
+    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+
+    Canvas(modifier = modifier) {
+        val corner = 10.dp.toPx()
+        drawRoundRect(
+            color = backgroundColor,
+            cornerRadius = CornerRadius(corner, corner),
+        )
+
+        val padding = 18.dp.toPx()
+        val drawWidth = size.width - padding * 2
+        val drawHeight = size.height - padding * 2
+        if (drawWidth <= 0f || drawHeight <= 0f || orderedPoints.isEmpty()) return@Canvas
+
+        val minLatitude = orderedPoints.minOf { it.latitude }
+        val maxLatitude = orderedPoints.maxOf { it.latitude }
+        val minLongitude = orderedPoints.minOf { it.longitude }
+        val maxLongitude = orderedPoints.maxOf { it.longitude }
+        val latitudeSpan = (maxLatitude - minLatitude).takeIf { it > 0.0 } ?: 0.00001
+        val longitudeSpan = (maxLongitude - minLongitude).takeIf { it > 0.0 } ?: 0.00001
+
+        fun project(point: ExerciseRoutePoint): Offset {
+            val x = padding + (((point.longitude - minLongitude) / longitudeSpan).toFloat() * drawWidth)
+            val y = padding + (((maxLatitude - point.latitude) / latitudeSpan).toFloat() * drawHeight)
+            return Offset(x, y)
+        }
+
+        val projected = orderedPoints.map(::project)
+        projected.zipWithNext().forEach { (start, end) ->
+            drawLine(
+                color = routeColor,
+                start = start,
+                end = end,
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round,
+            )
+        }
+
+        val markerRadius = 6.dp.toPx()
+        drawCircle(color = startColor, radius = markerRadius, center = projected.first())
+        drawCircle(color = endColor, radius = markerRadius, center = projected.last())
+        drawRoundRect(
+            color = borderColor,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+            cornerRadius = CornerRadius(corner, corner),
+        )
     }
 }
 

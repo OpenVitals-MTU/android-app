@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.onboarding
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.PermissionGrantMode
+import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 
 private const val HC_PACKAGE = "com.google.android.apps.healthdata"
@@ -55,6 +60,19 @@ fun OnboardingScreen(
     val context = LocalContext.current
     val permissionCategories = viewModel.permissionCategories
     val requiredCategory = permissionCategories.firstOrNull { it.required }
+    val openManualPermissionSettings = {
+        if (!openHealthConnectPermissionSettings(context)) {
+            Toast.makeText(
+                context,
+                "Unable to open Health Connect permissions.",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.checkState()
+    }
 
     val requestPermissions = rememberLauncherForActivityResult(
         contract = viewModel.onboardingPermissions.let {
@@ -204,10 +222,15 @@ fun OnboardingScreen(
                 cycleTrackingEnabled = state.cycleTrackingEnabled,
                 onGrant = {
                     if (category.available) {
-                        if (category.optIn) {
-                            viewModel.enableCycleTracking()
+                        when (category.grantMode) {
+                            PermissionGrantMode.MANUAL -> openManualPermissionSettings()
+                            PermissionGrantMode.REQUESTABLE -> {
+                                if (category.optIn) {
+                                    viewModel.enableCycleTracking()
+                                }
+                                requestPermissions.launch(category.permissions)
+                            }
                         }
-                        requestPermissions.launch(category.permissions)
                     }
                 },
             )
@@ -261,11 +284,13 @@ private fun PermissionCategoryRow(
     val optInEnabled = !category.optIn || cycleTrackingEnabled
     val granted = category.available && optInEnabled && grantedCount == category.permissions.size
     val partial = category.available && optInEnabled && grantedCount > 0 && !granted
+    val isManualGrant = category.grantMode == PermissionGrantMode.MANUAL
     val status = when {
         !category.available -> "Not supported"
         granted -> "Granted"
         partial -> "$grantedCount/${category.permissions.size} granted"
         category.optIn && !cycleTrackingEnabled -> "Off"
+        isManualGrant -> "Manual"
         category.required -> "Required"
         else -> "Optional"
     }
@@ -320,6 +345,7 @@ private fun PermissionCategoryRow(
                 FilledTonalButton(onClick = onGrant) {
                     Text(
                         when {
+                            isManualGrant -> "Open"
                             category.optIn && !cycleTrackingEnabled -> "Enable"
                             partial -> "Review"
                             else -> "Grant"

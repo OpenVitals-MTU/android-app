@@ -74,6 +74,7 @@ import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.OvulationTestEntry
+import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
@@ -98,6 +99,7 @@ import java.time.ZoneId
 class HealthConnectManager(private val context: Context) {
     companion object {
         private const val TAG = "HealthConnectManager"
+        private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"
     }
 
     // ─── Permissions ─────────────────────────────────────────────────────────
@@ -107,6 +109,10 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
+    )
+
+    val routePermissions: Set<String> = setOf(
+        READ_EXERCISE_ROUTES_PERMISSION,
     )
 
     val heartPermissions: Set<String> = setOf(
@@ -173,9 +179,22 @@ class HealthConnectManager(private val context: Context) {
     /** Phase 4 – sensitive cycle tracking, requested only after explicit opt-in from Settings */
     val phase4Permissions: Set<String> = cyclePermissions
 
-    val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
+    val manualOnlyPermissions: Set<String> get() = routePermissions
 
-    val managedPermissions: Set<String> get() = allPermissions + phase4Permissions
+    val requestableAllPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
+
+    val requestableManagedPermissions: Set<String> get() = requestableAllPermissions + phase4Permissions
+
+    val allPermissions: Set<String> get() = requestableAllPermissions + manualOnlyPermissions
+
+    val managedPermissions: Set<String> get() = requestableManagedPermissions + manualOnlyPermissions
+
+    fun grantModeFor(permission: String): PermissionGrantMode =
+        if (permission in manualOnlyPermissions) {
+            PermissionGrantMode.MANUAL
+        } else {
+            PermissionGrantMode.REQUESTABLE
+        }
 
     // ─── Availability ─────────────────────────────────────────────────────────
 
