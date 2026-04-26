@@ -59,6 +59,8 @@ import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
+import tech.mmarca.openvitals.features.sleep.SleepDetailScreen
+import tech.mmarca.openvitals.features.sleep.SleepDetailViewModel
 import tech.mmarca.openvitals.features.sleep.SleepScreen
 import tech.mmarca.openvitals.features.sleep.SleepViewModel
 
@@ -99,6 +101,7 @@ fun AppNavigation(
         Screen.Activity.route -> "Activities"
         Screen.ActivityDetail.route -> "Activity detail"
         Screen.Sleep.route -> "Sleep"
+        Screen.SleepDetail.route -> "Sleep detail"
         Screen.Heart.route -> "Heart & Vitals"
         Screen.Body.route -> "Body"
         Screen.Hydration.route -> "Hydration"
@@ -218,6 +221,24 @@ fun AppNavigation(
                     viewModel = sleepViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenSleepSession = { sleepId ->
+                        navController.navigate(Screen.SleepDetail.createRoute(sleepId))
+                    },
+                )
+            }
+
+            composable(
+                route = Screen.SleepDetail.route,
+                arguments = listOf(navArgument(SLEEP_DETAIL_ID_ARG) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val sleepId = backStackEntry.arguments?.getString(SLEEP_DETAIL_ID_ARG).orEmpty()
+                val sleepDetailViewModel = remember(sleepRepository, sleepId) {
+                    SleepDetailViewModel(sleepRepository, sleepId)
+                }
+                SleepDetailScreen(
+                    viewModel = sleepDetailViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                 )
             }
 
@@ -291,6 +312,9 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onOpenActivity = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    },
+                    onOpenSleepSession = { sleepId ->
+                        navController.navigate(Screen.SleepDetail.createRoute(sleepId))
                     },
                 )
             }

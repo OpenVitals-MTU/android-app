@@ -77,6 +77,7 @@ import tech.mmarca.openvitals.data.model.OvulationTestEntry
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.model.SleepDeviceData
 import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
@@ -669,6 +670,11 @@ class HealthConnectManager(private val context: Context) {
                     pageSize = 50,
                 )
             ).records.map { it.toSleepData() }
+        }
+
+    suspend fun readSleepSession(id: String): SleepData? =
+        withNullableLogging("readSleepSession[$id]") {
+            client().readRecord(SleepSessionRecord::class, id).record.toSleepData()
         }
 
     // ─── Heart rate ──────────────────────────────────────────────────────────
@@ -1395,10 +1401,25 @@ class HealthConnectManager(private val context: Context) {
 
     private fun SleepSessionRecord.toSleepData() = SleepData(
         id = metadata.id,
+        title = title,
         startTime = startTime,
         endTime = endTime,
         durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
         source = metadata.dataOrigin.packageName,
+        notes = notes,
+        startZoneOffset = startZoneOffset,
+        endZoneOffset = endZoneOffset,
+        lastModifiedTime = metadata.lastModifiedTime,
+        clientRecordId = metadata.clientRecordId,
+        clientRecordVersion = metadata.clientRecordVersion,
+        recordingMethod = metadata.recordingMethod,
+        device = metadata.device?.let { device ->
+            SleepDeviceData(
+                type = device.type,
+                manufacturer = device.manufacturer,
+                model = device.model,
+            )
+        },
         stages = stages.map { stage ->
             SleepStage(
                 startTime = stage.startTime,

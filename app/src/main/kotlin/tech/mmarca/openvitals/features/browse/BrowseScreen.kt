@@ -41,6 +41,7 @@ fun BrowseScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivity: (String) -> Unit,
+    onOpenSleepSession: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -104,6 +105,7 @@ fun BrowseScreen(
                                 session = s,
                                 unitFormatter = unitFormatter,
                                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                onClick = { onOpenSleepSession(s.id) },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
@@ -186,15 +188,18 @@ private fun WorkoutBrowseRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SleepBrowseRow(
     session: SleepData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
     Card(
+        onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
@@ -218,6 +223,12 @@ private fun SleepBrowseRow(
             Text(
                 text = unitFormatter.duration(session.durationMs),
                 style = MaterialTheme.typography.labelLarge,
+            )
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

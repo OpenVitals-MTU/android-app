@@ -70,6 +70,7 @@ class HealthDataTest {
         assertEquals("Light", SleepStage.stageLabel(SleepStage.STAGE_LIGHT))
         assertEquals("Deep", SleepStage.stageLabel(SleepStage.STAGE_DEEP))
         assertEquals("REM", SleepStage.stageLabel(SleepStage.STAGE_REM))
+        assertEquals("Awake in bed", SleepStage.stageLabel(SleepStage.STAGE_AWAKE_IN_BED))
         assertEquals("Unknown", SleepStage.stageLabel(SleepStage.STAGE_UNKNOWN))
     }
 

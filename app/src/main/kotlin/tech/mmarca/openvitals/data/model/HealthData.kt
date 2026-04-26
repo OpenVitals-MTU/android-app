@@ -133,6 +133,15 @@ data class SleepData(
     val endTime: Instant,
     val durationMs: Long,
     val source: String,
+    val title: String? = null,
+    val notes: String? = null,
+    val startZoneOffset: ZoneOffset? = null,
+    val endZoneOffset: ZoneOffset? = null,
+    val lastModifiedTime: Instant? = null,
+    val clientRecordId: String? = null,
+    val clientRecordVersion: Long? = null,
+    val recordingMethod: Int? = null,
+    val device: SleepDeviceData? = null,
     val stages: List<SleepStage> = emptyList(),
 ) {
     val durationHours: Double get() = durationMs / 3_600_000.0
@@ -143,6 +152,12 @@ data class SleepData(
             return "${h}h ${m}m"
         }
 }
+
+data class SleepDeviceData(
+    val type: Int,
+    val manufacturer: String?,
+    val model: String?,
+)
 
 data class SleepStage(
     val startTime: Instant,
@@ -159,6 +174,7 @@ data class SleepStage(
         const val STAGE_LIGHT = 4
         const val STAGE_DEEP = 5
         const val STAGE_REM = 6
+        const val STAGE_AWAKE_IN_BED = 7
 
         fun stageLabel(type: Int): String = when (type) {
             STAGE_AWAKE -> "Awake"
@@ -167,6 +183,7 @@ data class SleepStage(
             STAGE_LIGHT -> "Light"
             STAGE_DEEP -> "Deep"
             STAGE_REM -> "REM"
+            STAGE_AWAKE_IN_BED -> "Awake in bed"
             else -> "Unknown"
         }
     }

@@ -35,4 +35,13 @@ class SleepRepository(private val hc: HealthConnectManager) {
                 !sessionDate.isBefore(start) && !sessionDate.isAfter(end)
             }
     }
+
+    suspend fun loadSleepSession(id: String): SleepData? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readSleepPermission !in granted) {
+            Log.w(TAG, "Skipping loadSleepSession id=$id missing=$readSleepPermission")
+            return null
+        }
+        return hc.readSleepSession(id)
+    }
 }
