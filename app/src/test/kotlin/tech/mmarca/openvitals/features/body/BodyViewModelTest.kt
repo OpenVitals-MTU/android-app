@@ -285,7 +285,7 @@ class BodyViewModelTest {
 
     @Test fun `nextPeriod MONTH advances from a past anchor`() = runTest {
         val vm = BodyViewModel(emptyRepo())
-        vm.selectDate(pastAnchor)
+        vm.selectDate(today.minusMonths(2))
         val before = vm.uiState.value.selectedDate
         vm.nextPeriod()
         assertEquals(before.plusMonths(1), vm.uiState.value.selectedDate)

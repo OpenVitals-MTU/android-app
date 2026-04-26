@@ -11,7 +11,7 @@ Gap analysis between what the app currently shows and all Health Connect record 
 | Activity | Steps | `StepsRecord` | Activity screen + Dashboard |
 | Activity | Distance | `DistanceRecord` | Activity screen + Dashboard |
 | Activity | Total calories burned | `TotalCaloriesBurnedRecord` | Activity screen + Dashboard |
-| Activity | Hydration | `HydrationRecord` | Dashboard only (no detail screen) |
+| Activity | Hydration | `HydrationRecord` | Hydration screen + Dashboard |
 | Exercise | Workout sessions | `ExerciseSessionRecord` | Activities screen |
 | Sleep | Duration + stages | `SleepSessionRecord` | Sleep screen |
 | Heart | Avg/min/max heart rate | `HeartRateRecord` | Heart screen + Dashboard |
@@ -138,13 +138,13 @@ data class DailySteps(
 
 ---
 
-#### A4. Hydration detail screen
+#### A4. Hydration detail screen ✓ Done (2026-04-26)
 
 **No new permissions needed** — `HydrationRecord` is already in phase2.
 
-Hydration is currently shown on the Dashboard only. It needs a dedicated detail screen consistent with the other metrics.
+Hydration now has a dedicated period-based detail screen consistent with the other metrics.
 
-`ActivityRepository` (or a dedicated `HydrationRepository`):
+`HydrationRepository`:
 - `loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration>`
 
 New model:
@@ -152,9 +152,9 @@ New model:
 data class DailyHydration(val date: LocalDate, val liters: Double)
 ```
 
-`HydrationScreen` (or fold into the Activity detail screen as a tab): daily bar chart, period summary, daily goal progress ring if a target is set.
+`HydrationScreen`: daily/period summary cards, logged-day count, and period bar chart.
 
-Navigation: add `Screen.Hydration` route; wire `onOpenHydration` callback from Dashboard.
+Navigation: `Screen.Hydration` route and `onOpenHydration` callback from Dashboard.
 
 ---
 
@@ -289,7 +289,7 @@ The dashboard currently has a fixed card layout. As B1, B2, and B3 add new secti
 | 1 | ~~A1 — Resting HR + HRV~~ | ~~Low~~ | ✓ Done |
 | 2 | ~~A3 — Floors + active calories + elevation~~ | ~~Low~~ | ✓ Done |
 | 3 | ~~A2 — Body composition~~ | ~~Medium~~ | ✓ Done |
-| 4 | A4 — Hydration detail screen | Low | No new permissions needed; fills documented gap |
+| 4 | ~~A4 — Hydration detail screen~~ | ~~Low~~ | ✓ Done |
 | 5 | B2 — Nutrition | Medium | High user value; enables calories in/out view |
 | 6 | B1 — Vitals | Medium | Requires new screen + phase 3 permissions flow |
 | 7 | B3 — Mindfulness | Low | Small scope; mirrors Activities pattern exactly |
@@ -310,7 +310,7 @@ The dashboard currently has a fixed card layout. As B1, B2, and B3 add new secti
 
 ## Implementation status
 
-Comparison between this roadmap and the actual codebase as of 2026-04-25.
+Comparison between this roadmap and the actual codebase as of 2026-04-26.
 
 ### Phase A
 
@@ -319,7 +319,7 @@ Comparison between this roadmap and the actual codebase as of 2026-04-25.
 | A1 — Resting HR + HRV | ✓ Done | ✓ Implemented | `HeartRepository`, `HeartScreen`, `HeartViewModel` all present. `restingHeartRateBpm` in `DashboardData`. HRV not in `DashboardData` (roadmap doesn't require it there). |
 | A2 — Body composition | ✓ Done | ✓ Implemented | `BodyRepository` reads Height, BodyFat, LeanMass, BMR, BoneMass. `BodyCompositionCard` shows all five. `DashboardData` includes `bodyFatPercent`. |
 | A3 — Floors + active cals + elevation | ✓ Done | ✓ Implemented | `DailySteps` extended with 3 optional fields. `HealthConnectManager.readDailySteps` takes permission flags. `ActivityRepository` passes flags. `HealthRepository.loadDashboard` wires `floorsClimbed`. `ActivityScreen` shows bar charts for all 3 metrics. |
-| A4 — Hydration detail screen | Not started | Not started | `HydrationRecord` is in phase2 permissions and `ActivityRepository`, but no `HydrationScreen` or `Screen.Hydration` route exists. |
+| A4 — Hydration detail screen | ✓ Done | ✓ Implemented | `HydrationRepository`, `HydrationViewModel`, and `HydrationScreen` are present. `Screen.Hydration` is registered and the dashboard hydration card opens it. |
 
 ### Phase B
 
@@ -341,7 +341,6 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 
 | Field | Added by phase |
 |---|---|
-| `floorsClimbed: Int?` | A3 |
 | `caloriesInKcal: Double?` | B2 |
 | `mindfulnessMinutes: Int?` | B3 |
 | `latestSystolicMmHg: Int?` | B1 |
@@ -353,7 +352,6 @@ Fields described in the roadmap as additions to `DashboardData` that are not yet
 
 Routes described in the roadmap that are absent from `Screen.kt` and `AppNavigation.kt`:
 
-- `Screen.Hydration` (A4)
 - `Screen.Vitals` (B1)
 - `Screen.Nutrition` (B2)
 - `Screen.Mindfulness` (B3)

@@ -33,6 +33,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.data.model.DailyHrv
+import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -364,6 +365,26 @@ class HealthConnectManager(private val context: Context) {
     }
 
     suspend fun readTodayHydrationLiters(): Double? = readHydrationLiters(LocalDate.now())
+
+    suspend fun readDailyHydration(startDate: LocalDate, endDate: LocalDate): List<DailyHydration> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        return withLogging("readDailyHydration[$start..$end]", emptyList()) {
+            client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofDays(1),
+                )
+            ).map { bucket ->
+                DailyHydration(
+                    date = bucket.startTime.atZone(zone).toLocalDate(),
+                    liters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
+                )
+            }
+        }
+    }
 
     // ─── Exercise sessions ───────────────────────────────────────────────────
 

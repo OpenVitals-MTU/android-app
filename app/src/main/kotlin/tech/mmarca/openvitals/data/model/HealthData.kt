@@ -153,6 +153,11 @@ data class DailyNutrition(
     val caloriesBurnedKcal: Double,
 )
 
+data class DailyHydration(
+    val date: LocalDate,
+    val liters: Double,
+)
+
 // ─── Source attribution ───────────────────────────────────────────────────────
 
 data class DataSource(

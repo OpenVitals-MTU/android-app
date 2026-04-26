@@ -75,6 +75,7 @@ fun DashboardScreen(
     onOpenSleep: () -> Unit,
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
+    onOpenHydration: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -107,6 +108,7 @@ fun DashboardScreen(
                 onOpenSleep = onOpenSleep,
                 onOpenHeart = onOpenHeart,
                 onOpenBody = onOpenBody,
+                onOpenHydration = onOpenHydration,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -140,6 +142,7 @@ private fun DashboardContent(
     onOpenSleep: () -> Unit,
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
+    onOpenHydration: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -228,6 +231,7 @@ private fun DashboardContent(
                     icon = Icons.Outlined.LocalDrink,
                     accentColor = HydrationColor,
                     modifier = Modifier.weight(1f),
+                    onClick = onOpenHydration,
                 )
             }
         }

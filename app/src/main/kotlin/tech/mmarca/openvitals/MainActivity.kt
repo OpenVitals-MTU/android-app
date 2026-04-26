@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
                     sleepRepository = app.sleepRepository,
                     heartRepository = app.heartRepository,
                     bodyRepository = app.bodyRepository,
+                    hydrationRepository = app.hydrationRepository,
                     preferencesRepository = app.preferencesRepository,
                     startDestination = startDestination,
                     onOnboardingComplete = {

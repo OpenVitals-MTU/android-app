@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.ui.components.periodFor
 import java.time.LocalDate
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,20 +97,22 @@ class BodyViewModel(private val repository: BodyRepository) : ViewModel() {
             val period = periodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val weightDeferred = async { repository.loadWeightEntries(period.start, period.end) }
-                val heightDeferred = async { repository.loadLatestHeight() }
-                val bodyFatDeferred = async { repository.loadBodyFatEntries(period.start, period.end) }
-                val leanMassDeferred = async { repository.loadLatestLeanBodyMass() }
-                val bmrDeferred = async { repository.loadLatestBMR() }
-                val boneMassDeferred = async { repository.loadLatestBoneMass() }
-                BodyLoadResult(
-                    weightEntries = weightDeferred.await(),
-                    heightCm = heightDeferred.await(),
-                    bodyFatEntries = bodyFatDeferred.await(),
-                    leanMassKg = leanMassDeferred.await(),
-                    bmrKcal = bmrDeferred.await(),
-                    boneMassKg = boneMassDeferred.await(),
-                )
+                coroutineScope {
+                    val weightDeferred = async { repository.loadWeightEntries(period.start, period.end) }
+                    val heightDeferred = async { repository.loadLatestHeight() }
+                    val bodyFatDeferred = async { repository.loadBodyFatEntries(period.start, period.end) }
+                    val leanMassDeferred = async { repository.loadLatestLeanBodyMass() }
+                    val bmrDeferred = async { repository.loadLatestBMR() }
+                    val boneMassDeferred = async { repository.loadLatestBoneMass() }
+                    BodyLoadResult(
+                        weightEntries = weightDeferred.await(),
+                        heightCm = heightDeferred.await(),
+                        bodyFatEntries = bodyFatDeferred.await(),
+                        leanMassKg = leanMassDeferred.await(),
+                        bmrKcal = bmrDeferred.await(),
+                        boneMassKg = boneMassDeferred.await(),
+                    )
+                }
             }
                 .onSuccess { result ->
                     _uiState.value = _uiState.value.copy(
