@@ -32,4 +32,3 @@ val CycleColor = Color(0xFFC35B7A)
 // Surface variants
 val SurfaceDark = Color(0xFF1A1C1E)
 val SurfaceContainerDark = Color(0xFF2B2D30)
-val CardSurfaceDark = Color(0xFF222528)

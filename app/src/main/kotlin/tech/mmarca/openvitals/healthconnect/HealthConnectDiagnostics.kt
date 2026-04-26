@@ -11,5 +11,6 @@ internal class HealthConnectDiagnostics(private val context: Context) {
         "pkg=${context.packageName}, uid=${Process.myUid()}, sdk=${Build.VERSION.SDK_INT}, profile=${isRunningInUnsupportedProfile()}"
 
     fun isRunningInUnsupportedProfile(): Boolean =
-        context.getSystemService(UserManager::class.java)?.isProfile == true
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            context.getSystemService(UserManager::class.java)?.isProfile == true
 }
