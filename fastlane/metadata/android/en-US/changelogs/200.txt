@@ -1,0 +1,5 @@
+Added new detail screens for Heart & Vitals, Nutrition, Mindfulness, and Hydration.
+Expanded Activity with floors climbed, active calories, and elevation gain.
+Added Metric/Imperial unit preferences and shared display formatters.
+Improved categorized Health Connect onboarding permissions and on-demand permission prompts.
+Expanded dashboard cards, Health Connect coverage, documentation, and unit tests.
