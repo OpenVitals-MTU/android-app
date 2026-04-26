@@ -186,6 +186,30 @@ class ActivityViewModelTest {
         assertEquals(progress, vm.uiState.value.activityProgress)
     }
 
+    @Test fun `load for DAY range preserves detailed activityProgress fields`() = runTest {
+        val progress = listOf(
+            ActivityProgressPoint(
+                time = java.time.Instant.now(),
+                totalSteps = 500L,
+                totalDistanceMeters = 350.0,
+                totalCaloriesBurnedKcal = 80.0,
+                totalActiveCaloriesKcal = 45.0,
+                totalFloorsClimbed = 3,
+                totalElevationGainedMeters = 12.0,
+            )
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadActivityProgress(any()) } returns progress
+
+        val vm = ActivityViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
+
+        val point = vm.uiState.value.activityProgress.single()
+        assertEquals(45.0, point.totalActiveCaloriesKcal!!, 0.01)
+        assertEquals(3, point.totalFloorsClimbed)
+        assertEquals(12.0, point.totalElevationGainedMeters!!, 0.01)
+    }
+
     @Test fun `load for WEEK range returns empty activityProgress`() = runTest {
         val repo = emptyRepo()
         val vm = ActivityViewModel(repo)
@@ -309,40 +333,40 @@ class ActivityViewModelTest {
         assertTrue(vm.uiState.value.dailySteps.any { it.activeCaloriesKcal != null })
     }
 
-    // ─── Hydration chart visibility ───────────────────────────────────────────
+    // ─── Calories burned chart data ──────────────────────────────────────────
 
-    @Test fun `nutrition with positive hydration flows through state for any range including DAY`() = runTest {
-        val nutrition = listOf(DailyNutrition(today, hydrationLiters = 1.5, caloriesBurnedKcal = 0.0))
+    @Test fun `nutrition with calories burned flows through state for any range including DAY`() = runTest {
+        val nutrition = listOf(DailyNutrition(today, hydrationLiters = 0.0, caloriesBurnedKcal = 500.0))
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
         val vm = ActivityViewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
-        assertEquals(1.5, vm.uiState.value.nutrition.single().hydrationLiters, 0.001)
-        assertTrue(vm.uiState.value.nutrition.any { it.hydrationLiters > 0 })
+        assertEquals(500.0, vm.uiState.value.nutrition.single().caloriesBurnedKcal, 0.001)
+        assertTrue(vm.uiState.value.nutrition.any { it.caloriesBurnedKcal > 0 })
     }
 
-    @Test fun `nutrition with zero hydration does not satisfy hydration chart condition`() = runTest {
-        val nutrition = listOf(DailyNutrition(today, hydrationLiters = 0.0, caloriesBurnedKcal = 500.0))
+    @Test fun `nutrition with zero calories burned does not satisfy calories chart condition for period ranges`() = runTest {
+        val nutrition = listOf(DailyNutrition(today, hydrationLiters = 0.0, caloriesBurnedKcal = 0.0))
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
         val vm = ActivityViewModel(repo)
 
-        assertFalse(vm.uiState.value.nutrition.any { it.hydrationLiters > 0 })
+        assertFalse(vm.uiState.value.nutrition.any { it.caloriesBurnedKcal > 0 })
     }
 
-    @Test fun `hydration totals across multiple days sum correctly`() = runTest {
+    @Test fun `calories burned totals across multiple days sum correctly`() = runTest {
         val nutrition = listOf(
-            DailyNutrition(today.minusDays(1), hydrationLiters = 1.2, caloriesBurnedKcal = 0.0),
-            DailyNutrition(today, hydrationLiters = 2.0, caloriesBurnedKcal = 0.0),
+            DailyNutrition(today.minusDays(1), hydrationLiters = 0.0, caloriesBurnedKcal = 500.0),
+            DailyNutrition(today, hydrationLiters = 0.0, caloriesBurnedKcal = 700.0),
         )
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
         val vm = ActivityViewModel(repo)
 
-        assertEquals(3.2, vm.uiState.value.nutrition.sumOf { it.hydrationLiters }, 0.001)
+        assertEquals(1_200.0, vm.uiState.value.nutrition.sumOf { it.caloriesBurnedKcal }, 0.001)
     }
 }

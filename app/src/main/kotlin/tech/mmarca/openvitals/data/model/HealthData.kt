@@ -123,6 +123,9 @@ data class ActivityProgressPoint(
     val totalSteps: Long,
     val totalDistanceMeters: Double?,
     val totalCaloriesBurnedKcal: Double?,
+    val totalActiveCaloriesKcal: Double? = null,
+    val totalFloorsClimbed: Int? = null,
+    val totalElevationGainedMeters: Double? = null,
 )
 
 // ─── Sleep ────────────────────────────────────────────────────────────────────

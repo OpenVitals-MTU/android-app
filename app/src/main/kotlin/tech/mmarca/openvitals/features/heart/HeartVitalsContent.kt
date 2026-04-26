@@ -40,16 +40,18 @@ import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
 import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.periodBarBuckets
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.periodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.math.roundToInt
 
 private val oxygenColor = Color(0xFF00897B)
 private val respiratoryColor = Color(0xFF5E97F6)
@@ -154,10 +156,12 @@ fun LazyListScope.HeartVitalsContent(
             item { SectionHeader("Respiratory") }
             item {
                 VitalsSummaryRow(
-                    first = state.latestRespiratoryRate?.let {
-                        val value = unitFormatter.respiratoryRate(it.breathsPerMinute)
-                        SummaryMetric("Respiratory rate", value.value, value.unit, Icons.Outlined.Air, respiratoryColor, it.source)
-                    },
+                    first = respiratoryRateSummaryMetric(
+                        entries = state.respiratoryRate,
+                        selectedRange = selectedRange,
+                        period = period,
+                        unitFormatter = unitFormatter,
+                    ),
                     second = state.latestBodyTemperature?.let {
                         val value = unitFormatter.temperature(it.temperatureCelsius)
                         SummaryMetric("Body temp", value.value, value.unit, Icons.Outlined.DeviceThermostat, temperatureColor, it.source)
@@ -167,15 +171,37 @@ fun LazyListScope.HeartVitalsContent(
             }
             if (state.respiratoryRate.isNotEmpty()) {
                 item {
-                    SimpleVitalsList(
-                        title = "Respiratory rate readings",
-                        entries = state.respiratoryRate,
-                        value = { unitFormatter.respiratoryRate(it.breathsPerMinute).text },
-                        source = { it.source },
-                        time = { it.time },
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                    if (selectedRange == TimeRange.DAY) {
+                        SimpleVitalsList(
+                            title = "Respiratory rate readings",
+                            entries = state.respiratoryRate,
+                            value = { unitFormatter.respiratoryRate(it.breathsPerMinute).text },
+                            source = { it.source },
+                            time = { it.time },
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    } else {
+                        RespiratoryRateChart(
+                            entries = state.respiratoryRate,
+                            selectedRange = selectedRange,
+                            period = period,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+                if (selectedRange != TimeRange.DAY) {
+                    item { SectionHeader("Respiratory rate daily breakdown") }
+                    items(respiratoryRateDaySummaries(state.respiratoryRate).sortedByDescending { it.date }) { summary ->
+                        RespiratoryRateDayRow(
+                            summary = summary,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
                 }
             }
             if (state.bodyTemperature.isNotEmpty()) {
@@ -251,6 +277,192 @@ private fun SummaryMetricCard(metric: SummaryMetric?, modifier: Modifier = Modif
             source = metric.source,
             modifier = modifier,
         )
+    }
+}
+
+@Composable
+private fun RespiratoryRateChart(
+    entries: List<RespiratoryRateEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val buckets = respiratoryRateBuckets(entries, selectedRange, period)
+    val plotted = buckets.mapIndexedNotNull { index, bucket ->
+        bucket.value.takeIf { it > 0.0 }?.let { RespiratoryRatePlotPoint(index, it) }
+    }
+    val average = respiratoryRateAverage(buckets)
+    val max = plotted.maxOfOrNull { it.value }?.plus(1.0) ?: 1.0
+    val min = plotted.minOfOrNull { it.value }?.minus(1.0)?.coerceAtLeast(0.0) ?: 0.0
+    val range = (max - min).coerceAtLeast(1.0)
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Respiratory rate", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(12.dp))
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+            ) {
+                if (plotted.isEmpty()) return@Canvas
+
+                val lastIndex = buckets.lastIndex.coerceAtLeast(1)
+                val points = plotted.map { point ->
+                    Offset(
+                        x = point.index * size.width / lastIndex,
+                        y = size.height * (1f - ((point.value - min) / range).toFloat()),
+                    )
+                }
+
+                for (index in 0 until points.size - 1) {
+                    drawLine(
+                        color = respiratoryColor,
+                        start = points[index],
+                        end = points[index + 1],
+                        strokeWidth = 3.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                }
+                points.forEach { point ->
+                    drawCircle(color = respiratoryColor, radius = 4.dp.toPx(), center = point)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            PeriodChartXAxis(
+                dates = buckets.map { it.date },
+                selectedRange = selectedRange,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.respiratoryRate(average).text} avg",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private data class RespiratoryRatePlotPoint(
+    val index: Int,
+    val value: Double,
+)
+
+private fun respiratoryRateSummaryMetric(
+    entries: List<RespiratoryRateEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+): SummaryMetric? {
+    if (entries.isEmpty()) return null
+
+    if (selectedRange == TimeRange.DAY) {
+        val latest = entries.maxByOrNull { it.time } ?: return null
+        val value = unitFormatter.respiratoryRate(latest.breathsPerMinute)
+        return SummaryMetric("Respiratory rate", value.value, value.unit, Icons.Outlined.Air, respiratoryColor, latest.source)
+    }
+
+    val average = respiratoryRateAverage(respiratoryRateBuckets(entries, selectedRange, period))
+    val value = unitFormatter.respiratoryRate(average)
+    val source = entries.map { it.source }.distinct().singleOrNull() ?: "${entries.size} readings"
+    return SummaryMetric("Avg respiratory rate", value.value, value.unit, Icons.Outlined.Air, respiratoryColor, source)
+}
+
+private fun respiratoryRateBuckets(
+    entries: List<RespiratoryRateEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+) = periodBarBuckets(
+    values = entries
+        .groupBy { it.time.atZone(ZoneId.systemDefault()).toLocalDate() }
+        .map { (date, dayEntries) ->
+            PeriodChartValue(
+                date = date,
+                value = dayEntries.map { it.breathsPerMinute }.average(),
+            )
+        },
+    selectedRange = selectedRange,
+    period = period,
+    yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
+)
+
+private fun respiratoryRateAverage(
+    buckets: List<tech.mmarca.openvitals.ui.components.PeriodChartBucket>,
+): Double = buckets
+    .map { it.value }
+    .filter { it > 0.0 }
+    .takeIf { it.isNotEmpty() }
+    ?.average()
+    ?: 0.0
+
+private data class RespiratoryRateDaySummary(
+    val date: LocalDate,
+    val average: Double,
+    val min: Double,
+    val max: Double,
+    val readings: Int,
+)
+
+private fun respiratoryRateDaySummaries(entries: List<RespiratoryRateEntry>): List<RespiratoryRateDaySummary> =
+    entries
+        .groupBy { it.time.atZone(ZoneId.systemDefault()).toLocalDate() }
+        .map { (date, dayEntries) ->
+            val values = dayEntries.map { it.breathsPerMinute }
+            RespiratoryRateDaySummary(
+                date = date,
+                average = values.average(),
+                min = values.minOrNull() ?: 0.0,
+                max = values.maxOrNull() ?: 0.0,
+                readings = values.size,
+            )
+        }
+
+@Composable
+private fun RespiratoryRateDayRow(
+    summary: RespiratoryRateDaySummary,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val dayFormatter = dateTimeFormatterProvider.chartDay()
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = dayFormatter.format(summary.date),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${unitFormatter.respiratoryRate(summary.average).text} avg",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = respiratoryColor,
+                )
+                Text(
+                    text = "${unitFormatter.respiratoryRate(summary.min).text}-${unitFormatter.respiratoryRate(summary.max).text}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${unitFormatter.count(summary.readings)} readings",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

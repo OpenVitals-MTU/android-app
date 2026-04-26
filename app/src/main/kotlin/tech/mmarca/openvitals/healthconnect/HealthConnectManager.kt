@@ -392,6 +392,9 @@ class HealthConnectManager(private val context: Context) {
         date: LocalDate,
         includeDistance: Boolean,
         includeCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
     ): List<ActivityProgressPoint> {
         val zone = ZoneId.systemDefault()
         val start = date.atStartOfDay(zone).toInstant()
@@ -400,11 +403,17 @@ class HealthConnectManager(private val context: Context) {
             add(StepsRecord.COUNT_TOTAL)
             if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
             if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+            if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
         }
         return withLogging("readActivityProgress[$date][$start..$end]", emptyList()) {
             var cumulativeSteps = 0L
             var cumulativeDistance = 0.0
             var cumulativeCalories = 0.0
+            var cumulativeActiveCalories = 0.0
+            var cumulativeFloors = 0
+            var cumulativeElevation = 0.0
 
             client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
@@ -420,11 +429,23 @@ class HealthConnectManager(private val context: Context) {
                 if (includeCalories) {
                     cumulativeCalories += bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
                 }
+                if (includeActiveCalories) {
+                    cumulativeActiveCalories += bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                }
+                if (includeFloors) {
+                    cumulativeFloors += bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                }
+                if (includeElevation) {
+                    cumulativeElevation += bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                }
                 ActivityProgressPoint(
-                    time = bucket.startTime.plus(Duration.ofHours(1)),
+                    time = bucket.endTime,
                     totalSteps = cumulativeSteps,
                     totalDistanceMeters = if (includeDistance) cumulativeDistance else null,
                     totalCaloriesBurnedKcal = if (includeCalories) cumulativeCalories else null,
+                    totalActiveCaloriesKcal = if (includeActiveCalories) cumulativeActiveCalories else null,
+                    totalFloorsClimbed = if (includeFloors) cumulativeFloors else null,
+                    totalElevationGainedMeters = if (includeElevation) cumulativeElevation else null,
                 )
             }
         }
@@ -958,28 +979,34 @@ class HealthConnectManager(private val context: Context) {
 
     // ─── Nutrition helpers ────────────────────────────────────────────────────
 
-    suspend fun readDailyNutrition(startDate: LocalDate, endDate: LocalDate): List<DailyNutrition> {
+    suspend fun readDailyNutrition(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        includeHydration: Boolean = true,
+        includeCalories: Boolean = true,
+    ): List<DailyNutrition> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return withLogging("readDailyNutrition[$start..$end]", emptyList()) {
+            val metrics = buildSet {
+                if (includeHydration) add(HydrationRecord.VOLUME_TOTAL)
+                if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            }
             val aggregateRows = client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
-                    metrics = setOf(
-                        HydrationRecord.VOLUME_TOTAL,
-                        TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                    ),
+                    metrics = metrics,
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                     timeRangeSlicer = Duration.ofDays(1),
                 )
             ).map { bucket ->
                 DailyNutrition(
                     date = bucket.startTime.atZone(zone).toLocalDate(),
-                    hydrationLiters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
-                    caloriesBurnedKcal = bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
+                    hydrationLiters = if (includeHydration) bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0 else 0.0,
+                    caloriesBurnedKcal = if (includeCalories) bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0 else 0.0,
                 )
             }
-            if (aggregateRows.any { it.hydrationLiters > 0.0 }) {
+            if (!includeHydration || aggregateRows.any { it.hydrationLiters > 0.0 }) {
                 aggregateRows
             } else {
                 val hydrationByDate = readHydrationRecordsByDate(start, end, zone)
@@ -1211,14 +1238,23 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun readRespiratoryRateEntries(start: Instant, end: Instant): List<RespiratoryRateEntry> =
         withLogging("readRespiratoryRateEntries[$start..$end]", emptyList()) {
-            client().readRecords(
-                ReadRecordsRequest(
-                    recordType = RespiratoryRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    ascendingOrder = false,
-                    pageSize = 200,
+            val records = mutableListOf<RespiratoryRateRecord>()
+            var pageToken: String? = null
+            do {
+                val response = client().readRecords(
+                    ReadRecordsRequest(
+                        recordType = RespiratoryRateRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(start, end),
+                        ascendingOrder = true,
+                        pageSize = 1000,
+                        pageToken = pageToken,
+                    )
                 )
-            ).records.map { record ->
+                records += response.records
+                pageToken = response.pageToken
+            } while (pageToken != null)
+
+            records.map { record ->
                 RespiratoryRateEntry(
                     time = record.time,
                     breathsPerMinute = record.rate,

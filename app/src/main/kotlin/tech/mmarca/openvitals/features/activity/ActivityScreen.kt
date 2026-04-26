@@ -36,7 +36,6 @@ import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
-import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
 import java.time.Duration
 import java.time.LocalDate
@@ -159,63 +158,102 @@ fun ActivityScreen(
                 }
             }
 
-            if (state.nutrition.any { it.hydrationLiters > 0 }) {
-                item {
-                    HydrationBarChart(
-                        data = state.nutrition,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        unitFormatter = unitFormatter,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-            }
-
             if (state.dailySteps.any { it.floorsClimbed != null }) {
                 item {
-                    FloorsBarChart(
-                        data = state.dailySteps,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        unitFormatter = unitFormatter,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                    if (state.selectedRange == TimeRange.DAY) {
+                        val floorsTotal = state.dailySteps.firstOrNull()?.floorsClimbed ?: 0
+                        IntradayActivityChartCard(
+                            selectedDate = state.selectedDate,
+                            title = "Floors climbed",
+                            valueText = "${unitFormatter.count(floorsTotal)} floors",
+                            emptyText = "No floors climbed data was recorded",
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            points = state.activityProgress.mapNotNull { point ->
+                                point.totalFloorsClimbed?.let { point.time to it.toDouble() }
+                            },
+                            accentColor = FloorsColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    } else {
+                        FloorsBarChart(
+                            data = state.dailySteps,
+                            selectedRange = state.selectedRange,
+                            period = period,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
 
             if (state.dailySteps.any { it.activeCaloriesKcal != null }) {
                 item {
-                    ActiveCaloriesBarChart(
-                        data = state.dailySteps,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        unitFormatter = unitFormatter,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                    if (state.selectedRange == TimeRange.DAY) {
+                        val activeCaloriesTotal = state.dailySteps.firstOrNull()?.activeCaloriesKcal ?: 0.0
+                        IntradayActivityChartCard(
+                            selectedDate = state.selectedDate,
+                            title = "Active calories",
+                            valueText = unitFormatter.energy(activeCaloriesTotal).text,
+                            emptyText = "No active calories data was recorded",
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            points = state.activityProgress.mapNotNull { point ->
+                                point.totalActiveCaloriesKcal?.let { point.time to it }
+                            },
+                            accentColor = ActiveCaloriesColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    } else {
+                        ActiveCaloriesBarChart(
+                            data = state.dailySteps,
+                            selectedRange = state.selectedRange,
+                            period = period,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
 
             if (state.dailySteps.any { it.elevationGainedMeters != null }) {
                 item {
-                    ElevationBarChart(
-                        data = state.dailySteps,
-                        selectedRange = state.selectedRange,
-                        period = period,
-                        unitFormatter = unitFormatter,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                    if (state.selectedRange == TimeRange.DAY) {
+                        val elevationTotal = state.dailySteps.firstOrNull()?.elevationGainedMeters ?: 0.0
+                        IntradayActivityChartCard(
+                            selectedDate = state.selectedDate,
+                            title = "Elevation gained",
+                            valueText = unitFormatter.elevation(elevationTotal).text,
+                            emptyText = "No elevation data was recorded",
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            points = state.activityProgress.mapNotNull { point ->
+                                point.totalElevationGainedMeters?.let { point.time to it }
+                            },
+                            accentColor = ElevationColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    } else {
+                        ElevationBarChart(
+                            data = state.dailySteps,
+                            selectedRange = state.selectedRange,
+                            period = period,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
         }
@@ -280,27 +318,6 @@ private fun CaloriesBarChart(
         period = period,
         summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.caloriesBurnedKcal }).text}",
         accentColor = CaloriesColor,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun HydrationBarChart(
-    data: List<DailyNutrition>,
-    selectedRange: TimeRange,
-    period: DatePeriod,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    modifier: Modifier = Modifier,
-) {
-    MetricBarChartCard(
-        title = "Hydration",
-        values = data.map { PeriodChartValue(date = it.date, value = it.hydrationLiters) },
-        selectedRange = selectedRange,
-        period = period,
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.hydrationLiters }).text}",
-        accentColor = HydrationColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
