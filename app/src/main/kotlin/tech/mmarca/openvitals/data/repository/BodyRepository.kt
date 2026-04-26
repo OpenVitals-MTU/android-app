@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.data.repository
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
@@ -25,6 +26,7 @@ class BodyRepository(private val hc: HealthConnectManager) {
     private val readBodyFatPermission = HealthPermission.getReadPermission(BodyFatRecord::class)
     private val readLeanMassPermission = HealthPermission.getReadPermission(LeanBodyMassRecord::class)
     private val readBMRPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
+    private val readBoneMassPermission = HealthPermission.getReadPermission(BoneMassRecord::class)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -69,5 +71,11 @@ class BodyRepository(private val hc: HealthConnectManager) {
         val granted = grantedPermissionsIfAvailable()
         if (readBMRPermission !in granted) return null
         return hc.readLatestBMR()
+    }
+
+    suspend fun loadLatestBoneMass(): Double? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readBoneMassPermission !in granted) return null
+        return hc.readLatestBoneMass()
     }
 }

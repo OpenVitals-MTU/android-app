@@ -27,8 +27,12 @@ import tech.mmarca.openvitals.data.model.TimeRange
 import tech.mmarca.openvitals.ui.components.DatePeriod
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.periodTitle
+import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
+import tech.mmarca.openvitals.ui.theme.ElevationColor
+import tech.mmarca.openvitals.ui.theme.FloorsColor
+import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
 import java.time.Duration
 import java.time.LocalDate
@@ -145,6 +149,58 @@ fun ActivityScreen(viewModel: ActivityViewModel) {
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
+                }
+            }
+
+            if (state.nutrition.any { it.hydrationLiters > 0 }) {
+                item {
+                    HydrationBarChart(
+                        data = state.nutrition,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
+
+            if (state.dailySteps.any { it.floorsClimbed != null }) {
+                item {
+                    FloorsBarChart(
+                        data = state.dailySteps,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
+
+            if (state.dailySteps.any { it.activeCaloriesKcal != null }) {
+                item {
+                    ActiveCaloriesBarChart(
+                        data = state.dailySteps,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
+
+            if (state.dailySteps.any { it.elevationGainedMeters != null }) {
+                item {
+                    ElevationBarChart(
+                        data = state.dailySteps,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                 }
             }
         }
@@ -272,6 +328,26 @@ private fun CaloriesBarChart(
 }
 
 @Composable
+private fun HydrationBarChart(
+    data: List<DailyNutrition>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    modifier: Modifier = Modifier,
+) {
+    MetricBarChartCard(
+        title = "Hydration",
+        values = data.map { it.hydrationLiters },
+        labels = data.map { dayFormatter.format(it.date) },
+        selectedRange = selectedRange,
+        summaryText = "${periodTitle(selectedRange, period)} · %.1f L".format(
+            data.sumOf { it.hydrationLiters },
+        ),
+        accentColor = HydrationColor,
+        modifier = modifier,
+    )
+}
+
+@Composable
 private fun MetricBarChartCard(
     title: String,
     values: List<Double>,
@@ -344,6 +420,69 @@ private fun MetricBarChartCard(
             )
         }
     }
+}
+
+@Composable
+private fun FloorsBarChart(
+    data: List<DailySteps>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    modifier: Modifier = Modifier,
+) {
+    MetricBarChartCard(
+        title = "Floors climbed",
+        values = data.map { it.floorsClimbed?.toDouble() ?: 0.0 },
+        labels = data.map { dayFormatter.format(it.date) },
+        selectedRange = selectedRange,
+        summaryText = "${periodTitle(selectedRange, period)} · %,d floors".format(
+            data.sumOf { it.floorsClimbed ?: 0 },
+        ),
+        accentColor = FloorsColor,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun ActiveCaloriesBarChart(
+    data: List<DailySteps>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    modifier: Modifier = Modifier,
+) {
+    MetricBarChartCard(
+        title = "Active calories",
+        values = data.map { it.activeCaloriesKcal ?: 0.0 },
+        labels = data.map { dayFormatter.format(it.date) },
+        selectedRange = selectedRange,
+        summaryText = "${periodTitle(selectedRange, period)} · %,d kcal".format(
+            data.sumOf { it.activeCaloriesKcal ?: 0.0 }.roundToInt(),
+        ),
+        accentColor = ActiveCaloriesColor,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun ElevationBarChart(
+    data: List<DailySteps>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    modifier: Modifier = Modifier,
+) {
+    val totalMeters = data.sumOf { it.elevationGainedMeters ?: 0.0 }
+    MetricBarChartCard(
+        title = "Elevation gained",
+        values = data.map { it.elevationGainedMeters ?: 0.0 },
+        labels = data.map { dayFormatter.format(it.date) },
+        selectedRange = selectedRange,
+        summaryText = if (totalMeters >= 1000) {
+            "${periodTitle(selectedRange, period)} · %.1f km".format(totalMeters / 1000)
+        } else {
+            "${periodTitle(selectedRange, period)} · %d m".format(totalMeters.roundToInt())
+        },
+        accentColor = ElevationColor,
+        modifier = modifier,
+    )
 }
 
 @Composable

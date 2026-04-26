@@ -22,6 +22,8 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.features.activity.ActivityScreen
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
@@ -35,6 +37,8 @@ import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.heart.HeartScreen
 import tech.mmarca.openvitals.features.heart.HeartViewModel
+import tech.mmarca.openvitals.features.hydration.HydrationScreen
+import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
 import tech.mmarca.openvitals.features.settings.SettingsScreen
@@ -50,6 +54,8 @@ fun AppNavigation(
     sleepRepository: SleepRepository,
     heartRepository: HeartRepository,
     bodyRepository: BodyRepository,
+    hydrationRepository: HydrationRepository,
+    preferencesRepository: PreferencesRepository,
     startDestination: String,
     onOnboardingComplete: () -> Unit = {},
 ) {
@@ -72,6 +78,7 @@ fun AppNavigation(
         Screen.Sleep.route -> "Sleep"
         Screen.Heart.route -> "Heart"
         Screen.Body.route -> "Body"
+        Screen.Hydration.route -> "Hydration"
         Screen.Browse.route -> "Browse"
         Screen.Settings.route -> "Settings"
         else -> ""
@@ -122,7 +129,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Dashboard.route) {
-                val dashboardViewModel = remember(repository) { DashboardViewModel(repository) }
+                val dashboardViewModel = remember(repository) { DashboardViewModel(repository, preferencesRepository) }
                 DashboardScreen(
                     viewModel = dashboardViewModel,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
@@ -131,6 +138,7 @@ fun AppNavigation(
                     onOpenSleep = { navController.navigate(Screen.Sleep.route) },
                     onOpenHeart = { navController.navigate(Screen.Heart.route) },
                     onOpenBody = { navController.navigate(Screen.Body.route) },
+                    onOpenHydration = { navController.navigate(Screen.Hydration.route) },
                     onOpenBrowse = { navController.navigate(Screen.Browse.route) },
                 )
             }
@@ -158,6 +166,11 @@ fun AppNavigation(
             composable(Screen.Body.route) {
                 val bodyViewModel = remember(bodyRepository) { BodyViewModel(bodyRepository) }
                 BodyScreen(viewModel = bodyViewModel)
+            }
+
+            composable(Screen.Hydration.route) {
+                val hydrationViewModel = remember(hydrationRepository) { HydrationViewModel(hydrationRepository) }
+                HydrationScreen(viewModel = hydrationViewModel)
             }
 
             composable(Screen.Browse.route) {

@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals
 
-import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,19 +12,11 @@ import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-private const val PREFS_NAME = "openvitals_prefs"
-private const val KEY_ONBOARDING_DONE = "onboarding_done"
-
 class MainActivity : ComponentActivity() {
-
-    private lateinit var prefs: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val onboardingDone = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
 
         val app = application as OpenVitalsApp
 
@@ -33,7 +24,7 @@ class MainActivity : ComponentActivity() {
             OpenVitalsTheme {
                 var startDestination by remember {
                     mutableStateOf(
-                        if (onboardingDone) Screen.Dashboard.route
+                        if (app.preferencesRepository.onboardingDone) Screen.Dashboard.route
                         else Screen.Onboarding.route
                     )
                 }
@@ -44,21 +35,15 @@ class MainActivity : ComponentActivity() {
                     sleepRepository = app.sleepRepository,
                     heartRepository = app.heartRepository,
                     bodyRepository = app.bodyRepository,
+                    hydrationRepository = app.hydrationRepository,
+                    preferencesRepository = app.preferencesRepository,
                     startDestination = startDestination,
                     onOnboardingComplete = {
-                        markOnboardingDone()
+                        app.preferencesRepository.onboardingDone = true
                         startDestination = Screen.Dashboard.route
                     },
                 )
             }
         }
-    }
-
-    /**
-     * Called from the onboarding flow to persist the completed state.
-     * This is wired through the navigation callback.
-     */
-    fun markOnboardingDone() {
-        prefs.edit().putBoolean(KEY_ONBOARDING_DONE, true).apply()
     }
 }

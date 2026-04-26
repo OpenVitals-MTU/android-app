@@ -95,6 +95,103 @@ class HeartViewModelTest {
         assertEquals(42.5, vm.uiState.value.dayHrvMs!!, 0.001)
     }
 
+    @Test fun `DAY range leaves dayRestingBpm null when repo returns null`() = runTest {
+        val repo = emptyRepo() // loadRestingHeartRate returns null by default
+        val vm = HeartViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
+        assertNull(vm.uiState.value.dayRestingBpm)
+    }
+
+    @Test fun `DAY range leaves dayHrvMs null when repo returns null`() = runTest {
+        val repo = emptyRepo() // loadHrvRmssd returns null by default
+        val vm = HeartViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
+        assertNull(vm.uiState.value.dayHrvMs)
+    }
+
+    @Test fun `DAY range produces empty dailyRestingHR and dailyHrv`() = runTest {
+        val vm = HeartViewModel(emptyRepo())
+        vm.selectRange(TimeRange.DAY)
+        assertTrue(vm.uiState.value.dailyRestingHR.isEmpty())
+        assertTrue(vm.uiState.value.dailyHrv.isEmpty())
+    }
+
+    // ─── A1: multi-day resting HR + HRV trends ────────────────────────────────
+
+    @Test fun `WEEK range loads dailyRestingHR trend`() = runTest {
+        val trend = listOf(
+            DailyRestingHR(today.minusDays(1), 56L),
+            DailyRestingHR(today, 58L),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyRestingHR(any(), any()) } returns trend
+
+        val vm = HeartViewModel(repo)
+
+        assertEquals(trend, vm.uiState.value.dailyRestingHR)
+    }
+
+    @Test fun `WEEK range loads dailyHrv trend`() = runTest {
+        val trend = listOf(
+            DailyHrv(today.minusDays(1), 38.0),
+            DailyHrv(today, 42.5),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHRV(any(), any()) } returns trend
+
+        val vm = HeartViewModel(repo)
+
+        assertEquals(trend, vm.uiState.value.dailyHrv)
+    }
+
+    @Test fun `WEEK range clears dayRestingBpm and dayHrvMs`() = runTest {
+        val vm = HeartViewModel(emptyRepo())
+        // default range is WEEK — verify point-in-time fields are null
+        assertNull(vm.uiState.value.dayRestingBpm)
+        assertNull(vm.uiState.value.dayHrvMs)
+    }
+
+    @Test fun `switching from DAY to WEEK clears point-in-time resting HR and HRV`() = runTest {
+        val repo = emptyRepo()
+        coEvery { repo.loadRestingHeartRate(any()) } returns 60L
+        coEvery { repo.loadHrvRmssd(any()) } returns 40.0
+
+        val vm = HeartViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
+        assertEquals(60L, vm.uiState.value.dayRestingBpm)
+
+        vm.selectRange(TimeRange.WEEK)
+        assertNull(vm.uiState.value.dayRestingBpm)
+        assertNull(vm.uiState.value.dayHrvMs)
+    }
+
+    @Test fun `switching from DAY to WEEK clears HR samples`() = runTest {
+        val samples = listOf(HeartRateSample(Instant.now(), 72L, "test"))
+        val repo = emptyRepo()
+        coEvery { repo.loadHeartRateSamples(any()) } returns samples
+
+        val vm = HeartViewModel(repo)
+        vm.selectRange(TimeRange.DAY)
+        assertTrue(vm.uiState.value.daySamples.isNotEmpty())
+
+        vm.selectRange(TimeRange.WEEK)
+        assertTrue(vm.uiState.value.daySamples.isEmpty())
+    }
+
+    @Test fun `WEEK range does not call loadDailyRestingHR with empty result`() = runTest {
+        val repo = emptyRepo() // returns emptyList() by default
+        val vm = HeartViewModel(repo)
+        assertTrue(vm.uiState.value.dailyRestingHR.isEmpty())
+        coVerify(atLeast = 1) { repo.loadDailyRestingHR(any(), any()) }
+    }
+
+    @Test fun `WEEK range does not call loadDailyHRV with empty result`() = runTest {
+        val repo = emptyRepo()
+        val vm = HeartViewModel(repo)
+        assertTrue(vm.uiState.value.dailyHrv.isEmpty())
+        coVerify(atLeast = 1) { repo.loadDailyHRV(any(), any()) }
+    }
+
     // ─── Load failure ─────────────────────────────────────────────────────────
 
     @Test fun `load failure sets error and clears loading`() = runTest {

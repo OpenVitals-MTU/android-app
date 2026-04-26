@@ -14,6 +14,8 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Stairs
+import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.LocalDrink
@@ -47,6 +49,8 @@ import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
+import tech.mmarca.openvitals.ui.theme.ElevationColor
+import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
@@ -71,6 +75,7 @@ fun DashboardScreen(
     onOpenSleep: () -> Unit,
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
+    onOpenHydration: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -89,15 +94,21 @@ fun DashboardScreen(
             dashboardData != null -> DashboardContent(
                 data = dashboardData,
                 canGoForward = state.selectedDate.isBefore(LocalDate.now()),
+                showPermissionsCallout = state.showPermissionsCallout,
                 onPreviousDay = viewModel::previousDay,
                 onNextDay = viewModel::nextDay,
                 onOpenCalendar = { showDatePicker = true },
-                onGrantPermissions = onGrantPermissions,
+                onGrantPermissions = {
+                    viewModel.acknowledgePermissionsCallout()
+                    onGrantPermissions()
+                },
+                onDismissPermissionsCallout = viewModel::acknowledgePermissionsCallout,
                 onOpenSteps = onOpenSteps,
                 onOpenActivities = onOpenActivities,
                 onOpenSleep = onOpenSleep,
                 onOpenHeart = onOpenHeart,
                 onOpenBody = onOpenBody,
+                onOpenHydration = onOpenHydration,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage("No dashboard data available.")
@@ -120,15 +131,18 @@ fun DashboardScreen(
 private fun DashboardContent(
     data: DashboardData,
     canGoForward: Boolean,
+    showPermissionsCallout: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
     onGrantPermissions: () -> Unit,
+    onDismissPermissionsCallout: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenSleep: () -> Unit,
     onOpenHeart: () -> Unit,
     onOpenBody: () -> Unit,
+    onOpenHydration: () -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -147,12 +161,13 @@ private fun DashboardContent(
             )
         }
 
-        if (data.missingPermissions.isNotEmpty()) {
+        if (showPermissionsCallout) {
             item {
                 PermissionCallout(
                     title = "Some permissions are missing",
                     body = "Grant the missing permissions to see a complete dashboard.",
                     onGrant = onGrantPermissions,
+                    onDismiss = onDismissPermissionsCallout,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -216,7 +231,50 @@ private fun DashboardContent(
                     icon = Icons.Outlined.LocalDrink,
                     accentColor = HydrationColor,
                     modifier = Modifier.weight(1f),
+                    onClick = onOpenHydration,
                 )
+            }
+        }
+
+        if (data.floorsClimbed != null || data.elevationGainedMeters != null) {
+            item {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (data.floorsClimbed != null) {
+                        MetricCard(
+                            title = "Floors climbed",
+                            value = data.floorsClimbed.toString(),
+                            unit = "floors",
+                            icon = Icons.Outlined.Stairs,
+                            accentColor = FloorsColor,
+                            modifier = Modifier.weight(1f),
+                            onClick = onOpenSteps,
+                        )
+                    }
+                    if (data.elevationGainedMeters != null) {
+                        MetricCard(
+                            title = "Elevation",
+                            value = if (data.elevationGainedMeters >= 1000) {
+                                "%.1f".format(data.elevationGainedMeters / 1000)
+                            } else {
+                                "%d".format(data.elevationGainedMeters.roundToInt())
+                            },
+                            unit = if (data.elevationGainedMeters >= 1000) "km" else "m",
+                            icon = Icons.Outlined.Terrain,
+                            accentColor = ElevationColor,
+                            modifier = Modifier.weight(1f),
+                            onClick = onOpenSteps,
+                        )
+                    }
+                    if (data.floorsClimbed != null && data.elevationGainedMeters == null) {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
 

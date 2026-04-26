@@ -21,6 +21,9 @@ val CaloriesColor = Color(0xFFF44336)
 val HydrationColor = Color(0xFF03A9F4)
 val WorkoutColor = Color(0xFF00BCD4)
 val BodyFatColor = Color(0xFF795548)
+val FloorsColor = Color(0xFFFFC107)
+val ActiveCaloriesColor = Color(0xFFFF5722)
+val ElevationColor = Color(0xFF8BC34A)
 
 // Surface variants
 val SurfaceDark = Color(0xFF1A1C1E)

@@ -10,10 +10,14 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
@@ -29,6 +33,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.data.model.DailyHrv
+import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -80,6 +85,10 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(BodyFatRecord::class),
         HealthPermission.getReadPermission(LeanBodyMassRecord::class),
         HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
+        HealthPermission.getReadPermission(BoneMassRecord::class),
+        HealthPermission.getReadPermission(FloorsClimbedRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(ElevationGainedRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(HydrationRecord::class),
     )
@@ -180,14 +189,27 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun readTodaySteps(): Long = readSteps(LocalDate.now())
 
-    suspend fun readDailySteps(startDate: LocalDate, endDate: LocalDate): List<DailySteps> {
+    suspend fun readDailySteps(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        includeFloors: Boolean = false,
+        includeActiveCalories: Boolean = false,
+        includeElevation: Boolean = false,
+    ): List<DailySteps> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return withLogging("readDailySteps[$start..$end]", emptyList()) {
+            val metrics = buildSet {
+                add(StepsRecord.COUNT_TOTAL)
+                add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+                if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+            }
             client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
-                    metrics = setOf(StepsRecord.COUNT_TOTAL, DistanceRecord.DISTANCE_TOTAL),
+                    metrics = metrics,
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                     timeRangeSlicer = Duration.ofDays(1),
                 )
@@ -197,8 +219,35 @@ class HealthConnectManager(private val context: Context) {
                     date = date,
                     steps = bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L,
                     distanceMeters = bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0,
+                    floorsClimbed = if (includeFloors) bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0 else null,
+                    activeCaloriesKcal = if (includeActiveCalories) bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0 else null,
+                    elevationGainedMeters = if (includeElevation) bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0 else null,
                 )
             }
+        }
+    }
+
+    suspend fun readFloorsClimbed(date: LocalDate): Int {
+        val (start, end) = dayRange(date)
+        return withLogging("readFloorsClimbed[$date][$start..$end]", 0) {
+            client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+        }
+    }
+
+    suspend fun readElevationGained(date: LocalDate): Double {
+        val (start, end) = dayRange(date)
+        return withLogging("readElevationGained[$date][$start..$end]", 0.0) {
+            client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(ElevationGainedRecord.ELEVATION_GAINED_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
         }
     }
 
@@ -316,6 +365,26 @@ class HealthConnectManager(private val context: Context) {
     }
 
     suspend fun readTodayHydrationLiters(): Double? = readHydrationLiters(LocalDate.now())
+
+    suspend fun readDailyHydration(startDate: LocalDate, endDate: LocalDate): List<DailyHydration> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        return withLogging("readDailyHydration[$start..$end]", emptyList()) {
+            client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofDays(1),
+                )
+            ).map { bucket ->
+                DailyHydration(
+                    date = bucket.startTime.atZone(zone).toLocalDate(),
+                    liters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
+                )
+            }
+        }
+    }
 
     // ─── Exercise sessions ───────────────────────────────────────────────────
 
@@ -665,6 +734,18 @@ class HealthConnectManager(private val context: Context) {
                     pageSize = 1,
                 )
             ).records.firstOrNull()?.basalMetabolicRate?.inKilocaloriesPerDay
+        }
+
+    suspend fun readLatestBoneMass(): Double? =
+        withNullableLogging("readLatestBoneMass") {
+            client().readRecords(
+                ReadRecordsRequest(
+                    recordType = BoneMassRecord::class,
+                    timeRangeFilter = TimeRangeFilter.before(Instant.now()),
+                    ascendingOrder = false,
+                    pageSize = 1,
+                )
+            ).records.firstOrNull()?.mass?.inKilograms
         }
 
     // ─── Nutrition helpers ────────────────────────────────────────────────────
