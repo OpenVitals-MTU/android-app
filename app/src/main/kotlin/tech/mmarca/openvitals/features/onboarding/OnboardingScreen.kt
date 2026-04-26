@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.onboarding
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -55,18 +53,11 @@ fun OnboardingScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val permissionCategories = viewModel.permissionCategories
+    val requiredCategory = permissionCategories.firstOrNull { it.required }
 
     val requestPermissions = rememberLauncherForActivityResult(
-        contract = viewModel.phase1Permissions.let {
-            androidx.health.connect.client.PermissionController
-                .createRequestPermissionResultContract()
-        }
-    ) { granted ->
-        viewModel.onPermissionsResult(granted)
-    }
-
-    val requestPhase2 = rememberLauncherForActivityResult(
-        contract = viewModel.phase2Permissions.let {
+        contract = viewModel.onboardingPermissions.let {
             androidx.health.connect.client.PermissionController
                 .createRequestPermissionResultContract()
         }
@@ -157,7 +148,7 @@ fun OnboardingScreen(
             icon = Icons.Outlined.PhoneAndroid,
             title = "Powered by Health Connect",
             body = "Reads from Android's secure on-device health store. " +
-                    "Works with Samsung Health, Fitbit, Strava, and more.",
+                    "Works with all data imported into Health Connect."
         )
 
         Spacer(Modifier.height(24.dp))
@@ -172,28 +163,30 @@ fun OnboardingScreen(
                 .padding(bottom = 8.dp),
         )
 
-        PermissionGroupRow(
-            label = "Steps, Distance, Exercise & Sleep",
-            granted = state.phase1Granted,
-            onGrant = { requestPermissions.launch(viewModel.phase1Permissions) },
-        )
+        permissionCategories.forEach { category ->
+            PermissionCategoryRow(
+                category = category,
+                grantedPermissions = state.grantedPermissions,
+                onGrant = {
+                    if (category.available) {
+                        requestPermissions.launch(category.permissions)
+                    }
+                },
+            )
+            Spacer(Modifier.height(8.dp))
+        }
 
-        Spacer(Modifier.height(8.dp))
-
-        PermissionGroupRow(
-            label = "Heart Rate, Body, Calories, Hydration, Nutrition & Mindfulness",
-            granted = state.phase2Granted,
-            onGrant = { requestPhase2.launch(viewModel.phase2Permissions) },
-        )
-
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = onOnboardingComplete,
+            onClick = {
+                if (state.phase1Granted) onOnboardingComplete()
+                else requiredCategory?.let { requestPermissions.launch(it.permissions) }
+            },
             modifier = Modifier.fillMaxWidth(),
-            enabled = state.phase1Granted,
+            enabled = state.phase1Granted || requiredCategory != null,
         ) {
-            Text(if (state.phase1Granted) "Get started" else "Grant core permissions first")
+            Text(if (state.phase1Granted) "Get started" else "Grant required permissions")
         }
 
         if (!state.phase1Granted) {
@@ -204,15 +197,6 @@ fun OnboardingScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp),
             )
-        } else if (!state.phase2Granted) {
-            FilledTonalButton(
-                onClick = onOnboardingComplete,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            ) {
-                Text("Skip optional permissions for now")
-            }
         }
 
         Spacer(Modifier.height(32.dp))
@@ -252,7 +236,22 @@ private fun FeatureCard(icon: ImageVector, title: String, body: String) {
 }
 
 @Composable
-private fun PermissionGroupRow(label: String, granted: Boolean, onGrant: () -> Unit) {
+private fun PermissionCategoryRow(
+    category: OnboardingPermissionCategory,
+    grantedPermissions: Set<String>,
+    onGrant: () -> Unit,
+) {
+    val grantedCount = category.permissions.count { it in grantedPermissions }
+    val granted = category.available && grantedCount == category.permissions.size
+    val partial = category.available && grantedCount > 0 && !granted
+    val status = when {
+        !category.available -> "Not supported"
+        granted -> "Granted"
+        partial -> "$grantedCount/${category.permissions.size} granted"
+        category.required -> "Required"
+        else -> "Optional"
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -268,14 +267,23 @@ private fun PermissionGroupRow(label: String, granted: Boolean, onGrant: () -> U
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = if (granted) "Granted" else "Not granted",
+                    text = if (category.required) "${category.title} (required)" else category.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = status,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (granted)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = category.unavailableReason?.takeIf { !category.available } ?: category.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
             if (granted) {
@@ -284,9 +292,15 @@ private fun PermissionGroupRow(label: String, granted: Boolean, onGrant: () -> U
                     contentDescription = "Granted",
                     tint = MaterialTheme.colorScheme.primary,
                 )
+            } else if (!category.available) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = "Not supported",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             } else {
                 FilledTonalButton(onClick = onGrant) {
-                    Text("Grant")
+                    Text(if (partial) "Review" else "Grant")
                 }
             }
         }

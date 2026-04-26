@@ -61,7 +61,17 @@ class HealthRepository(private val hc: HealthConnectManager) {
     val phase1Permissions get() = hc.phase1Permissions
     val phase2Permissions get() = hc.phase2Permissions
     val phase3Permissions get() = hc.phase3Permissions
+    val corePermissions get() = hc.corePermissions
+    val heartPermissions get() = hc.heartPermissions
+    val bodyPermissions get() = hc.bodyPermissions
+    val activityExtrasPermissions get() = hc.activityExtrasPermissions
+    val nutritionHydrationPermissions get() = hc.nutritionHydrationPermissions
+    val mindfulnessPermissions get() = hc.mindfulnessPermissions
+    val vitalsPermissions get() = hc.vitalsPermissions
+    val onboardingPermissions get() = hc.allPermissions
     val allPermissions get() = hc.allPermissions
+
+    fun isMindfulnessAvailable(): Boolean = hc.isMindfulnessSessionAvailable()
 
     suspend fun grantedPermissions(): Set<String> = hc.grantedPermissions()
 
@@ -104,7 +114,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val elevation = if (readElevationPermission in granted) async { hc.readElevationGained(date) } else null
         val mindfulnessMinutes = if (readMindfulnessPermission in granted) async { hc.readMindfulnessMinutes(date) } else null
 
-        val missingPerms = (hc.phase1Permissions + hc.phase2Permissions).filterNot { it in granted }.toSet()
+        val missingPerms = onboardingPermissions.filterNot { it in granted }.toSet()
         val latestBloodPressure = bloodPressure?.await()
 
         DashboardData(

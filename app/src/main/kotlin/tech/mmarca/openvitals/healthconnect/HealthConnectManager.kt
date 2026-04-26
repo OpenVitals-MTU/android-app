@@ -8,6 +8,7 @@ import android.os.UserManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
@@ -84,42 +85,65 @@ class HealthConnectManager(private val context: Context) {
 
     // ─── Permissions ─────────────────────────────────────────────────────────
 
-    /** Phase 1 – core metrics requested on first launch */
-    val phase1Permissions: Set<String> = setOf(
+    val corePermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
     )
 
-    /** Phase 2 – extended metrics, requested after onboarding */
-    val phase2Permissions: Set<String> = setOf(
+    val heartPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+    )
+
+    val bodyPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(WeightRecord::class),
         HealthPermission.getReadPermission(HeightRecord::class),
         HealthPermission.getReadPermission(BodyFatRecord::class),
         HealthPermission.getReadPermission(LeanBodyMassRecord::class),
         HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
         HealthPermission.getReadPermission(BoneMassRecord::class),
+    )
+
+    val activityExtrasPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(FloorsClimbedRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(ElevationGainedRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+    )
+
+    val nutritionHydrationPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HydrationRecord::class),
         HealthPermission.getReadPermission(NutritionRecord::class),
+    )
+
+    val mindfulnessPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
 
-    /** Phase 3 – vitals, requested when opening Heart & Vitals */
-    val phase3Permissions: Set<String> = setOf(
+    val vitalsPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(OxygenSaturationRecord::class),
         HealthPermission.getReadPermission(RespiratoryRateRecord::class),
         HealthPermission.getReadPermission(BodyTemperatureRecord::class),
         HealthPermission.getReadPermission(Vo2MaxRecord::class),
     )
+
+    /** Phase 1 – core metrics requested on first launch */
+    val phase1Permissions: Set<String> = corePermissions
+
+    /** Phase 2 – extended metrics requested by category during onboarding */
+    val phase2Permissions: Set<String>
+        get() = heartPermissions +
+            bodyPermissions +
+            activityExtrasPermissions +
+            nutritionHydrationPermissions +
+            (if (isMindfulnessSessionAvailable()) mindfulnessPermissions else emptySet())
+
+    /** Phase 3 – vitals, requested by category during onboarding or when opening Heart & Vitals */
+    val phase3Permissions: Set<String> = vitalsPermissions
 
     val allPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
 
@@ -150,6 +174,13 @@ class HealthConnectManager(private val context: Context) {
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)
+
+    fun isMindfulnessSessionAvailable(): Boolean =
+        availability() == HealthConnectAvailability.AVAILABLE &&
+            withLogging("features.getFeatureStatus[mindfulness]", false) {
+                client().features.getFeatureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION) ==
+                    HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+            }
 
     // ─── Permission queries ───────────────────────────────────────────────────
 

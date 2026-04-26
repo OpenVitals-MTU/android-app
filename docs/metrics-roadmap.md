@@ -166,7 +166,7 @@ Each follows the established feature pattern: `ViewModel` + `Screen` in `feature
 
 #### B1. Heart & Vitals screen (`features/heart/`) ✓ Done (2026-04-26)
 
-**New permissions (phase 3 — requested on first open of Heart & Vitals):**
+**New permissions (phase 3 — included in the Vitals onboarding category, requested again on first open of Heart & Vitals if skipped):**
 `BloodPressureRecord`, `OxygenSaturationRecord`, `RespiratoryRateRecord`, `BodyTemperatureRecord`, `Vo2MaxRecord`
 
 New models:
@@ -231,6 +231,8 @@ Navigation: `Screen.Nutrition` route.
 #### B3. Mindfulness screen (`features/mindfulness/`) ✓ Done (2026-04-26)
 
 **New permissions (phase 2):** `MindfulnessSessionRecord`
+
+`MindfulnessSessionRecord` is behind `HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION`; onboarding shows the category as unsupported when the installed Health Connect provider does not expose that feature.
 
 New model:
 ```kotlin
@@ -306,9 +308,9 @@ As B3 and later phases add new sections, a plan is still needed for ordering, co
 
 | Phase | Permissions | When requested |
 |---|---|---|
-| Phase 1 | Steps, Distance, Exercise, Sleep | First launch / onboarding |
-| Phase 2 | Heart rate, Resting HR, HRV, Weight, Calories, Hydration, Floors, Active calories, Elevation, Height, Body fat, Lean mass, Bone mass, BMR, Nutrition, Mindfulness | After onboarding |
-| Phase 3 | Blood pressure, SpO2, Respiratory rate, Body temperature, VO2 max | On first open of Heart & Vitals |
+| Phase 1 | Steps, Distance, Exercise, Sleep | Onboarding category: Activity & sleep; required to continue |
+| Phase 2 | Heart rate, Resting HR, HRV, Weight, Calories, Hydration, Floors, Active calories, Elevation, Height, Body fat, Lean mass, Bone mass, BMR, Nutrition, Mindfulness | Optional onboarding categories: Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness |
+| Phase 3 | Blood pressure, SpO2, Respiratory rate, Body temperature, VO2 max | Optional onboarding category: Vitals; requested again on first open of Heart & Vitals if skipped |
 | Phase 4 | Menstruation, Ovulation, Cervical mucus, BBT | On opt-in in Settings |
 
 ---

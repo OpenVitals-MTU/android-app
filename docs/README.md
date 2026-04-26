@@ -22,8 +22,11 @@ This folder documents the target architecture for future feature work.
 
 The codebase is currently in a transition state:
 
-- steps/activity, activities, sleep, heart, body, and browse all use the shared period-based detail shell
+- steps/activity, activities, sleep, heart/vitals, body, hydration, nutrition, mindfulness, and browse follow the feature-first metric screen direction
 - `HealthRepository` is now focused on permissions and dashboard loading; feature data lives in feature repositories
+- onboarding requests Health Connect permissions by user-facing category, with Activity & sleep required and other categories optional
+- display units are centralized through `core/preferences` and `core/presentation`, with a Metric/Imperial selector in Settings
 - the main remaining cleanup is shared period state/orchestration across ViewModels and eventual `core/period` extraction
+- a later localization pass should move remaining hardcoded UI text into Android resources
 
 New work should follow the target architecture in these docs, even if some older files still use legacy patterns.

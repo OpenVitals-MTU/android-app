@@ -12,9 +12,22 @@ import kotlinx.coroutines.launch
 
 data class OnboardingUiState(
     val availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
+    val grantedPermissions: Set<String> = emptySet(),
+    val mindfulnessAvailable: Boolean = false,
     val phase1Granted: Boolean = false,
     val phase2Granted: Boolean = false,
+    val phase3Granted: Boolean = false,
     val isCheckingPermissions: Boolean = true,
+)
+
+data class OnboardingPermissionCategory(
+    val id: String,
+    val title: String,
+    val description: String,
+    val permissions: Set<String>,
+    val required: Boolean = false,
+    val available: Boolean = true,
+    val unavailableReason: String? = null,
 )
 
 class OnboardingViewModel(private val repository: HealthRepository) : ViewModel() {
@@ -27,6 +40,56 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
 
     val phase1Permissions get() = repository.phase1Permissions
     val phase2Permissions get() = repository.phase2Permissions
+    val phase3Permissions get() = repository.phase3Permissions
+    val onboardingPermissions get() = repository.onboardingPermissions
+    val permissionCategories: List<OnboardingPermissionCategory>
+        get() = listOf(
+            OnboardingPermissionCategory(
+                id = "activity_sleep",
+                title = "Activity & sleep",
+                description = "Steps, distance, workouts, and sleep sessions for the dashboard.",
+                permissions = repository.corePermissions,
+                required = true,
+            ),
+            OnboardingPermissionCategory(
+                id = "heart_recovery",
+                title = "Heart & recovery",
+                description = "Heart rate, resting heart rate, and HRV trends.",
+                permissions = repository.heartPermissions,
+            ),
+            OnboardingPermissionCategory(
+                id = "body",
+                title = "Body",
+                description = "Weight, height, body fat, lean mass, bone mass, and BMR.",
+                permissions = repository.bodyPermissions,
+            ),
+            OnboardingPermissionCategory(
+                id = "activity_extras",
+                title = "Activity extras",
+                description = "Calories burned, floors climbed, active calories, and elevation.",
+                permissions = repository.activityExtrasPermissions,
+            ),
+            OnboardingPermissionCategory(
+                id = "nutrition_hydration",
+                title = "Nutrition & hydration",
+                description = "Water intake, calories in, meals, and macros.",
+                permissions = repository.nutritionHydrationPermissions,
+            ),
+            OnboardingPermissionCategory(
+                id = "mindfulness",
+                title = "Mindfulness",
+                description = "Mindfulness session duration and history.",
+                permissions = repository.mindfulnessPermissions,
+                available = _uiState.value.mindfulnessAvailable,
+                unavailableReason = "Mindfulness sessions require a newer Health Connect version.",
+            ),
+            OnboardingPermissionCategory(
+                id = "vitals",
+                title = "Vitals",
+                description = "Blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max.",
+                permissions = repository.vitalsPermissions,
+            ),
+        ).filter { it.permissions.isNotEmpty() }
 
     init {
         checkState()
@@ -43,12 +106,16 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
                 )
                 return@launch
             }
+            val mindfulnessAvailable = repository.isMindfulnessAvailable()
             val granted = repository.grantedPermissions()
             Log.d(TAG, "checkState granted=${granted.sorted()}")
             _uiState.value = OnboardingUiState(
                 availability = avail,
+                grantedPermissions = granted,
+                mindfulnessAvailable = mindfulnessAvailable,
                 phase1Granted = repository.phase1Permissions.all { it in granted },
                 phase2Granted = repository.phase2Permissions.all { it in granted },
+                phase3Granted = repository.phase3Permissions.all { it in granted },
                 isCheckingPermissions = false,
             )
         }
@@ -60,8 +127,10 @@ class OnboardingViewModel(private val repository: HealthRepository) : ViewModel(
             val allGranted = repository.grantedPermissions()
             Log.d(TAG, "onPermissionsResult allGranted=${allGranted.sorted()}")
             _uiState.value = _uiState.value.copy(
+                grantedPermissions = allGranted,
                 phase1Granted = repository.phase1Permissions.all { it in allGranted },
                 phase2Granted = repository.phase2Permissions.all { it in allGranted },
+                phase3Granted = repository.phase3Permissions.all { it in allGranted },
             )
         }
     }
