@@ -32,8 +32,6 @@ steps:
         from_secret: OPENVITALS_RELEASE_KEY_ALIAS
       OPENVITALS_RELEASE_KEY_PASSWORD:
         from_secret: OPENVITALS_RELEASE_KEY_PASSWORD
-      OPENVITALS_ADI_REGISTRATION:
-        from_secret: OPENVITALS_ADI_REGISTRATION
     commands:
       - set -eu
       - git fetch --tags --force origin
@@ -53,9 +51,6 @@ steps:
       - rm -rf /tmp/gradle-dist
       - unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
       - export PATH="/tmp/gradle-dist/gradle-$${gradle_version}/bin:$${PATH}"
-      - test -n "$${OPENVITALS_ADI_REGISTRATION}"
-      - mkdir -p app/src/main/assets
-      - printf '%s\n' "$${OPENVITALS_ADI_REGISTRATION}" > app/src/main/assets/adi-registration.properties
       - gradle --no-daemon --stacktrace :app:assembleRelease :app:bundleRelease
       - apk_path="$$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)"
       - aab_path="$$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -n 1)"

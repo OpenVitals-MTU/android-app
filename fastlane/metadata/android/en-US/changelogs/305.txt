@@ -1,0 +1,3 @@
+Add the Play package ownership registration asset to release builds from source.
+Publish signed Android App Bundle artifacts with the release pipeline.
+Bump the Android bundle version for Google Play upgrade compatibility.
