@@ -3,7 +3,7 @@ package tech.mmarca.openvitals.features.activity
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery

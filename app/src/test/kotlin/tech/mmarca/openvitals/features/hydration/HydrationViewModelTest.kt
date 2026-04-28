@@ -1,7 +1,7 @@
 package tech.mmarca.openvitals.features.hydration
 
 import tech.mmarca.openvitals.data.model.DailyHydration
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery

@@ -1,0 +1,325 @@
+package tech.mmarca.openvitals.healthconnect
+
+import android.util.Log
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.request.AggregateGroupByDurationRequest
+import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.time.TimeRangeFilter
+import tech.mmarca.openvitals.data.model.ActivityProgressPoint
+import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.data.model.StepProgressPoint
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+internal class ActivityHealthReader(
+    private val support: HealthConnectReaderSupport,
+) {
+    suspend fun readSteps(date: LocalDate): Long {
+        val (start, end) = support.dayRange(date)
+        return support.withLogging("readSteps[$date][$start..$end]", 0L) {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[StepsRecord.COUNT_TOTAL] ?: 0L
+        }
+    }
+
+    suspend fun readTodaySteps(): Long = readSteps(LocalDate.now())
+
+    suspend fun readDailySteps(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        includeFloors: Boolean = false,
+        includeActiveCalories: Boolean = false,
+        includeElevation: Boolean = false,
+    ): List<DailySteps> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        return support.withLogging("readDailySteps[$start..$end]", emptyList()) {
+            val metrics = buildSet {
+                add(StepsRecord.COUNT_TOTAL)
+                add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+                if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+            }
+            support.client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = metrics,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofDays(1),
+                )
+            ).map { bucket ->
+                DailySteps(
+                    date = bucket.startTime.atZone(zone).toLocalDate(),
+                    steps = bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L,
+                    distanceMeters = bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0,
+                    floorsClimbed = if (includeFloors) {
+                        bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                    } else {
+                        null
+                    },
+                    activeCaloriesKcal = if (includeActiveCalories) {
+                        bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                    } else {
+                        null
+                    },
+                    elevationGainedMeters = if (includeElevation) {
+                        bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
+    }
+
+    suspend fun readFloorsClimbed(date: LocalDate): Int {
+        val (start, end) = support.dayRange(date)
+        return support.withLogging("readFloorsClimbed[$date][$start..$end]", 0) {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+        }
+    }
+
+    suspend fun readElevationGained(date: LocalDate): Double {
+        val (start, end) = support.dayRange(date)
+        return support.withLogging("readElevationGained[$date][$start..$end]", 0.0) {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(ElevationGainedRecord.ELEVATION_GAINED_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+        }
+    }
+
+    suspend fun readStepProgress(date: LocalDate): List<StepProgressPoint> {
+        val (start, end) = support.dayRange(date)
+        return support.withLogging("readStepProgress[$date][$start..$end]", emptyList()) {
+            var runningTotal = 0L
+            support.client().readRecordsPaged(
+                recordType = StepsRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+            ).map { record ->
+                runningTotal += record.count
+                StepProgressPoint(
+                    time = record.endTime,
+                    totalSteps = runningTotal,
+                )
+            }
+        }
+    }
+
+    suspend fun readActivityProgress(
+        date: LocalDate,
+        includeDistance: Boolean,
+        includeCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
+    ): List<ActivityProgressPoint> {
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = if (date == LocalDate.now()) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
+        val metrics = buildSet {
+            add(StepsRecord.COUNT_TOTAL)
+            if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
+            if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+            if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+        }
+        return support.withLogging("readActivityProgress[$date][$start..$end]", emptyList()) {
+            var cumulativeSteps = 0L
+            var cumulativeDistance = 0.0
+            var cumulativeCalories = 0.0
+            var cumulativeActiveCalories = 0.0
+            var cumulativeFloors = 0
+            var cumulativeElevation = 0.0
+
+            support.client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = metrics,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofHours(1),
+                )
+            ).map { bucket ->
+                cumulativeSteps += bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L
+                if (includeDistance) {
+                    cumulativeDistance += bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+                }
+                if (includeCalories) {
+                    cumulativeCalories += bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                }
+                if (includeActiveCalories) {
+                    cumulativeActiveCalories += bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                }
+                if (includeFloors) {
+                    cumulativeFloors += bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                }
+                if (includeElevation) {
+                    cumulativeElevation += bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                }
+                ActivityProgressPoint(
+                    time = bucket.endTime,
+                    totalSteps = cumulativeSteps,
+                    totalDistanceMeters = if (includeDistance) cumulativeDistance else null,
+                    totalCaloriesBurnedKcal = if (includeCalories) cumulativeCalories else null,
+                    totalActiveCaloriesKcal = if (includeActiveCalories) cumulativeActiveCalories else null,
+                    totalFloorsClimbed = if (includeFloors) cumulativeFloors else null,
+                    totalElevationGainedMeters = if (includeElevation) cumulativeElevation else null,
+                )
+            }
+        }
+    }
+
+    suspend fun readDistanceMeters(date: LocalDate): Double {
+        val (start, end) = support.dayRange(date)
+        return support.withLogging("readDistanceMeters[$date][$start..$end]", 0.0) {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(DistanceRecord.DISTANCE_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+        }
+    }
+
+    suspend fun readTodayDistanceMeters(): Double = readDistanceMeters(LocalDate.now())
+
+    suspend fun readCaloriesKcal(date: LocalDate): Double? {
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return support.withNullableLogging("readCaloriesKcal[$date][$start..$end]") {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
+        }
+    }
+
+    suspend fun readTodayCaloriesKcal(): Double? = readCaloriesKcal(LocalDate.now())
+
+    suspend fun readLatestWorkout(date: LocalDate): ExerciseData? {
+        val (start, end) = support.dayRange(date)
+        return support.withNullableLogging("readLatestWorkout[$date][$start..$end]") {
+            support.client().readRecordsPaged(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+                maxRecords = 1,
+            ).firstOrNull()?.toExerciseData()
+        }
+    }
+
+    suspend fun readLatestWorkout(): ExerciseData? =
+        support.withNullableLogging("readLatestWorkout") {
+            support.client().readRecordsPaged(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.before(Instant.now()),
+                ascendingOrder = false,
+                pageSize = 1,
+                maxRecords = 1,
+            ).firstOrNull()?.toExerciseData()
+        }
+
+    suspend fun readExerciseSessions(start: Instant, end: Instant): List<ExerciseData> =
+        support.withLogging("readExerciseSessions[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 50,
+            ).map { it.toExerciseData() }
+        }
+
+    suspend fun readExerciseSession(
+        id: String,
+        includeSteps: Boolean,
+        includeDistance: Boolean,
+        includeTotalCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
+    ): ExerciseData? =
+        support.withNullableLogging("readExerciseSession[$id]") {
+            val record = support.client().readRecord(ExerciseSessionRecord::class, id).record
+            val metrics = buildSet {
+                if (includeSteps) add(StepsRecord.COUNT_TOTAL)
+                if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeTotalCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
+                if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+            }
+            val aggregate = if (metrics.isEmpty()) {
+                null
+            } else {
+                runCatching {
+                    support.client().aggregate(
+                        AggregateRequest(
+                            metrics = metrics,
+                            timeRangeFilter = TimeRangeFilter.between(record.startTime, record.endTime),
+                        )
+                    )
+                }.onFailure {
+                    Log.e(TAG, "Failed readExerciseSession aggregate id=$id ${support.diagnosticsSummary()}", it)
+                }.getOrNull()
+            }
+
+            record.toExerciseData(
+                steps = if (includeSteps && aggregate != null) aggregate[StepsRecord.COUNT_TOTAL] ?: 0L else null,
+                totalDistanceMeters = if (includeDistance && aggregate != null) {
+                    aggregate[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+                } else {
+                    null
+                },
+                totalCaloriesKcal = if (includeTotalCalories && aggregate != null) {
+                    aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                },
+                activeCaloriesKcal = if (includeActiveCalories && aggregate != null) {
+                    aggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                },
+                floorsClimbed = if (includeFloors && aggregate != null) {
+                    aggregate[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                } else {
+                    null
+                },
+                elevationGainedMeters = if (includeElevation && aggregate != null) {
+                    aggregate[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
+                } else {
+                    null
+                },
+            )
+        }
+
+    private companion object {
+        private const val TAG = "HealthConnectManager"
+    }
+}

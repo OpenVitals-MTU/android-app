@@ -116,8 +116,6 @@ Each metric gets:
 * Kotlin
 * Jetpack Compose
 * MVVM or MVI
-* Room only for cached summaries and UI state, not canonical health data
-* WorkManager for optional background refresh
 * Health Connect AndroidX client
 * Kotlin coroutines + Flow
 * MPAndroidChart or Compose-native charts
@@ -416,7 +414,7 @@ Start with these:
 ## Suggested package structure
 
 ```text
-com.example.hcdashboard/
+tech.mmarca.openvitals/
   MainActivity.kt
   navigation/
   ui/

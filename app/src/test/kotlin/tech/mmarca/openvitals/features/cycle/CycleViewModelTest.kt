@@ -15,7 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.CycleData
 import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 

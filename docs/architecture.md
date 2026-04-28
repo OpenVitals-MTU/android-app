@@ -8,15 +8,15 @@ The repo is still a single Android app module. The goal is not to force a multi-
 
 ## Current Snapshot
 
-- App namespace: `dev.manu.openvitals`
+- App namespace: `tech.mmarca.openvitals`
 - Project shape: one Android app module under `app/`
-- Dependency wiring: manual, in [`OpenVitalsApp`](../app/src/main/kotlin/dev/manu/openvitals/OpenVitalsApp.kt)
+- Dependency wiring: manual, in [`OpenVitalsApp`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
 - UI stack: Jetpack Compose + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
-- Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/dev/manu/openvitals/healthconnect/HealthConnectManager.kt)
+- Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - Shared period shell: in place and used by all metric detail/list screens
 - Feature repositories: in place for activity, sleep, heart, and body
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
-- Declared but not active architecture pillars: Room and WorkManager are dependencies, but they are not part of the current feature flows yet
+- Room and WorkManager are intentionally absent until a concrete cache or background refresh design exists
 
 Most importantly, `body` and `browse` are no longer special legacy exceptions in the UI architecture. They now follow the same period-based shell as the other detail screens.
 
@@ -120,10 +120,10 @@ Responsibilities:
 
 Current files:
 
-- [`OpenVitalsApp.kt`](../app/src/main/kotlin/dev/manu/openvitals/OpenVitalsApp.kt)
-- [`MainActivity.kt`](../app/src/main/kotlin/dev/manu/openvitals/MainActivity.kt)
-- [`navigation/AppNavigation.kt`](../app/src/main/kotlin/dev/manu/openvitals/navigation/AppNavigation.kt)
-- [`navigation/Screen.kt`](../app/src/main/kotlin/dev/manu/openvitals/navigation/Screen.kt)
+- [`OpenVitalsApp.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
+- [`MainActivity.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/MainActivity.kt)
+- [`navigation/AppNavigation.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/navigation/AppNavigation.kt)
+- [`navigation/Screen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/navigation/Screen.kt)
 
 Notes:
 
@@ -143,13 +143,13 @@ Responsibilities:
 
 Current files:
 
-- [`healthconnect/HealthConnectManager.kt`](../app/src/main/kotlin/dev/manu/openvitals/healthconnect/HealthConnectManager.kt)
-- [`data/repository/HealthRepository.kt`](../app/src/main/kotlin/dev/manu/openvitals/data/repository/HealthRepository.kt)
-- [`data/repository/ActivityRepository.kt`](../app/src/main/kotlin/dev/manu/openvitals/data/repository/ActivityRepository.kt)
-- [`data/repository/SleepRepository.kt`](../app/src/main/kotlin/dev/manu/openvitals/data/repository/SleepRepository.kt)
-- [`data/repository/HeartRepository.kt`](../app/src/main/kotlin/dev/manu/openvitals/data/repository/HeartRepository.kt)
-- [`data/repository/BodyRepository.kt`](../app/src/main/kotlin/dev/manu/openvitals/data/repository/BodyRepository.kt)
-- [`data/model/HealthData.kt`](../app/src/main/kotlin/dev/manu/openvitals/data/model/HealthData.kt)
+- [`healthconnect/HealthConnectManager.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
+- [`data/repository/HealthRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HealthRepository.kt)
+- [`data/repository/ActivityRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/ActivityRepository.kt)
+- [`data/repository/SleepRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/SleepRepository.kt)
+- [`data/repository/HeartRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HeartRepository.kt)
+- [`data/repository/BodyRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/BodyRepository.kt)
+- feature-oriented model files under [`data/model`](../app/src/main/kotlin/tech/mmarca/openvitals/data/model)
 
 Current boundary shape:
 
@@ -171,20 +171,18 @@ Responsibilities:
 
 Current files:
 
-- [`ui/components/MetricDetailScaffold.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/MetricDetailScaffold.kt)
-- [`ui/components/PeriodNavigator.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/PeriodNavigator.kt)
-- [`ui/components/DateNavigation.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/DateNavigation.kt)
-- [`ui/components/MetricCard.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/MetricCard.kt)
-- [`ui/components/LoadingState.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/LoadingState.kt)
-- [`ui/components/PullToRefreshBox.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/PullToRefreshBox.kt)
-- [`ui/components/PermissionCallout.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/PermissionCallout.kt)
+- [`ui/components/MetricDetailScaffold.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt)
+- [`ui/components/PeriodNavigator.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/PeriodNavigator.kt)
+- [`ui/components/DateNavigation.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/DateNavigation.kt)
+- [`ui/components/MetricCard.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricCard.kt)
+- [`ui/components/LoadingState.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/LoadingState.kt)
+- [`ui/components/PullToRefreshBox.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/PullToRefreshBox.kt)
+- [`ui/components/PermissionCallout.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/PermissionCallout.kt)
 
 Important current detail:
 
-- `TimeRange` still lives in `data/model/HealthData.kt`
-- `DatePeriod`, `periodFor`, `periodTitle`, `periodSubtitle`, and `PeriodNavigator` live in `ui/components/PeriodNavigator.kt`
-
-That is acceptable for now, but it is still a good candidate for a future `core/period` package once the period model stabilizes further.
+- `TimeRange`, `DatePeriod`, `periodFor`, `periodTitle`, and `periodSubtitle` live in `core/period`
+- `PeriodNavigator` remains a UI component in `ui/components`
 
 ### Feature layer
 
@@ -197,14 +195,14 @@ Responsibilities:
 
 Current feature packages:
 
-- [`features/onboarding`](../app/src/main/kotlin/dev/manu/openvitals/features/onboarding)
-- [`features/dashboard`](../app/src/main/kotlin/dev/manu/openvitals/features/dashboard)
-- [`features/activity`](../app/src/main/kotlin/dev/manu/openvitals/features/activity)
-- [`features/sleep`](../app/src/main/kotlin/dev/manu/openvitals/features/sleep)
-- [`features/heart`](../app/src/main/kotlin/dev/manu/openvitals/features/heart)
-- [`features/body`](../app/src/main/kotlin/dev/manu/openvitals/features/body)
-- [`features/browse`](../app/src/main/kotlin/dev/manu/openvitals/features/browse)
-- [`features/settings`](../app/src/main/kotlin/dev/manu/openvitals/features/settings)
+- [`features/onboarding`](../app/src/main/kotlin/tech/mmarca/openvitals/features/onboarding)
+- [`features/dashboard`](../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard)
+- [`features/activity`](../app/src/main/kotlin/tech/mmarca/openvitals/features/activity)
+- [`features/sleep`](../app/src/main/kotlin/tech/mmarca/openvitals/features/sleep)
+- [`features/heart`](../app/src/main/kotlin/tech/mmarca/openvitals/features/heart)
+- [`features/body`](../app/src/main/kotlin/tech/mmarca/openvitals/features/body)
+- [`features/browse`](../app/src/main/kotlin/tech/mmarca/openvitals/features/browse)
+- [`features/settings`](../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
 One practical note: `features/activity` currently contains two screens:
 
@@ -228,8 +226,8 @@ It is:
 
 Current files:
 
-- [`features/dashboard/DashboardViewModel.kt`](../app/src/main/kotlin/dev/manu/openvitals/features/dashboard/DashboardViewModel.kt)
-- [`features/dashboard/DashboardScreen.kt`](../app/src/main/kotlin/dev/manu/openvitals/features/dashboard/DashboardScreen.kt)
+- [`features/dashboard/DashboardViewModel.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard/DashboardViewModel.kt)
+- [`features/dashboard/DashboardScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard/DashboardScreen.kt)
 
 Shared pieces it uses:
 
@@ -259,7 +257,7 @@ The aligned detail/list screens are:
 - body
 - browse
 
-They all use [`MetricDetailScaffold`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/MetricDetailScaffold.kt) as the shared shell.
+They all use [`MetricDetailScaffold`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt) as the shared shell.
 
 The scaffold currently owns:
 
@@ -279,8 +277,8 @@ Onboarding and Settings are not metric screens, but they are important architect
 
 Current files:
 
-- [`features/onboarding`](../app/src/main/kotlin/dev/manu/openvitals/features/onboarding)
-- [`features/settings`](../app/src/main/kotlin/dev/manu/openvitals/features/settings)
+- [`features/onboarding`](../app/src/main/kotlin/tech/mmarca/openvitals/features/onboarding)
+- [`features/settings`](../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
 These screens should continue to depend on `HealthRepository`, not on feature repositories.
 
@@ -305,8 +303,7 @@ Keep derived fields in the state only when they genuinely simplify the UI.
 
 Today the shared period model is:
 
-- `TimeRange` in `data/model/HealthData.kt`
-- `DatePeriod` and `periodFor(...)` in `ui/components/PeriodNavigator.kt`
+- `TimeRange`, `DatePeriod`, and `periodFor(...)` in `core/period`
 
 The feature should load data against the selected period rather than inventing custom navigation rules.
 
@@ -422,7 +419,7 @@ That works, but it is not the cleanest long-term boundary.
 
 ### 3. Shared UI primitives are still grouped in broad files
 
-For example, [`MetricCard.kt`](../app/src/main/kotlin/dev/manu/openvitals/ui/components/MetricCard.kt) currently contains:
+For example, [`MetricCard.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricCard.kt) currently contains:
 
 - `MetricCard`
 - `MetricCardPlaceholder`
@@ -434,7 +431,7 @@ This is fine for the current repo size, but if shared UI keeps growing, these sh
 
 ### 4. Room and WorkManager are not active architectural constraints yet
 
-The project declares both dependencies, and the manifest already removes the default WorkManager initializer, but there is no current repository/cache/job architecture built around them.
+The project does not declare Room or WorkManager dependencies because there is no current repository/cache/job architecture built around them.
 
 Do not design new features as if a cache/database/background-sync layer already exists.
 

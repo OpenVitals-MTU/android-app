@@ -1,7 +1,7 @@
 package tech.mmarca.openvitals.features.body
 
 import tech.mmarca.openvitals.data.model.BodyFatEntry
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule

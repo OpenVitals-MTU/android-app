@@ -20,66 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import tech.mmarca.openvitals.data.model.TimeRange
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
-
-private val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val monthFormatter = DateTimeFormatter.ofPattern("LLLL yyyy")
-private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
-
-data class DatePeriod(
-    val start: LocalDate,
-    val end: LocalDate,
-)
-
-fun periodFor(range: TimeRange, anchorDate: LocalDate): DatePeriod {
-    val today = LocalDate.now()
-    return when (range) {
-        TimeRange.DAY -> DatePeriod(
-            start = anchorDate,
-            end = anchorDate,
-        )
-        TimeRange.WEEK -> {
-            val start = anchorDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            val end = start.plusDays(6).coerceAtMost(today)
-            DatePeriod(start = start, end = end)
-        }
-        TimeRange.MONTH -> {
-            val start = anchorDate.withDayOfMonth(1)
-            val end = anchorDate.withDayOfMonth(anchorDate.lengthOfMonth()).coerceAtMost(today)
-            DatePeriod(start = start, end = end)
-        }
-        TimeRange.YEAR -> {
-            val start = anchorDate.withDayOfYear(1)
-            val end = anchorDate.withDayOfYear(anchorDate.lengthOfYear()).coerceAtMost(today)
-            DatePeriod(start = start, end = end)
-        }
-    }
-}
-
-fun periodTitle(range: TimeRange, period: DatePeriod): String {
-    val today = LocalDate.now()
-    return when (range) {
-        TimeRange.DAY -> when (period.start) {
-            today -> "Today"
-            today.minusDays(1) -> "Yesterday"
-            else -> dateFormatter.format(period.start)
-        }
-        TimeRange.WEEK -> if (period.end == today) "This week" else "Week of ${dateFormatter.format(period.start)}"
-        TimeRange.MONTH -> if (period.end == today) "This month" else monthFormatter.format(period.start)
-        TimeRange.YEAR -> if (period.end == today) "This year" else yearFormatter.format(period.start)
-    }
-}
-
-fun periodSubtitle(range: TimeRange, period: DatePeriod): String = when (range) {
-    TimeRange.DAY -> dateFormatter.format(period.start)
-    TimeRange.WEEK -> "${dateFormatter.format(period.start)} - ${dateFormatter.format(period.end)}"
-    TimeRange.MONTH,
-    TimeRange.YEAR -> "${dateFormatter.format(period.start)} - ${dateFormatter.format(period.end)}"
-}
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.periodSubtitle
+import tech.mmarca.openvitals.core.period.periodTitle
 
 @Composable
 fun PeriodNavigator(

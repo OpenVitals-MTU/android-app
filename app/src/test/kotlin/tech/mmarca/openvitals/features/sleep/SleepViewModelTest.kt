@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.features.sleep
 
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
-import tech.mmarca.openvitals.data.model.TimeRange
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery

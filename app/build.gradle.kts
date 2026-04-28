@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.kover)
 }
 
 val releaseStoreFilePath = System.getenv("OPENVITALS_RELEASE_STORE_FILE")
@@ -104,14 +104,6 @@ dependencies {
 
     // Health Connect
     implementation(libs.health.connect.client)
-
-    // Room
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
-    // WorkManager
-    implementation(libs.androidx.work.runtime.ktx)
 
     // Testing
     testImplementation(libs.junit4)
