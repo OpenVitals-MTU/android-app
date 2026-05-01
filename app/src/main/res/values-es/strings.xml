@@ -267,6 +267,7 @@
     <string name="settings_privacy_read_only">Solo lectura: no se escribe nada</string>
     <string name="settings_debug_availability">Disponibilidad de HC: %1$s</string>
     <string name="settings_debug_granted_permissions">Permisos concedidos: %1$d/%2$d</string>
+    <string name="settings_app_version">Versión %1$s (%2$d)</string>
 
     <string name="detail_metrics">Métricas</string>
     <string name="detail_session_details">Detalles de la sesión</string>
