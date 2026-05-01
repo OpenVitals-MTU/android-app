@@ -2,15 +2,17 @@ package tech.mmarca.openvitals.features.sleep
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodTitle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,12 +31,14 @@ internal fun SleepDurationChart(
     val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
 
     PeriodBarChart(
-        title = "Sleep duration",
+        title = stringResource(R.string.metric_sleep),
         values = points.map { PeriodChartValue(date = it.date, value = it.hours) },
         selectedRange = selectedRange,
         period = period,
         accentColor = SleepColor.copy(alpha = 0.75f),
-        summaryText = "${periodTitle(selectedRange, period)} · Avg ${unitFormatter.decimal(averageHours, 1)}h · ${unitFormatter.count(nightsWithSleep.size)} nights",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
+            stringResource(R.string.summary_avg_value, "${unitFormatter.decimal(averageHours, 1)}h")
+        } · ${stringResource(R.string.summary_nights, unitFormatter.count(nightsWithSleep.size))}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
         yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,

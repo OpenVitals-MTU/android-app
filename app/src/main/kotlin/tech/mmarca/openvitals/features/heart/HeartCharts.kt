@@ -12,17 +12,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodTitle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import kotlin.math.roundToInt
 
@@ -48,7 +50,7 @@ internal fun HeartRateChart(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Average heart rate",
+                text = stringResource(R.string.metric_average_heart_rate),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -102,7 +104,14 @@ internal fun HeartRateChart(
                 val overallMin = sorted.minOf { it.minBpm }
                 val overallMax = sorted.maxOf { it.maxBpm }
                 Text(
-                    text = "${periodTitle(selectedRange, period)} · Avg ${unitFormatter.heartRate(avgAll.toLong()).text} · range ${unitFormatter.heartRate(overallMin).text}-${unitFormatter.heartRate(overallMax).text}",
+                    text = "${localizedPeriodTitle(selectedRange, period)} · ${
+                        stringResource(
+                            R.string.summary_avg_value_range,
+                            unitFormatter.heartRate(avgAll.toLong()).text,
+                            unitFormatter.heartRate(overallMin).text,
+                            unitFormatter.heartRate(overallMax).text,
+                        )
+                    }",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -160,7 +169,12 @@ internal fun RestingHRChart(
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.bpm }.average().roundToInt()
             Text(
-                text = "Avg ${unitFormatter.heartRate(avg.toLong()).text} · range ${unitFormatter.heartRate(minBpm).text}-${unitFormatter.heartRate(maxBpm).text}",
+                text = stringResource(
+                    R.string.summary_avg_value_range,
+                    unitFormatter.heartRate(avg.toLong()).text,
+                    unitFormatter.heartRate(minBpm).text,
+                    unitFormatter.heartRate(maxBpm).text,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -219,7 +233,12 @@ internal fun HRVChart(
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.rmssdMs }.average()
             Text(
-                text = "Avg ${unitFormatter.hrv(avg).text} · range ${unitFormatter.hrv(minMs).text}-${unitFormatter.hrv(maxMs).text}",
+                text = stringResource(
+                    R.string.summary_avg_value_range,
+                    unitFormatter.hrv(avg).text,
+                    unitFormatter.hrv(minMs).text,
+                    unitFormatter.hrv(maxMs).text,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

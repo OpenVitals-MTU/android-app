@@ -12,11 +12,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepStage
 
@@ -61,7 +63,7 @@ internal fun SleepStageLegend(stages: List<SleepStage>, unitFormatter: UnitForma
                     drawCircle(color = stageColor(stageType))
                 }
                 Text(
-                    text = SleepStage.stageLabel(stageType),
+                    text = sleepStageLabel(stageType),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -84,3 +86,17 @@ internal fun stageColor(stageType: Int): Color = when (stageType) {
     SleepStage.STAGE_OUT_OF_BED -> Color(0xFFEF9A9A)
     else -> Color(0xFF90A4AE)
 }
+
+@Composable
+internal fun sleepStageLabel(stageType: Int): String = stringResource(
+    when (stageType) {
+        SleepStage.STAGE_AWAKE -> R.string.sleep_stage_awake
+        SleepStage.STAGE_SLEEPING -> R.string.sleep_stage_sleeping
+        SleepStage.STAGE_OUT_OF_BED -> R.string.sleep_stage_out_of_bed
+        SleepStage.STAGE_LIGHT -> R.string.sleep_stage_light
+        SleepStage.STAGE_DEEP -> R.string.sleep_stage_deep
+        SleepStage.STAGE_REM -> R.string.sleep_stage_rem
+        SleepStage.STAGE_AWAKE_IN_BED -> R.string.sleep_stage_awake_in_bed
+        else -> R.string.sleep_stage_unknown
+    }
+)

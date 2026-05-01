@@ -32,10 +32,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
@@ -51,12 +54,13 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val missingRequestablePermissions = state.missingRequestableVisiblePermissions
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
                 context,
-                "Unable to open Health Connect permissions.",
+                unableToOpenPermissions,
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -88,15 +92,15 @@ fun SettingsScreen(
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
         // ─── Health Connect status ────────────────────────────────────────
-        item { SectionHeader("Health Connect") }
+        item { SectionHeader(stringResource(R.string.section_health_connect)) }
 
         item {
             StatusCard(
-                label = "Health Connect",
+                label = stringResource(R.string.section_health_connect),
                 status = when (state.availability) {
-                    HealthConnectAvailability.AVAILABLE -> "Available"
-                    HealthConnectAvailability.NEEDS_PROVIDER_UPDATE -> "Needs update"
-                    HealthConnectAvailability.NOT_SUPPORTED -> "Not supported"
+                    HealthConnectAvailability.AVAILABLE -> stringResource(R.string.settings_status_available)
+                    HealthConnectAvailability.NEEDS_PROVIDER_UPDATE -> stringResource(R.string.settings_status_needs_update)
+                    HealthConnectAvailability.NOT_SUPPORTED -> stringResource(R.string.onboarding_status_not_supported)
                 },
                 ok = state.availability == HealthConnectAvailability.AVAILABLE,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -104,7 +108,19 @@ fun SettingsScreen(
         }
 
         // ─── Display preferences ─────────────────────────────────────────
-        item { SectionHeader("Display") }
+        item { SectionHeader(stringResource(R.string.section_display)) }
+
+        item {
+            LanguageCard(
+                selected = state.appLanguage,
+                onSelect = viewModel::selectAppLanguage,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
 
         item {
             UnitSystemCard(
@@ -115,7 +131,7 @@ fun SettingsScreen(
         }
 
         // ─── Cycle tracking ──────────────────────────────────────────────
-        item { SectionHeader("Cycle tracking") }
+        item { SectionHeader(stringResource(R.string.metric_cycle_tracking)) }
 
         item {
             CycleTrackingCard(
@@ -134,7 +150,7 @@ fun SettingsScreen(
         }
 
         // ─── Permissions ─────────────────────────────────────────────────
-        item { SectionHeader("Permissions") }
+        item { SectionHeader(stringResource(R.string.section_permissions)) }
 
         item {
             Card(
@@ -170,9 +186,9 @@ fun SettingsScreen(
             ) {
                 Text(
                     if (missingRequestablePermissions.isEmpty()) {
-                        "All requestable permissions granted"
+                        stringResource(R.string.settings_all_requestable_granted)
                     } else {
-                        "Request not granted permissions"
+                        stringResource(R.string.settings_request_missing_permissions)
                     }
                 )
             }
@@ -181,9 +197,9 @@ fun SettingsScreen(
         if (state.missingManualVisiblePermissions.isNotEmpty()) {
             item {
                 PermissionCallout(
-                    title = "Manual permissions required",
-                    body = "Some Health Connect permissions cannot be granted from the normal request dialog. Open Health Connect and enable them for OpenVitals.",
-                    actionLabel = "Open Health Connect permissions",
+                    title = stringResource(R.string.settings_manual_permissions_title),
+                    body = stringResource(R.string.settings_manual_permissions_body),
+                    actionLabel = stringResource(R.string.settings_open_health_permissions),
                     onGrant = openManualPermissionSettings,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -191,14 +207,14 @@ fun SettingsScreen(
         }
 
         // ─── Privacy info ─────────────────────────────────────────────────
-        item { SectionHeader("Privacy") }
+        item { SectionHeader(stringResource(R.string.section_privacy)) }
 
         item {
             PrivacyInfoCard(modifier = Modifier.padding(horizontal = 16.dp))
         }
 
         // ─── Debug ───────────────────────────────────────────────────────
-        item { SectionHeader("Debug") }
+        item { SectionHeader(stringResource(R.string.section_debug)) }
 
         item {
             Card(
@@ -210,13 +226,17 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     val visibleGranted = state.visiblePermissions.filter { it in state.grantedPermissions }
                     Text(
-                        text = "HC availability: ${state.availability}",
+                        text = stringResource(R.string.settings_debug_availability, state.availability),
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Granted permissions: ${visibleGranted.size}/${state.visiblePermissions.size}",
+                        text = stringResource(
+                            R.string.settings_debug_granted_permissions,
+                            visibleGranted.size,
+                            state.visiblePermissions.size,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     )
@@ -237,6 +257,50 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun LanguageCard(
+    selected: AppLanguage,
+    onSelect: (AppLanguage) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = stringResource(R.string.settings_language_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.settings_language_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(
+                modifier = Modifier.padding(top = 12.dp),
+            ) {
+                AppLanguage.entries.forEach { appLanguage ->
+                    FilterChip(
+                        selected = selected == appLanguage,
+                        onClick = { onSelect(appLanguage) },
+                        label = {
+                            Text(
+                                when (appLanguage) {
+                                    AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
+                                    AppLanguage.ENGLISH -> stringResource(R.string.settings_language_english)
+                                    AppLanguage.SPANISH -> stringResource(R.string.settings_language_spanish)
+                                }
+                            )
+                        },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun UnitSystemCard(
     selected: UnitSystem,
     onSelect: (UnitSystem) -> Unit,
@@ -249,9 +313,9 @@ private fun UnitSystemCard(
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Units", style = MaterialTheme.typography.titleSmall)
+            Text(text = stringResource(R.string.settings_units_title), style = MaterialTheme.typography.titleSmall)
             Text(
-                text = "Choose how distances, weights, hydration, and temperature are displayed.",
+                text = stringResource(R.string.settings_units_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -266,8 +330,8 @@ private fun UnitSystemCard(
                         label = {
                             Text(
                                 when (unitSystem) {
-                                    UnitSystem.METRIC -> "Metric"
-                                    UnitSystem.IMPERIAL -> "Imperial"
+                                    UnitSystem.METRIC -> stringResource(R.string.settings_unit_metric)
+                                    UnitSystem.IMPERIAL -> stringResource(R.string.settings_unit_imperial)
                                 }
                             )
                         },
@@ -310,12 +374,12 @@ private fun CycleTrackingCard(
                     .padding(horizontal = 12.dp)
                     .weight(1f),
             ) {
-                Text(text = "Track menstrual cycle", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.settings_track_cycle), style = MaterialTheme.typography.titleSmall)
                 Text(
                     text = if (enabled) {
-                        "$grantedCount/${cyclePermissions.size} cycle permissions granted."
+                        stringResource(R.string.settings_cycle_permissions_granted, grantedCount, cyclePermissions.size)
                     } else {
-                        "Off by default. Enable to request cycle and basal temperature access."
+                        stringResource(R.string.settings_cycle_off_body)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -409,13 +473,13 @@ private fun PrivacyInfoCard(modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             listOf(
-                "No account required",
-                "No cloud sync of health data",
-                "No analytics SDK",
-                "No ads or third-party tracking",
-                "Data stays on your device",
-                "Read-only — nothing is written back",
-            ).forEach { point ->
+                R.string.settings_privacy_no_account,
+                R.string.settings_privacy_no_cloud,
+                R.string.settings_privacy_no_analytics,
+                R.string.settings_privacy_no_ads,
+                R.string.settings_privacy_on_device,
+                R.string.settings_privacy_read_only,
+            ).forEach { pointRes ->
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
                         text = "•",
@@ -423,7 +487,7 @@ private fun PrivacyInfoCard(modifier: Modifier = Modifier) {
                         modifier = Modifier.padding(end = 8.dp, top = 2.dp),
                     )
                     Text(
-                        text = point,
+                        text = stringResource(pointRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

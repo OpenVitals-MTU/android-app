@@ -17,7 +17,7 @@ steps:
       - rm -rf /tmp/gradle-dist
       - unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
       - export PATH="/tmp/gradle-dist/gradle-$${gradle_version}/bin:$${PATH}"
-      - gradle --no-daemon :app:testDebugUnitTest
+      - gradle --no-daemon :app:testReleaseUnitTest
 
   - name: build-release-artifacts
     depends_on:

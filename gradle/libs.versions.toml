@@ -1,5 +1,5 @@
 [versions]
-agp = "9.1.1"
+agp = "9.2.0"
 kotlin = "2.2.10"
 compose-bom = "2024.10.01"
 activity-compose = "1.9.1"
@@ -12,10 +12,12 @@ kover = "0.9.8"
 # Keep 1.1.0+ for the rc02 mindfulness permission string fix and rc03 aggregation fixes.
 health-connect = "1.1.0"
 core-ktx = "1.13.1"
+appcompat = "1.7.0"
 
 [libraries]
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }

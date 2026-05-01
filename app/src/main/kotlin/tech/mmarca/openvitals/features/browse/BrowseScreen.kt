@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.InlineLoading
@@ -52,7 +54,7 @@ fun BrowseScreen(
                         FilterChip(
                             selected = cat == state.selectedCategory,
                             onClick = { viewModel.selectCategory(cat) },
-                            label = { Text(cat.label) },
+                            label = { Text(browseCategoryLabel(cat)) },
                         )
                     }
                 }
@@ -65,9 +67,9 @@ fun BrowseScreen(
             when (state.selectedCategory) {
                 BrowseCategory.WORKOUTS -> {
                     if (state.workouts.isEmpty()) {
-                        item { EmptyState("No workouts in the selected period.", Modifier.padding(16.dp)) }
+                        item { EmptyState(stringResource(R.string.message_no_workouts_period), Modifier.padding(16.dp)) }
                     } else {
-                        item { SectionHeader("${state.workouts.size} workouts") }
+                        item { SectionHeader(stringResource(R.string.browse_count_workouts, unitFormatter.count(state.workouts.size))) }
                         items(state.workouts) { workout ->
                             WorkoutBrowseRow(
                                 workout = workout,
@@ -82,9 +84,9 @@ fun BrowseScreen(
 
                 BrowseCategory.SLEEP -> {
                     if (state.sleepSessions.isEmpty()) {
-                        item { EmptyState("No sleep sessions in the selected period.", Modifier.padding(16.dp)) }
+                        item { EmptyState(stringResource(R.string.message_no_sleep_sessions_period), Modifier.padding(16.dp)) }
                     } else {
-                        item { SectionHeader("${state.sleepSessions.size} sleep sessions") }
+                        item { SectionHeader(stringResource(R.string.browse_count_sleep_sessions, unitFormatter.count(state.sleepSessions.size))) }
                         items(state.sleepSessions) { session ->
                             SleepBrowseRow(
                                 session = session,
@@ -99,9 +101,9 @@ fun BrowseScreen(
 
                 BrowseCategory.WEIGHT -> {
                     if (state.weightEntries.isEmpty()) {
-                        item { EmptyState("No weight entries in the selected period.", Modifier.padding(16.dp)) }
+                        item { EmptyState(stringResource(R.string.message_no_weight_entries_period), Modifier.padding(16.dp)) }
                     } else {
-                        item { SectionHeader("${state.weightEntries.size} weight entries") }
+                        item { SectionHeader(stringResource(R.string.browse_count_weight_entries, unitFormatter.count(state.weightEntries.size))) }
                         items(state.weightEntries.sortedByDescending { it.time }) { entry ->
                             WeightBrowseRow(
                                 entry = entry,
@@ -116,3 +118,12 @@ fun BrowseScreen(
         }
     }
 }
+
+@Composable
+private fun browseCategoryLabel(category: BrowseCategory): String = stringResource(
+    when (category) {
+        BrowseCategory.WORKOUTS -> R.string.browse_category_workouts
+        BrowseCategory.SLEEP -> R.string.browse_category_sleep
+        BrowseCategory.WEIGHT -> R.string.browse_category_weight
+    }
+)

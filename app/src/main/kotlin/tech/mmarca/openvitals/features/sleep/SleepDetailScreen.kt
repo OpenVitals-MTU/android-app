@@ -13,7 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepData
@@ -80,13 +82,16 @@ private fun SleepDetailContent(
         if (session.stages.isNotEmpty()) {
             item {
                 DetailSectionCard(
-                    title = "Stage events",
+                    title = stringResource(R.string.detail_stage_events),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        text = "${unitFormatter.count(session.stages.size)} recorded stages",
+                        text = stringResource(
+                            R.string.summary_recorded_stages,
+                            unitFormatter.count(session.stages.size),
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

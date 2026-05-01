@@ -207,7 +207,7 @@ fun TimeRangeSelector(
             androidx.compose.material3.FilterChip(
                 selected = range == selected,
                 onClick = { onSelect(range) },
-                label = { Text(range.label) },
+                label = { Text(timeRangeLabel(range)) },
             )
         }
     }

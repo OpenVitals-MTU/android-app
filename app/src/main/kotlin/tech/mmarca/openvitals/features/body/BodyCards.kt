@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
@@ -40,14 +42,14 @@ internal fun BodyCompositionCard(
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 bmi?.let {
                     CompositionStat(
-                        label = "BMI",
+                        label = stringResource(R.string.metric_bmi),
                         value = unitFormatter.decimal(it, 1),
                         modifier = Modifier.weight(1f),
                     )
                 }
                 bodyFatPercent?.let {
                     CompositionStat(
-                        label = "Body fat",
+                        label = stringResource(R.string.metric_body_fat),
                         value = unitFormatter.percent(it).text,
                         color = BodyFatColor,
                         modifier = Modifier.weight(1f),
@@ -55,7 +57,7 @@ internal fun BodyCompositionCard(
                 }
                 leanMassKg?.let {
                     CompositionStat(
-                        label = "Lean mass",
+                        label = stringResource(R.string.metric_lean_mass),
                         value = unitFormatter.bodyMass(it).text,
                         modifier = Modifier.weight(1f),
                     )
@@ -65,14 +67,14 @@ internal fun BodyCompositionCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     bmrKcal?.let {
                         CompositionStat(
-                            label = "BMR",
+                            label = stringResource(R.string.metric_bmr),
                             value = unitFormatter.energy(it).text,
                             modifier = Modifier.weight(1f),
                         )
                     }
                     boneMassKg?.let {
                         CompositionStat(
-                            label = "Bone mass",
+                            label = stringResource(R.string.metric_bone_mass),
                             value = unitFormatter.bodyMass(it, decimals = 2).text,
                             modifier = Modifier.weight(1f),
                         )
@@ -106,7 +108,7 @@ internal fun WeightSummaryCard(
         ) {
             Column {
                 Text(
-                    text = "Latest",
+                    text = stringResource(R.string.metric_latest),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -119,7 +121,7 @@ internal fun WeightSummaryCard(
             if (changeKg != null) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Change",
+                        text = stringResource(R.string.metric_change),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

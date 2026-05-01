@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -17,6 +18,11 @@ import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class OpenVitalsApp : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())
+    }
 
     val preferencesRepository: PreferencesRepository by lazy {
         PreferencesRepository(this)

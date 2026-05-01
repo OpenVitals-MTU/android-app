@@ -22,7 +22,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
@@ -55,7 +57,7 @@ fun ActivitiesScreen(
         onSelectDate = viewModel::selectDate,
     ) { _ ->
         if (state.workouts.isNotEmpty()) {
-            item { SectionHeader("Activities") }
+            item { SectionHeader(stringResource(R.string.section_activities)) }
             items(state.workouts) { workout ->
                 WorkoutListItem(
                     workout = workout,
@@ -70,7 +72,7 @@ fun ActivitiesScreen(
         } else if (!state.isLoading) {
             item {
                 Text(
-                    text = "No activities in the selected period.",
+                    text = stringResource(R.string.message_no_activities_period),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),

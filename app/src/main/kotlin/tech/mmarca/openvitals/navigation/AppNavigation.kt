@@ -13,6 +13,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -22,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -98,20 +100,20 @@ fun AppNavigation(
             navController.previousBackStackEntry != null
 
     val topBarTitle = when (currentRoute) {
-        Screen.Dashboard.route -> "Dashboard"
-        Screen.Steps.route -> "Steps"
-        Screen.Activity.route -> "Activities"
-        Screen.ActivityDetail.route -> "Activity detail"
-        Screen.Sleep.route -> "Sleep"
-        Screen.SleepDetail.route -> "Sleep detail"
-        Screen.Heart.route -> "Heart & Vitals"
-        Screen.Body.route -> "Body"
-        Screen.Hydration.route -> "Hydration"
-        Screen.Nutrition.route -> "Nutrition"
-        Screen.Mindfulness.route -> "Mindfulness"
-        Screen.Cycle.route -> "Cycle"
-        Screen.Browse.route -> "Browse"
-        Screen.Settings.route -> "Settings"
+        Screen.Dashboard.route -> stringResource(R.string.screen_dashboard)
+        Screen.Steps.route -> stringResource(R.string.screen_steps)
+        Screen.Activity.route -> stringResource(R.string.screen_activities)
+        Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
+        Screen.Sleep.route -> stringResource(R.string.screen_sleep)
+        Screen.SleepDetail.route -> stringResource(R.string.screen_sleep_detail)
+        Screen.Heart.route -> stringResource(R.string.screen_heart_vitals)
+        Screen.Body.route -> stringResource(R.string.screen_body)
+        Screen.Hydration.route -> stringResource(R.string.screen_hydration)
+        Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
+        Screen.Mindfulness.route -> stringResource(R.string.screen_mindfulness)
+        Screen.Cycle.route -> stringResource(R.string.screen_cycle)
+        Screen.Browse.route -> stringResource(R.string.screen_browse)
+        Screen.Settings.route -> stringResource(R.string.screen_settings)
         else -> ""
     }
 
@@ -125,7 +127,7 @@ fun AppNavigation(
                             IconButton(onClick = { navController.popBackStack() }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = "Back",
+                                    contentDescription = stringResource(R.string.cd_back),
                                 )
                             }
                         }
@@ -133,7 +135,7 @@ fun AppNavigation(
                     actions = {
                         if (currentRoute != Screen.Settings.route) {
                             IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                                Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+                                Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_settings))
                             }
                         }
                     },

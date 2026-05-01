@@ -18,12 +18,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodSubtitle
-import tech.mmarca.openvitals.core.period.periodTitle
 
 @Composable
 fun PeriodNavigator(
@@ -47,7 +47,7 @@ fun PeriodNavigator(
             IconButton(onClick = onPreviousPeriod) {
                 Icon(
                     imageVector = Icons.Outlined.ChevronLeft,
-                    contentDescription = "Previous period",
+                    contentDescription = stringResource(R.string.cd_previous_period),
                 )
             }
 
@@ -57,7 +57,7 @@ fun PeriodNavigator(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = periodTitle(selectedRange, period),
+                        text = localizedPeriodTitle(selectedRange, period),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                     )
@@ -70,7 +70,7 @@ fun PeriodNavigator(
                             contentDescription = null,
                         )
                         Text(
-                            text = periodSubtitle(selectedRange, period),
+                            text = localizedPeriodSubtitle(selectedRange, period),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -85,7 +85,7 @@ fun PeriodNavigator(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = "Next period",
+                    contentDescription = stringResource(R.string.cd_next_period),
                 )
             }
         }

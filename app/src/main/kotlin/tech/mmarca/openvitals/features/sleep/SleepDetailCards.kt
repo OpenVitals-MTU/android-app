@@ -18,11 +18,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepData
@@ -61,7 +63,7 @@ internal fun SleepSummaryCard(
                             tint = SleepColor,
                         )
                         Text(
-                            text = session.title?.takeIf { it.isNotBlank() } ?: "Sleep session",
+                            text = session.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.detail_sleep_session),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(start = 8.dp),
@@ -98,10 +100,10 @@ internal fun SleepStageBreakdownCard(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    DetailSectionCard(title = "Stages", modifier = modifier) {
+    DetailSectionCard(title = stringResource(R.string.detail_stages), modifier = modifier) {
         if (session.stages.isEmpty()) {
             Text(
-                text = "No stages recorded.",
+                text = stringResource(R.string.message_no_stages),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -142,7 +144,7 @@ internal fun SleepStageBreakdownCard(
                     0.0
                 }
                 DetailRow(
-                    label = SleepStage.stageLabel(stageType),
+                    label = sleepStageLabel(stageType),
                     value = "${unitFormatter.duration(durationMs)} · ${unitFormatter.decimal(percent, 0)}%",
                 )
             }
@@ -160,25 +162,26 @@ internal fun SleepSessionDetailsCard(
     val start = session.startTime.atZone(zone)
     val end = session.endTime.atZone(zone)
     val device = session.device
+    val notAvailable = stringResource(R.string.not_available)
 
-    DetailSectionCard(title = "Session details", modifier = modifier) {
-        DetailRow("Started", formatDateTime(start, dateTimeFormatterProvider))
-        DetailRow("Ended", formatDateTime(end, dateTimeFormatterProvider))
-        DetailRow("Start zone", session.startZoneOffset?.id ?: "Not available")
-        DetailRow("End zone", session.endZoneOffset?.id ?: "Not available")
-        DetailRow("Recording", recordingMethodLabel(session.recordingMethod))
-        DetailRow("Source package", session.source)
-        DetailRow("Device type", deviceTypeLabel(device?.type))
-        DetailRow("Device maker", device?.manufacturer ?: "Not available")
-        DetailRow("Device model", device?.model ?: "Not available")
-        DetailRow("Last modified", session.lastModifiedTime?.atZone(zone)?.let {
+    DetailSectionCard(title = stringResource(R.string.detail_session_details), modifier = modifier) {
+        DetailRow(stringResource(R.string.detail_started), formatDateTime(start, dateTimeFormatterProvider))
+        DetailRow(stringResource(R.string.detail_ended), formatDateTime(end, dateTimeFormatterProvider))
+        DetailRow(stringResource(R.string.detail_start_zone), session.startZoneOffset?.id ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_end_zone), session.endZoneOffset?.id ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_recording), recordingMethodLabel(session.recordingMethod))
+        DetailRow(stringResource(R.string.detail_source_package), session.source)
+        DetailRow(stringResource(R.string.detail_device_type), deviceTypeLabel(device?.type))
+        DetailRow(stringResource(R.string.detail_device_maker), device?.manufacturer ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_device_model), device?.model ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_last_modified), session.lastModifiedTime?.atZone(zone)?.let {
             formatDateTime(it, dateTimeFormatterProvider)
-        } ?: "Not available")
-        DetailRow("Record id", session.id)
-        DetailRow("Client record id", session.clientRecordId ?: "Not available")
-        DetailRow("Client version", session.clientRecordVersion?.toString() ?: "Not available")
-        DetailRow("Title", session.title?.takeIf { it.isNotBlank() } ?: "Not available")
-        DetailRow("Notes", session.notes?.takeIf { it.isNotBlank() } ?: "Not available")
+        } ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_record_id), session.id)
+        DetailRow(stringResource(R.string.detail_client_record_id), session.clientRecordId ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_client_version), session.clientRecordVersion?.toString() ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_title), session.title?.takeIf { it.isNotBlank() } ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_notes), session.notes?.takeIf { it.isNotBlank() } ?: notAvailable)
     }
 }
 
@@ -202,11 +205,11 @@ internal fun SleepStageEventRow(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = SleepStage.stageLabel(stage.stageType),
+                text = sleepStageLabel(stage.stageType),
                 style = MaterialTheme.typography.titleSmall,
             )
-            DetailRow("Time", formatTimeRange(start, end, dateTimeFormatterProvider))
-            DetailRow("Duration", unitFormatter.duration(stage.durationMs))
+            DetailRow(stringResource(R.string.detail_time), formatTimeRange(start, end, dateTimeFormatterProvider))
+            DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(stage.durationMs))
         }
     }
 }
@@ -280,23 +283,29 @@ private fun formatTimeRange(
         "${formatDateTime(start, dateTimeFormatterProvider)} - ${formatDateTime(end, dateTimeFormatterProvider)}"
     }
 
-private fun recordingMethodLabel(method: Int?): String = when (method) {
-    Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "Actively recorded"
-    Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "Automatically recorded"
-    Metadata.RECORDING_METHOD_MANUAL_ENTRY -> "Manual entry"
-    Metadata.RECORDING_METHOD_UNKNOWN -> "Unknown"
-    else -> "Not available"
-}
+@Composable
+private fun recordingMethodLabel(method: Int?): String = stringResource(
+    when (method) {
+        Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> R.string.recording_actively_recorded
+        Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> R.string.recording_automatically_recorded
+        Metadata.RECORDING_METHOD_MANUAL_ENTRY -> R.string.recording_manual_entry
+        Metadata.RECORDING_METHOD_UNKNOWN -> R.string.recording_unknown
+        else -> R.string.not_available
+    }
+)
 
-private fun deviceTypeLabel(type: Int?): String = when (type) {
-    Device.TYPE_WATCH -> "Watch"
-    Device.TYPE_PHONE -> "Phone"
-    Device.TYPE_SCALE -> "Scale"
-    Device.TYPE_RING -> "Ring"
-    Device.TYPE_HEAD_MOUNTED -> "Head-mounted"
-    Device.TYPE_FITNESS_BAND -> "Fitness band"
-    Device.TYPE_CHEST_STRAP -> "Chest strap"
-    Device.TYPE_SMART_DISPLAY -> "Smart display"
-    Device.TYPE_UNKNOWN -> "Unknown"
-    else -> "Not available"
-}
+@Composable
+private fun deviceTypeLabel(type: Int?): String = stringResource(
+    when (type) {
+        Device.TYPE_WATCH -> R.string.device_watch
+        Device.TYPE_PHONE -> R.string.device_phone
+        Device.TYPE_SCALE -> R.string.device_scale
+        Device.TYPE_RING -> R.string.device_ring
+        Device.TYPE_HEAD_MOUNTED -> R.string.device_head_mounted
+        Device.TYPE_FITNESS_BAND -> R.string.device_fitness_band
+        Device.TYPE_CHEST_STRAP -> R.string.device_chest_strap
+        Device.TYPE_SMART_DISPLAY -> R.string.device_smart_display
+        Device.TYPE_UNKNOWN -> R.string.recording_unknown
+        else -> R.string.not_available
+    }
+)

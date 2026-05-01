@@ -11,7 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
@@ -22,7 +24,7 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.core.period.periodTitle
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,10 +50,10 @@ fun HydrationScreen(
         if (state.dailyHydration.none { it.liters > 0.0 }) {
             item {
                 MetricCardPlaceholder(
-                    title = "Hydration",
+                    title = stringResource(R.string.metric_hydration),
                     icon = Icons.Outlined.LocalDrink,
                     accentColor = HydrationColor,
-                    message = "No hydration entries were recorded for this period.",
+                    message = stringResource(R.string.message_no_hydration_period),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -87,11 +89,15 @@ private fun HydrationSummary(
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
-    val title = if (state.selectedRange == TimeRange.DAY) "Hydration" else "Total hydration"
-    val subtitle = if (state.selectedRange == TimeRange.DAY) {
-        periodTitle(state.selectedRange, period)
+    val title = if (state.selectedRange == TimeRange.DAY) {
+        stringResource(R.string.metric_hydration)
     } else {
-        "${unitFormatter.hydration(state.averageLiters).text} daily average"
+        stringResource(R.string.metric_total_hydration)
+    }
+    val subtitle = if (state.selectedRange == TimeRange.DAY) {
+        localizedPeriodTitle(state.selectedRange, period)
+    } else {
+        stringResource(R.string.summary_daily_average, unitFormatter.hydration(state.averageLiters).text)
     }
     val total = unitFormatter.hydration(state.totalLiters)
 
@@ -109,12 +115,12 @@ private fun HydrationSummary(
             modifier = Modifier.weight(1f),
         )
         MetricCard(
-            title = "Logged days",
+            title = stringResource(R.string.metric_logged_days),
             value = unitFormatter.count(state.dailyHydration.count { it.liters > 0.0 }),
-            unit = "days",
+            unit = stringResource(R.string.unit_days),
             icon = Icons.Outlined.LocalDrink,
             accentColor = HydrationColor,
-            subtitle = "${unitFormatter.count(state.dailyHydration.size)} days in range",
+            subtitle = stringResource(R.string.summary_days_in_range, unitFormatter.count(state.dailyHydration.size)),
             modifier = Modifier.weight(1f),
         )
     }
@@ -130,12 +136,12 @@ private fun HydrationBarChart(
     modifier: Modifier = Modifier,
 ) {
     PeriodBarChart(
-        title = "Hydration trend",
+        title = stringResource(R.string.metric_hydration_trend),
         values = data.map { PeriodChartValue(date = it.date, value = it.liters) },
         selectedRange = selectedRange,
         period = period,
         accentColor = HydrationColor.copy(alpha = 0.85f),
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.liters }).text}",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.liters }).text}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )

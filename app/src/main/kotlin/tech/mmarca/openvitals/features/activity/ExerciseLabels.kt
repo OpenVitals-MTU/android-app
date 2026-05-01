@@ -1,9 +1,12 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import tech.mmarca.openvitals.R
 
 internal fun exerciseTypeLabel(type: Int): String = when (type) {
     ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> "Badminton"
@@ -140,23 +143,33 @@ internal fun exerciseSegmentLabel(type: Int): String = when (type) {
     else -> "Unknown"
 }
 
-internal fun recordingMethodLabel(method: Int?): String = when (method) {
-    Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "Actively recorded"
-    Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "Automatically recorded"
-    Metadata.RECORDING_METHOD_MANUAL_ENTRY -> "Manual entry"
-    Metadata.RECORDING_METHOD_UNKNOWN -> "Unknown"
-    else -> "Not available"
+@Composable
+internal fun recordingMethodLabel(method: Int?): String = stringResource(
+    recordingMethodLabelRes(method)
+)
+
+@Composable
+internal fun deviceTypeLabel(type: Int?): String = stringResource(
+    deviceTypeLabelRes(type)
+)
+
+internal fun recordingMethodLabelRes(method: Int?): Int = when (method) {
+    Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> R.string.recording_actively_recorded
+    Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> R.string.recording_automatically_recorded
+    Metadata.RECORDING_METHOD_MANUAL_ENTRY -> R.string.recording_manual_entry
+    Metadata.RECORDING_METHOD_UNKNOWN -> R.string.recording_unknown
+    else -> R.string.not_available
 }
 
-internal fun deviceTypeLabel(type: Int?): String = when (type) {
-    Device.TYPE_WATCH -> "Watch"
-    Device.TYPE_PHONE -> "Phone"
-    Device.TYPE_SCALE -> "Scale"
-    Device.TYPE_RING -> "Ring"
-    Device.TYPE_HEAD_MOUNTED -> "Head-mounted"
-    Device.TYPE_FITNESS_BAND -> "Fitness band"
-    Device.TYPE_CHEST_STRAP -> "Chest strap"
-    Device.TYPE_SMART_DISPLAY -> "Smart display"
-    Device.TYPE_UNKNOWN -> "Unknown"
-    else -> "Not available"
+internal fun deviceTypeLabelRes(type: Int?): Int = when (type) {
+    Device.TYPE_WATCH -> R.string.device_watch
+    Device.TYPE_PHONE -> R.string.device_phone
+    Device.TYPE_SCALE -> R.string.device_scale
+    Device.TYPE_RING -> R.string.device_ring
+    Device.TYPE_HEAD_MOUNTED -> R.string.device_head_mounted
+    Device.TYPE_FITNESS_BAND -> R.string.device_fitness_band
+    Device.TYPE_CHEST_STRAP -> R.string.device_chest_strap
+    Device.TYPE_SMART_DISPLAY -> R.string.device_smart_display
+    Device.TYPE_UNKNOWN -> R.string.recording_unknown
+    else -> R.string.not_available
 }

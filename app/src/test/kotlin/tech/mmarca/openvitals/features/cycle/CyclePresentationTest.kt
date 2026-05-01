@@ -1,13 +1,17 @@
 package tech.mmarca.openvitals.features.cycle
 
+import android.content.res.Resources
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.TimeZone
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.CervicalMucusEntry
@@ -81,6 +85,7 @@ class CyclePresentationTest {
 
     @Test fun `observationsFor maps cycle records to sorted display observations`() {
         val previousTimeZone = TimeZone.getDefault()
+        val resources = resourcesForCycleStrings()
         val observations = try {
             TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
             observationsFor(
@@ -114,7 +119,8 @@ class CyclePresentationTest {
                             source = "mucus",
                         )
                     ),
-                )
+                ),
+                resources = resources,
             )
         } finally {
             TimeZone.setDefault(previousTimeZone)
@@ -131,10 +137,26 @@ class CyclePresentationTest {
     }
 
     @Test fun `measurementLocationLabel maps known locations and fallback`() {
-        assertEquals("Mouth", measurementLocationLabel(4))
-        assertEquals("Vagina", measurementLocationLabel(10))
-        assertEquals("Measurement location unknown", measurementLocationLabel(-1))
+        assertEquals(R.string.measurement_location_mouth, measurementLocationLabelRes(4))
+        assertEquals(R.string.measurement_location_vagina, measurementLocationLabelRes(10))
+        assertEquals(R.string.measurement_location_unknown, measurementLocationLabelRes(-1))
     }
 
     private fun instant(value: String): Instant = Instant.parse(value)
+
+    private fun resourcesForCycleStrings(): Resources {
+        val resources = mockk<Resources>()
+        every { resources.getString(R.string.cycle_observation_menstruation_period) } returns "Menstruation period"
+        every { resources.getString(R.string.cycle_observation_menstruation_flow) } returns "Menstruation flow"
+        every { resources.getString(R.string.cycle_observation_ovulation_test) } returns "Ovulation test"
+        every { resources.getString(R.string.cycle_observation_cervical_mucus) } returns "Cervical mucus"
+        every { resources.getString(R.string.cycle_flow_heavy) } returns "Heavy"
+        every { resources.getString(R.string.cycle_ovulation_positive) } returns "Positive"
+        every { resources.getString(R.string.cycle_mucus_egg_white) } returns "Egg white"
+        every { resources.getString(R.string.cycle_mucus_heavy) } returns "heavy"
+        every { resources.getString(R.string.cycle_day_plural) } returns "days"
+        every { resources.getString(R.string.cycle_mucus_value, "Egg white", "heavy") } returns "Egg white, heavy"
+        every { resources.getString(R.string.cycle_days_value, 2L, "days") } returns "2 days"
+        return resources
+    }
 }

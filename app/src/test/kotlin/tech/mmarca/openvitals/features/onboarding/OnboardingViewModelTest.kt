@@ -23,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -180,17 +181,17 @@ class OnboardingViewModelTest {
         val categories = vm.permissionCategories
         assertEquals(
             listOf(
-                "Activity & sleep",
-                "Workout routes",
-                "Heart & recovery",
-                "Body",
-                "Activity extras",
-                "Nutrition & hydration",
-                "Mindfulness",
-                "Vitals",
-                "Cycle tracking",
+                R.string.onboarding_category_activity_sleep,
+                R.string.onboarding_category_workout_routes,
+                R.string.onboarding_category_heart_recovery,
+                R.string.onboarding_category_body,
+                R.string.onboarding_category_activity_extras,
+                R.string.onboarding_category_nutrition_hydration,
+                R.string.onboarding_category_mindfulness,
+                R.string.onboarding_category_vitals,
+                R.string.onboarding_category_cycle_tracking,
             ),
-            categories.map { it.title },
+            categories.map { it.titleRes },
         )
         assertTrue(categories.first().required)
         assertEquals("activity_sleep", categories.first().id)
@@ -200,7 +201,7 @@ class OnboardingViewModelTest {
         assertFalse(categories.drop(1).any { it.required })
         assertTrue(categories.last().optIn)
         assertEquals("cycle_tracking", categories.last().id)
-        assertTrue(categories.all { it.description.isNotBlank() })
+        assertTrue(categories.all { it.descriptionRes != 0 })
     }
 
     @Test fun `permissionCategories filters empty optional permission groups`() = runTest {
@@ -240,7 +241,7 @@ class OnboardingViewModelTest {
 
         val mindfulness = vm.permissionCategories.single { it.id == "mindfulness" }
         assertFalse(mindfulness.available)
-        assertEquals("Mindfulness sessions require a newer Health Connect version.", mindfulness.unavailableReason)
+        assertEquals(R.string.onboarding_category_mindfulness_unavailable, mindfulness.unavailableReasonRes)
         assertEquals(setOf("mindfulness"), mindfulness.permissions)
         assertFalse(vm.uiState.value.phase2Granted)
         assertFalse("mindfulness" in vm.onboardingPermissions)

@@ -21,11 +21,14 @@ class HeartVitalsSummariesTest {
 
     @Test fun `respiratoryRateSummaryMetric returns null for empty entries`() {
         assertNull(
-            respiratoryRateSummaryMetric(
+            respiratoryRateSummaryMetricCore(
                 entries = emptyList(),
                 selectedRange = TimeRange.WEEK,
                 period = DatePeriod(LocalDate.of(2026, 4, 20), LocalDate.of(2026, 4, 26)),
                 unitFormatter = formatter,
+                respiratoryTitle = "Respiratory rate",
+                avgRespiratoryTitle = "Avg respiratory rate",
+                readingsSource = "0 readings",
             )
         )
     }
@@ -33,7 +36,7 @@ class HeartVitalsSummariesTest {
     @Test fun `day respiratory summary uses latest reading`() {
         val period = DatePeriod(LocalDate.of(2026, 4, 20), LocalDate.of(2026, 4, 20))
 
-        val metric = respiratoryRateSummaryMetric(
+        val metric = respiratoryRateSummaryMetricCore(
             entries = listOf(
                 reading("2026-04-20T08:00:00Z", 13.0, "early"),
                 reading("2026-04-20T18:00:00Z", 15.6, "late"),
@@ -41,6 +44,9 @@ class HeartVitalsSummariesTest {
             selectedRange = TimeRange.DAY,
             period = period,
             unitFormatter = formatter,
+            respiratoryTitle = "Respiratory rate",
+            avgRespiratoryTitle = "Avg respiratory rate",
+            readingsSource = "2 readings",
         )
 
         assertEquals("Respiratory rate", metric?.title)
@@ -52,7 +58,7 @@ class HeartVitalsSummariesTest {
     @Test fun `week respiratory summary averages daily buckets`() {
         val period = DatePeriod(LocalDate.of(2026, 4, 20), LocalDate.of(2026, 4, 26))
 
-        val metric = respiratoryRateSummaryMetric(
+        val metric = respiratoryRateSummaryMetricCore(
             entries = listOf(
                 reading("2026-04-20T12:00:00Z", 12.0),
                 reading("2026-04-20T18:00:00Z", 16.0),
@@ -61,6 +67,9 @@ class HeartVitalsSummariesTest {
             selectedRange = TimeRange.WEEK,
             period = period,
             unitFormatter = formatter,
+            respiratoryTitle = "Respiratory rate",
+            avgRespiratoryTitle = "Avg respiratory rate",
+            readingsSource = "3 readings",
         )
 
         assertEquals("Avg respiratory rate", metric?.title)

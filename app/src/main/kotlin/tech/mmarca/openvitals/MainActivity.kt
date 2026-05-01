@@ -1,9 +1,11 @@
 package tech.mmarca.openvitals
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,7 +16,7 @@ import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,8 +33,13 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val unitSystem by app.preferencesRepository.unitSystemFlow.collectAsState()
+                val appLanguage by app.preferencesRepository.appLanguageFlow.collectAsState()
                 val unitFormatter = remember(unitSystem) {
                     UnitFormatter(unitSystemProvider = { unitSystem })
+                }
+
+                LaunchedEffect(appLanguage) {
+                    AppCompatDelegate.setApplicationLocales(appLanguage.toLocaleListCompat())
                 }
 
                 AppNavigation(

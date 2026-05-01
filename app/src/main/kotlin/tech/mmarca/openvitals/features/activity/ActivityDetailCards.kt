@@ -18,9 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
@@ -100,14 +102,15 @@ internal fun MetricsCard(
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
-    DetailSectionCard(title = "Metrics", modifier = modifier) {
-        DetailRow("Duration", unitFormatter.duration(workout.durationMs))
-        DetailRow("Steps", workout.steps?.let { unitFormatter.count(it) } ?: "Not available")
-        DetailRow("Distance", workout.totalDistanceMeters?.let { unitFormatter.distance(it).text } ?: "Not available")
-        DetailRow("Total calories", workout.totalCaloriesKcal?.let { unitFormatter.energy(it).text } ?: "Not available")
-        DetailRow("Active calories", workout.activeCaloriesKcal?.let { unitFormatter.energy(it).text } ?: "Not available")
-        DetailRow("Floors climbed", workout.floorsClimbed?.let { unitFormatter.count(it) } ?: "Not available")
-        DetailRow("Elevation gained", workout.elevationGainedMeters?.let { unitFormatter.elevation(it).text } ?: "Not available")
+    val notAvailable = stringResource(R.string.not_available)
+    DetailSectionCard(title = stringResource(R.string.detail_metrics), modifier = modifier) {
+        DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(workout.durationMs))
+        DetailRow(stringResource(R.string.metric_steps), workout.steps?.let { unitFormatter.count(it) } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_distance), workout.totalDistanceMeters?.let { unitFormatter.distance(it).text } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_calories_burned), workout.totalCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_active_calories), workout.activeCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_floors_climbed), workout.floorsClimbed?.let { unitFormatter.count(it) } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_elevation_gained), workout.elevationGainedMeters?.let { unitFormatter.elevation(it).text } ?: notAvailable)
     }
 }
 
@@ -121,26 +124,27 @@ internal fun SessionDetailsCard(
     val start = workout.startTime.atZone(zone)
     val end = workout.endTime.atZone(zone)
     val device = workout.device
+    val notAvailable = stringResource(R.string.not_available)
 
-    DetailSectionCard(title = "Session details", modifier = modifier) {
-        DetailRow("Type", exerciseTypeLabel(workout.exerciseType))
-        DetailRow("Started", formatDateTime(start, dateTimeFormatterProvider))
-        DetailRow("Ended", formatDateTime(end, dateTimeFormatterProvider))
-        DetailRow("Start zone", workout.startZoneOffset?.id ?: "Not available")
-        DetailRow("End zone", workout.endZoneOffset?.id ?: "Not available")
-        DetailRow("Recording", recordingMethodLabel(workout.recordingMethod))
-        DetailRow("Source package", workout.source)
-        DetailRow("Device type", deviceTypeLabel(device?.type))
-        DetailRow("Device maker", device?.manufacturer ?: "Not available")
-        DetailRow("Device model", device?.model ?: "Not available")
-        DetailRow("Last modified", workout.lastModifiedTime?.atZone(zone)?.let {
+    DetailSectionCard(title = stringResource(R.string.detail_session_details), modifier = modifier) {
+        DetailRow(stringResource(R.string.detail_type), exerciseTypeLabel(workout.exerciseType))
+        DetailRow(stringResource(R.string.detail_started), formatDateTime(start, dateTimeFormatterProvider))
+        DetailRow(stringResource(R.string.detail_ended), formatDateTime(end, dateTimeFormatterProvider))
+        DetailRow(stringResource(R.string.detail_start_zone), workout.startZoneOffset?.id ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_end_zone), workout.endZoneOffset?.id ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_recording), recordingMethodLabel(workout.recordingMethod))
+        DetailRow(stringResource(R.string.detail_source_package), workout.source)
+        DetailRow(stringResource(R.string.detail_device_type), deviceTypeLabel(device?.type))
+        DetailRow(stringResource(R.string.detail_device_maker), device?.manufacturer ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_device_model), device?.model ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_last_modified), workout.lastModifiedTime?.atZone(zone)?.let {
             formatDateTime(it, dateTimeFormatterProvider)
-        } ?: "Not available")
-        DetailRow("Record id", workout.id)
-        DetailRow("Client record id", workout.clientRecordId ?: "Not available")
-        DetailRow("Client version", workout.clientRecordVersion?.toString() ?: "Not available")
-        DetailRow("Planned session id", workout.plannedExerciseSessionId ?: "Not available")
-        DetailRow("Notes", workout.notes?.takeIf { it.isNotBlank() } ?: "Not available")
+        } ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_record_id), workout.id)
+        DetailRow(stringResource(R.string.detail_client_record_id), workout.clientRecordId ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_client_version), workout.clientRecordVersion?.toString() ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_planned_session_id), workout.plannedExerciseSessionId ?: notAvailable)
+        DetailRow(stringResource(R.string.detail_notes), workout.notes?.takeIf { it.isNotBlank() } ?: notAvailable)
     }
 }
 
@@ -151,10 +155,10 @@ internal fun SegmentsCard(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    DetailSectionCard(title = "Segments", modifier = modifier) {
+    DetailSectionCard(title = stringResource(R.string.detail_segments), modifier = modifier) {
         if (segments.isEmpty()) {
             Text(
-                text = "No segments recorded.",
+                text = stringResource(R.string.message_no_segments),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -178,10 +182,10 @@ internal fun LapsCard(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    DetailSectionCard(title = "Laps", modifier = modifier) {
+    DetailSectionCard(title = stringResource(R.string.detail_laps), modifier = modifier) {
         if (laps.isEmpty()) {
             Text(
-                text = "No laps recorded.",
+                text = stringResource(R.string.message_no_laps),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -206,12 +210,12 @@ internal fun RouteCard(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    DetailSectionCard(title = "Route", modifier = modifier) {
+    DetailSectionCard(title = stringResource(R.string.detail_route), modifier = modifier) {
         when (route.status) {
             ExerciseRouteStatus.DATA -> {
                 if (route.points.isEmpty()) {
                     Text(
-                        text = "No route points recorded.",
+                        text = stringResource(R.string.message_no_route_points),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -222,26 +226,26 @@ internal fun RouteCard(
                             .fillMaxWidth()
                             .height(180.dp),
                     )
-                    DetailRow("Status", "Available")
-                    DetailRow("Points", route.points.size.toString())
+                    DetailRow(stringResource(R.string.detail_status), stringResource(R.string.detail_status_available))
+                    DetailRow(stringResource(R.string.detail_points), route.points.size.toString())
                     route.points.minByOrNull { it.time }?.let { point ->
-                        DetailRow("Start point", formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
+                        DetailRow(stringResource(R.string.detail_start_point), formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
                     }
                     route.points.maxByOrNull { it.time }?.let { point ->
-                        DetailRow("End point", formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
+                        DetailRow(stringResource(R.string.detail_end_point), formatRoutePoint(point, unitFormatter, dateTimeFormatterProvider))
                     }
                 }
             }
             ExerciseRouteStatus.CONSENT_REQUIRED -> {
                 Text(
-                    text = "Route data is available, but route access has not been granted yet. Open Health Connect permissions from Settings to enable route previews.",
+                    text = stringResource(R.string.message_route_consent_required),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             ExerciseRouteStatus.NO_DATA -> {
                 Text(
-                    text = "No route data recorded.",
+                    text = stringResource(R.string.message_no_route_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -264,9 +268,12 @@ private fun SegmentBlock(
         text = exerciseSegmentLabel(segment.segmentType),
         style = MaterialTheme.typography.titleSmall,
     )
-    DetailRow("Time", formatTimeRange(start, end, dateTimeFormatterProvider))
-    DetailRow("Duration", unitFormatter.duration(segment.durationMs))
-    DetailRow("Repetitions", if (segment.repetitions > 0) unitFormatter.count(segment.repetitions) else "Not recorded")
+    DetailRow(stringResource(R.string.detail_time), formatTimeRange(start, end, dateTimeFormatterProvider))
+    DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(segment.durationMs))
+    DetailRow(
+        stringResource(R.string.detail_repetitions),
+        if (segment.repetitions > 0) unitFormatter.count(segment.repetitions) else stringResource(R.string.not_recorded),
+    )
 }
 
 @Composable
@@ -281,12 +288,15 @@ private fun LapBlock(
     val end = lap.endTime.atZone(zone)
 
     Text(
-        text = "Lap ${index + 1}",
+        text = stringResource(R.string.detail_lap, index + 1),
         style = MaterialTheme.typography.titleSmall,
     )
-    DetailRow("Time", formatTimeRange(start, end, dateTimeFormatterProvider))
-    DetailRow("Duration", unitFormatter.duration(lap.durationMs))
-    DetailRow("Length", lap.lengthMeters?.let { unitFormatter.distance(it).text } ?: "Not recorded")
+    DetailRow(stringResource(R.string.detail_time), formatTimeRange(start, end, dateTimeFormatterProvider))
+    DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(lap.durationMs))
+    DetailRow(
+        stringResource(R.string.detail_length),
+        lap.lengthMeters?.let { unitFormatter.distance(it).text } ?: stringResource(R.string.not_recorded),
+    )
 }
 
 @Composable
@@ -351,18 +361,31 @@ private fun formatTimeRange(
         "${formatDateTime(start, dateTimeFormatterProvider)} - ${formatDateTime(end, dateTimeFormatterProvider)}"
     }
 
+@Composable
 private fun formatRoutePoint(
     point: ExerciseRoutePoint,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ): String {
     val zone = ZoneId.systemDefault()
-    val parts = buildList {
-        add(String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude))
-        add(formatDateTime(point.time.atZone(zone), dateTimeFormatterProvider))
-        point.altitudeMeters?.let { add("Altitude ${unitFormatter.elevation(it).text}") }
-        point.horizontalAccuracyMeters?.let { add("Horizontal accuracy ${unitFormatter.elevation(it).text}") }
-        point.verticalAccuracyMeters?.let { add("Vertical accuracy ${unitFormatter.elevation(it).text}") }
+    val parts = mutableListOf(
+        String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
+        formatDateTime(point.time.atZone(zone), dateTimeFormatterProvider),
+    )
+    if (point.altitudeMeters != null) {
+        parts += stringResource(R.string.detail_altitude, unitFormatter.elevation(point.altitudeMeters).text)
+    }
+    if (point.horizontalAccuracyMeters != null) {
+        parts += stringResource(
+            R.string.detail_horizontal_accuracy,
+            unitFormatter.elevation(point.horizontalAccuracyMeters).text,
+        )
+    }
+    if (point.verticalAccuracyMeters != null) {
+        parts += stringResource(
+            R.string.detail_vertical_accuracy,
+            unitFormatter.elevation(point.verticalAccuracyMeters).text,
+        )
     }
     return parts.joinToString("\n")
 }

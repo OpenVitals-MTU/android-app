@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
@@ -69,13 +71,22 @@ internal fun BasalTemperatureTrendCard(
             val latest = sorted.last()
             val latestDate = latest.time.atZone(zone).toLocalDate()
             Text(
-                text = "Latest ${unitFormatter.temperature(latest.temperatureCelsius).text} · ${dayFormatter.format(latestDate)}",
+                text = stringResource(
+                    R.string.summary_latest_temperature,
+                    unitFormatter.temperature(latest.temperatureCelsius).text,
+                    dayFormatter.format(latestDate),
+                ),
                 style = MaterialTheme.typography.titleSmall,
                 color = CycleColor,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Range ${unitFormatter.temperature(minC).text}-${unitFormatter.temperature(maxC).text} · ${unitFormatter.count(sorted.size)} readings",
+                text = stringResource(
+                    R.string.summary_temperature_range,
+                    unitFormatter.temperature(minC).text,
+                    unitFormatter.temperature(maxC).text,
+                    unitFormatter.count(sorted.size),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

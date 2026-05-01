@@ -21,7 +21,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.MindfulnessSession
@@ -30,7 +32,7 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
-import tech.mmarca.openvitals.core.period.periodTitle
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import java.time.ZoneId
 
@@ -57,10 +59,10 @@ fun MindfulnessScreen(
         if (state.sessions.isEmpty() && !state.isLoading) {
             item {
                 MetricCardPlaceholder(
-                    title = "Mindfulness",
+                    title = stringResource(R.string.metric_mindfulness),
                     icon = Icons.Outlined.SelfImprovement,
                     accentColor = MindfulnessColor,
-                    message = "No mindfulness sessions were recorded for this period.",
+                    message = stringResource(R.string.message_no_mindfulness_period),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -70,12 +72,12 @@ fun MindfulnessScreen(
             item {
                 MindfulnessSummary(
                     state = state,
-                    subtitle = periodTitle(state.selectedRange, period),
+                    subtitle = localizedPeriodTitle(state.selectedRange, period),
                     unitFormatter = unitFormatter,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            item { SectionHeader("Sessions") }
+            item { SectionHeader(stringResource(R.string.section_sessions)) }
             items(state.sessions) { session ->
                 MindfulnessSessionRow(
                     session = session,
@@ -103,7 +105,7 @@ private fun MindfulnessSummary(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         MetricCard(
-            title = "Total mindfulness",
+            title = stringResource(R.string.metric_total_mindfulness),
             value = total.value,
             unit = total.unit,
             icon = Icons.Outlined.SelfImprovement,
@@ -112,12 +114,12 @@ private fun MindfulnessSummary(
             modifier = Modifier.weight(1f),
         )
         MetricCard(
-            title = "Sessions",
+            title = stringResource(R.string.section_sessions),
             value = unitFormatter.count(state.sessions.size),
-            unit = "total",
+            unit = stringResource(R.string.unit_total),
             icon = Icons.Outlined.SelfImprovement,
             accentColor = MindfulnessColor,
-            subtitle = "Selected period",
+            subtitle = stringResource(R.string.period_selected),
             modifier = Modifier.weight(1f),
         )
     }
@@ -153,7 +155,7 @@ private fun MindfulnessSessionRow(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = session.title ?: "Mindfulness",
+                    text = session.title ?: stringResource(R.string.metric_mindfulness),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(

@@ -11,15 +11,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
-import tech.mmarca.openvitals.core.period.periodTitle
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.CycleColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +33,7 @@ fun CycleScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val resources = LocalContext.current.resources
     val requestCyclePermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
@@ -50,8 +54,8 @@ fun CycleScreen(
         if (state.missingPermissions.isNotEmpty()) {
             item {
                 PermissionCallout(
-                    title = "Cycle permissions missing",
-                    body = "Grant cycle tracking permissions to show period days, ovulation tests, cervical mucus, and basal temperature.",
+                    title = stringResource(R.string.cycle_permissions_missing_title),
+                    body = stringResource(R.string.cycle_permissions_missing_body),
                     onGrant = { requestCyclePermissions.launch(viewModel.cyclePermissions) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -63,12 +67,12 @@ fun CycleScreen(
                 CycleSummary(
                     data = state.data,
                     period = period,
-                    subtitle = periodTitle(state.selectedRange, period),
+                    subtitle = localizedPeriodTitle(state.selectedRange, period),
                     unitFormatter = unitFormatter,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            item { SectionHeader("Cycle calendar") }
+            item { SectionHeader(stringResource(R.string.section_cycle_calendar)) }
             item {
                 CycleCalendarCard(
                     data = state.data,
@@ -80,7 +84,7 @@ fun CycleScreen(
                 )
             }
             if (state.data.basalBodyTemperature.isNotEmpty()) {
-                item { SectionHeader("Basal body temperature") }
+                item { SectionHeader(stringResource(R.string.section_basal_body_temperature)) }
                 item {
                     BasalTemperatureTrendCard(
                         entries = state.data.basalBodyTemperature,
@@ -93,9 +97,9 @@ fun CycleScreen(
                 }
             }
 
-            val observations = observationsFor(state.data)
+            val observations = observationsFor(state.data, resources)
             if (observations.isNotEmpty()) {
-                item { SectionHeader("Entries") }
+                item { SectionHeader(stringResource(R.string.section_entries)) }
                 items(observations) { observation ->
                     CycleObservationRow(
                         observation = observation,
@@ -109,10 +113,10 @@ fun CycleScreen(
         } else if (!state.isLoading) {
             item {
                 MetricCardPlaceholder(
-                    title = "Cycle tracking",
+                    title = stringResource(R.string.metric_cycle_tracking),
                     icon = Icons.Outlined.CalendarMonth,
                     accentColor = CycleColor,
-                    message = "No cycle data was recorded for this period.",
+                    message = stringResource(R.string.message_no_cycle_period),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }

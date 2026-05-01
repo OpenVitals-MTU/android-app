@@ -15,10 +15,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.HeartRateSample
@@ -64,17 +66,17 @@ internal fun HeartRateTimelineCard(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 HeartRateStat(
-                    label = "Avg",
+                    label = stringResource(R.string.summary_average),
                     value = unitFormatter.heartRate(avgBpm.toLong()).text,
                     modifier = Modifier.weight(1f),
                 )
                 HeartRateStat(
-                    label = "Range",
+                    label = stringResource(R.string.summary_range),
                     value = "${unitFormatter.heartRate(minBpm).text}-${unitFormatter.heartRate(maxBpm).text}",
                     modifier = Modifier.weight(1f),
                 )
                 HeartRateStat(
-                    label = "Samples",
+                    label = stringResource(R.string.summary_samples),
                     value = unitFormatter.count(sorted.size),
                     modifier = Modifier.weight(1f),
                 )
@@ -137,7 +139,11 @@ internal fun HeartRateTimelineCard(
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "${timeFormatter.format(firstSample)}-${timeFormatter.format(lastSample)} recorded",
+                text = stringResource(
+                    R.string.summary_recorded,
+                    timeFormatter.format(firstSample),
+                    timeFormatter.format(lastSample),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -155,13 +161,13 @@ internal fun HeartRateEmptyDayCard(modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "No heart rate samples recorded on this day.",
+                text = stringResource(R.string.message_no_heart_samples_day),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Try another date or check that a connected device synced point-in-time heart data.",
+                text = stringResource(R.string.message_heart_empty_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -197,7 +203,7 @@ internal fun HeartRateDayRow(
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "${unitFormatter.heartRate(summary.avgBpm).text} avg",
+                    text = stringResource(R.string.summary_value_avg, unitFormatter.heartRate(summary.avgBpm).text),
                     style = MaterialTheme.typography.titleSmall,
                     color = HeartColor,
                 )
@@ -208,14 +214,14 @@ internal fun HeartRateDayRow(
                 )
                 if (restingBpm != null) {
                     Text(
-                        text = "Resting ${unitFormatter.heartRate(restingBpm).text}",
+                        text = stringResource(R.string.summary_resting_value, unitFormatter.heartRate(restingBpm).text),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (hrvMs != null) {
                     Text(
-                        text = "HRV ${unitFormatter.hrv(hrvMs).text}",
+                        text = stringResource(R.string.summary_hrv_value, unitFormatter.hrv(hrvMs).text),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -242,7 +248,7 @@ internal fun RestingHRDayCard(
         ) {
             Column {
                 Text(
-                    text = "Resting heart rate",
+                    text = stringResource(R.string.metric_resting_heart_rate),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -274,7 +280,7 @@ internal fun HRVDayCard(
         ) {
             Column {
                 Text(
-                    text = "Heart rate variability (HRV)",
+                    text = stringResource(R.string.metric_hrv),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

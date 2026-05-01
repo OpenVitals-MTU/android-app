@@ -20,8 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -47,27 +49,27 @@ internal fun CycleSummary(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard(
-                title = "Period days",
+                title = stringResource(R.string.metric_period_days),
                 value = unitFormatter.count(periodDays),
-                unit = "days",
+                unit = stringResource(R.string.unit_days),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = CycleColor,
                 subtitle = subtitle,
                 modifier = Modifier.weight(1f),
             )
             MetricCard(
-                title = "Ovulation tests",
+                title = stringResource(R.string.metric_ovulation_tests),
                 value = unitFormatter.count(data.ovulationTests.size),
-                unit = "tests",
+                unit = stringResource(R.string.unit_tests),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = CycleColor,
-                subtitle = "Selected period",
+                subtitle = stringResource(R.string.period_selected),
                 modifier = Modifier.weight(1f),
             )
         }
         if (latestTemperature != null) {
             MetricCard(
-                title = "Latest BBT",
+                title = stringResource(R.string.metric_latest_bbt),
                 value = latestTemperature.value,
                 unit = latestTemperature.unit,
                 icon = Icons.Outlined.DeviceThermostat,
@@ -117,9 +119,17 @@ internal fun CycleCalendarCard(
 @Composable
 private fun WeekdayHeader() {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf("M", "T", "W", "T", "F", "S", "S").forEach { label ->
+        listOf(
+            R.string.weekday_monday_short,
+            R.string.weekday_tuesday_short,
+            R.string.weekday_wednesday_short,
+            R.string.weekday_thursday_short,
+            R.string.weekday_friday_short,
+            R.string.weekday_saturday_short,
+            R.string.weekday_sunday_short,
+        ).forEach { labelRes ->
             Text(
-                text = label,
+                text = stringResource(labelRes),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

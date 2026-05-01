@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -65,7 +67,7 @@ internal fun RespiratoryRateDayRow(
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "${unitFormatter.respiratoryRate(summary.average).text} avg",
+                    text = stringResource(R.string.summary_value_avg, unitFormatter.respiratoryRate(summary.average).text),
                     style = MaterialTheme.typography.titleSmall,
                     color = respiratoryColor,
                 )
@@ -75,7 +77,7 @@ internal fun RespiratoryRateDayRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "${unitFormatter.count(summary.readings)} readings",
+                    text = stringResource(R.string.summary_readings, unitFormatter.count(summary.readings)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -146,10 +148,10 @@ internal fun VitalsReadingRow(
 private fun SummaryMetricCard(metric: SummaryMetric?, modifier: Modifier = Modifier) {
     if (metric == null) {
         MetricCardPlaceholder(
-            title = "No data",
+            title = stringResource(R.string.no_data),
             icon = Icons.Outlined.Favorite,
             accentColor = MaterialTheme.colorScheme.outline,
-            message = "No readings in this period.",
+            message = stringResource(R.string.message_no_readings_period),
             modifier = modifier,
         )
     } else {

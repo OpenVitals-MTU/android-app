@@ -11,9 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -84,7 +86,7 @@ fun HeartScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
-                item { SectionHeader("Daily breakdown") }
+                item { SectionHeader(stringResource(R.string.section_daily_breakdown)) }
                 val restingByDate = state.dailyRestingHR.associateBy { it.date }
                 val hrvByDate = state.dailyHrv.associateBy { it.date }
                 items(state.dailySummaries.sortedByDescending { it.date }) { summary ->
@@ -104,7 +106,7 @@ fun HeartScreen(
             !state.isLoading -> {
                 item {
                     Text(
-                        text = "No heart rate data in the selected period.\n\nMake sure the heart rate permission is granted and a connected device has synced data.",
+                        text = stringResource(R.string.message_no_heart_period),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
@@ -138,7 +140,7 @@ fun HeartScreen(
         }
 
         if (state.selectedRange != TimeRange.DAY && state.dailyRestingHR.isNotEmpty()) {
-            item { SectionHeader("Resting heart rate") }
+            item { SectionHeader(stringResource(R.string.metric_resting_heart_rate)) }
             item {
                 RestingHRChart(
                     entries = state.dailyRestingHR,
@@ -153,7 +155,7 @@ fun HeartScreen(
         }
 
         if (state.selectedRange != TimeRange.DAY && state.dailyHrv.isNotEmpty()) {
-            item { SectionHeader("Heart rate variability (HRV)") }
+            item { SectionHeader(stringResource(R.string.metric_hrv)) }
             item {
                 HRVChart(
                     entries = state.dailyHrv,
@@ -167,7 +169,7 @@ fun HeartScreen(
             }
         }
 
-        item { SectionHeader("Vitals") }
+        item { SectionHeader(stringResource(R.string.section_vitals)) }
         HeartVitalsContent(
             state = state,
             phase3Permissions = viewModel.vitalsPermissions,

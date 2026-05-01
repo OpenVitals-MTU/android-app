@@ -1,8 +1,10 @@
 package tech.mmarca.openvitals.features.onboarding
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -26,14 +28,14 @@ data class OnboardingUiState(
 
 data class OnboardingPermissionCategory(
     val id: String,
-    val title: String,
-    val description: String,
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
     val permissions: Set<String>,
     val required: Boolean = false,
     val optIn: Boolean = false,
     val grantMode: PermissionGrantMode = PermissionGrantMode.REQUESTABLE,
     val available: Boolean = true,
-    val unavailableReason: String? = null,
+    @StringRes val unavailableReasonRes: Int? = null,
 )
 
 class OnboardingViewModel(
@@ -56,60 +58,60 @@ class OnboardingViewModel(
         get() = listOf(
             OnboardingPermissionCategory(
                 id = "activity_sleep",
-                title = "Activity & sleep",
-                description = "Steps, distance, workouts, and sleep sessions for the dashboard.",
+                titleRes = R.string.onboarding_category_activity_sleep,
+                descriptionRes = R.string.onboarding_category_activity_sleep_desc,
                 permissions = repository.corePermissions,
                 required = true,
             ),
             OnboardingPermissionCategory(
                 id = "workout_routes",
-                title = "Workout routes",
-                description = "Route previews require manual approval in Health Connect settings.",
+                titleRes = R.string.onboarding_category_workout_routes,
+                descriptionRes = R.string.onboarding_category_workout_routes_desc,
                 permissions = repository.routePermissions,
                 grantMode = grantModeFor(repository.routePermissions),
             ),
             OnboardingPermissionCategory(
                 id = "heart_recovery",
-                title = "Heart & recovery",
-                description = "Heart rate, resting heart rate, and HRV trends.",
+                titleRes = R.string.onboarding_category_heart_recovery,
+                descriptionRes = R.string.onboarding_category_heart_recovery_desc,
                 permissions = repository.heartPermissions,
             ),
             OnboardingPermissionCategory(
                 id = "body",
-                title = "Body",
-                description = "Weight, height, body fat, lean mass, bone mass, and BMR.",
+                titleRes = R.string.onboarding_category_body,
+                descriptionRes = R.string.onboarding_category_body_desc,
                 permissions = repository.bodyPermissions,
             ),
             OnboardingPermissionCategory(
                 id = "activity_extras",
-                title = "Activity extras",
-                description = "Calories burned, floors climbed, active calories, and elevation.",
+                titleRes = R.string.onboarding_category_activity_extras,
+                descriptionRes = R.string.onboarding_category_activity_extras_desc,
                 permissions = repository.activityExtrasPermissions,
             ),
             OnboardingPermissionCategory(
                 id = "nutrition_hydration",
-                title = "Nutrition & hydration",
-                description = "Water intake, calories in, meals, and macros.",
+                titleRes = R.string.onboarding_category_nutrition_hydration,
+                descriptionRes = R.string.onboarding_category_nutrition_hydration_desc,
                 permissions = repository.nutritionHydrationPermissions,
             ),
             OnboardingPermissionCategory(
                 id = "mindfulness",
-                title = "Mindfulness",
-                description = "Mindfulness session duration and history.",
+                titleRes = R.string.onboarding_category_mindfulness,
+                descriptionRes = R.string.onboarding_category_mindfulness_desc,
                 permissions = repository.mindfulnessPermissions,
                 available = _uiState.value.mindfulnessAvailable,
-                unavailableReason = "Mindfulness sessions require a newer Health Connect version.",
+                unavailableReasonRes = R.string.onboarding_category_mindfulness_unavailable,
             ),
             OnboardingPermissionCategory(
                 id = "vitals",
-                title = "Vitals",
-                description = "Blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max.",
+                titleRes = R.string.onboarding_category_vitals,
+                descriptionRes = R.string.onboarding_category_vitals_desc,
                 permissions = repository.vitalsPermissions,
             ),
             OnboardingPermissionCategory(
                 id = "cycle_tracking",
-                title = "Cycle tracking",
-                description = "Optional sensitive cycle data: period dates, flow, ovulation, cervical mucus, and basal body temperature.",
+                titleRes = R.string.onboarding_category_cycle_tracking,
+                descriptionRes = R.string.onboarding_category_cycle_tracking_desc,
                 permissions = repository.cyclePermissions,
                 optIn = true,
             ),

@@ -14,19 +14,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodTitle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
@@ -48,12 +50,12 @@ internal fun StepsBarChart(
     modifier: Modifier = Modifier,
 ) {
     PeriodBarChart(
-        title = "Steps",
+        title = stringResource(R.string.metric_steps),
         values = data.map { PeriodChartValue(date = it.date, value = it.steps.toDouble()) },
         selectedRange = selectedRange,
         period = period,
         accentColor = StepsColor.copy(alpha = 0.8f),
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} steps",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} ${stringResource(R.string.unit_steps)}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
     )
@@ -69,11 +71,11 @@ internal fun DistanceBarChart(
     modifier: Modifier = Modifier,
 ) {
     MetricBarChartCard(
-        title = "Distance",
+        title = stringResource(R.string.metric_distance),
         values = data.map { PeriodChartValue(date = it.date, value = it.distanceMeters) },
         selectedRange = selectedRange,
         period = period,
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.distance(data.sumOf { it.distanceMeters }).text}",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.distance(data.sumOf { it.distanceMeters }).text}",
         accentColor = DistanceColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
@@ -90,11 +92,11 @@ internal fun CaloriesBarChart(
     modifier: Modifier = Modifier,
 ) {
     MetricBarChartCard(
-        title = "Calories burned",
+        title = stringResource(R.string.metric_calories_burned),
         values = data.map { PeriodChartValue(date = it.date, value = it.caloriesBurnedKcal) },
         selectedRange = selectedRange,
         period = period,
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.caloriesBurnedKcal }).text}",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.caloriesBurnedKcal }).text}",
         accentColor = CaloriesColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
@@ -134,11 +136,11 @@ internal fun FloorsBarChart(
     modifier: Modifier = Modifier,
 ) {
     MetricBarChartCard(
-        title = "Floors climbed",
+        title = stringResource(R.string.metric_floors_climbed),
         values = data.map { PeriodChartValue(date = it.date, value = it.floorsClimbed?.toDouble() ?: 0.0) },
         selectedRange = selectedRange,
         period = period,
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.floorsClimbed ?: 0 })} floors",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.floorsClimbed ?: 0 })} ${stringResource(R.string.unit_floors)}",
         accentColor = FloorsColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
@@ -155,11 +157,11 @@ internal fun ActiveCaloriesBarChart(
     modifier: Modifier = Modifier,
 ) {
     MetricBarChartCard(
-        title = "Active calories",
+        title = stringResource(R.string.metric_active_calories),
         values = data.map { PeriodChartValue(date = it.date, value = it.activeCaloriesKcal ?: 0.0) },
         selectedRange = selectedRange,
         period = period,
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.activeCaloriesKcal ?: 0.0 }).text}",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.activeCaloriesKcal ?: 0.0 }).text}",
         accentColor = ActiveCaloriesColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
@@ -177,11 +179,11 @@ internal fun ElevationBarChart(
 ) {
     val totalMeters = data.sumOf { it.elevationGainedMeters ?: 0.0 }
     MetricBarChartCard(
-        title = "Elevation gained",
+        title = stringResource(R.string.metric_elevation_gained),
         values = data.map { PeriodChartValue(date = it.date, value = it.elevationGainedMeters ?: 0.0) },
         selectedRange = selectedRange,
         period = period,
-        summaryText = "${periodTitle(selectedRange, period)} · ${unitFormatter.elevation(totalMeters).text}",
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.elevation(totalMeters).text}",
         accentColor = ElevationColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
@@ -222,7 +224,11 @@ internal fun IntradayActivityChartCard(
                 color = accentColor,
             )
             Text(
-                text = if (isToday) "$title today" else "$title on ${dateFormatter.format(selectedDate)}",
+                text = if (isToday) {
+                    stringResource(R.string.summary_today, title)
+                } else {
+                    stringResource(R.string.summary_on_date, title, dateFormatter.format(selectedDate))
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -288,7 +294,7 @@ internal fun IntradayActivityChartCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    listOf("00:00", "06:00", "12:00", "18:00", if (isToday) "Now" else "24:00").forEach { label ->
+                    listOf("00:00", "06:00", "12:00", "18:00", if (isToday) stringResource(R.string.summary_now) else "24:00").forEach { label ->
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelSmall,
@@ -298,16 +304,19 @@ internal fun IntradayActivityChartCard(
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Last update ${timeFormatter.format(points.last().first.atZone(zone))}",
+                    text = stringResource(
+                        R.string.summary_last_update,
+                        timeFormatter.format(points.last().first.atZone(zone)),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Text(
                     text = if (isToday) {
-                        "$emptyText yet today."
+                        stringResource(R.string.summary_empty_today, emptyText)
                     } else {
-                        "$emptyText on this day."
+                        stringResource(R.string.summary_empty_day, emptyText)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

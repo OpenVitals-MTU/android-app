@@ -38,11 +38,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
@@ -58,13 +60,14 @@ fun OnboardingScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val permissionCategories = viewModel.permissionCategories
     val requiredCategory = permissionCategories.firstOrNull { it.required }
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
                 context,
-                "Unable to open Health Connect permissions.",
+                unableToOpenPermissions,
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -115,14 +118,14 @@ fun OnboardingScreen(
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "OpenVitals",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
 
         Text(
-            text = "Your health data, on your device",
+            text = stringResource(R.string.onboarding_tagline),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -154,9 +157,8 @@ fun OnboardingScreen(
         // Privacy card
         FeatureCard(
             icon = Icons.Outlined.Lock,
-            title = "Privacy first",
-            body = "No account required. Data stays on your device. " +
-                    "No cloud upload, no analytics, no ads.",
+            title = stringResource(R.string.onboarding_privacy_title),
+            body = stringResource(R.string.onboarding_privacy_body),
         )
 
         Spacer(Modifier.height(12.dp))
@@ -164,16 +166,15 @@ fun OnboardingScreen(
         // On-device card
         FeatureCard(
             icon = Icons.Outlined.PhoneAndroid,
-            title = "Powered by Health Connect",
-            body = "Reads from Android's secure on-device health store. " +
-                    "Works with all data imported into Health Connect."
+            title = stringResource(R.string.onboarding_health_connect_title),
+            body = stringResource(R.string.onboarding_health_connect_body),
         )
 
         Spacer(Modifier.height(24.dp))
 
         // Permissions section
         Text(
-            text = "PERMISSIONS",
+            text = stringResource(R.string.onboarding_permissions_header),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
@@ -189,7 +190,13 @@ fun OnboardingScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = state.phase1Granted || requiredCategory != null,
         ) {
-            Text(if (state.phase1Granted) "Get started" else "Grant only core permissions")
+            Text(
+                if (state.phase1Granted) {
+                    stringResource(R.string.action_get_started)
+                } else {
+                    stringResource(R.string.onboarding_grant_core)
+                }
+            )
         }
 
         if (!state.phase2Granted || !state.phase3Granted) {
@@ -199,13 +206,13 @@ fun OnboardingScreen(
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             ) {
-                Text("Grant all dashboard permissions")
+                Text(stringResource(R.string.onboarding_grant_all))
             }
         }
 
         if (!state.phase1Granted) {
             Text(
-                text = "Core permissions are required to show your dashboard.",
+                text = stringResource(R.string.onboarding_core_required),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -285,15 +292,21 @@ private fun PermissionCategoryRow(
     val granted = category.available && optInEnabled && grantedCount == category.permissions.size
     val partial = category.available && optInEnabled && grantedCount > 0 && !granted
     val isManualGrant = category.grantMode == PermissionGrantMode.MANUAL
+    val unavailableReasonRes = category.unavailableReasonRes
     val status = when {
-        !category.available -> "Not supported"
-        granted -> "Granted"
-        partial -> "$grantedCount/${category.permissions.size} granted"
-        category.optIn && !cycleTrackingEnabled -> "Off"
-        isManualGrant -> "Manual"
-        category.required -> "Required"
-        else -> "Optional"
+        !category.available -> stringResource(R.string.onboarding_status_not_supported)
+        granted -> stringResource(R.string.onboarding_status_granted)
+        partial -> stringResource(
+            R.string.onboarding_status_partially_granted,
+            grantedCount,
+            category.permissions.size,
+        )
+        category.optIn && !cycleTrackingEnabled -> stringResource(R.string.onboarding_status_off)
+        isManualGrant -> stringResource(R.string.onboarding_status_manual)
+        category.required -> stringResource(R.string.onboarding_status_required)
+        else -> stringResource(R.string.onboarding_status_optional)
     }
+    val categoryTitle = stringResource(category.titleRes)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -311,7 +324,11 @@ private fun PermissionCategoryRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (category.required) "${category.title} (required)" else category.title,
+                    text = if (category.required) {
+                        stringResource(R.string.onboarding_required_suffix, categoryTitle)
+                    } else {
+                        categoryTitle
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
@@ -323,7 +340,11 @@ private fun PermissionCategoryRow(
                         MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = category.unavailableReason?.takeIf { !category.available } ?: category.description,
+                    text = if (!category.available && unavailableReasonRes != null) {
+                        stringResource(unavailableReasonRes)
+                    } else {
+                        stringResource(category.descriptionRes)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
@@ -332,23 +353,23 @@ private fun PermissionCategoryRow(
             if (granted) {
                 Icon(
                     imageVector = Icons.Outlined.CheckCircle,
-                    contentDescription = "Granted",
+                    contentDescription = stringResource(R.string.onboarding_status_granted),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             } else if (!category.available) {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
-                    contentDescription = "Not supported",
+                    contentDescription = stringResource(R.string.onboarding_status_not_supported),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 FilledTonalButton(onClick = onGrant) {
                     Text(
                         when {
-                            isManualGrant -> "Open"
-                            category.optIn && !cycleTrackingEnabled -> "Enable"
-                            partial -> "Review"
-                            else -> "Grant"
+                            isManualGrant -> stringResource(R.string.action_open)
+                            category.optIn && !cycleTrackingEnabled -> stringResource(R.string.action_enable)
+                            partial -> stringResource(R.string.action_review)
+                            else -> stringResource(R.string.action_grant)
                         }
                     )
                 }
@@ -366,7 +387,7 @@ private fun UnavailableMessage() {
         ),
     ) {
         Text(
-            text = "Health Connect is not supported on this device.",
+            text = stringResource(R.string.onboarding_health_connect_not_supported),
             modifier = Modifier.padding(16.dp),
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
@@ -383,14 +404,14 @@ private fun NeedsUpdateMessage(onInstall: () -> Unit) {
             ),
         ) {
             Text(
-                text = "Health Connect needs to be installed or updated to use this app.",
+                text = stringResource(R.string.onboarding_health_connect_update),
                 modifier = Modifier.padding(16.dp),
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
         }
         Spacer(Modifier.height(16.dp))
         Button(onClick = onInstall, modifier = Modifier.fillMaxWidth()) {
-            Text("Install Health Connect")
+            Text(stringResource(R.string.onboarding_install_health_connect))
         }
     }
 }

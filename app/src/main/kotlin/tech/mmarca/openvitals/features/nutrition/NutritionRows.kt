@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.MealType
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.NutritionEntry
@@ -72,7 +74,7 @@ internal fun NutritionEntryRow(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = entry.energyKcal?.let { unitFormatter.energy(it).text } ?: "No kcal",
+                    text = entry.energyKcal?.let { unitFormatter.energy(it).text } ?: stringResource(R.string.message_no_kcal),
                     style = MaterialTheme.typography.labelLarge,
                     color = CaloriesColor,
                 )
@@ -83,21 +85,40 @@ internal fun NutritionEntryRow(
     }
 }
 
+@Composable
 private fun macroLine(entry: NutritionEntry, unitFormatter: UnitFormatter): String {
+    val protein = entry.proteinGrams?.let {
+        stringResource(R.string.macro_protein_short, unitFormatter.count(it.roundToInt()))
+    }
+    val carbs = entry.carbsGrams?.let {
+        stringResource(R.string.macro_carbs_short, unitFormatter.count(it.roundToInt()))
+    }
+    val fat = entry.fatGrams?.let {
+        stringResource(R.string.macro_fat_short, unitFormatter.count(it.roundToInt()))
+    }
+    val fiber = entry.fiberGrams?.let {
+        stringResource(R.string.macro_fiber, unitFormatter.count(it.roundToInt()))
+    }
+    val sugar = entry.sugarGrams?.let {
+        stringResource(R.string.macro_sugar, unitFormatter.count(it.roundToInt()))
+    }
     val parts = buildList {
-        entry.proteinGrams?.let { add("P ${unitFormatter.count(it.roundToInt())}g") }
-        entry.carbsGrams?.let { add("C ${unitFormatter.count(it.roundToInt())}g") }
-        entry.fatGrams?.let { add("F ${unitFormatter.count(it.roundToInt())}g") }
-        entry.fiberGrams?.let { add("fiber ${unitFormatter.count(it.roundToInt())}g") }
-        entry.sugarGrams?.let { add("sugar ${unitFormatter.count(it.roundToInt())}g") }
+        protein?.let(::add)
+        carbs?.let(::add)
+        fat?.let(::add)
+        fiber?.let(::add)
+        sugar?.let(::add)
     }
     return parts.ifEmpty { listOf(mealTypeLabel(entry.mealType)) }.joinToString(" · ")
 }
 
-private fun mealTypeLabel(mealType: Int): String = when (mealType) {
-    MealType.MEAL_TYPE_BREAKFAST -> "Breakfast"
-    MealType.MEAL_TYPE_LUNCH -> "Lunch"
-    MealType.MEAL_TYPE_DINNER -> "Dinner"
-    MealType.MEAL_TYPE_SNACK -> "Snack"
-    else -> "Meal"
-}
+@Composable
+private fun mealTypeLabel(mealType: Int): String = stringResource(
+    when (mealType) {
+        MealType.MEAL_TYPE_BREAKFAST -> R.string.meal_breakfast
+        MealType.MEAL_TYPE_LUNCH -> R.string.meal_lunch
+        MealType.MEAL_TYPE_DINNER -> R.string.meal_dinner
+        MealType.MEAL_TYPE_SNACK -> R.string.meal_snack
+        else -> R.string.meal_generic
+    }
+)

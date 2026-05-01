@@ -11,7 +11,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -72,7 +74,7 @@ fun SleepScreen(
                     )
                 }
 
-                item { SectionHeader("Sleep sessions") }
+                item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
                 items(state.sessions.sortedByDescending { it.endTime }) { session ->
                     SleepSessionItem(
                         session = session,
@@ -90,9 +92,9 @@ fun SleepScreen(
                 item {
                     Text(
                         text = if (state.selectedRange == TimeRange.DAY) {
-                            "No sleep data for the selected day."
+                            stringResource(R.string.message_no_sleep_day_selected)
                         } else {
-                            "No sleep data in the selected period."
+                            stringResource(R.string.message_no_sleep_period)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

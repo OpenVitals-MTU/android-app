@@ -10,7 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
@@ -41,10 +43,10 @@ fun NutritionScreen(
         if (state.dailyMacros.isEmpty() && state.entries.isEmpty() && !state.isLoading) {
             item {
                 MetricCardPlaceholder(
-                    title = "Nutrition",
+                    title = stringResource(R.string.screen_nutrition),
                     icon = Icons.Outlined.Restaurant,
                     accentColor = NutritionColor,
-                    message = "No nutrition entries were recorded for this period.",
+                    message = stringResource(R.string.message_no_nutrition_period),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -84,7 +86,7 @@ fun NutritionScreen(
         }
 
         if (state.entries.isNotEmpty()) {
-            item { SectionHeader("Meals") }
+            item { SectionHeader(stringResource(R.string.section_meals)) }
             items(state.entries) { entry ->
                 NutritionEntryRow(
                     entry = entry,

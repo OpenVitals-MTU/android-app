@@ -1,7 +1,10 @@
 package tech.mmarca.openvitals.features.heart
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Air
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -13,24 +16,46 @@ import tech.mmarca.openvitals.ui.components.periodBarBuckets
 import java.time.LocalDate
 import java.time.ZoneId
 
+@Composable
 internal fun respiratoryRateSummaryMetric(
     entries: List<RespiratoryRateEntry>,
     selectedRange: TimeRange,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
 ): SummaryMetric? {
+    return respiratoryRateSummaryMetricCore(
+        entries = entries,
+        selectedRange = selectedRange,
+        period = period,
+        unitFormatter = unitFormatter,
+        respiratoryTitle = stringResource(R.string.metric_respiratory_rate),
+        avgRespiratoryTitle = stringResource(R.string.metric_avg_respiratory_rate),
+        readingsSource = stringResource(R.string.summary_readings, unitFormatter.count(entries.size)),
+    )
+}
+
+internal fun respiratoryRateSummaryMetricCore(
+    entries: List<RespiratoryRateEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    respiratoryTitle: String,
+    avgRespiratoryTitle: String,
+    readingsSource: String,
+): SummaryMetric? {
     if (entries.isEmpty()) return null
 
     if (selectedRange == TimeRange.DAY) {
         val latest = entries.maxByOrNull { it.time } ?: return null
         val value = unitFormatter.respiratoryRate(latest.breathsPerMinute)
-        return SummaryMetric("Respiratory rate", value.value, value.unit, Icons.Outlined.Air, respiratoryColor, latest.source)
+        return SummaryMetric(respiratoryTitle, value.value, value.unit, Icons.Outlined.Air, respiratoryColor, latest.source)
     }
 
     val average = respiratoryRateAverage(respiratoryRateBuckets(entries, selectedRange, period))
     val value = unitFormatter.respiratoryRate(average)
-    val source = entries.map { it.source }.distinct().singleOrNull() ?: "${entries.size} readings"
-    return SummaryMetric("Avg respiratory rate", value.value, value.unit, Icons.Outlined.Air, respiratoryColor, source)
+    val source = entries.map { it.source }.distinct().singleOrNull()
+        ?: readingsSource
+    return SummaryMetric(avgRespiratoryTitle, value.value, value.unit, Icons.Outlined.Air, respiratoryColor, source)
 }
 
 internal fun respiratoryRateBuckets(

@@ -36,9 +36,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DashboardData
@@ -106,7 +108,7 @@ fun DashboardScreen(
         when {
             state.isLoading && dashboardData == null -> FullScreenLoading()
             state.errorMessage != null && dashboardData == null ->
-                ErrorMessage(state.errorMessage ?: "Unknown error")
+                ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
             dashboardData != null -> DashboardContent(
                 data = dashboardData,
                 unitFormatter = unitFormatter,
@@ -133,7 +135,7 @@ fun DashboardScreen(
                 onOpenCycle = onOpenCycle,
                 onOpenBrowse = onOpenBrowse,
             )
-            else -> ErrorMessage("No dashboard data available.")
+            else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
         }
     }
 
@@ -193,8 +195,8 @@ private fun DashboardContent(
         if (showPermissionsCallout) {
             item {
                 PermissionCallout(
-                    title = "Some permissions are missing",
-                    body = "Grant the missing permissions to see a complete dashboard.",
+                    title = stringResource(R.string.message_missing_permissions_title),
+                    body = stringResource(R.string.message_missing_permissions_body),
                     onGrant = onGrantPermissions,
                     onDismiss = onDismissPermissionsCallout,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -202,7 +204,7 @@ private fun DashboardContent(
             }
         }
 
-        item { SectionHeader("Activity & recovery") }
+        item { SectionHeader(stringResource(R.string.section_activity_recovery)) }
 
         item {
             Row(
@@ -212,16 +214,16 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Steps",
+                    title = stringResource(R.string.metric_steps),
                     value = unitFormatter.count(data.steps),
-                    unit = "steps",
+                    unit = stringResource(R.string.unit_steps),
                     icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
                     accentColor = StepsColor,
                     modifier = Modifier.weight(1f),
                     onClick = onOpenSteps,
                 )
                 MetricCard(
-                    title = "Distance",
+                    title = stringResource(R.string.metric_distance),
                     value = distance.value,
                     unit = distance.unit,
                     icon = Icons.Outlined.Straighten,
@@ -243,9 +245,9 @@ private fun DashboardContent(
                 ) {
                     if (data.floorsClimbed != null) {
                         MetricCard(
-                            title = "Floors climbed",
+                            title = stringResource(R.string.metric_floors_climbed),
                             value = data.floorsClimbed.toString(),
-                            unit = "floors",
+                            unit = stringResource(R.string.unit_floors),
                             icon = Icons.Outlined.Stairs,
                             accentColor = FloorsColor,
                             modifier = Modifier.weight(1f),
@@ -255,7 +257,7 @@ private fun DashboardContent(
                     if (data.elevationGainedMeters != null) {
                         val elevation = unitFormatter.elevation(data.elevationGainedMeters)
                         MetricCard(
-                            title = "Elevation",
+                            title = stringResource(R.string.metric_elevation),
                             value = elevation.value,
                             unit = elevation.unit,
                             icon = Icons.Outlined.Terrain,
@@ -285,10 +287,10 @@ private fun DashboardContent(
                 )
             } else {
                 MetricCardPlaceholder(
-                    title = "Workout",
+                    title = stringResource(R.string.metric_workout),
                     icon = Icons.AutoMirrored.Outlined.DirectionsRun,
                     accentColor = WorkoutColor,
-                    message = "No workouts recorded on this day.",
+                    message = stringResource(R.string.message_no_workouts_day),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenActivities,
                 )
@@ -309,17 +311,17 @@ private fun DashboardContent(
                 )
             } else {
                 MetricCardPlaceholder(
-                    title = "Sleep",
+                    title = stringResource(R.string.metric_sleep),
                     icon = Icons.Outlined.Bed,
                     accentColor = SleepColor,
-                    message = "No sleep session ended on this day.",
+                    message = stringResource(R.string.message_no_sleep_day),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenSleep,
                 )
             }
         }
 
-        item { SectionHeader("Body & intake") }
+        item { SectionHeader(stringResource(R.string.section_body_intake)) }
 
         item {
             Row(
@@ -329,7 +331,7 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Calories out",
+                    title = stringResource(R.string.metric_calories_out),
                     value = unitFormatter.energy(data.caloriesKcal).value,
                     unit = unitFormatter.energy(data.caloriesKcal).unit,
                     icon = Icons.Outlined.LocalFireDepartment,
@@ -338,7 +340,7 @@ private fun DashboardContent(
                     onClick = onOpenSteps,
                 )
                 MetricCard(
-                    title = "Calories in",
+                    title = stringResource(R.string.metric_calories_in),
                     value = unitFormatter.energy(data.caloriesInKcal ?: 0.0).value,
                     unit = unitFormatter.energy(data.caloriesInKcal ?: 0.0).unit,
                     icon = Icons.Outlined.Restaurant,
@@ -358,7 +360,7 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Hydration",
+                    title = stringResource(R.string.metric_hydration),
                     value = unitFormatter.hydration(data.hydrationLiters).value,
                     unit = unitFormatter.hydration(data.hydrationLiters).unit,
                     icon = Icons.Outlined.LocalDrink,
@@ -367,7 +369,7 @@ private fun DashboardContent(
                     onClick = onOpenHydration,
                 )
                 MetricCard(
-                    title = "Latest weight",
+                    title = stringResource(R.string.metric_latest_weight),
                     value = unitFormatter.weight(data.weightKg).value,
                     unit = unitFormatter.weight(data.weightKg).unit,
                     icon = Icons.Outlined.MonitorWeight,
@@ -381,7 +383,7 @@ private fun DashboardContent(
         item {
             Spacer(Modifier.height(12.dp))
             MetricCard(
-                title = "Body fat",
+                title = stringResource(R.string.metric_body_fat),
                 value = unitFormatter.percent(data.bodyFatPercent).value,
                 unit = unitFormatter.percent(data.bodyFatPercent).unit,
                 icon = Icons.Outlined.MonitorWeight,
@@ -391,7 +393,7 @@ private fun DashboardContent(
             )
         }
 
-        item { SectionHeader("Heart") }
+        item { SectionHeader(stringResource(R.string.section_heart)) }
 
         item {
             Row(
@@ -401,7 +403,7 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Avg heart rate",
+                    title = stringResource(R.string.metric_avg_heart_rate),
                     value = unitFormatter.heartRate(data.avgHeartRateBpm).value,
                     unit = unitFormatter.heartRate(data.avgHeartRateBpm).unit,
                     icon = Icons.Outlined.Favorite,
@@ -410,7 +412,7 @@ private fun DashboardContent(
                     onClick = onOpenHeart,
                 )
                 MetricCard(
-                    title = "Resting heart rate",
+                    title = stringResource(R.string.metric_resting_heart_rate),
                     value = unitFormatter.heartRate(data.restingHeartRateBpm).value,
                     unit = unitFormatter.heartRate(data.restingHeartRateBpm).unit,
                     icon = Icons.Outlined.FavoriteBorder,
@@ -435,7 +437,7 @@ private fun DashboardContent(
                         data.latestDiastolicMmHg,
                     )
                     MetricCard(
-                        title = "Blood pressure",
+                        title = stringResource(R.string.metric_blood_pressure),
                         value = bloodPressure.value,
                         unit = bloodPressure.unit,
                         icon = Icons.Outlined.Favorite,
@@ -445,10 +447,10 @@ private fun DashboardContent(
                     )
                 } else {
                     MetricCardPlaceholder(
-                        title = "Blood pressure",
+                        title = stringResource(R.string.metric_blood_pressure),
                         icon = Icons.Outlined.Favorite,
                         accentColor = VitalsColor,
-                        message = "No blood pressure reading.",
+                        message = stringResource(R.string.message_no_blood_pressure),
                         modifier = Modifier.weight(1f),
                         onClick = onOpenHeart,
                     )
@@ -456,7 +458,7 @@ private fun DashboardContent(
                 if (data.latestSpO2Percent != null) {
                     val spO2 = unitFormatter.percent(data.latestSpO2Percent)
                     MetricCard(
-                        title = "SpO2",
+                        title = stringResource(R.string.metric_spo2),
                         value = spO2.value,
                         unit = spO2.unit,
                         icon = Icons.Outlined.FavoriteBorder,
@@ -466,10 +468,10 @@ private fun DashboardContent(
                     )
                 } else {
                     MetricCardPlaceholder(
-                        title = "SpO2",
+                        title = stringResource(R.string.metric_spo2),
                         icon = Icons.Outlined.FavoriteBorder,
                         accentColor = VitalsColor,
-                        message = "No oxygen reading.",
+                        message = stringResource(R.string.message_no_oxygen),
                         modifier = Modifier.weight(1f),
                         onClick = onOpenHeart,
                     )
@@ -482,7 +484,7 @@ private fun DashboardContent(
             if (data.latestVo2Max != null) {
                 val vo2Max = unitFormatter.vo2Max(data.latestVo2Max)
                 MetricCard(
-                    title = "VO2 max",
+                    title = stringResource(R.string.metric_vo2_max),
                     value = vo2Max.value,
                     unit = vo2Max.unit,
                     icon = Icons.AutoMirrored.Outlined.DirectionsRun,
@@ -492,17 +494,17 @@ private fun DashboardContent(
                 )
             } else {
                 MetricCardPlaceholder(
-                    title = "VO2 max",
+                    title = stringResource(R.string.metric_vo2_max),
                     icon = Icons.AutoMirrored.Outlined.DirectionsRun,
                     accentColor = VitalsColor,
-                    message = "No VO2 max reading.",
+                    message = stringResource(R.string.message_no_vo2_max),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenHeart,
                 )
             }
         }
 
-        item { SectionHeader("Mind") }
+        item { SectionHeader(stringResource(R.string.section_mind)) }
         item {
             Row(
                 modifier = Modifier
@@ -511,7 +513,7 @@ private fun DashboardContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    title = "Mindfulness",
+                    title = stringResource(R.string.metric_mindfulness),
                     value = unitFormatter.minutes((data.mindfulnessMinutes ?: 0).toLong()).value,
                     unit = unitFormatter.minutes((data.mindfulnessMinutes ?: 0).toLong()).unit,
                     icon = Icons.Outlined.SelfImprovement,
@@ -524,26 +526,26 @@ private fun DashboardContent(
         }
 
         if (trackCycle) {
-            item { SectionHeader("Cycle") }
+            item { SectionHeader(stringResource(R.string.metric_cycle)) }
             item {
                 MetricCardPlaceholder(
-                    title = "Cycle",
+                    title = stringResource(R.string.metric_cycle),
                     icon = Icons.Outlined.CalendarMonth,
                     accentColor = CycleColor,
-                    message = "View cycle calendar and readings.",
+                    message = stringResource(R.string.message_cycle_browse),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onClick = onOpenCycle,
                 )
             }
         }
 
-        item { SectionHeader("Records") }
+        item { SectionHeader(stringResource(R.string.section_records)) }
         item {
             MetricCardPlaceholder(
-                title = "Browse",
+                title = stringResource(R.string.metric_browse),
                 icon = Icons.Outlined.FolderOpen,
                 accentColor = MaterialTheme.colorScheme.primary,
-                message = "Browse all raw records from Health Connect.",
+                message = stringResource(R.string.message_browse_records),
                 modifier = Modifier.padding(horizontal = 16.dp),
                 onClick = onOpenBrowse,
             )
@@ -564,7 +566,7 @@ private fun WorkoutCard(
 ) {
     val start = workout.startTime.atZone(zone)
     MetricCard(
-        title = "Workout",
+        title = stringResource(R.string.metric_workout),
         value = unitFormatter.duration(workout.durationMs),
         unit = exerciseTypeLabel(workout.exerciseType),
         icon = Icons.AutoMirrored.Outlined.DirectionsRun,
@@ -587,7 +589,7 @@ private fun SleepCard(
 ) {
     val end = sleep.endTime.atZone(zone)
     MetricCard(
-        title = "Sleep",
+        title = stringResource(R.string.metric_sleep),
         value = unitFormatter.duration(sleep.durationMs),
         unit = "",
         icon = Icons.Outlined.Bed,

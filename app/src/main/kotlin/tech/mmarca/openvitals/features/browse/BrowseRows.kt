@@ -18,7 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
@@ -59,7 +61,7 @@ internal fun WorkoutBrowseRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = workout.title ?: "Exercise",
+                    text = workout.title ?: stringResource(R.string.browse_exercise_fallback),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
@@ -109,7 +111,7 @@ internal fun SleepBrowseRow(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "${session.stages.size} stages",
+                    text = stringResource(R.string.browse_stages_count, unitFormatter.count(session.stages.size)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

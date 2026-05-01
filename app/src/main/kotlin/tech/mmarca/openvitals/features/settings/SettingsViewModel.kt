@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -21,6 +22,7 @@ data class SettingsUiState(
     val manualOnlyPermissions: Set<String> = emptySet(),
     val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
 ) {
     val visiblePermissions: Set<String>
         get() = allPermissions + if (trackCycle) cyclePermissions else emptySet()
@@ -67,6 +69,7 @@ class SettingsViewModel(
                 manualOnlyPermissions = repository.manualOnlyPermissions,
                 trackCycle = preferencesRepository.trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
+                appLanguage = preferencesRepository.appLanguage,
             )
         }
     }
@@ -79,6 +82,11 @@ class SettingsViewModel(
     fun setTrackCycle(enabled: Boolean) {
         preferencesRepository.trackCycle = enabled
         _uiState.value = _uiState.value.copy(trackCycle = enabled)
+    }
+
+    fun selectAppLanguage(appLanguage: AppLanguage) {
+        preferencesRepository.appLanguage = appLanguage
+        _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
     }
 
     fun onPermissionsResult(granted: Set<String>) {

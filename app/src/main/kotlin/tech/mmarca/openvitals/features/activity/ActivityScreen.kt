@@ -7,7 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -44,9 +46,9 @@ fun ActivityScreen(
                 if (state.selectedRange == TimeRange.DAY) {
                     IntradayActivityChartCard(
                         selectedDate = state.selectedDate,
-                        title = "Steps",
-                        valueText = "${unitFormatter.count(state.dailySteps.firstOrNull()?.steps ?: 0L)} steps",
-                        emptyText = "No step updates were recorded",
+                        title = stringResource(R.string.metric_steps),
+                        valueText = "${unitFormatter.count(state.dailySteps.firstOrNull()?.steps ?: 0L)} ${stringResource(R.string.unit_steps)}",
+                        emptyText = stringResource(R.string.message_no_step_updates),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         points = state.activityProgress.map { point ->
                             point.time to point.totalSteps.toDouble()
@@ -76,9 +78,9 @@ fun ActivityScreen(
                         val distanceTotal = state.dailySteps.firstOrNull()?.distanceMeters ?: 0.0
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
-                            title = "Distance",
+                            title = stringResource(R.string.metric_distance),
                             valueText = unitFormatter.distance(distanceTotal).text,
-                            emptyText = "No distance updates were recorded",
+                            emptyText = stringResource(R.string.message_no_distance_updates),
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalDistanceMeters?.let { point.time to it }
@@ -109,9 +111,9 @@ fun ActivityScreen(
                         val caloriesTotal = state.nutrition.firstOrNull()?.caloriesBurnedKcal ?: 0.0
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
-                            title = "Calories burned",
+                            title = stringResource(R.string.metric_calories_burned),
                             valueText = unitFormatter.energy(caloriesTotal).text,
-                            emptyText = "No calories burned data was recorded",
+                            emptyText = stringResource(R.string.message_no_calories_burned),
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalCaloriesBurnedKcal?.let { point.time to it }
@@ -142,9 +144,9 @@ fun ActivityScreen(
                         val floorsTotal = state.dailySteps.firstOrNull()?.floorsClimbed ?: 0
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
-                            title = "Floors climbed",
-                            valueText = "${unitFormatter.count(floorsTotal)} floors",
-                            emptyText = "No floors climbed data was recorded",
+                            title = stringResource(R.string.metric_floors_climbed),
+                            valueText = "${unitFormatter.count(floorsTotal)} ${stringResource(R.string.unit_floors)}",
+                            emptyText = stringResource(R.string.message_no_floors_climbed),
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalFloorsClimbed?.let { point.time to it.toDouble() }
@@ -175,9 +177,9 @@ fun ActivityScreen(
                         val activeCaloriesTotal = state.dailySteps.firstOrNull()?.activeCaloriesKcal ?: 0.0
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
-                            title = "Active calories",
+                            title = stringResource(R.string.metric_active_calories),
                             valueText = unitFormatter.energy(activeCaloriesTotal).text,
-                            emptyText = "No active calories data was recorded",
+                            emptyText = stringResource(R.string.message_no_active_calories),
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalActiveCaloriesKcal?.let { point.time to it }
@@ -208,9 +210,9 @@ fun ActivityScreen(
                         val elevationTotal = state.dailySteps.firstOrNull()?.elevationGainedMeters ?: 0.0
                         IntradayActivityChartCard(
                             selectedDate = state.selectedDate,
-                            title = "Elevation gained",
+                            title = stringResource(R.string.metric_elevation_gained),
                             valueText = unitFormatter.elevation(elevationTotal).text,
-                            emptyText = "No elevation data was recorded",
+                            emptyText = stringResource(R.string.message_no_elevation),
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             points = state.activityProgress.mapNotNull { point ->
                                 point.totalElevationGainedMeters?.let { point.time to it }

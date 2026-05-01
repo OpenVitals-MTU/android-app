@@ -20,7 +20,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 
 @Composable
 fun PermissionCallout(
@@ -28,7 +30,7 @@ fun PermissionCallout(
     body: String,
     onGrant: () -> Unit,
     modifier: Modifier = Modifier,
-    actionLabel: String = "Grant permission",
+    actionLabel: String? = null,
     onDismiss: (() -> Unit)? = null,
 ) {
     Card(
@@ -61,11 +63,11 @@ fun PermissionCallout(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(onClick = onGrant) {
-                    Text(actionLabel)
+                    Text(actionLabel ?: stringResource(R.string.action_grant_permission))
                 }
                 if (onDismiss != null) {
                     TextButton(onClick = onDismiss) {
-                        Text("Not now")
+                        Text(stringResource(R.string.action_not_now))
                     }
                 }
             }

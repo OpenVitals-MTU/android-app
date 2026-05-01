@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -42,7 +44,7 @@ fun BodyScreen(
             state.leanMassKg != null || state.bmrKcal != null || state.boneMassKg != null
 
         if (state.weightEntries.isNotEmpty()) {
-            item { SectionHeader("Weight") }
+            item { SectionHeader(stringResource(R.string.section_weight)) }
             item {
                 WeightSummaryCard(
                     latestKg = state.latestWeightKg,
@@ -61,7 +63,7 @@ fun BodyScreen(
                         .padding(horizontal = 16.dp),
                 )
             }
-            item { SectionHeader("Entries") }
+            item { SectionHeader(stringResource(R.string.section_entries)) }
             items(state.weightEntries.sortedByDescending { it.time }) { entry ->
                 WeightEntryRow(
                     entry = entry,
@@ -75,7 +77,7 @@ fun BodyScreen(
         }
 
         if (hasComposition) {
-            item { SectionHeader("Body composition") }
+            item { SectionHeader(stringResource(R.string.section_body_composition)) }
             item {
                 BodyCompositionCard(
                     bmi = state.bmi,
@@ -106,7 +108,7 @@ fun BodyScreen(
         if (state.weightEntries.isEmpty() && !hasComposition && !state.isLoading) {
             item {
                 Text(
-                    text = "No weight data in the selected period.\n\nSync a scale or wearable that reports weight to Health Connect.",
+                    text = stringResource(R.string.message_no_weight_period),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),

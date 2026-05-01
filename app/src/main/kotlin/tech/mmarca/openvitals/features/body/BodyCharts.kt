@@ -12,8 +12,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
@@ -64,7 +66,9 @@ internal fun BodyFatLineChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${unitFormatter.percent(minPct).text} - ${unitFormatter.percent(maxPct).text} · ${unitFormatter.count(sorted.size)} entries",
+                text = "${unitFormatter.percent(minPct).text} - ${unitFormatter.percent(maxPct).text} · ${
+                    stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))
+                }",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -116,7 +120,9 @@ internal fun WeightLineChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${unitFormatter.weight(minKg).text} - ${unitFormatter.weight(maxKg).text} · ${unitFormatter.count(sorted.size)} entries",
+                text = "${unitFormatter.weight(minKg).text} - ${unitFormatter.weight(maxKg).text} · ${
+                    stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))
+                }",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

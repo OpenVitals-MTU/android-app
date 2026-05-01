@@ -12,18 +12,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodTitle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.LocalDate
@@ -51,7 +53,7 @@ internal fun RespiratoryRateChart(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Respiratory rate", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.metric_respiratory_rate), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
             Canvas(
                 modifier = Modifier
@@ -89,7 +91,9 @@ internal fun RespiratoryRateChart(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.respiratoryRate(average).text} avg",
+                text = "${localizedPeriodTitle(selectedRange, period)} · ${
+                    stringResource(R.string.summary_value_avg, unitFormatter.respiratoryRate(average).text)
+                }",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -115,7 +119,7 @@ internal fun BloodPressureChart(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Blood pressure", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.metric_blood_pressure), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
             Canvas(
                 modifier = Modifier
@@ -141,7 +145,9 @@ internal fun BloodPressureChart(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "${periodTitle(selectedRange, period)} · ${unitFormatter.count(sorted.size)} readings",
+                text = "${localizedPeriodTitle(selectedRange, period)} · ${
+                    stringResource(R.string.summary_readings, unitFormatter.count(sorted.size))
+                }",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

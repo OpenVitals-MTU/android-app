@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -96,6 +97,19 @@ class SettingsViewModelTest {
         assertEquals(setOf("steps", "route", "cycle"), vm.uiState.value.visiblePermissions)
     }
 
+    @Test fun `selectAppLanguage persists preference and updates ui state`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.selectAppLanguage(AppLanguage.SPANISH)
+
+        verify { prefs.appLanguage = AppLanguage.SPANISH }
+        assertEquals(AppLanguage.SPANISH, vm.uiState.value.appLanguage)
+    }
+
     @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
         val repository = repo(availability = HealthConnectAvailability.NOT_SUPPORTED)
 
@@ -124,7 +138,9 @@ class SettingsViewModelTest {
     private fun prefs(trackCycle: Boolean): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.unitSystem } returns UnitSystem.METRIC
+            every { prefs.appLanguage } returns AppLanguage.SYSTEM
             every { prefs.trackCycle } returns trackCycle
+            every { prefs.appLanguage = any() } just runs
             every { prefs.trackCycle = any() } just runs
         }
 }

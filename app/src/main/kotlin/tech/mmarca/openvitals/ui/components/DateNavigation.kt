@@ -22,15 +22,13 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-
-private val dayHeaderFormatter = DateTimeFormatter.ofPattern("EEE, d MMM")
-private val daySubtitleFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
 @Composable
 fun DayNavigator(
@@ -53,7 +51,7 @@ fun DayNavigator(
             IconButton(onClick = onPreviousDay) {
                 Icon(
                     imageVector = Icons.Outlined.ChevronLeft,
-                    contentDescription = "Previous day",
+                    contentDescription = stringResource(R.string.cd_previous_day),
                 )
             }
 
@@ -65,7 +63,7 @@ fun DayNavigator(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = dayTitle(date),
+                        text = localizedDayTitle(date),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                     )
@@ -78,7 +76,7 @@ fun DayNavigator(
                             contentDescription = null,
                         )
                         Text(
-                            text = daySubtitle(date),
+                            text = localizedDaySubtitle(date),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -93,7 +91,7 @@ fun DayNavigator(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = "Next day",
+                    contentDescription = stringResource(R.string.cd_next_day),
                 )
             }
         }
@@ -126,12 +124,12 @@ fun HealthDatePickerDialog(
                     }
                 },
             ) {
-                Text("Select")
+                Text(stringResource(R.string.action_select))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         },
     ) {
@@ -141,14 +139,6 @@ fun HealthDatePickerDialog(
         )
     }
 }
-
-private fun dayTitle(date: LocalDate): String = when (date) {
-    LocalDate.now() -> "Today"
-    LocalDate.now().minusDays(1) -> "Yesterday"
-    else -> dayHeaderFormatter.format(date)
-}
-
-private fun daySubtitle(date: LocalDate): String = daySubtitleFormatter.format(date)
 
 private fun LocalDate.toUtcDateMillis(): Long =
     atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()

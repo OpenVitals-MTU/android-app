@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.content.Context
+import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,9 @@ class PreferencesRepository(context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
     private val _unitSystem = MutableStateFlow(readUnitSystem())
+    private val _appLanguage = MutableStateFlow(readAppLanguage())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
+    val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -30,6 +33,13 @@ class PreferencesRepository(context: Context) {
             prefs.edit().putBoolean(KEY_TRACK_CYCLE, value).apply()
         }
 
+    var appLanguage: AppLanguage
+        get() = _appLanguage.value
+        set(value) {
+            prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
+            _appLanguage.value = value
+        }
+
     fun acknowledgedPermissions(): Set<String> =
         prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()
 
@@ -44,6 +54,11 @@ class PreferencesRepository(context: Context) {
             ?.let { value -> runCatching { UnitSystem.valueOf(value) }.getOrNull() }
             ?: defaultUnitSystem()
 
+    private fun readAppLanguage(): AppLanguage =
+        prefs.getString(KEY_APP_LANGUAGE, null)
+            ?.let { value -> runCatching { AppLanguage.valueOf(value) }.getOrNull() }
+            ?: AppLanguage.SYSTEM
+
     private fun defaultUnitSystem(): UnitSystem {
         val country = Locale.getDefault().country.uppercase(Locale.US)
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
@@ -55,6 +70,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_ACKNOWLEDGED_PERMISSIONS = "acknowledged_permissions"
         private const val KEY_UNIT_SYSTEM = "unit_system"
         private const val KEY_TRACK_CYCLE = "track_cycle"
+        private const val KEY_APP_LANGUAGE = "app_language"
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

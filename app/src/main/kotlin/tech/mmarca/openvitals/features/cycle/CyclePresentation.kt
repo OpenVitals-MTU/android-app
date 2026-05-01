@@ -1,5 +1,9 @@
 package tech.mmarca.openvitals.features.cycle
 
+import android.content.res.Resources
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.CervicalMucusEntry
@@ -51,7 +55,7 @@ internal fun cycleDays(period: DatePeriod, data: CycleData, zone: ZoneId): List<
     }
 }
 
-internal fun observationsFor(data: CycleData): List<CycleObservation> {
+internal fun observationsFor(data: CycleData, resources: Resources): List<CycleObservation> {
     val zone = ZoneId.systemDefault()
     return buildList {
         data.menstruationPeriods.forEach { period ->
@@ -59,8 +63,14 @@ internal fun observationsFor(data: CycleData): List<CycleObservation> {
             add(
                 CycleObservation(
                     time = period.startTime,
-                    title = "Menstruation period",
-                    value = "$days ${if (days == 1L) "day" else "days"}",
+                    title = resources.getString(R.string.cycle_observation_menstruation_period),
+                    value = resources.getString(
+                        R.string.cycle_days_value,
+                        days,
+                        resources.getString(
+                            if (days == 1L) R.string.cycle_day_singular else R.string.cycle_day_plural
+                        ),
+                    ),
                     source = period.source,
                 )
             )
@@ -69,8 +79,8 @@ internal fun observationsFor(data: CycleData): List<CycleObservation> {
             add(
                 CycleObservation(
                     time = flow.time,
-                    title = "Menstruation flow",
-                    value = flowLabel(flow.flow),
+                    title = resources.getString(R.string.cycle_observation_menstruation_flow),
+                    value = flowLabel(flow.flow, resources),
                     source = flow.source,
                 )
             )
@@ -79,8 +89,8 @@ internal fun observationsFor(data: CycleData): List<CycleObservation> {
             add(
                 CycleObservation(
                     time = test.time,
-                    title = "Ovulation test",
-                    value = ovulationResultLabel(test.result),
+                    title = resources.getString(R.string.cycle_observation_ovulation_test),
+                    value = ovulationResultLabel(test.result, resources),
                     source = test.source,
                 )
             )
@@ -89,8 +99,8 @@ internal fun observationsFor(data: CycleData): List<CycleObservation> {
             add(
                 CycleObservation(
                     time = mucus.time,
-                    title = "Cervical mucus",
-                    value = mucusLabel(mucus),
+                    title = resources.getString(R.string.cycle_observation_cervical_mucus),
+                    value = mucusLabel(mucus, resources),
                     source = mucus.source,
                 )
             )
@@ -98,18 +108,23 @@ internal fun observationsFor(data: CycleData): List<CycleObservation> {
     }.sortedByDescending { it.time }
 }
 
-internal fun measurementLocationLabel(location: Int): String = when (location) {
-    1 -> "Armpit"
-    2 -> "Finger"
-    3 -> "Forehead"
-    4 -> "Mouth"
-    5 -> "Rectum"
-    6 -> "Temporal artery"
-    7 -> "Toe"
-    8 -> "Ear"
-    9 -> "Wrist"
-    10 -> "Vagina"
-    else -> "Measurement location unknown"
+@Composable
+internal fun measurementLocationLabel(location: Int): String = stringResource(
+    measurementLocationLabelRes(location)
+)
+
+internal fun measurementLocationLabelRes(location: Int): Int = when (location) {
+    1 -> R.string.measurement_location_armpit
+    2 -> R.string.measurement_location_finger
+    3 -> R.string.measurement_location_forehead
+    4 -> R.string.measurement_location_mouth
+    5 -> R.string.measurement_location_rectum
+    6 -> R.string.measurement_location_temporal_artery
+    7 -> R.string.measurement_location_toe
+    8 -> R.string.measurement_location_ear
+    9 -> R.string.measurement_location_wrist
+    10 -> R.string.measurement_location_vagina
+    else -> R.string.measurement_location_unknown
 }
 
 private fun MenstruationPeriodEntry.dates(zone: ZoneId): List<LocalDate> {
@@ -124,37 +139,45 @@ private fun datesBetween(start: LocalDate, endInclusive: LocalDate): List<LocalD
         if (next.isAfter(endInclusive)) null else next
     }.toList()
 
-private fun flowLabel(flow: Int): String = when (flow) {
-    FLOW_LIGHT -> "Light"
-    FLOW_MEDIUM -> "Medium"
-    FLOW_HEAVY -> "Heavy"
-    else -> "Unknown"
-}
+private fun flowLabel(flow: Int, resources: Resources): String = resources.getString(
+    when (flow) {
+        FLOW_LIGHT -> R.string.cycle_flow_light
+        FLOW_MEDIUM -> R.string.cycle_flow_medium
+        FLOW_HEAVY -> R.string.cycle_flow_heavy
+        else -> R.string.recording_unknown
+    }
+)
 
-private fun ovulationResultLabel(result: Int): String = when (result) {
-    OVULATION_POSITIVE -> "Positive"
-    OVULATION_HIGH -> "High"
-    OVULATION_NEGATIVE -> "Negative"
-    else -> "Inconclusive"
-}
+private fun ovulationResultLabel(result: Int, resources: Resources): String = resources.getString(
+    when (result) {
+        OVULATION_POSITIVE -> R.string.cycle_ovulation_positive
+        OVULATION_HIGH -> R.string.cycle_ovulation_high
+        OVULATION_NEGATIVE -> R.string.cycle_ovulation_negative
+        else -> R.string.cycle_ovulation_inconclusive
+    }
+)
 
-private fun mucusLabel(mucus: CervicalMucusEntry): String {
+private fun mucusLabel(mucus: CervicalMucusEntry, resources: Resources): String {
     val appearance = when (mucus.appearance) {
-        MUCUS_DRY -> "Dry"
-        MUCUS_STICKY -> "Sticky"
-        MUCUS_CREAMY -> "Creamy"
-        MUCUS_WATERY -> "Watery"
-        MUCUS_EGG_WHITE -> "Egg white"
-        MUCUS_UNUSUAL -> "Unusual"
-        else -> "Unknown"
+        MUCUS_DRY -> R.string.cycle_mucus_dry
+        MUCUS_STICKY -> R.string.cycle_mucus_sticky
+        MUCUS_CREAMY -> R.string.cycle_mucus_creamy
+        MUCUS_WATERY -> R.string.cycle_mucus_watery
+        MUCUS_EGG_WHITE -> R.string.cycle_mucus_egg_white
+        MUCUS_UNUSUAL -> R.string.cycle_mucus_unusual
+        else -> R.string.recording_unknown
     }
     val sensation = when (mucus.sensation) {
-        MUCUS_LIGHT -> "light"
-        MUCUS_MEDIUM -> "medium"
-        MUCUS_HEAVY -> "heavy"
-        else -> "unknown"
+        MUCUS_LIGHT -> R.string.cycle_mucus_light
+        MUCUS_MEDIUM -> R.string.cycle_mucus_medium
+        MUCUS_HEAVY -> R.string.cycle_mucus_heavy
+        else -> R.string.recording_unknown
     }
-    return "$appearance, $sensation"
+    return resources.getString(
+        R.string.cycle_mucus_value,
+        resources.getString(appearance),
+        resources.getString(sensation),
+    )
 }
 
 internal const val FLOW_UNKNOWN = 0

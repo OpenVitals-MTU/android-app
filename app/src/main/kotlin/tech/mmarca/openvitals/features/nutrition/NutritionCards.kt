@@ -21,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.theme.NutritionColor
@@ -44,21 +46,21 @@ internal fun NutritionSummary(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         MetricCard(
-            title = "Calories in",
+            title = stringResource(R.string.metric_calories_in),
             value = energy.value,
             unit = energy.unit,
             icon = Icons.Outlined.Restaurant,
             accentColor = NutritionColor,
-            subtitle = "${unitFormatter.count(state.entries.size)} entries",
+            subtitle = stringResource(R.string.summary_entries, unitFormatter.count(state.entries.size)),
             modifier = Modifier.weight(1f),
         )
         MetricCard(
-            title = "Protein",
+            title = stringResource(R.string.metric_protein),
             value = unitFormatter.count(state.totalProteinGrams.roundToInt()),
-            unit = "g",
+            unit = stringResource(R.string.unit_grams),
             icon = Icons.Outlined.Restaurant,
             accentColor = proteinColor,
-            subtitle = "Across selected period",
+            subtitle = stringResource(R.string.summary_across_selected_period),
             modifier = Modifier.weight(1f),
         )
     }
@@ -82,7 +84,7 @@ internal fun MacroSummaryCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Macros",
+                text = stringResource(R.string.metric_macros),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -101,9 +103,9 @@ internal fun MacroSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                MacroLegend("Protein", proteinGrams, proteinColor, unitFormatter)
-                MacroLegend("Carbs", carbsGrams, carbsColor, unitFormatter)
-                MacroLegend("Fat", fatGrams, fatColor, unitFormatter)
+                MacroLegend(stringResource(R.string.metric_protein), proteinGrams, proteinColor, unitFormatter)
+                MacroLegend(stringResource(R.string.metric_carbs), carbsGrams, carbsColor, unitFormatter)
+                MacroLegend(stringResource(R.string.metric_fat), fatGrams, fatColor, unitFormatter)
             }
         }
     }
@@ -140,7 +142,7 @@ private fun MacroLegend(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "${unitFormatter.count(grams.roundToInt())} g",
+            text = "${unitFormatter.count(grams.roundToInt())} ${stringResource(R.string.unit_grams)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
