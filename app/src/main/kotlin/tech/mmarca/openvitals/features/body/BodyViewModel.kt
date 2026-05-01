@@ -44,9 +44,13 @@ data class BodyUiState(
         }
 }
 
-class BodyViewModel(private val repository: BodyRepository) : ViewModel() {
+class BodyViewModel(
+    private val repository: BodyRepository,
+    initialRange: TimeRange = TimeRange.MONTH,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BodyUiState())
+    private val _uiState = MutableStateFlow(BodyUiState(selectedRange = initialRange))
     val uiState: StateFlow<BodyUiState> = _uiState.asStateFlow()
 
     init {
@@ -54,6 +58,7 @@ class BodyViewModel(private val repository: BodyRepository) : ViewModel() {
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

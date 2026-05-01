@@ -24,9 +24,13 @@ data class CycleUiState(
     val error: String? = null,
 )
 
-class CycleViewModel(private val repository: CycleRepository) : ViewModel() {
+class CycleViewModel(
+    private val repository: CycleRepository,
+    initialRange: TimeRange = TimeRange.MONTH,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CycleUiState())
+    private val _uiState = MutableStateFlow(CycleUiState(selectedRange = initialRange))
     val uiState: StateFlow<CycleUiState> = _uiState.asStateFlow()
 
     val cyclePermissions: Set<String> get() = repository.phase4Permissions
@@ -36,6 +40,7 @@ class CycleViewModel(private val repository: CycleRepository) : ViewModel() {
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

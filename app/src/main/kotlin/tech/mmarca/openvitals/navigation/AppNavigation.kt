@@ -24,6 +24,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -186,7 +188,13 @@ fun AppNavigation(
             }
 
             composable(Screen.Steps.route) {
-                val activityViewModel = appViewModel { ActivityViewModel(activityRepository) }
+                val activityViewModel = appViewModel {
+                    ActivityViewModel(
+                        repository = activityRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
+                    )
+                }
                 ActivityScreen(
                     viewModel = activityViewModel,
                     unitFormatter = unitFormatter,
@@ -195,7 +203,13 @@ fun AppNavigation(
             }
 
             composable(Screen.Activity.route) {
-                val activitiesViewModel = appViewModel { ActivitiesViewModel(activityRepository) }
+                val activitiesViewModel = appViewModel {
+                    ActivitiesViewModel(
+                        repository = activityRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
+                    )
+                }
                 ActivitiesScreen(
                     viewModel = activitiesViewModel,
                     unitFormatter = unitFormatter,
@@ -222,7 +236,13 @@ fun AppNavigation(
             }
 
             composable(Screen.Sleep.route) {
-                val sleepViewModel = appViewModel { SleepViewModel(sleepRepository) }
+                val sleepViewModel = appViewModel {
+                    SleepViewModel(
+                        repository = sleepRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
+                    )
+                }
                 SleepScreen(
                     viewModel = sleepViewModel,
                     unitFormatter = unitFormatter,
@@ -250,7 +270,12 @@ fun AppNavigation(
 
             composable(Screen.Heart.route) {
                 val heartViewModel = appViewModel {
-                    HeartViewModel(heartRepository, vitalsRepository)
+                    HeartViewModel(
+                        repository = heartRepository,
+                        vitalsRepository = vitalsRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
+                    )
                 }
                 HeartScreen(
                     viewModel = heartViewModel,
@@ -260,7 +285,13 @@ fun AppNavigation(
             }
 
             composable(Screen.Body.route) {
-                val bodyViewModel = appViewModel { BodyViewModel(bodyRepository) }
+                val bodyViewModel = appViewModel {
+                    BodyViewModel(
+                        repository = bodyRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
+                    )
+                }
                 BodyScreen(
                     viewModel = bodyViewModel,
                     unitFormatter = unitFormatter,
@@ -269,7 +300,13 @@ fun AppNavigation(
             }
 
             composable(Screen.Hydration.route) {
-                val hydrationViewModel = appViewModel { HydrationViewModel(hydrationRepository) }
+                val hydrationViewModel = appViewModel {
+                    HydrationViewModel(
+                        repository = hydrationRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
+                    )
+                }
                 HydrationScreen(
                     viewModel = hydrationViewModel,
                     unitFormatter = unitFormatter,
@@ -278,7 +315,13 @@ fun AppNavigation(
             }
 
             composable(Screen.Nutrition.route) {
-                val nutritionViewModel = appViewModel { NutritionViewModel(nutritionRepository) }
+                val nutritionViewModel = appViewModel {
+                    NutritionViewModel(
+                        repository = nutritionRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
+                    )
+                }
                 NutritionScreen(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
@@ -288,7 +331,11 @@ fun AppNavigation(
 
             composable(Screen.Mindfulness.route) {
                 val mindfulnessViewModel = appViewModel {
-                    MindfulnessViewModel(mindfulnessRepository)
+                    MindfulnessViewModel(
+                        repository = mindfulnessRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
+                    )
                 }
                 MindfulnessScreen(
                     viewModel = mindfulnessViewModel,
@@ -299,7 +346,11 @@ fun AppNavigation(
 
             composable(Screen.Cycle.route) {
                 val cycleViewModel = appViewModel {
-                    CycleViewModel(cycleRepository)
+                    CycleViewModel(
+                        repository = cycleRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.CYCLE),
+                    )
                 }
                 CycleScreen(
                     viewModel = cycleViewModel,
@@ -310,7 +361,13 @@ fun AppNavigation(
 
             composable(Screen.Browse.route) {
                 val browseViewModel = appViewModel {
-                    BrowseViewModel(activityRepository, sleepRepository, bodyRepository)
+                    BrowseViewModel(
+                        activityRepository = activityRepository,
+                        sleepRepository = sleepRepository,
+                        bodyRepository = bodyRepository,
+                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BROWSE),
+                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BROWSE),
+                    )
                 }
                 BrowseScreen(
                     viewModel = browseViewModel,
@@ -337,6 +394,9 @@ fun AppNavigation(
         }
     }
 }
+
+private fun PreferencesRepository.rangeSaver(key: PeriodRangePreferenceKey): (TimeRange) -> Unit =
+    { range -> setTimeRangeFor(key, range) }
 
 @Composable
 private inline fun <reified VM : ViewModel> appViewModel(

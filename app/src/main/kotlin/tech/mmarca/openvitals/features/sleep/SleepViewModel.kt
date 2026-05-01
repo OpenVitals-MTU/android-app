@@ -21,9 +21,13 @@ data class SleepUiState(
     val error: String? = null,
 )
 
-class SleepViewModel(private val repository: SleepRepository) : ViewModel() {
+class SleepViewModel(
+    private val repository: SleepRepository,
+    initialRange: TimeRange = TimeRange.WEEK,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SleepUiState())
+    private val _uiState = MutableStateFlow(SleepUiState(selectedRange = initialRange))
     val uiState: StateFlow<SleepUiState> = _uiState.asStateFlow()
 
     init {
@@ -31,6 +35,7 @@ class SleepViewModel(private val repository: SleepRepository) : ViewModel() {
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

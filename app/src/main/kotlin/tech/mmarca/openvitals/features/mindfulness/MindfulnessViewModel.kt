@@ -23,9 +23,13 @@ data class MindfulnessUiState(
     val totalMinutes: Long get() = sessions.sumOf { it.durationMinutes }
 }
 
-class MindfulnessViewModel(private val repository: MindfulnessRepository) : ViewModel() {
+class MindfulnessViewModel(
+    private val repository: MindfulnessRepository,
+    initialRange: TimeRange = TimeRange.WEEK,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MindfulnessUiState())
+    private val _uiState = MutableStateFlow(MindfulnessUiState(selectedRange = initialRange))
     val uiState: StateFlow<MindfulnessUiState> = _uiState.asStateFlow()
 
     init {
@@ -33,6 +37,7 @@ class MindfulnessViewModel(private val repository: MindfulnessRepository) : View
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

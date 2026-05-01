@@ -24,9 +24,13 @@ data class HydrationUiState(
     val averageLiters: Double get() = dailyHydration.takeIf { it.isNotEmpty() }?.let { totalLiters / it.size } ?: 0.0
 }
 
-class HydrationViewModel(private val repository: HydrationRepository) : ViewModel() {
+class HydrationViewModel(
+    private val repository: HydrationRepository,
+    initialRange: TimeRange = TimeRange.WEEK,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HydrationUiState())
+    private val _uiState = MutableStateFlow(HydrationUiState(selectedRange = initialRange))
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
 
     init {
@@ -34,6 +38,7 @@ class HydrationViewModel(private val repository: HydrationRepository) : ViewMode
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

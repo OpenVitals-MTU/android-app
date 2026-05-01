@@ -66,6 +66,7 @@ The canonical interaction model for metric screens is:
 - previous/next navigation
 - direct calendar selection
 - forward navigation capped at the current period
+- last selected range remembered independently per detail/list screen
 
 This pattern is implemented today by shared primitives in `ui/components`.
 
@@ -182,6 +183,7 @@ Current files:
 Important current detail:
 
 - `TimeRange`, `DatePeriod`, `periodFor`, `periodTitle`, and `periodSubtitle` live in `core/period`
+- `PeriodRangePreferenceKey` lives in `core/period`; `PreferencesRepository` persists the last selected `TimeRange` per detail/list screen
 - `PeriodNavigator` remains a UI component in `ui/components`
 
 ### Feature layer
@@ -255,6 +257,10 @@ The aligned detail/list screens are:
 - sleep
 - heart
 - body
+- hydration
+- nutrition
+- mindfulness
+- cycle
 - browse
 
 They all use [`MetricDetailScaffold`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt) as the shared shell.
@@ -328,6 +334,8 @@ The content lambda should render:
 - `Day` mode content
 - `Week / Month / Year` content
 - optional list/breakdown sections
+
+When registering a new period-based screen, add a `PeriodRangePreferenceKey` and wire its saved range through `AppNavigation` into the screen ViewModel. Persist only range changes; selected dates remain screen state.
 
 ### 5. Keep visuals local to the feature
 

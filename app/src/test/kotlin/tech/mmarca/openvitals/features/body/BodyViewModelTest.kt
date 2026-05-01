@@ -47,6 +47,11 @@ class BodyViewModelTest {
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
     }
 
+    @Test fun `initial range can be restored`() = runTest {
+        val vm = BodyViewModel(emptyRepo(), initialRange = TimeRange.YEAR)
+        assertEquals(TimeRange.YEAR, vm.uiState.value.selectedRange)
+    }
+
     @Test fun `initial load clears loading and produces no error`() = runTest {
         val vm = BodyViewModel(emptyRepo())
         assertFalse(vm.uiState.value.isLoading)
@@ -241,6 +246,18 @@ class BodyViewModelTest {
         val vm = BodyViewModel(emptyRepo())
         vm.selectRange(TimeRange.YEAR)
         assertEquals(TimeRange.YEAR, vm.uiState.value.selectedRange)
+    }
+
+    @Test fun `selectRange saves selected range`() = runTest {
+        var savedRange: TimeRange? = null
+        val vm = BodyViewModel(
+            repository = emptyRepo(),
+            onRangeSelected = { range -> savedRange = range },
+        )
+
+        vm.selectRange(TimeRange.WEEK)
+
+        assertEquals(TimeRange.WEEK, savedRange)
     }
 
     @Test fun `selectRange triggers reload`() = runTest {

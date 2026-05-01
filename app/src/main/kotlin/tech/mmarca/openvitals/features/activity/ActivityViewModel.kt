@@ -27,9 +27,13 @@ data class ActivityUiState(
     val error: String? = null,
 )
 
-class ActivityViewModel(private val repository: ActivityRepository) : ViewModel() {
+class ActivityViewModel(
+    private val repository: ActivityRepository,
+    initialRange: TimeRange = TimeRange.WEEK,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ActivityUiState())
+    private val _uiState = MutableStateFlow(ActivityUiState(selectedRange = initialRange))
     val uiState: StateFlow<ActivityUiState> = _uiState.asStateFlow()
 
     init {
@@ -37,6 +41,7 @@ class ActivityViewModel(private val repository: ActivityRepository) : ViewModel(
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

@@ -33,6 +33,11 @@ class HydrationViewModelTest {
         assertEquals(TimeRange.WEEK, vm.uiState.value.selectedRange)
     }
 
+    @Test fun `initial range can be restored`() = runTest {
+        val vm = HydrationViewModel(emptyRepo(), initialRange = TimeRange.DAY)
+        assertEquals(TimeRange.DAY, vm.uiState.value.selectedRange)
+    }
+
     @Test fun `initial load clears loading and sets empty list`() = runTest {
         val vm = HydrationViewModel(emptyRepo())
         val state = vm.uiState.value
@@ -74,6 +79,18 @@ class HydrationViewModelTest {
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
         coVerify(atLeast = 2) { repo.loadDailyHydration(any(), any()) }
+    }
+
+    @Test fun `selectRange saves selected range`() = runTest {
+        var savedRange: TimeRange? = null
+        val vm = HydrationViewModel(
+            repository = emptyRepo(),
+            onRangeSelected = { range -> savedRange = range },
+        )
+
+        vm.selectRange(TimeRange.MONTH)
+
+        assertEquals(TimeRange.MONTH, savedRange)
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {

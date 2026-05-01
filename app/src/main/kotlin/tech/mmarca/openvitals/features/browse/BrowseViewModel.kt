@@ -38,9 +38,11 @@ class BrowseViewModel(
     private val activityRepository: ActivityRepository,
     private val sleepRepository: SleepRepository,
     private val bodyRepository: BodyRepository,
+    initialRange: TimeRange = TimeRange.MONTH,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BrowseUiState())
+    private val _uiState = MutableStateFlow(BrowseUiState(selectedRange = initialRange))
     val uiState: StateFlow<BrowseUiState> = _uiState.asStateFlow()
 
     init {
@@ -53,6 +55,7 @@ class BrowseViewModel(
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

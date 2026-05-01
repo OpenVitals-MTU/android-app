@@ -59,9 +59,11 @@ data class HeartUiState(
 class HeartViewModel(
     private val repository: HeartRepository,
     private val vitalsRepository: VitalsRepository,
+    initialRange: TimeRange = TimeRange.WEEK,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HeartUiState())
+    private val _uiState = MutableStateFlow(HeartUiState(selectedRange = initialRange))
     val uiState: StateFlow<HeartUiState> = _uiState.asStateFlow()
     val vitalsPermissions: Set<String> get() = vitalsRepository.phase3Permissions
 
@@ -70,6 +72,7 @@ class HeartViewModel(
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }

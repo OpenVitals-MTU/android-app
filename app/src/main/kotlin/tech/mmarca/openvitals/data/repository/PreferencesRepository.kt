@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.content.Context
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import java.util.Locale
@@ -39,6 +41,15 @@ class PreferencesRepository(context: Context) {
             prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
             _appLanguage.value = value
         }
+
+    fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
+        prefs.getString(key.storageKey, null)
+            ?.let { value -> runCatching { TimeRange.valueOf(value) }.getOrNull() }
+            ?: key.defaultRange
+
+    fun setTimeRangeFor(key: PeriodRangePreferenceKey, range: TimeRange) {
+        prefs.edit().putString(key.storageKey, range.name).apply()
+    }
 
     fun acknowledgedPermissions(): Set<String> =
         prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()

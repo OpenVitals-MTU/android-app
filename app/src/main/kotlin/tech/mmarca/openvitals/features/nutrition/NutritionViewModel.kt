@@ -30,9 +30,13 @@ data class NutritionUiState(
     val totalFatGrams: Double get() = dailyMacros.sumOf { it.fatGrams }
 }
 
-class NutritionViewModel(private val repository: NutritionRepository) : ViewModel() {
+class NutritionViewModel(
+    private val repository: NutritionRepository,
+    initialRange: TimeRange = TimeRange.WEEK,
+    private val onRangeSelected: (TimeRange) -> Unit = {},
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(NutritionUiState())
+    private val _uiState = MutableStateFlow(NutritionUiState(selectedRange = initialRange))
     val uiState: StateFlow<NutritionUiState> = _uiState.asStateFlow()
 
     init {
@@ -40,6 +44,7 @@ class NutritionViewModel(private val repository: NutritionRepository) : ViewMode
     }
 
     fun selectRange(range: TimeRange) {
+        onRangeSelected(range)
         applyPeriodSelection(periodSelection.selectRange(range))
         load()
     }
