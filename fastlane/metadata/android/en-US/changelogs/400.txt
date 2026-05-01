@@ -1,0 +1,5 @@
+Refactored metric detail screens and Health Connect data access into clearer feature-focused modules.
+Added Spanish localization.
+Remember the last selected time range per detail view.
+Added app version info.
+Improved release pipeline Play ownership handling and expanded tests around period selection, summaries, cycle presentation, onboarding, and settings.
