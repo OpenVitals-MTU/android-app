@@ -5,6 +5,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.model.mergeSleepSessions
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,7 +30,7 @@ class SleepRepository(private val hc: HealthConnectManager) {
         val zone = ZoneId.systemDefault()
         val queryStart = start.minusDays(1).atStartOfDay(zone).toInstant()
         val queryEnd = end.plusDays(1).atStartOfDay(zone).toInstant()
-        return hc.readSleepSessions(queryStart, queryEnd)
+        return mergeSleepSessions(hc.readSleepSessions(queryStart, queryEnd))
             .filter { session ->
                 val sessionDate = session.endTime.atZone(zone).toLocalDate()
                 !sessionDate.isBefore(start) && !sessionDate.isAfter(end)
