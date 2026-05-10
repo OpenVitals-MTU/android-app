@@ -285,6 +285,9 @@ internal class ActivityHealthReader(
                         )
                     )
                 }.onFailure {
+                    if (HealthConnectRateLimitBackoff.isRateLimitFailure(it)) {
+                        throw it
+                    }
                     Log.e(TAG, "Failed readExerciseSession aggregate id=$id ${support.diagnosticsSummary()}", it)
                 }.getOrNull()
             }

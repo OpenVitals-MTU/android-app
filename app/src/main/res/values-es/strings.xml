@@ -162,6 +162,7 @@
     <string name="message_no_dashboard_data">No hay datos del panel disponibles.</string>
     <string name="message_missing_permissions_title">Faltan algunos permisos</string>
     <string name="message_missing_permissions_body">Concede los permisos que faltan para ver un panel completo.</string>
+    <string name="message_health_connect_rate_limited">Se alcanzó el límite de Health Connect. Espera aproximadamente %1$d min e inténtalo de nuevo.</string>
     <string name="message_no_workouts_day">No hay entrenamientos registrados en este día.</string>
     <string name="message_no_sleep_day">No hay ninguna sesión de sueño terminada en este día.</string>
     <string name="message_no_blood_pressure">No hay lectura de presión arterial.</string>

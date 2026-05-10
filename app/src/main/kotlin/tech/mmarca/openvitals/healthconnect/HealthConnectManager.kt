@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
@@ -49,7 +50,16 @@ class HealthConnectManager(private val context: Context) {
         availabilityService = availabilityService,
         diagnostics = diagnostics,
     )
-    private val readerSupport = HealthConnectReaderSupport(::client, diagnostics)
+    private val readerSupport = HealthConnectReaderSupport(
+        clientProvider = ::client,
+        diagnostics = diagnostics,
+        rateLimitMessage = { retryAfterMillis ->
+            context.getString(
+                R.string.message_health_connect_rate_limited,
+                retryAfterMinutes(retryAfterMillis),
+            )
+        },
+    )
     private val activityReader = ActivityHealthReader(readerSupport)
     private val hydrationReader = HydrationHealthReader(readerSupport)
     private val sleepReader = SleepHealthReader(readerSupport)

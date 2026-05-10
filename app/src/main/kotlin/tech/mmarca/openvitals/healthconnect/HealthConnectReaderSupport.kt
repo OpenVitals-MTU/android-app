@@ -9,6 +9,7 @@ import java.time.ZoneId
 internal class HealthConnectReaderSupport(
     private val clientProvider: () -> HealthConnectClient,
     private val diagnostics: HealthConnectDiagnostics,
+    private val rateLimitMessage: (Long) -> String,
 ) {
     fun client(): HealthConnectClient = clientProvider()
 
@@ -18,27 +19,43 @@ internal class HealthConnectReaderSupport(
         operation: String,
         fallback: T,
         block: suspend () -> T,
-    ): T = try {
-        Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
-        block().also {
-            Log.d(TAG, "Finished $operation successfully")
+    ): T {
+        HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
+        return try {
+            Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
+            block().also {
+                Log.d(TAG, "Finished $operation successfully")
+            }
+        } catch (t: Throwable) {
+            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                Log.w(TAG, "Rate limited $operation ${diagnosticsSummary()}", t)
+                throw rateLimit
+            }
+            Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
+            fallback
         }
-    } catch (t: Throwable) {
-        Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
-        fallback
     }
 
     suspend fun <T> withNullableLogging(
         operation: String,
         block: suspend () -> T?,
-    ): T? = try {
-        Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
-        block().also {
-            Log.d(TAG, "Finished $operation successfully")
+    ): T? {
+        HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
+        return try {
+            Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
+            block().also {
+                Log.d(TAG, "Finished $operation successfully")
+            }
+        } catch (t: Throwable) {
+            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                Log.w(TAG, "Rate limited $operation ${diagnosticsSummary()}", t)
+                throw rateLimit
+            }
+            Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
+            null
         }
-    } catch (t: Throwable) {
-        Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
-        null
     }
 
     fun dayRange(date: LocalDate): Pair<Instant, Instant> {
