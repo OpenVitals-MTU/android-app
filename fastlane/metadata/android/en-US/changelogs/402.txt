@@ -1,0 +1,4 @@
+Merge split sleep sessions with short gaps so fragmented Health Connect sleep records show as one night.
+Explain Android 13 standalone Health Connect devices that are missing Google Play Store services.
+Improve Health Connect permission UX for history, background reads, and workout route access.
+Serialize Health Connect dashboard reads and isolate metric failures so rate limits no longer block the whole dashboard.
