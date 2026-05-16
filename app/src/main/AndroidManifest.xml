@@ -47,6 +47,7 @@
     <!-- Query for Health Connect package (needed on Android 11+) -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.android.vending" />
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>

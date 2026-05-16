@@ -44,6 +44,7 @@ import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
+import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -102,6 +103,7 @@ fun SettingsScreen(
                 status = when (state.availability) {
                     HealthConnectAvailability.AVAILABLE -> stringResource(R.string.settings_status_available)
                     HealthConnectAvailability.NEEDS_PROVIDER_UPDATE -> stringResource(R.string.settings_status_needs_update)
+                    HealthConnectAvailability.NEEDS_PLAY_STORE -> stringResource(R.string.settings_status_needs_play_store)
                     HealthConnectAvailability.NOT_SUPPORTED -> stringResource(R.string.onboarding_status_not_supported)
                 },
                 ok = state.availability == HealthConnectAvailability.AVAILABLE,
@@ -292,26 +294,11 @@ private fun LanguageCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Row(
+            AppLanguageDropdown(
+                selected = selected,
+                onSelect = onSelect,
                 modifier = Modifier.padding(top = 12.dp),
-            ) {
-                AppLanguage.entries.forEach { appLanguage ->
-                    FilterChip(
-                        selected = selected == appLanguage,
-                        onClick = { onSelect(appLanguage) },
-                        label = {
-                            Text(
-                                when (appLanguage) {
-                                    AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
-                                    AppLanguage.ENGLISH -> stringResource(R.string.settings_language_english)
-                                    AppLanguage.SPANISH -> stringResource(R.string.settings_language_spanish)
-                                }
-                            )
-                        },
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
-                }
-            }
+            )
         }
     }
 }

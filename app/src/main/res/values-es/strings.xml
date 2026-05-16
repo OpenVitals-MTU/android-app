@@ -211,6 +211,7 @@
     <string name="onboarding_core_required">Los permisos básicos son necesarios para mostrar tu panel.</string>
     <string name="onboarding_unable_open_permissions">No se pueden abrir los permisos de Health Connect.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect no es compatible con este dispositivo.</string>
+    <string name="onboarding_health_connect_needs_play_store">Este dispositivo usa Android 13 y tiene instalada la app independiente de Health Connect. Por desgracia, esta versión depende de los servicios de Google Play Store, que no están instalados en este dispositivo, así que Health Connect rechaza las solicitudes antes de que OpenVitals pueda leer tus datos. OpenVitals no puede arreglar ni evitar este problema del dispositivo. La única forma de resolverlo es instalar los servicios de Google Play o actualizar a Android 14 o superior, donde Health Connect forma parte del sistema operativo y no necesita los servicios de Google.</string>
     <string name="onboarding_health_connect_update">Health Connect debe instalarse o actualizarse para usar esta app.</string>
     <string name="onboarding_install_health_connect">Instalar Health Connect</string>
     <string name="onboarding_required_suffix">%1$s (obligatorio)</string>
@@ -243,6 +244,7 @@
 
     <string name="settings_status_available">Disponible</string>
     <string name="settings_status_needs_update">Necesita actualización</string>
+    <string name="settings_status_needs_play_store">Necesita Play Store</string>
     <string name="settings_all_requestable_granted">Todos los permisos solicitables concedidos</string>
     <string name="settings_request_missing_permissions">Solicitar permisos no concedidos</string>
     <string name="settings_manual_permissions_title">Permisos manuales requeridos</string>

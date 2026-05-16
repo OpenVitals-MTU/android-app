@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -23,6 +24,7 @@ data class OnboardingUiState(
     val phase3Granted: Boolean = false,
     val phase4Granted: Boolean = false,
     val cycleTrackingEnabled: Boolean = false,
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val isCheckingPermissions: Boolean = true,
 )
 
@@ -135,6 +137,7 @@ class OnboardingViewModel(
             if (avail != HealthConnectAvailability.AVAILABLE) {
                 _uiState.value = OnboardingUiState(
                     availability = avail,
+                    appLanguage = preferencesRepository.appLanguage,
                     isCheckingPermissions = false,
                 )
                 return@launch
@@ -151,6 +154,7 @@ class OnboardingViewModel(
                 phase3Granted = repository.phase3Permissions.all { it in granted },
                 phase4Granted = repository.phase4Permissions.all { it in granted },
                 cycleTrackingEnabled = preferencesRepository.trackCycle,
+                appLanguage = preferencesRepository.appLanguage,
                 isCheckingPermissions = false,
             )
         }
@@ -175,5 +179,10 @@ class OnboardingViewModel(
                 cycleTrackingEnabled = preferencesRepository.trackCycle,
             )
         }
+    }
+
+    fun selectAppLanguage(appLanguage: AppLanguage) {
+        preferencesRepository.appLanguage = appLanguage
+        _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
     }
 }

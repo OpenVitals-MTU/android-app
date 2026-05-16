@@ -48,6 +48,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
+import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 
 private const val HC_PACKAGE = "com.google.android.apps.healthdata"
@@ -100,6 +101,14 @@ fun OnboardingScreen(
     ) {
         Spacer(Modifier.height(32.dp))
 
+        AppLanguageDropdown(
+            selected = state.appLanguage,
+            onSelect = viewModel::selectAppLanguage,
+            modifier = Modifier.align(Alignment.End),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         // App icon placeholder
         Box(
             modifier = Modifier
@@ -137,6 +146,11 @@ fun OnboardingScreen(
         when (state.availability) {
             HealthConnectAvailability.NOT_SUPPORTED -> {
                 UnavailableMessage()
+                return@Column
+            }
+
+            HealthConnectAvailability.NEEDS_PLAY_STORE -> {
+                NeedsPlayStoreMessage()
                 return@Column
             }
 
@@ -388,6 +402,22 @@ private fun UnavailableMessage() {
     ) {
         Text(
             text = stringResource(R.string.onboarding_health_connect_not_supported),
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
+private fun NeedsPlayStoreMessage() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_health_connect_needs_play_store),
             modifier = Modifier.padding(16.dp),
             color = MaterialTheme.colorScheme.onErrorContainer,
         )

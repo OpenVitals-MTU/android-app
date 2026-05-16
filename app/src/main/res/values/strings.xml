@@ -211,6 +211,7 @@
     <string name="onboarding_core_required">Core permissions are required to show your dashboard.</string>
     <string name="onboarding_unable_open_permissions">Unable to open Health Connect permissions.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect is not supported on this device.</string>
+    <string name="onboarding_health_connect_needs_play_store">This device is running Android 13 with the standalone Health Connect app installed. Sadly, this version depends on Google Play Store services, which are missing on this device, so Health Connect rejects requests before OpenVitals can read your data. OpenVitals cannot fix or bypass this device-side Health Connect issue. The only way to solve it is to install Google Play services or upgrade to Android 14 or higher, where Health Connect is part of the operating system and does not need Google services.</string>
     <string name="onboarding_health_connect_update">Health Connect needs to be installed or updated to use this app.</string>
     <string name="onboarding_install_health_connect">Install Health Connect</string>
     <string name="onboarding_required_suffix">%1$s (required)</string>
@@ -243,6 +244,7 @@
 
     <string name="settings_status_available">Available</string>
     <string name="settings_status_needs_update">Needs update</string>
+    <string name="settings_status_needs_play_store">Needs Play Store</string>
     <string name="settings_all_requestable_granted">All requestable permissions granted</string>
     <string name="settings_request_missing_permissions">Request not granted permissions</string>
     <string name="settings_manual_permissions_title">Manual permissions required</string>

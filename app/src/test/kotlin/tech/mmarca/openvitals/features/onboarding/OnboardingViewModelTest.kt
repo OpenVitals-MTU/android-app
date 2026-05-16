@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -58,6 +59,7 @@ class OnboardingViewModelTest {
         assertFalse(state.phase3Granted)
         assertFalse(state.phase4Granted)
         assertFalse(state.cycleTrackingEnabled)
+        assertEquals(AppLanguage.SYSTEM, state.appLanguage)
     }
 
     @Test fun `checkState tracks granted permissions and phases separately`() = runTest {
@@ -337,6 +339,20 @@ class OnboardingViewModelTest {
         assertTrue(vm.uiState.value.cycleTrackingEnabled)
     }
 
+    @Test fun `selectAppLanguage persists preference and updates ui state`() = runTest {
+        val prefs = prefs(appLanguage = AppLanguage.SYSTEM)
+        val vm = OnboardingViewModel(
+            repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs,
+        )
+        advanceUntilIdle()
+
+        vm.selectAppLanguage(AppLanguage.SPANISH)
+
+        verify { prefs.appLanguage = AppLanguage.SPANISH }
+        assertEquals(AppLanguage.SPANISH, vm.uiState.value.appLanguage)
+    }
+
     @Test fun `androidx mindfulness permission matches platform permission`() {
         assertEquals(
             "android.permission.health.READ_MINDFULNESS",
@@ -384,10 +400,15 @@ class OnboardingViewModelTest {
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 
-    private fun prefs(trackCycle: Boolean = false): PreferencesRepository =
+    private fun prefs(
+        trackCycle: Boolean = false,
+        appLanguage: AppLanguage = AppLanguage.SYSTEM,
+    ): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.trackCycle } returns trackCycle
             every { prefs.trackCycle = any() } just runs
+            every { prefs.appLanguage } returns appLanguage
+            every { prefs.appLanguage = any() } just runs
         }
 
     companion object {
