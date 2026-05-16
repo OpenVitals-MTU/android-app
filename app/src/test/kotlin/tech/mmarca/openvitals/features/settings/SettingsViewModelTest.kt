@@ -129,6 +129,16 @@ class SettingsViewModelTest {
     ): HealthRepository =
         mockk<HealthRepository>().also { repo ->
             every { repo.availability() } returns availability
+            every { repo.corePermissions } returns setOf("steps")
+            every { repo.routePermissions } returns setOf("route")
+            every { repo.heartPermissions } returns emptySet()
+            every { repo.bodyPermissions } returns emptySet()
+            every { repo.activityExtrasPermissions } returns emptySet()
+            every { repo.nutritionHydrationPermissions } returns emptySet()
+            every { repo.mindfulnessPermissions } returns emptySet()
+            every { repo.additionalDataAccessPermissions } returns emptySet()
+            every { repo.vitalsPermissions } returns emptySet()
+            every { repo.isMindfulnessAvailable() } returns false
             every { repo.allPermissions } returns setOf("steps", "route")
             every { repo.cyclePermissions } returns setOf("cycle")
             every { repo.manualOnlyPermissions } returns setOf("route")

@@ -237,6 +237,9 @@
     <string name="onboarding_category_mindfulness">Mindfulness</string>
     <string name="onboarding_category_mindfulness_desc">Mindfulness session duration and history.</string>
     <string name="onboarding_category_mindfulness_unavailable">Mindfulness sessions require a newer Health Connect version.</string>
+    <string name="onboarding_category_additional_data_access">Additional data access</string>
+    <string name="onboarding_category_additional_data_access_desc">Allows OpenVitals to read Health Connect records outside the recent access window, continue reading data in the background when supported, and access workout routes after manual approval.</string>
+    <string name="onboarding_category_additional_data_access_manual_note">%1$s Health history and background reads appear in the access dialog. Workout routes are approved separately from Health Connect settings.</string>
     <string name="onboarding_category_vitals">Vitals</string>
     <string name="onboarding_category_vitals_desc">Blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max.</string>
     <string name="onboarding_category_cycle_tracking">Cycle tracking</string>

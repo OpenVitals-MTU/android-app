@@ -92,6 +92,16 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
 
+    val additionalDataAccessPermissions: Set<String>
+        get() = buildSet {
+            if (isHealthDataHistoryAvailable()) {
+                add(HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY)
+            }
+            if (isBackgroundHealthDataReadAvailable()) {
+                add(HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)
+            }
+        }
+
     val vitalsPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(OxygenSaturationRecord::class),
@@ -127,7 +137,8 @@ internal class HealthConnectPermissionService(
 
     val manualOnlyPermissions: Set<String> get() = routePermissions
 
-    val requestableAllPermissions: Set<String> get() = phase1Permissions + phase2Permissions + phase3Permissions
+    val requestableAllPermissions: Set<String>
+        get() = phase1Permissions + phase2Permissions + phase3Permissions + additionalDataAccessPermissions
 
     val requestableManagedPermissions: Set<String> get() = requestableAllPermissions + phase4Permissions
 
@@ -153,6 +164,34 @@ internal class HealthConnectPermissionService(
         }
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "mindfulnessFeatureStatus=$status available=$available ${diagnostics.summary()}")
+        return available
+    }
+
+    fun isHealthDataHistoryAvailable(): Boolean {
+        if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
+
+        val status = withLogging(
+            "features.getFeatureStatus[history]",
+            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
+        ) {
+            clientProvider().features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY)
+        }
+        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        Log.d(TAG, "historyFeatureStatus=$status available=$available ${diagnostics.summary()}")
+        return available
+    }
+
+    fun isBackgroundHealthDataReadAvailable(): Boolean {
+        if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
+
+        val status = withLogging(
+            "features.getFeatureStatus[background]",
+            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
+        ) {
+            clientProvider().features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
+        }
+        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        Log.d(TAG, "backgroundFeatureStatus=$status available=$available ${diagnostics.summary()}")
         return available
     }
 

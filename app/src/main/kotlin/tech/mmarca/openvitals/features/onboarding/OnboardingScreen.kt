@@ -243,14 +243,18 @@ fun OnboardingScreen(
                 cycleTrackingEnabled = state.cycleTrackingEnabled,
                 onGrant = {
                     if (category.available) {
-                        when (category.grantMode) {
-                            PermissionGrantMode.MANUAL -> openManualPermissionSettings()
-                            PermissionGrantMode.REQUESTABLE -> {
+                        val missingPermissions = category.permissions - state.grantedPermissions
+                        val requestablePermissions = missingPermissions - category.manualPermissions
+                        val manualPermissions = missingPermissions.intersect(category.manualPermissions)
+                        when {
+                            requestablePermissions.isNotEmpty() -> {
                                 if (category.optIn) {
                                     viewModel.enableCycleTracking()
                                 }
-                                requestPermissions.launch(category.permissions)
+                                requestPermissions.launch(requestablePermissions)
                             }
+                            manualPermissions.isNotEmpty() -> openManualPermissionSettings()
+                            category.grantMode == PermissionGrantMode.MANUAL -> openManualPermissionSettings()
                         }
                     }
                 },
@@ -305,7 +309,11 @@ private fun PermissionCategoryRow(
     val optInEnabled = !category.optIn || cycleTrackingEnabled
     val granted = category.available && optInEnabled && grantedCount == category.permissions.size
     val partial = category.available && optInEnabled && grantedCount > 0 && !granted
-    val isManualGrant = category.grantMode == PermissionGrantMode.MANUAL
+    val missingPermissions = category.permissions - grantedPermissions
+    val missingRequestableCount = (missingPermissions - category.manualPermissions).size
+    val missingManualCount = missingPermissions.intersect(category.manualPermissions).size
+    val isManualGrant = category.grantMode == PermissionGrantMode.MANUAL ||
+        (missingRequestableCount == 0 && missingManualCount > 0)
     val unavailableReasonRes = category.unavailableReasonRes
     val status = when {
         !category.available -> stringResource(R.string.onboarding_status_not_supported)
@@ -356,6 +364,11 @@ private fun PermissionCategoryRow(
                 Text(
                     text = if (!category.available && unavailableReasonRes != null) {
                         stringResource(unavailableReasonRes)
+                    } else if (category.manualPermissions.isNotEmpty() && missingManualCount > 0) {
+                        stringResource(
+                            R.string.onboarding_category_additional_data_access_manual_note,
+                            stringResource(category.descriptionRes),
+                        )
                     } else {
                         stringResource(category.descriptionRes)
                     },

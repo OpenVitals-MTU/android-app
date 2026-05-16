@@ -58,7 +58,6 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
-    val missingRequestablePermissions = state.missingRequestableVisiblePermissions
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -156,45 +155,40 @@ fun SettingsScreen(
         // ─── Permissions ─────────────────────────────────────────────────
         item { SectionHeader(stringResource(R.string.section_permissions)) }
 
-        item {
-            Card(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-            ) {
-                Column {
-                    state.visiblePermissions.forEachIndexed { index, perm ->
-                        val granted = perm in state.grantedPermissions
-                        PermissionRow(permission = perm, granted = granted)
-                        if (index < state.visiblePermissions.size - 1) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                            )
+        state.permissionCategories.forEach { category ->
+            item {
+                PermissionCategoryCard(
+                    category = category,
+                    grantedPermissions = state.grantedPermissions,
+                    availability = state.availability,
+                    onGrant = {
+                        val missingPermissions = category.permissions - state.grantedPermissions
+                        val requestablePermissions = missingPermissions - category.manualPermissions
+                        val manualPermissions = missingPermissions.intersect(category.manualPermissions)
+                        when {
+                            requestablePermissions.isNotEmpty() -> requestAllPermissions.launch(requestablePermissions)
+                            manualPermissions.isNotEmpty() -> openManualPermissionSettings()
                         }
-                    }
-                }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
             }
         }
 
-        item {
-            Spacer(Modifier.height(12.dp))
-            FilledTonalButton(
-                onClick = { requestAllPermissions.launch(missingRequestablePermissions) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                enabled = state.availability == HealthConnectAvailability.AVAILABLE &&
-                    missingRequestablePermissions.isNotEmpty(),
-            ) {
-                Text(
-                    if (missingRequestablePermissions.isEmpty()) {
-                        stringResource(R.string.settings_all_requestable_granted)
-                    } else {
-                        stringResource(R.string.settings_request_missing_permissions)
-                    }
-                )
+        if (state.permissionCategories.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_all_requestable_granted),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
             }
         }
 
@@ -432,6 +426,107 @@ private fun StatusCard(
                     color = if (ok) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.error,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionCategoryCard(
+    category: SettingsPermissionCategory,
+    grantedPermissions: Set<String>,
+    availability: HealthConnectAvailability,
+    onGrant: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val grantedCount = category.permissions.count { it in grantedPermissions }
+    val granted = category.available && grantedCount == category.permissions.size
+    val partial = category.available && grantedCount > 0 && !granted
+    val missingPermissions = category.permissions - grantedPermissions
+    val missingRequestableCount = (missingPermissions - category.manualPermissions).size
+    val missingManualCount = missingPermissions.intersect(category.manualPermissions).size
+    val isManualGrant = missingRequestableCount == 0 && missingManualCount > 0
+    val unavailableReasonRes = category.unavailableReasonRes
+    val status = when {
+        !category.available -> stringResource(R.string.onboarding_status_not_supported)
+        granted -> stringResource(R.string.onboarding_status_granted)
+        partial -> stringResource(
+            R.string.onboarding_status_partially_granted,
+            grantedCount,
+            category.permissions.size,
+        )
+        isManualGrant -> stringResource(R.string.onboarding_status_manual)
+        else -> stringResource(R.string.onboarding_status_optional)
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (granted)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            else
+                MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(category.titleRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (granted)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = if (!category.available && unavailableReasonRes != null) {
+                        stringResource(unavailableReasonRes)
+                    } else if (category.manualPermissions.isNotEmpty() && missingManualCount > 0) {
+                        stringResource(
+                            R.string.onboarding_category_additional_data_access_manual_note,
+                            stringResource(category.descriptionRes),
+                        )
+                    } else {
+                        stringResource(category.descriptionRes)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            if (granted) {
+                Icon(
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = stringResource(R.string.onboarding_status_granted),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            } else if (!category.available) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = stringResource(R.string.onboarding_status_not_supported),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                FilledTonalButton(
+                    onClick = onGrant,
+                    enabled = availability == HealthConnectAvailability.AVAILABLE,
+                    modifier = Modifier.padding(start = 12.dp),
+                ) {
+                    Text(
+                        when {
+                            isManualGrant -> stringResource(R.string.action_open)
+                            partial -> stringResource(R.string.action_review)
+                            else -> stringResource(R.string.action_grant)
+                        }
+                    )
+                }
             }
         }
     }

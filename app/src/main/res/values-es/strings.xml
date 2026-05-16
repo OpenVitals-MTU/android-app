@@ -237,6 +237,9 @@
     <string name="onboarding_category_mindfulness">Mindfulness</string>
     <string name="onboarding_category_mindfulness_desc">Duración e historial de sesiones de mindfulness.</string>
     <string name="onboarding_category_mindfulness_unavailable">Las sesiones de mindfulness requieren una versión más reciente de Health Connect.</string>
+    <string name="onboarding_category_additional_data_access">Acceso adicional a datos</string>
+    <string name="onboarding_category_additional_data_access_desc">Permite que OpenVitals lea registros de Health Connect fuera de la ventana de acceso reciente, siga leyendo datos en segundo plano cuando sea compatible y acceda a rutas de entrenamiento tras la aprobación manual.</string>
+    <string name="onboarding_category_additional_data_access_manual_note">%1$s El historial y la lectura en segundo plano aparecen en el diálogo de acceso. Las rutas de entrenamiento se aprueban por separado desde los ajustes de Health Connect.</string>
     <string name="onboarding_category_vitals">Constantes</string>
     <string name="onboarding_category_vitals_desc">Presión arterial, saturación de oxígeno, frecuencia respiratoria, temperatura corporal y VO2 máx.</string>
     <string name="onboarding_category_cycle_tracking">Seguimiento del ciclo</string>

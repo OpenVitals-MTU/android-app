@@ -69,6 +69,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
     val activityExtrasPermissions get() = hc.activityExtrasPermissions
     val nutritionHydrationPermissions get() = hc.nutritionHydrationPermissions
     val mindfulnessPermissions get() = hc.mindfulnessPermissions
+    val additionalDataAccessPermissions get() = hc.additionalDataAccessPermissions
     val vitalsPermissions get() = hc.vitalsPermissions
     val cyclePermissions get() = hc.cyclePermissions
     val manualOnlyPermissions get() = hc.manualOnlyPermissions

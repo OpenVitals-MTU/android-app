@@ -77,6 +77,7 @@ class HealthConnectManager(private val context: Context) {
     val activityExtrasPermissions: Set<String> get() = permissionService.activityExtrasPermissions
     val nutritionHydrationPermissions: Set<String> get() = permissionService.nutritionHydrationPermissions
     val mindfulnessPermissions: Set<String> get() = permissionService.mindfulnessPermissions
+    val additionalDataAccessPermissions: Set<String> get() = permissionService.additionalDataAccessPermissions
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val phase1Permissions: Set<String> get() = permissionService.phase1Permissions

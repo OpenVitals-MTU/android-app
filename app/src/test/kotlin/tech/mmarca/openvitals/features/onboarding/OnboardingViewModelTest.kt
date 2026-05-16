@@ -168,7 +168,17 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            setOf("steps", "heart", "body", "activity", "nutrition", "mindfulness", "vitals"),
+            setOf(
+                "steps",
+                "heart",
+                "body",
+                "activity",
+                "nutrition",
+                "mindfulness",
+                "history",
+                "background",
+                "vitals",
+            ),
             vm.onboardingPermissions,
         )
     }
@@ -184,12 +194,12 @@ class OnboardingViewModelTest {
         assertEquals(
             listOf(
                 R.string.onboarding_category_activity_sleep,
-                R.string.onboarding_category_workout_routes,
                 R.string.onboarding_category_heart_recovery,
                 R.string.onboarding_category_body,
                 R.string.onboarding_category_activity_extras,
                 R.string.onboarding_category_nutrition_hydration,
                 R.string.onboarding_category_mindfulness,
+                R.string.onboarding_category_additional_data_access,
                 R.string.onboarding_category_vitals,
                 R.string.onboarding_category_cycle_tracking,
             ),
@@ -198,8 +208,11 @@ class OnboardingViewModelTest {
         assertTrue(categories.first().required)
         assertEquals("activity_sleep", categories.first().id)
         assertEquals(setOf("steps"), categories.first().permissions)
-        assertEquals(PermissionGrantMode.MANUAL, categories.single { it.id == "workout_routes" }.grantMode)
-        assertEquals(setOf("route"), categories.single { it.id == "workout_routes" }.permissions)
+        assertEquals(
+            setOf("history", "background", "route"),
+            categories.single { it.id == "additional_data_access" }.permissions,
+        )
+        assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
         assertFalse(categories.drop(1).any { it.required })
         assertTrue(categories.last().optIn)
         assertEquals("cycle_tracking", categories.last().id)
@@ -220,10 +233,10 @@ class OnboardingViewModelTest {
         assertEquals(
             listOf(
                 "activity_sleep",
-                "workout_routes",
                 "heart_recovery",
                 "activity_extras",
                 "nutrition_hydration",
+                "additional_data_access",
                 "vitals",
                 "cycle_tracking",
             ),
@@ -275,16 +288,16 @@ class OnboardingViewModelTest {
         assertFalse("cycle" in vm.onboardingPermissions)
     }
 
-    @Test fun `route category is manual-only and excluded from grant all request set`() = runTest {
+    @Test fun `route permission is grouped with additional data access and excluded from grant all request set`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
         )
         advanceUntilIdle()
 
-        val route = vm.permissionCategories.single { it.id == "workout_routes" }
-        assertEquals(PermissionGrantMode.MANUAL, route.grantMode)
-        assertEquals(setOf("route"), route.permissions)
+        val additionalDataAccess = vm.permissionCategories.single { it.id == "additional_data_access" }
+        assertEquals(setOf("history", "background", "route"), additionalDataAccess.permissions)
+        assertEquals(setOf("route"), additionalDataAccess.manualPermissions)
         assertFalse("route" in vm.onboardingPermissions)
     }
 
@@ -369,6 +382,7 @@ class OnboardingViewModelTest {
         routePermissions: Set<String> = setOf("route"),
         manualOnlyPermissions: Set<String> = routePermissions,
         mindfulnessPermissions: Set<String> = setOf("mindfulness"),
+        additionalDataAccessPermissions: Set<String> = setOf("history", "background"),
         cyclePermissions: Set<String> = setOf("cycle"),
         onboardingPermissions: Set<String> = standardPermissions,
     ): HealthRepository =
@@ -393,6 +407,7 @@ class OnboardingViewModelTest {
             every { repo.activityExtrasPermissions } returns setOf("activity")
             every { repo.nutritionHydrationPermissions } returns setOf("nutrition")
             every { repo.mindfulnessPermissions } returns mindfulnessPermissions
+            every { repo.additionalDataAccessPermissions } returns additionalDataAccessPermissions
             every { repo.vitalsPermissions } returns setOf("vitals")
             every { repo.cyclePermissions } returns cyclePermissions
             every { repo.isMindfulnessAvailable() } returns mindfulnessAvailable
@@ -419,6 +434,8 @@ class OnboardingViewModelTest {
             "activity",
             "nutrition",
             "mindfulness",
+            "history",
+            "background",
             "vitals",
         )
         private val allPermissions = standardPermissions + "cycle"

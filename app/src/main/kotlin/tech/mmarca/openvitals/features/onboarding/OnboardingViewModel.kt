@@ -33,6 +33,7 @@ data class OnboardingPermissionCategory(
     @StringRes val titleRes: Int,
     @StringRes val descriptionRes: Int,
     val permissions: Set<String>,
+    val manualPermissions: Set<String> = emptySet(),
     val required: Boolean = false,
     val optIn: Boolean = false,
     val grantMode: PermissionGrantMode = PermissionGrantMode.REQUESTABLE,
@@ -66,13 +67,6 @@ class OnboardingViewModel(
                 required = true,
             ),
             OnboardingPermissionCategory(
-                id = "workout_routes",
-                titleRes = R.string.onboarding_category_workout_routes,
-                descriptionRes = R.string.onboarding_category_workout_routes_desc,
-                permissions = repository.routePermissions,
-                grantMode = grantModeFor(repository.routePermissions),
-            ),
-            OnboardingPermissionCategory(
                 id = "heart_recovery",
                 titleRes = R.string.onboarding_category_heart_recovery,
                 descriptionRes = R.string.onboarding_category_heart_recovery_desc,
@@ -103,6 +97,13 @@ class OnboardingViewModel(
                 permissions = repository.mindfulnessPermissions,
                 available = _uiState.value.mindfulnessAvailable,
                 unavailableReasonRes = R.string.onboarding_category_mindfulness_unavailable,
+            ),
+            OnboardingPermissionCategory(
+                id = "additional_data_access",
+                titleRes = R.string.onboarding_category_additional_data_access,
+                descriptionRes = R.string.onboarding_category_additional_data_access_desc,
+                permissions = repository.additionalDataAccessPermissions + repository.routePermissions,
+                manualPermissions = repository.routePermissions,
             ),
             OnboardingPermissionCategory(
                 id = "vitals",

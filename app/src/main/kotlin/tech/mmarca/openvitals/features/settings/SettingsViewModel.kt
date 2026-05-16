@@ -1,8 +1,10 @@
 package tech.mmarca.openvitals.features.settings
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
@@ -17,6 +19,7 @@ data class SettingsUiState(
     val isLoading: Boolean = true,
     val availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val grantedPermissions: Set<String> = emptySet(),
+    val permissionCategories: List<SettingsPermissionCategory> = emptyList(),
     val allPermissions: Set<String> = emptySet(),
     val cyclePermissions: Set<String> = emptySet(),
     val manualOnlyPermissions: Set<String> = emptySet(),
@@ -25,7 +28,8 @@ data class SettingsUiState(
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
 ) {
     val visiblePermissions: Set<String>
-        get() = allPermissions + if (trackCycle) cyclePermissions else emptySet()
+        get() = permissionCategories.flatMap { it.permissions }.toSet() +
+            if (trackCycle) cyclePermissions else emptySet()
 
     val missingVisiblePermissions: Set<String>
         get() = visiblePermissions - grantedPermissions
@@ -36,6 +40,16 @@ data class SettingsUiState(
     val missingManualVisiblePermissions: Set<String>
         get() = missingVisiblePermissions.intersect(manualOnlyPermissions)
 }
+
+data class SettingsPermissionCategory(
+    val id: String,
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
+    val permissions: Set<String>,
+    val manualPermissions: Set<String> = emptySet(),
+    val available: Boolean = true,
+    @StringRes val unavailableReasonRes: Int? = null,
+)
 
 class SettingsViewModel(
     private val repository: HealthRepository,
@@ -64,6 +78,7 @@ class SettingsViewModel(
                 isLoading = false,
                 availability = avail,
                 grantedPermissions = granted,
+                permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 cyclePermissions = repository.cyclePermissions,
                 manualOnlyPermissions = repository.manualOnlyPermissions,
@@ -92,5 +107,63 @@ class SettingsViewModel(
     fun onPermissionsResult(granted: Set<String>) {
         Log.d(TAG, "onPermissionsResult callbackGranted=${granted.sorted()}")
         refresh()
+    }
+
+    private fun permissionCategories(availability: HealthConnectAvailability): List<SettingsPermissionCategory> {
+        val mindfulnessAvailable = availability == HealthConnectAvailability.AVAILABLE &&
+            repository.isMindfulnessAvailable()
+        return listOf(
+            SettingsPermissionCategory(
+                id = "activity_sleep",
+                titleRes = R.string.onboarding_category_activity_sleep,
+                descriptionRes = R.string.onboarding_category_activity_sleep_desc,
+                permissions = repository.corePermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "heart_recovery",
+                titleRes = R.string.onboarding_category_heart_recovery,
+                descriptionRes = R.string.onboarding_category_heart_recovery_desc,
+                permissions = repository.heartPermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "body",
+                titleRes = R.string.onboarding_category_body,
+                descriptionRes = R.string.onboarding_category_body_desc,
+                permissions = repository.bodyPermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "activity_extras",
+                titleRes = R.string.onboarding_category_activity_extras,
+                descriptionRes = R.string.onboarding_category_activity_extras_desc,
+                permissions = repository.activityExtrasPermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "nutrition_hydration",
+                titleRes = R.string.onboarding_category_nutrition_hydration,
+                descriptionRes = R.string.onboarding_category_nutrition_hydration_desc,
+                permissions = repository.nutritionHydrationPermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "mindfulness",
+                titleRes = R.string.onboarding_category_mindfulness,
+                descriptionRes = R.string.onboarding_category_mindfulness_desc,
+                permissions = repository.mindfulnessPermissions,
+                available = mindfulnessAvailable,
+                unavailableReasonRes = R.string.onboarding_category_mindfulness_unavailable,
+            ),
+            SettingsPermissionCategory(
+                id = "additional_data_access",
+                titleRes = R.string.onboarding_category_additional_data_access,
+                descriptionRes = R.string.onboarding_category_additional_data_access_desc,
+                permissions = repository.additionalDataAccessPermissions + repository.routePermissions,
+                manualPermissions = repository.routePermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "vitals",
+                titleRes = R.string.onboarding_category_vitals,
+                descriptionRes = R.string.onboarding_category_vitals_desc,
+                permissions = repository.vitalsPermissions,
+            ),
+        ).filter { it.permissions.isNotEmpty() }
     }
 }
