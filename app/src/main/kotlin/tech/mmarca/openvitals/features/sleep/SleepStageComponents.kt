@@ -29,10 +29,12 @@ internal fun SleepStagesBar(
     modifier: Modifier = Modifier,
 ) {
     if (totalMs == 0L) return
+    val stageTotalMs = stages.sumOf { it.durationMs.coerceAtLeast(0L) }
+    val normalizedTotalMs = stageTotalMs.takeIf { it > 0L } ?: totalMs
     Canvas(modifier = modifier) {
         var x = 0f
         stages.sortedBy { it.startTime }.forEach { stage ->
-            val fraction = stage.durationMs.toFloat() / totalMs
+            val fraction = stage.durationMs.coerceAtLeast(0L).toFloat() / normalizedTotalMs
             val width = size.width * fraction
             drawRoundRect(
                 color = stageColor(stage.stageType),

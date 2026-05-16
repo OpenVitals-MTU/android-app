@@ -59,6 +59,7 @@ class SleepRepositoryTest {
         assertEquals(1, sessions.size)
         assertEquals(beforeMidnight.startTime, sessions.single().startTime)
         assertEquals(afterMidnight.endTime, sessions.single().endTime)
+        assertEquals(beforeMidnight.durationMs + afterMidnight.durationMs, sessions.single().durationMs)
     }
 
     private fun hc(

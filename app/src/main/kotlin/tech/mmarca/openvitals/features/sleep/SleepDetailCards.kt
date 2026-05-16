@@ -137,9 +137,10 @@ internal fun SleepStageBreakdownCard(
             Spacer(Modifier.height(12.dp))
             SleepStageLegend(stages = orderedStages, unitFormatter = unitFormatter)
             Spacer(Modifier.height(8.dp))
+            val stageTotalMs = orderedStages.sumOf { it.durationMs.coerceAtLeast(0L) }
             stageTotals(orderedStages).forEach { (stageType, durationMs) ->
-                val percent = if (session.durationMs > 0) {
-                    durationMs * 100.0 / session.durationMs
+                val percent = if (stageTotalMs > 0) {
+                    durationMs * 100.0 / stageTotalMs
                 } else {
                     0.0
                 }

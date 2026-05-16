@@ -6,7 +6,7 @@ import java.util.Base64
 
 private const val MERGED_SLEEP_SESSION_ID_PREFIX = "merged:"
 private const val MERGED_SLEEP_SESSION_ID_SEPARATOR = "."
-// Handles importer splits around midnight or brief awake gaps without folding separate naps into a night.
+// Mirrors Gadgetbridge's sleep-session analysis: short quiet wake/no-data gaps keep one night together.
 private val DEFAULT_SLEEP_SESSION_MERGE_GAP: Duration = Duration.ofMinutes(60)
 
 internal fun mergeSleepSessions(
@@ -84,7 +84,7 @@ private fun List<SleepData>.toMergedSleepSession(maxGap: Duration): SleepData {
         id = mergedSleepSessionId(ordered.map { it.id }),
         startTime = startTime,
         endTime = endTime,
-        durationMs = Duration.between(startTime, endTime).toMillis().coerceAtLeast(0L),
+        durationMs = ordered.sumOf { it.durationMs.coerceAtLeast(0L) },
         source = distinctSources.singleOrNull() ?: first.source,
         title = ordered
             .mapNotNull { session -> session.title?.takeIf { it.isNotBlank() } }

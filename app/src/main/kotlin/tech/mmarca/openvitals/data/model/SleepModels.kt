@@ -64,3 +64,24 @@ data class SleepStage(
         }
     }
 }
+
+internal fun sleepDurationMsFromStages(
+    stages: List<SleepStage>,
+    fallbackDurationMs: Long,
+): Long {
+    if (stages.isEmpty()) return fallbackDurationMs.coerceAtLeast(0L)
+
+    val sleepStageDurationMs = stages
+        .filter { it.stageType.isSleepDurationStage() }
+        .sumOf { it.durationMs.coerceAtLeast(0L) }
+
+    return sleepStageDurationMs.takeIf { it > 0L } ?: fallbackDurationMs.coerceAtLeast(0L)
+}
+
+private fun Int.isSleepDurationStage(): Boolean = when (this) {
+    SleepStage.STAGE_SLEEPING,
+    SleepStage.STAGE_LIGHT,
+    SleepStage.STAGE_DEEP,
+    SleepStage.STAGE_REM -> true
+    else -> false
+}
