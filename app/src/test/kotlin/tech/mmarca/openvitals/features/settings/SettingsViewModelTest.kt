@@ -19,6 +19,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -110,6 +111,19 @@ class SettingsViewModelTest {
         assertEquals(AppLanguage.SPANISH, vm.uiState.value.appLanguage)
     }
 
+    @Test fun `selectSleepRangeMode persists preference and updates ui state`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.selectSleepRangeMode(SleepRangeMode.NOON)
+
+        verify { prefs.sleepRangeMode = SleepRangeMode.NOON }
+        assertEquals(SleepRangeMode.NOON, vm.uiState.value.sleepRangeMode)
+    }
+
     @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
         val repository = repo(availability = HealthConnectAvailability.NOT_SUPPORTED)
 
@@ -149,8 +163,10 @@ class SettingsViewModelTest {
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.unitSystem } returns UnitSystem.METRIC
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
+            every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
             every { prefs.trackCycle } returns trackCycle
             every { prefs.appLanguage = any() } just runs
+            every { prefs.sleepRangeMode = any() } just runs
             every { prefs.trackCycle = any() } just runs
         }
 }

@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
@@ -22,11 +23,12 @@ internal fun SleepDurationChart(
     sessions: List<SleepData>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val points = sleepDurationPoints(sessions, period)
+    val points = sleepDurationPoints(sessions, period, sleepRangeMode)
     val nightsWithSleep = points.filter { it.hours > 0.0 }
     val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
 
@@ -48,18 +50,21 @@ internal fun SleepDurationChart(
 private fun sleepDurationPoints(
     sessions: List<SleepData>,
     period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
 ): List<SleepDurationPoint> {
     val zone = ZoneId.systemDefault()
-    val sessionByDate = sessions
-        .groupBy { it.endTime.atZone(zone).toLocalDate() }
-        .mapValues { (_, dailySessions) -> dailySessions.maxByOrNull { it.durationMs } }
 
     return generateSequence(period.start) { current ->
         current.plusDays(1).takeUnless { it.isAfter(period.end) }
     }.map { date ->
         SleepDurationPoint(
             date = date,
-            hours = sessionByDate[date]?.durationHours ?: 0.0,
+            hours = dailySleepSummary(
+                sessions = sessions,
+                selectedDate = date,
+                sleepRangeMode = sleepRangeMode,
+                zone = zone,
+            )?.durationHours ?: 0.0,
         )
     }.toList()
 }

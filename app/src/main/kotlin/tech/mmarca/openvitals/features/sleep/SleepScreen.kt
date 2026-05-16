@@ -17,8 +17,11 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,8 +32,19 @@ fun SleepScreen(
     onOpenSleepSession: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
-    val primarySession = remember(state.sessions) {
-        state.sessions.maxByOrNull { it.durationMs }
+    val dailySessions = remember(state.sessions, state.selectedDate, state.sleepRangeMode) {
+        sleepSessionsForRange(
+            sessions = state.sessions,
+            selectedDate = state.selectedDate,
+            sleepRangeMode = state.sleepRangeMode,
+        )
+    }
+    val dailySummary = remember(state.sessions, state.selectedDate, state.sleepRangeMode) {
+        dailySleepSummary(
+            sessions = state.sessions,
+            selectedDate = state.selectedDate,
+            sleepRangeMode = state.sleepRangeMode,
+        )
     }
 
     MetricDetailScaffold(
@@ -45,18 +59,42 @@ fun SleepScreen(
         onSelectDate = viewModel::selectDate,
     ) { period ->
         when {
-            state.selectedRange == TimeRange.DAY && primarySession != null -> {
+            state.selectedRange == TimeRange.DAY && dailySummary != null -> {
                 item {
+                    val summary = dailySummary
                     SleepSessionTimelineCard(
-                        session = primarySession,
+                        session = summary,
                         selectedDate = state.selectedDate,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        onClick = { onOpenSleepSession(primarySession.id) },
+                        timeRangeText = dailySleepTimeRangeText(
+                            sessions = dailySessions,
+                            selectedDate = state.selectedDate,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        ),
+                        onClick = dailySessions.singleOrNull()?.let { session ->
+                            { onOpenSleepSession(session.id) }
+                        },
+                        preserveTimelineGaps = dailySessions.size > 1,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+                }
+
+                if (dailySessions.size > 1) {
+                    item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
+                    items(dailySessions.sortedByDescending { it.endTime }) { session ->
+                        SleepSessionItem(
+                            session = session,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            onClick = { onOpenSleepSession(session.id) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
                 }
             }
 
@@ -66,6 +104,7 @@ fun SleepScreen(
                         sessions = state.sessions,
                         selectedRange = state.selectedRange,
                         period = period,
+                        sleepRangeMode = state.sleepRangeMode,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
@@ -104,4 +143,23 @@ fun SleepScreen(
             }
         }
     }
+}
+
+private fun dailySleepTimeRangeText(
+    sessions: List<SleepData>,
+    selectedDate: LocalDate,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+): String {
+    val zone = ZoneId.systemDefault()
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
+    val ranges = sessions
+        .sortedWith(compareBy<SleepData> { it.startTime }.thenBy { it.endTime })
+        .joinToString(" | ") { session ->
+            val start = session.startTime.atZone(zone)
+            val end = session.endTime.atZone(zone)
+            "${timeFormatter.format(start)} - ${timeFormatter.format(end)}"
+        }
+
+    return "${dateFormatter.format(selectedDate)}  ·  $ranges"
 }

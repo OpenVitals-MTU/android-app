@@ -240,6 +240,8 @@ fun AppNavigation(
                     SleepViewModel(
                         repository = sleepRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
+                        initialSleepRangeMode = preferencesRepository.sleepRangeMode,
+                        sleepRangeModeFlow = preferencesRepository.sleepRangeModeFlow,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
                     )
                 }

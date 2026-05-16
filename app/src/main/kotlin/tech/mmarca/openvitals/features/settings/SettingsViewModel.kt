@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -26,6 +27,7 @@ data class SettingsUiState(
     val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
+    val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet() +
@@ -85,6 +87,7 @@ class SettingsViewModel(
                 trackCycle = preferencesRepository.trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
+                sleepRangeMode = preferencesRepository.sleepRangeMode,
             )
         }
     }
@@ -102,6 +105,11 @@ class SettingsViewModel(
     fun selectAppLanguage(appLanguage: AppLanguage) {
         preferencesRepository.appLanguage = appLanguage
         _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
+    }
+
+    fun selectSleepRangeMode(sleepRangeMode: SleepRangeMode) {
+        preferencesRepository.sleepRangeMode = sleepRangeMode
+        _uiState.value = _uiState.value.copy(sleepRangeMode = sleepRangeMode)
     }
 
     fun onPermissionsResult(granted: Set<String>) {

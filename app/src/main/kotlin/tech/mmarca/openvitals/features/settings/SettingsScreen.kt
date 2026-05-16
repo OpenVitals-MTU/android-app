@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
@@ -129,6 +130,17 @@ fun SettingsScreen(
             UnitSystemCard(
                 selected = state.unitSystem,
                 onSelect = viewModel::selectUnitSystem,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        // ─── Sleep preferences ───────────────────────────────────────────
+        item { SectionHeader(stringResource(R.string.metric_sleep)) }
+
+        item {
+            SleepRangeModeCard(
+                selected = state.sleepRangeMode,
+                onSelect = viewModel::selectSleepRangeMode,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -293,6 +305,54 @@ private fun LanguageCard(
                 onSelect = onSelect,
                 modifier = Modifier.padding(top = 12.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun SleepRangeModeCard(
+    selected: SleepRangeMode,
+    onSelect: (SleepRangeMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = stringResource(R.string.settings_sleep_range_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.settings_sleep_range_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(
+                modifier = Modifier.padding(top = 12.dp),
+            ) {
+                SleepRangeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = selected == mode,
+                        onClick = { onSelect(mode) },
+                        label = {
+                            Text(
+                                when (mode) {
+                                    SleepRangeMode.ROLLING_24H -> {
+                                        stringResource(R.string.settings_sleep_range_rolling_24h)
+                                    }
+                                    SleepRangeMode.NOON -> stringResource(R.string.settings_sleep_range_noon)
+                                    SleepRangeMode.EVENING_18H -> {
+                                        stringResource(R.string.settings_sleep_range_evening)
+                                    }
+                                }
+                            )
+                        },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
         }
     }
 }

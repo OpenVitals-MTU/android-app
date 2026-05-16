@@ -262,6 +262,11 @@
     <string name="settings_units_body">Elige cómo se muestran distancias, pesos, hidratación y temperatura.</string>
     <string name="settings_unit_metric">Métrico</string>
     <string name="settings_unit_imperial">Imperial</string>
+    <string name="settings_sleep_range_title">Rango de sueño</string>
+    <string name="settings_sleep_range_body">Elige a qué día se asignan las sesiones de sueño.</string>
+    <string name="settings_sleep_range_rolling_24h">24 h móviles</string>
+    <string name="settings_sleep_range_noon">Mediodía</string>
+    <string name="settings_sleep_range_evening">18:00</string>
     <string name="settings_track_cycle">Registrar ciclo menstrual</string>
     <string name="settings_cycle_permissions_granted">%1$d/%2$d permisos de ciclo concedidos.</string>
     <string name="settings_cycle_off_body">Desactivado por defecto. Actívalo para solicitar acceso al ciclo y a la temperatura basal.</string>

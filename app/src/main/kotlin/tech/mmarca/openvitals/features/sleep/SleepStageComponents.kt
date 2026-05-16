@@ -21,28 +21,56 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepStage
+import java.time.Duration
+import java.time.Instant
 
 @Composable
 internal fun SleepStagesBar(
     stages: List<SleepStage>,
     totalMs: Long,
     modifier: Modifier = Modifier,
+    timelineStart: Instant? = null,
+    timelineEnd: Instant? = null,
 ) {
     if (totalMs == 0L) return
     val stageTotalMs = stages.sumOf { it.durationMs.coerceAtLeast(0L) }
     val normalizedTotalMs = stageTotalMs.takeIf { it > 0L } ?: totalMs
+    val timelineTotalMs = timelineStart
+        ?.let { start -> timelineEnd?.let { end -> Duration.between(start, end).toMillis() } }
+        ?.takeIf { it > 0L }
+
     Canvas(modifier = modifier) {
-        var x = 0f
-        stages.sortedBy { it.startTime }.forEach { stage ->
-            val fraction = stage.durationMs.coerceAtLeast(0L).toFloat() / normalizedTotalMs
-            val width = size.width * fraction
-            drawRoundRect(
-                color = stageColor(stage.stageType),
-                topLeft = Offset(x, 0f),
-                size = Size(width, size.height),
-                cornerRadius = CornerRadius(4.dp.toPx()),
-            )
-            x += width
+        if (timelineTotalMs != null) {
+            val startBoundary = timelineStart ?: return@Canvas
+            val endBoundary = timelineEnd ?: return@Canvas
+            stages.sortedBy { it.startTime }.forEach { stage ->
+                val start = stage.startTime.coerceAtLeast(startBoundary)
+                val end = stage.endTime.coerceAtMost(endBoundary)
+                val stageMs = Duration.between(start, end).toMillis().coerceAtLeast(0L)
+                if (stageMs > 0L) {
+                    val leftFraction = Duration.between(startBoundary, start).toMillis().toFloat() / timelineTotalMs
+                    val widthFraction = stageMs.toFloat() / timelineTotalMs
+                    drawRoundRect(
+                        color = stageColor(stage.stageType),
+                        topLeft = Offset(size.width * leftFraction, 0f),
+                        size = Size(size.width * widthFraction, size.height),
+                        cornerRadius = CornerRadius(4.dp.toPx()),
+                    )
+                }
+            }
+        } else {
+            var x = 0f
+            stages.sortedBy { it.startTime }.forEach { stage ->
+                val fraction = stage.durationMs.coerceAtLeast(0L).toFloat() / normalizedTotalMs
+                val width = size.width * fraction
+                drawRoundRect(
+                    color = stageColor(stage.stageType),
+                    topLeft = Offset(x, 0f),
+                    size = Size(width, size.height),
+                    cornerRadius = CornerRadius(4.dp.toPx()),
+                )
+                x += width
+            }
         }
     }
 }
