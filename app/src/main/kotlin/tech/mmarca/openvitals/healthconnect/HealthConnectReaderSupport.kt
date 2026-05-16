@@ -5,12 +5,17 @@ import androidx.health.connect.client.HealthConnectClient
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal class HealthConnectReaderSupport(
     private val clientProvider: () -> HealthConnectClient,
     private val diagnostics: HealthConnectDiagnostics,
     private val rateLimitMessage: (Long) -> String,
 ) {
+    private val readMutex = Mutex()
+
     fun client(): HealthConnectClient = clientProvider()
 
     fun diagnosticsSummary(): String = diagnostics.summary()
@@ -19,42 +24,54 @@ internal class HealthConnectReaderSupport(
         operation: String,
         fallback: T,
         block: suspend () -> T,
-    ): T {
-        HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
-        return try {
-            Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
-            block().also {
-                Log.d(TAG, "Finished $operation successfully")
-            }
-        } catch (t: Throwable) {
-            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
-                val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
-                Log.w(TAG, "Rate limited $operation ${diagnosticsSummary()}", t)
-                throw rateLimit
-            }
-            Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
-            fallback
-        }
-    }
+    ): T = withRateLimitRetry(operation, fallback, block)
 
     suspend fun <T> withNullableLogging(
         operation: String,
         block: suspend () -> T?,
-    ): T? {
-        HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
-        return try {
+    ): T? = withRateLimitRetry(operation, null, block)
+
+    private suspend fun <T> withRateLimitRetry(
+        operation: String,
+        fallback: T,
+        block: suspend () -> T,
+    ): T = readMutex.withLock {
+        var hasRetriedRateLimit = false
+        var result: Result<T>? = null
+
+        while (result == null) {
+            waitForActiveRateLimit(operation)
             Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
-            block().also {
-                Log.d(TAG, "Finished $operation successfully")
+
+            try {
+                result = Result.success(block().also {
+                    Log.d(TAG, "Finished $operation successfully")
+                })
+            } catch (t: Throwable) {
+                if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
+                    val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                    Log.w(TAG, "Rate limited $operation ${diagnosticsSummary()}", t)
+                    if (!hasRetriedRateLimit) {
+                        hasRetriedRateLimit = true
+                        delay(rateLimit.retryAfterMillis)
+                        continue
+                    }
+                } else {
+                    Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
+                }
+                result = Result.success(fallback)
             }
-        } catch (t: Throwable) {
-            if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
-                val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
-                Log.w(TAG, "Rate limited $operation ${diagnosticsSummary()}", t)
-                throw rateLimit
-            }
-            Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
-            null
+        }
+
+        result.getOrThrow()
+    }
+
+    private suspend fun waitForActiveRateLimit(operation: String) {
+        try {
+            HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
+        } catch (rateLimit: HealthConnectRateLimitException) {
+            Log.w(TAG, "Waiting to retry $operation after Health Connect rate limit")
+            delay(rateLimit.retryAfterMillis)
         }
     }
 

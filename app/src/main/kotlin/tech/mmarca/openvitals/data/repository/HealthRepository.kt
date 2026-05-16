@@ -103,23 +103,30 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val granted = grantedPermissionsIfAvailable()
         Log.d(TAG, "loadDashboard date=$date granted=${granted.sorted()}")
 
-        val steps = if (readStepsPermission in granted) async { hc.readSteps(date) } else null
-        val distance = if (readDistancePermission in granted) async { hc.readDistanceMeters(date) } else null
-        val workout = if (readExercisePermission in granted) async { hc.readLatestWorkout(date) } else null
-        val sleep = if (readSleepPermission in granted) async { hc.readSleepSession(date) } else null
-        val calories = if (readCaloriesPermission in granted) async { hc.readCaloriesKcal(date) } else null
-        val caloriesIn = if (readNutritionPermission in granted) async { hc.readCaloriesInKcal(date) } else null
-        val hydration = if (readHydrationPermission in granted) async { hc.readHydrationLiters(date) } else null
-        val weight = if (readWeightPermission in granted) async { hc.readLatestWeight(date) } else null
-        val bodyFat = if (readBodyFatPermission in granted) async { hc.readLatestBodyFat() } else null
-        val heartRate = if (readHeartRatePermission in granted) async { hc.readAvgHeartRate(date) } else null
-        val restingHR = if (readRestingHRPermission in granted) async { hc.readRestingHeartRate(date) } else null
-        val bloodPressure = if (readBloodPressurePermission in granted) async { hc.readLatestBloodPressure(date) } else null
-        val spO2 = if (readSpO2Permission in granted) async { hc.readLatestSpO2(date) } else null
-        val vo2Max = if (readVo2MaxPermission in granted) async { hc.readLatestVo2Max(date) } else null
-        val floors = if (readFloorsPermission in granted) async { hc.readFloorsClimbed(date) } else null
-        val elevation = if (readElevationPermission in granted) async { hc.readElevationGained(date) } else null
-        val mindfulnessMinutes = if (readMindfulnessPermission in granted) async { hc.readMindfulnessMinutes(date) } else null
+        fun <T> readIfGranted(permission: String, name: String, block: suspend () -> T) =
+            if (permission in granted) async { dashboardMetric(name, block) } else null
+
+        val steps = readIfGranted(readStepsPermission, "steps") { hc.readSteps(date) }
+        val distance = readIfGranted(readDistancePermission, "distance") { hc.readDistanceMeters(date) }
+        val workout = readIfGranted(readExercisePermission, "latest workout") { hc.readLatestWorkout(date) }
+        val sleep = readIfGranted(readSleepPermission, "sleep") { hc.readSleepSession(date) }
+        val calories = readIfGranted(readCaloriesPermission, "calories") { hc.readCaloriesKcal(date) }
+        val caloriesIn = readIfGranted(readNutritionPermission, "calories in") { hc.readCaloriesInKcal(date) }
+        val hydration = readIfGranted(readHydrationPermission, "hydration") { hc.readHydrationLiters(date) }
+        val weight = readIfGranted(readWeightPermission, "weight") { hc.readLatestWeight(date) }
+        val bodyFat = readIfGranted(readBodyFatPermission, "body fat") { hc.readLatestBodyFat() }
+        val heartRate = readIfGranted(readHeartRatePermission, "heart rate") { hc.readAvgHeartRate(date) }
+        val restingHR = readIfGranted(readRestingHRPermission, "resting heart rate") { hc.readRestingHeartRate(date) }
+        val bloodPressure = readIfGranted(readBloodPressurePermission, "blood pressure") {
+            hc.readLatestBloodPressure(date)
+        }
+        val spO2 = readIfGranted(readSpO2Permission, "SpO2") { hc.readLatestSpO2(date) }
+        val vo2Max = readIfGranted(readVo2MaxPermission, "VO2 max") { hc.readLatestVo2Max(date) }
+        val floors = readIfGranted(readFloorsPermission, "floors") { hc.readFloorsClimbed(date) }
+        val elevation = readIfGranted(readElevationPermission, "elevation") { hc.readElevationGained(date) }
+        val mindfulnessMinutes = readIfGranted(readMindfulnessPermission, "mindfulness") {
+            hc.readMindfulnessMinutes(date)
+        }
 
         val missingPerms = onboardingPermissions.filterNot { it in granted }.toSet()
         val latestBloodPressure = bloodPressure?.await()
@@ -147,4 +154,9 @@ class HealthRepository(private val hc: HealthConnectManager) {
             missingPermissions = missingPerms,
         )
     }
+
+    private suspend fun <T> dashboardMetric(name: String, block: suspend () -> T): T? =
+        runCatching { block() }
+            .onFailure { Log.w(TAG, "Skipping dashboard metric $name after Health Connect failure", it) }
+            .getOrNull()
 }
