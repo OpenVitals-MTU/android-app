@@ -22,10 +22,15 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.dailySleepSummary
+import tech.mmarca.openvitals.data.model.sleepRangeWindowFor
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import java.time.Duration
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalMindfulnessSessionApi::class)
 class HealthRepository(private val hc: HealthConnectManager) {
@@ -99,7 +104,13 @@ class HealthRepository(private val hc: HealthConnectManager) {
 
     // ─── Dashboard ────────────────────────────────────────────────────────────
 
-    suspend fun loadDashboard(date: LocalDate = LocalDate.now()): DashboardData = coroutineScope {
+    suspend fun loadDashboard(date: LocalDate = LocalDate.now()): DashboardData =
+        loadDashboard(date, SleepRangeMode.EVENING_18H)
+
+    suspend fun loadDashboard(
+        date: LocalDate,
+        sleepRangeMode: SleepRangeMode,
+    ): DashboardData = coroutineScope {
         val granted = grantedPermissionsIfAvailable()
         Log.d(TAG, "loadDashboard date=$date granted=${granted.sorted()}")
 
@@ -109,7 +120,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
         val steps = readIfGranted(readStepsPermission, "steps") { hc.readSteps(date) }
         val distance = readIfGranted(readDistancePermission, "distance") { hc.readDistanceMeters(date) }
         val workout = readIfGranted(readExercisePermission, "latest workout") { hc.readLatestWorkout(date) }
-        val sleep = readIfGranted(readSleepPermission, "sleep") { hc.readSleepSession(date) }
+        val sleep = readIfGranted(readSleepPermission, "sleep") { readDashboardSleep(date, sleepRangeMode) }
         val calories = readIfGranted(readCaloriesPermission, "calories") { hc.readCaloriesKcal(date) }
         val caloriesIn = readIfGranted(readNutritionPermission, "calories in") { hc.readCaloriesInKcal(date) }
         val hydration = readIfGranted(readHydrationPermission, "hydration") { hc.readHydrationLiters(date) }
@@ -152,6 +163,17 @@ class HealthRepository(private val hc: HealthConnectManager) {
             elevationGainedMeters = elevation?.await(),
             mindfulnessMinutes = mindfulnessMinutes?.await(),
             missingPermissions = missingPerms,
+        )
+    }
+
+    private suspend fun readDashboardSleep(
+        date: LocalDate,
+        sleepRangeMode: SleepRangeMode,
+    ) = with(sleepRangeWindowFor(date, sleepRangeMode, ZoneId.systemDefault())) {
+        dailySleepSummary(
+            sessions = hc.readSleepSessions(start.minus(Duration.ofDays(1)), end),
+            selectedDate = date,
+            sleepRangeMode = sleepRangeMode,
         )
     }
 

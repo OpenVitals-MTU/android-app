@@ -303,6 +303,7 @@ private fun DashboardContent(
             if (sleep != null) {
                 SleepCard(
                     sleep = sleep,
+                    date = data.date,
                     zone = zone,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -581,12 +582,14 @@ private fun WorkoutCard(
 @Composable
 private fun SleepCard(
     sleep: SleepData,
+    date: LocalDate,
     zone: ZoneId,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
+    val start = sleep.startTime.atZone(zone)
     val end = sleep.endTime.atZone(zone)
     MetricCard(
         title = stringResource(R.string.metric_sleep),
@@ -594,7 +597,8 @@ private fun SleepCard(
         unit = "",
         icon = Icons.Outlined.Bed,
         accentColor = SleepColor,
-        subtitle = "${dateTimeFormatterProvider.mediumDate().format(end)} · ${dateTimeFormatterProvider.shortTime().format(end)}",
+        subtitle = "${dateTimeFormatterProvider.mediumDate().format(date)} · " +
+            "${dateTimeFormatterProvider.shortTime().format(start)} - ${dateTimeFormatterProvider.shortTime().format(end)}",
         source = sleep.source,
         modifier = modifier,
         onClick = onClick,

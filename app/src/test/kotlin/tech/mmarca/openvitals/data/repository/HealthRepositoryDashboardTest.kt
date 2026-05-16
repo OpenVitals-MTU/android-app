@@ -3,26 +3,33 @@ package tech.mmarca.openvitals.data.repository
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class HealthRepositoryDashboardTest {
 
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
+    private val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
 
     @Before
     fun setUp() {
@@ -54,4 +61,45 @@ class HealthRepositoryDashboardTest {
         assertEquals(1234.0, data.distanceMeters, 0.01)
         assertNull(data.workout)
     }
+
+    @Test fun `loadDashboard combines sleep sessions with selected sleep range mode`() = runTest {
+        val date = LocalDate.of(2026, 5, 4)
+        val eveningSleep = sleep(
+            id = "evening",
+            start = "2026-05-03T21:46:00Z",
+            end = "2026-05-03T22:22:00Z",
+            duration = Duration.ofMinutes(36),
+        )
+        val nextDaySleep = sleep(
+            id = "next-day",
+            start = "2026-05-04T01:11:00Z",
+            end = "2026-05-04T08:13:00Z",
+            duration = Duration.ofHours(7).plusMinutes(3),
+        )
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(sleepPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(sleepPermission)
+        coEvery { hc.readSleepSessions(any(), any()) } returns listOf(nextDaySleep, eveningSleep)
+
+        val data = HealthRepository(hc).loadDashboard(date, SleepRangeMode.EVENING_18H)
+
+        assertNotNull(data.sleep)
+        assertEquals(eveningSleep.startTime, data.sleep!!.startTime)
+        assertEquals(nextDaySleep.endTime, data.sleep.endTime)
+        assertEquals(Duration.ofHours(7).plusMinutes(39).toMillis(), data.sleep.durationMs)
+    }
+
+    private fun sleep(
+        id: String,
+        start: String,
+        end: String,
+        duration: Duration,
+    ) = SleepData(
+        id = id,
+        startTime = Instant.parse(start),
+        endTime = Instant.parse(end),
+        durationMs = duration.toMillis(),
+        source = "gadgetbridge",
+    )
 }

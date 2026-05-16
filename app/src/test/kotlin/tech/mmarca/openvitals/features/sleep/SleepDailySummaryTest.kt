@@ -10,6 +10,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.data.model.dailySleepSummary
 
 class SleepDailySummaryTest {
 

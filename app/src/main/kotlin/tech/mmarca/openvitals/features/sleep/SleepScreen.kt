@@ -18,6 +18,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.model.dailySleepSummary
+import tech.mmarca.openvitals.data.model.sleepSessionsForRange
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import java.time.LocalDate

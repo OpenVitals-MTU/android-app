@@ -1,8 +1,6 @@
-package tech.mmarca.openvitals.features.sleep
+package tech.mmarca.openvitals.data.model
 
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.SleepStage
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime

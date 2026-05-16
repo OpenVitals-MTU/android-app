@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -18,6 +19,7 @@ data class DashboardUiState(
     val errorMessage: String? = null,
     val showPermissionsCallout: Boolean = false,
     val trackCycle: Boolean = false,
+    val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
 )
 
 class DashboardViewModel(
@@ -38,21 +40,33 @@ class DashboardViewModel(
 
     fun refreshPreferences() {
         val trackCycle = prefs.trackCycle
-        if (_uiState.value.trackCycle != trackCycle) {
-            _uiState.value = _uiState.value.copy(trackCycle = trackCycle)
+        val sleepRangeMode = prefs.sleepRangeMode
+        val current = _uiState.value
+        val sleepRangeChanged = current.sleepRangeMode != sleepRangeMode
+        if (current.trackCycle != trackCycle || sleepRangeChanged) {
+            _uiState.value = current.copy(
+                trackCycle = trackCycle,
+                sleepRangeMode = sleepRangeMode,
+            )
+        }
+        if (sleepRangeChanged) {
+            load(current.selectedDate)
         }
     }
 
     fun load(date: LocalDate) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         viewModelScope.launch {
+            val trackCycle = prefs.trackCycle
+            val sleepRangeMode = prefs.sleepRangeMode
             _uiState.value = _uiState.value.copy(
                 selectedDate = clampedDate,
                 isLoading = true,
                 errorMessage = null,
-                trackCycle = prefs.trackCycle,
+                trackCycle = trackCycle,
+                sleepRangeMode = sleepRangeMode,
             )
-            runCatching { repository.loadDashboard(clampedDate) }
+            runCatching { repository.loadDashboard(clampedDate, sleepRangeMode) }
                 .onSuccess { data ->
                     val unacknowledged = data.missingPermissions - prefs.acknowledgedPermissions()
                     _uiState.value = _uiState.value.copy(
@@ -60,6 +74,7 @@ class DashboardViewModel(
                         isLoading = false,
                         showPermissionsCallout = unacknowledged.isNotEmpty(),
                         trackCycle = prefs.trackCycle,
+                        sleepRangeMode = sleepRangeMode,
                     )
                 }
                 .onFailure { error ->
