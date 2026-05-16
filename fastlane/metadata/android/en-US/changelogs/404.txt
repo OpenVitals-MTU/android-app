@@ -1,0 +1,4 @@
+Apply the configurable sleep range mode to the dashboard sleep card.
+Combine dashboard sleep sessions within the same sleep day into one total.
+Reload dashboard sleep when the sleep range setting changes.
+Show the combined sleep range on the dashboard card.
