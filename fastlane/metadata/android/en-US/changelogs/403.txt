@@ -1,0 +1,4 @@
+Add configurable sleep range modes, defaulting to the Gadgetbridge-style 18:00 sleep day.
+Combine split sleep sessions within the same sleep day into one daily total.
+Show individual sleep sessions below combined daily summaries for review.
+Keep sleep stage timelines gap-aware when multiple sessions are summarized together.
