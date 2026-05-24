@@ -1,0 +1,3 @@
+Metric detail screens now show entries for the selected timeframe, with a simple "Load 10 more" button.
+Tap a day in week or month charts to see that day's entries, then tap again to hide them.
+Dashboard editing is smoother: drag widgets to the carousel edge to move between pages, with safer cross-page swaps.

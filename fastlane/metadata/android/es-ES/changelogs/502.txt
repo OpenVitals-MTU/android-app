@@ -1,0 +1,3 @@
+Las pantallas de detalle ahora muestran las entradas del periodo seleccionado, con un botón sencillo para cargar 10 más.
+Toca un día en los gráficos semanales o mensuales para ver sus entradas, y vuelve a tocarlo para ocultarlas.
+Editar el panel es más cómodo: arrastra widgets al borde del carrusel para cambiar de página con intercambios más seguros.
