@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,10 +46,12 @@ import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
+import tech.mmarca.openvitals.features.activity.ActivityMetric
 import tech.mmarca.openvitals.features.activity.ActivityScreen
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
 import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
+import tech.mmarca.openvitals.features.body.BodyMetric
 import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
 import tech.mmarca.openvitals.features.browse.BrowseScreen
@@ -57,12 +60,15 @@ import tech.mmarca.openvitals.features.cycle.CycleScreen
 import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
+import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
+import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.heart.HeartScreen
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
+import tech.mmarca.openvitals.features.nutrition.NutritionMetric
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
@@ -97,6 +103,11 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
+    val currentMetricId = if (currentRoute == Screen.Metric.route) {
+        navBackStackEntry?.arguments?.getString(METRIC_ID_ARG)?.toDashboardWidgetIdOrNull()
+    } else {
+        null
+    }
     var dashboardTopBarState by remember { mutableStateOf(DashboardTopBarState()) }
 
     val showTopBar = currentRoute != Screen.Onboarding.route
@@ -113,6 +124,7 @@ fun AppNavigation(
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
         Screen.SleepDetail.route -> stringResource(R.string.screen_sleep_detail)
+        Screen.Metric.route -> currentMetricId?.let { stringResource(metricTitleRes(it)) }.orEmpty()
         Screen.Heart.route -> stringResource(R.string.screen_heart_vitals)
         Screen.Body.route -> stringResource(R.string.screen_body)
         Screen.Hydration.route -> stringResource(R.string.screen_hydration)
@@ -198,18 +210,40 @@ fun AppNavigation(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
-                    onOpenSteps = { navController.navigate(Screen.Steps.route) },
-                    onOpenActivities = { navController.navigate(Screen.Activity.route) },
-                    onOpenSleep = { navController.navigate(Screen.Sleep.route) },
-                    onOpenHeart = { navController.navigate(Screen.Heart.route) },
-                    onOpenBody = { navController.navigate(Screen.Body.route) },
-                    onOpenHydration = { navController.navigate(Screen.Hydration.route) },
-                    onOpenNutrition = { navController.navigate(Screen.Nutrition.route) },
-                    onOpenMindfulness = { navController.navigate(Screen.Mindfulness.route) },
-                    onOpenCycle = { navController.navigate(Screen.Cycle.route) },
+                    onOpenMetric = { metricId -> navController.navigate(Screen.Metric.createRoute(metricId.name)) },
                     onOpenBrowse = { navController.navigate(Screen.Browse.route) },
                     onEditStateChanged = { isEditing, onToggleEdit ->
                         dashboardTopBarState = DashboardTopBarState(isEditing, onToggleEdit)
+                    },
+                )
+            }
+
+            composable(
+                route = Screen.Metric.route,
+                arguments = listOf(navArgument(METRIC_ID_ARG) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val metricId = backStackEntry.arguments
+                    ?.getString(METRIC_ID_ARG)
+                    ?.toDashboardWidgetIdOrNull()
+                MetricRouteContent(
+                    metricId = metricId,
+                    activityRepository = activityRepository,
+                    sleepRepository = sleepRepository,
+                    heartRepository = heartRepository,
+                    bodyRepository = bodyRepository,
+                    hydrationRepository = hydrationRepository,
+                    nutritionRepository = nutritionRepository,
+                    mindfulnessRepository = mindfulnessRepository,
+                    vitalsRepository = vitalsRepository,
+                    cycleRepository = cycleRepository,
+                    preferencesRepository = preferencesRepository,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenActivity = { activityId ->
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    },
+                    onOpenSleepSession = { sleepId ->
+                        navController.navigate(Screen.SleepDetail.createRoute(sleepId))
                     },
                 )
             }
@@ -424,8 +458,262 @@ fun AppNavigation(
     }
 }
 
+@Composable
+private fun MetricRouteContent(
+    metricId: DashboardWidgetId?,
+    activityRepository: ActivityRepository,
+    sleepRepository: SleepRepository,
+    heartRepository: HeartRepository,
+    bodyRepository: BodyRepository,
+    hydrationRepository: HydrationRepository,
+    nutritionRepository: NutritionRepository,
+    mindfulnessRepository: MindfulnessRepository,
+    vitalsRepository: VitalsRepository,
+    cycleRepository: CycleRepository,
+    preferencesRepository: PreferencesRepository,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenActivity: (String) -> Unit,
+    onOpenSleepSession: (String) -> Unit,
+) {
+    metricId?.toActivityMetricOrNull()?.let { activityMetric ->
+        val activityViewModel = appViewModel {
+            ActivityViewModel(
+                repository = activityRepository,
+                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
+                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
+            )
+        }
+        ActivityScreen(
+            viewModel = activityViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            metric = activityMetric,
+        )
+        return
+    }
+
+    metricId?.toHeartMetricOrNull()?.let { heartMetric ->
+        val heartViewModel = appViewModel {
+            HeartViewModel(
+                repository = heartRepository,
+                vitalsRepository = vitalsRepository,
+                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
+                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
+            )
+        }
+        HeartScreen(
+            viewModel = heartViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            metric = heartMetric,
+        )
+        return
+    }
+
+    metricId?.toBodyMetricOrNull()?.let { bodyMetric ->
+        val bodyViewModel = appViewModel {
+            BodyViewModel(
+                repository = bodyRepository,
+                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
+                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
+            )
+        }
+        BodyScreen(
+            viewModel = bodyViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            metric = bodyMetric,
+        )
+        return
+    }
+
+    metricId?.toNutritionMetricOrNull()?.let { nutritionMetric ->
+        val nutritionViewModel = appViewModel {
+            NutritionViewModel(
+                repository = nutritionRepository,
+                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
+                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
+            )
+        }
+        NutritionScreen(
+            viewModel = nutritionViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            metric = nutritionMetric,
+        )
+        return
+    }
+
+    when (metricId) {
+        DashboardWidgetId.WORKOUT -> {
+            val activitiesViewModel = appViewModel {
+                ActivitiesViewModel(
+                    repository = activityRepository,
+                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
+                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
+                )
+            }
+            ActivitiesScreen(
+                viewModel = activitiesViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onOpenActivity = onOpenActivity,
+            )
+        }
+        DashboardWidgetId.SLEEP -> {
+            val sleepViewModel = appViewModel {
+                SleepViewModel(
+                    repository = sleepRepository,
+                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
+                    initialSleepRangeMode = preferencesRepository.sleepRangeMode,
+                    sleepRangeModeFlow = preferencesRepository.sleepRangeModeFlow,
+                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
+                )
+            }
+            SleepScreen(
+                viewModel = sleepViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onOpenSleepSession = onOpenSleepSession,
+            )
+        }
+        DashboardWidgetId.HYDRATION -> {
+            val hydrationViewModel = appViewModel {
+                HydrationViewModel(
+                    repository = hydrationRepository,
+                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
+                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
+                )
+            }
+            HydrationScreen(
+                viewModel = hydrationViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+        }
+        DashboardWidgetId.MINDFULNESS -> {
+            val mindfulnessViewModel = appViewModel {
+                MindfulnessViewModel(
+                    repository = mindfulnessRepository,
+                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
+                )
+            }
+            MindfulnessScreen(
+                viewModel = mindfulnessViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+        }
+        DashboardWidgetId.CYCLE -> {
+            val cycleViewModel = appViewModel {
+                CycleViewModel(
+                    repository = cycleRepository,
+                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
+                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.CYCLE),
+                )
+            }
+            CycleScreen(
+                viewModel = cycleViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+        }
+        else -> {
+            Text(
+                text = stringResource(R.string.unknown_error),
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
 private fun PreferencesRepository.rangeSaver(key: PeriodRangePreferenceKey): (TimeRange) -> Unit =
     { range -> setTimeRangeFor(key, range) }
+
+private fun String.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
+    runCatching { DashboardWidgetId.valueOf(this) }.getOrNull()
+
+private fun DashboardWidgetId.toActivityMetricOrNull(): ActivityMetric? =
+    when (this) {
+        DashboardWidgetId.STEPS -> ActivityMetric.STEPS
+        DashboardWidgetId.DISTANCE -> ActivityMetric.DISTANCE
+        DashboardWidgetId.CALORIES_OUT -> ActivityMetric.CALORIES_BURNED
+        DashboardWidgetId.ACTIVE_CALORIES -> ActivityMetric.ACTIVE_CALORIES
+        DashboardWidgetId.FLOORS -> ActivityMetric.FLOORS
+        DashboardWidgetId.ELEVATION -> ActivityMetric.ELEVATION
+        else -> null
+    }
+
+private fun DashboardWidgetId.toHeartMetricOrNull(): HeartMetric? =
+    when (this) {
+        DashboardWidgetId.AVG_HEART_RATE -> HeartMetric.AVERAGE_HEART_RATE
+        DashboardWidgetId.RESTING_HEART_RATE -> HeartMetric.RESTING_HEART_RATE
+        DashboardWidgetId.HRV -> HeartMetric.HRV
+        DashboardWidgetId.BLOOD_PRESSURE -> HeartMetric.BLOOD_PRESSURE
+        DashboardWidgetId.SPO2 -> HeartMetric.SPO2
+        DashboardWidgetId.VO2_MAX -> HeartMetric.VO2_MAX
+        DashboardWidgetId.RESPIRATORY_RATE -> HeartMetric.RESPIRATORY_RATE
+        DashboardWidgetId.BODY_TEMPERATURE -> HeartMetric.BODY_TEMPERATURE
+        else -> null
+    }
+
+private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =
+    when (this) {
+        DashboardWidgetId.WEIGHT -> BodyMetric.WEIGHT
+        DashboardWidgetId.HEIGHT -> BodyMetric.HEIGHT
+        DashboardWidgetId.BMI -> BodyMetric.BMI
+        DashboardWidgetId.BODY_FAT -> BodyMetric.BODY_FAT
+        DashboardWidgetId.LEAN_MASS -> BodyMetric.LEAN_MASS
+        DashboardWidgetId.BMR -> BodyMetric.BMR
+        DashboardWidgetId.BONE_MASS -> BodyMetric.BONE_MASS
+        else -> null
+    }
+
+private fun DashboardWidgetId.toNutritionMetricOrNull(): NutritionMetric? =
+    when (this) {
+        DashboardWidgetId.CALORIES_IN -> NutritionMetric.CALORIES_IN
+        DashboardWidgetId.PROTEIN -> NutritionMetric.PROTEIN
+        DashboardWidgetId.CARBS -> NutritionMetric.CARBS
+        DashboardWidgetId.FAT -> NutritionMetric.FAT
+        else -> null
+    }
+
+private fun metricTitleRes(metricId: DashboardWidgetId): Int =
+    when (metricId) {
+        DashboardWidgetId.STEPS -> R.string.metric_steps
+        DashboardWidgetId.DISTANCE -> R.string.metric_distance
+        DashboardWidgetId.CALORIES_OUT -> R.string.metric_calories_out
+        DashboardWidgetId.ACTIVE_CALORIES -> R.string.metric_active_calories
+        DashboardWidgetId.FLOORS -> R.string.metric_floors_climbed
+        DashboardWidgetId.ELEVATION -> R.string.metric_elevation
+        DashboardWidgetId.WORKOUT -> R.string.metric_workout
+        DashboardWidgetId.SLEEP -> R.string.metric_sleep
+        DashboardWidgetId.HYDRATION -> R.string.metric_hydration
+        DashboardWidgetId.CALORIES_IN -> R.string.metric_calories_in
+        DashboardWidgetId.PROTEIN -> R.string.metric_protein
+        DashboardWidgetId.CARBS -> R.string.metric_carbs
+        DashboardWidgetId.FAT -> R.string.metric_fat
+        DashboardWidgetId.WEIGHT -> R.string.metric_weight
+        DashboardWidgetId.HEIGHT -> R.string.metric_height
+        DashboardWidgetId.BMI -> R.string.metric_bmi
+        DashboardWidgetId.BODY_FAT -> R.string.metric_body_fat
+        DashboardWidgetId.LEAN_MASS -> R.string.metric_lean_mass
+        DashboardWidgetId.BMR -> R.string.metric_bmr
+        DashboardWidgetId.BONE_MASS -> R.string.metric_bone_mass
+        DashboardWidgetId.AVG_HEART_RATE -> R.string.metric_avg_heart_rate
+        DashboardWidgetId.RESTING_HEART_RATE -> R.string.metric_resting_heart_rate
+        DashboardWidgetId.HRV -> R.string.metric_hrv
+        DashboardWidgetId.BLOOD_PRESSURE -> R.string.metric_blood_pressure
+        DashboardWidgetId.SPO2 -> R.string.metric_spo2
+        DashboardWidgetId.VO2_MAX -> R.string.metric_vo2_max
+        DashboardWidgetId.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
+        DashboardWidgetId.BODY_TEMPERATURE -> R.string.metric_body_temp
+        DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
+        DashboardWidgetId.CYCLE -> R.string.metric_cycle
+        DashboardWidgetId.BROWSE -> R.string.metric_browse
+    }
 
 private data class DashboardTopBarState(
     val isEditing: Boolean = false,

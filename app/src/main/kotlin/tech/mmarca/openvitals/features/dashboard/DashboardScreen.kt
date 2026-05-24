@@ -134,15 +134,7 @@ fun DashboardScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onGrantPermissions: () -> Unit,
-    onOpenSteps: () -> Unit,
-    onOpenActivities: () -> Unit,
-    onOpenSleep: () -> Unit,
-    onOpenHeart: () -> Unit,
-    onOpenBody: () -> Unit,
-    onOpenHydration: () -> Unit,
-    onOpenNutrition: () -> Unit,
-    onOpenMindfulness: () -> Unit,
-    onOpenCycle: () -> Unit,
+    onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenBrowse: () -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
@@ -190,15 +182,7 @@ fun DashboardScreen(
                 onMoveWidgetToTarget = viewModel::moveDashboardWidgetToTarget,
                 onRemoveWidget = viewModel::removeDashboardWidget,
                 onAddWidget = viewModel::addDashboardWidget,
-                onOpenSteps = onOpenSteps,
-                onOpenActivities = onOpenActivities,
-                onOpenSleep = onOpenSleep,
-                onOpenHeart = onOpenHeart,
-                onOpenBody = onOpenBody,
-                onOpenHydration = onOpenHydration,
-                onOpenNutrition = onOpenNutrition,
-                onOpenMindfulness = onOpenMindfulness,
-                onOpenCycle = onOpenCycle,
+                onOpenMetric = onOpenMetric,
                 onOpenBrowse = onOpenBrowse,
             )
             else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
@@ -235,15 +219,7 @@ private fun DashboardContent(
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     onAddWidget: (DashboardWidgetId) -> Unit,
-    onOpenSteps: () -> Unit,
-    onOpenActivities: () -> Unit,
-    onOpenSleep: () -> Unit,
-    onOpenHeart: () -> Unit,
-    onOpenBody: () -> Unit,
-    onOpenHydration: () -> Unit,
-    onOpenNutrition: () -> Unit,
-    onOpenMindfulness: () -> Unit,
-    onOpenCycle: () -> Unit,
+    onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenBrowse: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
@@ -254,15 +230,7 @@ private fun DashboardContent(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         trackCycle = trackCycle,
         isEditingDashboard = isEditingDashboard,
-        onOpenSteps = onOpenSteps,
-        onOpenActivities = onOpenActivities,
-        onOpenSleep = onOpenSleep,
-        onOpenHeart = onOpenHeart,
-        onOpenBody = onOpenBody,
-        onOpenHydration = onOpenHydration,
-        onOpenNutrition = onOpenNutrition,
-        onOpenMindfulness = onOpenMindfulness,
-        onOpenCycle = onOpenCycle,
+        onOpenMetric = onOpenMetric,
     )
     val specsById = specs.associateBy { it.id }
     val visibleIds = dashboardWidgets.filter { it in specsById }
@@ -748,25 +716,11 @@ private fun dashboardWidgetSpecs(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     trackCycle: Boolean,
     isEditingDashboard: Boolean,
-    onOpenSteps: () -> Unit,
-    onOpenActivities: () -> Unit,
-    onOpenSleep: () -> Unit,
-    onOpenHeart: () -> Unit,
-    onOpenBody: () -> Unit,
-    onOpenHydration: () -> Unit,
-    onOpenNutrition: () -> Unit,
-    onOpenMindfulness: () -> Unit,
-    onOpenCycle: () -> Unit,
+    onOpenMetric: (DashboardWidgetId) -> Unit,
 ): List<DashboardWidgetSpec> = buildList {
-    val openSteps = onOpenSteps.takeUnless { isEditingDashboard }
-    val openActivities = onOpenActivities.takeUnless { isEditingDashboard }
-    val openSleep = onOpenSleep.takeUnless { isEditingDashboard }
-    val openHeart = onOpenHeart.takeUnless { isEditingDashboard }
-    val openBody = onOpenBody.takeUnless { isEditingDashboard }
-    val openHydration = onOpenHydration.takeUnless { isEditingDashboard }
-    val openNutrition = onOpenNutrition.takeUnless { isEditingDashboard }
-    val openMindfulness = onOpenMindfulness.takeUnless { isEditingDashboard }
-    val openCycle = onOpenCycle.takeUnless { isEditingDashboard }
+    val openMetric: (DashboardWidgetId) -> (() -> Unit)? = { widgetId ->
+        if (isEditingDashboard) null else ({ onOpenMetric(widgetId) })
+    }
 
     addMetric(
         id = DashboardWidgetId.STEPS,
@@ -774,7 +728,7 @@ private fun dashboardWidgetSpecs(
         value = DisplayValue(unitFormatter.count(data.steps), stringResource(R.string.unit_steps)),
         icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
         accentColor = StepsColor,
-        onClick = openSteps,
+        onClick = openMetric(DashboardWidgetId.STEPS),
     )
     addMetric(
         id = DashboardWidgetId.DISTANCE,
@@ -782,7 +736,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.distance(data.distanceMeters),
         icon = Icons.Outlined.Straighten,
         accentColor = DistanceColor,
-        onClick = openSteps,
+        onClick = openMetric(DashboardWidgetId.DISTANCE),
     )
     addMetric(
         id = DashboardWidgetId.CALORIES_OUT,
@@ -790,7 +744,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.energy(data.caloriesKcal),
         icon = Icons.Outlined.LocalFireDepartment,
         accentColor = CaloriesColor,
-        onClick = openSteps,
+        onClick = openMetric(DashboardWidgetId.CALORIES_OUT),
     )
     addOptionalMetric(
         id = DashboardWidgetId.ACTIVE_CALORIES,
@@ -798,7 +752,7 @@ private fun dashboardWidgetSpecs(
         value = data.activeCaloriesKcal?.let(unitFormatter::energy),
         icon = Icons.Outlined.LocalFireDepartment,
         accentColor = ActiveCaloriesColor,
-        onClick = openSteps,
+        onClick = openMetric(DashboardWidgetId.ACTIVE_CALORIES),
     )
     addOptionalMetric(
         id = DashboardWidgetId.FLOORS,
@@ -808,7 +762,7 @@ private fun dashboardWidgetSpecs(
         },
         icon = Icons.Outlined.Stairs,
         accentColor = FloorsColor,
-        onClick = openSteps,
+        onClick = openMetric(DashboardWidgetId.FLOORS),
     )
     addOptionalMetric(
         id = DashboardWidgetId.ELEVATION,
@@ -816,7 +770,7 @@ private fun dashboardWidgetSpecs(
         value = data.elevationGainedMeters?.let(unitFormatter::elevation),
         icon = Icons.Outlined.Terrain,
         accentColor = ElevationColor,
-        onClick = openSteps,
+        onClick = openMetric(DashboardWidgetId.ELEVATION),
     )
     add(
         DashboardWidgetSpec(DashboardWidgetId.WORKOUT, stringResource(R.string.metric_workout)) { modifier ->
@@ -827,7 +781,7 @@ private fun dashboardWidgetSpecs(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = modifier,
-                    onClick = openActivities,
+                    onClick = openMetric(DashboardWidgetId.WORKOUT),
                 )
             } ?: MetricCardPlaceholder(
                 title = stringResource(R.string.metric_workout),
@@ -836,7 +790,7 @@ private fun dashboardWidgetSpecs(
                 message = stringResource(R.string.message_no_workouts_day),
                 modifier = modifier,
                 contentAtBottom = true,
-                onClick = openActivities,
+                onClick = openMetric(DashboardWidgetId.WORKOUT),
             )
         }
     )
@@ -847,7 +801,7 @@ private fun dashboardWidgetSpecs(
                     sleep = sleep,
                     unitFormatter = unitFormatter,
                     modifier = modifier,
-                    onClick = openSleep,
+                    onClick = openMetric(DashboardWidgetId.SLEEP),
                 )
             } ?: MetricCardPlaceholder(
                 title = stringResource(R.string.metric_sleep),
@@ -856,7 +810,7 @@ private fun dashboardWidgetSpecs(
                 message = stringResource(R.string.message_no_sleep_day),
                 modifier = modifier,
                 contentAtBottom = true,
-                onClick = openSleep,
+                onClick = openMetric(DashboardWidgetId.SLEEP),
             )
         }
     )
@@ -866,7 +820,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.hydration(data.hydrationLiters),
         icon = Icons.Outlined.LocalDrink,
         accentColor = HydrationColor,
-        onClick = openHydration,
+        onClick = openMetric(DashboardWidgetId.HYDRATION),
     )
     addOptionalMetric(
         id = DashboardWidgetId.CALORIES_IN,
@@ -874,7 +828,7 @@ private fun dashboardWidgetSpecs(
         value = data.caloriesInKcal?.let(unitFormatter::energy),
         icon = Icons.Outlined.Restaurant,
         accentColor = NutritionColor,
-        onClick = openNutrition,
+        onClick = openMetric(DashboardWidgetId.CALORIES_IN),
     )
     addOptionalMetric(
         id = DashboardWidgetId.PROTEIN,
@@ -882,7 +836,7 @@ private fun dashboardWidgetSpecs(
         value = data.proteinGrams?.let { DisplayValue(unitFormatter.count(it.roundToInt()), stringResource(R.string.unit_grams)) },
         icon = Icons.Outlined.Restaurant,
         accentColor = NutritionColor,
-        onClick = openNutrition,
+        onClick = openMetric(DashboardWidgetId.PROTEIN),
     )
     addOptionalMetric(
         id = DashboardWidgetId.CARBS,
@@ -890,7 +844,7 @@ private fun dashboardWidgetSpecs(
         value = data.carbsGrams?.let { DisplayValue(unitFormatter.count(it.roundToInt()), stringResource(R.string.unit_grams)) },
         icon = Icons.Outlined.Restaurant,
         accentColor = NutritionColor,
-        onClick = openNutrition,
+        onClick = openMetric(DashboardWidgetId.CARBS),
     )
     addOptionalMetric(
         id = DashboardWidgetId.FAT,
@@ -898,7 +852,7 @@ private fun dashboardWidgetSpecs(
         value = data.fatGrams?.let { DisplayValue(unitFormatter.count(it.roundToInt()), stringResource(R.string.unit_grams)) },
         icon = Icons.Outlined.Restaurant,
         accentColor = NutritionColor,
-        onClick = openNutrition,
+        onClick = openMetric(DashboardWidgetId.FAT),
     )
     addMetric(
         id = DashboardWidgetId.WEIGHT,
@@ -906,7 +860,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.weight(data.weightKg),
         icon = Icons.Outlined.MonitorWeight,
         accentColor = WeightColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.WEIGHT),
     )
     addOptionalMetric(
         id = DashboardWidgetId.HEIGHT,
@@ -914,7 +868,7 @@ private fun dashboardWidgetSpecs(
         value = data.heightCm?.let(unitFormatter::height),
         icon = Icons.Outlined.Straighten,
         accentColor = WeightColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.HEIGHT),
     )
     addOptionalMetric(
         id = DashboardWidgetId.BMI,
@@ -922,7 +876,7 @@ private fun dashboardWidgetSpecs(
         value = data.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
         icon = Icons.Outlined.MonitorWeight,
         accentColor = WeightColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.BMI),
     )
     addMetric(
         id = DashboardWidgetId.BODY_FAT,
@@ -930,7 +884,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.percent(data.bodyFatPercent),
         icon = Icons.Outlined.MonitorWeight,
         accentColor = BodyFatColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.BODY_FAT),
     )
     addOptionalMetric(
         id = DashboardWidgetId.LEAN_MASS,
@@ -938,7 +892,7 @@ private fun dashboardWidgetSpecs(
         value = data.leanMassKg?.let(unitFormatter::bodyMass),
         icon = Icons.Outlined.MonitorWeight,
         accentColor = WeightColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.LEAN_MASS),
     )
     addOptionalMetric(
         id = DashboardWidgetId.BMR,
@@ -946,7 +900,7 @@ private fun dashboardWidgetSpecs(
         value = data.bmrKcal?.let(unitFormatter::energy),
         icon = Icons.Outlined.LocalFireDepartment,
         accentColor = CaloriesColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.BMR),
     )
     addOptionalMetric(
         id = DashboardWidgetId.BONE_MASS,
@@ -954,7 +908,7 @@ private fun dashboardWidgetSpecs(
         value = data.boneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
         icon = Icons.Outlined.MonitorWeight,
         accentColor = WeightColor,
-        onClick = openBody,
+        onClick = openMetric(DashboardWidgetId.BONE_MASS),
     )
     addMetric(
         id = DashboardWidgetId.AVG_HEART_RATE,
@@ -962,7 +916,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.heartRate(data.avgHeartRateBpm),
         icon = Icons.Outlined.Favorite,
         accentColor = HeartColor,
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.AVG_HEART_RATE),
     )
     addMetric(
         id = DashboardWidgetId.RESTING_HEART_RATE,
@@ -970,7 +924,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.heartRate(data.restingHeartRateBpm),
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = HeartColor,
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.RESTING_HEART_RATE),
     )
     addOptionalMetric(
         id = DashboardWidgetId.HRV,
@@ -978,7 +932,7 @@ private fun dashboardWidgetSpecs(
         value = data.hrvRmssdMs?.let(unitFormatter::hrv),
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = HeartColor,
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.HRV),
     )
     addOptionalMetric(
         id = DashboardWidgetId.BLOOD_PRESSURE,
@@ -991,7 +945,7 @@ private fun dashboardWidgetSpecs(
         icon = Icons.Outlined.Favorite,
         accentColor = VitalsColor,
         noDataMessage = stringResource(R.string.message_no_blood_pressure),
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.BLOOD_PRESSURE),
     )
     addOptionalMetric(
         id = DashboardWidgetId.SPO2,
@@ -1000,7 +954,7 @@ private fun dashboardWidgetSpecs(
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = VitalsColor,
         noDataMessage = stringResource(R.string.message_no_oxygen),
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.SPO2),
     )
     addOptionalMetric(
         id = DashboardWidgetId.VO2_MAX,
@@ -1009,7 +963,7 @@ private fun dashboardWidgetSpecs(
         icon = Icons.AutoMirrored.Outlined.DirectionsRun,
         accentColor = VitalsColor,
         noDataMessage = stringResource(R.string.message_no_vo2_max),
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.VO2_MAX),
     )
     addOptionalMetric(
         id = DashboardWidgetId.RESPIRATORY_RATE,
@@ -1017,7 +971,7 @@ private fun dashboardWidgetSpecs(
         value = data.avgRespiratoryRate?.let(unitFormatter::respiratoryRate),
         icon = Icons.Outlined.Favorite,
         accentColor = VitalsColor,
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.RESPIRATORY_RATE),
     )
     addOptionalMetric(
         id = DashboardWidgetId.BODY_TEMPERATURE,
@@ -1025,7 +979,7 @@ private fun dashboardWidgetSpecs(
         value = data.latestBodyTemperatureCelsius?.let(unitFormatter::temperature),
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = VitalsColor,
-        onClick = openHeart,
+        onClick = openMetric(DashboardWidgetId.BODY_TEMPERATURE),
     )
     addMetric(
         id = DashboardWidgetId.MINDFULNESS,
@@ -1033,7 +987,7 @@ private fun dashboardWidgetSpecs(
         value = unitFormatter.minutes((data.mindfulnessMinutes ?: 0).toLong()),
         icon = Icons.Outlined.SelfImprovement,
         accentColor = MindfulnessColor,
-        onClick = openMindfulness,
+        onClick = openMetric(DashboardWidgetId.MINDFULNESS),
     )
     if (trackCycle) {
         add(
@@ -1048,7 +1002,7 @@ private fun dashboardWidgetSpecs(
                         accentColor = CycleColor,
                         modifier = modifier,
                         contentAtBottom = true,
-                        onClick = openCycle,
+                        onClick = openMetric(DashboardWidgetId.CYCLE),
                     )
                 } else {
                     MetricCardPlaceholder(
@@ -1058,7 +1012,7 @@ private fun dashboardWidgetSpecs(
                         message = stringResource(R.string.message_cycle_browse),
                         modifier = modifier,
                         contentAtBottom = true,
-                        onClick = openCycle,
+                        onClick = openMetric(DashboardWidgetId.CYCLE),
                     )
                 }
             }

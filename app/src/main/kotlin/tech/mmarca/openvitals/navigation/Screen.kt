@@ -4,6 +4,7 @@ import android.net.Uri
 
 const val ACTIVITY_DETAIL_ID_ARG = "activityId"
 const val SLEEP_DETAIL_ID_ARG = "sleepId"
+const val METRIC_ID_ARG = "metricId"
 
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
@@ -16,6 +17,9 @@ sealed class Screen(val route: String) {
     data object Sleep : Screen("sleep")
     data object SleepDetail : Screen("sleep_detail/{$SLEEP_DETAIL_ID_ARG}") {
         fun createRoute(sleepId: String): String = "sleep_detail/${Uri.encode(sleepId)}"
+    }
+    data object Metric : Screen("metric/{$METRIC_ID_ARG}") {
+        fun createRoute(metricId: String): String = "metric/${Uri.encode(metricId)}"
     }
     data object Heart : Screen("heart")
     data object Body : Screen("body")
