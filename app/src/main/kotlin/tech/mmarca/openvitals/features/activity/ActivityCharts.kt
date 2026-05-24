@@ -26,8 +26,8 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
-import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.YAxisChart
 import tech.mmarca.openvitals.ui.components.chartYAxisLabels
 import tech.mmarca.openvitals.ui.components.drawYAxisGuides
@@ -54,7 +54,7 @@ internal fun StepsBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    PeriodBarChart(
+    PeriodHistoryChart(
         title = stringResource(R.string.metric_steps),
         values = data.map { PeriodChartValue(date = it.date, value = it.steps.toDouble()) },
         selectedRange = selectedRange,
@@ -123,7 +123,7 @@ private fun MetricBarChartCard(
     modifier: Modifier = Modifier,
     valueFormatter: (Double) -> String,
 ) {
-    PeriodBarChart(
+    PeriodHistoryChart(
         title = title,
         values = values,
         selectedRange = selectedRange,

@@ -28,8 +28,8 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
-import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.NutritionColor
@@ -115,7 +115,7 @@ private fun LazyListScope.nutritionMetricContent(
             )
         }
         item {
-            PeriodBarChart(
+            PeriodHistoryChart(
                 title = stringResource(metricData.titleRes),
                 values = metricData.values,
                 selectedRange = state.selectedRange,

@@ -12,8 +12,8 @@ import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
-import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
@@ -34,7 +34,7 @@ internal fun SleepDurationChart(
     val nightsWithSleep = points.filter { it.hours > 0.0 }
     val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
 
-    PeriodBarChart(
+    PeriodHistoryChart(
         title = stringResource(R.string.metric_sleep),
         values = points.map { PeriodChartValue(date = it.date, value = it.hours) },
         selectedRange = selectedRange,

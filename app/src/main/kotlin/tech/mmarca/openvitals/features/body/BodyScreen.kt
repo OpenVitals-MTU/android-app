@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -68,9 +69,9 @@ fun BodyScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
-    ) { _ ->
+    ) { period ->
         when (metric) {
-            BodyMetric.WEIGHT -> weightContent(state, unitFormatter, dateTimeFormatterProvider)
+            BodyMetric.WEIGHT -> weightContent(state, period, unitFormatter, dateTimeFormatterProvider)
             BodyMetric.HEIGHT -> singleBodyMetricContent(
                 state = state,
                 titleRes = R.string.metric_height,
@@ -87,7 +88,7 @@ fun BodyScreen(
                 accentColor = WeightColor,
                 unitFormatter = unitFormatter,
             )
-            BodyMetric.BODY_FAT -> bodyFatContent(state, unitFormatter)
+            BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider)
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
                 state = state,
                 titleRes = R.string.metric_lean_mass,
@@ -118,6 +119,7 @@ fun BodyScreen(
 
 private fun LazyListScope.weightContent(
     state: BodyUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
@@ -135,7 +137,10 @@ private fun LazyListScope.weightContent(
         item {
             WeightLineChart(
                 entries = state.weightEntries,
+                selectedRange = state.selectedRange,
+                period = period,
                 unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
             )
         }
@@ -166,7 +171,9 @@ private fun LazyListScope.weightContent(
 
 private fun LazyListScope.bodyFatContent(
     state: BodyUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
     val latest = state.latestBodyFatPercent
     if (latest != null) {
@@ -185,7 +192,10 @@ private fun LazyListScope.bodyFatContent(
             item {
                 BodyFatLineChart(
                     entries = state.bodyFatEntries,
+                    selectedRange = state.selectedRange,
+                    period = period,
                     unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
                 )
             }

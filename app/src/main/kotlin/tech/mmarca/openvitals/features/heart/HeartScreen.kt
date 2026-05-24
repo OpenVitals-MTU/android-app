@@ -91,8 +91,8 @@ fun HeartScreen(
     ) { period ->
         when (metric) {
             HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(state, unitFormatter, dateTimeFormatterProvider)
-            HeartMetric.HRV -> hrvContent(state, unitFormatter, dateTimeFormatterProvider)
+            HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(state, period, unitFormatter, dateTimeFormatterProvider)
+            HeartMetric.HRV -> hrvContent(state, period, unitFormatter, dateTimeFormatterProvider)
             HeartMetric.BLOOD_PRESSURE -> vitalsMetricContent(
                 state = state,
                 phase3Permissions = viewModel.vitalsPermissions,
@@ -189,6 +189,7 @@ private fun LazyListScope.averageHeartRateContent(
 
 private fun LazyListScope.restingHeartRateContent(
     state: HeartUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
@@ -216,6 +217,7 @@ private fun LazyListScope.restingHeartRateContent(
                 RestingHRChart(
                     entries = state.dailyRestingHR,
                     selectedRange = state.selectedRange,
+                    period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
@@ -234,6 +236,7 @@ private fun LazyListScope.restingHeartRateContent(
 
 private fun LazyListScope.hrvContent(
     state: HeartUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
@@ -261,6 +264,7 @@ private fun LazyListScope.hrvContent(
                 HRVChart(
                     entries = state.dailyHrv,
                     selectedRange = state.selectedRange,
+                    period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
@@ -336,6 +340,7 @@ private fun LazyListScope.spO2Content(
                 values = sorted.map { it.percent },
                 dates = sorted.map { it.time.atZone(ZoneId.systemDefault()).toLocalDate() },
                 selectedRange = state.selectedRange,
+                period = period,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 accentColor = oxygenColor,
                 summary = "${localizedPeriodTitle(state.selectedRange, period)} · ${

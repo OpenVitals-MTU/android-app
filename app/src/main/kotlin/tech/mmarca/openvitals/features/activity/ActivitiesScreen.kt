@@ -28,17 +28,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
+import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,8 +66,18 @@ fun ActivitiesScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
-    ) { _ ->
+    ) { period ->
         if (state.workouts.isNotEmpty()) {
+            item {
+                WorkoutHistoryChart(
+                    workouts = state.workouts,
+                    selectedRange = state.selectedRange,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             workoutStatistics(
                 workouts = state.workouts,
                 unitFormatter = unitFormatter,
@@ -89,6 +105,39 @@ fun ActivitiesScreen(
             }
         }
     }
+}
+
+@Composable
+private fun WorkoutHistoryChart(
+    workouts: List<ExerciseData>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val zone = ZoneId.systemDefault()
+    val values = workouts
+        .groupBy { it.startTime.atZone(zone).toLocalDate() }
+        .map { (date, dayWorkouts) ->
+            PeriodChartValue(
+                date = date,
+                value = dayWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
+            )
+        }
+    val totalMs = workouts.sumOf { it.durationMs.coerceAtLeast(0L) }
+
+    PeriodHistoryChart(
+        title = stringResource(R.string.metric_workout),
+        values = values,
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = WorkoutColor.copy(alpha = 0.85f),
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.duration(totalMs)}",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = modifier.fillMaxWidth(),
+        valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
+    )
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.workoutStatistics(

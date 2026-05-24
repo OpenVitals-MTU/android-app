@@ -9,8 +9,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
-import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 
@@ -23,7 +23,7 @@ internal fun EnergyBarChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    PeriodBarChart(
+    PeriodHistoryChart(
         title = stringResource(R.string.metric_calories_in),
         values = data.map { PeriodChartValue(date = it.date, value = it.energyKcal) },
         selectedRange = selectedRange,

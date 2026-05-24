@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -99,6 +100,7 @@ fun PeriodMonthHeatmap(
     modifier: Modifier = Modifier,
 ) {
     val cells = remember(values, period) { periodMonthHeatmapCells(values, period) }
+    val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
     val maxValue = cells.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
     val dayFormatter = dateTimeFormatterProvider.chartDayOfMonth()
     val monthStart = period.start.withDayOfMonth(1)
@@ -139,6 +141,7 @@ fun PeriodMonthHeatmap(
                     rowCells.forEach { cell ->
                         val cellColor = heatmapCellColor(
                             value = cell.value,
+                            minPositiveValue = minPositiveValue,
                             maxValue = maxValue,
                             isWithinLoadedPeriod = cell.isWithinLoadedPeriod,
                             accentColor = accentColor,
@@ -163,7 +166,7 @@ fun PeriodMonthHeatmap(
                 }
                 Spacer(Modifier.height(8.dp))
             }
-            HeatmapLegend(accentColor = accentColor, maxValue = maxValue)
+            HeatmapLegend(accentColor = accentColor, minPositiveValue = minPositiveValue, maxValue = maxValue)
         }
     }
 }
@@ -178,6 +181,7 @@ fun PeriodYearHeatmap(
     modifier: Modifier = Modifier,
 ) {
     val cells = remember(values, period) { periodYearHeatmapCells(values, period) }
+    val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
     val maxValue = cells.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
 
     Card(
@@ -199,6 +203,7 @@ fun PeriodYearHeatmap(
                                 .background(
                                     color = heatmapCellColor(
                                         value = cell.value,
+                                        minPositiveValue = minPositiveValue,
                                         maxValue = maxValue,
                                         isWithinLoadedPeriod = cell.isWithinLoadedPeriod,
                                         accentColor = accentColor,
@@ -214,8 +219,55 @@ fun PeriodYearHeatmap(
                 Spacer(Modifier.height(4.dp))
             }
             Spacer(Modifier.height(8.dp))
-            HeatmapLegend(accentColor = accentColor, maxValue = maxValue)
+            HeatmapLegend(accentColor = accentColor, minPositiveValue = minPositiveValue, maxValue = maxValue)
         }
+    }
+}
+
+@Composable
+fun PeriodHistoryChart(
+    title: String,
+    values: List<PeriodChartValue>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    accentColor: Color,
+    summaryText: String,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+    yearAggregation: PeriodBarAggregation = PeriodBarAggregation.SUM,
+    valueFormatter: (Double) -> String = ::formatCompactAxisValue,
+) {
+    when (selectedRange) {
+        TimeRange.MONTH -> PeriodMonthHeatmap(
+            title = title,
+            values = values,
+            period = period,
+            accentColor = accentColor,
+            summaryText = summaryText,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = modifier,
+        )
+        TimeRange.YEAR -> PeriodYearHeatmap(
+            title = title,
+            values = values,
+            period = period,
+            accentColor = accentColor,
+            summaryText = summaryText,
+            modifier = modifier,
+        )
+        TimeRange.DAY,
+        TimeRange.WEEK -> PeriodBarChart(
+            title = title,
+            values = values,
+            selectedRange = selectedRange,
+            period = period,
+            accentColor = accentColor,
+            summaryText = summaryText,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = modifier,
+            yearAggregation = yearAggregation,
+            valueFormatter = valueFormatter,
+        )
     }
 }
 
@@ -240,6 +292,7 @@ private fun PeriodHeatmapHeader(
 @Composable
 private fun HeatmapLegend(
     accentColor: Color,
+    minPositiveValue: Double,
     maxValue: Double,
 ) {
     Row(
@@ -253,13 +306,18 @@ private fun HeatmapLegend(
         )
         Spacer(Modifier.weight(1f))
         repeat(5) { index ->
-            val value = maxValue * (index + 1) / 5.0
+            val value = if (maxValue <= minPositiveValue) {
+                maxValue
+            } else {
+                minPositiveValue + (maxValue - minPositiveValue) * index / 4.0
+            }
             Box(
                 modifier = Modifier
                     .size(12.dp)
                     .background(
                         color = heatmapCellColor(
                             value = value,
+                            minPositiveValue = minPositiveValue,
                             maxValue = maxValue,
                             isWithinLoadedPeriod = true,
                             accentColor = accentColor,
@@ -283,6 +341,7 @@ private fun HeatmapLegend(
 @Composable
 private fun heatmapCellColor(
     value: Double,
+    minPositiveValue: Double,
     maxValue: Double,
     isWithinLoadedPeriod: Boolean,
     accentColor: Color,
@@ -293,7 +352,11 @@ private fun heatmapCellColor(
     if (value <= 0.0) {
         return MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.65f)
     }
-    val fraction = (value / maxValue).toFloat().coerceIn(0f, 1f)
+    val fraction = if (maxValue <= minPositiveValue) {
+        1f
+    } else {
+        ((value - minPositiveValue) / (maxValue - minPositiveValue)).toFloat().coerceIn(0f, 1f)
+    }
     return accentColor.copy(alpha = 0.25f + 0.75f * fraction)
 }
 

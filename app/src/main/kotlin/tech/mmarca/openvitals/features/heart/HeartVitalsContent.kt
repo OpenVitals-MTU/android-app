@@ -94,6 +94,7 @@ fun LazyListScope.HeartVitalsContent(
                     values = sortedSpO2.map { it.percent },
                     dates = sortedSpO2.map { it.time.atZone(ZoneId.systemDefault()).toLocalDate() },
                     selectedRange = selectedRange,
+                    period = period,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     accentColor = oxygenColor,
                     summary = "${localizedPeriodTitle(selectedRange, period)} · ${

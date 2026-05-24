@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.MindfulnessSession
@@ -35,11 +37,14 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import java.time.ZoneId
+import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +87,16 @@ fun MindfulnessScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            item {
+                MindfulnessHistoryChart(
+                    sessions = state.sessions,
+                    selectedRange = state.selectedRange,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             mindfulnessStatistics(
                 sessions = state.sessions,
                 unitFormatter = unitFormatter,
@@ -99,6 +114,39 @@ fun MindfulnessScreen(
             }
         }
     }
+}
+
+@Composable
+private fun MindfulnessHistoryChart(
+    sessions: List<MindfulnessSession>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val zone = ZoneId.systemDefault()
+    val values = sessions
+        .groupBy { it.startTime.atZone(zone).toLocalDate() }
+        .map { (date, daySessions) ->
+            PeriodChartValue(
+                date = date,
+                value = daySessions.sumOf { it.durationMs }.toDouble() / 60_000.0,
+            )
+        }
+    val totalMinutes = sessions.sumOf { it.durationMinutes }
+
+    PeriodHistoryChart(
+        title = stringResource(R.string.metric_mindfulness),
+        values = values,
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = MindfulnessColor.copy(alpha = 0.85f),
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.minutes(totalMinutes).text}",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = modifier.fillMaxWidth(),
+        valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
+    )
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.mindfulnessStatistics(

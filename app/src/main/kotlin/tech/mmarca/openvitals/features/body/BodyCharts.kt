@@ -1,154 +1,94 @@
 package tech.mmarca.openvitals.features.body
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
-import tech.mmarca.openvitals.ui.components.YAxisChart
-import tech.mmarca.openvitals.ui.components.chartYAxisLabels
-import tech.mmarca.openvitals.ui.components.drawYAxisGuides
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
+import java.time.ZoneId
 
 @Composable
 internal fun BodyFatLineChart(
     entries: List<BodyFatEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.time }
     val maxPct = sorted.maxOfOrNull { it.percent } ?: 30.0
     val minPct = sorted.minOfOrNull { it.percent } ?: 0.0
-    val range = (maxPct - minPct).coerceAtLeast(0.5)
-    val chartHeight = 80.dp
-    val gridColor = BodyFatColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
-    Card(
+    PeriodHistoryChart(
+        title = stringResource(R.string.metric_body_fat),
+        values = bodyFatHistoryValues(sorted),
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = BodyFatColor.copy(alpha = 0.85f),
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.percent(minPct).text} - ${
+            unitFormatter.percent(maxPct).text
+        } · ${stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))}",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            YAxisChart(
-                labels = chartYAxisLabels(
-                    minValue = minPct,
-                    maxValue = maxPct,
-                    valueFormatter = { unitFormatter.percent(it).text },
-                ),
-                chartHeight = chartHeight,
-            ) {
-                drawYAxisGuides(
-                    gridColor = gridColor,
-                    axisColor = axisColor,
-                    strokeWidth = 1.dp.toPx(),
-                )
-                if (sorted.size < 2) return@YAxisChart
-                val stepX = size.width / (sorted.size - 1)
-                val points = sorted.mapIndexed { i, entry ->
-                    val x = i * stepX
-                    val y = size.height * (1f - ((entry.percent - minPct) / range).toFloat())
-                    Offset(x, y)
-                }
-                for (i in 0 until points.size - 1) {
-                    drawLine(
-                        color = BodyFatColor,
-                        start = points[i],
-                        end = points[i + 1],
-                        strokeWidth = 2.dp.toPx(),
-                    )
-                }
-                points.forEach { pt ->
-                    drawCircle(color = BodyFatColor, radius = 4.dp.toPx(), center = pt)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${unitFormatter.percent(minPct).text} - ${unitFormatter.percent(maxPct).text} · ${
-                    stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))
-                }",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        valueFormatter = { unitFormatter.percent(it).text },
+    )
 }
 
 @Composable
 internal fun WeightLineChart(
     entries: List<WeightEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val sorted = entries.sortedBy { it.time }
     val maxKg = sorted.maxOfOrNull { it.weightKg } ?: 100.0
     val minKg = sorted.minOfOrNull { it.weightKg } ?: 50.0
-    val range = (maxKg - minKg).coerceAtLeast(0.5)
-    val chartHeight = 100.dp
-    val gridColor = WeightColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
-    Card(
+    PeriodHistoryChart(
+        title = stringResource(R.string.metric_weight),
+        values = weightHistoryValues(sorted),
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = WeightColor.copy(alpha = 0.85f),
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.weight(minKg).text} - ${
+            unitFormatter.weight(maxKg).text
+        } · ${stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))}",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            YAxisChart(
-                labels = chartYAxisLabels(
-                    minValue = minKg,
-                    maxValue = maxKg,
-                    valueFormatter = { unitFormatter.weight(it).text },
-                ),
-                chartHeight = chartHeight,
-            ) {
-                drawYAxisGuides(
-                    gridColor = gridColor,
-                    axisColor = axisColor,
-                    strokeWidth = 1.dp.toPx(),
-                )
-                if (sorted.size < 2) return@YAxisChart
-                val stepX = size.width / (sorted.size - 1)
-                val points = sorted.mapIndexed { i, entry ->
-                    val x = i * stepX
-                    val y = size.height * (1f - ((entry.weightKg - minKg) / range).toFloat())
-                    Offset(x, y)
-                }
-                for (i in 0 until points.size - 1) {
-                    drawLine(
-                        color = WeightColor,
-                        start = points[i],
-                        end = points[i + 1],
-                        strokeWidth = 2.dp.toPx(),
-                    )
-                }
-                points.forEach { pt ->
-                    drawCircle(color = WeightColor, radius = 4.dp.toPx(), center = pt)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${unitFormatter.weight(minKg).text} - ${unitFormatter.weight(maxKg).text} · ${
-                    stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))
-                }",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        valueFormatter = { unitFormatter.weight(it).text },
+    )
+}
+
+private fun weightHistoryValues(entries: List<WeightEntry>): List<PeriodChartValue> =
+    entries
+        .groupBy { it.time.atZone(ZoneId.systemDefault()).toLocalDate() }
+        .map { (date, dayEntries) ->
+            PeriodChartValue(
+                date = date,
+                value = dayEntries.maxByOrNull { it.time }?.weightKg ?: 0.0,
             )
         }
-    }
-}
+
+private fun bodyFatHistoryValues(entries: List<BodyFatEntry>): List<PeriodChartValue> =
+    entries
+        .groupBy { it.time.atZone(ZoneId.systemDefault()).toLocalDate() }
+        .map { (date, dayEntries) ->
+            PeriodChartValue(
+                date = date,
+                value = dayEntries.maxByOrNull { it.time }?.percent ?: 0.0,
+            )
+        }

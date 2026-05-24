@@ -23,8 +23,8 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
-import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
-import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.YAxisChart
 import tech.mmarca.openvitals.ui.components.chartYAxisLabels
 import tech.mmarca.openvitals.ui.components.drawYAxisGuides
@@ -44,79 +44,26 @@ internal fun RespiratoryRateChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val buckets = respiratoryRateBuckets(entries, selectedRange, period)
-    val plotted = buckets.mapIndexedNotNull { index, bucket ->
-        bucket.value.takeIf { it > 0.0 }?.let { RespiratoryRatePlotPoint(index, it) }
-    }
-    val average = respiratoryRateAverage(buckets)
-    val max = plotted.maxOfOrNull { it.value }?.plus(1.0) ?: 1.0
-    val min = plotted.minOfOrNull { it.value }?.minus(1.0)?.coerceAtLeast(0.0) ?: 0.0
-    val range = (max - min).coerceAtLeast(1.0)
-    val chartHeight = 140.dp
-    val gridColor = respiratoryColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
-
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.metric_respiratory_rate), style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(12.dp))
-            YAxisChart(
-                labels = chartYAxisLabels(
-                    minValue = min,
-                    maxValue = max,
-                    valueFormatter = { unitFormatter.respiratoryRate(it).text },
-                ),
-                chartHeight = chartHeight,
-            ) {
-                drawYAxisGuides(
-                    gridColor = gridColor,
-                    axisColor = axisColor,
-                    strokeWidth = 1.dp.toPx(),
-                )
-                if (plotted.isEmpty()) return@YAxisChart
-
-                val lastIndex = buckets.lastIndex.coerceAtLeast(1)
-                val points = plotted.map { point ->
-                    Offset(
-                        x = point.index * size.width / lastIndex,
-                        y = size.height * (1f - ((point.value - min) / range).toFloat()),
-                    )
-                }
-
-                for (index in 0 until points.size - 1) {
-                    drawLine(
-                        color = respiratoryColor,
-                        start = points[index],
-                        end = points[index + 1],
-                        strokeWidth = 3.dp.toPx(),
-                        cap = StrokeCap.Round,
-                    )
-                }
-                points.forEach { point ->
-                    drawCircle(color = respiratoryColor, radius = 4.dp.toPx(), center = point)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            ChartXAxisWithYAxis {
-                PeriodChartXAxis(
-                    dates = buckets.map { it.date },
-                    selectedRange = selectedRange,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${localizedPeriodTitle(selectedRange, period)} · ${
-                    stringResource(R.string.summary_value_avg, unitFormatter.respiratoryRate(average).text)
-                }",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    val dailyValues = entries
+        .groupBy { it.time.atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
+        .map { (date, dayEntries) ->
+            PeriodChartValue(date = date, value = dayEntries.map { it.breathsPerMinute }.average())
         }
-    }
+    val average = respiratoryRateAverage(respiratoryRateBuckets(entries, selectedRange, period))
+
+    PeriodHistoryChart(
+        title = stringResource(R.string.metric_respiratory_rate),
+        values = dailyValues,
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = respiratoryColor.copy(alpha = 0.85f),
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
+            stringResource(R.string.summary_value_avg, unitFormatter.respiratoryRate(average).text)
+        }",
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = modifier.fillMaxWidth(),
+        valueFormatter = { unitFormatter.respiratoryRate(it).text },
+    )
 }
 
 @Composable
@@ -190,78 +137,33 @@ internal fun VitalsLineChart(
     values: List<Double>,
     dates: List<LocalDate>,
     selectedRange: TimeRange,
+    period: DatePeriod,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     accentColor: Color,
     summary: String,
     modifier: Modifier = Modifier,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
-    val max = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
-    val min = values.minOrNull()?.coerceAtMost(max - 1.0) ?: 0.0
-    val range = (max - min).coerceAtLeast(1.0)
-    val chartHeight = 140.dp
-    val gridColor = accentColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
-
-    Card(
+    PeriodHistoryChart(
+        title = title,
+        values = dailyAverageChartValues(values, dates),
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = accentColor.copy(alpha = 0.85f),
+        summaryText = summary,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(12.dp))
-            YAxisChart(
-                labels = chartYAxisLabels(
-                    minValue = min,
-                    maxValue = max,
-                    valueFormatter = valueFormatter,
-                ),
-                chartHeight = chartHeight,
-            ) {
-                drawYAxisGuides(
-                    gridColor = gridColor,
-                    axisColor = axisColor,
-                    strokeWidth = 1.dp.toPx(),
-                )
-                if (values.size < 2) return@YAxisChart
-                val points = values.mapIndexed { index, value ->
-                    Offset(
-                        x = index * size.width / (values.size - 1),
-                        y = size.height * (1f - ((value - min) / range).toFloat()),
-                    )
-                }
-                for (index in 0 until points.size - 1) {
-                    drawLine(
-                        color = accentColor,
-                        start = points[index],
-                        end = points[index + 1],
-                        strokeWidth = 3.dp.toPx(),
-                        cap = StrokeCap.Round,
-                    )
-                }
-                points.forEach { point ->
-                    drawCircle(color = accentColor, radius = 4.dp.toPx(), center = point)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            ChartXAxisWithYAxis {
-                PeriodChartXAxis(
-                    dates = dates,
-                    selectedRange = selectedRange,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        valueFormatter = valueFormatter,
+    )
 }
 
-private data class RespiratoryRatePlotPoint(
-    val index: Int,
-    val value: Double,
-)
+private fun dailyAverageChartValues(
+    values: List<Double>,
+    dates: List<LocalDate>,
+): List<PeriodChartValue> =
+    dates
+        .zip(values)
+        .groupBy({ it.first }, { it.second })
+        .map { (date, dayValues) ->
+            PeriodChartValue(date = date, value = dayValues.average())
+        }

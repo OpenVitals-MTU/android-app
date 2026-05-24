@@ -41,10 +41,8 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
-import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodMonthHeatmap
-import tech.mmarca.openvitals.ui.components.PeriodYearHeatmap
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HydrationColor
@@ -318,35 +316,15 @@ private fun HydrationHistoryChart(
         unitFormatter.hydration(data.sumOf { it.liters }).text
     }"
 
-    when (selectedRange) {
-        TimeRange.MONTH -> PeriodMonthHeatmap(
-            title = stringResource(R.string.metric_hydration_trend),
-            values = values,
-            period = period,
-            accentColor = HydrationColor.copy(alpha = 0.85f),
-            summaryText = summaryText,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = modifier,
-        )
-        TimeRange.YEAR -> PeriodYearHeatmap(
-            title = stringResource(R.string.metric_hydration_trend),
-            values = values,
-            period = period,
-            accentColor = HydrationColor.copy(alpha = 0.85f),
-            summaryText = summaryText,
-            modifier = modifier,
-        )
-        TimeRange.DAY,
-        TimeRange.WEEK -> PeriodBarChart(
-            title = stringResource(R.string.metric_hydration_trend),
-            values = values,
-            selectedRange = selectedRange,
-            period = period,
-            accentColor = HydrationColor.copy(alpha = 0.85f),
-            summaryText = summaryText,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = modifier,
-            valueFormatter = { unitFormatter.hydration(it).text },
-        )
-    }
+    PeriodHistoryChart(
+        title = stringResource(R.string.metric_hydration_trend),
+        values = values,
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = HydrationColor.copy(alpha = 0.85f),
+        summaryText = summaryText,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = modifier,
+        valueFormatter = { unitFormatter.hydration(it).text },
+    )
 }
