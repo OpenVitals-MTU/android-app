@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.cycle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -30,6 +29,7 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
@@ -119,15 +119,17 @@ fun CycleScreen(
 
             val observations = observationsFor(state.data, resources)
             if (observations.isNotEmpty()) {
-                item { SectionHeader(stringResource(R.string.section_entries)) }
-                items(observations) { observation ->
-                    CycleObservationRow(
-                        observation = observation,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
+                item {
+                    PaginatedEntryList(
+                        title = stringResource(R.string.section_entries),
+                        entries = observations,
+                    ) { observation, rowModifier ->
+                        CycleObservationRow(
+                            observation = observation,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = rowModifier,
+                        )
+                    }
                 }
             }
         } else if (!state.isLoading) {

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -51,6 +50,7 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -963,19 +963,20 @@ private fun <T> LazyListScope.activityDailyEntries(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     accentColor: Color,
 ) {
-    if (entries.isEmpty()) return
-
-    item { SectionHeader(stringResource(R.string.section_entries)) }
-    items(entries.sortedByDescending(date)) { entry ->
-        ActivityDailyEntryRow(
-            date = date(entry),
-            value = value(entry),
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            accentColor = accentColor,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+    val sortedEntries = entries.sortedByDescending(date)
+    item {
+        PaginatedEntryList(
+            title = stringResource(R.string.section_entries),
+            entries = sortedEntries,
+        ) { entry, rowModifier ->
+            ActivityDailyEntryRow(
+                date = date(entry),
+                value = value(entry),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = accentColor,
+                modifier = rowModifier,
+            )
+        }
     }
 }
 

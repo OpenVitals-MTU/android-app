@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -57,6 +56,7 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -130,17 +130,19 @@ fun ActivitiesScreen(
                 workouts = state.workouts,
                 restingHr = state.crossDailyRestingHR,
             )
-            item { SectionHeader(stringResource(R.string.section_activities)) }
-            items(state.workouts) { workout ->
-                WorkoutListItem(
-                    workout = workout,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onClick = { onOpenActivity(workout.id) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+            item {
+                PaginatedEntryList(
+                    title = stringResource(R.string.section_activities),
+                    entries = state.workouts,
+                ) { workout, rowModifier ->
+                    WorkoutListItem(
+                        workout = workout,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onClick = { onOpenActivity(workout.id) },
+                        modifier = rowModifier,
+                    )
+                }
             }
         } else if (!state.isLoading) {
             item {

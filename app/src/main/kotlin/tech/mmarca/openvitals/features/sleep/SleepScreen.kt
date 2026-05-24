@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.sleep
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -52,6 +51,7 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -181,17 +181,19 @@ fun SleepScreen(
                 )
 
                 if (dailySessions.size > 1) {
-                    item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
-                    items(dailySessions.sortedByDescending { it.endTime }) { session ->
-                        SleepSessionItem(
-                            session = session,
-                            unitFormatter = unitFormatter,
-                            dateTimeFormatterProvider = dateTimeFormatterProvider,
-                            onClick = { onOpenSleepSession(session.id) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                        )
+                    item {
+                        PaginatedEntryList(
+                            title = stringResource(R.string.section_sleep_sessions),
+                            entries = dailySessions.sortedByDescending { it.endTime },
+                        ) { session, rowModifier ->
+                            SleepSessionItem(
+                                session = session,
+                                unitFormatter = unitFormatter,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                onClick = { onOpenSleepSession(session.id) },
+                                modifier = rowModifier,
+                            )
+                        }
                     }
                 }
             }
@@ -243,17 +245,19 @@ fun SleepScreen(
                     hrvValues = state.crossDailyHrv.map { CrossMetricValue(it.date, it.rmssdMs) },
                 )
 
-                item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
-                items(state.sessions.sortedByDescending { it.endTime }) { session ->
-                    SleepSessionItem(
-                        session = session,
-                        unitFormatter = unitFormatter,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        onClick = { onOpenSleepSession(session.id) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
+                item {
+                    PaginatedEntryList(
+                        title = stringResource(R.string.section_sleep_sessions),
+                        entries = state.sessions.sortedByDescending { it.endTime },
+                    ) { session, rowModifier ->
+                        SleepSessionItem(
+                            session = session,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            onClick = { onOpenSleepSession(session.id) },
+                            modifier = rowModifier,
+                        )
+                    }
                 }
             }
 

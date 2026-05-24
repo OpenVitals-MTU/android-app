@@ -20,6 +20,7 @@
     <string name="action_get_started">Empezar</string>
     <string name="action_grant">Conceder</string>
     <string name="action_grant_permission">Conceder permiso</string>
+    <string name="action_load_more_entries">Cargar 10 más</string>
     <string name="action_not_now">Ahora no</string>
     <string name="action_open">Abrir</string>
     <string name="action_review">Revisar</string>

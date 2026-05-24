@@ -20,6 +20,7 @@
     <string name="action_get_started">Get started</string>
     <string name="action_grant">Grant</string>
     <string name="action_grant_permission">Grant permission</string>
+    <string name="action_load_more_entries">Load 10 more</string>
     <string name="action_not_now">Not now</string>
     <string name="action_open">Open</string>
     <string name="action_review">Review</string>

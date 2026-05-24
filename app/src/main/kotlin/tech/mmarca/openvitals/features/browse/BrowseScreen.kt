@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
@@ -19,7 +18,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.InlineLoading
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
-import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,15 +68,19 @@ fun BrowseScreen(
                     if (state.workouts.isEmpty()) {
                         item { EmptyState(stringResource(R.string.message_no_workouts_period), Modifier.padding(16.dp)) }
                     } else {
-                        item { SectionHeader(stringResource(R.string.browse_count_workouts, unitFormatter.count(state.workouts.size))) }
-                        items(state.workouts) { workout ->
-                            WorkoutBrowseRow(
-                                workout = workout,
-                                unitFormatter = unitFormatter,
-                                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                                onClick = { onOpenActivity(workout.id) },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            )
+                        item {
+                            PaginatedEntryList(
+                                title = stringResource(R.string.browse_count_workouts, unitFormatter.count(state.workouts.size)),
+                                entries = state.workouts,
+                            ) { workout, rowModifier ->
+                                WorkoutBrowseRow(
+                                    workout = workout,
+                                    unitFormatter = unitFormatter,
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    onClick = { onOpenActivity(workout.id) },
+                                    modifier = rowModifier,
+                                )
+                            }
                         }
                     }
                 }
@@ -86,15 +89,19 @@ fun BrowseScreen(
                     if (state.sleepSessions.isEmpty()) {
                         item { EmptyState(stringResource(R.string.message_no_sleep_sessions_period), Modifier.padding(16.dp)) }
                     } else {
-                        item { SectionHeader(stringResource(R.string.browse_count_sleep_sessions, unitFormatter.count(state.sleepSessions.size))) }
-                        items(state.sleepSessions) { session ->
-                            SleepBrowseRow(
-                                session = session,
-                                unitFormatter = unitFormatter,
-                                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                                onClick = { onOpenSleepSession(session.id) },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            )
+                        item {
+                            PaginatedEntryList(
+                                title = stringResource(R.string.browse_count_sleep_sessions, unitFormatter.count(state.sleepSessions.size)),
+                                entries = state.sleepSessions,
+                            ) { session, rowModifier ->
+                                SleepBrowseRow(
+                                    session = session,
+                                    unitFormatter = unitFormatter,
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    onClick = { onOpenSleepSession(session.id) },
+                                    modifier = rowModifier,
+                                )
+                            }
                         }
                     }
                 }
@@ -103,14 +110,18 @@ fun BrowseScreen(
                     if (state.weightEntries.isEmpty()) {
                         item { EmptyState(stringResource(R.string.message_no_weight_entries_period), Modifier.padding(16.dp)) }
                     } else {
-                        item { SectionHeader(stringResource(R.string.browse_count_weight_entries, unitFormatter.count(state.weightEntries.size))) }
-                        items(state.weightEntries.sortedByDescending { it.time }) { entry ->
-                            WeightBrowseRow(
-                                entry = entry,
-                                unitFormatter = unitFormatter,
-                                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            )
+                        item {
+                            PaginatedEntryList(
+                                title = stringResource(R.string.browse_count_weight_entries, unitFormatter.count(state.weightEntries.size)),
+                                entries = state.weightEntries.sortedByDescending { it.time },
+                            ) { entry, rowModifier ->
+                                WeightBrowseRow(
+                                    entry = entry,
+                                    unitFormatter = unitFormatter,
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = rowModifier,
+                                )
+                            }
                         }
                     }
                 }

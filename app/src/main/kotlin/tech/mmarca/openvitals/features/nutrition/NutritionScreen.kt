@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.nutrition
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -40,6 +39,7 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -235,16 +235,18 @@ private fun LazyListScope.nutritionMetricContent(
     }
 
     if (state.entries.isNotEmpty()) {
-        item { SectionHeader(stringResource(R.string.section_meals)) }
-        items(state.entries.sortedByDescending { it.time }) { entry ->
-            NutritionEntryRow(
-                entry = entry,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+        item {
+            PaginatedEntryList(
+                title = stringResource(R.string.section_meals),
+                entries = state.entries.sortedByDescending { it.time },
+            ) { entry, rowModifier ->
+                NutritionEntryRow(
+                    entry = entry,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = rowModifier,
+                )
+            }
         }
     }
 }

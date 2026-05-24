@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Add
@@ -54,6 +53,7 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -433,18 +433,19 @@ private fun LazyListScope.hydrationEntries(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    if (entries.isEmpty()) return
-
-    item { SectionHeader(stringResource(R.string.section_entries)) }
-    items(entries.sortedByDescending { it.startTime }) { entry ->
-        HydrationEntryRow(
-            entry = entry,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+    val sortedEntries = entries.sortedByDescending { it.startTime }
+    item {
+        PaginatedEntryList(
+            title = stringResource(R.string.section_entries),
+            entries = sortedEntries,
+        ) { entry, rowModifier ->
+            HydrationEntryRow(
+                entry = entry,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = rowModifier,
+            )
+        }
     }
 }
 

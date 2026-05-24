@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -68,6 +67,7 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
@@ -340,16 +340,18 @@ private fun LazyListScope.averageHeartRateContent(
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
             )
-            item { SectionHeader(stringResource(R.string.section_daily_breakdown)) }
-            items(state.dailySummaries.sortedByDescending { it.date }) { summary ->
-                HeartRateDayRow(
-                    summary = summary,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+            item {
+                PaginatedEntryList(
+                    title = stringResource(R.string.section_daily_breakdown),
+                    entries = state.dailySummaries.sortedByDescending { it.date },
+                ) { summary, rowModifier ->
+                    HeartRateDayRow(
+                        summary = summary,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = rowModifier,
+                    )
+                }
             }
         }
         !state.isLoading -> noHeartMetricData(
@@ -764,14 +766,18 @@ private fun LazyListScope.respiratoryRateContent(
             unitFormatter = unitFormatter,
         )
         if (state.selectedRange != TimeRange.DAY) {
-            item { SectionHeader(stringResource(R.string.section_respiratory_rate_daily_breakdown)) }
-            items(respiratoryRateDaySummaries(state.respiratoryRate).sortedByDescending { it.date }) { summary ->
-                RespiratoryRateDayRow(
-                    summary = summary,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+            item {
+                PaginatedEntryList(
+                    title = stringResource(R.string.section_respiratory_rate_daily_breakdown),
+                    entries = respiratoryRateDaySummaries(state.respiratoryRate).sortedByDescending { it.date },
+                ) { summary, rowModifier ->
+                    RespiratoryRateDayRow(
+                        summary = summary,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = rowModifier,
+                    )
+                }
             }
         }
         heartEntryRows(
@@ -1426,15 +1432,19 @@ private fun <T> LazyListScope.heartEntryRows(
 ) {
     if (entries.isEmpty()) return
 
-    item { SectionHeader(stringResource(R.string.section_entries)) }
-    items(entries.sortedByDescending(time)) { entry ->
-        VitalsReadingRow(
-            label = value(entry),
-            source = source(entry),
-            time = time(entry).atZone(ZoneId.systemDefault()),
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+    item {
+        PaginatedEntryList(
+            title = stringResource(R.string.section_entries),
+            entries = entries.sortedByDescending(time),
+        ) { entry, rowModifier ->
+            VitalsReadingRow(
+                label = value(entry),
+                source = source(entry),
+                time = time(entry).atZone(ZoneId.systemDefault()),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = rowModifier,
+            )
+        }
     }
 }
 
@@ -1447,17 +1457,19 @@ private fun <T> LazyListScope.heartDailyEntries(
 ) {
     if (entries.isEmpty()) return
 
-    item { SectionHeader(stringResource(R.string.section_entries)) }
-    items(entries.sortedByDescending(date)) { entry ->
-        HeartDailyEntryRow(
-            date = date(entry),
-            value = value(entry),
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            accentColor = accentColor,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+    item {
+        PaginatedEntryList(
+            title = stringResource(R.string.section_entries),
+            entries = entries.sortedByDescending(date),
+        ) { entry, rowModifier ->
+            HeartDailyEntryRow(
+                date = date(entry),
+                value = value(entry),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = accentColor,
+                modifier = rowModifier,
+            )
+        }
     }
 }
 

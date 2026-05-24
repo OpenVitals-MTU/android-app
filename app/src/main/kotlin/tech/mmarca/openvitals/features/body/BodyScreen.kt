@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -49,6 +48,7 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -447,16 +447,18 @@ private fun LazyListScope.weightContent(
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
-        item { SectionHeader(stringResource(R.string.section_entries)) }
-        items(state.weightEntries.sortedByDescending { it.time }) { entry ->
-            WeightEntryRow(
-                entry = entry,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+        item {
+            PaginatedEntryList(
+                title = stringResource(R.string.section_entries),
+                entries = state.weightEntries.sortedByDescending { it.time },
+            ) { entry, rowModifier ->
+                WeightEntryRow(
+                    entry = entry,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = rowModifier,
+                )
+            }
         }
     } else if (!state.isLoading) {
         noBodyMetricData(
@@ -836,20 +838,21 @@ private fun <T> LazyListScope.bodyReadingEntries(
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    if (entries.isEmpty()) return
-
-    item { SectionHeader(stringResource(R.string.section_entries)) }
-    items(entries.sortedByDescending(time)) { entry ->
-        BodyReadingRow(
-            value = value(entry),
-            source = source(entry),
-            time = time(entry),
-            accentColor = accentColor,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+    val sortedEntries = entries.sortedByDescending(time)
+    item {
+        PaginatedEntryList(
+            title = stringResource(R.string.section_entries),
+            entries = sortedEntries,
+        ) { entry, rowModifier ->
+            BodyReadingRow(
+                value = value(entry),
+                source = source(entry),
+                time = time(entry),
+                accentColor = accentColor,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = rowModifier,
+            )
+        }
     }
 }
 

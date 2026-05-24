@@ -12,8 +12,13 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -27,6 +32,8 @@ import tech.mmarca.openvitals.ui.components.SourceChip
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+
+private const val VitalsEntryPageSize = 10
 
 @Composable
 internal fun VitalsSummaryRow(
@@ -96,6 +103,12 @@ internal fun <T> SimpleVitalsList(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
+    val sortedEntries = entries.sortedByDescending(time)
+    var visibleCount by remember(sortedEntries) {
+        mutableIntStateOf(sortedEntries.size.coerceAtMost(VitalsEntryPageSize))
+    }
+    val boundedVisibleCount = visibleCount.coerceAtMost(sortedEntries.size)
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -106,7 +119,7 @@ internal fun <T> SimpleVitalsList(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            entries.sortedByDescending(time).take(8).forEach { entry ->
+            sortedEntries.take(boundedVisibleCount).forEach { entry ->
                 VitalsReadingRow(
                     label = value(entry),
                     source = source(entry),
@@ -114,6 +127,18 @@ internal fun <T> SimpleVitalsList(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 )
+            }
+            if (boundedVisibleCount < sortedEntries.size) {
+                OutlinedButton(
+                    onClick = {
+                        visibleCount = (boundedVisibleCount + VitalsEntryPageSize).coerceAtMost(sortedEntries.size)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(stringResource(R.string.action_load_more_entries))
+                }
             }
         }
     }
