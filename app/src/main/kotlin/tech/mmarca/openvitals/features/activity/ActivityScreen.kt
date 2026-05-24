@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Stairs
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,9 +25,13 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
@@ -107,6 +114,25 @@ private fun LazyListScope.stepsContent(
                 )
             }
         }
+        activityStatistics(
+            unitFormatter = unitFormatter,
+            total = { DisplayValue(unitFormatter.count(state.dailySteps.sumOf { it.steps }), stringResource(R.string.unit_steps)) },
+            average = {
+                DisplayValue(
+                    unitFormatter.count(
+                        averageOrZero(
+                            total = state.dailySteps.sumOf { it.steps }.toDouble(),
+                            activeDays = state.dailySteps.count { it.steps > 0L },
+                        ).roundToLong(),
+                    ),
+                    stringResource(R.string.unit_steps),
+                )
+            },
+            best = { DisplayValue(unitFormatter.count(state.dailySteps.maxOfOrNull { it.steps } ?: 0L), stringResource(R.string.unit_steps)) },
+            activeDays = state.dailySteps.count { it.steps > 0L },
+            icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
+            accentColor = StepsColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_steps, R.string.message_no_step_updates, Icons.AutoMirrored.Outlined.DirectionsWalk, StepsColor)
     }
@@ -146,6 +172,16 @@ private fun LazyListScope.distanceContent(
                 )
             }
         }
+        val values = state.dailySteps.map { it.distanceMeters }
+        activityStatistics(
+            unitFormatter = unitFormatter,
+            total = { unitFormatter.distance(values.sum()) },
+            average = { unitFormatter.distance(averageOrZero(values.sum(), values.count { it > 0.0 })) },
+            best = { unitFormatter.distance(values.maxOrNull() ?: 0.0) },
+            activeDays = values.count { it > 0.0 },
+            icon = Icons.Outlined.Straighten,
+            accentColor = DistanceColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_distance, R.string.message_no_distance_updates, Icons.Outlined.Straighten, DistanceColor)
     }
@@ -185,6 +221,16 @@ private fun LazyListScope.caloriesContent(
                 )
             }
         }
+        val values = state.nutrition.map { it.caloriesBurnedKcal }
+        activityStatistics(
+            unitFormatter = unitFormatter,
+            total = { unitFormatter.energy(values.sum()) },
+            average = { unitFormatter.energy(averageOrZero(values.sum(), values.count { it > 0.0 })) },
+            best = { unitFormatter.energy(values.maxOrNull() ?: 0.0) },
+            activeDays = values.count { it > 0.0 },
+            icon = Icons.Outlined.LocalFireDepartment,
+            accentColor = CaloriesColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_calories_burned, R.string.message_no_calories_burned, Icons.Outlined.LocalFireDepartment, CaloriesColor)
     }
@@ -224,6 +270,16 @@ private fun LazyListScope.activeCaloriesContent(
                 )
             }
         }
+        val values = state.dailySteps.map { it.activeCaloriesKcal ?: 0.0 }
+        activityStatistics(
+            unitFormatter = unitFormatter,
+            total = { unitFormatter.energy(values.sum()) },
+            average = { unitFormatter.energy(averageOrZero(values.sum(), values.count { it > 0.0 })) },
+            best = { unitFormatter.energy(values.maxOrNull() ?: 0.0) },
+            activeDays = values.count { it > 0.0 },
+            icon = Icons.Outlined.LocalFireDepartment,
+            accentColor = ActiveCaloriesColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(
             R.string.metric_active_calories,
@@ -268,6 +324,21 @@ private fun LazyListScope.floorsContent(
                 )
             }
         }
+        val values = state.dailySteps.map { (it.floorsClimbed ?: 0).toDouble() }
+        activityStatistics(
+            unitFormatter = unitFormatter,
+            total = { DisplayValue(unitFormatter.count(values.sum().roundToLong()), stringResource(R.string.unit_floors)) },
+            average = {
+                DisplayValue(
+                    unitFormatter.count(averageOrZero(values.sum(), values.count { it > 0.0 }).roundToLong()),
+                    stringResource(R.string.unit_floors),
+                )
+            },
+            best = { DisplayValue(unitFormatter.count((values.maxOrNull() ?: 0.0).roundToLong()), stringResource(R.string.unit_floors)) },
+            activeDays = values.count { it > 0.0 },
+            icon = Icons.Outlined.Stairs,
+            accentColor = FloorsColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_floors_climbed, R.string.message_no_floors_climbed, Icons.Outlined.Stairs, FloorsColor)
     }
@@ -307,8 +378,68 @@ private fun LazyListScope.elevationContent(
                 )
             }
         }
+        val values = state.dailySteps.map { it.elevationGainedMeters ?: 0.0 }
+        activityStatistics(
+            unitFormatter = unitFormatter,
+            total = { unitFormatter.elevation(values.sum()) },
+            average = { unitFormatter.elevation(averageOrZero(values.sum(), values.count { it > 0.0 })) },
+            best = { unitFormatter.elevation(values.maxOrNull() ?: 0.0) },
+            activeDays = values.count { it > 0.0 },
+            icon = Icons.Outlined.Terrain,
+            accentColor = ElevationColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_elevation_gained, R.string.message_no_elevation, Icons.Outlined.Terrain, ElevationColor)
+    }
+}
+
+private fun LazyListScope.activityStatistics(
+    unitFormatter: UnitFormatter,
+    total: @Composable () -> DisplayValue,
+    average: @Composable () -> DisplayValue,
+    best: @Composable () -> DisplayValue,
+    activeDays: Int,
+    icon: ImageVector,
+    accentColor: Color,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        val totalValue = total()
+        val averageValue = average()
+        val bestValue = best()
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.stat_total),
+                    value = totalValue.value,
+                    unit = totalValue.unit,
+                    icon = icon,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_daily_average),
+                    value = averageValue.value,
+                    unit = averageValue.unit,
+                    icon = Icons.Outlined.Star,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_best_day),
+                    value = bestValue.value,
+                    unit = bestValue.unit,
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_active_days),
+                    value = unitFormatter.count(activeDays),
+                    unit = stringResource(R.string.unit_days),
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = accentColor,
+                ),
+            ),
+            modifier = metricModifier(),
+        )
     }
 }
 
@@ -333,3 +464,6 @@ private fun metricModifier(): Modifier =
     Modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
+
+private fun averageOrZero(total: Double, activeDays: Int): Double =
+    activeDays.takeIf { it > 0 }?.let { total / it } ?: 0.0

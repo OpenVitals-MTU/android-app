@@ -166,6 +166,8 @@
     <string name="summary_sleep_ending_today">Sueño que termina hoy</string>
     <string name="summary_sleep_ending_on">Sueño que termina el %1$s</string>
     <string name="stat_current_streak">Racha actual</string>
+    <string name="stat_total">Total</string>
+    <string name="stat_active_days">Días activos</string>
     <string name="stat_daily_average">Media diaria</string>
     <string name="stat_total_intake">Ingesta total</string>
     <string name="stat_best_day">Mejor día</string>
