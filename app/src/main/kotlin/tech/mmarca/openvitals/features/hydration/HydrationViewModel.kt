@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
@@ -26,6 +27,7 @@ data class HydrationUiState(
     val dailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
     val dailyHydration: List<DailyHydration> = emptyList(),
     val previousDailyHydration: List<DailyHydration> = emptyList(),
+    val baselineDailyHydration: List<DailyHydration> = emptyList(),
     val error: String? = null,
 ) {
     val totalLiters: Double get() = dailyHydration.sumOf { it.liters }
@@ -130,11 +132,13 @@ class HydrationViewModel(
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
             val previousPeriod = previousPeriodFor(range, date)
+            val baselinePeriod = baselinePeriodBefore(period)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 HydrationLoadResult(
                     dailyHydration = repository.loadDailyHydration(period.start, period.end),
                     previousDailyHydration = repository.loadDailyHydration(previousPeriod.start, previousPeriod.end),
+                    baselineDailyHydration = repository.loadDailyHydration(baselinePeriod.start, baselinePeriod.end),
                 )
             }.onSuccess { result ->
                 _uiState.value = _uiState.value.copy(
@@ -142,6 +146,7 @@ class HydrationViewModel(
                     selectedDate = date,
                     dailyHydration = result.dailyHydration,
                     previousDailyHydration = result.previousDailyHydration,
+                    baselineDailyHydration = result.baselineDailyHydration,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -156,6 +161,7 @@ class HydrationViewModel(
     private data class HydrationLoadResult(
         val dailyHydration: List<DailyHydration>,
         val previousDailyHydration: List<DailyHydration>,
+        val baselineDailyHydration: List<DailyHydration>,
     )
 
     private val periodSelection: PeriodSelection

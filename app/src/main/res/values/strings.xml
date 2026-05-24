@@ -191,6 +191,17 @@
     <string name="stat_vs_previous_week">Vs previous week</string>
     <string name="stat_vs_previous_month">Vs previous month</string>
     <string name="stat_vs_previous_year">Vs previous year</string>
+    <string name="stat_baseline">Baseline</string>
+    <string name="stat_30_day_baseline">30-day avg</string>
+    <string name="stat_60_day_baseline">60-day avg</string>
+    <string name="stat_90_day_baseline">90-day avg</string>
+    <string name="stat_usual_range">Usual range</string>
+    <string name="stat_baseline_deviation">Baseline deviation</string>
+    <string name="baseline_status_usual">Usual</string>
+    <string name="baseline_status_above">Above</string>
+    <string name="baseline_status_below">Below</string>
+    <string name="baseline_status_unusual_high">Unusual high</string>
+    <string name="baseline_status_unusual_low">Unusual low</string>
     <string name="legend_less">Less</string>
     <string name="legend_more">More</string>
     <string name="daily_goal">Daily goal</string>

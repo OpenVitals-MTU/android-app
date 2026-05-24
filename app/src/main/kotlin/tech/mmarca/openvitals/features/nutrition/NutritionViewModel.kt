@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.NutritionRepository
+import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
@@ -22,6 +23,7 @@ data class NutritionUiState(
     val dailyGoal: Double = NutritionMetric.CALORIES_IN.dailyGoalKey.defaultValue,
     val dailyMacros: List<DailyMacros> = emptyList(),
     val previousDailyMacros: List<DailyMacros> = emptyList(),
+    val baselineDailyMacros: List<DailyMacros> = emptyList(),
     val entries: List<NutritionEntry> = emptyList(),
     val error: String? = null,
 ) {
@@ -98,11 +100,13 @@ class NutritionViewModel(
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
             val previousPeriod = previousPeriodFor(range, date)
+            val baselinePeriod = baselinePeriodBefore(period)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 NutritionLoadResult(
                     dailyMacros = repository.loadDailyMacros(period.start, period.end),
                     previousDailyMacros = repository.loadDailyMacros(previousPeriod.start, previousPeriod.end),
+                    baselineDailyMacros = repository.loadDailyMacros(baselinePeriod.start, baselinePeriod.end),
                     entries = if (selectedMetric.loadsMealEntries(range)) {
                         repository.loadNutritionEntries(period.start, period.end)
                     } else {
@@ -115,6 +119,7 @@ class NutritionViewModel(
                     selectedDate = date,
                     dailyMacros = result.dailyMacros,
                     previousDailyMacros = result.previousDailyMacros,
+                    baselineDailyMacros = result.baselineDailyMacros,
                     entries = result.entries,
                 )
             }.onFailure { error ->
@@ -130,6 +135,7 @@ class NutritionViewModel(
     private data class NutritionLoadResult(
         val dailyMacros: List<DailyMacros>,
         val previousDailyMacros: List<DailyMacros>,
+        val baselineDailyMacros: List<DailyMacros>,
         val entries: List<NutritionEntry>,
     )
 

@@ -31,7 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
@@ -46,6 +48,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
@@ -113,6 +116,7 @@ fun HydrationScreen(
             item {
                 HydrationStatistics(
                     state = state,
+                    period = period,
                     unitFormatter = unitFormatter,
                     selectedRange = state.selectedRange,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -169,6 +173,7 @@ private fun HydrationSummary(
 @Composable
 private fun HydrationStatistics(
     state: HydrationUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
     selectedRange: TimeRange,
     modifier: Modifier = Modifier,
@@ -237,6 +242,15 @@ private fun HydrationStatistics(
                 valueFormatter = { unitFormatter.hydration(it) },
                 accentColor = HydrationColor,
             ),
+        ) + personalBaselineInsightStats(
+            insight = personalBaselineInsight(
+                currentValue = state.averageLiters,
+                values = state.baselineDailyHydration.map { BaselineValue(it.date, it.liters) },
+                referenceDate = period.start.minusDays(1),
+            ),
+            unitFormatter = unitFormatter,
+            valueFormatter = { unitFormatter.hydration(it) },
+            accentColor = HydrationColor,
         ),
         modifier = modifier,
     )

@@ -22,10 +22,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.DailyGoalDirection
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -38,6 +40,7 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
@@ -266,6 +269,7 @@ private fun LazyListScope.stepsContent(
         )
         activityStatistics(
             unitFormatter = unitFormatter,
+            period = period,
             total = { DisplayValue(unitFormatter.count(state.dailySteps.sumOf { it.steps }), stringResource(R.string.unit_steps)) },
             average = {
                 DisplayValue(
@@ -288,6 +292,11 @@ private fun LazyListScope.stepsContent(
             comparisonValueFormatter = {
                 DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_steps))
             },
+            baselineCurrentValue = averageOrZero(
+                total = state.dailySteps.sumOf { it.steps }.toDouble(),
+                activeDays = state.dailySteps.count { it.steps > 0L },
+            ),
+            baselineValues = state.baselineDailySteps.map { BaselineValue(it.date, it.steps.toDouble()) },
             icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
             accentColor = StepsColor,
             includeHeader = false,
@@ -348,6 +357,7 @@ private fun LazyListScope.distanceContent(
         )
         activityStatistics(
             unitFormatter = unitFormatter,
+            period = period,
             total = { unitFormatter.distance(values.sum()) },
             average = { unitFormatter.distance(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.distance(values.maxOrNull() ?: 0.0) },
@@ -358,6 +368,8 @@ private fun LazyListScope.distanceContent(
             ),
             selectedRange = state.selectedRange,
             comparisonValueFormatter = { unitFormatter.distance(it) },
+            baselineCurrentValue = averageOrZero(values.sum(), values.count { it > 0.0 }),
+            baselineValues = state.baselineDailySteps.map { BaselineValue(it.date, it.distanceMeters) },
             icon = Icons.Outlined.Straighten,
             accentColor = DistanceColor,
             includeHeader = false,
@@ -418,6 +430,7 @@ private fun LazyListScope.caloriesContent(
         )
         activityStatistics(
             unitFormatter = unitFormatter,
+            period = period,
             total = { unitFormatter.energy(values.sum()) },
             average = { unitFormatter.energy(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.energy(values.maxOrNull() ?: 0.0) },
@@ -428,6 +441,8 @@ private fun LazyListScope.caloriesContent(
             ),
             selectedRange = state.selectedRange,
             comparisonValueFormatter = { unitFormatter.energy(it) },
+            baselineCurrentValue = averageOrZero(values.sum(), values.count { it > 0.0 }),
+            baselineValues = state.baselineNutrition.map { BaselineValue(it.date, it.caloriesBurnedKcal) },
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = CaloriesColor,
             includeHeader = false,
@@ -488,6 +503,7 @@ private fun LazyListScope.activeCaloriesContent(
         )
         activityStatistics(
             unitFormatter = unitFormatter,
+            period = period,
             total = { unitFormatter.energy(values.sum()) },
             average = { unitFormatter.energy(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.energy(values.maxOrNull() ?: 0.0) },
@@ -498,6 +514,8 @@ private fun LazyListScope.activeCaloriesContent(
             ),
             selectedRange = state.selectedRange,
             comparisonValueFormatter = { unitFormatter.energy(it) },
+            baselineCurrentValue = averageOrZero(values.sum(), values.count { it > 0.0 }),
+            baselineValues = state.baselineDailySteps.map { BaselineValue(it.date, it.activeCaloriesKcal ?: 0.0) },
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = ActiveCaloriesColor,
             includeHeader = false,
@@ -565,6 +583,7 @@ private fun LazyListScope.floorsContent(
         )
         activityStatistics(
             unitFormatter = unitFormatter,
+            period = period,
             total = { DisplayValue(unitFormatter.count(values.sum().roundToLong()), stringResource(R.string.unit_floors)) },
             average = {
                 DisplayValue(
@@ -582,6 +601,8 @@ private fun LazyListScope.floorsContent(
             comparisonValueFormatter = {
                 DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_floors))
             },
+            baselineCurrentValue = averageOrZero(values.sum(), values.count { it > 0.0 }),
+            baselineValues = state.baselineDailySteps.map { BaselineValue(it.date, (it.floorsClimbed ?: 0).toDouble()) },
             icon = Icons.Outlined.Stairs,
             accentColor = FloorsColor,
             includeHeader = false,
@@ -642,6 +663,7 @@ private fun LazyListScope.elevationContent(
         )
         activityStatistics(
             unitFormatter = unitFormatter,
+            period = period,
             total = { unitFormatter.elevation(values.sum()) },
             average = { unitFormatter.elevation(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.elevation(values.maxOrNull() ?: 0.0) },
@@ -652,6 +674,8 @@ private fun LazyListScope.elevationContent(
             ),
             selectedRange = state.selectedRange,
             comparisonValueFormatter = { unitFormatter.elevation(it) },
+            baselineCurrentValue = averageOrZero(values.sum(), values.count { it > 0.0 }),
+            baselineValues = state.baselineDailySteps.map { BaselineValue(it.date, it.elevationGainedMeters ?: 0.0) },
             icon = Icons.Outlined.Terrain,
             accentColor = ElevationColor,
             includeHeader = false,
@@ -705,6 +729,7 @@ private fun LazyListScope.activityGoal(
 
 private fun LazyListScope.activityStatistics(
     unitFormatter: UnitFormatter,
+    period: DatePeriod,
     total: @Composable () -> DisplayValue,
     average: @Composable () -> DisplayValue,
     best: @Composable () -> DisplayValue,
@@ -712,6 +737,8 @@ private fun LazyListScope.activityStatistics(
     comparison: tech.mmarca.openvitals.core.insights.PeriodComparison,
     selectedRange: TimeRange,
     comparisonValueFormatter: @Composable (Double) -> DisplayValue,
+    baselineCurrentValue: Double,
+    baselineValues: List<BaselineValue>,
     icon: ImageVector,
     accentColor: Color,
     includeHeader: Boolean = true,
@@ -760,6 +787,15 @@ private fun LazyListScope.activityStatistics(
                     valueFormatter = comparisonValueFormatter,
                     accentColor = accentColor,
                 ),
+            ) + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = baselineCurrentValue,
+                    values = baselineValues,
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = comparisonValueFormatter,
+                accentColor = accentColor,
             ),
             modifier = metricModifier(),
         )

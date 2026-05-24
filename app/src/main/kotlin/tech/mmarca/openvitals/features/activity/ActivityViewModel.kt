@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
@@ -23,8 +24,10 @@ data class ActivityUiState(
     val dailyGoal: Double = ActivityMetric.STEPS.dailyGoalKey.defaultValue,
     val dailySteps: List<DailySteps> = emptyList(),
     val previousDailySteps: List<DailySteps> = emptyList(),
+    val baselineDailySteps: List<DailySteps> = emptyList(),
     val nutrition: List<DailyNutrition> = emptyList(),
     val previousNutrition: List<DailyNutrition> = emptyList(),
+    val baselineNutrition: List<DailyNutrition> = emptyList(),
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
     val error: String? = null,
 )
@@ -96,6 +99,7 @@ class ActivityViewModel(
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
             val previousPeriod = previousPeriodFor(range, date)
+            val baselinePeriod = baselinePeriodBefore(period)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 val dailySteps = if (selectedMetric.usesDailySteps) {
@@ -105,6 +109,11 @@ class ActivityViewModel(
                 }
                 val previousDailySteps = if (selectedMetric.usesDailySteps) {
                     repository.loadDailySteps(previousPeriod.start, previousPeriod.end)
+                } else {
+                    emptyList()
+                }
+                val baselineDailySteps = if (selectedMetric.usesDailySteps) {
+                    repository.loadDailySteps(baselinePeriod.start, baselinePeriod.end)
                 } else {
                     emptyList()
                 }
@@ -118,6 +127,11 @@ class ActivityViewModel(
                 } else {
                     emptyList()
                 }
+                val baselineNutrition = if (selectedMetric.usesDailyNutrition) {
+                    repository.loadDailyNutrition(baselinePeriod.start, baselinePeriod.end)
+                } else {
+                    emptyList()
+                }
                 val activityProgress = if (range == TimeRange.DAY) {
                     repository.loadActivityProgress(period.start)
                 } else {
@@ -128,8 +142,10 @@ class ActivityViewModel(
                     selectedDate = date,
                     dailySteps = dailySteps,
                     previousDailySteps = previousDailySteps,
+                    baselineDailySteps = baselineDailySteps,
                     nutrition = nutrition,
                     previousNutrition = previousNutrition,
+                    baselineNutrition = baselineNutrition,
                     activityProgress = activityProgress,
                 )
             }.onFailure {

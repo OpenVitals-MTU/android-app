@@ -191,6 +191,17 @@
     <string name="stat_vs_previous_week">Vs semana anterior</string>
     <string name="stat_vs_previous_month">Vs mes anterior</string>
     <string name="stat_vs_previous_year">Vs año anterior</string>
+    <string name="stat_baseline">Base</string>
+    <string name="stat_30_day_baseline">Media 30 días</string>
+    <string name="stat_60_day_baseline">Media 60 días</string>
+    <string name="stat_90_day_baseline">Media 90 días</string>
+    <string name="stat_usual_range">Rango habitual</string>
+    <string name="stat_baseline_deviation">Desviación base</string>
+    <string name="baseline_status_usual">Habitual</string>
+    <string name="baseline_status_above">Por encima</string>
+    <string name="baseline_status_below">Por debajo</string>
+    <string name="baseline_status_unusual_high">Alto inusual</string>
+    <string name="baseline_status_unusual_low">Bajo inusual</string>
     <string name="legend_less">Menos</string>
     <string name="legend_more">Más</string>
     <string name="daily_goal">Objetivo diario</string>

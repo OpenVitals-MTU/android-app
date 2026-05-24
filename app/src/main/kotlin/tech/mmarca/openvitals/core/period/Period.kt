@@ -87,6 +87,15 @@ fun previousPeriodFor(
         selectedDate = anchorDate.coerceAtMost(today),
     ).previousPeriod().period(today)
 
+fun baselinePeriodBefore(
+    period: DatePeriod,
+    days: Long = 90,
+): DatePeriod =
+    DatePeriod(
+        start = period.start.minusDays(days),
+        end = period.start.minusDays(1),
+    )
+
 fun periodTitle(
     range: TimeRange,
     period: DatePeriod,

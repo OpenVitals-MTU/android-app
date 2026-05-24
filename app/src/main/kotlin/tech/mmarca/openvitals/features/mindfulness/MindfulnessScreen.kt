@@ -28,10 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -50,6 +52,7 @@ import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import java.time.ZoneId
@@ -117,6 +120,8 @@ fun MindfulnessScreen(
             mindfulnessStatistics(
                 sessions = state.sessions,
                 previousSessions = state.previousSessions,
+                baselineSessions = state.baselineSessions,
+                period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
                 includeHeader = false,
@@ -211,6 +216,8 @@ private fun LazyListScope.mindfulnessGoal(
 private fun LazyListScope.mindfulnessStatistics(
     sessions: List<MindfulnessSession>,
     previousSessions: List<MindfulnessSession>,
+    baselineSessions: List<MindfulnessSession>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
@@ -225,6 +232,9 @@ private fun LazyListScope.mindfulnessStatistics(
             ?: 0L
         val longestMs = sessions.maxOfOrNull { it.durationMs.coerceAtLeast(0L) } ?: 0L
         val previousTotalMs = previousSessions.sumOf { it.durationMs.coerceAtLeast(0L) }
+        val dailyMinutes = mindfulnessDailyGoalValues(sessions).map { it.value }
+        val baselineValues = mindfulnessDailyGoalValues(baselineSessions)
+            .map { BaselineValue(it.date, it.value) }
 
         InsightStatGrid(
             stats = listOf(
@@ -266,6 +276,15 @@ private fun LazyListScope.mindfulnessStatistics(
                     valueFormatter = { DisplayValue(unitFormatter.duration(it.roundToLong()), "") },
                     accentColor = MindfulnessColor,
                 ),
+            ) + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = dailyMinutes.takeIf { it.isNotEmpty() }?.average() ?: 0.0,
+                    values = baselineValues,
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = { unitFormatter.minutes(it.roundToLong()) },
+                accentColor = MindfulnessColor,
             ),
             modifier = metricModifier(),
         )

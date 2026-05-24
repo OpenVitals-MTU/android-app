@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
+import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
@@ -22,6 +23,7 @@ data class MindfulnessUiState(
     val dailyGoalMinutes: Double = MetricDailyGoalKey.MINDFULNESS_MINUTES.defaultValue,
     val sessions: List<MindfulnessSession> = emptyList(),
     val previousSessions: List<MindfulnessSession> = emptyList(),
+    val baselineSessions: List<MindfulnessSession> = emptyList(),
     val error: String? = null,
 ) {
     val totalMinutes: Long get() = sessions.sumOf { it.durationMinutes }
@@ -93,11 +95,13 @@ class MindfulnessViewModel(
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
             val previousPeriod = previousPeriodFor(range, date)
+            val baselinePeriod = baselinePeriodBefore(period)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 MindfulnessLoadResult(
                     sessions = repository.loadMindfulnessSessions(period.start, period.end),
                     previousSessions = repository.loadMindfulnessSessions(previousPeriod.start, previousPeriod.end),
+                    baselineSessions = repository.loadMindfulnessSessions(baselinePeriod.start, baselinePeriod.end),
                 )
             }
                 .onSuccess { result ->
@@ -106,6 +110,7 @@ class MindfulnessViewModel(
                         selectedDate = date,
                         sessions = result.sessions,
                         previousSessions = result.previousSessions,
+                        baselineSessions = result.baselineSessions,
                     )
                 }
                 .onFailure { error ->
@@ -121,6 +126,7 @@ class MindfulnessViewModel(
     private data class MindfulnessLoadResult(
         val sessions: List<MindfulnessSession>,
         val previousSessions: List<MindfulnessSession>,
+        val baselineSessions: List<MindfulnessSession>,
     )
 
     private val periodSelection: PeriodSelection

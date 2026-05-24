@@ -23,8 +23,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.PeriodComparison
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -38,10 +40,12 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
+import java.time.ZoneId
 
 enum class BodyMetric {
     WEIGHT,
@@ -177,6 +181,7 @@ private fun BodyMetricScreen(
             BodyMetric.WEIGHT -> weightContent(state, period, unitFormatter, dateTimeFormatterProvider)
             BodyMetric.HEIGHT -> singleBodyMetricContent(
                 state = state,
+                period = period,
                 titleRes = R.string.metric_height,
                 value = state.heightCm?.let(unitFormatter::height),
                 icon = Icons.Outlined.Straighten,
@@ -185,6 +190,7 @@ private fun BodyMetricScreen(
             )
             BodyMetric.BMI -> singleBodyMetricContent(
                 state = state,
+                period = period,
                 titleRes = R.string.metric_bmi,
                 value = state.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
                 comparison = state.previousBmi?.let { previous ->
@@ -195,10 +201,13 @@ private fun BodyMetricScreen(
                 accentColor = WeightColor,
                 unitFormatter = unitFormatter,
                 selectedRange = state.selectedRange,
+                baselineCurrentValue = state.bmi,
+                baselineValues = bmiBaselineValues(state.baselineWeightEntries, state.heightCm),
             )
             BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider)
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
                 state = state,
+                period = period,
                 titleRes = R.string.metric_lean_mass,
                 value = state.leanMassKg?.let(unitFormatter::bodyMass),
                 icon = Icons.Outlined.MonitorWeight,
@@ -207,6 +216,7 @@ private fun BodyMetricScreen(
             )
             BodyMetric.BMR -> singleBodyMetricContent(
                 state = state,
+                period = period,
                 titleRes = R.string.metric_bmr,
                 value = state.bmrKcal?.let(unitFormatter::energy),
                 icon = Icons.Outlined.LocalFireDepartment,
@@ -215,6 +225,7 @@ private fun BodyMetricScreen(
             )
             BodyMetric.BONE_MASS -> singleBodyMetricContent(
                 state = state,
+                period = period,
                 titleRes = R.string.metric_bone_mass,
                 value = state.boneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
                 icon = Icons.Outlined.MonitorWeight,
@@ -255,6 +266,8 @@ private fun LazyListScope.weightContent(
         weightStatistics(
             entries = state.weightEntries,
             previousEntries = state.previousWeightEntries,
+            baselineEntries = state.baselineWeightEntries,
+            period = period,
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
@@ -313,6 +326,8 @@ private fun LazyListScope.bodyFatContent(
         bodyFatStatistics(
             entries = state.bodyFatEntries,
             previousEntries = state.previousBodyFatEntries,
+            baselineEntries = state.baselineBodyFatEntries,
+            period = period,
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
@@ -327,6 +342,7 @@ private fun LazyListScope.bodyFatContent(
 
 private fun LazyListScope.singleBodyMetricContent(
     state: BodyUiState,
+    period: DatePeriod,
     titleRes: Int,
     value: DisplayValue?,
     comparison: PeriodComparison? = null,
@@ -335,6 +351,8 @@ private fun LazyListScope.singleBodyMetricContent(
     accentColor: Color,
     unitFormatter: UnitFormatter,
     selectedRange: TimeRange? = null,
+    baselineCurrentValue: Double? = null,
+    baselineValues: List<BaselineValue> = emptyList(),
 ) {
     if (value != null) {
         item {
@@ -355,6 +373,9 @@ private fun LazyListScope.singleBodyMetricContent(
             accentColor = accentColor,
             unitFormatter = unitFormatter,
             selectedRange = selectedRange,
+            period = period,
+            baselineCurrentValue = baselineCurrentValue,
+            baselineValues = baselineValues,
         )
     } else if (!state.isLoading) {
         noBodyMetricData(titleRes, icon, accentColor)
@@ -364,6 +385,8 @@ private fun LazyListScope.singleBodyMetricContent(
 private fun LazyListScope.weightStatistics(
     entries: List<WeightEntry>,
     previousEntries: List<WeightEntry>,
+    baselineEntries: List<WeightEntry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -387,12 +410,17 @@ private fun LazyListScope.weightStatistics(
         icon = Icons.Outlined.MonitorWeight,
         accentColor = WeightColor,
         unitFormatter = unitFormatter,
+        period = period,
+        baselineCurrentValue = entries.maxByOrNull { entry -> entry.time }?.weightKg ?: 0.0,
+        baselineValues = baselineEntries.map { it.weightBaselineValue() },
     )
 }
 
 private fun LazyListScope.bodyFatStatistics(
     entries: List<BodyFatEntry>,
     previousEntries: List<BodyFatEntry>,
+    baselineEntries: List<BodyFatEntry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -415,6 +443,9 @@ private fun LazyListScope.bodyFatStatistics(
         icon = Icons.Outlined.MonitorWeight,
         accentColor = BodyFatColor,
         unitFormatter = unitFormatter,
+        period = period,
+        baselineCurrentValue = entries.maxByOrNull { entry -> entry.time }?.percent ?: 0.0,
+        baselineValues = baselineEntries.map { it.bodyFatBaselineValue() },
     )
 }
 
@@ -426,6 +457,9 @@ private fun LazyListScope.singleBodyMetricStatistics(
     accentColor: Color,
     unitFormatter: UnitFormatter,
     selectedRange: TimeRange?,
+    period: DatePeriod,
+    baselineCurrentValue: Double?,
+    baselineValues: List<BaselineValue>,
 ) {
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
@@ -457,7 +491,18 @@ private fun LazyListScope.singleBodyMetricStatistics(
                 )
             } else {
                 emptyList()
-            },
+            } + baselineCurrentValue?.let { current ->
+                personalBaselineInsightStats(
+                    insight = personalBaselineInsight(
+                        currentValue = current,
+                        values = baselineValues,
+                        referenceDate = period.start.minusDays(1),
+                    ),
+                    unitFormatter = unitFormatter,
+                    valueFormatter = comparisonValueFormatter,
+                    accentColor = accentColor,
+                )
+            }.orEmpty(),
             modifier = metricModifier(),
         )
     }
@@ -475,6 +520,9 @@ private fun LazyListScope.bodyNumericStatistics(
     icon: ImageVector,
     accentColor: Color,
     unitFormatter: UnitFormatter,
+    period: DatePeriod,
+    baselineCurrentValue: Double,
+    baselineValues: List<BaselineValue>,
 ) {
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
@@ -525,7 +573,16 @@ private fun LazyListScope.bodyNumericStatistics(
                         accentColor = accentColor,
                     )
                 )
-            }.orEmpty(),
+            }.orEmpty() + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = baselineCurrentValue,
+                    values = baselineValues,
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = comparisonValueFormatter,
+                accentColor = accentColor,
+            ),
             modifier = metricModifier(),
         )
     }
@@ -552,3 +609,28 @@ private fun metricModifier(): Modifier =
     Modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
+
+private fun WeightEntry.weightBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = weightKg,
+    )
+
+private fun BodyFatEntry.bodyFatBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = percent,
+    )
+
+private fun bmiBaselineValues(
+    entries: List<WeightEntry>,
+    heightCm: Double?,
+): List<BaselineValue> {
+    val heightMeters = heightCm?.takeIf { it > 0.0 }?.let { it / 100.0 } ?: return emptyList()
+    return entries.map { entry ->
+        BaselineValue(
+            date = entry.time.atZone(ZoneId.systemDefault()).toLocalDate(),
+            value = entry.weightKg / (heightMeters * heightMeters),
+        )
+    }
+}

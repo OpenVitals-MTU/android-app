@@ -25,8 +25,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.PeriodComparison
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -49,6 +51,7 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
@@ -228,7 +231,7 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                vo2MaxContent(state, unitFormatter, dateTimeFormatterProvider)
+                vo2MaxContent(state, period, unitFormatter, dateTimeFormatterProvider)
             }
             HeartMetric.RESPIRATORY_RATE -> vitalsMetricContent(
                 state = state,
@@ -242,7 +245,7 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                bodyTemperatureContent(state, unitFormatter, dateTimeFormatterProvider)
+                bodyTemperatureContent(state, period, unitFormatter, dateTimeFormatterProvider)
             }
         }
     }
@@ -268,6 +271,8 @@ private fun LazyListScope.averageHeartRateContent(
             heartRateSampleStatistics(
                 samples = state.daySamples,
                 previousSamples = state.previousDaySamples,
+                baselineSummaries = state.baselineDailySummaries,
+                period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
             )
@@ -289,6 +294,8 @@ private fun LazyListScope.averageHeartRateContent(
             heartRateSummaryStatistics(
                 summaries = state.dailySummaries,
                 previousSummaries = state.previousDailySummaries,
+                baselineSummaries = state.baselineDailySummaries,
+                period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
             )
@@ -341,6 +348,9 @@ private fun LazyListScope.restingHeartRateContent(
                 comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
                 icon = Icons.Outlined.FavoriteBorder,
                 accentColor = HeartColor,
+                period = period,
+                baselineCurrentValue = state.dayRestingBpm.toDouble(),
+                baselineValues = state.baselineDailyRestingHR.map { BaselineValue(it.date, it.bpm.toDouble()) },
             )
         }
         state.selectedRange != TimeRange.DAY && state.dailyRestingHR.isNotEmpty() -> {
@@ -357,6 +367,8 @@ private fun LazyListScope.restingHeartRateContent(
             restingHeartRateStatistics(
                 entries = state.dailyRestingHR,
                 previousEntries = state.previousDailyRestingHR,
+                baselineEntries = state.baselineDailyRestingHR,
+                period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
             )
@@ -398,6 +410,9 @@ private fun LazyListScope.hrvContent(
                 comparisonValueFormatter = { unitFormatter.hrv(it) },
                 icon = Icons.Outlined.FavoriteBorder,
                 accentColor = HeartColor,
+                period = period,
+                baselineCurrentValue = state.dayHrvMs,
+                baselineValues = state.baselineDailyHrv.map { BaselineValue(it.date, it.rmssdMs) },
             )
         }
         state.selectedRange != TimeRange.DAY && state.dailyHrv.isNotEmpty() -> {
@@ -414,6 +429,8 @@ private fun LazyListScope.hrvContent(
             hrvStatistics(
                 entries = state.dailyHrv,
                 previousEntries = state.previousDailyHrv,
+                baselineEntries = state.baselineDailyHrv,
+                period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
             )
@@ -461,7 +478,14 @@ private fun LazyListScope.bloodPressureContent(
                 modifier = metricModifier(),
             )
         }
-        bloodPressureStatistics(state.bloodPressure, state.previousBloodPressure, state.selectedRange, unitFormatter)
+        bloodPressureStatistics(
+            entries = state.bloodPressure,
+            previousEntries = state.previousBloodPressure,
+            baselineEntries = state.baselineBloodPressure,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_blood_pressure,
@@ -496,7 +520,14 @@ private fun LazyListScope.spO2Content(
                 modifier = metricModifier(),
             )
         }
-        spO2Statistics(state.spO2, state.previousSpO2, state.selectedRange, unitFormatter)
+        spO2Statistics(
+            entries = state.spO2,
+            previousEntries = state.previousSpO2,
+            baselineEntries = state.baselineSpO2,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_spo2,
@@ -509,6 +540,7 @@ private fun LazyListScope.spO2Content(
 
 private fun LazyListScope.vo2MaxContent(
     state: HeartUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
@@ -526,7 +558,14 @@ private fun LazyListScope.vo2MaxContent(
                 modifier = metricModifier(),
             )
         }
-        vo2MaxStatistics(state.vo2Max, state.previousVo2Max, state.selectedRange, unitFormatter)
+        vo2MaxStatistics(
+            entries = state.vo2Max,
+            previousEntries = state.previousVo2Max,
+            baselineEntries = state.baselineVo2Max,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
         if (state.vo2Max.size > 1) {
             item { SectionHeader(stringResource(R.string.section_vo2_max_history)) }
             items(state.vo2Max.sortedByDescending { it.time }) { entry ->
@@ -578,7 +617,14 @@ private fun LazyListScope.respiratoryRateContent(
                 )
             }
         }
-        respiratoryRateStatistics(state.respiratoryRate, state.previousRespiratoryRate, state.selectedRange, unitFormatter)
+        respiratoryRateStatistics(
+            entries = state.respiratoryRate,
+            previousEntries = state.previousRespiratoryRate,
+            baselineEntries = state.baselineRespiratoryRate,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
         if (state.selectedRange != TimeRange.DAY) {
             item { SectionHeader(stringResource(R.string.section_respiratory_rate_daily_breakdown)) }
             items(respiratoryRateDaySummaries(state.respiratoryRate).sortedByDescending { it.date }) { summary ->
@@ -602,6 +648,7 @@ private fun LazyListScope.respiratoryRateContent(
 
 private fun LazyListScope.bodyTemperatureContent(
     state: HeartUiState,
+    period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
@@ -617,7 +664,14 @@ private fun LazyListScope.bodyTemperatureContent(
                 modifier = metricModifier(),
             )
         }
-        bodyTemperatureStatistics(state.bodyTemperature, state.previousBodyTemperature, state.selectedRange, unitFormatter)
+        bodyTemperatureStatistics(
+            entries = state.bodyTemperature,
+            previousEntries = state.previousBodyTemperature,
+            baselineEntries = state.baselineBodyTemperature,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_body_temp,
@@ -631,6 +685,8 @@ private fun LazyListScope.bodyTemperatureContent(
 private fun LazyListScope.heartRateSampleStatistics(
     samples: List<HeartRateSample>,
     previousSamples: List<HeartRateSample>,
+    baselineSummaries: List<HeartRateSummary>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -649,12 +705,17 @@ private fun LazyListScope.heartRateSampleStatistics(
         comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.Favorite,
         accentColor = HeartColor,
+        period = period,
+        baselineCurrentValue = values.average(),
+        baselineValues = baselineSummaries.map { BaselineValue(it.date, it.avgBpm.toDouble()) },
     )
 }
 
 private fun LazyListScope.heartRateSummaryStatistics(
     summaries: List<HeartRateSummary>,
     previousSummaries: List<HeartRateSummary>,
+    baselineSummaries: List<HeartRateSummary>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -676,12 +737,17 @@ private fun LazyListScope.heartRateSummaryStatistics(
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
         countUnitRes = R.string.unit_days,
+        period = period,
+        baselineCurrentValue = summaries.map { it.avgBpm }.average(),
+        baselineValues = baselineSummaries.map { BaselineValue(it.date, it.avgBpm.toDouble()) },
     )
 }
 
 private fun LazyListScope.restingHeartRateStatistics(
     entries: List<DailyRestingHR>,
     previousEntries: List<DailyRestingHR>,
+    baselineEntries: List<DailyRestingHR>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -703,12 +769,17 @@ private fun LazyListScope.restingHeartRateStatistics(
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
         countUnitRes = R.string.unit_days,
+        period = period,
+        baselineCurrentValue = entries.map { it.bpm }.average(),
+        baselineValues = baselineEntries.map { BaselineValue(it.date, it.bpm.toDouble()) },
     )
 }
 
 private fun LazyListScope.hrvStatistics(
     entries: List<DailyHrv>,
     previousEntries: List<DailyHrv>,
+    baselineEntries: List<DailyHrv>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -730,12 +801,17 @@ private fun LazyListScope.hrvStatistics(
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
         countUnitRes = R.string.unit_days,
+        period = period,
+        baselineCurrentValue = entries.map { it.rmssdMs }.average(),
+        baselineValues = baselineEntries.map { BaselineValue(it.date, it.rmssdMs) },
     )
 }
 
 private fun LazyListScope.bloodPressureStatistics(
     entries: List<BloodPressureEntry>,
     previousEntries: List<BloodPressureEntry>,
+    baselineEntries: List<BloodPressureEntry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -797,7 +873,16 @@ private fun LazyListScope.bloodPressureStatistics(
                         accentColor = VitalsColor,
                     )
                 )
-            }.orEmpty(),
+            }.orEmpty() + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = entries.map { entry -> entry.systolicMmHg }.average(),
+                    values = baselineEntries.map { it.systolicBaselineValue() },
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = { value -> DisplayValue(unitFormatter.count(value.roundToInt()), "mmHg") },
+                accentColor = VitalsColor,
+            ),
             modifier = metricModifier(),
         )
     }
@@ -806,6 +891,8 @@ private fun LazyListScope.bloodPressureStatistics(
 private fun LazyListScope.spO2Statistics(
     entries: List<SpO2Entry>,
     previousEntries: List<SpO2Entry>,
+    baselineEntries: List<SpO2Entry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -825,12 +912,17 @@ private fun LazyListScope.spO2Statistics(
         comparisonValueFormatter = { unitFormatter.percent(it) },
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = oxygenColor,
+        period = period,
+        baselineCurrentValue = entries.map { it.percent }.average(),
+        baselineValues = baselineEntries.map { it.spO2BaselineValue() },
     )
 }
 
 private fun LazyListScope.vo2MaxStatistics(
     entries: List<Vo2MaxEntry>,
     previousEntries: List<Vo2MaxEntry>,
+    baselineEntries: List<Vo2MaxEntry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -850,12 +942,17 @@ private fun LazyListScope.vo2MaxStatistics(
         comparisonValueFormatter = { unitFormatter.vo2Max(it) },
         icon = Icons.Outlined.Speed,
         accentColor = vo2Color,
+        period = period,
+        baselineCurrentValue = entries.map { it.vo2MaxMlPerKgPerMin }.average(),
+        baselineValues = baselineEntries.map { it.vo2BaselineValue() },
     )
 }
 
 private fun LazyListScope.respiratoryRateStatistics(
     entries: List<RespiratoryRateEntry>,
     previousEntries: List<RespiratoryRateEntry>,
+    baselineEntries: List<RespiratoryRateEntry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -874,12 +971,17 @@ private fun LazyListScope.respiratoryRateStatistics(
         comparisonValueFormatter = { unitFormatter.respiratoryRate(it) },
         icon = Icons.Outlined.Favorite,
         accentColor = respiratoryColor,
+        period = period,
+        baselineCurrentValue = values.average(),
+        baselineValues = baselineEntries.map { it.respiratoryRateBaselineValue() },
     )
 }
 
 private fun LazyListScope.bodyTemperatureStatistics(
     entries: List<BodyTempEntry>,
     previousEntries: List<BodyTempEntry>,
+    baselineEntries: List<BodyTempEntry>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
@@ -898,6 +1000,9 @@ private fun LazyListScope.bodyTemperatureStatistics(
         comparisonValueFormatter = { unitFormatter.temperature(it) },
         icon = Icons.Outlined.DeviceThermostat,
         accentColor = temperatureColor,
+        period = period,
+        baselineCurrentValue = values.average(),
+        baselineValues = baselineEntries.map { it.bodyTemperatureBaselineValue() },
     )
 }
 
@@ -914,6 +1019,9 @@ private fun LazyListScope.heartNumericStatistics(
     accentColor: Color,
     countTitleRes: Int = R.string.stat_readings,
     countUnitRes: Int? = null,
+    period: DatePeriod? = null,
+    baselineCurrentValue: Double? = null,
+    baselineValues: List<BaselineValue> = emptyList(),
 ) {
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
@@ -957,7 +1065,20 @@ private fun LazyListScope.heartNumericStatistics(
                         accentColor = accentColor,
                     )
                 )
-            }.orEmpty(),
+            }.orEmpty() + if (period != null && baselineCurrentValue != null) {
+                personalBaselineInsightStats(
+                    insight = personalBaselineInsight(
+                        currentValue = baselineCurrentValue,
+                        values = baselineValues,
+                        referenceDate = period.start.minusDays(1),
+                    ),
+                    unitFormatter = unitFormatter,
+                    valueFormatter = comparisonValueFormatter,
+                    accentColor = accentColor,
+                )
+            } else {
+                emptyList()
+            },
             modifier = metricModifier(),
         )
     }
@@ -984,3 +1105,33 @@ private fun metricModifier(): Modifier =
     Modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
+
+private fun BloodPressureEntry.systolicBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = systolicMmHg.toDouble(),
+    )
+
+private fun SpO2Entry.spO2BaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = percent,
+    )
+
+private fun RespiratoryRateEntry.respiratoryRateBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = breathsPerMinute,
+    )
+
+private fun BodyTempEntry.bodyTemperatureBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = temperatureCelsius,
+    )
+
+private fun Vo2MaxEntry.vo2BaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = vo2MaxMlPerKgPerMin,
+    )

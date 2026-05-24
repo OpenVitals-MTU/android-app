@@ -20,12 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -41,6 +44,7 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
@@ -90,6 +94,16 @@ fun SleepScreen(
             sleepRangeMode = state.sleepRangeMode,
         )
     }
+    val baselinePeriod = remember(selectedPeriod) {
+        baselinePeriodBefore(selectedPeriod)
+    }
+    val baselineDurationPoints = remember(state.baselineSessions, baselinePeriod, state.sleepRangeMode) {
+        sleepDurationPoints(
+            sessions = state.baselineSessions,
+            period = baselinePeriod,
+            sleepRangeMode = state.sleepRangeMode,
+        )
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -136,6 +150,8 @@ fun SleepScreen(
                 sleepStatistics(
                     durationPoints = durationPoints,
                     previousDurationPoints = previousDurationPoints,
+                    baselineDurationPoints = baselineDurationPoints,
+                    period = period,
                     selectedRange = state.selectedRange,
                     unitFormatter = unitFormatter,
                     includeHeader = false,
@@ -183,6 +199,8 @@ fun SleepScreen(
                 sleepStatistics(
                     durationPoints = durationPoints,
                     previousDurationPoints = previousDurationPoints,
+                    baselineDurationPoints = baselineDurationPoints,
+                    period = period,
                     selectedRange = state.selectedRange,
                     unitFormatter = unitFormatter,
                     includeHeader = false,
@@ -281,6 +299,8 @@ private fun LazyListScope.sleepGoal(
 private fun LazyListScope.sleepStatistics(
     durationPoints: List<SleepDurationPoint>,
     previousDurationPoints: List<SleepDurationPoint>,
+    baselineDurationPoints: List<SleepDurationPoint>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
@@ -336,6 +356,15 @@ private fun LazyListScope.sleepStatistics(
                     valueFormatter = { sleepHoursDisplay(it, unitFormatter) },
                     accentColor = SleepColor,
                 ),
+            ) + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = averageHours,
+                    values = baselineDurationPoints.map { BaselineValue(it.date, it.hours) },
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = { sleepHoursDisplay(it, unitFormatter) },
+                accentColor = SleepColor,
             ),
             modifier = metricModifier(),
         )

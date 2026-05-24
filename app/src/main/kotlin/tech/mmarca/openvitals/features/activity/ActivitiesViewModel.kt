@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
@@ -22,6 +23,7 @@ data class ActivitiesUiState(
     val dailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
     val workouts: List<ExerciseData> = emptyList(),
     val previousWorkouts: List<ExerciseData> = emptyList(),
+    val baselineWorkouts: List<ExerciseData> = emptyList(),
     val error: String? = null,
 )
 
@@ -91,11 +93,13 @@ class ActivitiesViewModel(
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
             val previousPeriod = previousPeriodFor(range, date)
+            val baselinePeriod = baselinePeriodBefore(period)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 ActivitiesLoadResult(
                     workouts = repository.loadWorkouts(period.start, period.end),
                     previousWorkouts = repository.loadWorkouts(previousPeriod.start, previousPeriod.end),
+                    baselineWorkouts = repository.loadWorkouts(baselinePeriod.start, baselinePeriod.end),
                 )
             }
                 .onSuccess { result ->
@@ -104,6 +108,7 @@ class ActivitiesViewModel(
                         selectedDate = date,
                         workouts = result.workouts,
                         previousWorkouts = result.previousWorkouts,
+                        baselineWorkouts = result.baselineWorkouts,
                     )
                 }
                 .onFailure {
@@ -119,6 +124,7 @@ class ActivitiesViewModel(
     private data class ActivitiesLoadResult(
         val workouts: List<ExerciseData>,
         val previousWorkouts: List<ExerciseData>,
+        val baselineWorkouts: List<ExerciseData>,
     )
 
     private val periodSelection: PeriodSelection

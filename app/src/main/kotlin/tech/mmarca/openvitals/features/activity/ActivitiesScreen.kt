@@ -29,10 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -49,6 +51,7 @@ import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
@@ -98,6 +101,8 @@ fun ActivitiesScreen(
             workoutStatistics(
                 workouts = state.workouts,
                 previousWorkouts = state.previousWorkouts,
+                baselineWorkouts = state.baselineWorkouts,
+                period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
                 includeHeader = false,
@@ -202,6 +207,8 @@ private fun LazyListScope.workoutGoal(
 private fun LazyListScope.workoutStatistics(
     workouts: List<ExerciseData>,
     previousWorkouts: List<ExerciseData>,
+    baselineWorkouts: List<ExerciseData>,
+    period: DatePeriod,
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
@@ -216,6 +223,9 @@ private fun LazyListScope.workoutStatistics(
             ?: 0L
         val longestMs = workouts.maxOfOrNull { it.durationMs.coerceAtLeast(0L) } ?: 0L
         val previousTotalMs = previousWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }
+        val dailyMinutes = workoutDailyGoalValues(workouts).map { it.value }
+        val baselineValues = workoutDailyGoalValues(baselineWorkouts)
+            .map { BaselineValue(it.date, it.value) }
 
         InsightStatGrid(
             stats = listOf(
@@ -257,6 +267,15 @@ private fun LazyListScope.workoutStatistics(
                     valueFormatter = { DisplayValue(unitFormatter.duration(it.roundToLong()), "") },
                     accentColor = WorkoutColor,
                 ),
+            ) + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = dailyMinutes.takeIf { it.isNotEmpty() }?.average() ?: 0.0,
+                    values = baselineValues,
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = { unitFormatter.minutes(it.roundToLong()) },
+                accentColor = WorkoutColor,
             ),
             modifier = metricModifier(),
         )

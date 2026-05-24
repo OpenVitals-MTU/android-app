@@ -18,9 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
+import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
@@ -37,6 +39,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import kotlin.math.roundToInt
@@ -153,6 +156,7 @@ private fun LazyListScope.nutritionMetricContent(
 ) {
     val metricData = nutritionMetricData(metric, state.dailyMacros, unitFormatter)
     val previousMetricData = nutritionMetricData(metric, state.previousDailyMacros, unitFormatter)
+    val baselineMetricData = nutritionMetricData(metric, state.baselineDailyMacros, unitFormatter)
     if (state.dailyMacros.isEmpty() && !state.isLoading) {
         item {
             MetricCardPlaceholder(
@@ -207,6 +211,8 @@ private fun LazyListScope.nutritionMetricContent(
         nutritionStatistics(
             metricData = metricData,
             previousMetricData = previousMetricData,
+            baselineMetricData = baselineMetricData,
+            period = period,
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
             includeHeader = false,
@@ -306,6 +312,8 @@ private fun LazyListScope.nutritionGoal(
 private fun LazyListScope.nutritionStatistics(
     metricData: NutritionMetricData,
     previousMetricData: NutritionMetricData,
+    baselineMetricData: NutritionMetricData,
+    period: DatePeriod,
     selectedRange: tech.mmarca.openvitals.core.period.TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
@@ -361,6 +369,17 @@ private fun LazyListScope.nutritionStatistics(
                     valueFormatter = { metricData.valueDisplayFormatter(it) },
                     accentColor = metricData.color,
                 ),
+            ) + personalBaselineInsightStats(
+                insight = personalBaselineInsight(
+                    currentValue = loggedDays.takeIf { it > 0 }
+                        ?.let { values.sum() / it }
+                        ?: 0.0,
+                    values = baselineMetricData.values.map { BaselineValue(it.date, it.value) },
+                    referenceDate = period.start.minusDays(1),
+                ),
+                unitFormatter = unitFormatter,
+                valueFormatter = { metricData.valueDisplayFormatter(it) },
+                accentColor = metricData.color,
             ),
             modifier = metricModifier(),
         )
