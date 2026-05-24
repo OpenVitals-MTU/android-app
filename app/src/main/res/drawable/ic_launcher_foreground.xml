@@ -1,32 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M24,58m6,0a6,6 0,1 1,-12 0a6,6 0,1 1,12 0" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M54,40m6,0a6,6 0,1 1,-12 0a6,6 0,1 1,12 0" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M84,50m6,0a6,6 0,1 1,-12 0a6,6 0,1 1,12 0" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M18,64h12v14H18z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M48,46h12v32H48z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M78,56h12v22H78z" />
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M22,39h11l8,12 9,-22 8,31 8,-15h20"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="6" />
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:antialias="true"
+    android:filter="true"
+    android:gravity="fill"
+    android:src="@drawable/open_vitals_launcher_prod" />

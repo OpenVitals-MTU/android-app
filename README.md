@@ -1,3 +1,7 @@
+<p align="center">
+    <img width="160" alt="OpenVitals logo" src="docs/images/readme-logo.png">
+</p>
+
 # OpenVitals: a privacy-first Health Connect dashboard
 
 OpenVitals is an Android app for exploring your Health Connect data on-device.
@@ -9,15 +13,10 @@ OpenVitals is still in an early stage, but the core product direction is already
 ## Screenshots
 
 <div>
-    <img width="23%" src="docs/images/Dashboard.png">
-    <img width="23%" src="docs/images/StepsAndCalories.png">
-    <img width="23%" src="docs/images/Activities.png">
-    <img width="23%" src="docs/images/BrowseActivities.png">
-</div>
-<div>
-    <img width="23%" src="docs/images/Sleep.png">
-    <img width="23%" src="docs/images/Heart.png">
-    <img width="23%" src="docs/images/Heart2.png">
+    <img width="23%" alt="OpenVitals dashboard" src="docs/images/readme-dashboard.png">
+    <img width="23%" alt="Steps weekly chart" src="docs/images/readme-steps-week.png">
+    <img width="23%" alt="Steps statistics" src="docs/images/readme-steps-statistics.png">
+    <img width="23%" alt="Sleep detail" src="docs/images/readme-sleep.png">
 </div>
 
 ## Features
