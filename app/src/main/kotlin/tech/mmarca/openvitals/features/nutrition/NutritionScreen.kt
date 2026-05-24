@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,6 +23,8 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -115,9 +120,13 @@ private fun LazyListScope.nutritionMetricContent(
                 summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${metricData.total.text}",
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
-                valueFormatter = metricData.valueFormatter,
+                valueFormatter = { metricData.valueDisplayFormatter(it).text },
             )
         }
+        nutritionStatistics(
+            metricData = metricData,
+            unitFormatter = unitFormatter,
+        )
     }
 
     if (metric == NutritionMetric.CALORIES_IN && state.entries.isNotEmpty()) {
@@ -146,30 +155,79 @@ private fun nutritionMetricData(
             total = unitFormatter.energy(data.sumOf { it.energyKcal }),
             values = data.map { PeriodChartValue(date = it.date, value = it.energyKcal) },
             color = NutritionColor,
-            valueFormatter = { unitFormatter.energy(it).text },
+            valueDisplayFormatter = { unitFormatter.energy(it) },
         )
         NutritionMetric.PROTEIN -> NutritionMetricData(
             titleRes = R.string.metric_protein,
             total = DisplayValue(unitFormatter.count(data.sumOf { it.proteinGrams }.roundToInt()), GramsUnit),
             values = data.map { PeriodChartValue(date = it.date, value = it.proteinGrams) },
             color = proteinMetricColor,
-            valueFormatter = { "${unitFormatter.count(it.roundToInt())} $GramsUnit" },
+            valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
         )
         NutritionMetric.CARBS -> NutritionMetricData(
             titleRes = R.string.metric_carbs,
             total = DisplayValue(unitFormatter.count(data.sumOf { it.carbsGrams }.roundToInt()), GramsUnit),
             values = data.map { PeriodChartValue(date = it.date, value = it.carbsGrams) },
             color = carbsMetricColor,
-            valueFormatter = { "${unitFormatter.count(it.roundToInt())} $GramsUnit" },
+            valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
         )
         NutritionMetric.FAT -> NutritionMetricData(
             titleRes = R.string.metric_fat,
             total = DisplayValue(unitFormatter.count(data.sumOf { it.fatGrams }.roundToInt()), GramsUnit),
             values = data.map { PeriodChartValue(date = it.date, value = it.fatGrams) },
             color = fatMetricColor,
-            valueFormatter = { "${unitFormatter.count(it.roundToInt())} $GramsUnit" },
+            valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
         )
     }
+
+private fun LazyListScope.nutritionStatistics(
+    metricData: NutritionMetricData,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        val values = metricData.values.map { it.value }
+        val loggedDays = values.count { it > 0.0 }
+        val average = loggedDays.takeIf { it > 0 }
+            ?.let { metricData.valueDisplayFormatter(values.sum() / it) }
+            ?: metricData.valueDisplayFormatter(0.0)
+        val best = metricData.valueDisplayFormatter(values.maxOrNull() ?: 0.0)
+
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.stat_total),
+                    value = metricData.total.value,
+                    unit = metricData.total.unit,
+                    icon = Icons.Outlined.Restaurant,
+                    accentColor = metricData.color,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_daily_average),
+                    value = average.value,
+                    unit = average.unit,
+                    icon = Icons.Outlined.Star,
+                    accentColor = metricData.color,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_best_day),
+                    value = best.value,
+                    unit = best.unit,
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = metricData.color,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.metric_logged_days),
+                    value = unitFormatter.count(loggedDays),
+                    unit = stringResource(R.string.unit_days),
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = metricData.color,
+                ),
+            ),
+            modifier = metricModifier(),
+        )
+    }
+}
 
 private const val GramsUnit = "g"
 
@@ -178,7 +236,7 @@ private data class NutritionMetricData(
     val total: DisplayValue,
     val values: List<PeriodChartValue>,
     val color: Color,
-    val valueFormatter: (Double) -> String,
+    val valueDisplayFormatter: (Double) -> DisplayValue,
 )
 
 private fun metricModifier(): Modifier =
