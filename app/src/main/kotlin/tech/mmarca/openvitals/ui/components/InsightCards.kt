@@ -53,9 +53,6 @@ fun InsightStatGrid(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                repeat((columns - rowStats.size).coerceAtLeast(0)) {
-                    Spacer(Modifier.weight(1f))
-                }
             }
         }
     }
