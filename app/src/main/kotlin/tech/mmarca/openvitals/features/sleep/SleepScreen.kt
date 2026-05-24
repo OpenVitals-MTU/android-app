@@ -28,6 +28,7 @@ import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
+import tech.mmarca.openvitals.core.insights.sleepTargetInterpretation
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.baselinePeriodBefore
@@ -46,6 +47,7 @@ import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -159,6 +161,11 @@ fun SleepScreen(
                     unitFormatter = unitFormatter,
                     includeHeader = false,
                 )
+                sleepTargetContext(
+                    durationPoints = durationPoints,
+                    targetHours = state.dailyGoalHours,
+                    unitFormatter = unitFormatter,
+                )
                 sleepHrvInsight(
                     durationPoints = durationPoints,
                     hrvValues = state.crossDailyHrv.map { CrossMetricValue(it.date, it.rmssdMs) },
@@ -212,6 +219,11 @@ fun SleepScreen(
                     unitFormatter = unitFormatter,
                     includeHeader = false,
                 )
+                sleepTargetContext(
+                    durationPoints = durationPoints,
+                    targetHours = state.dailyGoalHours,
+                    unitFormatter = unitFormatter,
+                )
                 sleepHrvInsight(
                     durationPoints = durationPoints,
                     hrvValues = state.crossDailyHrv.map { CrossMetricValue(it.date, it.rmssdMs) },
@@ -246,6 +258,50 @@ fun SleepScreen(
                 }
             }
         }
+    }
+}
+
+private fun LazyListScope.sleepTargetContext(
+    durationPoints: List<SleepDurationPoint>,
+    targetHours: Double,
+    unitFormatter: UnitFormatter,
+) {
+    val nights = durationPoints.filter { it.hours > 0.0 }
+    val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: return
+    val interpretation = sleepTargetInterpretation(
+        averageHours = averageHours,
+        targetHours = targetHours,
+    ) ?: return
+    val averageDisplay = sleepHoursDisplay(interpretation.averageHours, unitFormatter).text
+    val targetDisplay = sleepHoursDisplay(interpretation.targetHours, unitFormatter).text
+    val gapDisplay = sleepHoursDisplay(interpretation.gapHours, unitFormatter).text
+
+    item { SectionHeader(stringResource(R.string.section_metric_context)) }
+    item {
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_sleep_title),
+            status = when (interpretation.status) {
+                tech.mmarca.openvitals.core.insights.SleepTargetStatus.BELOW_TARGET ->
+                    stringResource(R.string.interpretation_sleep_below)
+                tech.mmarca.openvitals.core.insights.SleepTargetStatus.NEAR_TARGET ->
+                    stringResource(R.string.interpretation_sleep_near)
+                tech.mmarca.openvitals.core.insights.SleepTargetStatus.MET_TARGET ->
+                    stringResource(R.string.interpretation_sleep_met)
+            },
+            body = when (interpretation.status) {
+                tech.mmarca.openvitals.core.insights.SleepTargetStatus.BELOW_TARGET ->
+                    stringResource(R.string.interpretation_sleep_below_body, gapDisplay)
+                tech.mmarca.openvitals.core.insights.SleepTargetStatus.NEAR_TARGET ->
+                    stringResource(R.string.interpretation_sleep_near_body, averageDisplay, targetDisplay)
+                tech.mmarca.openvitals.core.insights.SleepTargetStatus.MET_TARGET ->
+                    stringResource(R.string.interpretation_sleep_met_body, averageDisplay, targetDisplay)
+            },
+            source = stringResource(R.string.interpretation_sleep_source),
+            icon = Icons.Outlined.Bed,
+            accentColor = SleepColor,
+            severity = interpretation.severity,
+            modifier = metricModifier(),
+        )
     }
 }
 

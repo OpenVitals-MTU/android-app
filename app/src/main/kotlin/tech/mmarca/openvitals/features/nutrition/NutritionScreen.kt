@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.macroSplitInterpretation
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -35,6 +36,7 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -217,6 +219,11 @@ private fun LazyListScope.nutritionMetricContent(
             unitFormatter = unitFormatter,
             includeHeader = false,
         )
+        macroSplitContext(
+            data = state.dailyMacros,
+            unitFormatter = unitFormatter,
+            accentColor = metricData.color,
+        )
     }
 
     if (metric == NutritionMetric.CALORIES_IN && state.entries.isNotEmpty()) {
@@ -231,6 +238,41 @@ private fun LazyListScope.nutritionMetricContent(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
+    }
+}
+
+private fun LazyListScope.macroSplitContext(
+    data: List<DailyMacros>,
+    unitFormatter: UnitFormatter,
+    accentColor: Color,
+) {
+    val split = macroSplitInterpretation(
+        proteinGrams = data.sumOf { it.proteinGrams },
+        carbsGrams = data.sumOf { it.carbsGrams },
+        fatGrams = data.sumOf { it.fatGrams },
+    ) ?: return
+
+    item { SectionHeader(stringResource(R.string.section_metric_context)) }
+    item {
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_macro_title),
+            status = if (split.isWithinReference) {
+                stringResource(R.string.interpretation_macro_within)
+            } else {
+                stringResource(R.string.interpretation_macro_outside)
+            },
+            body = stringResource(
+                R.string.interpretation_macro_body,
+                unitFormatter.percent(split.proteinPercent, decimals = 0).text,
+                unitFormatter.percent(split.carbsPercent, decimals = 0).text,
+                unitFormatter.percent(split.fatPercent, decimals = 0).text,
+            ),
+            source = stringResource(R.string.interpretation_macro_source),
+            icon = Icons.Outlined.Restaurant,
+            accentColor = accentColor,
+            severity = split.severity,
+            modifier = metricModifier(),
+        )
     }
 }
 

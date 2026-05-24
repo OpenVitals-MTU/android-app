@@ -26,9 +26,17 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.BloodPressureCategory
 import tech.mmarca.openvitals.core.insights.PeriodComparison
+import tech.mmarca.openvitals.core.insights.VitalContextInterpretation
+import tech.mmarca.openvitals.core.insights.VitalContextStatus
+import tech.mmarca.openvitals.core.insights.bloodPressureInterpretation
+import tech.mmarca.openvitals.core.insights.bodyTemperatureContext
+import tech.mmarca.openvitals.core.insights.oxygenSaturationContext
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
+import tech.mmarca.openvitals.core.insights.respiratoryRateContext
+import tech.mmarca.openvitals.core.insights.restingHeartRateContext
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -48,6 +56,7 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
@@ -335,6 +344,7 @@ private fun LazyListScope.restingHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            restingHeartRateContextCard(state.dayRestingBpm)
             heartNumericStatistics(
                 unitFormatter = unitFormatter,
                 average = unitFormatter.heartRate(state.dayRestingBpm),
@@ -364,6 +374,9 @@ private fun LazyListScope.restingHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            restingHeartRateContextCard(
+                state.dailyRestingHR.map { it.bpm }.average().roundToInt().toLong(),
+            )
             restingHeartRateStatistics(
                 entries = state.dailyRestingHR,
                 previousEntries = state.previousDailyRestingHR,
@@ -478,6 +491,7 @@ private fun LazyListScope.bloodPressureContent(
                 modifier = metricModifier(),
             )
         }
+        bloodPressureContextCard(state.bloodPressure.maxByOrNull { it.time })
         bloodPressureStatistics(
             entries = state.bloodPressure,
             previousEntries = state.previousBloodPressure,
@@ -520,6 +534,7 @@ private fun LazyListScope.spO2Content(
                 modifier = metricModifier(),
             )
         }
+        oxygenSaturationContextCard(state.spO2.maxByOrNull { it.time })
         spO2Statistics(
             entries = state.spO2,
             previousEntries = state.previousSpO2,
@@ -617,6 +632,7 @@ private fun LazyListScope.respiratoryRateContent(
                 )
             }
         }
+        respiratoryRateContextCard(state.respiratoryRate.map { it.breathsPerMinute }.average())
         respiratoryRateStatistics(
             entries = state.respiratoryRate,
             previousEntries = state.previousRespiratoryRate,
@@ -664,6 +680,7 @@ private fun LazyListScope.bodyTemperatureContent(
                 modifier = metricModifier(),
             )
         }
+        bodyTemperatureContextCard(state.bodyTemperature.maxByOrNull { it.time })
         bodyTemperatureStatistics(
             entries = state.bodyTemperature,
             previousEntries = state.previousBodyTemperature,
@@ -681,6 +698,119 @@ private fun LazyListScope.bodyTemperatureContent(
         )
     }
 }
+
+private fun LazyListScope.bloodPressureContextCard(entry: BloodPressureEntry?) {
+    val interpretation = entry
+        ?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg) }
+        ?: return
+    item { SectionHeader(stringResource(R.string.section_metric_context)) }
+    item {
+        val status = bloodPressureCategoryText(interpretation.category)
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_bp_title),
+            status = status,
+            body = if (interpretation.category == BloodPressureCategory.SEVERE_REFERENCE) {
+                stringResource(R.string.interpretation_bp_severe_body)
+            } else {
+                stringResource(R.string.interpretation_bp_body, status)
+            },
+            source = stringResource(R.string.interpretation_bp_source),
+            icon = Icons.Outlined.Favorite,
+            accentColor = VitalsColor,
+            severity = interpretation.severity,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.restingHeartRateContextCard(bpm: Long) {
+    val interpretation = restingHeartRateContext(bpm) ?: return
+    vitalContextCard(
+        interpretation = interpretation,
+        bodyRes = R.string.interpretation_vital_resting_hr_body,
+        sourceRes = R.string.interpretation_vital_source,
+        icon = Icons.Outlined.FavoriteBorder,
+        accentColor = HeartColor,
+    )
+}
+
+private fun LazyListScope.oxygenSaturationContextCard(entry: SpO2Entry?) {
+    val interpretation = entry?.let { oxygenSaturationContext(it.percent) } ?: return
+    vitalContextCard(
+        interpretation = interpretation,
+        bodyRes = R.string.interpretation_vital_oxygen_body,
+        sourceRes = R.string.interpretation_oxygen_source,
+        icon = Icons.Outlined.FavoriteBorder,
+        accentColor = oxygenColor,
+    )
+}
+
+private fun LazyListScope.respiratoryRateContextCard(breathsPerMinute: Double) {
+    val interpretation = respiratoryRateContext(breathsPerMinute) ?: return
+    vitalContextCard(
+        interpretation = interpretation,
+        bodyRes = R.string.interpretation_vital_respiratory_body,
+        sourceRes = R.string.interpretation_vital_source,
+        icon = Icons.Outlined.Favorite,
+        accentColor = respiratoryColor,
+    )
+}
+
+private fun LazyListScope.bodyTemperatureContextCard(entry: BodyTempEntry?) {
+    val interpretation = entry?.let { bodyTemperatureContext(it.temperatureCelsius) } ?: return
+    vitalContextCard(
+        interpretation = interpretation,
+        bodyRes = R.string.interpretation_vital_temperature_body,
+        sourceRes = R.string.interpretation_vital_source,
+        icon = Icons.Outlined.DeviceThermostat,
+        accentColor = temperatureColor,
+    )
+}
+
+private fun LazyListScope.vitalContextCard(
+    interpretation: VitalContextInterpretation,
+    bodyRes: Int,
+    sourceRes: Int,
+    icon: ImageVector,
+    accentColor: Color,
+) {
+    item { SectionHeader(stringResource(R.string.section_metric_context)) }
+    item {
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_vital_title),
+            status = vitalContextStatusText(interpretation.status),
+            body = stringResource(bodyRes),
+            source = stringResource(sourceRes),
+            icon = icon,
+            accentColor = accentColor,
+            severity = interpretation.severity,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+@Composable
+private fun bloodPressureCategoryText(category: BloodPressureCategory): String =
+    when (category) {
+        BloodPressureCategory.NORMAL -> stringResource(R.string.interpretation_bp_normal)
+        BloodPressureCategory.ELEVATED -> stringResource(R.string.interpretation_bp_elevated)
+        BloodPressureCategory.STAGE_1 -> stringResource(R.string.interpretation_bp_stage_1)
+        BloodPressureCategory.STAGE_2 -> stringResource(R.string.interpretation_bp_stage_2)
+        BloodPressureCategory.SEVERE_REFERENCE -> stringResource(R.string.interpretation_bp_severe)
+    }
+
+@Composable
+private fun vitalContextStatusText(status: VitalContextStatus): String =
+    when (status) {
+        VitalContextStatus.WITHIN_REFERENCE -> stringResource(R.string.interpretation_vital_within)
+        VitalContextStatus.BELOW_REFERENCE -> stringResource(R.string.interpretation_vital_below)
+        VitalContextStatus.ABOVE_REFERENCE -> stringResource(R.string.interpretation_vital_above)
+        VitalContextStatus.BELOW_TYPICAL_OXYGEN ->
+            stringResource(R.string.interpretation_vital_oxygen_below_typical)
+        VitalContextStatus.LOW_OXYGEN_REFERENCE -> stringResource(R.string.interpretation_vital_oxygen_low)
+        VitalContextStatus.VERY_LOW_OXYGEN_REFERENCE ->
+            stringResource(R.string.interpretation_vital_oxygen_very_low)
+    }
 
 private fun LazyListScope.heartRateSampleStatistics(
     samples: List<HeartRateSample>,

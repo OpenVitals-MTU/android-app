@@ -24,7 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.BmiCategory
 import tech.mmarca.openvitals.core.insights.PeriodComparison
+import tech.mmarca.openvitals.core.insights.bmiInterpretation
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -39,6 +41,7 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -203,6 +206,9 @@ private fun BodyMetricScreen(
                 selectedRange = state.selectedRange,
                 baselineCurrentValue = state.bmi,
                 baselineValues = bmiBaselineValues(state.baselineWeightEntries, state.heightCm),
+                contextContent = {
+                    bmiContextCard(state.bmi)
+                },
             )
             BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider)
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
@@ -353,6 +359,7 @@ private fun LazyListScope.singleBodyMetricContent(
     selectedRange: TimeRange? = null,
     baselineCurrentValue: Double? = null,
     baselineValues: List<BaselineValue> = emptyList(),
+    contextContent: (LazyListScope.() -> Unit)? = null,
 ) {
     if (value != null) {
         item {
@@ -365,6 +372,7 @@ private fun LazyListScope.singleBodyMetricContent(
                 modifier = metricModifier(),
             )
         }
+        contextContent?.invoke(this)
         singleBodyMetricStatistics(
             value = value,
             comparison = comparison,
@@ -379,6 +387,31 @@ private fun LazyListScope.singleBodyMetricContent(
         )
     } else if (!state.isLoading) {
         noBodyMetricData(titleRes, icon, accentColor)
+    }
+}
+
+private fun LazyListScope.bmiContextCard(bmi: Double?) {
+    val interpretation = bmi?.let { bmiInterpretation(it) } ?: return
+
+    item { SectionHeader(stringResource(R.string.section_metric_context)) }
+    item {
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_bmi_title),
+            status = when (interpretation.category) {
+                BmiCategory.UNDERWEIGHT -> stringResource(R.string.interpretation_bmi_underweight)
+                BmiCategory.HEALTHY -> stringResource(R.string.interpretation_bmi_healthy)
+                BmiCategory.OVERWEIGHT -> stringResource(R.string.interpretation_bmi_overweight)
+                BmiCategory.OBESITY_CLASS_1 -> stringResource(R.string.interpretation_bmi_obesity_1)
+                BmiCategory.OBESITY_CLASS_2 -> stringResource(R.string.interpretation_bmi_obesity_2)
+                BmiCategory.OBESITY_CLASS_3 -> stringResource(R.string.interpretation_bmi_obesity_3)
+            },
+            body = stringResource(R.string.interpretation_bmi_body),
+            source = stringResource(R.string.interpretation_bmi_source),
+            icon = Icons.Outlined.MonitorWeight,
+            accentColor = WeightColor,
+            severity = interpretation.severity,
+            modifier = metricModifier(),
+        )
     }
 }
 

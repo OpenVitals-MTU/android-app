@@ -33,10 +33,12 @@ import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.WorkoutGuidelineStatus
 import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
+import tech.mmarca.openvitals.core.insights.workoutGuidelineProgress
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -50,6 +52,7 @@ import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -111,6 +114,10 @@ fun ActivitiesScreen(
                 unitFormatter = unitFormatter,
                 includeHeader = false,
             )
+            workoutGuidelineContext(
+                workouts = state.workouts,
+                unitFormatter = unitFormatter,
+            )
             workoutRestingHrInsight(
                 workouts = state.workouts,
                 restingHr = state.crossDailyRestingHR,
@@ -137,6 +144,36 @@ fun ActivitiesScreen(
                 )
             }
         }
+    }
+}
+
+private fun LazyListScope.workoutGuidelineContext(
+    workouts: List<ExerciseData>,
+    unitFormatter: UnitFormatter,
+) {
+    val loggedMinutes = workouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0
+    val progress = workoutGuidelineProgress(loggedMinutes) ?: return
+    item { SectionHeader(stringResource(R.string.section_metric_context)) }
+    item {
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_workout_title),
+            status = when (progress.status) {
+                WorkoutGuidelineStatus.NO_LOGGED_MINUTES -> stringResource(R.string.interpretation_workout_none)
+                WorkoutGuidelineStatus.BELOW_REFERENCE -> stringResource(R.string.interpretation_workout_below)
+                WorkoutGuidelineStatus.APPROACHING_REFERENCE -> stringResource(R.string.interpretation_workout_approaching)
+                WorkoutGuidelineStatus.MEETS_REFERENCE -> stringResource(R.string.interpretation_workout_met)
+            },
+            body = stringResource(
+                R.string.interpretation_workout_body,
+                unitFormatter.minutes(progress.loggedMinutes.roundToLong()).text,
+                unitFormatter.percent(progress.percentOfReference, decimals = 0).text,
+            ),
+            source = stringResource(R.string.interpretation_workout_source),
+            icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+            accentColor = WorkoutColor,
+            severity = progress.severity,
+            modifier = metricModifier(),
+        )
     }
 }
 
