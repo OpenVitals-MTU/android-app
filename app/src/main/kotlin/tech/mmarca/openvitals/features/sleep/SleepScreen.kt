@@ -21,8 +21,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.CrossMetricValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
@@ -38,6 +40,7 @@ import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepSessionsForRange
+import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -156,6 +159,10 @@ fun SleepScreen(
                     unitFormatter = unitFormatter,
                     includeHeader = false,
                 )
+                sleepHrvInsight(
+                    durationPoints = durationPoints,
+                    hrvValues = state.crossDailyHrv.map { CrossMetricValue(it.date, it.rmssdMs) },
+                )
 
                 if (dailySessions.size > 1) {
                     item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
@@ -204,6 +211,10 @@ fun SleepScreen(
                     selectedRange = state.selectedRange,
                     unitFormatter = unitFormatter,
                     includeHeader = false,
+                )
+                sleepHrvInsight(
+                    durationPoints = durationPoints,
+                    hrvValues = state.crossDailyHrv.map { CrossMetricValue(it.date, it.rmssdMs) },
                 )
 
                 item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
@@ -366,6 +377,29 @@ private fun LazyListScope.sleepStatistics(
                 valueFormatter = { sleepHoursDisplay(it, unitFormatter) },
                 accentColor = SleepColor,
             ),
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.sleepHrvInsight(
+    durationPoints: List<SleepDurationPoint>,
+    hrvValues: List<CrossMetricValue>,
+) {
+    val insight = crossMetricInsight(
+        primaryValues = durationPoints.map { CrossMetricValue(it.date, it.hours) },
+        secondaryValues = hrvValues,
+    ) ?: return
+
+    item { SectionHeader(stringResource(R.string.section_cross_metric_insights)) }
+    item {
+        CrossMetricInsightCard(
+            insight = insight,
+            title = stringResource(R.string.cross_sleep_hrv_title),
+            positiveMessage = stringResource(R.string.cross_sleep_hrv_positive),
+            negativeMessage = stringResource(R.string.cross_sleep_hrv_negative),
+            neutralMessage = stringResource(R.string.cross_sleep_hrv_neutral),
+            accentColor = SleepColor,
             modifier = metricModifier(),
         )
     }

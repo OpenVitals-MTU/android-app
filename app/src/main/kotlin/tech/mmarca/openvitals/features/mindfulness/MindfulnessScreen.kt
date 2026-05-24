@@ -29,8 +29,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.CrossMetricValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
@@ -39,7 +41,11 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.model.dailySleepSummary
+import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -125,6 +131,12 @@ fun MindfulnessScreen(
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
                 includeHeader = false,
+            )
+            mindfulnessSleepInsight(
+                sessions = state.sessions,
+                sleepSessions = state.crossSleepSessions,
+                period = period,
+                sleepRangeMode = state.sleepRangeMode,
             )
             item { SectionHeader(stringResource(R.string.section_sessions)) }
             items(state.sessions) { session ->
@@ -301,6 +313,57 @@ private fun mindfulnessDailyGoalValues(sessions: List<MindfulnessSession>): List
                 value = daySessions.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
             )
         }
+}
+
+private fun LazyListScope.mindfulnessSleepInsight(
+    sessions: List<MindfulnessSession>,
+    sleepSessions: List<SleepData>,
+    period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
+) {
+    val insight = crossMetricInsight(
+        primaryValues = mindfulnessDailyGoalValues(sessions)
+            .map { CrossMetricValue(it.date, it.value) },
+        secondaryValues = sleepDurationValues(
+            sessions = sleepSessions,
+            period = period,
+            sleepRangeMode = sleepRangeMode,
+        ),
+    ) ?: return
+
+    item { SectionHeader(stringResource(R.string.section_cross_metric_insights)) }
+    item {
+        CrossMetricInsightCard(
+            insight = insight,
+            title = stringResource(R.string.cross_mindfulness_sleep_title),
+            positiveMessage = stringResource(R.string.cross_mindfulness_sleep_positive),
+            negativeMessage = stringResource(R.string.cross_mindfulness_sleep_negative),
+            neutralMessage = stringResource(R.string.cross_mindfulness_sleep_neutral),
+            accentColor = MindfulnessColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun sleepDurationValues(
+    sessions: List<SleepData>,
+    period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
+): List<CrossMetricValue> {
+    val zone = ZoneId.systemDefault()
+    return generateSequence(period.start) { current ->
+        current.plusDays(1).takeUnless { it.isAfter(period.end) }
+    }.map { date ->
+        CrossMetricValue(
+            date = date,
+            value = dailySleepSummary(
+                sessions = sessions,
+                selectedDate = date,
+                sleepRangeMode = sleepRangeMode,
+                zone = zone,
+            )?.durationHours ?: 0.0,
+        )
+    }.toList()
 }
 
 private fun metricModifier(): Modifier =

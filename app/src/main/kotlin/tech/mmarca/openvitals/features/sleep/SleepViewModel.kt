@@ -9,7 +9,9 @@ import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -30,11 +32,13 @@ data class SleepUiState(
     val sessions: List<SleepData> = emptyList(),
     val previousSessions: List<SleepData> = emptyList(),
     val baselineSessions: List<SleepData> = emptyList(),
+    val crossDailyHrv: List<DailyHrv> = emptyList(),
     val error: String? = null,
 )
 
 class SleepViewModel(
     private val repository: SleepRepository,
+    private val heartRepository: HeartRepository? = null,
     initialRange: TimeRange = TimeRange.WEEK,
     initialSleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     initialDailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
@@ -134,6 +138,7 @@ class SleepViewModel(
                     sessions = repository.loadSleepSessions(queryStart, period.end),
                     previousSessions = repository.loadSleepSessions(previousQueryStart, previousPeriod.end),
                     baselineSessions = repository.loadSleepSessions(baselineQueryStart, baselinePeriod.end),
+                    crossDailyHrv = heartRepository?.loadDailyHRV(period.start, period.end).orEmpty(),
                 )
             }
                 .onSuccess { result ->
@@ -144,6 +149,7 @@ class SleepViewModel(
                         sessions = result.sessions,
                         previousSessions = result.previousSessions,
                         baselineSessions = result.baselineSessions,
+                        crossDailyHrv = result.crossDailyHrv,
                     )
                 }
                 .onFailure {
@@ -161,6 +167,7 @@ class SleepViewModel(
         val sessions: List<SleepData>,
         val previousSessions: List<SleepData>,
         val baselineSessions: List<SleepData>,
+        val crossDailyHrv: List<DailyHrv>,
     )
 
     private val periodSelection: PeriodSelection

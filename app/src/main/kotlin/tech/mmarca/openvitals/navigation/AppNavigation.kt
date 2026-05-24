@@ -296,6 +296,7 @@ fun AppNavigation(
                 val activitiesViewModel = appViewModel {
                     ActivitiesViewModel(
                         repository = activityRepository,
+                        heartRepository = heartRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
                         initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
@@ -333,6 +334,7 @@ fun AppNavigation(
                 val sleepViewModel = appViewModel {
                     SleepViewModel(
                         repository = sleepRepository,
+                        heartRepository = heartRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
                         initialSleepRangeMode = preferencesRepository.sleepRangeMode,
                         initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
@@ -405,6 +407,7 @@ fun AppNavigation(
                 val hydrationViewModel = appViewModel {
                     HydrationViewModel(
                         repository = hydrationRepository,
+                        bodyRepository = bodyRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
                         initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
@@ -442,7 +445,9 @@ fun AppNavigation(
                 val mindfulnessViewModel = appViewModel {
                     MindfulnessViewModel(
                         repository = mindfulnessRepository,
+                        sleepRepository = sleepRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+                        initialSleepRangeMode = preferencesRepository.sleepRangeMode,
                         initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
                         onDailyGoalChanged = { goal ->
@@ -612,6 +617,7 @@ private fun MetricRouteContent(
             val activitiesViewModel = appViewModel {
                 ActivitiesViewModel(
                     repository = activityRepository,
+                    heartRepository = heartRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
                     initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
@@ -631,6 +637,7 @@ private fun MetricRouteContent(
             val sleepViewModel = appViewModel {
                 SleepViewModel(
                     repository = sleepRepository,
+                    heartRepository = heartRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
                     initialSleepRangeMode = preferencesRepository.sleepRangeMode,
                     initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
@@ -652,6 +659,7 @@ private fun MetricRouteContent(
             val hydrationViewModel = appViewModel {
                 HydrationViewModel(
                     repository = hydrationRepository,
+                    bodyRepository = bodyRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
                     initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
@@ -668,7 +676,9 @@ private fun MetricRouteContent(
             val mindfulnessViewModel = appViewModel {
                 MindfulnessViewModel(
                     repository = mindfulnessRepository,
+                    sleepRepository = sleepRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+                    initialSleepRangeMode = preferencesRepository.sleepRangeMode,
                     initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
                     onDailyGoalChanged = { goal ->

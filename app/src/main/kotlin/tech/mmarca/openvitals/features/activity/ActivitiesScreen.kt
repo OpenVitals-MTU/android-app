@@ -30,8 +30,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.CrossMetricValue
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
@@ -40,7 +42,9 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -106,6 +110,10 @@ fun ActivitiesScreen(
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
                 includeHeader = false,
+            )
+            workoutRestingHrInsight(
+                workouts = state.workouts,
+                restingHr = state.crossDailyRestingHR,
             )
             item { SectionHeader(stringResource(R.string.section_activities)) }
             items(state.workouts) { workout ->
@@ -292,6 +300,30 @@ private fun workoutDailyGoalValues(workouts: List<ExerciseData>): List<DailyGoal
                 value = dayWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
             )
         }
+}
+
+private fun LazyListScope.workoutRestingHrInsight(
+    workouts: List<ExerciseData>,
+    restingHr: List<DailyRestingHR>,
+) {
+    val insight = crossMetricInsight(
+        primaryValues = workoutDailyGoalValues(workouts)
+            .map { CrossMetricValue(it.date, it.value) },
+        secondaryValues = restingHr.map { CrossMetricValue(it.date, it.bpm.toDouble()) },
+    ) ?: return
+
+    item { SectionHeader(stringResource(R.string.section_cross_metric_insights)) }
+    item {
+        CrossMetricInsightCard(
+            insight = insight,
+            title = stringResource(R.string.cross_workout_resting_hr_title),
+            positiveMessage = stringResource(R.string.cross_workout_resting_hr_positive),
+            negativeMessage = stringResource(R.string.cross_workout_resting_hr_negative),
+            neutralMessage = stringResource(R.string.cross_workout_resting_hr_neutral),
+            accentColor = WorkoutColor,
+            modifier = metricModifier(),
+        )
+    }
 }
 
 private fun metricModifier(): Modifier =

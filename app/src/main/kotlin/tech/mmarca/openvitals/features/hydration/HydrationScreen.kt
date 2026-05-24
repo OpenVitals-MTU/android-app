@@ -32,13 +32,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.CrossMetricValue
+import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -51,6 +55,8 @@ import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import java.time.ZoneId
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +128,10 @@ fun HydrationScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            hydrationWeightInsight(
+                hydration = state.dailyHydration,
+                weightEntries = state.crossWeightEntries,
+            )
         }
     }
 }
@@ -355,4 +365,42 @@ private fun HydrationHistoryChart(
         modifier = modifier,
         valueFormatter = { unitFormatter.hydration(it).text },
     )
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.hydrationWeightInsight(
+    hydration: List<DailyHydration>,
+    weightEntries: List<WeightEntry>,
+) {
+    val insight = crossMetricInsight(
+        primaryValues = hydration.map { CrossMetricValue(it.date, it.liters) },
+        secondaryValues = weightFluctuationValues(weightEntries),
+    ) ?: return
+
+    item { SectionHeader(stringResource(R.string.section_cross_metric_insights)) }
+    item {
+        CrossMetricInsightCard(
+            insight = insight,
+            title = stringResource(R.string.cross_hydration_weight_title),
+            positiveMessage = stringResource(R.string.cross_hydration_weight_positive),
+            negativeMessage = stringResource(R.string.cross_hydration_weight_negative),
+            neutralMessage = stringResource(R.string.cross_hydration_weight_neutral),
+            accentColor = HydrationColor,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+}
+
+private fun weightFluctuationValues(entries: List<WeightEntry>): List<CrossMetricValue> {
+    val zone = ZoneId.systemDefault()
+    val dailyWeights = entries
+        .groupBy { it.time.atZone(zone).toLocalDate() }
+        .mapValues { (_, dayEntries) -> dayEntries.map { it.weightKg }.average() }
+        .toSortedMap()
+
+    var previousWeight: Double? = null
+    return dailyWeights.mapNotNull { (date, weight) ->
+        val previous = previousWeight
+        previousWeight = weight
+        previous?.let { CrossMetricValue(date, abs(weight - it)) }
+    }
 }

@@ -2,11 +2,13 @@ package tech.mmarca.openvitals.features.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.core.period.baselinePeriodBefore
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.period.previousPeriodFor
@@ -24,11 +26,13 @@ data class ActivitiesUiState(
     val workouts: List<ExerciseData> = emptyList(),
     val previousWorkouts: List<ExerciseData> = emptyList(),
     val baselineWorkouts: List<ExerciseData> = emptyList(),
+    val crossDailyRestingHR: List<DailyRestingHR> = emptyList(),
     val error: String? = null,
 )
 
 class ActivitiesViewModel(
     private val repository: ActivityRepository,
+    private val heartRepository: HeartRepository? = null,
     initialRange: TimeRange = TimeRange.WEEK,
     initialDailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
     private val onRangeSelected: (TimeRange) -> Unit = {},
@@ -100,6 +104,7 @@ class ActivitiesViewModel(
                     workouts = repository.loadWorkouts(period.start, period.end),
                     previousWorkouts = repository.loadWorkouts(previousPeriod.start, previousPeriod.end),
                     baselineWorkouts = repository.loadWorkouts(baselinePeriod.start, baselinePeriod.end),
+                    crossDailyRestingHR = heartRepository?.loadDailyRestingHR(period.start, period.end).orEmpty(),
                 )
             }
                 .onSuccess { result ->
@@ -109,6 +114,7 @@ class ActivitiesViewModel(
                         workouts = result.workouts,
                         previousWorkouts = result.previousWorkouts,
                         baselineWorkouts = result.baselineWorkouts,
+                        crossDailyRestingHR = result.crossDailyRestingHR,
                     )
                 }
                 .onFailure {
@@ -125,6 +131,7 @@ class ActivitiesViewModel(
         val workouts: List<ExerciseData>,
         val previousWorkouts: List<ExerciseData>,
         val baselineWorkouts: List<ExerciseData>,
+        val crossDailyRestingHR: List<DailyRestingHR>,
     )
 
     private val periodSelection: PeriodSelection
