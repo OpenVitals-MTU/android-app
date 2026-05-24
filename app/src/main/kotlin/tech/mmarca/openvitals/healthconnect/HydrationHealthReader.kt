@@ -6,6 +6,7 @@ import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.HydrationEntry
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -58,6 +59,23 @@ internal class HydrationHealthReader(
             dailyHydrationSeries(startDate, endDate, hydrationByDate)
         }
     }
+
+    suspend fun readHydrationEntries(start: Instant, end: Instant): List<HydrationEntry> =
+        support.withLogging("readHydrationEntries[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = HydrationRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 200,
+            ).map { record ->
+                HydrationEntry(
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    liters = record.volume.inLiters,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
 }
 
 internal suspend fun HealthConnectClient.readHydrationRecordsByDate(

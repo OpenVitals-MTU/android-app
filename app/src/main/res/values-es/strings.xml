@@ -478,6 +478,8 @@
     <string name="cycle_observation_menstruation_flow">Flujo menstrual</string>
     <string name="cycle_observation_ovulation_test">Prueba de ovulación</string>
     <string name="cycle_observation_cervical_mucus">Moco cervical</string>
+    <string name="cycle_observation_basal_body_temperature">Temperatura corporal basal</string>
+    <string name="cycle_basal_temperature_value">%1$.1f C · %2$s</string>
     <string name="cycle_days_value">%1$d %2$s</string>
     <string name="cycle_day_singular">día</string>
     <string name="cycle_day_plural">días</string>

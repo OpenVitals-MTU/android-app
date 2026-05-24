@@ -14,6 +14,13 @@ data class DailyHydration(
     val liters: Double,
 )
 
+data class HydrationEntry(
+    val startTime: Instant,
+    val endTime: Instant,
+    val liters: Double,
+    val source: String,
+)
+
 data class NutritionEntry(
     val time: Instant,
     val mealType: Int,

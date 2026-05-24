@@ -107,11 +107,7 @@ class NutritionViewModel(
                     dailyMacros = repository.loadDailyMacros(period.start, period.end),
                     previousDailyMacros = repository.loadDailyMacros(previousPeriod.start, previousPeriod.end),
                     baselineDailyMacros = repository.loadDailyMacros(baselinePeriod.start, baselinePeriod.end),
-                    entries = if (selectedMetric.loadsMealEntries(range)) {
-                        repository.loadNutritionEntries(period.start, period.end)
-                    } else {
-                        emptyList()
-                    },
+                    entries = repository.loadNutritionEntries(period.start, period.end),
                 )
             }.onSuccess { result ->
                 _uiState.value = _uiState.value.copy(
@@ -149,6 +145,3 @@ class NutritionViewModel(
         )
     }
 }
-
-private fun NutritionMetric.loadsMealEntries(range: TimeRange): Boolean =
-    this == NutritionMetric.CALORIES_IN && range != TimeRange.YEAR

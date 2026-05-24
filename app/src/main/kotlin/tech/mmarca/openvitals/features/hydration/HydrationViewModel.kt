@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.hydration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -30,6 +31,7 @@ data class HydrationUiState(
     val dailyHydration: List<DailyHydration> = emptyList(),
     val previousDailyHydration: List<DailyHydration> = emptyList(),
     val baselineDailyHydration: List<DailyHydration> = emptyList(),
+    val hydrationEntries: List<HydrationEntry> = emptyList(),
     val crossWeightEntries: List<WeightEntry> = emptyList(),
     val error: String? = null,
 ) {
@@ -143,6 +145,7 @@ class HydrationViewModel(
                     dailyHydration = repository.loadDailyHydration(period.start, period.end),
                     previousDailyHydration = repository.loadDailyHydration(previousPeriod.start, previousPeriod.end),
                     baselineDailyHydration = repository.loadDailyHydration(baselinePeriod.start, baselinePeriod.end),
+                    hydrationEntries = repository.loadHydrationEntries(period.start, period.end),
                     crossWeightEntries = bodyRepository?.loadWeightEntries(period.start, period.end).orEmpty(),
                 )
             }.onSuccess { result ->
@@ -152,6 +155,7 @@ class HydrationViewModel(
                     dailyHydration = result.dailyHydration,
                     previousDailyHydration = result.previousDailyHydration,
                     baselineDailyHydration = result.baselineDailyHydration,
+                    hydrationEntries = result.hydrationEntries,
                     crossWeightEntries = result.crossWeightEntries,
                 )
             }.onFailure { error ->
@@ -168,6 +172,7 @@ class HydrationViewModel(
         val dailyHydration: List<DailyHydration>,
         val previousDailyHydration: List<DailyHydration>,
         val baselineDailyHydration: List<DailyHydration>,
+        val hydrationEntries: List<HydrationEntry>,
         val crossWeightEntries: List<WeightEntry>,
     )
 

@@ -97,18 +97,18 @@ class NutritionViewModelTest {
         coVerify(atLeast = 2) { repo.loadDailyMacros(any(), any()) }
     }
 
-    @Test fun `year range skips raw meal entries`() = runTest {
+    @Test fun `year range loads raw meal entries`() = runTest {
         val repo = emptyRepo()
         NutritionViewModel(repo, initialRange = TimeRange.YEAR)
 
-        coVerify(exactly = 0) { repo.loadNutritionEntries(any(), any()) }
+        coVerify(exactly = 1) { repo.loadNutritionEntries(any(), any()) }
     }
 
-    @Test fun `macro metrics skip raw meal entries`() = runTest {
+    @Test fun `macro metrics load raw meal entries`() = runTest {
         val repo = emptyRepo()
         NutritionViewModel(repo, selectedMetric = NutritionMetric.PROTEIN)
 
-        coVerify(exactly = 0) { repo.loadNutritionEntries(any(), any()) }
+        coVerify(exactly = 1) { repo.loadNutritionEntries(any(), any()) }
     }
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {

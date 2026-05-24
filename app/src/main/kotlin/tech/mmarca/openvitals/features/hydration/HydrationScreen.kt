@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Add
@@ -41,6 +43,7 @@ import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -54,6 +57,7 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -141,6 +145,11 @@ fun HydrationScreen(
             hydrationWeightInsight(
                 hydration = state.dailyHydration,
                 weightEntries = state.crossWeightEntries,
+            )
+            hydrationEntries(
+                entries = state.hydrationEntries,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
             )
         }
     }
@@ -396,7 +405,7 @@ private fun HydrationHistoryChart(
     )
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.hydrationWeightInsight(
+private fun LazyListScope.hydrationWeightInsight(
     hydration: List<DailyHydration>,
     weightEntries: List<WeightEntry>,
 ) {
@@ -416,6 +425,67 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hydrationWeightInsigh
             accentColor = HydrationColor,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
+    }
+}
+
+private fun LazyListScope.hydrationEntries(
+    entries: List<HydrationEntry>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    if (entries.isEmpty()) return
+
+    item { SectionHeader(stringResource(R.string.section_entries)) }
+    items(entries.sortedByDescending { it.startTime }) { entry ->
+        HydrationEntryRow(
+            entry = entry,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun HydrationEntryRow(
+    entry: HydrationEntry,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val zone = ZoneId.systemDefault()
+    val start = entry.startTime.atZone(zone)
+    val end = entry.endTime.atZone(zone)
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = dateTimeFormatterProvider.mediumDate().format(start),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = "${dateTimeFormatterProvider.shortTime().format(start)} - ${dateTimeFormatterProvider.shortTime().format(end)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SourceChip(source = entry.source)
+            }
+            Text(
+                text = unitFormatter.hydration(entry.liters).text,
+                style = MaterialTheme.typography.titleMedium,
+                color = HydrationColor,
+            )
+        }
     }
 }
 

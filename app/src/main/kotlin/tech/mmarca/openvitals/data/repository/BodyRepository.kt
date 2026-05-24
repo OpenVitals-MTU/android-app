@@ -9,7 +9,11 @@ import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BmrEntry
+import tech.mmarca.openvitals.data.model.BoneMassEntry
+import tech.mmarca.openvitals.data.model.HeightEntry
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -49,6 +53,15 @@ class BodyRepository(private val hc: HealthConnectManager) {
         return hc.readLatestHeight()
     }
 
+    suspend fun loadHeightEntries(start: LocalDate, end: LocalDate): List<HeightEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        if (readHeightPermission !in granted) {
+            Log.w(TAG, "Skipping loadHeightEntries missing=$readHeightPermission")
+            return emptyList()
+        }
+        return hc.readHeightEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
     suspend fun loadBodyFatEntries(start: LocalDate, end: LocalDate): List<BodyFatEntry> {
         val granted = grantedPermissionsIfAvailable()
         if (readBodyFatPermission !in granted) {
@@ -67,10 +80,28 @@ class BodyRepository(private val hc: HealthConnectManager) {
         return hc.readLatestLeanBodyMass()
     }
 
+    suspend fun loadLeanBodyMassEntries(start: LocalDate, end: LocalDate): List<LeanBodyMassEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        if (readLeanMassPermission !in granted) {
+            Log.w(TAG, "Skipping loadLeanBodyMassEntries missing=$readLeanMassPermission")
+            return emptyList()
+        }
+        return hc.readLeanBodyMassEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
     suspend fun loadLatestBMR(): Double? {
         val granted = grantedPermissionsIfAvailable()
         if (readBMRPermission !in granted) return null
         return hc.readLatestBMR()
+    }
+
+    suspend fun loadBmrEntries(start: LocalDate, end: LocalDate): List<BmrEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        if (readBMRPermission !in granted) {
+            Log.w(TAG, "Skipping loadBmrEntries missing=$readBMRPermission")
+            return emptyList()
+        }
+        return hc.readBmrEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
     suspend fun loadLatestBoneMass(): Double? {
@@ -78,4 +109,15 @@ class BodyRepository(private val hc: HealthConnectManager) {
         if (readBoneMassPermission !in granted) return null
         return hc.readLatestBoneMass()
     }
+
+    suspend fun loadBoneMassEntries(start: LocalDate, end: LocalDate): List<BoneMassEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        if (readBoneMassPermission !in granted) {
+            Log.w(TAG, "Skipping loadBoneMassEntries missing=$readBoneMassPermission")
+            return emptyList()
+        }
+        return hc.readBoneMassEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
+    private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()
 }

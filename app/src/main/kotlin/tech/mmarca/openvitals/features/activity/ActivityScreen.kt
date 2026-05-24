@@ -1,8 +1,12 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -12,10 +16,15 @@ import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Terrain
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -315,6 +324,13 @@ private fun LazyListScope.stepsContent(
             accentColor = StepsColor,
             includeHeader = false,
         )
+        activityDailyEntries(
+            entries = state.dailySteps.filter { it.steps > 0L },
+            date = { it.date },
+            value = { DisplayValue(unitFormatter.count(it.steps), stringResource(R.string.unit_steps)) },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = StepsColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_steps, R.string.message_no_step_updates, Icons.AutoMirrored.Outlined.DirectionsWalk, StepsColor)
     }
@@ -397,6 +413,13 @@ private fun LazyListScope.distanceContent(
             icon = Icons.Outlined.Straighten,
             accentColor = DistanceColor,
             includeHeader = false,
+        )
+        activityDailyEntries(
+            entries = state.dailySteps.filter { it.distanceMeters > 0.0 },
+            date = { it.date },
+            value = { unitFormatter.distance(it.distanceMeters) },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = DistanceColor,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_distance, R.string.message_no_distance_updates, Icons.Outlined.Straighten, DistanceColor)
@@ -481,6 +504,13 @@ private fun LazyListScope.caloriesContent(
             accentColor = CaloriesColor,
             includeHeader = false,
         )
+        activityDailyEntries(
+            entries = state.nutrition.filter { it.caloriesBurnedKcal > 0.0 },
+            date = { it.date },
+            value = { unitFormatter.energy(it.caloriesBurnedKcal) },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = CaloriesColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_calories_burned, R.string.message_no_calories_burned, Icons.Outlined.LocalFireDepartment, CaloriesColor)
     }
@@ -563,6 +593,13 @@ private fun LazyListScope.activeCaloriesContent(
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = ActiveCaloriesColor,
             includeHeader = false,
+        )
+        activityDailyEntries(
+            entries = state.dailySteps.filter { it.activeCaloriesKcal != null },
+            date = { it.date },
+            value = { unitFormatter.energy(it.activeCaloriesKcal ?: 0.0) },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = ActiveCaloriesColor,
         )
     } else if (!state.isLoading) {
         noMetricData(
@@ -661,6 +698,15 @@ private fun LazyListScope.floorsContent(
             accentColor = FloorsColor,
             includeHeader = false,
         )
+        activityDailyEntries(
+            entries = state.dailySteps.filter { it.floorsClimbed != null },
+            date = { it.date },
+            value = {
+                DisplayValue(unitFormatter.count((it.floorsClimbed ?: 0).toLong()), stringResource(R.string.unit_floors))
+            },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = FloorsColor,
+        )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_floors_climbed, R.string.message_no_floors_climbed, Icons.Outlined.Stairs, FloorsColor)
     }
@@ -743,6 +789,13 @@ private fun LazyListScope.elevationContent(
             icon = Icons.Outlined.Terrain,
             accentColor = ElevationColor,
             includeHeader = false,
+        )
+        activityDailyEntries(
+            entries = state.dailySteps.filter { it.elevationGainedMeters != null },
+            date = { it.date },
+            value = { unitFormatter.elevation(it.elevationGainedMeters ?: 0.0) },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = ElevationColor,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_elevation_gained, R.string.message_no_elevation, Icons.Outlined.Terrain, ElevationColor)
@@ -900,6 +953,63 @@ private fun LazyListScope.noMetricData(
             message = stringResource(messageRes),
             modifier = metricModifier(),
         )
+    }
+}
+
+private fun <T> LazyListScope.activityDailyEntries(
+    entries: List<T>,
+    date: (T) -> LocalDate,
+    value: @Composable (T) -> DisplayValue,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    accentColor: Color,
+) {
+    if (entries.isEmpty()) return
+
+    item { SectionHeader(stringResource(R.string.section_entries)) }
+    items(entries.sortedByDescending(date)) { entry ->
+        ActivityDailyEntryRow(
+            date = date(entry),
+            value = value(entry),
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = accentColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun ActivityDailyEntryRow(
+    date: LocalDate,
+    value: DisplayValue,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = dateTimeFormatterProvider.mediumDate().format(date),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Text(
+                text = value.text,
+                style = MaterialTheme.typography.titleMedium,
+                color = accentColor,
+            )
+        }
     }
 }
 

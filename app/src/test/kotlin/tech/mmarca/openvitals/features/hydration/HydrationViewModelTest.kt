@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.hydration
 
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -26,6 +27,7 @@ class HydrationViewModelTest {
 
     private fun emptyRepo() = mockk<HydrationRepository>().also { repo ->
         coEvery { repo.loadDailyHydration(any(), any()) } returns emptyList()
+        coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
     }
 
     @Test fun `initial range is WEEK`() = runTest {
@@ -48,6 +50,7 @@ class HydrationViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isLoading)
         assertTrue(state.dailyHydration.isEmpty())
+        assertTrue(state.hydrationEntries.isEmpty())
     }
 
     @Test fun `load success populates hydration and derived totals`() = runTest {
@@ -64,6 +67,23 @@ class HydrationViewModelTest {
         assertEquals(3.5, vm.uiState.value.totalLiters, 0.01)
         assertEquals(1.75, vm.uiState.value.averageLiters, 0.01)
         assertNull(vm.uiState.value.error)
+    }
+
+    @Test fun `load success populates hydration entries`() = runTest {
+        val entries = listOf(
+            HydrationEntry(
+                startTime = java.time.Instant.ofEpochSecond(1_000),
+                endTime = java.time.Instant.ofEpochSecond(1_300),
+                liters = 0.5,
+                source = "test",
+            )
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadHydrationEntries(any(), any()) } returns entries
+
+        val vm = HydrationViewModel(repo)
+
+        assertEquals(entries, vm.uiState.value.hydrationEntries)
     }
 
     @Test fun `derived hydration statistics ignore zero intake days`() = runTest {
@@ -142,6 +162,7 @@ class HydrationViewModelTest {
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<HydrationRepository>()
         coEvery { repo.loadDailyHydration(any(), any()) } throws RuntimeException("timeout")
+        coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
 
         val vm = HydrationViewModel(repo)
 

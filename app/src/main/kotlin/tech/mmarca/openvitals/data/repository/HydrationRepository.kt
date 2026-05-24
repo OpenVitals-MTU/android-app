@@ -4,9 +4,11 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
 import tech.mmarca.openvitals.data.model.DailyHydration
+import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
+import java.time.ZoneId
 
 class HydrationRepository(private val hc: HealthConnectManager) {
 
@@ -26,5 +28,18 @@ class HydrationRepository(private val hc: HealthConnectManager) {
             return emptyList()
         }
         return hc.readDailyHydration(start, end)
+    }
+
+    suspend fun loadHydrationEntries(start: LocalDate, end: LocalDate): List<HydrationEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        if (readHydrationPermission !in granted) {
+            Log.w(TAG, "Skipping loadHydrationEntries start=$start end=$end missing=$readHydrationPermission")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        return hc.readHydrationEntries(
+            start = start.atStartOfDay(zone).toInstant(),
+            end = end.plusDays(1).atStartOfDay(zone).toInstant(),
+        )
     }
 }

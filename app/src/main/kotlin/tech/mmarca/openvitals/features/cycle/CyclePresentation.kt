@@ -105,6 +105,20 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                 )
             )
         }
+        data.basalBodyTemperature.forEach { temperature ->
+            add(
+                CycleObservation(
+                    time = temperature.time,
+                    title = resources.getString(R.string.cycle_observation_basal_body_temperature),
+                    value = resources.getString(
+                        R.string.cycle_basal_temperature_value,
+                        temperature.temperatureCelsius,
+                        resources.getString(measurementLocationLabelRes(temperature.measurementLocation)),
+                    ),
+                    source = temperature.source,
+                )
+            )
+        }
     }.sortedByDescending { it.time }
 }
 

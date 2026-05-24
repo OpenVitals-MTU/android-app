@@ -1,6 +1,9 @@
 package tech.mmarca.openvitals.features.heart
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
@@ -14,10 +17,15 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -230,7 +238,7 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                bloodPressureContent(state, period, unitFormatter)
+                bloodPressureContent(state, period, unitFormatter, dateTimeFormatterProvider)
             }
             HeartMetric.SPO2 -> vitalsMetricContent(
                 state = state,
@@ -295,6 +303,13 @@ private fun LazyListScope.averageHeartRateContent(
                 period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
+            )
+            heartEntryRows(
+                entries = state.daySamples,
+                value = { unitFormatter.heartRate(it.beatsPerMinute).text },
+                source = { it.source },
+                time = { it.time },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
             )
         }
         state.selectedRange == TimeRange.DAY && !state.isLoading -> {
@@ -385,6 +400,13 @@ private fun LazyListScope.restingHeartRateContent(
                 baselineCurrentValue = state.dayRestingBpm.toDouble(),
                 baselineValues = state.baselineDailyRestingHR.map { BaselineValue(it.date, it.bpm.toDouble()) },
             )
+            heartDailyEntries(
+                entries = listOf(DailyRestingHR(state.selectedDate, state.dayRestingBpm)),
+                date = { it.date },
+                value = { unitFormatter.heartRate(it.bpm).text },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = HeartColor,
+            )
         }
         state.selectedRange != TimeRange.DAY && state.dailyRestingHR.isNotEmpty() -> {
             item {
@@ -413,6 +435,13 @@ private fun LazyListScope.restingHeartRateContent(
                 period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
+            )
+            heartDailyEntries(
+                entries = state.dailyRestingHR,
+                date = { it.date },
+                value = { unitFormatter.heartRate(it.bpm).text },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = HeartColor,
             )
         }
         !state.isLoading -> noHeartMetricData(
@@ -462,6 +491,13 @@ private fun LazyListScope.hrvContent(
                 baselineCurrentValue = state.dayHrvMs,
                 baselineValues = state.baselineDailyHrv.map { BaselineValue(it.date, it.rmssdMs) },
             )
+            heartDailyEntries(
+                entries = listOf(DailyHrv(state.selectedDate, state.dayHrvMs)),
+                date = { it.date },
+                value = { unitFormatter.hrv(it.rmssdMs).text },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = HeartColor,
+            )
         }
         state.selectedRange != TimeRange.DAY && state.dailyHrv.isNotEmpty() -> {
             item {
@@ -487,6 +523,13 @@ private fun LazyListScope.hrvContent(
                 period = period,
                 selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
+            )
+            heartDailyEntries(
+                entries = state.dailyHrv,
+                date = { it.date },
+                value = { unitFormatter.hrv(it.rmssdMs).text },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = HeartColor,
             )
         }
         !state.isLoading -> noHeartMetricData(
@@ -521,6 +564,7 @@ private fun LazyListScope.bloodPressureContent(
     state: HeartUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
     if (state.bloodPressure.isNotEmpty()) {
         item {
@@ -547,6 +591,13 @@ private fun LazyListScope.bloodPressureContent(
             period = period,
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
+        )
+        heartEntryRows(
+            entries = state.bloodPressure,
+            value = { unitFormatter.bloodPressure(it.systolicMmHg, it.diastolicMmHg).text },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
     } else if (!state.isLoading) {
         noHeartMetricData(
@@ -598,6 +649,13 @@ private fun LazyListScope.spO2Content(
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
+        heartEntryRows(
+            entries = state.spO2,
+            value = { unitFormatter.percent(it.percent).text },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_spo2,
@@ -643,18 +701,13 @@ private fun LazyListScope.vo2MaxContent(
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
-        if (state.vo2Max.size > 1) {
-            item { SectionHeader(stringResource(R.string.section_vo2_max_history)) }
-            items(state.vo2Max.sortedByDescending { it.time }) { entry ->
-                VitalsReadingRow(
-                    label = unitFormatter.vo2Max(entry.vo2MaxMlPerKgPerMin).text,
-                    source = entry.source,
-                    time = entry.time.atZone(ZoneId.systemDefault()),
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-        }
+        heartEntryRows(
+            entries = state.vo2Max,
+            value = { unitFormatter.vo2Max(it.vo2MaxMlPerKgPerMin).text },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_vo2_max,
@@ -721,6 +774,13 @@ private fun LazyListScope.respiratoryRateContent(
                 )
             }
         }
+        heartEntryRows(
+            entries = state.respiratoryRate,
+            value = { unitFormatter.respiratoryRate(it.breathsPerMinute).text },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_respiratory_rate,
@@ -764,6 +824,13 @@ private fun LazyListScope.bodyTemperatureContent(
             period = period,
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
+        )
+        heartEntryRows(
+            entries = state.bodyTemperature,
+            value = { unitFormatter.temperature(it.temperatureCelsius).text },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
     } else if (!state.isLoading) {
         noHeartMetricData(
@@ -1347,6 +1414,84 @@ private fun LazyListScope.noHeartMetricData(
             message = stringResource(messageRes),
             modifier = metricModifier(),
         )
+    }
+}
+
+private fun <T> LazyListScope.heartEntryRows(
+    entries: List<T>,
+    value: (T) -> String,
+    source: (T) -> String,
+    time: (T) -> java.time.Instant,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    if (entries.isEmpty()) return
+
+    item { SectionHeader(stringResource(R.string.section_entries)) }
+    items(entries.sortedByDescending(time)) { entry ->
+        VitalsReadingRow(
+            label = value(entry),
+            source = source(entry),
+            time = time(entry).atZone(ZoneId.systemDefault()),
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
+private fun <T> LazyListScope.heartDailyEntries(
+    entries: List<T>,
+    date: (T) -> LocalDate,
+    value: (T) -> String,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    accentColor: Color,
+) {
+    if (entries.isEmpty()) return
+
+    item { SectionHeader(stringResource(R.string.section_entries)) }
+    items(entries.sortedByDescending(date)) { entry ->
+        HeartDailyEntryRow(
+            date = date(entry),
+            value = value(entry),
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = accentColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun HeartDailyEntryRow(
+    date: LocalDate,
+    value: String,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = dateTimeFormatterProvider.mediumDate().format(date),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = accentColor,
+            )
+        }
     }
 }
 

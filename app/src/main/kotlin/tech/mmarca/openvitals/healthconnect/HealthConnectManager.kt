@@ -8,6 +8,8 @@ import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
+import tech.mmarca.openvitals.data.model.BmrEntry
+import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.CervicalMucusEntry
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyHydration
@@ -19,6 +21,9 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.HeightEntry
+import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.data.model.MindfulnessSession
@@ -173,6 +178,9 @@ class HealthConnectManager(private val context: Context) {
     suspend fun readDailyHydration(startDate: LocalDate, endDate: LocalDate): List<DailyHydration> =
         hydrationReader.readDailyHydration(startDate, endDate)
 
+    suspend fun readHydrationEntries(start: Instant, end: Instant): List<HydrationEntry> =
+        hydrationReader.readHydrationEntries(start, end)
+
     suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
         activityReader.readLatestWorkout(date)
 
@@ -252,6 +260,9 @@ class HealthConnectManager(private val context: Context) {
     suspend fun readLatestHeight(): Double? =
         bodyReader.readLatestHeight()
 
+    suspend fun readHeightEntries(start: Instant, end: Instant): List<HeightEntry> =
+        bodyReader.readHeightEntries(start, end)
+
     suspend fun readLatestBodyFat(): Double? =
         bodyReader.readLatestBodyFat()
 
@@ -261,11 +272,20 @@ class HealthConnectManager(private val context: Context) {
     suspend fun readLatestLeanBodyMass(): Double? =
         bodyReader.readLatestLeanBodyMass()
 
+    suspend fun readLeanBodyMassEntries(start: Instant, end: Instant): List<LeanBodyMassEntry> =
+        bodyReader.readLeanBodyMassEntries(start, end)
+
     suspend fun readLatestBMR(): Double? =
         bodyReader.readLatestBMR()
 
+    suspend fun readBmrEntries(start: Instant, end: Instant): List<BmrEntry> =
+        bodyReader.readBmrEntries(start, end)
+
     suspend fun readLatestBoneMass(): Double? =
         bodyReader.readLatestBoneMass()
+
+    suspend fun readBoneMassEntries(start: Instant, end: Instant): List<BoneMassEntry> =
+        bodyReader.readBoneMassEntries(start, end)
 
     suspend fun readDailyNutrition(
         startDate: LocalDate,

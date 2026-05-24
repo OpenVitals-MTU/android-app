@@ -3,8 +3,12 @@ package tech.mmarca.openvitals.features.body
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BmrEntry
+import tech.mmarca.openvitals.data.model.BoneMassEntry
+import tech.mmarca.openvitals.data.model.HeightEntry
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.core.period.baselinePeriodBefore
@@ -24,12 +28,24 @@ data class BodyUiState(
     val previousWeightEntries: List<WeightEntry> = emptyList(),
     val baselineWeightEntries: List<WeightEntry> = emptyList(),
     val heightCm: Double? = null,
+    val heightEntries: List<HeightEntry> = emptyList(),
+    val previousHeightEntries: List<HeightEntry> = emptyList(),
+    val baselineHeightEntries: List<HeightEntry> = emptyList(),
     val bodyFatEntries: List<BodyFatEntry> = emptyList(),
     val previousBodyFatEntries: List<BodyFatEntry> = emptyList(),
     val baselineBodyFatEntries: List<BodyFatEntry> = emptyList(),
     val leanMassKg: Double? = null,
+    val leanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+    val previousLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+    val baselineLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
     val bmrKcal: Double? = null,
+    val bmrEntries: List<BmrEntry> = emptyList(),
+    val previousBmrEntries: List<BmrEntry> = emptyList(),
+    val baselineBmrEntries: List<BmrEntry> = emptyList(),
     val boneMassKg: Double? = null,
+    val boneMassEntries: List<BoneMassEntry> = emptyList(),
+    val previousBoneMassEntries: List<BoneMassEntry> = emptyList(),
+    val baselineBoneMassEntries: List<BoneMassEntry> = emptyList(),
     val error: String? = null,
 ) {
     val latestWeightKg: Double? get() = weightEntries.maxByOrNull { it.time }?.weightKg
@@ -48,6 +64,14 @@ data class BodyUiState(
             val hm = h / 100.0
             return w / (hm * hm)
         }
+    val latestHeightCm: Double? get() = heightEntries.maxByOrNull { it.time }?.heightCm ?: heightCm
+    val previousLatestHeightCm: Double? get() = previousHeightEntries.maxByOrNull { it.time }?.heightCm
+    val latestLeanMassKg: Double? get() = leanMassEntries.maxByOrNull { it.time }?.massKg ?: leanMassKg
+    val previousLatestLeanMassKg: Double? get() = previousLeanMassEntries.maxByOrNull { it.time }?.massKg
+    val latestBmrKcal: Double? get() = bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: bmrKcal
+    val previousLatestBmrKcal: Double? get() = previousBmrEntries.maxByOrNull { it.time }?.kcalPerDay
+    val latestBoneMassKg: Double? get() = boneMassEntries.maxByOrNull { it.time }?.massKg ?: boneMassKg
+    val previousLatestBoneMassKg: Double? get() = previousBoneMassEntries.maxByOrNull { it.time }?.massKg
     val previousBmi: Double?
         get() {
             val w = previousLatestWeightKg ?: return null
@@ -113,7 +137,9 @@ class BodyViewModel(
                         baselineWeightEntries = repository.loadWeightEntries(baselinePeriod.start, baselinePeriod.end),
                     )
                     BodyMetric.HEIGHT -> BodyLoadResult(
-                        heightCm = repository.loadLatestHeight(),
+                        heightEntries = repository.loadHeightEntries(period.start, period.end),
+                        previousHeightEntries = repository.loadHeightEntries(previousPeriod.start, previousPeriod.end),
+                        baselineHeightEntries = repository.loadHeightEntries(baselinePeriod.start, baselinePeriod.end),
                     )
                     BodyMetric.BMI -> BodyLoadResult(
                         weightEntries = repository.loadWeightEntries(period.start, period.end),
@@ -127,13 +153,19 @@ class BodyViewModel(
                         baselineBodyFatEntries = repository.loadBodyFatEntries(baselinePeriod.start, baselinePeriod.end),
                     )
                     BodyMetric.LEAN_MASS -> BodyLoadResult(
-                        leanMassKg = repository.loadLatestLeanBodyMass(),
+                        leanMassEntries = repository.loadLeanBodyMassEntries(period.start, period.end),
+                        previousLeanMassEntries = repository.loadLeanBodyMassEntries(previousPeriod.start, previousPeriod.end),
+                        baselineLeanMassEntries = repository.loadLeanBodyMassEntries(baselinePeriod.start, baselinePeriod.end),
                     )
                     BodyMetric.BMR -> BodyLoadResult(
-                        bmrKcal = repository.loadLatestBMR(),
+                        bmrEntries = repository.loadBmrEntries(period.start, period.end),
+                        previousBmrEntries = repository.loadBmrEntries(previousPeriod.start, previousPeriod.end),
+                        baselineBmrEntries = repository.loadBmrEntries(baselinePeriod.start, baselinePeriod.end),
                     )
                     BodyMetric.BONE_MASS -> BodyLoadResult(
-                        boneMassKg = repository.loadLatestBoneMass(),
+                        boneMassEntries = repository.loadBoneMassEntries(period.start, period.end),
+                        previousBoneMassEntries = repository.loadBoneMassEntries(previousPeriod.start, previousPeriod.end),
+                        baselineBoneMassEntries = repository.loadBoneMassEntries(baselinePeriod.start, baselinePeriod.end),
                     )
                 }
             }
@@ -144,13 +176,25 @@ class BodyViewModel(
                         weightEntries = result.weightEntries,
                         previousWeightEntries = result.previousWeightEntries,
                         baselineWeightEntries = result.baselineWeightEntries,
-                        heightCm = result.heightCm,
+                        heightCm = result.heightEntries.maxByOrNull { it.time }?.heightCm ?: result.heightCm,
+                        heightEntries = result.heightEntries,
+                        previousHeightEntries = result.previousHeightEntries,
+                        baselineHeightEntries = result.baselineHeightEntries,
                         bodyFatEntries = result.bodyFatEntries,
                         previousBodyFatEntries = result.previousBodyFatEntries,
                         baselineBodyFatEntries = result.baselineBodyFatEntries,
-                        leanMassKg = result.leanMassKg,
-                        bmrKcal = result.bmrKcal,
-                        boneMassKg = result.boneMassKg,
+                        leanMassKg = result.leanMassEntries.maxByOrNull { it.time }?.massKg ?: result.leanMassKg,
+                        leanMassEntries = result.leanMassEntries,
+                        previousLeanMassEntries = result.previousLeanMassEntries,
+                        baselineLeanMassEntries = result.baselineLeanMassEntries,
+                        bmrKcal = result.bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: result.bmrKcal,
+                        bmrEntries = result.bmrEntries,
+                        previousBmrEntries = result.previousBmrEntries,
+                        baselineBmrEntries = result.baselineBmrEntries,
+                        boneMassKg = result.boneMassEntries.maxByOrNull { it.time }?.massKg ?: result.boneMassKg,
+                        boneMassEntries = result.boneMassEntries,
+                        previousBoneMassEntries = result.previousBoneMassEntries,
+                        baselineBoneMassEntries = result.baselineBoneMassEntries,
                     )
                 }
                 .onFailure {
@@ -168,12 +212,24 @@ class BodyViewModel(
         val previousWeightEntries: List<WeightEntry> = emptyList(),
         val baselineWeightEntries: List<WeightEntry> = emptyList(),
         val heightCm: Double? = null,
+        val heightEntries: List<HeightEntry> = emptyList(),
+        val previousHeightEntries: List<HeightEntry> = emptyList(),
+        val baselineHeightEntries: List<HeightEntry> = emptyList(),
         val bodyFatEntries: List<BodyFatEntry> = emptyList(),
         val previousBodyFatEntries: List<BodyFatEntry> = emptyList(),
         val baselineBodyFatEntries: List<BodyFatEntry> = emptyList(),
         val leanMassKg: Double? = null,
+        val leanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+        val previousLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+        val baselineLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
         val bmrKcal: Double? = null,
+        val bmrEntries: List<BmrEntry> = emptyList(),
+        val previousBmrEntries: List<BmrEntry> = emptyList(),
+        val baselineBmrEntries: List<BmrEntry> = emptyList(),
         val boneMassKg: Double? = null,
+        val boneMassEntries: List<BoneMassEntry> = emptyList(),
+        val previousBoneMassEntries: List<BoneMassEntry> = emptyList(),
+        val baselineBoneMassEntries: List<BoneMassEntry> = emptyList(),
     )
 
     private val periodSelection: PeriodSelection
