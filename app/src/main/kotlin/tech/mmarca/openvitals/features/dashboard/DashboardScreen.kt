@@ -50,6 +50,8 @@ import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Terrain
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -80,6 +82,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
@@ -1116,17 +1119,55 @@ private fun WorkoutCard(
     onClick: (() -> Unit)? = null,
 ) {
     val start = workout.startTime.atZone(zone)
-    MetricCard(
-        title = stringResource(R.string.metric_workout),
-        value = unitFormatter.duration(workout.durationMs),
-        unit = exerciseTypeLabel(workout.exerciseType),
-        icon = Icons.AutoMirrored.Outlined.DirectionsRun,
-        accentColor = WorkoutColor,
-        subtitle = "${dateTimeFormatterProvider.mediumDate().format(start)} · ${dateTimeFormatterProvider.shortTime().format(start)}",
-        source = workout.source,
-        modifier = modifier,
-        onClick = onClick,
-    )
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    contentDescription = null,
+                    tint = WorkoutColor,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.metric_workout),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = exerciseTypeLabel(workout.exerciseType),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = unitFormatter.duration(workout.durationMs),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = dateTimeFormatterProvider.shortTime().format(start),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
