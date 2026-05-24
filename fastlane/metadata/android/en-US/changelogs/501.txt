@@ -1,0 +1,4 @@
+Refresh the OpenVitals app branding with the new logo and launcher icons.
+Use distinct launcher icons for production and debug builds.
+Show the new logo during onboarding.
+Update README screenshots and project branding.
