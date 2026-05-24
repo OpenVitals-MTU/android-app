@@ -108,6 +108,7 @@
     <string name="unit_steps">steps</string>
     <string name="unit_floors">floors</string>
     <string name="unit_days">days</string>
+    <string name="unit_nights">nights</string>
     <string name="unit_tests">tests</string>
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
@@ -169,8 +170,14 @@
     <string name="stat_total">Total</string>
     <string name="stat_active_days">Active days</string>
     <string name="stat_daily_average">Daily average</string>
+    <string name="stat_average_duration">Average duration</string>
     <string name="stat_total_intake">Total intake</string>
     <string name="stat_best_day">Best day</string>
+    <string name="stat_nights_logged">Nights logged</string>
+    <string name="stat_longest_sleep">Longest sleep</string>
+    <string name="stat_longest_workout">Longest workout</string>
+    <string name="stat_longest_session">Longest session</string>
+    <string name="stat_bbt_readings">BBT readings</string>
     <string name="stat_goal_streak">Goal streak</string>
     <string name="stat_longest_goal_streak">Longest streak</string>
     <string name="stat_goals_met">Goals met</string>

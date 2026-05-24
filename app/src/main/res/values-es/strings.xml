@@ -108,6 +108,7 @@
     <string name="unit_steps">pasos</string>
     <string name="unit_floors">pisos</string>
     <string name="unit_days">días</string>
+    <string name="unit_nights">noches</string>
     <string name="unit_tests">pruebas</string>
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
@@ -169,8 +170,14 @@
     <string name="stat_total">Total</string>
     <string name="stat_active_days">Días activos</string>
     <string name="stat_daily_average">Media diaria</string>
+    <string name="stat_average_duration">Duración media</string>
     <string name="stat_total_intake">Ingesta total</string>
     <string name="stat_best_day">Mejor día</string>
+    <string name="stat_nights_logged">Noches registradas</string>
+    <string name="stat_longest_sleep">Sueño más largo</string>
+    <string name="stat_longest_workout">Entreno más largo</string>
+    <string name="stat_longest_session">Sesión más larga</string>
+    <string name="stat_bbt_readings">Lecturas BBT</string>
     <string name="stat_goal_streak">Racha de objetivo</string>
     <string name="stat_longest_goal_streak">Racha más larga</string>
     <string name="stat_goals_met">Objetivos cumplidos</string>

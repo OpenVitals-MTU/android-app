@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.SelfImprovement
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +30,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -77,6 +82,10 @@ fun MindfulnessScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            mindfulnessStatistics(
+                sessions = state.sessions,
+                unitFormatter = unitFormatter,
+            )
             item { SectionHeader(stringResource(R.string.section_sessions)) }
             items(state.sessions) { session ->
                 MindfulnessSessionRow(
@@ -89,6 +98,54 @@ fun MindfulnessScreen(
                 )
             }
         }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.mindfulnessStatistics(
+    sessions: List<MindfulnessSession>,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        val totalMs = sessions.sumOf { it.durationMs.coerceAtLeast(0L) }
+        val averageMs = sessions.takeIf { it.isNotEmpty() }
+            ?.let { totalMs / it.size }
+            ?: 0L
+        val longestMs = sessions.maxOfOrNull { it.durationMs.coerceAtLeast(0L) } ?: 0L
+
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.stat_total),
+                    value = unitFormatter.duration(totalMs),
+                    unit = "",
+                    icon = Icons.Outlined.SelfImprovement,
+                    accentColor = MindfulnessColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.section_sessions),
+                    value = unitFormatter.count(sessions.size),
+                    unit = "",
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = MindfulnessColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_average_duration),
+                    value = unitFormatter.duration(averageMs),
+                    unit = "",
+                    icon = Icons.Outlined.Star,
+                    accentColor = MindfulnessColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_longest_session),
+                    value = unitFormatter.duration(longestMs),
+                    unit = "",
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = MindfulnessColor,
+                ),
+            ),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 

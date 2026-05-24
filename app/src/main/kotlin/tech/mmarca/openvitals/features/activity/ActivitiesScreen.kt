@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +31,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
@@ -57,6 +62,10 @@ fun ActivitiesScreen(
         onSelectDate = viewModel::selectDate,
     ) { _ ->
         if (state.workouts.isNotEmpty()) {
+            workoutStatistics(
+                workouts = state.workouts,
+                unitFormatter = unitFormatter,
+            )
             item { SectionHeader(stringResource(R.string.section_activities)) }
             items(state.workouts) { workout ->
                 WorkoutListItem(
@@ -79,6 +88,54 @@ fun ActivitiesScreen(
                 )
             }
         }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.workoutStatistics(
+    workouts: List<ExerciseData>,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        val totalMs = workouts.sumOf { it.durationMs.coerceAtLeast(0L) }
+        val averageMs = workouts.takeIf { it.isNotEmpty() }
+            ?.let { totalMs / it.size }
+            ?: 0L
+        val longestMs = workouts.maxOfOrNull { it.durationMs.coerceAtLeast(0L) } ?: 0L
+
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.stat_total),
+                    value = unitFormatter.duration(totalMs),
+                    unit = "",
+                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    accentColor = WorkoutColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.section_activities),
+                    value = unitFormatter.count(workouts.size),
+                    unit = "",
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = WorkoutColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_average_duration),
+                    value = unitFormatter.duration(averageMs),
+                    unit = "",
+                    icon = Icons.Outlined.Star,
+                    accentColor = WorkoutColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_longest_workout),
+                    value = unitFormatter.duration(longestMs),
+                    unit = "",
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = WorkoutColor,
+                ),
+            ),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 

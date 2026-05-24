@@ -2,7 +2,13 @@ package tech.mmarca.openvitals.features.sleep
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bed
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,16 +20,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepSessionsForRange
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +95,12 @@ fun SleepScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
+                sleepStatistics(
+                    sessions = state.sessions,
+                    period = period,
+                    sleepRangeMode = state.sleepRangeMode,
+                    unitFormatter = unitFormatter,
+                )
 
                 if (dailySessions.size > 1) {
                     item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
@@ -114,6 +132,12 @@ fun SleepScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
+                sleepStatistics(
+                    sessions = state.sessions,
+                    period = period,
+                    sleepRangeMode = state.sleepRangeMode,
+                    unitFormatter = unitFormatter,
+                )
 
                 item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
                 items(state.sessions.sortedByDescending { it.endTime }) { session ->
@@ -165,3 +189,78 @@ private fun dailySleepTimeRangeText(
 
     return "${dateFormatter.format(selectedDate)}  ·  $ranges"
 }
+
+private fun LazyListScope.sleepStatistics(
+    sessions: List<SleepData>,
+    period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        val nights = sleepDurationStatPoints(sessions, period, sleepRangeMode).filter { it.hours > 0.0 }
+        val totalHours = nights.sumOf { it.hours }
+        val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
+        val longestHours = nights.maxOfOrNull { it.hours } ?: 0.0
+
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.stat_total),
+                    value = unitFormatter.duration((totalHours * 3_600_000).roundToLong()),
+                    unit = "",
+                    icon = Icons.Outlined.Bed,
+                    accentColor = SleepColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_daily_average),
+                    value = unitFormatter.duration((averageHours * 3_600_000).roundToLong()),
+                    unit = "",
+                    icon = Icons.Outlined.Star,
+                    accentColor = SleepColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_longest_sleep),
+                    value = unitFormatter.duration((longestHours * 3_600_000).roundToLong()),
+                    unit = "",
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = SleepColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_nights_logged),
+                    value = unitFormatter.count(nights.size),
+                    unit = stringResource(R.string.unit_nights),
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = SleepColor,
+                ),
+            ),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+}
+
+private fun sleepDurationStatPoints(
+    sessions: List<SleepData>,
+    period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
+): List<SleepDurationStatPoint> {
+    val zone = ZoneId.systemDefault()
+    return generateSequence(period.start) { current ->
+        current.plusDays(1).takeUnless { it.isAfter(period.end) }
+    }.map { date ->
+        SleepDurationStatPoint(
+            date = date,
+            hours = dailySleepSummary(
+                sessions = sessions,
+                selectedDate = date,
+                sleepRangeMode = sleepRangeMode,
+                zone = zone,
+            )?.durationHours ?: 0.0,
+        )
+    }.toList()
+}
+
+private data class SleepDurationStatPoint(
+    val date: LocalDate,
+    val hours: Double,
+)

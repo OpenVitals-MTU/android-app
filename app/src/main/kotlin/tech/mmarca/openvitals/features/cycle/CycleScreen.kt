@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DeviceThermostat
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,14 +19,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.CycleData
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.CycleColor
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +80,11 @@ fun CycleScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            cycleStatistics(
+                data = state.data,
+                period = period,
+                unitFormatter = unitFormatter,
+            )
             item { SectionHeader(stringResource(R.string.section_cycle_calendar)) }
             item {
                 CycleCalendarCard(
@@ -121,5 +134,57 @@ fun CycleScreen(
                 )
             }
         }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.cycleStatistics(
+    data: CycleData,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        val zone = ZoneId.systemDefault()
+        val periodDays = cycleDays(period, data, zone)
+            .count { it.inSelectedPeriod && (it.periodActive || it.flows.isNotEmpty()) }
+        val entries = data.menstruationFlows.size +
+            data.menstruationPeriods.size +
+            data.ovulationTests.size +
+            data.cervicalMucus.size +
+            data.basalBodyTemperature.size
+
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.metric_period_days),
+                    value = unitFormatter.count(periodDays),
+                    unit = stringResource(R.string.unit_days),
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = CycleColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.metric_ovulation_tests),
+                    value = unitFormatter.count(data.ovulationTests.size),
+                    unit = stringResource(R.string.unit_tests),
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = CycleColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_bbt_readings),
+                    value = unitFormatter.count(data.basalBodyTemperature.size),
+                    unit = "",
+                    icon = Icons.Outlined.DeviceThermostat,
+                    accentColor = CycleColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.section_entries),
+                    value = unitFormatter.count(entries),
+                    unit = "",
+                    icon = Icons.Outlined.Star,
+                    accentColor = CycleColor,
+                ),
+            ),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
