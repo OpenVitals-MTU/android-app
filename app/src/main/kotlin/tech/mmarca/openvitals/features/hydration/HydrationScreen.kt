@@ -1,18 +1,32 @@
 package tech.mmarca.openvitals.features.hydration
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -86,6 +100,15 @@ fun HydrationScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            item {
+                HydrationGoalCard(
+                    state = state,
+                    unitFormatter = unitFormatter,
+                    onDecreaseGoal = viewModel::decreaseDailyGoal,
+                    onIncreaseGoal = viewModel::increaseDailyGoal,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             item { SectionHeader(stringResource(R.string.section_statistics)) }
             item {
                 HydrationStatistics(
@@ -154,10 +177,31 @@ private fun HydrationStatistics(
     InsightStatGrid(
         stats = listOf(
             InsightStat(
-                title = stringResource(R.string.stat_current_streak),
-                value = unitFormatter.count(state.currentTrackedStreakDays),
+                title = stringResource(R.string.stat_goal_streak),
+                value = unitFormatter.count(state.currentGoalStreakDays),
                 unit = stringResource(R.string.unit_days),
                 icon = Icons.Outlined.LocalFireDepartment,
+                accentColor = HydrationColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_goals_met),
+                value = unitFormatter.count(state.goalMetDays),
+                unit = stringResource(R.string.unit_days),
+                icon = Icons.Outlined.CheckCircle,
+                accentColor = HydrationColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_longest_goal_streak),
+                value = unitFormatter.count(state.longestGoalStreakDays),
+                unit = stringResource(R.string.unit_days),
+                icon = Icons.Outlined.CalendarMonth,
+                accentColor = HydrationColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_success_rate),
+                value = unitFormatter.count(state.goalSuccessRatePercent),
+                unit = stringResource(R.string.unit_percent_symbol),
+                icon = Icons.Outlined.Star,
                 accentColor = HydrationColor,
             ),
             InsightStat(
@@ -184,6 +228,80 @@ private fun HydrationStatistics(
         ),
         modifier = modifier,
     )
+}
+
+@Composable
+private fun HydrationGoalCard(
+    state: HydrationUiState,
+    unitFormatter: UnitFormatter,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val goal = unitFormatter.hydration(state.dailyGoalLiters)
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalDrink,
+                    contentDescription = null,
+                    tint = HydrationColor,
+                    modifier = Modifier.size(22.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.hydration_daily_goal),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.hydration_goal_progress,
+                            state.goalMetDays,
+                            state.trackedDays,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onDecreaseGoal) {
+                    Icon(
+                        imageVector = Icons.Outlined.Remove,
+                        contentDescription = stringResource(R.string.cd_decrease_hydration_goal),
+                    )
+                }
+                IconButton(onClick = onIncreaseGoal) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = stringResource(R.string.cd_increase_hydration_goal),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = goal.value,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = goal.unit,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 6.dp, bottom = 3.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable

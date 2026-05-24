@@ -13,10 +13,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+private const val DefaultHydrationDailyGoalLiters = 2.0
+private const val HydrationGoalStepLiters = 0.25
+private const val MinHydrationDailyGoalLiters = 0.25
+private const val MaxHydrationDailyGoalLiters = 10.0
+
 data class HydrationUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
+    val dailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
     val dailyHydration: List<DailyHydration> = emptyList(),
     val error: String? = null,
 ) {
@@ -24,21 +30,53 @@ data class HydrationUiState(
     val trackedDays: Int get() = dailyHydration.count { it.liters > 0.0 }
     val averageLiters: Double get() = trackedDays.takeIf { it > 0 }?.let { totalLiters / it } ?: 0.0
     val bestDayLiters: Double get() = dailyHydration.maxOfOrNull { it.liters } ?: 0.0
+    val goalMetDays: Int get() = dailyHydration.count { it.meetsDailyGoal() }
+    val goalSuccessRatePercent: Int get() = trackedDays.takeIf { it > 0 }?.let { goalMetDays * 100 / it } ?: 0
     val currentTrackedStreakDays: Int
         get() = dailyHydration
             .sortedBy { it.date }
             .asReversed()
             .takeWhile { it.liters > 0.0 }
             .count()
+    val currentGoalStreakDays: Int
+        get() = dailyHydration
+            .sortedBy { it.date }
+            .asReversed()
+            .takeWhile { it.meetsDailyGoal() }
+            .count()
+    val longestGoalStreakDays: Int
+        get() {
+            var current = 0
+            var longest = 0
+            dailyHydration.sortedBy { it.date }.forEach { day ->
+                if (day.meetsDailyGoal()) {
+                    current += 1
+                    longest = maxOf(longest, current)
+                } else {
+                    current = 0
+                }
+            }
+            return longest
+        }
+
+    private fun DailyHydration.meetsDailyGoal(): Boolean =
+        dailyGoalLiters > 0.0 && liters >= dailyGoalLiters
 }
 
 class HydrationViewModel(
     private val repository: HydrationRepository,
     initialRange: TimeRange = TimeRange.WEEK,
+    initialDailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
     private val onRangeSelected: (TimeRange) -> Unit = {},
+    private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HydrationUiState(selectedRange = initialRange))
+    private val _uiState = MutableStateFlow(
+        HydrationUiState(
+            selectedRange = initialRange,
+            dailyGoalLiters = normalizeHydrationGoalLiters(initialDailyGoalLiters),
+        )
+    )
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
 
     init {
@@ -68,6 +106,20 @@ class HydrationViewModel(
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodSelection.selectDate(date))
         load()
+    }
+
+    fun increaseDailyGoal() {
+        setDailyGoalLiters(_uiState.value.dailyGoalLiters + HydrationGoalStepLiters)
+    }
+
+    fun decreaseDailyGoal() {
+        setDailyGoalLiters(_uiState.value.dailyGoalLiters - HydrationGoalStepLiters)
+    }
+
+    fun setDailyGoalLiters(liters: Double) {
+        val goal = normalizeHydrationGoalLiters(liters)
+        onDailyGoalChanged(goal)
+        _uiState.value = _uiState.value.copy(dailyGoalLiters = goal)
     }
 
     fun load() {
@@ -103,4 +155,7 @@ class HydrationViewModel(
             selectedDate = selection.selectedDate,
         )
     }
+
+    private fun normalizeHydrationGoalLiters(liters: Double): Double =
+        liters.coerceIn(MinHydrationDailyGoalLiters, MaxHydrationDailyGoalLiters)
 }

@@ -38,6 +38,11 @@ class HydrationViewModelTest {
         assertEquals(TimeRange.DAY, vm.uiState.value.selectedRange)
     }
 
+    @Test fun `daily goal can be restored`() = runTest {
+        val vm = HydrationViewModel(emptyRepo(), initialDailyGoalLiters = 2.5)
+        assertEquals(2.5, vm.uiState.value.dailyGoalLiters, 0.01)
+    }
+
     @Test fun `initial load clears loading and sets empty list`() = runTest {
         val vm = HydrationViewModel(emptyRepo())
         val state = vm.uiState.value
@@ -93,6 +98,45 @@ class HydrationViewModelTest {
         val vm = HydrationViewModel(repo)
 
         assertEquals(2, vm.uiState.value.currentTrackedStreakDays)
+    }
+
+    @Test fun `goal statistics use the configured daily goal`() = runTest {
+        val hydration = listOf(
+            DailyHydration(today.minusDays(3), 2.0),
+            DailyHydration(today.minusDays(2), 2.5),
+            DailyHydration(today.minusDays(1), 1.0),
+            DailyHydration(today, 2.0),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
+
+        val vm = HydrationViewModel(repo, initialDailyGoalLiters = 2.0)
+
+        assertEquals(3, vm.uiState.value.goalMetDays)
+        assertEquals(75, vm.uiState.value.goalSuccessRatePercent)
+        assertEquals(1, vm.uiState.value.currentGoalStreakDays)
+        assertEquals(2, vm.uiState.value.longestGoalStreakDays)
+    }
+
+    @Test fun `updating daily goal saves and recalculates goal statistics`() = runTest {
+        val hydration = listOf(
+            DailyHydration(today.minusDays(1), 2.0),
+            DailyHydration(today, 2.5),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
+        var savedGoal: Double? = null
+        val vm = HydrationViewModel(
+            repository = repo,
+            initialDailyGoalLiters = 2.0,
+            onDailyGoalChanged = { goal -> savedGoal = goal },
+        )
+
+        vm.increaseDailyGoal()
+
+        assertEquals(2.25, savedGoal ?: 0.0, 0.01)
+        assertEquals(2.25, vm.uiState.value.dailyGoalLiters, 0.01)
+        assertEquals(1, vm.uiState.value.goalMetDays)
     }
 
     @Test fun `load failure sets error and clears loading`() = runTest {

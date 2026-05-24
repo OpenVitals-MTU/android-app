@@ -52,6 +52,20 @@ class PreferencesRepository(context: Context) {
             _sleepRangeMode.value = value
         }
 
+    var hydrationDailyGoalLiters: Double
+        get() = prefs.getFloat(
+            KEY_HYDRATION_DAILY_GOAL_LITERS,
+            DEFAULT_HYDRATION_DAILY_GOAL_LITERS.toFloat(),
+        ).toDouble()
+        set(value) {
+            prefs.edit()
+                .putFloat(
+                    KEY_HYDRATION_DAILY_GOAL_LITERS,
+                    value.coerceIn(MIN_HYDRATION_DAILY_GOAL_LITERS, MAX_HYDRATION_DAILY_GOAL_LITERS).toFloat(),
+                )
+                .apply()
+        }
+
     fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
         prefs.getString(key.storageKey, null)
             ?.let { value -> runCatching { TimeRange.valueOf(value) }.getOrNull() }
@@ -110,7 +124,11 @@ class PreferencesRepository(context: Context) {
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
+        private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
         private const val KEY_VALUE_SEPARATOR = ","
+        private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
+        private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
+        private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

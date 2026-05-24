@@ -367,7 +367,9 @@ fun AppNavigation(
                     HydrationViewModel(
                         repository = hydrationRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
+                        initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
+                        onDailyGoalChanged = { goal -> preferencesRepository.hydrationDailyGoalLiters = goal },
                     )
                 }
                 HydrationScreen(
@@ -583,7 +585,9 @@ private fun MetricRouteContent(
                 HydrationViewModel(
                     repository = hydrationRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
+                    initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
+                    onDailyGoalChanged = { goal -> preferencesRepository.hydrationDailyGoalLiters = goal },
                 )
             }
             HydrationScreen(

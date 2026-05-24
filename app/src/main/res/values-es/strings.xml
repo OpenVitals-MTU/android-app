@@ -169,8 +169,17 @@
     <string name="stat_daily_average">Media diaria</string>
     <string name="stat_total_intake">Ingesta total</string>
     <string name="stat_best_day">Mejor día</string>
+    <string name="stat_goal_streak">Racha de objetivo</string>
+    <string name="stat_longest_goal_streak">Racha más larga</string>
+    <string name="stat_goals_met">Objetivos cumplidos</string>
+    <string name="stat_success_rate">Tasa de éxito</string>
     <string name="legend_less">Menos</string>
     <string name="legend_more">Más</string>
+    <string name="hydration_daily_goal">Objetivo diario</string>
+    <string name="hydration_goal_progress">%1$d de %2$d días registrados cumplidos</string>
+    <string name="cd_decrease_hydration_goal">Reducir objetivo de hidratación</string>
+    <string name="cd_increase_hydration_goal">Aumentar objetivo de hidratación</string>
+    <string name="unit_percent_symbol">%</string>
 
     <string name="message_no_dashboard_data">No hay datos del panel disponibles.</string>
     <string name="message_missing_permissions_title">Faltan algunos permisos</string>
