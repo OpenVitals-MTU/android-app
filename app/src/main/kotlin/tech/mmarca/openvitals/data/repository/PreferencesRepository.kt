@@ -61,6 +61,17 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putString(key.storageKey, range.name).apply()
     }
 
+    fun dashboardWidgetOrder(): List<String>? =
+        prefs.getString(KEY_DASHBOARD_WIDGET_ORDER, null)
+            ?.split(KEY_VALUE_SEPARATOR)
+            ?.filter { it.isNotBlank() }
+
+    fun setDashboardWidgetOrder(widgetIds: List<String>) {
+        prefs.edit()
+            .putString(KEY_DASHBOARD_WIDGET_ORDER, widgetIds.joinToString(KEY_VALUE_SEPARATOR))
+            .apply()
+    }
+
     fun acknowledgedPermissions(): Set<String> =
         prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()
 
@@ -98,6 +109,8 @@ class PreferencesRepository(context: Context) {
         private const val KEY_TRACK_CYCLE = "track_cycle"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
+        private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
+        private const val KEY_VALUE_SEPARATOR = ","
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

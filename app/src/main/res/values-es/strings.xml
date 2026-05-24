@@ -4,6 +4,11 @@
 
     <string name="cd_back">Atrás</string>
     <string name="cd_settings">Ajustes</string>
+    <string name="cd_edit_dashboard">Editar panel</string>
+    <string name="cd_finish_dashboard_editing">Terminar edición del panel</string>
+    <string name="cd_move_widget_up">Mover widget arriba</string>
+    <string name="cd_move_widget_down">Mover widget abajo</string>
+    <string name="cd_remove_widget">Quitar widget</string>
     <string name="cd_previous_day">Día anterior</string>
     <string name="cd_next_day">Día siguiente</string>
     <string name="cd_previous_period">Periodo anterior</string>
@@ -85,6 +90,7 @@
     <string name="metric_ovulation_tests">Pruebas de ovulación</string>
     <string name="metric_latest_bbt">Última TCB</string>
     <string name="metric_weight">Peso</string>
+    <string name="metric_height">Altura</string>
     <string name="metric_bmi">IMC</string>
     <string name="metric_lean_mass">Masa magra</string>
     <string name="metric_bmr">TMB</string>
@@ -170,6 +176,8 @@
     <string name="message_no_vo2_max">No hay lectura de VO2 máx.</string>
     <string name="message_cycle_browse">Ver calendario y lecturas del ciclo.</string>
     <string name="message_browse_records">Explora todos los registros sin procesar de Health Connect.</string>
+    <string name="dashboard_add_widgets">Añadir widgets</string>
+    <string name="dashboard_all_widgets_added">Todos los widgets ya están en el panel.</string>
     <string name="message_no_activities_period">No hay actividades en el periodo seleccionado.</string>
     <string name="message_no_step_updates">No se registraron actualizaciones de pasos</string>
     <string name="message_no_distance_updates">No se registraron actualizaciones de distancia</string>

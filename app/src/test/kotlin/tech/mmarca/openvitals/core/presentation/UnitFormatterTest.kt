@@ -35,6 +35,14 @@ class UnitFormatterTest {
         assertEquals("154.3 lb", formatter(UnitSystem.IMPERIAL).weight(70.0).text)
     }
 
+    @Test fun `metric height uses centimeters`() {
+        assertEquals("180 cm", formatter(UnitSystem.METRIC).height(180.0).text)
+    }
+
+    @Test fun `imperial height uses feet and inches`() {
+        assertEquals("5' 11\"", formatter(UnitSystem.IMPERIAL).height(180.0).text)
+    }
+
     @Test fun `imperial hydration uses fluid ounces`() {
         assertEquals("68 fl oz", formatter(UnitSystem.IMPERIAL).hydration(2.0).text)
     }

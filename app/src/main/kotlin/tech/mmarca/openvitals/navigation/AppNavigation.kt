@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -12,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
@@ -93,6 +97,7 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
+    var dashboardTopBarState by remember { mutableStateOf(DashboardTopBarState()) }
 
     val showTopBar = currentRoute != Screen.Onboarding.route
     val canNavigateBack =
@@ -135,6 +140,25 @@ fun AppNavigation(
                         }
                     },
                     actions = {
+                        if (currentRoute == Screen.Dashboard.route) {
+                            IconButton(onClick = dashboardTopBarState.onToggleEdit) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = stringResource(
+                                        if (dashboardTopBarState.isEditing) {
+                                            R.string.cd_finish_dashboard_editing
+                                        } else {
+                                            R.string.cd_edit_dashboard
+                                        }
+                                    ),
+                                    tint = if (dashboardTopBarState.isEditing) {
+                                        androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                    } else {
+                                        androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            }
+                        }
                         if (currentRoute != Screen.Settings.route) {
                             IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                                 Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_settings))
@@ -184,6 +208,9 @@ fun AppNavigation(
                     onOpenMindfulness = { navController.navigate(Screen.Mindfulness.route) },
                     onOpenCycle = { navController.navigate(Screen.Cycle.route) },
                     onOpenBrowse = { navController.navigate(Screen.Browse.route) },
+                    onEditStateChanged = { isEditing, onToggleEdit ->
+                        dashboardTopBarState = DashboardTopBarState(isEditing, onToggleEdit)
+                    },
                 )
             }
 
@@ -399,6 +426,11 @@ fun AppNavigation(
 
 private fun PreferencesRepository.rangeSaver(key: PeriodRangePreferenceKey): (TimeRange) -> Unit =
     { range -> setTimeRangeFor(key, range) }
+
+private data class DashboardTopBarState(
+    val isEditing: Boolean = false,
+    val onToggleEdit: () -> Unit = {},
+)
 
 @Composable
 private inline fun <reified VM : ViewModel> appViewModel(

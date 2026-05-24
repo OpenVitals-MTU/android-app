@@ -20,6 +20,8 @@ data class DashboardUiState(
     val showPermissionsCallout: Boolean = false,
     val trackCycle: Boolean = false,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    val dashboardWidgets: List<DashboardWidgetId> = DefaultDashboardWidgetIds,
+    val isEditingDashboard: Boolean = false,
 )
 
 class DashboardViewModel(
@@ -27,7 +29,11 @@ class DashboardViewModel(
     private val prefs: PreferencesRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
+    private val _uiState = MutableStateFlow(
+        DashboardUiState(
+            dashboardWidgets = dashboardWidgetIdsFromStored(prefs.dashboardWidgetOrder()),
+        )
+    )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
@@ -106,5 +112,63 @@ class DashboardViewModel(
         val missing = _uiState.value.data?.missingPermissions ?: return
         prefs.acknowledgePermissions(missing)
         _uiState.value = _uiState.value.copy(showPermissionsCallout = false)
+    }
+
+    fun toggleDashboardEdit() {
+        _uiState.value = _uiState.value.copy(isEditingDashboard = !_uiState.value.isEditingDashboard)
+    }
+
+    fun removeDashboardWidget(widgetId: DashboardWidgetId) {
+        updateDashboardWidgets(_uiState.value.dashboardWidgets - widgetId)
+    }
+
+    fun addDashboardWidget(widgetId: DashboardWidgetId) {
+        val current = _uiState.value.dashboardWidgets
+        if (widgetId !in current) {
+            updateDashboardWidgets(current + widgetId)
+        }
+    }
+
+    fun moveDashboardWidget(widgetId: DashboardWidgetId, offset: Int) {
+        val current = _uiState.value.dashboardWidgets
+        val fromIndex = current.indexOf(widgetId)
+        if (fromIndex == -1) return
+
+        val toIndex = (fromIndex + offset).coerceIn(current.indices)
+        if (fromIndex == toIndex) return
+
+        updateDashboardWidgets(
+            current.toMutableList().apply {
+                removeAt(fromIndex)
+                add(toIndex, widgetId)
+            }
+        )
+    }
+
+    fun moveDashboardWidgetToTarget(widgetId: DashboardWidgetId, targetWidgetId: DashboardWidgetId) {
+        val current = _uiState.value.dashboardWidgets
+        val fromIndex = current.indexOf(widgetId)
+        val targetIndex = current.indexOf(targetWidgetId)
+        if (fromIndex == -1 || targetIndex == -1 || fromIndex == targetIndex) return
+
+        val fromFixedSection = fromIndex < DashboardFixedWidgetCount
+        val targetFixedSection = targetIndex < DashboardFixedWidgetCount
+        val updated = current.toMutableList().apply {
+            if (fromFixedSection == targetFixedSection) {
+                removeAt(fromIndex)
+                add(targetIndex, widgetId)
+            } else {
+                this[fromIndex] = targetWidgetId
+                this[targetIndex] = widgetId
+            }
+        }
+
+        updateDashboardWidgets(updated)
+    }
+
+    private fun updateDashboardWidgets(widgets: List<DashboardWidgetId>) {
+        val customizableWidgets = customizableDashboardWidgetIds(widgets)
+        prefs.setDashboardWidgetOrder(customizableWidgets.map { it.name })
+        _uiState.value = _uiState.value.copy(dashboardWidgets = customizableWidgets)
     }
 }

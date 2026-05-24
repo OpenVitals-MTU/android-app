@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,6 +35,7 @@ fun MetricCard(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     source: String? = null,
+    contentAtBottom: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     Card(
@@ -51,7 +53,15 @@ fun MetricCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = if (contentAtBottom) {
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            } else {
+                Modifier.padding(16.dp)
+            }
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -67,6 +77,9 @@ fun MetricCard(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (contentAtBottom) {
+                Spacer(Modifier.weight(1f))
             }
             Spacer(Modifier.height(12.dp))
             Row(
@@ -110,6 +123,7 @@ fun MetricCardPlaceholder(
     accentColor: Color,
     message: String,
     modifier: Modifier = Modifier,
+    contentAtBottom: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     Card(
@@ -127,7 +141,15 @@ fun MetricCardPlaceholder(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = if (contentAtBottom) {
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            } else {
+                Modifier.padding(16.dp)
+            }
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = icon,
@@ -141,6 +163,9 @@ fun MetricCardPlaceholder(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (contentAtBottom) {
+                Spacer(Modifier.weight(1f))
             }
             Spacer(Modifier.height(12.dp))
             Text(

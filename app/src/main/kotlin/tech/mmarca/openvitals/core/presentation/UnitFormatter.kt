@@ -38,6 +38,17 @@ class UnitFormatter(
             UnitSystem.IMPERIAL -> DisplayValue(decimal(kgToPounds(kg), 1), "lb")
         }
 
+    fun height(centimeters: Double): DisplayValue =
+        when (unitSystem()) {
+            UnitSystem.METRIC -> DisplayValue(decimal(centimeters, 0), "cm")
+            UnitSystem.IMPERIAL -> {
+                val totalInches = (centimeters / 2.54).roundToInt()
+                val feet = totalInches / 12
+                val inches = totalInches % 12
+                DisplayValue("$feet' $inches\"", "")
+            }
+        }
+
     fun bodyMass(kg: Double, decimals: Int = 1): DisplayValue =
         when (unitSystem()) {
             UnitSystem.METRIC -> DisplayValue(decimal(kg, decimals), "kg")

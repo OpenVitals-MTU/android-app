@@ -35,6 +35,8 @@ class DashboardViewModelTest {
         every { it.acknowledgePermissions(any()) } returns Unit
         every { it.trackCycle } returns trackCycle
         every { it.sleepRangeMode } returns sleepRangeMode
+        every { it.dashboardWidgetOrder() } returns null
+        every { it.setDashboardWidgetOrder(any()) } returns Unit
     }
 
     // ─── Initial load ─────────────────────────────────────────────────────────
@@ -286,5 +288,165 @@ class DashboardViewModelTest {
 
         assertEquals(SleepRangeMode.NOON, vm.uiState.value.sleepRangeMode)
         coVerify { repo.loadDashboard(today, SleepRangeMode.NOON) }
+    }
+
+    @Test fun `dashboard widgets default to full widget set`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs())
+
+        assertEquals(DefaultDashboardWidgetIds, vm.uiState.value.dashboardWidgets)
+    }
+
+    @Test fun `dashboard widgets restore saved order`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.SLEEP.name,
+            DashboardWidgetId.STEPS.name,
+        )
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(
+            listOf(DashboardWidgetId.SLEEP, DashboardWidgetId.STEPS),
+            vm.uiState.value.dashboardWidgets,
+        )
+    }
+
+    @Test fun `dashboard widgets ignore unknown saved ids`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf("unknown", DashboardWidgetId.STEPS.name)
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(listOf(DashboardWidgetId.STEPS), vm.uiState.value.dashboardWidgets)
+    }
+
+    @Test fun `dashboard widgets ignore fixed browse saved id`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.BROWSE.name,
+            DashboardWidgetId.STEPS.name,
+        )
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(listOf(DashboardWidgetId.STEPS), vm.uiState.value.dashboardWidgets)
+    }
+
+    @Test fun `dashboard widget remove add and move persist order`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.removeDashboardWidget(DashboardWidgetId.DISTANCE)
+        assertFalse(DashboardWidgetId.DISTANCE in vm.uiState.value.dashboardWidgets)
+
+        vm.addDashboardWidget(DashboardWidgetId.DISTANCE)
+        assertEquals(DashboardWidgetId.DISTANCE, vm.uiState.value.dashboardWidgets.last())
+
+        vm.moveDashboardWidget(DashboardWidgetId.DISTANCE, -1)
+        assertEquals(
+            DashboardWidgetId.DISTANCE,
+            vm.uiState.value.dashboardWidgets[vm.uiState.value.dashboardWidgets.lastIndex - 1],
+        )
+    }
+
+    @Test fun `dashboard widget add ignores fixed browse widget`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.addDashboardWidget(DashboardWidgetId.BROWSE)
+
+        assertFalse(DashboardWidgetId.BROWSE in vm.uiState.value.dashboardWidgets)
+    }
+
+    @Test fun `dashboard widget moves to target drop position`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.DISTANCE.name,
+            DashboardWidgetId.CALORIES_OUT.name,
+            DashboardWidgetId.SLEEP.name,
+        )
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.CALORIES_OUT)
+
+        assertEquals(
+            listOf(
+                DashboardWidgetId.DISTANCE,
+                DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.STEPS,
+                DashboardWidgetId.SLEEP,
+            ),
+            vm.uiState.value.dashboardWidgets,
+        )
+    }
+
+    @Test fun `dashboard widget swaps when moved from carousel to fixed section`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.DISTANCE.name,
+            DashboardWidgetId.CALORIES_OUT.name,
+            DashboardWidgetId.SLEEP.name,
+            DashboardWidgetId.HYDRATION.name,
+        )
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.moveDashboardWidgetToTarget(DashboardWidgetId.HYDRATION, DashboardWidgetId.DISTANCE)
+
+        assertEquals(
+            listOf(
+                DashboardWidgetId.STEPS,
+                DashboardWidgetId.HYDRATION,
+                DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.SLEEP,
+                DashboardWidgetId.DISTANCE,
+            ),
+            vm.uiState.value.dashboardWidgets,
+        )
+    }
+
+    @Test fun `dashboard widget swaps when moved from fixed to carousel section`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.DISTANCE.name,
+            DashboardWidgetId.CALORIES_OUT.name,
+            DashboardWidgetId.SLEEP.name,
+            DashboardWidgetId.HYDRATION.name,
+        )
+        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.HYDRATION)
+
+        assertEquals(
+            listOf(
+                DashboardWidgetId.HYDRATION,
+                DashboardWidgetId.DISTANCE,
+                DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.SLEEP,
+                DashboardWidgetId.STEPS,
+            ),
+            vm.uiState.value.dashboardWidgets,
+        )
     }
 }
