@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MonitorWeight
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -23,6 +26,10 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -70,6 +77,7 @@ fun BodyScreen(
                 value = state.heightCm?.let(unitFormatter::height),
                 icon = Icons.Outlined.Straighten,
                 accentColor = WeightColor,
+                unitFormatter = unitFormatter,
             )
             BodyMetric.BMI -> singleBodyMetricContent(
                 state = state,
@@ -77,6 +85,7 @@ fun BodyScreen(
                 value = state.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
                 icon = Icons.Outlined.MonitorWeight,
                 accentColor = WeightColor,
+                unitFormatter = unitFormatter,
             )
             BodyMetric.BODY_FAT -> bodyFatContent(state, unitFormatter)
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
@@ -85,6 +94,7 @@ fun BodyScreen(
                 value = state.leanMassKg?.let(unitFormatter::bodyMass),
                 icon = Icons.Outlined.MonitorWeight,
                 accentColor = WeightColor,
+                unitFormatter = unitFormatter,
             )
             BodyMetric.BMR -> singleBodyMetricContent(
                 state = state,
@@ -92,6 +102,7 @@ fun BodyScreen(
                 value = state.bmrKcal?.let(unitFormatter::energy),
                 icon = Icons.Outlined.LocalFireDepartment,
                 accentColor = CaloriesColor,
+                unitFormatter = unitFormatter,
             )
             BodyMetric.BONE_MASS -> singleBodyMetricContent(
                 state = state,
@@ -99,6 +110,7 @@ fun BodyScreen(
                 value = state.boneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
                 icon = Icons.Outlined.MonitorWeight,
                 accentColor = WeightColor,
+                unitFormatter = unitFormatter,
             )
         }
     }
@@ -127,6 +139,10 @@ private fun LazyListScope.weightContent(
                 modifier = metricModifier(),
             )
         }
+        weightStatistics(
+            entries = state.weightEntries,
+            unitFormatter = unitFormatter,
+        )
         item { SectionHeader(stringResource(R.string.section_entries)) }
         items(state.weightEntries.sortedByDescending { it.time }) { entry ->
             WeightEntryRow(
@@ -174,6 +190,10 @@ private fun LazyListScope.bodyFatContent(
                 )
             }
         }
+        bodyFatStatistics(
+            entries = state.bodyFatEntries,
+            unitFormatter = unitFormatter,
+        )
     } else if (!state.isLoading) {
         noBodyMetricData(
             titleRes = R.string.metric_body_fat,
@@ -189,6 +209,7 @@ private fun LazyListScope.singleBodyMetricContent(
     value: DisplayValue?,
     icon: ImageVector,
     accentColor: Color,
+    unitFormatter: UnitFormatter,
 ) {
     if (value != null) {
         item {
@@ -201,8 +222,133 @@ private fun LazyListScope.singleBodyMetricContent(
                 modifier = metricModifier(),
             )
         }
+        singleBodyMetricStatistics(
+            value = value,
+            icon = icon,
+            accentColor = accentColor,
+            unitFormatter = unitFormatter,
+        )
     } else if (!state.isLoading) {
         noBodyMetricData(titleRes, icon, accentColor)
+    }
+}
+
+private fun LazyListScope.weightStatistics(
+    entries: List<WeightEntry>,
+    unitFormatter: UnitFormatter,
+) {
+    val values = entries.map { it.weightKg }
+    bodyNumericStatistics(
+        latest = entries.maxByOrNull { it.time }?.let { unitFormatter.weight(it.weightKg) } ?: unitFormatter.weight(0.0),
+        average = unitFormatter.weight(values.average()),
+        low = unitFormatter.weight(values.minOrNull() ?: 0.0),
+        high = unitFormatter.weight(values.maxOrNull() ?: 0.0),
+        readings = entries.size,
+        icon = Icons.Outlined.MonitorWeight,
+        accentColor = WeightColor,
+        unitFormatter = unitFormatter,
+    )
+}
+
+private fun LazyListScope.bodyFatStatistics(
+    entries: List<BodyFatEntry>,
+    unitFormatter: UnitFormatter,
+) {
+    val values = entries.map { it.percent }
+    bodyNumericStatistics(
+        latest = entries.maxByOrNull { it.time }?.let { unitFormatter.percent(it.percent) } ?: unitFormatter.percent(0.0),
+        average = unitFormatter.percent(values.average()),
+        low = unitFormatter.percent(values.minOrNull() ?: 0.0),
+        high = unitFormatter.percent(values.maxOrNull() ?: 0.0),
+        readings = entries.size,
+        icon = Icons.Outlined.MonitorWeight,
+        accentColor = BodyFatColor,
+        unitFormatter = unitFormatter,
+    )
+}
+
+private fun LazyListScope.singleBodyMetricStatistics(
+    value: DisplayValue,
+    icon: ImageVector,
+    accentColor: Color,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.metric_latest),
+                    value = value.value,
+                    unit = value.unit,
+                    icon = icon,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_readings),
+                    value = unitFormatter.count(1),
+                    unit = "",
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = accentColor,
+                ),
+            ),
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.bodyNumericStatistics(
+    latest: DisplayValue,
+    average: DisplayValue,
+    low: DisplayValue,
+    high: DisplayValue,
+    readings: Int,
+    icon: ImageVector,
+    accentColor: Color,
+    unitFormatter: UnitFormatter,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        InsightStatGrid(
+            stats = listOf(
+                InsightStat(
+                    title = stringResource(R.string.metric_latest),
+                    value = latest.value,
+                    unit = latest.unit,
+                    icon = icon,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_average),
+                    value = average.value,
+                    unit = average.unit,
+                    icon = Icons.Outlined.Star,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_lowest),
+                    value = low.value,
+                    unit = low.unit,
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_highest),
+                    value = high.value,
+                    unit = high.unit,
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = accentColor,
+                ),
+                InsightStat(
+                    title = stringResource(R.string.stat_readings),
+                    value = unitFormatter.count(readings),
+                    unit = "",
+                    icon = Icons.Outlined.CheckCircle,
+                    accentColor = accentColor,
+                ),
+            ),
+            modifier = metricModifier(),
+        )
     }
 }
 

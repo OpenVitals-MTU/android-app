@@ -169,6 +169,10 @@
     <string name="stat_current_streak">Current streak</string>
     <string name="stat_total">Total</string>
     <string name="stat_active_days">Active days</string>
+    <string name="stat_average">Average</string>
+    <string name="stat_lowest">Lowest</string>
+    <string name="stat_highest">Highest</string>
+    <string name="stat_readings">Readings</string>
     <string name="stat_daily_average">Daily average</string>
     <string name="stat_average_duration">Average duration</string>
     <string name="stat_total_intake">Total intake</string>

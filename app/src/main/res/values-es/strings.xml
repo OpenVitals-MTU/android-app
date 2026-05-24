@@ -169,6 +169,10 @@
     <string name="stat_current_streak">Racha actual</string>
     <string name="stat_total">Total</string>
     <string name="stat_active_days">Días activos</string>
+    <string name="stat_average">Media</string>
+    <string name="stat_lowest">Mínimo</string>
+    <string name="stat_highest">Máximo</string>
+    <string name="stat_readings">Lecturas</string>
     <string name="stat_daily_average">Media diaria</string>
     <string name="stat_average_duration">Duración media</string>
     <string name="stat_total_intake">Ingesta total</string>
