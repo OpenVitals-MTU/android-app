@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,9 @@ data class ActivityUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val dailyGoal: Double = ActivityMetric.STEPS.dailyGoalKey.defaultValue,
     val dailySteps: List<DailySteps> = emptyList(),
+    val previousDailySteps: List<DailySteps> = emptyList(),
     val nutrition: List<DailyNutrition> = emptyList(),
+    val previousNutrition: List<DailyNutrition> = emptyList(),
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
     val error: String? = null,
 )
@@ -92,6 +95,7 @@ class ActivityViewModel(
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
+            val previousPeriod = previousPeriodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 val dailySteps = if (selectedMetric.usesDailySteps) {
@@ -99,8 +103,18 @@ class ActivityViewModel(
                 } else {
                     emptyList()
                 }
+                val previousDailySteps = if (selectedMetric.usesDailySteps) {
+                    repository.loadDailySteps(previousPeriod.start, previousPeriod.end)
+                } else {
+                    emptyList()
+                }
                 val nutrition = if (selectedMetric.usesDailyNutrition) {
                     repository.loadDailyNutrition(period.start, period.end)
+                } else {
+                    emptyList()
+                }
+                val previousNutrition = if (selectedMetric.usesDailyNutrition) {
+                    repository.loadDailyNutrition(previousPeriod.start, previousPeriod.end)
                 } else {
                     emptyList()
                 }
@@ -113,7 +127,9 @@ class ActivityViewModel(
                     isLoading = false,
                     selectedDate = date,
                     dailySteps = dailySteps,
+                    previousDailySteps = previousDailySteps,
                     nutrition = nutrition,
+                    previousNutrition = previousNutrition,
                     activityProgress = activityProgress,
                 )
             }.onFailure {

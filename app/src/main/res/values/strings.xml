@@ -187,6 +187,10 @@
     <string name="stat_goals_met">Goals met</string>
     <string name="stat_success_rate">Success rate</string>
     <string name="stat_average_gap">Avg gap</string>
+    <string name="stat_vs_previous_day">Vs previous day</string>
+    <string name="stat_vs_previous_week">Vs previous week</string>
+    <string name="stat_vs_previous_month">Vs previous month</string>
+    <string name="stat_vs_previous_year">Vs previous year</string>
     <string name="legend_less">Less</string>
     <string name="legend_more">More</string>
     <string name="daily_goal">Daily goal</string>

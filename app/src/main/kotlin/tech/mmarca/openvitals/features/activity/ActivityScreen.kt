@@ -25,6 +25,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.DailyGoalDirection
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -37,6 +38,7 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
@@ -278,6 +280,14 @@ private fun LazyListScope.stepsContent(
             },
             best = { DisplayValue(unitFormatter.count(state.dailySteps.maxOfOrNull { it.steps } ?: 0L), stringResource(R.string.unit_steps)) },
             activeDays = state.dailySteps.count { it.steps > 0L },
+            comparison = periodComparison(
+                currentValue = state.dailySteps.sumOf { it.steps }.toDouble(),
+                previousValue = state.previousDailySteps.sumOf { it.steps }.toDouble(),
+            ),
+            selectedRange = state.selectedRange,
+            comparisonValueFormatter = {
+                DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_steps))
+            },
             icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
             accentColor = StepsColor,
             includeHeader = false,
@@ -342,6 +352,12 @@ private fun LazyListScope.distanceContent(
             average = { unitFormatter.distance(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.distance(values.maxOrNull() ?: 0.0) },
             activeDays = values.count { it > 0.0 },
+            comparison = periodComparison(
+                currentValue = values.sum(),
+                previousValue = state.previousDailySteps.sumOf { it.distanceMeters },
+            ),
+            selectedRange = state.selectedRange,
+            comparisonValueFormatter = { unitFormatter.distance(it) },
             icon = Icons.Outlined.Straighten,
             accentColor = DistanceColor,
             includeHeader = false,
@@ -406,6 +422,12 @@ private fun LazyListScope.caloriesContent(
             average = { unitFormatter.energy(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.energy(values.maxOrNull() ?: 0.0) },
             activeDays = values.count { it > 0.0 },
+            comparison = periodComparison(
+                currentValue = values.sum(),
+                previousValue = state.previousNutrition.sumOf { it.caloriesBurnedKcal },
+            ),
+            selectedRange = state.selectedRange,
+            comparisonValueFormatter = { unitFormatter.energy(it) },
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = CaloriesColor,
             includeHeader = false,
@@ -470,6 +492,12 @@ private fun LazyListScope.activeCaloriesContent(
             average = { unitFormatter.energy(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.energy(values.maxOrNull() ?: 0.0) },
             activeDays = values.count { it > 0.0 },
+            comparison = periodComparison(
+                currentValue = values.sum(),
+                previousValue = state.previousDailySteps.sumOf { it.activeCaloriesKcal ?: 0.0 },
+            ),
+            selectedRange = state.selectedRange,
+            comparisonValueFormatter = { unitFormatter.energy(it) },
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = ActiveCaloriesColor,
             includeHeader = false,
@@ -546,6 +574,14 @@ private fun LazyListScope.floorsContent(
             },
             best = { DisplayValue(unitFormatter.count((values.maxOrNull() ?: 0.0).roundToLong()), stringResource(R.string.unit_floors)) },
             activeDays = values.count { it > 0.0 },
+            comparison = periodComparison(
+                currentValue = values.sum(),
+                previousValue = state.previousDailySteps.sumOf { (it.floorsClimbed ?: 0).toDouble() },
+            ),
+            selectedRange = state.selectedRange,
+            comparisonValueFormatter = {
+                DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_floors))
+            },
             icon = Icons.Outlined.Stairs,
             accentColor = FloorsColor,
             includeHeader = false,
@@ -610,6 +646,12 @@ private fun LazyListScope.elevationContent(
             average = { unitFormatter.elevation(averageOrZero(values.sum(), values.count { it > 0.0 })) },
             best = { unitFormatter.elevation(values.maxOrNull() ?: 0.0) },
             activeDays = values.count { it > 0.0 },
+            comparison = periodComparison(
+                currentValue = values.sum(),
+                previousValue = state.previousDailySteps.sumOf { it.elevationGainedMeters ?: 0.0 },
+            ),
+            selectedRange = state.selectedRange,
+            comparisonValueFormatter = { unitFormatter.elevation(it) },
             icon = Icons.Outlined.Terrain,
             accentColor = ElevationColor,
             includeHeader = false,
@@ -667,6 +709,9 @@ private fun LazyListScope.activityStatistics(
     average: @Composable () -> DisplayValue,
     best: @Composable () -> DisplayValue,
     activeDays: Int,
+    comparison: tech.mmarca.openvitals.core.insights.PeriodComparison,
+    selectedRange: TimeRange,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
     icon: ImageVector,
     accentColor: Color,
     includeHeader: Boolean = true,
@@ -706,6 +751,13 @@ private fun LazyListScope.activityStatistics(
                     value = unitFormatter.count(activeDays),
                     unit = stringResource(R.string.unit_days),
                     icon = Icons.Outlined.CheckCircle,
+                    accentColor = accentColor,
+                ),
+                previousPeriodInsightStat(
+                    comparison = comparison,
+                    selectedRange = selectedRange,
+                    unitFormatter = unitFormatter,
+                    valueFormatter = comparisonValueFormatter,
                     accentColor = accentColor,
                 ),
             ),

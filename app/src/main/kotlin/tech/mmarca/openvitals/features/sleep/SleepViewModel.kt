@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.repository.SleepRepository
@@ -26,6 +27,7 @@ data class SleepUiState(
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val dailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
     val sessions: List<SleepData> = emptyList(),
+    val previousSessions: List<SleepData> = emptyList(),
     val error: String? = null,
 )
 
@@ -107,19 +109,31 @@ class SleepViewModel(
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val sleepRangeMode = _uiState.value.sleepRangeMode
             val period = periodFor(range, date)
+            val previousPeriod = previousPeriodFor(range, date)
             val queryStart = when (sleepRangeMode) {
                 SleepRangeMode.ROLLING_24H -> period.start
                 SleepRangeMode.NOON,
                 SleepRangeMode.EVENING_18H -> period.start.minusDays(1)
             }
+            val previousQueryStart = when (sleepRangeMode) {
+                SleepRangeMode.ROLLING_24H -> previousPeriod.start
+                SleepRangeMode.NOON,
+                SleepRangeMode.EVENING_18H -> previousPeriod.start.minusDays(1)
+            }
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            runCatching { repository.loadSleepSessions(queryStart, period.end) }
-                .onSuccess { sessions ->
+            runCatching {
+                SleepLoadResult(
+                    sessions = repository.loadSleepSessions(queryStart, period.end),
+                    previousSessions = repository.loadSleepSessions(previousQueryStart, previousPeriod.end),
+                )
+            }
+                .onSuccess { result ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
                         sleepRangeMode = sleepRangeMode,
-                        sessions = sessions,
+                        sessions = result.sessions,
+                        previousSessions = result.previousSessions,
                     )
                 }
                 .onFailure {
@@ -132,6 +146,11 @@ class SleepViewModel(
                 }
         }
     }
+
+    private data class SleepLoadResult(
+        val sessions: List<SleepData>,
+        val previousSessions: List<SleepData>,
+    )
 
     private val periodSelection: PeriodSelection
         get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)

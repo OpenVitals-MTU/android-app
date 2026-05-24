@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ data class MindfulnessUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val dailyGoalMinutes: Double = MetricDailyGoalKey.MINDFULNESS_MINUTES.defaultValue,
     val sessions: List<MindfulnessSession> = emptyList(),
+    val previousSessions: List<MindfulnessSession> = emptyList(),
     val error: String? = null,
 ) {
     val totalMinutes: Long get() = sessions.sumOf { it.durationMinutes }
@@ -90,13 +92,20 @@ class MindfulnessViewModel(
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
+            val previousPeriod = previousPeriodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            runCatching { repository.loadMindfulnessSessions(period.start, period.end) }
-                .onSuccess { sessions ->
+            runCatching {
+                MindfulnessLoadResult(
+                    sessions = repository.loadMindfulnessSessions(period.start, period.end),
+                    previousSessions = repository.loadMindfulnessSessions(previousPeriod.start, previousPeriod.end),
+                )
+            }
+                .onSuccess { result ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
-                        sessions = sessions,
+                        sessions = result.sessions,
+                        previousSessions = result.previousSessions,
                     )
                 }
                 .onFailure { error ->
@@ -108,6 +117,11 @@ class MindfulnessViewModel(
                 }
         }
     }
+
+    private data class MindfulnessLoadResult(
+        val sessions: List<MindfulnessSession>,
+        val previousSessions: List<MindfulnessSession>,
+    )
 
     private val periodSelection: PeriodSelection
         get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)

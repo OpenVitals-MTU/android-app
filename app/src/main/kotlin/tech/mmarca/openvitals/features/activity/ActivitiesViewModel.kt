@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ data class ActivitiesUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val dailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
     val workouts: List<ExerciseData> = emptyList(),
+    val previousWorkouts: List<ExerciseData> = emptyList(),
     val error: String? = null,
 )
 
@@ -88,13 +90,20 @@ class ActivitiesViewModel(
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
+            val previousPeriod = previousPeriodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            runCatching { repository.loadWorkouts(period.start, period.end) }
-                .onSuccess { workouts ->
+            runCatching {
+                ActivitiesLoadResult(
+                    workouts = repository.loadWorkouts(period.start, period.end),
+                    previousWorkouts = repository.loadWorkouts(previousPeriod.start, previousPeriod.end),
+                )
+            }
+                .onSuccess { result ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
-                        workouts = workouts,
+                        workouts = result.workouts,
+                        previousWorkouts = result.previousWorkouts,
                     )
                 }
                 .onFailure {
@@ -106,6 +115,11 @@ class ActivitiesViewModel(
                 }
         }
     }
+
+    private data class ActivitiesLoadResult(
+        val workouts: List<ExerciseData>,
+        val previousWorkouts: List<ExerciseData>,
+    )
 
     private val periodSelection: PeriodSelection
         get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)

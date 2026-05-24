@@ -32,9 +32,11 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
@@ -47,6 +49,7 @@ import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
@@ -94,6 +97,8 @@ fun ActivitiesScreen(
             )
             workoutStatistics(
                 workouts = state.workouts,
+                previousWorkouts = state.previousWorkouts,
+                selectedRange = state.selectedRange,
                 unitFormatter = unitFormatter,
                 includeHeader = false,
             )
@@ -196,6 +201,8 @@ private fun LazyListScope.workoutGoal(
 
 private fun LazyListScope.workoutStatistics(
     workouts: List<ExerciseData>,
+    previousWorkouts: List<ExerciseData>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
 ) {
@@ -208,6 +215,7 @@ private fun LazyListScope.workoutStatistics(
             ?.let { totalMs / it.size }
             ?: 0L
         val longestMs = workouts.maxOfOrNull { it.durationMs.coerceAtLeast(0L) } ?: 0L
+        val previousTotalMs = previousWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }
 
         InsightStatGrid(
             stats = listOf(
@@ -237,6 +245,16 @@ private fun LazyListScope.workoutStatistics(
                     value = unitFormatter.duration(longestMs),
                     unit = "",
                     icon = Icons.Outlined.CalendarMonth,
+                    accentColor = WorkoutColor,
+                ),
+                previousPeriodInsightStat(
+                    comparison = periodComparison(
+                        currentValue = totalMs.toDouble(),
+                        previousValue = previousTotalMs.toDouble(),
+                    ),
+                    selectedRange = selectedRange,
+                    unitFormatter = unitFormatter,
+                    valueFormatter = { DisplayValue(unitFormatter.duration(it.roundToLong()), "") },
                     accentColor = WorkoutColor,
                 ),
             ),

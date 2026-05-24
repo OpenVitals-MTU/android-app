@@ -50,4 +50,15 @@ class PeriodSelectionTest {
         assertEquals(today.minusWeeks(1), updated.selectedDate)
         assertFalse(updated.period(today).end.isAfter(today))
     }
+
+    @Test fun `previousPeriodFor returns previous calendar period`() {
+        val period = previousPeriodFor(
+            range = TimeRange.MONTH,
+            anchorDate = LocalDate.of(2026, 4, 15),
+            today = today,
+        )
+
+        assertEquals(LocalDate.of(2026, 3, 1), period.start)
+        assertEquals(LocalDate.of(2026, 3, 31), period.end)
+    }
 }

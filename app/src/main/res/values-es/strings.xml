@@ -187,6 +187,10 @@
     <string name="stat_goals_met">Objetivos cumplidos</string>
     <string name="stat_success_rate">Tasa de éxito</string>
     <string name="stat_average_gap">Diferencia media</string>
+    <string name="stat_vs_previous_day">Vs día anterior</string>
+    <string name="stat_vs_previous_week">Vs semana anterior</string>
+    <string name="stat_vs_previous_month">Vs mes anterior</string>
+    <string name="stat_vs_previous_year">Vs año anterior</string>
     <string name="legend_less">Menos</string>
     <string name="legend_more">Más</string>
     <string name="daily_goal">Objetivo diario</string>

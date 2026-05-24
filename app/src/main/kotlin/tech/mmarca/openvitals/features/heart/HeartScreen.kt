@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.PeriodComparison
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -47,6 +49,7 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.ZoneId
@@ -262,7 +265,12 @@ private fun LazyListScope.averageHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
-            heartRateSampleStatistics(state.daySamples, unitFormatter)
+            heartRateSampleStatistics(
+                samples = state.daySamples,
+                previousSamples = state.previousDaySamples,
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+            )
         }
         state.selectedRange == TimeRange.DAY && !state.isLoading -> {
             item { HeartRateEmptyDayCard(modifier = metricModifier()) }
@@ -278,7 +286,12 @@ private fun LazyListScope.averageHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
-            heartRateSummaryStatistics(state.dailySummaries, unitFormatter)
+            heartRateSummaryStatistics(
+                summaries = state.dailySummaries,
+                previousSummaries = state.previousDailySummaries,
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+            )
             item { SectionHeader(stringResource(R.string.section_daily_breakdown)) }
             items(state.dailySummaries.sortedByDescending { it.date }) { summary ->
                 HeartRateDayRow(
@@ -321,6 +334,11 @@ private fun LazyListScope.restingHeartRateContent(
                 low = unitFormatter.heartRate(state.dayRestingBpm),
                 high = unitFormatter.heartRate(state.dayRestingBpm),
                 readings = 1,
+                comparison = state.previousDayRestingBpm?.let {
+                    periodComparison(state.dayRestingBpm.toDouble(), it.toDouble())
+                },
+                selectedRange = state.selectedRange,
+                comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
                 icon = Icons.Outlined.FavoriteBorder,
                 accentColor = HeartColor,
             )
@@ -336,7 +354,12 @@ private fun LazyListScope.restingHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
-            restingHeartRateStatistics(state.dailyRestingHR, unitFormatter)
+            restingHeartRateStatistics(
+                entries = state.dailyRestingHR,
+                previousEntries = state.previousDailyRestingHR,
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+            )
         }
         !state.isLoading -> noHeartMetricData(
             titleRes = R.string.metric_resting_heart_rate,
@@ -368,6 +391,11 @@ private fun LazyListScope.hrvContent(
                 low = unitFormatter.hrv(state.dayHrvMs),
                 high = unitFormatter.hrv(state.dayHrvMs),
                 readings = 1,
+                comparison = state.previousDayHrvMs?.let {
+                    periodComparison(state.dayHrvMs, it)
+                },
+                selectedRange = state.selectedRange,
+                comparisonValueFormatter = { unitFormatter.hrv(it) },
                 icon = Icons.Outlined.FavoriteBorder,
                 accentColor = HeartColor,
             )
@@ -383,7 +411,12 @@ private fun LazyListScope.hrvContent(
                     modifier = metricModifier(),
                 )
             }
-            hrvStatistics(state.dailyHrv, unitFormatter)
+            hrvStatistics(
+                entries = state.dailyHrv,
+                previousEntries = state.previousDailyHrv,
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+            )
         }
         !state.isLoading -> noHeartMetricData(
             titleRes = R.string.metric_hrv,
@@ -428,7 +461,7 @@ private fun LazyListScope.bloodPressureContent(
                 modifier = metricModifier(),
             )
         }
-        bloodPressureStatistics(state.bloodPressure, unitFormatter)
+        bloodPressureStatistics(state.bloodPressure, state.previousBloodPressure, state.selectedRange, unitFormatter)
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_blood_pressure,
@@ -463,7 +496,7 @@ private fun LazyListScope.spO2Content(
                 modifier = metricModifier(),
             )
         }
-        spO2Statistics(state.spO2, unitFormatter)
+        spO2Statistics(state.spO2, state.previousSpO2, state.selectedRange, unitFormatter)
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_spo2,
@@ -493,7 +526,7 @@ private fun LazyListScope.vo2MaxContent(
                 modifier = metricModifier(),
             )
         }
-        vo2MaxStatistics(state.vo2Max, unitFormatter)
+        vo2MaxStatistics(state.vo2Max, state.previousVo2Max, state.selectedRange, unitFormatter)
         if (state.vo2Max.size > 1) {
             item { SectionHeader(stringResource(R.string.section_vo2_max_history)) }
             items(state.vo2Max.sortedByDescending { it.time }) { entry ->
@@ -545,7 +578,7 @@ private fun LazyListScope.respiratoryRateContent(
                 )
             }
         }
-        respiratoryRateStatistics(state.respiratoryRate, unitFormatter)
+        respiratoryRateStatistics(state.respiratoryRate, state.previousRespiratoryRate, state.selectedRange, unitFormatter)
         if (state.selectedRange != TimeRange.DAY) {
             item { SectionHeader(stringResource(R.string.section_respiratory_rate_daily_breakdown)) }
             items(respiratoryRateDaySummaries(state.respiratoryRate).sortedByDescending { it.date }) { summary ->
@@ -584,7 +617,7 @@ private fun LazyListScope.bodyTemperatureContent(
                 modifier = metricModifier(),
             )
         }
-        bodyTemperatureStatistics(state.bodyTemperature, unitFormatter)
+        bodyTemperatureStatistics(state.bodyTemperature, state.previousBodyTemperature, state.selectedRange, unitFormatter)
     } else if (!state.isLoading) {
         noHeartMetricData(
             titleRes = R.string.metric_body_temp,
@@ -597,15 +630,23 @@ private fun LazyListScope.bodyTemperatureContent(
 
 private fun LazyListScope.heartRateSampleStatistics(
     samples: List<HeartRateSample>,
+    previousSamples: List<HeartRateSample>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     val values = samples.map { it.beatsPerMinute }
+    val previousValues = previousSamples.map { it.beatsPerMinute }
     heartNumericStatistics(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(values.average().roundToInt().toLong()),
         low = unitFormatter.heartRate(values.minOrNull() ?: 0L),
         high = unitFormatter.heartRate(values.maxOrNull() ?: 0L),
         readings = samples.size,
+        comparison = previousValues.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(values.average(), it.average())
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.Favorite,
         accentColor = HeartColor,
     )
@@ -613,6 +654,8 @@ private fun LazyListScope.heartRateSampleStatistics(
 
 private fun LazyListScope.heartRateSummaryStatistics(
     summaries: List<HeartRateSummary>,
+    previousSummaries: List<HeartRateSummary>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     heartNumericStatistics(
@@ -621,6 +664,14 @@ private fun LazyListScope.heartRateSummaryStatistics(
         low = unitFormatter.heartRate(summaries.minOfOrNull { it.minBpm } ?: 0L),
         high = unitFormatter.heartRate(summaries.maxOfOrNull { it.maxBpm } ?: 0L),
         readings = summaries.size,
+        comparison = previousSummaries.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(
+                currentValue = summaries.map { summary -> summary.avgBpm }.average(),
+                previousValue = it.map { summary -> summary.avgBpm }.average(),
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.Favorite,
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
@@ -630,6 +681,8 @@ private fun LazyListScope.heartRateSummaryStatistics(
 
 private fun LazyListScope.restingHeartRateStatistics(
     entries: List<DailyRestingHR>,
+    previousEntries: List<DailyRestingHR>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     heartNumericStatistics(
@@ -638,6 +691,14 @@ private fun LazyListScope.restingHeartRateStatistics(
         low = unitFormatter.heartRate(entries.minOfOrNull { it.bpm } ?: 0L),
         high = unitFormatter.heartRate(entries.maxOfOrNull { it.bpm } ?: 0L),
         readings = entries.size,
+        comparison = previousEntries.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(
+                currentValue = entries.map { entry -> entry.bpm }.average(),
+                previousValue = it.map { entry -> entry.bpm }.average(),
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
@@ -647,6 +708,8 @@ private fun LazyListScope.restingHeartRateStatistics(
 
 private fun LazyListScope.hrvStatistics(
     entries: List<DailyHrv>,
+    previousEntries: List<DailyHrv>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     heartNumericStatistics(
@@ -655,6 +718,14 @@ private fun LazyListScope.hrvStatistics(
         low = unitFormatter.hrv(entries.minOfOrNull { it.rmssdMs } ?: 0.0),
         high = unitFormatter.hrv(entries.maxOfOrNull { it.rmssdMs } ?: 0.0),
         readings = entries.size,
+        comparison = previousEntries.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(
+                currentValue = entries.map { entry -> entry.rmssdMs }.average(),
+                previousValue = it.map { entry -> entry.rmssdMs }.average(),
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.hrv(it) },
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
@@ -664,6 +735,8 @@ private fun LazyListScope.hrvStatistics(
 
 private fun LazyListScope.bloodPressureStatistics(
     entries: List<BloodPressureEntry>,
+    previousEntries: List<BloodPressureEntry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     item { SectionHeader(stringResource(R.string.section_statistics)) }
@@ -677,6 +750,9 @@ private fun LazyListScope.bloodPressureStatistics(
             .maxWithOrNull(compareBy<BloodPressureEntry> { it.systolicMmHg }.thenBy { it.diastolicMmHg })
             ?.let { unitFormatter.bloodPressure(it.systolicMmHg, it.diastolicMmHg) }
             ?: unitFormatter.bloodPressure(0, 0)
+        val previousAverageSystolic = previousEntries.takeIf { it.isNotEmpty() }
+            ?.map { it.systolicMmHg }
+            ?.average()
 
         InsightStatGrid(
             stats = listOf(
@@ -708,7 +784,20 @@ private fun LazyListScope.bloodPressureStatistics(
                     icon = Icons.Outlined.CheckCircle,
                     accentColor = VitalsColor,
                 ),
-            ),
+            ) + previousAverageSystolic?.let {
+                listOf(
+                    previousPeriodInsightStat(
+                        comparison = periodComparison(
+                            currentValue = entries.map { entry -> entry.systolicMmHg }.average(),
+                            previousValue = it,
+                        ),
+                        selectedRange = selectedRange,
+                        unitFormatter = unitFormatter,
+                        valueFormatter = { value -> DisplayValue(unitFormatter.count(value.roundToInt()), "mmHg") },
+                        accentColor = VitalsColor,
+                    )
+                )
+            }.orEmpty(),
             modifier = metricModifier(),
         )
     }
@@ -716,6 +805,8 @@ private fun LazyListScope.bloodPressureStatistics(
 
 private fun LazyListScope.spO2Statistics(
     entries: List<SpO2Entry>,
+    previousEntries: List<SpO2Entry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     heartNumericStatistics(
@@ -724,6 +815,14 @@ private fun LazyListScope.spO2Statistics(
         low = unitFormatter.percent(entries.minOfOrNull { it.percent } ?: 0.0),
         high = unitFormatter.percent(entries.maxOfOrNull { it.percent } ?: 0.0),
         readings = entries.size,
+        comparison = previousEntries.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(
+                currentValue = entries.map { entry -> entry.percent }.average(),
+                previousValue = it.map { entry -> entry.percent }.average(),
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.percent(it) },
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = oxygenColor,
     )
@@ -731,6 +830,8 @@ private fun LazyListScope.spO2Statistics(
 
 private fun LazyListScope.vo2MaxStatistics(
     entries: List<Vo2MaxEntry>,
+    previousEntries: List<Vo2MaxEntry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     heartNumericStatistics(
@@ -739,6 +840,14 @@ private fun LazyListScope.vo2MaxStatistics(
         low = unitFormatter.vo2Max(entries.minOfOrNull { it.vo2MaxMlPerKgPerMin } ?: 0.0),
         high = unitFormatter.vo2Max(entries.maxOfOrNull { it.vo2MaxMlPerKgPerMin } ?: 0.0),
         readings = entries.size,
+        comparison = previousEntries.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(
+                currentValue = entries.map { entry -> entry.vo2MaxMlPerKgPerMin }.average(),
+                previousValue = it.map { entry -> entry.vo2MaxMlPerKgPerMin }.average(),
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.vo2Max(it) },
         icon = Icons.Outlined.Speed,
         accentColor = vo2Color,
     )
@@ -746,15 +855,23 @@ private fun LazyListScope.vo2MaxStatistics(
 
 private fun LazyListScope.respiratoryRateStatistics(
     entries: List<RespiratoryRateEntry>,
+    previousEntries: List<RespiratoryRateEntry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     val values = entries.map { it.breathsPerMinute }
+    val previousValues = previousEntries.map { it.breathsPerMinute }
     heartNumericStatistics(
         unitFormatter = unitFormatter,
         average = unitFormatter.respiratoryRate(values.average()),
         low = unitFormatter.respiratoryRate(values.minOrNull() ?: 0.0),
         high = unitFormatter.respiratoryRate(values.maxOrNull() ?: 0.0),
         readings = entries.size,
+        comparison = previousValues.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(values.average(), it.average())
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.respiratoryRate(it) },
         icon = Icons.Outlined.Favorite,
         accentColor = respiratoryColor,
     )
@@ -762,15 +879,23 @@ private fun LazyListScope.respiratoryRateStatistics(
 
 private fun LazyListScope.bodyTemperatureStatistics(
     entries: List<BodyTempEntry>,
+    previousEntries: List<BodyTempEntry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     val values = entries.map { it.temperatureCelsius }
+    val previousValues = previousEntries.map { it.temperatureCelsius }
     heartNumericStatistics(
         unitFormatter = unitFormatter,
         average = unitFormatter.temperature(values.average()),
         low = unitFormatter.temperature(values.minOrNull() ?: 0.0),
         high = unitFormatter.temperature(values.maxOrNull() ?: 0.0),
         readings = entries.size,
+        comparison = previousValues.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(values.average(), it.average())
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.temperature(it) },
         icon = Icons.Outlined.DeviceThermostat,
         accentColor = temperatureColor,
     )
@@ -782,6 +907,9 @@ private fun LazyListScope.heartNumericStatistics(
     low: DisplayValue,
     high: DisplayValue,
     readings: Int,
+    comparison: PeriodComparison? = null,
+    selectedRange: TimeRange,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
     icon: ImageVector,
     accentColor: Color,
     countTitleRes: Int = R.string.stat_readings,
@@ -819,7 +947,17 @@ private fun LazyListScope.heartNumericStatistics(
                     icon = Icons.Outlined.CheckCircle,
                     accentColor = accentColor,
                 ),
-            ),
+            ) + comparison?.let {
+                listOf(
+                    previousPeriodInsightStat(
+                        comparison = it,
+                        selectedRange = selectedRange,
+                        unitFormatter = unitFormatter,
+                        valueFormatter = comparisonValueFormatter,
+                        accentColor = accentColor,
+                    )
+                )
+            }.orEmpty(),
             modifier = metricModifier(),
         )
     }

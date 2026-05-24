@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,7 @@ data class HydrationUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val dailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
     val dailyHydration: List<DailyHydration> = emptyList(),
+    val previousDailyHydration: List<DailyHydration> = emptyList(),
     val error: String? = null,
 ) {
     val totalLiters: Double get() = dailyHydration.sumOf { it.liters }
@@ -127,14 +129,19 @@ class HydrationViewModel(
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
+            val previousPeriod = previousPeriodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadDailyHydration(period.start, period.end)
-            }.onSuccess { dailyHydration ->
+                HydrationLoadResult(
+                    dailyHydration = repository.loadDailyHydration(period.start, period.end),
+                    previousDailyHydration = repository.loadDailyHydration(previousPeriod.start, previousPeriod.end),
+                )
+            }.onSuccess { result ->
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    dailyHydration = dailyHydration,
+                    dailyHydration = result.dailyHydration,
+                    previousDailyHydration = result.previousDailyHydration,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -145,6 +152,11 @@ class HydrationViewModel(
             }
         }
     }
+
+    private data class HydrationLoadResult(
+        val dailyHydration: List<DailyHydration>,
+        val previousDailyHydration: List<DailyHydration>,
+    )
 
     private val periodSelection: PeriodSelection
         get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)

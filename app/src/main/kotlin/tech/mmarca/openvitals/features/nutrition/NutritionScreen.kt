@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
@@ -36,6 +37,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import kotlin.math.roundToInt
 
@@ -150,6 +152,7 @@ private fun LazyListScope.nutritionMetricContent(
     onIncreaseGoal: () -> Unit,
 ) {
     val metricData = nutritionMetricData(metric, state.dailyMacros, unitFormatter)
+    val previousMetricData = nutritionMetricData(metric, state.previousDailyMacros, unitFormatter)
     if (state.dailyMacros.isEmpty() && !state.isLoading) {
         item {
             MetricCardPlaceholder(
@@ -203,6 +206,8 @@ private fun LazyListScope.nutritionMetricContent(
         )
         nutritionStatistics(
             metricData = metricData,
+            previousMetricData = previousMetricData,
+            selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
             includeHeader = false,
         )
@@ -300,6 +305,8 @@ private fun LazyListScope.nutritionGoal(
 
 private fun LazyListScope.nutritionStatistics(
     metricData: NutritionMetricData,
+    previousMetricData: NutritionMetricData,
+    selectedRange: tech.mmarca.openvitals.core.period.TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
 ) {
@@ -342,6 +349,16 @@ private fun LazyListScope.nutritionStatistics(
                     value = unitFormatter.count(loggedDays),
                     unit = stringResource(R.string.unit_days),
                     icon = Icons.Outlined.CheckCircle,
+                    accentColor = metricData.color,
+                ),
+                previousPeriodInsightStat(
+                    comparison = periodComparison(
+                        currentValue = metricData.values.sumOf { it.value },
+                        previousValue = previousMetricData.values.sumOf { it.value },
+                    ),
+                    selectedRange = selectedRange,
+                    unitFormatter = unitFormatter,
+                    valueFormatter = { metricData.valueDisplayFormatter(it) },
                     accentColor = metricData.color,
                 ),
             ),

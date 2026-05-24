@@ -23,9 +23,11 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -39,6 +41,7 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
 import java.time.ZoneId
@@ -70,10 +73,20 @@ fun SleepScreen(
     val selectedPeriod = remember(state.selectedRange, state.selectedDate) {
         periodFor(state.selectedRange, state.selectedDate)
     }
+    val previousPeriod = remember(state.selectedRange, state.selectedDate) {
+        previousPeriodFor(state.selectedRange, state.selectedDate)
+    }
     val durationPoints = remember(state.sessions, selectedPeriod, state.sleepRangeMode) {
         sleepDurationPoints(
             sessions = state.sessions,
             period = selectedPeriod,
+            sleepRangeMode = state.sleepRangeMode,
+        )
+    }
+    val previousDurationPoints = remember(state.previousSessions, previousPeriod, state.sleepRangeMode) {
+        sleepDurationPoints(
+            sessions = state.previousSessions,
+            period = previousPeriod,
             sleepRangeMode = state.sleepRangeMode,
         )
     }
@@ -122,6 +135,8 @@ fun SleepScreen(
                 )
                 sleepStatistics(
                     durationPoints = durationPoints,
+                    previousDurationPoints = previousDurationPoints,
+                    selectedRange = state.selectedRange,
                     unitFormatter = unitFormatter,
                     includeHeader = false,
                 )
@@ -167,6 +182,8 @@ fun SleepScreen(
                 )
                 sleepStatistics(
                     durationPoints = durationPoints,
+                    previousDurationPoints = previousDurationPoints,
+                    selectedRange = state.selectedRange,
                     unitFormatter = unitFormatter,
                     includeHeader = false,
                 )
@@ -263,6 +280,8 @@ private fun LazyListScope.sleepGoal(
 
 private fun LazyListScope.sleepStatistics(
     durationPoints: List<SleepDurationPoint>,
+    previousDurationPoints: List<SleepDurationPoint>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
     includeHeader: Boolean = true,
 ) {
@@ -274,6 +293,8 @@ private fun LazyListScope.sleepStatistics(
         val totalHours = nights.sumOf { it.hours }
         val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
         val longestHours = nights.maxOfOrNull { it.hours } ?: 0.0
+        val previousNights = previousDurationPoints.filter { it.hours > 0.0 }
+        val previousAverageHours = previousNights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
 
         InsightStatGrid(
             stats = listOf(
@@ -303,6 +324,16 @@ private fun LazyListScope.sleepStatistics(
                     value = unitFormatter.count(nights.size),
                     unit = stringResource(R.string.unit_nights),
                     icon = Icons.Outlined.CheckCircle,
+                    accentColor = SleepColor,
+                ),
+                previousPeriodInsightStat(
+                    comparison = periodComparison(
+                        currentValue = averageHours,
+                        previousValue = previousAverageHours,
+                    ),
+                    selectedRange = selectedRange,
+                    unitFormatter = unitFormatter,
+                    valueFormatter = { sleepHoursDisplay(it, unitFormatter) },
                     accentColor = SleepColor,
                 ),
             ),

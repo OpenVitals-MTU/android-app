@@ -23,7 +23,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.PeriodComparison
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -35,6 +38,7 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
@@ -183,9 +187,14 @@ private fun BodyMetricScreen(
                 state = state,
                 titleRes = R.string.metric_bmi,
                 value = state.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
+                comparison = state.previousBmi?.let { previous ->
+                    periodComparison(currentValue = state.bmi ?: 0.0, previousValue = previous)
+                },
+                comparisonValueFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
                 icon = Icons.Outlined.MonitorWeight,
                 accentColor = WeightColor,
                 unitFormatter = unitFormatter,
+                selectedRange = state.selectedRange,
             )
             BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider)
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
@@ -245,6 +254,8 @@ private fun LazyListScope.weightContent(
         }
         weightStatistics(
             entries = state.weightEntries,
+            previousEntries = state.previousWeightEntries,
+            selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
         item { SectionHeader(stringResource(R.string.section_entries)) }
@@ -301,6 +312,8 @@ private fun LazyListScope.bodyFatContent(
         }
         bodyFatStatistics(
             entries = state.bodyFatEntries,
+            previousEntries = state.previousBodyFatEntries,
+            selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
     } else if (!state.isLoading) {
@@ -316,9 +329,12 @@ private fun LazyListScope.singleBodyMetricContent(
     state: BodyUiState,
     titleRes: Int,
     value: DisplayValue?,
+    comparison: PeriodComparison? = null,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue = { value ?: DisplayValue("", "") },
     icon: ImageVector,
     accentColor: Color,
     unitFormatter: UnitFormatter,
+    selectedRange: TimeRange? = null,
 ) {
     if (value != null) {
         item {
@@ -333,9 +349,12 @@ private fun LazyListScope.singleBodyMetricContent(
         }
         singleBodyMetricStatistics(
             value = value,
+            comparison = comparison,
+            comparisonValueFormatter = comparisonValueFormatter,
             icon = icon,
             accentColor = accentColor,
             unitFormatter = unitFormatter,
+            selectedRange = selectedRange,
         )
     } else if (!state.isLoading) {
         noBodyMetricData(titleRes, icon, accentColor)
@@ -344,15 +363,27 @@ private fun LazyListScope.singleBodyMetricContent(
 
 private fun LazyListScope.weightStatistics(
     entries: List<WeightEntry>,
+    previousEntries: List<WeightEntry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     val values = entries.map { it.weightKg }
+    val latest = entries.maxByOrNull { it.time }?.let { unitFormatter.weight(it.weightKg) } ?: unitFormatter.weight(0.0)
+    val previousLatestKg = previousEntries.maxByOrNull { it.time }?.weightKg
     bodyNumericStatistics(
-        latest = entries.maxByOrNull { it.time }?.let { unitFormatter.weight(it.weightKg) } ?: unitFormatter.weight(0.0),
+        latest = latest,
         average = unitFormatter.weight(values.average()),
         low = unitFormatter.weight(values.minOrNull() ?: 0.0),
         high = unitFormatter.weight(values.maxOrNull() ?: 0.0),
         readings = entries.size,
+        comparison = previousLatestKg?.let {
+            periodComparison(
+                currentValue = entries.maxByOrNull { entry -> entry.time }?.weightKg ?: 0.0,
+                previousValue = it,
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.weight(it) },
         icon = Icons.Outlined.MonitorWeight,
         accentColor = WeightColor,
         unitFormatter = unitFormatter,
@@ -361,15 +392,26 @@ private fun LazyListScope.weightStatistics(
 
 private fun LazyListScope.bodyFatStatistics(
     entries: List<BodyFatEntry>,
+    previousEntries: List<BodyFatEntry>,
+    selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
     val values = entries.map { it.percent }
+    val previousLatestPercent = previousEntries.maxByOrNull { it.time }?.percent
     bodyNumericStatistics(
         latest = entries.maxByOrNull { it.time }?.let { unitFormatter.percent(it.percent) } ?: unitFormatter.percent(0.0),
         average = unitFormatter.percent(values.average()),
         low = unitFormatter.percent(values.minOrNull() ?: 0.0),
         high = unitFormatter.percent(values.maxOrNull() ?: 0.0),
         readings = entries.size,
+        comparison = previousLatestPercent?.let {
+            periodComparison(
+                currentValue = entries.maxByOrNull { entry -> entry.time }?.percent ?: 0.0,
+                previousValue = it,
+            )
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.percent(it) },
         icon = Icons.Outlined.MonitorWeight,
         accentColor = BodyFatColor,
         unitFormatter = unitFormatter,
@@ -378,9 +420,12 @@ private fun LazyListScope.bodyFatStatistics(
 
 private fun LazyListScope.singleBodyMetricStatistics(
     value: DisplayValue,
+    comparison: PeriodComparison?,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
     icon: ImageVector,
     accentColor: Color,
     unitFormatter: UnitFormatter,
+    selectedRange: TimeRange?,
 ) {
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
@@ -400,7 +445,19 @@ private fun LazyListScope.singleBodyMetricStatistics(
                     icon = Icons.Outlined.CheckCircle,
                     accentColor = accentColor,
                 ),
-            ),
+            ) + if (comparison != null && selectedRange != null) {
+                listOf(
+                    previousPeriodInsightStat(
+                        comparison = comparison,
+                        selectedRange = selectedRange,
+                        unitFormatter = unitFormatter,
+                        valueFormatter = comparisonValueFormatter,
+                        accentColor = accentColor,
+                    )
+                )
+            } else {
+                emptyList()
+            },
             modifier = metricModifier(),
         )
     }
@@ -412,6 +469,9 @@ private fun LazyListScope.bodyNumericStatistics(
     low: DisplayValue,
     high: DisplayValue,
     readings: Int,
+    comparison: PeriodComparison?,
+    selectedRange: TimeRange,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
     icon: ImageVector,
     accentColor: Color,
     unitFormatter: UnitFormatter,
@@ -455,7 +515,17 @@ private fun LazyListScope.bodyNumericStatistics(
                     icon = Icons.Outlined.CheckCircle,
                     accentColor = accentColor,
                 ),
-            ),
+            ) + comparison?.let {
+                listOf(
+                    previousPeriodInsightStat(
+                        comparison = it,
+                        selectedRange = selectedRange,
+                        unitFormatter = unitFormatter,
+                        valueFormatter = comparisonValueFormatter,
+                        accentColor = accentColor,
+                    )
+                )
+            }.orEmpty(),
             modifier = metricModifier(),
         )
     }

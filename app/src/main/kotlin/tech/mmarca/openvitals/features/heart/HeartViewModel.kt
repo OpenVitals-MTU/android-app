@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.previousPeriodFor
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,16 +28,27 @@ data class HeartUiState(
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
     val daySamples: List<HeartRateSample> = emptyList(),
+    val previousDaySamples: List<HeartRateSample> = emptyList(),
     val dailySummaries: List<HeartRateSummary> = emptyList(),
+    val previousDailySummaries: List<HeartRateSummary> = emptyList(),
     val dayRestingBpm: Long? = null,
+    val previousDayRestingBpm: Long? = null,
     val dayHrvMs: Double? = null,
+    val previousDayHrvMs: Double? = null,
     val dailyRestingHR: List<DailyRestingHR> = emptyList(),
+    val previousDailyRestingHR: List<DailyRestingHR> = emptyList(),
     val dailyHrv: List<DailyHrv> = emptyList(),
+    val previousDailyHrv: List<DailyHrv> = emptyList(),
     val bloodPressure: List<BloodPressureEntry> = emptyList(),
+    val previousBloodPressure: List<BloodPressureEntry> = emptyList(),
     val spO2: List<SpO2Entry> = emptyList(),
+    val previousSpO2: List<SpO2Entry> = emptyList(),
     val respiratoryRate: List<RespiratoryRateEntry> = emptyList(),
+    val previousRespiratoryRate: List<RespiratoryRateEntry> = emptyList(),
     val bodyTemperature: List<BodyTempEntry> = emptyList(),
+    val previousBodyTemperature: List<BodyTempEntry> = emptyList(),
     val vo2Max: List<Vo2MaxEntry> = emptyList(),
+    val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
     val missingVitalsPermissions: Set<String> = emptySet(),
     val error: String? = null,
 ) {
@@ -104,43 +116,67 @@ class HeartViewModel(
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
+            val previousPeriod = previousPeriodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 when (selectedMetric) {
                     HeartMetric.AVERAGE_HEART_RATE -> if (range == TimeRange.DAY) {
-                        HeartLoadResult(daySamples = repository.loadHeartRateSamples(date))
+                        HeartLoadResult(
+                            daySamples = repository.loadHeartRateSamples(date),
+                            previousDaySamples = repository.loadHeartRateSamples(previousPeriod.start),
+                        )
                     } else {
-                        HeartLoadResult(dailySummaries = repository.loadDailyHeartRateSummaries(period.start, period.end))
+                        HeartLoadResult(
+                            dailySummaries = repository.loadDailyHeartRateSummaries(period.start, period.end),
+                            previousDailySummaries = repository.loadDailyHeartRateSummaries(previousPeriod.start, previousPeriod.end),
+                        )
                     }
                     HeartMetric.RESTING_HEART_RATE -> if (range == TimeRange.DAY) {
-                        HeartLoadResult(dayRestingBpm = repository.loadRestingHeartRate(date))
+                        HeartLoadResult(
+                            dayRestingBpm = repository.loadRestingHeartRate(date),
+                            previousDayRestingBpm = repository.loadRestingHeartRate(previousPeriod.start),
+                        )
                     } else {
-                        HeartLoadResult(dailyRestingHR = repository.loadDailyRestingHR(period.start, period.end))
+                        HeartLoadResult(
+                            dailyRestingHR = repository.loadDailyRestingHR(period.start, period.end),
+                            previousDailyRestingHR = repository.loadDailyRestingHR(previousPeriod.start, previousPeriod.end),
+                        )
                     }
                     HeartMetric.HRV -> if (range == TimeRange.DAY) {
-                        HeartLoadResult(dayHrvMs = repository.loadHrvRmssd(date))
+                        HeartLoadResult(
+                            dayHrvMs = repository.loadHrvRmssd(date),
+                            previousDayHrvMs = repository.loadHrvRmssd(previousPeriod.start),
+                        )
                     } else {
-                        HeartLoadResult(dailyHrv = repository.loadDailyHRV(period.start, period.end))
+                        HeartLoadResult(
+                            dailyHrv = repository.loadDailyHRV(period.start, period.end),
+                            previousDailyHrv = repository.loadDailyHRV(previousPeriod.start, previousPeriod.end),
+                        )
                     }
                     HeartMetric.BLOOD_PRESSURE -> HeartLoadResult(
                         missingVitalsPermissions = vitalsRepository.missingPermissions(),
                         bloodPressure = vitalsRepository.loadBloodPressure(period.start, period.end),
+                        previousBloodPressure = vitalsRepository.loadBloodPressure(previousPeriod.start, previousPeriod.end),
                     )
                     HeartMetric.SPO2 -> HeartLoadResult(
                         missingVitalsPermissions = vitalsRepository.missingPermissions(),
                         spO2 = vitalsRepository.loadSpO2(period.start, period.end),
+                        previousSpO2 = vitalsRepository.loadSpO2(previousPeriod.start, previousPeriod.end),
                     )
                     HeartMetric.VO2_MAX -> HeartLoadResult(
                         missingVitalsPermissions = vitalsRepository.missingPermissions(),
                         vo2Max = vitalsRepository.loadVo2Max(period.start, period.end),
+                        previousVo2Max = vitalsRepository.loadVo2Max(previousPeriod.start, previousPeriod.end),
                     )
                     HeartMetric.RESPIRATORY_RATE -> HeartLoadResult(
                         missingVitalsPermissions = vitalsRepository.missingPermissions(),
                         respiratoryRate = vitalsRepository.loadRespiratoryRate(period.start, period.end),
+                        previousRespiratoryRate = vitalsRepository.loadRespiratoryRate(previousPeriod.start, previousPeriod.end),
                     )
                     HeartMetric.BODY_TEMPERATURE -> HeartLoadResult(
                         missingVitalsPermissions = vitalsRepository.missingPermissions(),
                         bodyTemperature = vitalsRepository.loadBodyTemperature(period.start, period.end),
+                        previousBodyTemperature = vitalsRepository.loadBodyTemperature(previousPeriod.start, previousPeriod.end),
                     )
                 }
             }.onSuccess { result ->
@@ -148,17 +184,28 @@ class HeartViewModel(
                     isLoading = false,
                     selectedDate = date,
                     daySamples = result.daySamples,
+                    previousDaySamples = result.previousDaySamples,
                     dailySummaries = result.dailySummaries,
+                    previousDailySummaries = result.previousDailySummaries,
                     dayRestingBpm = result.dayRestingBpm,
+                    previousDayRestingBpm = result.previousDayRestingBpm,
                     dayHrvMs = result.dayHrvMs,
+                    previousDayHrvMs = result.previousDayHrvMs,
                     dailyRestingHR = result.dailyRestingHR,
+                    previousDailyRestingHR = result.previousDailyRestingHR,
                     dailyHrv = result.dailyHrv,
+                    previousDailyHrv = result.previousDailyHrv,
                     missingVitalsPermissions = result.missingVitalsPermissions,
                     bloodPressure = result.bloodPressure,
+                    previousBloodPressure = result.previousBloodPressure,
                     spO2 = result.spO2,
+                    previousSpO2 = result.previousSpO2,
                     respiratoryRate = result.respiratoryRate,
+                    previousRespiratoryRate = result.previousRespiratoryRate,
                     bodyTemperature = result.bodyTemperature,
+                    previousBodyTemperature = result.previousBodyTemperature,
                     vo2Max = result.vo2Max,
+                    previousVo2Max = result.previousVo2Max,
                 )
             }.onFailure {
                 _uiState.value = _uiState.value.copy(
@@ -183,15 +230,26 @@ class HeartViewModel(
 
 private data class HeartLoadResult(
     val daySamples: List<HeartRateSample> = emptyList(),
+    val previousDaySamples: List<HeartRateSample> = emptyList(),
     val dailySummaries: List<HeartRateSummary> = emptyList(),
+    val previousDailySummaries: List<HeartRateSummary> = emptyList(),
     val dayRestingBpm: Long? = null,
+    val previousDayRestingBpm: Long? = null,
     val dayHrvMs: Double? = null,
+    val previousDayHrvMs: Double? = null,
     val dailyRestingHR: List<DailyRestingHR> = emptyList(),
+    val previousDailyRestingHR: List<DailyRestingHR> = emptyList(),
     val dailyHrv: List<DailyHrv> = emptyList(),
+    val previousDailyHrv: List<DailyHrv> = emptyList(),
     val missingVitalsPermissions: Set<String> = emptySet(),
     val bloodPressure: List<BloodPressureEntry> = emptyList(),
+    val previousBloodPressure: List<BloodPressureEntry> = emptyList(),
     val spO2: List<SpO2Entry> = emptyList(),
+    val previousSpO2: List<SpO2Entry> = emptyList(),
     val respiratoryRate: List<RespiratoryRateEntry> = emptyList(),
+    val previousRespiratoryRate: List<RespiratoryRateEntry> = emptyList(),
     val bodyTemperature: List<BodyTempEntry> = emptyList(),
+    val previousBodyTemperature: List<BodyTempEntry> = emptyList(),
     val vo2Max: List<Vo2MaxEntry> = emptyList(),
+    val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
 )

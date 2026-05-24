@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
@@ -45,6 +46,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
+import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,6 +114,7 @@ fun HydrationScreen(
                 HydrationStatistics(
                     state = state,
                     unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -167,6 +170,7 @@ private fun HydrationSummary(
 private fun HydrationStatistics(
     state: HydrationUiState,
     unitFormatter: UnitFormatter,
+    selectedRange: TimeRange,
     modifier: Modifier = Modifier,
 ) {
     val total = unitFormatter.hydration(state.totalLiters)
@@ -221,6 +225,16 @@ private fun HydrationStatistics(
                 value = bestDay.value,
                 unit = bestDay.unit,
                 icon = Icons.Outlined.CalendarMonth,
+                accentColor = HydrationColor,
+            ),
+            previousPeriodInsightStat(
+                comparison = periodComparison(
+                    currentValue = state.totalLiters,
+                    previousValue = state.previousDailyHydration.sumOf { it.liters },
+                ),
+                selectedRange = selectedRange,
+                unitFormatter = unitFormatter,
+                valueFormatter = { unitFormatter.hydration(it) },
                 accentColor = HydrationColor,
             ),
         ),

@@ -77,6 +77,16 @@ fun periodFor(
     }
 }
 
+fun previousPeriodFor(
+    range: TimeRange,
+    anchorDate: LocalDate,
+    today: LocalDate = LocalDate.now(),
+): DatePeriod =
+    PeriodSelection(
+        selectedRange = range,
+        selectedDate = anchorDate.coerceAtMost(today),
+    ).previousPeriod().period(today)
+
 fun periodTitle(
     range: TimeRange,
     period: DatePeriod,
