@@ -56,11 +56,96 @@ enum class ActivityMetric {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivityScreen(
+fun StepsScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    metric: ActivityMetric = ActivityMetric.STEPS,
+) {
+    ActivityMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = ActivityMetric.STEPS,
+    )
+}
+
+@Composable
+fun DistanceScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    ActivityMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = ActivityMetric.DISTANCE,
+    )
+}
+
+@Composable
+fun CaloriesOutScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    ActivityMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = ActivityMetric.CALORIES_BURNED,
+    )
+}
+
+@Composable
+fun ActiveCaloriesScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    ActivityMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = ActivityMetric.ACTIVE_CALORIES,
+    )
+}
+
+@Composable
+fun FloorsScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    ActivityMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = ActivityMetric.FLOORS,
+    )
+}
+
+@Composable
+fun ElevationScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    ActivityMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = ActivityMetric.ELEVATION,
+    )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ActivityMetricScreen(
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    metric: ActivityMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
 

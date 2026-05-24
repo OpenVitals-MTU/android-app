@@ -206,12 +206,12 @@ Current feature packages:
 - [`features/browse`](../app/src/main/kotlin/tech/mmarca/openvitals/features/browse)
 - [`features/settings`](../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
-One practical note: `features/activity` currently contains two screens:
+One practical note: `features/activity` currently contains two screen families:
 
-- `ActivityScreen` for steps/distance/calories style metric detail
+- concrete metric entry screens such as `StepsScreen`, `DistanceScreen`, `CaloriesOutScreen`, `ActiveCaloriesScreen`, `FloorsScreen`, and `ElevationScreen`
 - `ActivitiesScreen` for workout sessions
 
-That is a reasonable local compromise today because both screens share `ActivityRepository`, but future metrics should still prefer one feature package per cohesive surface.
+That is a reasonable local compromise today because these screens share `ActivityRepository`, but route-facing composables should stay metric-specific. Shared renderers inside a feature package are acceptable when they only remove local duplication and do not make the user-facing detail screen show several metrics at once.
 
 ## Screen Families
 
@@ -241,7 +241,7 @@ Shared pieces it uses:
 
 The dashboard should stay summary-first. It should not become a second copy of detail-screen logic.
 
-Dashboard metric cards route to metric-specific detail destinations. Metrics that share a repository can still reuse the same feature package and ViewModel, but the rendered detail view should focus on the selected metric instead of showing every related metric in one grouped screen. The records browser remains a fixed dashboard action rather than a customizable metric card.
+Dashboard metric cards route to metric-specific detail destinations. Metrics that share a repository can still reuse the same feature package and ViewModel, but navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter. The rendered detail view should focus on the selected metric instead of showing every related metric in one grouped screen. The records browser remains a fixed dashboard action rather than a customizable metric card.
 
 ### Period-based detail/list screens
 

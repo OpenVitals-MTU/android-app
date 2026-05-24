@@ -52,11 +52,68 @@ private val fatMetricColor = Color(0xFFFFB300)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NutritionScreen(
+fun CaloriesInScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    metric: NutritionMetric = NutritionMetric.CALORIES_IN,
+) {
+    NutritionMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = NutritionMetric.CALORIES_IN,
+    )
+}
+
+@Composable
+fun ProteinScreen(
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    NutritionMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = NutritionMetric.PROTEIN,
+    )
+}
+
+@Composable
+fun CarbsScreen(
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    NutritionMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = NutritionMetric.CARBS,
+    )
+}
+
+@Composable
+fun FatScreen(
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    NutritionMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = NutritionMetric.FAT,
+    )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun NutritionMetricScreen(
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    metric: NutritionMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
 

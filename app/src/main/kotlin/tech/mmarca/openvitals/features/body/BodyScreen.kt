@@ -51,11 +51,110 @@ enum class BodyMetric {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BodyScreen(
+fun WeightScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    metric: BodyMetric = BodyMetric.WEIGHT,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.WEIGHT,
+    )
+}
+
+@Composable
+fun HeightScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.HEIGHT,
+    )
+}
+
+@Composable
+fun BmiScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BMI,
+    )
+}
+
+@Composable
+fun BodyFatScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BODY_FAT,
+    )
+}
+
+@Composable
+fun LeanMassScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.LEAN_MASS,
+    )
+}
+
+@Composable
+fun BmrScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BMR,
+    )
+}
+
+@Composable
+fun BoneMassScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BONE_MASS,
+    )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun BodyMetricScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    metric: BodyMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
 

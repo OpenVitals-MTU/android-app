@@ -47,15 +47,26 @@ import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
+import tech.mmarca.openvitals.features.activity.ActiveCaloriesScreen
 import tech.mmarca.openvitals.features.activity.ActivityMetric
-import tech.mmarca.openvitals.features.activity.ActivityScreen
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
 import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
+import tech.mmarca.openvitals.features.activity.CaloriesOutScreen
+import tech.mmarca.openvitals.features.activity.DistanceScreen
+import tech.mmarca.openvitals.features.activity.ElevationScreen
+import tech.mmarca.openvitals.features.activity.FloorsScreen
+import tech.mmarca.openvitals.features.activity.StepsScreen
 import tech.mmarca.openvitals.features.activity.dailyGoalKey
+import tech.mmarca.openvitals.features.body.BmiScreen
+import tech.mmarca.openvitals.features.body.BmrScreen
+import tech.mmarca.openvitals.features.body.BodyFatScreen
 import tech.mmarca.openvitals.features.body.BodyMetric
-import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
+import tech.mmarca.openvitals.features.body.BoneMassScreen
+import tech.mmarca.openvitals.features.body.HeightScreen
+import tech.mmarca.openvitals.features.body.LeanMassScreen
+import tech.mmarca.openvitals.features.body.WeightScreen
 import tech.mmarca.openvitals.features.browse.BrowseScreen
 import tech.mmarca.openvitals.features.browse.BrowseViewModel
 import tech.mmarca.openvitals.features.cycle.CycleScreen
@@ -63,16 +74,26 @@ import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
+import tech.mmarca.openvitals.features.heart.AverageHeartRateScreen
+import tech.mmarca.openvitals.features.heart.BloodPressureScreen
+import tech.mmarca.openvitals.features.heart.BodyTemperatureScreen
 import tech.mmarca.openvitals.features.heart.HeartMetric
-import tech.mmarca.openvitals.features.heart.HeartScreen
 import tech.mmarca.openvitals.features.heart.HeartViewModel
+import tech.mmarca.openvitals.features.heart.HrvScreen
+import tech.mmarca.openvitals.features.heart.RespiratoryRateScreen
+import tech.mmarca.openvitals.features.heart.RestingHeartRateScreen
+import tech.mmarca.openvitals.features.heart.SpO2Screen
+import tech.mmarca.openvitals.features.heart.Vo2MaxScreen
 import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
+import tech.mmarca.openvitals.features.nutrition.CaloriesInScreen
+import tech.mmarca.openvitals.features.nutrition.CarbsScreen
+import tech.mmarca.openvitals.features.nutrition.FatScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionMetric
-import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
+import tech.mmarca.openvitals.features.nutrition.ProteinScreen
 import tech.mmarca.openvitals.features.nutrition.dailyGoalKey
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
@@ -264,7 +285,7 @@ fun AppNavigation(
                         },
                     )
                 }
-                ActivityScreen(
+                StepsScreen(
                     viewModel = activityViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -357,7 +378,7 @@ fun AppNavigation(
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
                     )
                 }
-                HeartScreen(
+                AverageHeartRateScreen(
                     viewModel = heartViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -373,7 +394,7 @@ fun AppNavigation(
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
                     )
                 }
-                BodyScreen(
+                WeightScreen(
                     viewModel = bodyViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -410,7 +431,7 @@ fun AppNavigation(
                         },
                     )
                 }
-                NutritionScreen(
+                CaloriesInScreen(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -518,11 +539,11 @@ private fun MetricRouteContent(
                 },
             )
         }
-        ActivityScreen(
+        ActivityMetricRouteScreen(
+            metric = activityMetric,
             viewModel = activityViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            metric = activityMetric,
         )
         return
     }
@@ -537,11 +558,11 @@ private fun MetricRouteContent(
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
             )
         }
-        HeartScreen(
+        HeartMetricRouteScreen(
+            metric = heartMetric,
             viewModel = heartViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            metric = heartMetric,
         )
         return
     }
@@ -555,11 +576,11 @@ private fun MetricRouteContent(
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
             )
         }
-        BodyScreen(
+        BodyMetricRouteScreen(
+            metric = bodyMetric,
             viewModel = bodyViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            metric = bodyMetric,
         )
         return
     }
@@ -577,11 +598,11 @@ private fun MetricRouteContent(
                 },
             )
         }
-        NutritionScreen(
+        NutritionMetricRouteScreen(
+            metric = nutritionMetric,
             viewModel = nutritionViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            metric = nutritionMetric,
         )
         return
     }
@@ -681,6 +702,75 @@ private fun MetricRouteContent(
                 modifier = Modifier.padding(16.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun ActivityMetricRouteScreen(
+    metric: ActivityMetric,
+    viewModel: ActivityViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    when (metric) {
+        ActivityMetric.STEPS -> StepsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.DISTANCE -> DistanceScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.CALORIES_BURNED -> CaloriesOutScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.ACTIVE_CALORIES -> ActiveCaloriesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.FLOORS -> FloorsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.ELEVATION -> ElevationScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+    }
+}
+
+@Composable
+private fun HeartMetricRouteScreen(
+    metric: HeartMetric,
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    when (metric) {
+        HeartMetric.AVERAGE_HEART_RATE -> AverageHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.RESTING_HEART_RATE -> RestingHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.BLOOD_PRESSURE -> BloodPressureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.SPO2 -> SpO2Screen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.BODY_TEMPERATURE -> BodyTemperatureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+    }
+}
+
+@Composable
+private fun BodyMetricRouteScreen(
+    metric: BodyMetric,
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    when (metric) {
+        BodyMetric.WEIGHT -> WeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.HEIGHT -> HeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.BMI -> BmiScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.BODY_FAT -> BodyFatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.LEAN_MASS -> LeanMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.BONE_MASS -> BoneMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+    }
+}
+
+@Composable
+private fun NutritionMetricRouteScreen(
+    metric: NutritionMetric,
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    when (metric) {
+        NutritionMetric.CALORIES_IN -> CaloriesInScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.PROTEIN -> ProteinScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.CARBS -> CarbsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.FAT -> FatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
     }
 }
 

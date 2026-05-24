@@ -65,11 +65,124 @@ enum class HeartMetric {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HeartScreen(
+fun AverageHeartRateScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    metric: HeartMetric = HeartMetric.AVERAGE_HEART_RATE,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.AVERAGE_HEART_RATE,
+    )
+}
+
+@Composable
+fun RestingHeartRateScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.RESTING_HEART_RATE,
+    )
+}
+
+@Composable
+fun HrvScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.HRV,
+    )
+}
+
+@Composable
+fun BloodPressureScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.BLOOD_PRESSURE,
+    )
+}
+
+@Composable
+fun SpO2Screen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.SPO2,
+    )
+}
+
+@Composable
+fun Vo2MaxScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.VO2_MAX,
+    )
+}
+
+@Composable
+fun RespiratoryRateScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.RESPIRATORY_RATE,
+    )
+}
+
+@Composable
+fun BodyTemperatureScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.BODY_TEMPERATURE,
+    )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun HeartMetricScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    metric: HeartMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
     val requestVitalsPermissions = rememberLauncherForActivityResult(
