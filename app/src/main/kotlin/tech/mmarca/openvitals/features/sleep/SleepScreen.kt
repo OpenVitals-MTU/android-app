@@ -20,8 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
@@ -57,6 +57,16 @@ fun SleepScreen(
         dailySleepSummary(
             sessions = state.sessions,
             selectedDate = state.selectedDate,
+            sleepRangeMode = state.sleepRangeMode,
+        )
+    }
+    val selectedPeriod = remember(state.selectedRange, state.selectedDate) {
+        periodFor(state.selectedRange, state.selectedDate)
+    }
+    val durationPoints = remember(state.sessions, selectedPeriod, state.sleepRangeMode) {
+        sleepDurationPoints(
+            sessions = state.sessions,
+            period = selectedPeriod,
             sleepRangeMode = state.sleepRangeMode,
         )
     }
@@ -96,9 +106,7 @@ fun SleepScreen(
                     )
                 }
                 sleepStatistics(
-                    sessions = state.sessions,
-                    period = period,
-                    sleepRangeMode = state.sleepRangeMode,
+                    durationPoints = durationPoints,
                     unitFormatter = unitFormatter,
                 )
 
@@ -130,12 +138,11 @@ fun SleepScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
+                        durationPoints = durationPoints,
                     )
                 }
                 sleepStatistics(
-                    sessions = state.sessions,
-                    period = period,
-                    sleepRangeMode = state.sleepRangeMode,
+                    durationPoints = durationPoints,
                     unitFormatter = unitFormatter,
                 )
 
@@ -191,14 +198,12 @@ private fun dailySleepTimeRangeText(
 }
 
 private fun LazyListScope.sleepStatistics(
-    sessions: List<SleepData>,
-    period: DatePeriod,
-    sleepRangeMode: SleepRangeMode,
+    durationPoints: List<SleepDurationPoint>,
     unitFormatter: UnitFormatter,
 ) {
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
-        val nights = sleepDurationStatPoints(sessions, period, sleepRangeMode).filter { it.hours > 0.0 }
+        val nights = durationPoints.filter { it.hours > 0.0 }
         val totalHours = nights.sumOf { it.hours }
         val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
         val longestHours = nights.maxOfOrNull { it.hours } ?: 0.0
@@ -238,29 +243,3 @@ private fun LazyListScope.sleepStatistics(
         )
     }
 }
-
-private fun sleepDurationStatPoints(
-    sessions: List<SleepData>,
-    period: DatePeriod,
-    sleepRangeMode: SleepRangeMode,
-): List<SleepDurationStatPoint> {
-    val zone = ZoneId.systemDefault()
-    return generateSequence(period.start) { current ->
-        current.plusDays(1).takeUnless { it.isAfter(period.end) }
-    }.map { date ->
-        SleepDurationStatPoint(
-            date = date,
-            hours = dailySleepSummary(
-                sessions = sessions,
-                selectedDate = date,
-                sleepRangeMode = sleepRangeMode,
-                zone = zone,
-            )?.durationHours ?: 0.0,
-        )
-    }.toList()
-}
-
-private data class SleepDurationStatPoint(
-    val date: LocalDate,
-    val hours: Double,
-)

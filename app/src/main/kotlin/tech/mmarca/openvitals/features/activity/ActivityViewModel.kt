@@ -10,8 +10,6 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.periodFor
 import java.time.LocalDate
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +28,7 @@ data class ActivityUiState(
 class ActivityViewModel(
     private val repository: ActivityRepository,
     initialRange: TimeRange = TimeRange.WEEK,
+    private val selectedMetric: ActivityMetric = ActivityMetric.STEPS,
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
@@ -72,20 +71,28 @@ class ActivityViewModel(
             val period = periodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                coroutineScope {
-                    val stepsDeferred = async { repository.loadDailySteps(period.start, period.end) }
-                    val nutritionDeferred = async { repository.loadDailyNutrition(period.start, period.end) }
-                    val progressDeferred = async {
-                        if (range == TimeRange.DAY) repository.loadActivityProgress(period.start) else emptyList()
-                    }
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        selectedDate = date,
-                        dailySteps = stepsDeferred.await(),
-                        nutrition = nutritionDeferred.await(),
-                        activityProgress = progressDeferred.await(),
-                    )
+                val dailySteps = if (selectedMetric.usesDailySteps) {
+                    repository.loadDailySteps(period.start, period.end)
+                } else {
+                    emptyList()
                 }
+                val nutrition = if (selectedMetric.usesDailyNutrition) {
+                    repository.loadDailyNutrition(period.start, period.end)
+                } else {
+                    emptyList()
+                }
+                val activityProgress = if (range == TimeRange.DAY) {
+                    repository.loadActivityProgress(period.start)
+                } else {
+                    emptyList()
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    selectedDate = date,
+                    dailySteps = dailySteps,
+                    nutrition = nutrition,
+                    activityProgress = activityProgress,
+                )
             }.onFailure {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -106,3 +113,9 @@ class ActivityViewModel(
         )
     }
 }
+
+private val ActivityMetric.usesDailySteps: Boolean
+    get() = this != ActivityMetric.CALORIES_BURNED
+
+private val ActivityMetric.usesDailyNutrition: Boolean
+    get() = this == ActivityMetric.CALORIES_BURNED

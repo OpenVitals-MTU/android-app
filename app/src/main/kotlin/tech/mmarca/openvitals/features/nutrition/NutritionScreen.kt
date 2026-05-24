@@ -106,7 +106,11 @@ private fun LazyListScope.nutritionMetricContent(
                 unit = metricData.total.unit,
                 icon = Icons.Outlined.Restaurant,
                 accentColor = metricData.color,
-                subtitle = stringResource(R.string.summary_entries, unitFormatter.count(state.entries.size)),
+                subtitle = if (metric == NutritionMetric.CALORIES_IN && state.entries.isNotEmpty()) {
+                    stringResource(R.string.summary_entries, unitFormatter.count(state.entries.size))
+                } else {
+                    stringResource(R.string.summary_across_selected_period)
+                },
                 modifier = metricModifier(),
             )
         }

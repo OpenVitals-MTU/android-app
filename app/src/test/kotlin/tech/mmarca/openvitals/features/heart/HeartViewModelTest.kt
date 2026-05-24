@@ -5,8 +5,6 @@ import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
-import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
-import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
@@ -98,28 +96,42 @@ class HeartViewModelTest {
         assertTrue(vm.uiState.value.dailySummaries.isEmpty())
     }
 
-    @Test fun `DAY range loads resting HR and HRV`() = runTest {
-        val repo = emptyRepo()
-        coEvery { repo.loadRestingHeartRate(any()) } returns 58L
-        coEvery { repo.loadHrvRmssd(any()) } returns 42.5
+    @Test fun `DAY range loads resting HR and HRV for selected metrics`() = runTest {
+        val restingRepo = emptyRepo()
+        coEvery { restingRepo.loadRestingHeartRate(any()) } returns 58L
 
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
-        vm.selectRange(TimeRange.DAY)
+        val restingVm = HeartViewModel(
+            repository = restingRepo,
+            vitalsRepository = emptyVitalsRepo(),
+            selectedMetric = HeartMetric.RESTING_HEART_RATE,
+        )
+        restingVm.selectRange(TimeRange.DAY)
 
-        assertEquals(58L, vm.uiState.value.dayRestingBpm)
-        assertEquals(42.5, vm.uiState.value.dayHrvMs!!, 0.001)
+        assertEquals(58L, restingVm.uiState.value.dayRestingBpm)
+
+        val hrvRepo = emptyRepo()
+        coEvery { hrvRepo.loadHrvRmssd(any()) } returns 42.5
+
+        val hrvVm = HeartViewModel(
+            repository = hrvRepo,
+            vitalsRepository = emptyVitalsRepo(),
+            selectedMetric = HeartMetric.HRV,
+        )
+        hrvVm.selectRange(TimeRange.DAY)
+
+        assertEquals(42.5, hrvVm.uiState.value.dayHrvMs!!, 0.001)
     }
 
     @Test fun `DAY range leaves dayRestingBpm null when repo returns null`() = runTest {
         val repo = emptyRepo() // loadRestingHeartRate returns null by default
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
         vm.selectRange(TimeRange.DAY)
         assertNull(vm.uiState.value.dayRestingBpm)
     }
 
     @Test fun `DAY range leaves dayHrvMs null when repo returns null`() = runTest {
         val repo = emptyRepo() // loadHrvRmssd returns null by default
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.HRV)
         vm.selectRange(TimeRange.DAY)
         assertNull(vm.uiState.value.dayHrvMs)
     }
@@ -141,7 +153,7 @@ class HeartViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyRestingHR(any(), any()) } returns trend
 
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
 
         assertEquals(trend, vm.uiState.value.dailyRestingHR)
     }
@@ -154,7 +166,7 @@ class HeartViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyHRV(any(), any()) } returns trend
 
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.HRV)
 
         assertEquals(trend, vm.uiState.value.dailyHrv)
     }
@@ -166,18 +178,16 @@ class HeartViewModelTest {
         assertNull(vm.uiState.value.dayHrvMs)
     }
 
-    @Test fun `switching from DAY to WEEK clears point-in-time resting HR and HRV`() = runTest {
+    @Test fun `switching from DAY to WEEK clears point-in-time resting HR`() = runTest {
         val repo = emptyRepo()
         coEvery { repo.loadRestingHeartRate(any()) } returns 60L
-        coEvery { repo.loadHrvRmssd(any()) } returns 40.0
 
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
         vm.selectRange(TimeRange.DAY)
         assertEquals(60L, vm.uiState.value.dayRestingBpm)
 
         vm.selectRange(TimeRange.WEEK)
         assertNull(vm.uiState.value.dayRestingBpm)
-        assertNull(vm.uiState.value.dayHrvMs)
     }
 
     @Test fun `switching from DAY to WEEK clears HR samples`() = runTest {
@@ -195,14 +205,14 @@ class HeartViewModelTest {
 
     @Test fun `WEEK range does not call loadDailyRestingHR with empty result`() = runTest {
         val repo = emptyRepo() // returns emptyList() by default
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
         assertTrue(vm.uiState.value.dailyRestingHR.isEmpty())
         coVerify(atLeast = 1) { repo.loadDailyRestingHR(any(), any()) }
     }
 
     @Test fun `WEEK range does not call loadDailyHRV with empty result`() = runTest {
         val repo = emptyRepo()
-        val vm = HeartViewModel(repo, emptyVitalsRepo())
+        val vm = HeartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.HRV)
         assertTrue(vm.uiState.value.dailyHrv.isEmpty())
         coVerify(atLeast = 1) { repo.loadDailyHRV(any(), any()) }
     }
@@ -214,32 +224,23 @@ class HeartViewModelTest {
         val permissions = setOf("blood", "oxygen")
         coEvery { vitalsRepo.missingPermissions() } returns permissions
 
-        val vm = HeartViewModel(emptyRepo(), vitalsRepo)
+        val vm = HeartViewModel(emptyRepo(), vitalsRepo, selectedMetric = HeartMetric.BLOOD_PRESSURE)
 
         assertEquals(permissions, vm.uiState.value.missingVitalsPermissions)
     }
 
-    @Test fun `load success populates vitals and latest values`() = runTest {
+    @Test fun `load success populates selected vitals and latest values`() = runTest {
         val bloodPressure = listOf(
             BloodPressureEntry(Instant.ofEpochSecond(1_000), 118, 76, "test"),
             BloodPressureEntry(Instant.ofEpochSecond(2_000), 122, 78, "test"),
         )
-        val spO2 = listOf(SpO2Entry(Instant.ofEpochSecond(1_500), 97.5, "test"))
-        val respiratoryRate = listOf(
-            RespiratoryRateEntry(Instant.ofEpochSecond(1_200), 13.0, "test"),
-            RespiratoryRateEntry(Instant.ofEpochSecond(2_200), 15.0, "test"),
-        )
         val vitalsRepo = emptyVitalsRepo()
         coEvery { vitalsRepo.loadBloodPressure(any(), any()) } returns bloodPressure
-        coEvery { vitalsRepo.loadSpO2(any(), any()) } returns spO2
-        coEvery { vitalsRepo.loadRespiratoryRate(any(), any()) } returns respiratoryRate
 
-        val vm = HeartViewModel(emptyRepo(), vitalsRepo)
+        val vm = HeartViewModel(emptyRepo(), vitalsRepo, selectedMetric = HeartMetric.BLOOD_PRESSURE)
 
         assertTrue(vm.uiState.value.hasVitalsData)
         assertEquals(122, vm.uiState.value.latestBloodPressure?.systolicMmHg)
-        assertEquals(97.5, vm.uiState.value.latestSpO2?.percent!!, 0.01)
-        assertEquals(15.0, vm.uiState.value.latestRespiratoryRate?.breathsPerMinute!!, 0.01)
     }
 
     // ─── Load failure ─────────────────────────────────────────────────────────

@@ -28,8 +28,9 @@ internal fun SleepDurationChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    durationPoints: List<SleepDurationPoint> = sleepDurationPoints(sessions, period, sleepRangeMode),
 ) {
-    val points = sleepDurationPoints(sessions, period, sleepRangeMode)
+    val points = durationPoints
     val nightsWithSleep = points.filter { it.hours > 0.0 }
     val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
 
@@ -49,7 +50,7 @@ internal fun SleepDurationChart(
     )
 }
 
-private fun sleepDurationPoints(
+internal fun sleepDurationPoints(
     sessions: List<SleepData>,
     period: DatePeriod,
     sleepRangeMode: SleepRangeMode,
@@ -71,7 +72,7 @@ private fun sleepDurationPoints(
     }.toList()
 }
 
-private data class SleepDurationPoint(
+internal data class SleepDurationPoint(
     val date: LocalDate,
     val hours: Double,
 )

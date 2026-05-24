@@ -9,8 +9,6 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.core.period.periodFor
 import java.time.LocalDate
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +31,7 @@ data class NutritionUiState(
 class NutritionViewModel(
     private val repository: NutritionRepository,
     initialRange: TimeRange = TimeRange.WEEK,
+    private val selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
@@ -75,14 +74,14 @@ class NutritionViewModel(
             val period = periodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                coroutineScope {
-                    val macrosDeferred = async { repository.loadDailyMacros(period.start, period.end) }
-                    val entriesDeferred = async { repository.loadNutritionEntries(period.start, period.end) }
-                    NutritionLoadResult(
-                        dailyMacros = macrosDeferred.await(),
-                        entries = entriesDeferred.await(),
-                    )
-                }
+                NutritionLoadResult(
+                    dailyMacros = repository.loadDailyMacros(period.start, period.end),
+                    entries = if (selectedMetric.loadsMealEntries(range)) {
+                        repository.loadNutritionEntries(period.start, period.end)
+                    } else {
+                        emptyList()
+                    },
+                )
             }.onSuccess { result ->
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -115,3 +114,6 @@ class NutritionViewModel(
         )
     }
 }
+
+private fun NutritionMetric.loadsMealEntries(range: TimeRange): Boolean =
+    this == NutritionMetric.CALORIES_IN && range != TimeRange.YEAR

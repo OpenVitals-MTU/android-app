@@ -340,7 +340,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
-        val vm = ActivityViewModel(repo)
+        val vm = ActivityViewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
         vm.selectRange(TimeRange.DAY)
 
         assertEquals(500.0, vm.uiState.value.nutrition.single().caloriesBurnedKcal, 0.001)
@@ -352,7 +352,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
-        val vm = ActivityViewModel(repo)
+        val vm = ActivityViewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
 
         assertFalse(vm.uiState.value.nutrition.any { it.caloriesBurnedKcal > 0 })
     }
@@ -365,7 +365,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
-        val vm = ActivityViewModel(repo)
+        val vm = ActivityViewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
 
         assertEquals(1_200.0, vm.uiState.value.nutrition.sumOf { it.caloriesBurnedKcal }, 0.001)
     }

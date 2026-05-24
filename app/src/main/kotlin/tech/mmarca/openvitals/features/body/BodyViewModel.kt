@@ -9,8 +9,6 @@ import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.core.period.periodFor
 import java.time.LocalDate
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +45,7 @@ data class BodyUiState(
 class BodyViewModel(
     private val repository: BodyRepository,
     initialRange: TimeRange = TimeRange.MONTH,
+    private val selectedMetric: BodyMetric = BodyMetric.WEIGHT,
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
@@ -89,20 +88,28 @@ class BodyViewModel(
             val period = periodFor(range, date)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                coroutineScope {
-                    val weightDeferred = async { repository.loadWeightEntries(period.start, period.end) }
-                    val heightDeferred = async { repository.loadLatestHeight() }
-                    val bodyFatDeferred = async { repository.loadBodyFatEntries(period.start, period.end) }
-                    val leanMassDeferred = async { repository.loadLatestLeanBodyMass() }
-                    val bmrDeferred = async { repository.loadLatestBMR() }
-                    val boneMassDeferred = async { repository.loadLatestBoneMass() }
-                    BodyLoadResult(
-                        weightEntries = weightDeferred.await(),
-                        heightCm = heightDeferred.await(),
-                        bodyFatEntries = bodyFatDeferred.await(),
-                        leanMassKg = leanMassDeferred.await(),
-                        bmrKcal = bmrDeferred.await(),
-                        boneMassKg = boneMassDeferred.await(),
+                when (selectedMetric) {
+                    BodyMetric.WEIGHT -> BodyLoadResult(
+                        weightEntries = repository.loadWeightEntries(period.start, period.end),
+                    )
+                    BodyMetric.HEIGHT -> BodyLoadResult(
+                        heightCm = repository.loadLatestHeight(),
+                    )
+                    BodyMetric.BMI -> BodyLoadResult(
+                        weightEntries = repository.loadWeightEntries(period.start, period.end),
+                        heightCm = repository.loadLatestHeight(),
+                    )
+                    BodyMetric.BODY_FAT -> BodyLoadResult(
+                        bodyFatEntries = repository.loadBodyFatEntries(period.start, period.end),
+                    )
+                    BodyMetric.LEAN_MASS -> BodyLoadResult(
+                        leanMassKg = repository.loadLatestLeanBodyMass(),
+                    )
+                    BodyMetric.BMR -> BodyLoadResult(
+                        bmrKcal = repository.loadLatestBMR(),
+                    )
+                    BodyMetric.BONE_MASS -> BodyLoadResult(
+                        boneMassKg = repository.loadLatestBoneMass(),
                     )
                 }
             }
@@ -129,12 +136,12 @@ class BodyViewModel(
     }
 
     private data class BodyLoadResult(
-        val weightEntries: List<WeightEntry>,
-        val heightCm: Double?,
-        val bodyFatEntries: List<BodyFatEntry>,
-        val leanMassKg: Double?,
-        val bmrKcal: Double?,
-        val boneMassKg: Double?,
+        val weightEntries: List<WeightEntry> = emptyList(),
+        val heightCm: Double? = null,
+        val bodyFatEntries: List<BodyFatEntry> = emptyList(),
+        val leanMassKg: Double? = null,
+        val bmrKcal: Double? = null,
+        val boneMassKg: Double? = null,
     )
 
     private val periodSelection: PeriodSelection

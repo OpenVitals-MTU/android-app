@@ -253,6 +253,7 @@ fun AppNavigation(
                     ActivityViewModel(
                         repository = activityRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
+                        selectedMetric = ActivityMetric.STEPS,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
                     )
                 }
@@ -337,6 +338,7 @@ fun AppNavigation(
                         repository = heartRepository,
                         vitalsRepository = vitalsRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
+                        selectedMetric = HeartMetric.AVERAGE_HEART_RATE,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
                     )
                 }
@@ -352,6 +354,7 @@ fun AppNavigation(
                     BodyViewModel(
                         repository = bodyRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
+                        selectedMetric = BodyMetric.WEIGHT,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
                     )
                 }
@@ -384,6 +387,7 @@ fun AppNavigation(
                     NutritionViewModel(
                         repository = nutritionRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
+                        selectedMetric = NutritionMetric.CALORIES_IN,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
                     )
                 }
@@ -483,6 +487,7 @@ private fun MetricRouteContent(
             ActivityViewModel(
                 repository = activityRepository,
                 initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
+                selectedMetric = activityMetric,
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
             )
         }
@@ -501,6 +506,7 @@ private fun MetricRouteContent(
                 repository = heartRepository,
                 vitalsRepository = vitalsRepository,
                 initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
+                selectedMetric = heartMetric,
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
             )
         }
@@ -518,6 +524,7 @@ private fun MetricRouteContent(
             BodyViewModel(
                 repository = bodyRepository,
                 initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
+                selectedMetric = bodyMetric,
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
             )
         }
@@ -535,6 +542,7 @@ private fun MetricRouteContent(
             NutritionViewModel(
                 repository = nutritionRepository,
                 initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
+                selectedMetric = nutritionMetric,
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
             )
         }
