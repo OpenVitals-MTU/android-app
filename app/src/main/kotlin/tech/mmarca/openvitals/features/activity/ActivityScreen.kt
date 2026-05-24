@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +55,7 @@ fun ActivityScreen(
                             point.time to point.totalSteps.toDouble()
                         },
                         accentColor = StepsColor,
+                        yAxisValueFormatter = { unitFormatter.count(it.roundToLong()) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -86,6 +88,7 @@ fun ActivityScreen(
                                 point.totalDistanceMeters?.let { point.time to it }
                             },
                             accentColor = DistanceColor,
+                            yAxisValueFormatter = { unitFormatter.distance(it).text },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -119,6 +122,7 @@ fun ActivityScreen(
                                 point.totalCaloriesBurnedKcal?.let { point.time to it }
                             },
                             accentColor = CaloriesColor,
+                            yAxisValueFormatter = { unitFormatter.energy(it).text },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -152,6 +156,7 @@ fun ActivityScreen(
                                 point.totalFloorsClimbed?.let { point.time to it.toDouble() }
                             },
                             accentColor = FloorsColor,
+                            yAxisValueFormatter = { unitFormatter.count(it.roundToLong()) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -185,6 +190,7 @@ fun ActivityScreen(
                                 point.totalActiveCaloriesKcal?.let { point.time to it }
                             },
                             accentColor = ActiveCaloriesColor,
+                            yAxisValueFormatter = { unitFormatter.energy(it).text },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -218,6 +224,7 @@ fun ActivityScreen(
                                 point.totalElevationGainedMeters?.let { point.time to it }
                             },
                             accentColor = ElevationColor,
+                            yAxisValueFormatter = { unitFormatter.elevation(it).text },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),

@@ -45,6 +45,7 @@ internal fun SleepDurationChart(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
         yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
+        valueFormatter = { "${unitFormatter.decimal(it, 1)}h" },
     )
 }
 

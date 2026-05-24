@@ -99,6 +99,7 @@ fun LazyListScope.HeartVitalsContent(
                     summary = "${localizedPeriodTitle(selectedRange, period)} · ${
                         stringResource(R.string.summary_value_avg, unitFormatter.percent(state.spO2.map { it.percent }.average()).text)
                     }",
+                    valueFormatter = { unitFormatter.percent(it).text },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),

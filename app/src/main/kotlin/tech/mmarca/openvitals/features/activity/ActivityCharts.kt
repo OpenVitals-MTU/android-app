@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.activity
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,8 +25,13 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.YAxisChart
+import tech.mmarca.openvitals.ui.components.chartYAxisLabels
+import tech.mmarca.openvitals.ui.components.drawYAxisGuides
+import tech.mmarca.openvitals.ui.components.formatCompactAxisValue
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
@@ -39,6 +43,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.roundToLong
 
 @Composable
 internal fun StepsBarChart(
@@ -58,6 +63,7 @@ internal fun StepsBarChart(
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} ${stringResource(R.string.unit_steps)}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.count(it.roundToLong()) },
     )
 }
 
@@ -79,6 +85,7 @@ internal fun DistanceBarChart(
         accentColor = DistanceColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.distance(it).text },
     )
 }
 
@@ -100,6 +107,7 @@ internal fun CaloriesBarChart(
         accentColor = CaloriesColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.energy(it).text },
     )
 }
 
@@ -113,6 +121,7 @@ private fun MetricBarChartCard(
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    valueFormatter: (Double) -> String,
 ) {
     PeriodBarChart(
         title = title,
@@ -123,6 +132,7 @@ private fun MetricBarChartCard(
         summaryText = summaryText,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = valueFormatter,
     )
 }
 
@@ -144,6 +154,7 @@ internal fun FloorsBarChart(
         accentColor = FloorsColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.count(it.roundToLong()) },
     )
 }
 
@@ -165,6 +176,7 @@ internal fun ActiveCaloriesBarChart(
         accentColor = ActiveCaloriesColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.energy(it).text },
     )
 }
 
@@ -187,6 +199,7 @@ internal fun ElevationBarChart(
         accentColor = ElevationColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.elevation(it).text },
     )
 }
 
@@ -200,6 +213,7 @@ internal fun IntradayActivityChartCard(
     points: List<Pair<Instant, Double>>,
     accentColor: Color,
     modifier: Modifier = Modifier,
+    yAxisValueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
     val zone = ZoneId.systemDefault()
     val now = Instant.now()
@@ -210,6 +224,9 @@ internal fun IntradayActivityChartCard(
     val chartEnd = if (isToday) now else selectedDate.plusDays(1).atStartOfDay(zone).toInstant()
     val elapsedToday = Duration.between(dayStart, chartEnd).toMillis().coerceAtLeast(1L)
     val maxValue = points.lastOrNull()?.second?.coerceAtLeast(1.0) ?: 1.0
+    val chartHeight = 180.dp
+    val gridColor = accentColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -256,20 +273,15 @@ internal fun IntradayActivityChartCard(
                     )
                 }
 
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
+                YAxisChart(
+                    labels = chartYAxisLabels(0.0, maxValue, yAxisValueFormatter),
+                    chartHeight = chartHeight,
                 ) {
-                    repeat(4) { index ->
-                        val y = size.height * index / 3f
-                        drawLine(
-                            color = accentColor.copy(alpha = 0.12f),
-                            start = Offset(0f, y),
-                            end = Offset(size.width, y),
-                            strokeWidth = 1.dp.toPx(),
-                        )
-                    }
+                    drawYAxisGuides(
+                        gridColor = gridColor,
+                        axisColor = axisColor,
+                        strokeWidth = 1.dp.toPx(),
+                    )
 
                     val scaledPoints = chartPoints.map { point ->
                         Offset(
@@ -290,16 +302,18 @@ internal fun IntradayActivityChartCard(
                 }
 
                 Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    listOf("00:00", "06:00", "12:00", "18:00", if (isToday) stringResource(R.string.summary_now) else "24:00").forEach { label ->
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                ChartXAxisWithYAxis {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        listOf("00:00", "06:00", "12:00", "18:00", if (isToday) stringResource(R.string.summary_now) else "24:00").forEach { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(12.dp))

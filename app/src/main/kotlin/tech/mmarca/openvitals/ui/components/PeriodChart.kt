@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.ui.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -97,6 +96,7 @@ fun PeriodBarChart(
     modifier: Modifier = Modifier,
     yearAggregation: PeriodBarAggregation = PeriodBarAggregation.SUM,
     chartHeight: Dp = 120.dp,
+    valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
     val buckets = remember(values, selectedRange, period, yearAggregation) {
         periodBarBuckets(
@@ -107,6 +107,8 @@ fun PeriodBarChart(
         )
     }
     val maxValue = buckets.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
+    val gridColor = accentColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -121,12 +123,16 @@ fun PeriodBarChart(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(12.dp))
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(chartHeight),
+            YAxisChart(
+                labels = chartYAxisLabels(0.0, maxValue, valueFormatter),
+                chartHeight = chartHeight,
             ) {
-                if (buckets.isEmpty()) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (buckets.isEmpty()) return@YAxisChart
 
                 val slotWidth = size.width / buckets.size
                 val gap = when {
@@ -157,11 +163,13 @@ fun PeriodBarChart(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            PeriodChartXAxis(
-                dates = buckets.map { it.date },
-                selectedRange = selectedRange,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
+            ChartXAxisWithYAxis {
+                PeriodChartXAxis(
+                    dates = buckets.map { it.date },
+                    selectedRange = selectedRange,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 text = summaryText,

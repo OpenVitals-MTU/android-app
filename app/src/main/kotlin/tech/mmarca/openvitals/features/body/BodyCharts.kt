@@ -1,9 +1,7 @@
 package tech.mmarca.openvitals.features.body
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -19,6 +17,9 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.ui.components.YAxisChart
+import tech.mmarca.openvitals.ui.components.chartYAxisLabels
+import tech.mmarca.openvitals.ui.components.drawYAxisGuides
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 
@@ -32,6 +33,9 @@ internal fun BodyFatLineChart(
     val maxPct = sorted.maxOfOrNull { it.percent } ?: 30.0
     val minPct = sorted.minOfOrNull { it.percent } ?: 0.0
     val range = (maxPct - minPct).coerceAtLeast(0.5)
+    val chartHeight = 80.dp
+    val gridColor = BodyFatColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -40,12 +44,20 @@ internal fun BodyFatLineChart(
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = minPct,
+                    maxValue = maxPct,
+                    valueFormatter = { unitFormatter.percent(it).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (sorted.size < 2) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (sorted.size < 2) return@YAxisChart
                 val stepX = size.width / (sorted.size - 1)
                 val points = sorted.mapIndexed { i, entry ->
                     val x = i * stepX
@@ -86,6 +98,9 @@ internal fun WeightLineChart(
     val maxKg = sorted.maxOfOrNull { it.weightKg } ?: 100.0
     val minKg = sorted.minOfOrNull { it.weightKg } ?: 50.0
     val range = (maxKg - minKg).coerceAtLeast(0.5)
+    val chartHeight = 100.dp
+    val gridColor = WeightColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -94,12 +109,20 @@ internal fun WeightLineChart(
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = minKg,
+                    maxValue = maxKg,
+                    valueFormatter = { unitFormatter.weight(it).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (sorted.size < 2) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (sorted.size < 2) return@YAxisChart
                 val stepX = size.width / (sorted.size - 1)
                 val points = sorted.mapIndexed { i, entry ->
                     val x = i * stepX

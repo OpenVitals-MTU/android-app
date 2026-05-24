@@ -32,5 +32,6 @@ internal fun EnergyBarChart(
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.energyKcal }).text}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.energy(it).text },
     )
 }

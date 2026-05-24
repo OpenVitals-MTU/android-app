@@ -1,9 +1,7 @@
 package tech.mmarca.openvitals.features.cycle
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -19,6 +17,9 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.ui.components.YAxisChart
+import tech.mmarca.openvitals.ui.components.chartYAxisLabels
+import tech.mmarca.openvitals.ui.components.drawYAxisGuides
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import java.time.ZoneId
 
@@ -35,6 +36,9 @@ internal fun BasalTemperatureTrendCard(
     val range = (maxC - minC).coerceAtLeast(0.2)
     val zone = ZoneId.systemDefault()
     val dayFormatter = dateTimeFormatterProvider.chartDay()
+    val chartHeight = 110.dp
+    val gridColor = CycleColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -42,11 +46,19 @@ internal fun BasalTemperatureTrendCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (sorted.size >= 2) {
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp),
+                YAxisChart(
+                    labels = chartYAxisLabels(
+                        minValue = minC,
+                        maxValue = maxC,
+                        valueFormatter = { unitFormatter.temperature(it).text },
+                    ),
+                    chartHeight = chartHeight,
                 ) {
+                    drawYAxisGuides(
+                        gridColor = gridColor,
+                        axisColor = axisColor,
+                        strokeWidth = 1.dp.toPx(),
+                    )
                     val stepX = size.width / (sorted.size - 1)
                     val points = sorted.mapIndexed { index, entry ->
                         Offset(

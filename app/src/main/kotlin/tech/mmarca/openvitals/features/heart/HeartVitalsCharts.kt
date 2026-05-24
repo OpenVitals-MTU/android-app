@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.heart
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,11 +23,17 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
+import tech.mmarca.openvitals.ui.components.YAxisChart
+import tech.mmarca.openvitals.ui.components.chartYAxisLabels
+import tech.mmarca.openvitals.ui.components.drawYAxisGuides
+import tech.mmarca.openvitals.ui.components.formatCompactAxisValue
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 @Composable
 internal fun RespiratoryRateChart(
@@ -47,6 +52,9 @@ internal fun RespiratoryRateChart(
     val max = plotted.maxOfOrNull { it.value }?.plus(1.0) ?: 1.0
     val min = plotted.minOfOrNull { it.value }?.minus(1.0)?.coerceAtLeast(0.0) ?: 0.0
     val range = (max - min).coerceAtLeast(1.0)
+    val chartHeight = 140.dp
+    val gridColor = respiratoryColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -55,12 +63,20 @@ internal fun RespiratoryRateChart(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(stringResource(R.string.metric_respiratory_rate), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = min,
+                    maxValue = max,
+                    valueFormatter = { unitFormatter.respiratoryRate(it).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (plotted.isEmpty()) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (plotted.isEmpty()) return@YAxisChart
 
                 val lastIndex = buckets.lastIndex.coerceAtLeast(1)
                 val points = plotted.map { point ->
@@ -84,11 +100,13 @@ internal fun RespiratoryRateChart(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            PeriodChartXAxis(
-                dates = buckets.map { it.date },
-                selectedRange = selectedRange,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
+            ChartXAxisWithYAxis {
+                PeriodChartXAxis(
+                    dates = buckets.map { it.date },
+                    selectedRange = selectedRange,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "${localizedPeriodTitle(selectedRange, period)} · ${
@@ -113,6 +131,9 @@ internal fun BloodPressureChart(
     val max = sorted.maxOfOrNull { it.systolicMmHg }?.coerceAtLeast(140) ?: 140
     val min = sorted.minOfOrNull { it.diastolicMmHg }?.coerceAtMost(60) ?: 60
     val range = (max - min).coerceAtLeast(1)
+    val chartHeight = 150.dp
+    val gridColor = VitalsColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -121,12 +142,20 @@ internal fun BloodPressureChart(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(stringResource(R.string.metric_blood_pressure), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = min.toDouble(),
+                    maxValue = max.toDouble(),
+                    valueFormatter = { "${it.roundToInt()} mmHg" },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (sorted.isEmpty()) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (sorted.isEmpty()) return@YAxisChart
                 val stepX = if (sorted.size > 1) size.width / (sorted.size - 1) else size.width
                 sorted.forEachIndexed { index, entry ->
                     val x = if (sorted.size > 1) index * stepX else size.width / 2f
@@ -165,10 +194,14 @@ internal fun VitalsLineChart(
     accentColor: Color,
     summary: String,
     modifier: Modifier = Modifier,
+    valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
     val max = values.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
     val min = values.minOrNull()?.coerceAtMost(max - 1.0) ?: 0.0
     val range = (max - min).coerceAtLeast(1.0)
+    val chartHeight = 140.dp
+    val gridColor = accentColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -177,12 +210,20 @@ internal fun VitalsLineChart(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = min,
+                    maxValue = max,
+                    valueFormatter = valueFormatter,
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (values.size < 2) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (values.size < 2) return@YAxisChart
                 val points = values.mapIndexed { index, value ->
                     Offset(
                         x = index * size.width / (values.size - 1),
@@ -203,11 +244,13 @@ internal fun VitalsLineChart(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            PeriodChartXAxis(
-                dates = dates,
-                selectedRange = selectedRange,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
+            ChartXAxisWithYAxis {
+                PeriodChartXAxis(
+                    dates = dates,
+                    selectedRange = selectedRange,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 text = summary,

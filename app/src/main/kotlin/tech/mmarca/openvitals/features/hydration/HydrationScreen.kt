@@ -144,5 +144,6 @@ private fun HydrationBarChart(
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.hydration(data.sumOf { it.liters }).text}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        valueFormatter = { unitFormatter.hydration(it).text },
     )
 }

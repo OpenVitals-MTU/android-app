@@ -93,4 +93,23 @@ class PeriodChartTest {
         assertTrue(isPeriodChartLabelVisible(index = 30, lastIndex = 364, selectedRange = TimeRange.YEAR))
         assertTrue(isPeriodChartLabelVisible(index = 364, lastIndex = 364, selectedRange = TimeRange.YEAR))
     }
+
+    @Test fun `y axis labels are ordered from high to low`() {
+        assertEquals(listOf("10", "5", "0"), chartYAxisLabels(minValue = 0.0, maxValue = 10.0))
+    }
+
+    @Test fun `compact y axis values abbreviate large numbers`() {
+        assertEquals("1.5k", formatCompactAxisValue(1_500.0))
+        assertEquals("2M", formatCompactAxisValue(2_000_000.0))
+    }
+
+    @Test fun `y axis labels keep fallback midpoint visible when formatter rounds it`() {
+        val labels = chartYAxisLabels(
+            minValue = 0.0,
+            maxValue = 1.0,
+            valueFormatter = { it.toLong().toString() },
+        )
+
+        assertEquals(listOf("1", "0.5", "0"), labels)
+    }
 }

@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.heart
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,10 +22,15 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
+import tech.mmarca.openvitals.ui.components.YAxisChart
+import tech.mmarca.openvitals.ui.components.chartYAxisLabels
+import tech.mmarca.openvitals.ui.components.drawYAxisGuides
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 @Composable
 internal fun HeartRateChart(
@@ -41,6 +45,9 @@ internal fun HeartRateChart(
     val maxBpm = sorted.maxOfOrNull { it.maxBpm } ?: 200L
     val minBpm = sorted.minOfOrNull { it.minBpm } ?: 40L
     val range = (maxBpm - minBpm).coerceAtLeast(1)
+    val chartHeight = 120.dp
+    val gridColor = HeartColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -55,12 +62,20 @@ internal fun HeartRateChart(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(12.dp))
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = minBpm.toDouble(),
+                    maxValue = maxBpm.toDouble(),
+                    valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (sorted.size < 2) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (sorted.size < 2) return@YAxisChart
                 val stepX = size.width / (sorted.size - 1)
 
                 sorted.forEachIndexed { index, summary ->
@@ -93,11 +108,13 @@ internal fun HeartRateChart(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            PeriodChartXAxis(
-                dates = sorted.map { it.date },
-                selectedRange = selectedRange,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
+            ChartXAxisWithYAxis {
+                PeriodChartXAxis(
+                    dates = sorted.map { it.date },
+                    selectedRange = selectedRange,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             if (sorted.isNotEmpty()) {
                 val avgAll = sorted.map { it.avgBpm }.average().roundToInt()
@@ -132,18 +149,29 @@ internal fun RestingHRChart(
     val maxBpm = sorted.maxOfOrNull { it.bpm } ?: 80L
     val minBpm = sorted.minOfOrNull { it.bpm } ?: 40L
     val range = (maxBpm - minBpm).coerceAtLeast(1L)
+    val chartHeight = 80.dp
+    val gridColor = HeartColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = minBpm.toDouble(),
+                    maxValue = maxBpm.toDouble(),
+                    valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (sorted.size < 2) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (sorted.size < 2) return@YAxisChart
                 val stepX = size.width / (sorted.size - 1)
                 val points = sorted.mapIndexed { i, entry ->
                     val x = i * stepX
@@ -161,11 +189,13 @@ internal fun RestingHRChart(
                 points.forEach { pt -> drawCircle(color = HeartColor, radius = 4.dp.toPx(), center = pt) }
             }
             Spacer(Modifier.height(4.dp))
-            PeriodChartXAxis(
-                dates = sorted.map { it.date },
-                selectedRange = selectedRange,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
+            ChartXAxisWithYAxis {
+                PeriodChartXAxis(
+                    dates = sorted.map { it.date },
+                    selectedRange = selectedRange,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.bpm }.average().roundToInt()
             Text(
@@ -194,18 +224,30 @@ internal fun HRVChart(
     val maxMs = sorted.maxOfOrNull { it.rmssdMs } ?: 100.0
     val minMs = sorted.minOfOrNull { it.rmssdMs } ?: 0.0
     val range = (maxMs - minMs).coerceAtLeast(0.5)
+    val chartHeight = 80.dp
+    val chartColor = HeartColor.copy(alpha = 0.7f)
+    val gridColor = HeartColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = minMs,
+                    maxValue = maxMs,
+                    valueFormatter = { unitFormatter.hrv(it).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                if (sorted.size < 2) return@Canvas
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
+                if (sorted.size < 2) return@YAxisChart
                 val stepX = size.width / (sorted.size - 1)
                 val points = sorted.mapIndexed { i, entry ->
                     val x = i * stepX
@@ -214,22 +256,24 @@ internal fun HRVChart(
                 }
                 for (i in 0 until points.size - 1) {
                     drawLine(
-                        color = HeartColor.copy(alpha = 0.7f),
+                        color = chartColor,
                         start = points[i],
                         end = points[i + 1],
                         strokeWidth = 2.dp.toPx(),
                     )
                 }
                 points.forEach { pt ->
-                    drawCircle(color = HeartColor.copy(alpha = 0.7f), radius = 4.dp.toPx(), center = pt)
+                    drawCircle(color = chartColor, radius = 4.dp.toPx(), center = pt)
                 }
             }
             Spacer(Modifier.height(4.dp))
-            PeriodChartXAxis(
-                dates = sorted.map { it.date },
-                selectedRange = selectedRange,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
+            ChartXAxisWithYAxis {
+                PeriodChartXAxis(
+                    dates = sorted.map { it.date },
+                    selectedRange = selectedRange,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
             Spacer(Modifier.height(4.dp))
             val avg = sorted.map { it.rmssdMs }.average()
             Text(

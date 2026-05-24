@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.heart
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,11 +24,16 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
+import tech.mmarca.openvitals.ui.components.YAxisChart
+import tech.mmarca.openvitals.ui.components.chartYAxisLabels
+import tech.mmarca.openvitals.ui.components.drawYAxisGuides
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 @Composable
 internal fun HeartRateTimelineCard(
@@ -53,6 +57,9 @@ internal fun HeartRateTimelineCard(
     val firstSample = sorted.first().time.atZone(zone)
     val lastSample = sorted.last().time.atZone(zone)
     val timeFormatter = dateTimeFormatterProvider.shortTime()
+    val chartHeight = 180.dp
+    val gridColor = HeartColor.copy(alpha = 0.12f)
+    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -82,20 +89,19 @@ internal fun HeartRateTimelineCard(
                 )
             }
             Spacer(Modifier.height(16.dp))
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
+            YAxisChart(
+                labels = chartYAxisLabels(
+                    minValue = paddedMin.toDouble(),
+                    maxValue = paddedMax.toDouble(),
+                    valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+                ),
+                chartHeight = chartHeight,
             ) {
-                repeat(4) { index ->
-                    val y = size.height * index / 3f
-                    drawLine(
-                        color = HeartColor.copy(alpha = 0.12f),
-                        start = Offset(0f, y),
-                        end = Offset(size.width, y),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                }
+                drawYAxisGuides(
+                    gridColor = gridColor,
+                    axisColor = axisColor,
+                    strokeWidth = 1.dp.toPx(),
+                )
 
                 val points = sorted.map { sample ->
                     val elapsed = Duration.between(dayStart, sample.time).toMillis()
@@ -125,16 +131,18 @@ internal fun HeartRateTimelineCard(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                listOf("00:00", "06:00", "12:00", "18:00", "24:00").forEach { label ->
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            ChartXAxisWithYAxis {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    listOf("00:00", "06:00", "12:00", "18:00", "24:00").forEach { label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(12.dp))
