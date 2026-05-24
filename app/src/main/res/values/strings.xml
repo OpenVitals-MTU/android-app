@@ -137,6 +137,7 @@
     <string name="section_debug">Debug</string>
     <string name="section_cycle_calendar">Cycle calendar</string>
     <string name="section_basal_body_temperature">Basal body temperature</string>
+    <string name="section_statistics">Statistics</string>
 
     <string name="summary_daily_average">%1$s daily average</string>
     <string name="summary_days_in_range">%1$s days in range</string>
@@ -164,6 +165,10 @@
     <string name="summary_temperature_range">Range %1$s-%2$s · %3$s readings</string>
     <string name="summary_sleep_ending_today">Sleep ending today</string>
     <string name="summary_sleep_ending_on">Sleep ending on %1$s</string>
+    <string name="stat_current_streak">Current streak</string>
+    <string name="stat_daily_average">Daily average</string>
+    <string name="stat_total_intake">Total intake</string>
+    <string name="stat_best_day">Best day</string>
 
     <string name="message_no_dashboard_data">No dashboard data available.</string>
     <string name="message_missing_permissions_title">Some permissions are missing</string>

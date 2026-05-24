@@ -137,6 +137,7 @@
     <string name="section_debug">Depuración</string>
     <string name="section_cycle_calendar">Calendario del ciclo</string>
     <string name="section_basal_body_temperature">Temperatura corporal basal</string>
+    <string name="section_statistics">Estadísticas</string>
 
     <string name="summary_daily_average">media diaria de %1$s</string>
     <string name="summary_days_in_range">%1$s días en el rango</string>
@@ -164,6 +165,10 @@
     <string name="summary_temperature_range">Rango %1$s-%2$s · %3$s lecturas</string>
     <string name="summary_sleep_ending_today">Sueño que termina hoy</string>
     <string name="summary_sleep_ending_on">Sueño que termina el %1$s</string>
+    <string name="stat_current_streak">Racha actual</string>
+    <string name="stat_daily_average">Media diaria</string>
+    <string name="stat_total_intake">Ingesta total</string>
+    <string name="stat_best_day">Mejor día</string>
 
     <string name="message_no_dashboard_data">No hay datos del panel disponibles.</string>
     <string name="message_missing_permissions_title">Faltan algunos permisos</string>

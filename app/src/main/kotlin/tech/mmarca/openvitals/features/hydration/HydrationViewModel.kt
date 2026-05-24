@@ -21,7 +21,15 @@ data class HydrationUiState(
     val error: String? = null,
 ) {
     val totalLiters: Double get() = dailyHydration.sumOf { it.liters }
-    val averageLiters: Double get() = dailyHydration.takeIf { it.isNotEmpty() }?.let { totalLiters / it.size } ?: 0.0
+    val trackedDays: Int get() = dailyHydration.count { it.liters > 0.0 }
+    val averageLiters: Double get() = trackedDays.takeIf { it > 0 }?.let { totalLiters / it } ?: 0.0
+    val bestDayLiters: Double get() = dailyHydration.maxOfOrNull { it.liters } ?: 0.0
+    val currentTrackedStreakDays: Int
+        get() = dailyHydration
+            .sortedBy { it.date }
+            .asReversed()
+            .takeWhile { it.liters > 0.0 }
+            .count()
 }
 
 class HydrationViewModel(

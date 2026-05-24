@@ -61,6 +61,40 @@ class HydrationViewModelTest {
         assertNull(vm.uiState.value.error)
     }
 
+    @Test fun `derived hydration statistics ignore zero intake days`() = runTest {
+        val hydration = listOf(
+            DailyHydration(today.minusDays(4), 0.0),
+            DailyHydration(today.minusDays(3), 1.0),
+            DailyHydration(today.minusDays(2), 2.0),
+            DailyHydration(today.minusDays(1), 0.0),
+            DailyHydration(today, 1.5),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
+
+        val vm = HydrationViewModel(repo)
+
+        assertEquals(3, vm.uiState.value.trackedDays)
+        assertEquals(1.5, vm.uiState.value.averageLiters, 0.01)
+        assertEquals(2.0, vm.uiState.value.bestDayLiters, 0.01)
+        assertEquals(1, vm.uiState.value.currentTrackedStreakDays)
+    }
+
+    @Test fun `current tracked streak counts consecutive intake days from period end`() = runTest {
+        val hydration = listOf(
+            DailyHydration(today.minusDays(3), 1.0),
+            DailyHydration(today.minusDays(2), 0.0),
+            DailyHydration(today.minusDays(1), 2.0),
+            DailyHydration(today, 1.5),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
+
+        val vm = HydrationViewModel(repo)
+
+        assertEquals(2, vm.uiState.value.currentTrackedStreakDays)
+    }
+
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<HydrationRepository>()
         coEvery { repo.loadDailyHydration(any(), any()) } throws RuntimeException("timeout")

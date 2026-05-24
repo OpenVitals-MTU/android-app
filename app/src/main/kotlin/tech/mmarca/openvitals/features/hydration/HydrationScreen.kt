@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,11 +22,14 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.ui.components.InsightStat
+import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PeriodBarChart
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
@@ -78,6 +84,14 @@ fun HydrationScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            item { SectionHeader(stringResource(R.string.section_statistics)) }
+            item {
+                HydrationStatistics(
+                    state = state,
+                    unitFormatter = unitFormatter,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
     }
 }
@@ -124,6 +138,50 @@ private fun HydrationSummary(
             modifier = Modifier.weight(1f),
         )
     }
+}
+
+@Composable
+private fun HydrationStatistics(
+    state: HydrationUiState,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val total = unitFormatter.hydration(state.totalLiters)
+    val average = unitFormatter.hydration(state.averageLiters)
+    val bestDay = unitFormatter.hydration(state.bestDayLiters)
+    InsightStatGrid(
+        stats = listOf(
+            InsightStat(
+                title = stringResource(R.string.stat_current_streak),
+                value = unitFormatter.count(state.currentTrackedStreakDays),
+                unit = stringResource(R.string.unit_days),
+                icon = Icons.Outlined.LocalFireDepartment,
+                accentColor = HydrationColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_daily_average),
+                value = average.value,
+                unit = average.unit,
+                icon = Icons.Outlined.Star,
+                accentColor = HydrationColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_total_intake),
+                value = total.value,
+                unit = total.unit,
+                icon = Icons.Outlined.LocalDrink,
+                accentColor = HydrationColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_best_day),
+                value = bestDay.value,
+                unit = bestDay.unit,
+                icon = Icons.Outlined.CalendarMonth,
+                accentColor = HydrationColor,
+            ),
+        ),
+        modifier = modifier,
+    )
 }
 
 @Composable
