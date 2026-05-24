@@ -23,9 +23,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.DailyGoalDirection
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -33,6 +35,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
@@ -48,6 +51,7 @@ import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import java.time.LocalDate
 import kotlin.math.roundToLong
 
 enum class ActivityMetric {
@@ -267,6 +271,16 @@ private fun LazyListScope.stepsContent(
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
         )
+        activityDataConfidence(
+            period = period,
+            trackedDates = state.dailySteps.filter { it.steps > 0L }.map { it.date },
+            sampleCount = if (state.selectedRange == TimeRange.DAY) {
+                state.activityProgress.count { it.totalSteps > 0L }
+            } else {
+                state.dailySteps.count { it.steps > 0L }
+            },
+            accentColor = StepsColor,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             period = period,
@@ -355,6 +369,16 @@ private fun LazyListScope.distanceContent(
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
         )
+        activityDataConfidence(
+            period = period,
+            trackedDates = state.dailySteps.filter { it.distanceMeters > 0.0 }.map { it.date },
+            sampleCount = if (state.selectedRange == TimeRange.DAY) {
+                state.activityProgress.count { it.totalDistanceMeters != null }
+            } else {
+                values.count { it > 0.0 }
+            },
+            accentColor = DistanceColor,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             period = period,
@@ -428,6 +452,16 @@ private fun LazyListScope.caloriesContent(
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
         )
+        activityDataConfidence(
+            period = period,
+            trackedDates = state.nutrition.filter { it.caloriesBurnedKcal > 0.0 }.map { it.date },
+            sampleCount = if (state.selectedRange == TimeRange.DAY) {
+                state.activityProgress.count { it.totalCaloriesBurnedKcal != null }
+            } else {
+                values.count { it > 0.0 }
+            },
+            accentColor = CaloriesColor,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             period = period,
@@ -500,6 +534,16 @@ private fun LazyListScope.activeCaloriesContent(
             goalFormatter = { unitFormatter.energy(it) },
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
+        )
+        activityDataConfidence(
+            period = period,
+            trackedDates = state.dailySteps.filter { (it.activeCaloriesKcal ?: 0.0) > 0.0 }.map { it.date },
+            sampleCount = if (state.selectedRange == TimeRange.DAY) {
+                state.activityProgress.count { it.totalActiveCaloriesKcal != null }
+            } else {
+                values.count { it > 0.0 }
+            },
+            accentColor = ActiveCaloriesColor,
         )
         activityStatistics(
             unitFormatter = unitFormatter,
@@ -581,6 +625,16 @@ private fun LazyListScope.floorsContent(
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
         )
+        activityDataConfidence(
+            period = period,
+            trackedDates = state.dailySteps.filter { (it.floorsClimbed ?: 0) > 0 }.map { it.date },
+            sampleCount = if (state.selectedRange == TimeRange.DAY) {
+                state.activityProgress.count { it.totalFloorsClimbed != null }
+            } else {
+                values.count { it > 0.0 }
+            },
+            accentColor = FloorsColor,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             period = period,
@@ -661,6 +715,16 @@ private fun LazyListScope.elevationContent(
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
         )
+        activityDataConfidence(
+            period = period,
+            trackedDates = state.dailySteps.filter { (it.elevationGainedMeters ?: 0.0) > 0.0 }.map { it.date },
+            sampleCount = if (state.selectedRange == TimeRange.DAY) {
+                state.activityProgress.count { it.totalElevationGainedMeters != null }
+            } else {
+                values.count { it > 0.0 }
+            },
+            accentColor = ElevationColor,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             period = period,
@@ -682,6 +746,26 @@ private fun LazyListScope.elevationContent(
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_elevation_gained, R.string.message_no_elevation, Icons.Outlined.Terrain, ElevationColor)
+    }
+}
+
+private fun LazyListScope.activityDataConfidence(
+    period: DatePeriod,
+    trackedDates: Collection<LocalDate>,
+    sampleCount: Int,
+    accentColor: Color,
+) {
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = trackedDates,
+                sampleCount = sampleCount,
+                valueKind = DataValueKind.AGGREGATED,
+            ),
+            accentColor = accentColor,
+            modifier = metricModifier(),
+        )
     }
 }
 

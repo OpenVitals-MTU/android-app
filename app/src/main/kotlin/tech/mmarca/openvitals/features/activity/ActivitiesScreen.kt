@@ -28,14 +28,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.WorkoutGuidelineStatus
 import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.insights.workoutGuidelineProgress
@@ -47,6 +50,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -97,6 +101,10 @@ fun ActivitiesScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            workoutDataConfidence(
+                workouts = state.workouts,
+                period = period,
+            )
             workoutGoal(
                 state = state,
                 period = period,
@@ -144,6 +152,29 @@ fun ActivitiesScreen(
                 )
             }
         }
+    }
+}
+
+private fun LazyListScope.workoutDataConfidence(
+    workouts: List<ExerciseData>,
+    period: DatePeriod,
+) {
+    val zone = ZoneId.systemDefault()
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = workouts.map { it.startTime.atZone(zone).toLocalDate() },
+                sampleCount = workouts.size,
+                sources = workouts.map { it.source },
+                valueKind = DataValueKind.MEASURED,
+                manualEntryCount = workouts.count {
+                    it.recordingMethod == Metadata.RECORDING_METHOD_MANUAL_ENTRY
+                },
+            ),
+            accentColor = WorkoutColor,
+            modifier = metricModifier(),
+        )
     }
 }
 

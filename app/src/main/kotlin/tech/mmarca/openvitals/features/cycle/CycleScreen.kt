@@ -19,10 +19,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.DataValueKind
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.CycleData
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
@@ -80,6 +83,10 @@ fun CycleScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            cycleDataConfidence(
+                data = state.data,
+                period = period,
+            )
             cycleStatistics(
                 data = state.data,
                 period = period,
@@ -134,6 +141,40 @@ fun CycleScreen(
                 )
             }
         }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.cycleDataConfidence(
+    data: CycleData,
+    period: DatePeriod,
+) {
+    item {
+        val zone = ZoneId.systemDefault()
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates =
+                    data.menstruationFlows.map { it.time.atZone(zone).toLocalDate() } +
+                        data.menstruationPeriods.map { it.startTime.atZone(zone).toLocalDate() } +
+                        data.ovulationTests.map { it.time.atZone(zone).toLocalDate() } +
+                        data.cervicalMucus.map { it.time.atZone(zone).toLocalDate() } +
+                        data.basalBodyTemperature.map { it.time.atZone(zone).toLocalDate() },
+                sampleCount = data.menstruationFlows.size +
+                    data.menstruationPeriods.size +
+                    data.ovulationTests.size +
+                    data.cervicalMucus.size +
+                    data.basalBodyTemperature.size,
+                sources =
+                    data.menstruationFlows.map { it.source } +
+                        data.menstruationPeriods.map { it.source } +
+                        data.ovulationTests.map { it.source } +
+                        data.cervicalMucus.map { it.source } +
+                        data.basalBodyTemperature.map { it.source },
+                valueKind = DataValueKind.MEASURED,
+            ),
+            accentColor = CycleColor,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 

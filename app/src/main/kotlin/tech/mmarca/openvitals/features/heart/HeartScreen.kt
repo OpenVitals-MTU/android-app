@@ -27,11 +27,13 @@ import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.BloodPressureCategory
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.PeriodComparison
 import tech.mmarca.openvitals.core.insights.VitalContextInterpretation
 import tech.mmarca.openvitals.core.insights.VitalContextStatus
 import tech.mmarca.openvitals.core.insights.bloodPressureInterpretation
 import tech.mmarca.openvitals.core.insights.bodyTemperatureContext
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.oxygenSaturationContext
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
@@ -51,6 +53,7 @@ import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -64,6 +67,7 @@ import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
@@ -277,6 +281,13 @@ private fun LazyListScope.averageHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            heartRawDataConfidence(
+                period = period,
+                entries = state.daySamples,
+                source = { it.source },
+                time = { it.time },
+                accentColor = HeartColor,
+            )
             heartRateSampleStatistics(
                 samples = state.daySamples,
                 previousSamples = state.previousDaySamples,
@@ -300,6 +311,12 @@ private fun LazyListScope.averageHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            heartAggregateDataConfidence(
+                period = period,
+                trackedDates = state.dailySummaries.map { it.date },
+                sampleCount = state.dailySummaries.size,
+                accentColor = HeartColor,
+            )
             heartRateSummaryStatistics(
                 summaries = state.dailySummaries,
                 previousSummaries = state.previousDailySummaries,
@@ -344,6 +361,12 @@ private fun LazyListScope.restingHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            heartAggregateDataConfidence(
+                period = period,
+                trackedDates = listOf(state.selectedDate),
+                sampleCount = 1,
+                accentColor = HeartColor,
+            )
             restingHeartRateContextCard(state.dayRestingBpm)
             heartNumericStatistics(
                 unitFormatter = unitFormatter,
@@ -374,6 +397,12 @@ private fun LazyListScope.restingHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            heartAggregateDataConfidence(
+                period = period,
+                trackedDates = state.dailyRestingHR.map { it.date },
+                sampleCount = state.dailyRestingHR.size,
+                accentColor = HeartColor,
+            )
             restingHeartRateContextCard(
                 state.dailyRestingHR.map { it.bpm }.average().roundToInt().toLong(),
             )
@@ -410,6 +439,12 @@ private fun LazyListScope.hrvContent(
                     modifier = metricModifier(),
                 )
             }
+            heartAggregateDataConfidence(
+                period = period,
+                trackedDates = listOf(state.selectedDate),
+                sampleCount = 1,
+                accentColor = HeartColor,
+            )
             heartNumericStatistics(
                 unitFormatter = unitFormatter,
                 average = unitFormatter.hrv(state.dayHrvMs),
@@ -439,6 +474,12 @@ private fun LazyListScope.hrvContent(
                     modifier = metricModifier(),
                 )
             }
+            heartAggregateDataConfidence(
+                period = period,
+                trackedDates = state.dailyHrv.map { it.date },
+                sampleCount = state.dailyHrv.size,
+                accentColor = HeartColor,
+            )
             hrvStatistics(
                 entries = state.dailyHrv,
                 previousEntries = state.previousDailyHrv,
@@ -491,6 +532,13 @@ private fun LazyListScope.bloodPressureContent(
                 modifier = metricModifier(),
             )
         }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.bloodPressure,
+            source = { it.source },
+            time = { it.time },
+            accentColor = VitalsColor,
+        )
         bloodPressureContextCard(state.bloodPressure.maxByOrNull { it.time })
         bloodPressureStatistics(
             entries = state.bloodPressure,
@@ -534,6 +582,13 @@ private fun LazyListScope.spO2Content(
                 modifier = metricModifier(),
             )
         }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.spO2,
+            source = { it.source },
+            time = { it.time },
+            accentColor = oxygenColor,
+        )
         oxygenSaturationContextCard(state.spO2.maxByOrNull { it.time })
         spO2Statistics(
             entries = state.spO2,
@@ -573,6 +628,13 @@ private fun LazyListScope.vo2MaxContent(
                 modifier = metricModifier(),
             )
         }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.vo2Max,
+            source = { it.source },
+            time = { it.time },
+            accentColor = vo2Color,
+        )
         vo2MaxStatistics(
             entries = state.vo2Max,
             previousEntries = state.previousVo2Max,
@@ -632,6 +694,13 @@ private fun LazyListScope.respiratoryRateContent(
                 )
             }
         }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.respiratoryRate,
+            source = { it.source },
+            time = { it.time },
+            accentColor = respiratoryColor,
+        )
         respiratoryRateContextCard(state.respiratoryRate.map { it.breathsPerMinute }.average())
         respiratoryRateStatistics(
             entries = state.respiratoryRate,
@@ -680,6 +749,13 @@ private fun LazyListScope.bodyTemperatureContent(
                 modifier = metricModifier(),
             )
         }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.bodyTemperature,
+            source = { it.source },
+            time = { it.time },
+            accentColor = temperatureColor,
+        )
         bodyTemperatureContextCard(state.bodyTemperature.maxByOrNull { it.time })
         bodyTemperatureStatistics(
             entries = state.bodyTemperature,
@@ -695,6 +771,49 @@ private fun LazyListScope.bodyTemperatureContent(
             messageRes = R.string.message_no_readings_period,
             icon = Icons.Outlined.DeviceThermostat,
             accentColor = temperatureColor,
+        )
+    }
+}
+
+private fun LazyListScope.heartAggregateDataConfidence(
+    period: DatePeriod,
+    trackedDates: Collection<LocalDate>,
+    sampleCount: Int,
+    accentColor: Color,
+) {
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = trackedDates,
+                sampleCount = sampleCount,
+                valueKind = DataValueKind.AGGREGATED,
+            ),
+            accentColor = accentColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun <T> LazyListScope.heartRawDataConfidence(
+    period: DatePeriod,
+    entries: List<T>,
+    source: (T) -> String,
+    time: (T) -> java.time.Instant,
+    accentColor: Color,
+) {
+    item {
+        val zone = ZoneId.systemDefault()
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = entries.map { time(it).atZone(zone).toLocalDate() },
+                sampleCount = entries.size,
+                sources = entries.map(source),
+                valueKind = DataValueKind.MEASURED,
+            ),
+            accentColor = accentColor,
+            modifier = metricModifier(),
         )
     }
 }

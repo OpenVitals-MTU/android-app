@@ -542,6 +542,27 @@
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">azúcar %1$sg</string>
 
+    <string name="data_confidence_title">Confianza de los datos</string>
+    <string name="data_confidence_high">Confianza alta</string>
+    <string name="data_confidence_medium">Confianza media</string>
+    <string name="data_confidence_low">Confianza baja</string>
+    <string name="data_confidence_coverage">%1$d de %2$d días registrados (%3$d%%)</string>
+    <string name="data_confidence_samples">%1$d registros</string>
+    <string name="data_confidence_source_unavailable">Detalles de origen no disponibles para este agregado</string>
+    <string name="data_confidence_source_single">Origen: %1$s</string>
+    <string name="data_confidence_source_mixed">Orígenes mixtos: %1$s</string>
+    <string name="data_confidence_kind_measured">Registros medidos de Health Connect</string>
+    <string name="data_confidence_kind_aggregated">Agregado desde registros de Health Connect</string>
+    <string name="data_confidence_kind_calculated">Calculado por OpenVitals</string>
+    <string name="data_confidence_kind_estimated">Valor estimado o derivado</string>
+    <string name="data_confidence_kind_mixed">Datos medidos y calculados mezclados</string>
+    <string name="data_confidence_warning_low_coverage">Los días sin datos pueden debilitar medias y tendencias.</string>
+    <string name="data_confidence_warning_sparse">Datos escasos: las tendencias y estadísticas pueden ser inestables.</string>
+    <string name="data_confidence_warning_mixed_sources">Los cambios de origen pueden explicar saltos o datos que parecen duplicados.</string>
+    <string name="data_confidence_warning_manual">Este periodo incluye entradas manuales.</string>
+    <string name="data_confidence_warning_calculated">Este valor es derivado, no medido directamente.</string>
+    <string name="data_confidence_warning_no_sources">Este agregado no expone detalles por origen.</string>
+
     <string name="privacy_policy_title">Política de privacidad</string>
     <string name="privacy_policy_body_1">OpenVitals lee datos de Health Connect para mostrar pasos, entrenamientos, sueño, frecuencia cardiaca, peso, calorías, hidratación, nutrición, mindfulness y constantes en tu dispositivo.</string>
     <string name="privacy_policy_body_2">Esta app no sube tus datos de salud a un servicio en la nube, no incluye anuncios y no comparte datos con terceros.</string>

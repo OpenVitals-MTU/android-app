@@ -19,13 +19,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.insights.sleepTargetInterpretation
@@ -42,6 +45,7 @@ import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepSessionsForRange
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -144,6 +148,11 @@ fun SleepScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
+                sleepDataConfidence(
+                    sessions = dailySessions,
+                    durationPoints = durationPoints,
+                    period = period,
+                )
                 sleepGoal(
                     state = state,
                     period = period,
@@ -202,6 +211,11 @@ fun SleepScreen(
                         durationPoints = durationPoints,
                     )
                 }
+                sleepDataConfidence(
+                    sessions = state.sessions,
+                    durationPoints = durationPoints,
+                    period = period,
+                )
                 sleepGoal(
                     state = state,
                     period = period,
@@ -258,6 +272,29 @@ fun SleepScreen(
                 }
             }
         }
+    }
+}
+
+private fun LazyListScope.sleepDataConfidence(
+    sessions: List<SleepData>,
+    durationPoints: List<SleepDurationPoint>,
+    period: DatePeriod,
+) {
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = durationPoints.filter { it.hours > 0.0 }.map { it.date },
+                sampleCount = sessions.size,
+                sources = sessions.map { it.source },
+                valueKind = DataValueKind.MEASURED,
+                manualEntryCount = sessions.count {
+                    it.recordingMethod == Metadata.RECORDING_METHOD_MANUAL_ENTRY
+                },
+            ),
+            accentColor = SleepColor,
+            modifier = metricModifier(),
+        )
     }
 }
 

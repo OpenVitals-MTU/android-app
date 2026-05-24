@@ -19,8 +19,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.macroSplitInterpretation
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
@@ -29,6 +31,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -201,6 +204,11 @@ private fun LazyListScope.nutritionMetricContent(
                 valueFormatter = { metricData.valueDisplayFormatter(it).text },
             )
         }
+        nutritionDataConfidence(
+            state = state,
+            period = period,
+            metricData = metricData,
+        )
         nutritionGoal(
             metric = metric,
             state = state,
@@ -238,6 +246,27 @@ private fun LazyListScope.nutritionMetricContent(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
+    }
+}
+
+private fun LazyListScope.nutritionDataConfidence(
+    state: NutritionUiState,
+    period: DatePeriod,
+    metricData: NutritionMetricData,
+) {
+    val trackedValues = metricData.values.filter { it.value > 0.0 }
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = trackedValues.map { it.date },
+                sampleCount = state.entries.takeIf { it.isNotEmpty() }?.size ?: trackedValues.size,
+                sources = state.entries.map { it.source },
+                valueKind = DataValueKind.AGGREGATED,
+            ),
+            accentColor = metricData.color,
+            modifier = metricModifier(),
+        )
     }
 }
 

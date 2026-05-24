@@ -30,10 +30,12 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.DailyGoalValue
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.insights.crossMetricInsight
 import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -46,6 +48,7 @@ import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -115,6 +118,10 @@ fun MindfulnessScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            mindfulnessDataConfidence(
+                sessions = state.sessions,
+                period = period,
+            )
             mindfulnessGoal(
                 state = state,
                 period = period,
@@ -150,6 +157,26 @@ fun MindfulnessScreen(
                 )
             }
         }
+    }
+}
+
+private fun LazyListScope.mindfulnessDataConfidence(
+    sessions: List<MindfulnessSession>,
+    period: DatePeriod,
+) {
+    val zone = ZoneId.systemDefault()
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = sessions.map { it.startTime.atZone(zone).toLocalDate() },
+                sampleCount = sessions.size,
+                sources = sessions.map { it.source },
+                valueKind = DataValueKind.MEASURED,
+            ),
+            accentColor = MindfulnessColor,
+            modifier = metricModifier(),
+        )
     }
 }
 

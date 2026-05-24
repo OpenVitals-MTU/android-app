@@ -542,6 +542,27 @@
     <string name="macro_fiber">fiber %1$sg</string>
     <string name="macro_sugar">sugar %1$sg</string>
 
+    <string name="data_confidence_title">Data confidence</string>
+    <string name="data_confidence_high">High confidence</string>
+    <string name="data_confidence_medium">Medium confidence</string>
+    <string name="data_confidence_low">Low confidence</string>
+    <string name="data_confidence_coverage">%1$d of %2$d days tracked (%3$d%%)</string>
+    <string name="data_confidence_samples">%1$d records</string>
+    <string name="data_confidence_source_unavailable">Source details not available for this aggregate</string>
+    <string name="data_confidence_source_single">Source: %1$s</string>
+    <string name="data_confidence_source_mixed">Mixed sources: %1$s</string>
+    <string name="data_confidence_kind_measured">Measured Health Connect records</string>
+    <string name="data_confidence_kind_aggregated">Aggregated from Health Connect records</string>
+    <string name="data_confidence_kind_calculated">Calculated by OpenVitals</string>
+    <string name="data_confidence_kind_estimated">Estimated or derived value</string>
+    <string name="data_confidence_kind_mixed">Mixed measured and calculated data</string>
+    <string name="data_confidence_warning_low_coverage">Missing days can weaken averages and trends.</string>
+    <string name="data_confidence_warning_sparse">Sparse data: trends and statistics may be unstable.</string>
+    <string name="data_confidence_warning_mixed_sources">Source changes may explain jumps or duplicated-looking data.</string>
+    <string name="data_confidence_warning_manual">Manual entries are included in this period.</string>
+    <string name="data_confidence_warning_calculated">This value is derived, not directly measured.</string>
+    <string name="data_confidence_warning_no_sources">This aggregate does not expose source-level details.</string>
+
     <string name="privacy_policy_title">Privacy policy</string>
     <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device.</string>
     <string name="privacy_policy_body_2">This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.</string>

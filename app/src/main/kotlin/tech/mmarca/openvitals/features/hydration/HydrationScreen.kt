@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.crossMetricInsight
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -43,6 +45,7 @@ import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -110,6 +113,13 @@ fun HydrationScreen(
                 )
             }
             item {
+                HydrationDataConfidence(
+                    data = state.dailyHydration,
+                    period = period,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            item {
                 HydrationGoalCard(
                     state = state,
                     unitFormatter = unitFormatter,
@@ -134,6 +144,25 @@ fun HydrationScreen(
             )
         }
     }
+}
+
+@Composable
+private fun HydrationDataConfidence(
+    data: List<DailyHydration>,
+    period: DatePeriod,
+    modifier: Modifier = Modifier,
+) {
+    val tracked = data.filter { it.liters > 0.0 }
+    DataConfidenceCard(
+        confidence = dataConfidence(
+            period = period,
+            trackedDates = tracked.map { it.date },
+            sampleCount = tracked.size,
+            valueKind = DataValueKind.AGGREGATED,
+        ),
+        accentColor = HydrationColor,
+        modifier = modifier,
+    )
 }
 
 @Composable

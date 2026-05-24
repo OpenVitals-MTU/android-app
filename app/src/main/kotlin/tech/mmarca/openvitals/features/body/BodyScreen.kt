@@ -25,8 +25,10 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.BmiCategory
+import tech.mmarca.openvitals.core.insights.DataValueKind
 import tech.mmarca.openvitals.core.insights.PeriodComparison
 import tech.mmarca.openvitals.core.insights.bmiInterpretation
+import tech.mmarca.openvitals.core.insights.dataConfidence
 import tech.mmarca.openvitals.core.insights.periodComparison
 import tech.mmarca.openvitals.core.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -36,6 +38,7 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -207,6 +210,7 @@ private fun BodyMetricScreen(
                 baselineCurrentValue = state.bmi,
                 baselineValues = bmiBaselineValues(state.baselineWeightEntries, state.heightCm),
                 contextContent = {
+                    bmiDataConfidence(state, period)
                     bmiContextCard(state.bmi)
                 },
             )
@@ -242,6 +246,44 @@ private fun BodyMetricScreen(
     }
 }
 
+private fun LazyListScope.bmiDataConfidence(
+    state: BodyUiState,
+    period: DatePeriod,
+) {
+    bodyEntryDataConfidence(
+        period = period,
+        entries = state.weightEntries,
+        source = { it.source },
+        time = { it.time },
+        accentColor = WeightColor,
+        valueKind = DataValueKind.CALCULATED,
+    )
+}
+
+private fun <T> LazyListScope.bodyEntryDataConfidence(
+    period: DatePeriod,
+    entries: List<T>,
+    source: (T) -> String,
+    time: (T) -> java.time.Instant,
+    accentColor: Color,
+    valueKind: DataValueKind = DataValueKind.MEASURED,
+) {
+    item {
+        val zone = ZoneId.systemDefault()
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = entries.map { time(it).atZone(zone).toLocalDate() },
+                sampleCount = entries.size,
+                sources = entries.map(source),
+                valueKind = valueKind,
+            ),
+            accentColor = accentColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
 private fun LazyListScope.weightContent(
     state: BodyUiState,
     period: DatePeriod,
@@ -269,6 +311,13 @@ private fun LazyListScope.weightContent(
                 modifier = metricModifier(),
             )
         }
+        bodyEntryDataConfidence(
+            period = period,
+            entries = state.weightEntries,
+            source = { it.source },
+            time = { it.time },
+            accentColor = WeightColor,
+        )
         weightStatistics(
             entries = state.weightEntries,
             previousEntries = state.previousWeightEntries,
@@ -329,6 +378,13 @@ private fun LazyListScope.bodyFatContent(
                 )
             }
         }
+        bodyEntryDataConfidence(
+            period = period,
+            entries = state.bodyFatEntries,
+            source = { it.source },
+            time = { it.time },
+            accentColor = BodyFatColor,
+        )
         bodyFatStatistics(
             entries = state.bodyFatEntries,
             previousEntries = state.previousBodyFatEntries,
