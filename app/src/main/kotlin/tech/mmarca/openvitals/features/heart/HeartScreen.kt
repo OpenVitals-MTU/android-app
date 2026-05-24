@@ -60,6 +60,7 @@ import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
+import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
@@ -70,9 +71,11 @@ import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.LocalDate
@@ -212,6 +215,7 @@ private fun HeartMetricScreen(
     metric: HeartMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
     val requestVitalsPermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
@@ -230,9 +234,21 @@ private fun HeartMetricScreen(
         onSelectDate = viewModel::selectDate,
     ) { period ->
         when (metric) {
-            HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            HeartMetric.HRV -> hrvContent(state, period, unitFormatter, dateTimeFormatterProvider)
+            HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                chartDaySelection,
+            )
+            HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                chartDaySelection,
+            )
+            HeartMetric.HRV -> hrvContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
             HeartMetric.BLOOD_PRESSURE -> vitalsMetricContent(
                 state = state,
                 phase3Permissions = viewModel.vitalsPermissions,
@@ -245,7 +261,7 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                spO2Content(state, period, unitFormatter, dateTimeFormatterProvider)
+                spO2Content(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
             }
             HeartMetric.VO2_MAX -> vitalsMetricContent(
                 state = state,
@@ -259,7 +275,7 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                respiratoryRateContent(state, period, unitFormatter, dateTimeFormatterProvider)
+                respiratoryRateContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
             }
             HeartMetric.BODY_TEMPERATURE -> vitalsMetricContent(
                 state = state,
@@ -277,6 +293,7 @@ private fun LazyListScope.averageHeartRateContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     when {
         state.selectedRange == TimeRange.DAY && state.daySamples.isNotEmpty() -> {
@@ -324,7 +341,24 @@ private fun LazyListScope.averageHeartRateContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
+            }
+            chartDaySelection.selectedDate?.let { selectedDate ->
+                item {
+                    PaginatedEntryList(
+                        title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+                        entries = state.dailySummaries.filter { it.date == selectedDate },
+                    ) { summary, rowModifier ->
+                        HeartRateDayRow(
+                            summary = summary,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = rowModifier,
+                        )
+                    }
+                }
             }
             heartAggregateDataConfidence(
                 period = period,
@@ -368,6 +402,7 @@ private fun LazyListScope.restingHeartRateContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     when {
         state.selectedRange == TimeRange.DAY && state.dayRestingBpm != null -> {
@@ -419,6 +454,18 @@ private fun LazyListScope.restingHeartRateContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                )
+            }
+            chartDaySelection.selectedDate?.let { selectedDate ->
+                heartDailyEntries(
+                    entries = state.dailyRestingHR.filter { it.date == selectedDate },
+                    date = { it.date },
+                    value = { unitFormatter.heartRate(it.bpm).text },
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    accentColor = HeartColor,
+                    titleDate = selectedDate,
                 )
             }
             heartAggregateDataConfidence(
@@ -460,6 +507,7 @@ private fun LazyListScope.hrvContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     when {
         state.selectedRange == TimeRange.DAY && state.dayHrvMs != null -> {
@@ -510,6 +558,18 @@ private fun LazyListScope.hrvContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                )
+            }
+            chartDaySelection.selectedDate?.let { selectedDate ->
+                heartDailyEntries(
+                    entries = state.dailyHrv.filter { it.date == selectedDate },
+                    date = { it.date },
+                    value = { unitFormatter.hrv(it.rmssdMs).text },
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    accentColor = HeartColor,
+                    titleDate = selectedDate,
                 )
             }
             heartAggregateDataConfidence(
@@ -616,6 +676,7 @@ private fun LazyListScope.spO2Content(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     if (state.spO2.isNotEmpty()) {
         val sorted = state.spO2.sortedBy { it.time }
@@ -633,6 +694,18 @@ private fun LazyListScope.spO2Content(
                 }",
                 valueFormatter = { unitFormatter.percent(it).text },
                 modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            heartEntryRows(
+                entries = state.spO2.filter { it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate },
+                value = { unitFormatter.percent(it.percent).text },
+                source = { it.source },
+                time = { it.time },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                titleDate = selectedDate,
             )
         }
         heartRawDataConfidence(
@@ -725,6 +798,7 @@ private fun LazyListScope.respiratoryRateContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     if (state.respiratoryRate.isNotEmpty()) {
         item {
@@ -746,8 +820,22 @@ private fun LazyListScope.respiratoryRateContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            heartEntryRows(
+                entries = state.respiratoryRate.filter {
+                    it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
+                },
+                value = { unitFormatter.respiratoryRate(it.breathsPerMinute).text },
+                source = { it.source },
+                time = { it.time },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                titleDate = selectedDate,
+            )
         }
         heartRawDataConfidence(
             period = period,
@@ -1429,12 +1517,13 @@ private fun <T> LazyListScope.heartEntryRows(
     source: (T) -> String,
     time: (T) -> java.time.Instant,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    titleDate: LocalDate? = null,
 ) {
     if (entries.isEmpty()) return
 
     item {
         PaginatedEntryList(
-            title = stringResource(R.string.section_entries),
+            title = entryListTitle(titleDate, dateTimeFormatterProvider),
             entries = entries.sortedByDescending(time),
         ) { entry, rowModifier ->
             VitalsReadingRow(
@@ -1454,12 +1543,13 @@ private fun <T> LazyListScope.heartDailyEntries(
     value: (T) -> String,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     accentColor: Color,
+    titleDate: LocalDate? = null,
 ) {
     if (entries.isEmpty()) return
 
     item {
         PaginatedEntryList(
-            title = stringResource(R.string.section_entries),
+            title = entryListTitle(titleDate, dateTimeFormatterProvider),
             entries = entries.sortedByDescending(date),
         ) { entry, rowModifier ->
             HeartDailyEntryRow(

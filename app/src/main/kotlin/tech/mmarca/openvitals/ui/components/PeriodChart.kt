@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -96,6 +98,8 @@ fun PeriodBarChart(
     modifier: Modifier = Modifier,
     yearAggregation: PeriodBarAggregation = PeriodBarAggregation.SUM,
     chartHeight: Dp = 120.dp,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
     val buckets = remember(values, selectedRange, period, yearAggregation) {
@@ -109,6 +113,21 @@ fun PeriodBarChart(
     val maxValue = buckets.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
     val gridColor = accentColor.copy(alpha = 0.12f)
     val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
+    val chartTapModifier = if (
+        selectedRange == TimeRange.WEEK &&
+        onDateSelected != null &&
+        buckets.isNotEmpty()
+    ) {
+        Modifier.pointerInput(buckets, onDateSelected) {
+            detectTapGestures { offset ->
+                val slotWidth = size.width.toFloat() / buckets.size
+                val index = (offset.x / slotWidth).toInt().coerceIn(0, buckets.lastIndex)
+                onDateSelected(buckets[index].date)
+            }
+        }
+    } else {
+        Modifier
+    }
 
     Card(
         modifier = modifier,
@@ -126,6 +145,7 @@ fun PeriodBarChart(
             YAxisChart(
                 labels = chartYAxisLabels(0.0, maxValue, valueFormatter),
                 chartHeight = chartHeight,
+                canvasModifier = chartTapModifier,
             ) {
                 drawYAxisGuides(
                     gridColor = gridColor,
@@ -145,12 +165,22 @@ fun PeriodBarChart(
                 val minVisibleHeight = 4.dp.toPx()
 
                 buckets.forEachIndexed { index, bucket ->
+                    val slotLeft = index * slotWidth
+                    val isSelected = selectedDate == bucket.date && selectedRange == TimeRange.WEEK
+                    if (isSelected) {
+                        drawRoundRect(
+                            color = accentColor.copy(alpha = 0.16f),
+                            topLeft = Offset(slotLeft, 0f),
+                            size = Size(slotWidth, size.height),
+                            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                        )
+                    }
                     val value = bucket.value.coerceAtLeast(0.0)
                     if (value <= 0.0) return@forEachIndexed
 
                     val fraction = (value / maxValue).toFloat().coerceIn(0f, 1f)
                     val barHeight = (size.height * fraction).coerceAtLeast(minVisibleHeight)
-                    val left = index * slotWidth + (slotWidth - barWidth) / 2f
+                    val left = slotLeft + (slotWidth - barWidth) / 2f
                     val top = size.height - barHeight
                     val radius = (barWidth / 2f).coerceAtMost(8.dp.toPx())
 

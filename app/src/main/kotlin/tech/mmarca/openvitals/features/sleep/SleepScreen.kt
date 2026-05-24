@@ -53,8 +53,10 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
 import java.time.ZoneId
@@ -69,6 +71,7 @@ fun SleepScreen(
     onOpenSleepSession: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
     val dailySessions = remember(state.sessions, state.selectedDate, state.sleepRangeMode) {
         sleepSessionsForRange(
             sessions = state.sessions,
@@ -211,7 +214,29 @@ fun SleepScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         durationPoints = durationPoints,
+                        selectedDate = chartDaySelection.selectedDate,
+                        onDateSelected = chartDaySelection.onDateSelected,
                     )
+                }
+                chartDaySelection.selectedDate?.let { selectedDate ->
+                    item {
+                        PaginatedEntryList(
+                            title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+                            entries = sleepSessionsForRange(
+                                sessions = state.sessions,
+                                selectedDate = selectedDate,
+                                sleepRangeMode = state.sleepRangeMode,
+                            ).sortedByDescending { it.endTime },
+                        ) { session, rowModifier ->
+                            SleepSessionItem(
+                                session = session,
+                                unitFormatter = unitFormatter,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                onClick = { onOpenSleepSession(session.id) },
+                                modifier = rowModifier,
+                            )
+                        }
+                    }
                 }
                 sleepDataConfidence(
                     sessions = state.sessions,

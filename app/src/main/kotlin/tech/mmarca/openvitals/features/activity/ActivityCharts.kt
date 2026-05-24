@@ -53,6 +53,8 @@ internal fun StepsBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     PeriodHistoryChart(
         title = stringResource(R.string.metric_steps),
@@ -63,6 +65,8 @@ internal fun StepsBarChart(
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.steps })} ${stringResource(R.string.unit_steps)}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.count(it.roundToLong()) },
     )
 }
@@ -75,6 +79,8 @@ internal fun DistanceBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     MetricBarChartCard(
         title = stringResource(R.string.metric_distance),
@@ -85,6 +91,8 @@ internal fun DistanceBarChart(
         accentColor = DistanceColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.distance(it).text },
     )
 }
@@ -97,6 +105,8 @@ internal fun CaloriesBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     MetricBarChartCard(
         title = stringResource(R.string.metric_calories_burned),
@@ -107,6 +117,8 @@ internal fun CaloriesBarChart(
         accentColor = CaloriesColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.energy(it).text },
     )
 }
@@ -121,6 +133,8 @@ private fun MetricBarChartCard(
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String,
 ) {
     PeriodHistoryChart(
@@ -132,6 +146,8 @@ private fun MetricBarChartCard(
         summaryText = summaryText,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = valueFormatter,
     )
 }
@@ -144,6 +160,8 @@ internal fun FloorsBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     MetricBarChartCard(
         title = stringResource(R.string.metric_floors_climbed),
@@ -154,6 +172,8 @@ internal fun FloorsBarChart(
         accentColor = FloorsColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.count(it.roundToLong()) },
     )
 }
@@ -166,6 +186,8 @@ internal fun ActiveCaloriesBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     MetricBarChartCard(
         title = stringResource(R.string.metric_active_calories),
@@ -176,6 +198,8 @@ internal fun ActiveCaloriesBarChart(
         accentColor = ActiveCaloriesColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.energy(it).text },
     )
 }
@@ -188,6 +212,8 @@ internal fun ElevationBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val totalMeters = data.sumOf { it.elevationGainedMeters ?: 0.0 }
     MetricBarChartCard(
@@ -199,6 +225,8 @@ internal fun ElevationBarChart(
         accentColor = ElevationColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.elevation(it).text },
     )
 }

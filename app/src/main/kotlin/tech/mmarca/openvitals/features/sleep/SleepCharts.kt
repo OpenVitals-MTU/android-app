@@ -29,6 +29,8 @@ internal fun SleepDurationChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     durationPoints: List<SleepDurationPoint> = sleepDurationPoints(sessions, period, sleepRangeMode),
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val points = durationPoints
     val nightsWithSleep = points.filter { it.hours > 0.0 }
@@ -46,6 +48,8 @@ internal fun SleepDurationChart(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
         yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { "${unitFormatter.decimal(it, 1)}h" },
     )
 }

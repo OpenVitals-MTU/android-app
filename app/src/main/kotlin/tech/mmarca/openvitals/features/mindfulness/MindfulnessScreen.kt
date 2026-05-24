@@ -60,10 +60,13 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToLong
 
@@ -75,6 +78,7 @@ fun MindfulnessScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -116,7 +120,27 @@ fun MindfulnessScreen(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
+            }
+            chartDaySelection.selectedDate?.let { selectedDate ->
+                item {
+                    val zone = ZoneId.systemDefault()
+                    PaginatedEntryList(
+                        title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+                        entries = state.sessions
+                            .filter { it.startTime.atZone(zone).toLocalDate() == selectedDate }
+                            .sortedByDescending { it.startTime },
+                    ) { session, rowModifier ->
+                        MindfulnessSessionRow(
+                            session = session,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = rowModifier,
+                        )
+                    }
+                }
             }
             mindfulnessDataConfidence(
                 sessions = state.sessions,
@@ -190,6 +214,8 @@ private fun MindfulnessHistoryChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val zone = ZoneId.systemDefault()
     val values = sessions
@@ -211,6 +237,8 @@ private fun MindfulnessHistoryChart(
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.minutes(totalMinutes).text}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier.fillMaxWidth(),
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
     )
 }

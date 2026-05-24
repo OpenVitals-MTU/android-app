@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
+import java.time.LocalDate
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -26,6 +27,8 @@ internal fun HeartRateChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val sorted = summaries.sortedBy { it.date }
     val summaryText = if (sorted.isNotEmpty()) {
@@ -53,6 +56,8 @@ internal fun HeartRateChart(
         summaryText = summaryText,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
     )
 }
@@ -65,6 +70,8 @@ internal fun RestingHRChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val sorted = entries.sortedBy { it.date }
     val maxBpm = sorted.maxOfOrNull { it.bpm } ?: 80L
@@ -87,6 +94,8 @@ internal fun RestingHRChart(
         }",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
     )
 }
@@ -99,6 +108,8 @@ internal fun HRVChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val sorted = entries.sortedBy { it.date }
     val maxMs = sorted.maxOfOrNull { it.rmssdMs } ?: 100.0
@@ -121,6 +132,8 @@ internal fun HRVChart(
         }",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.hrv(it).text },
     )
 }

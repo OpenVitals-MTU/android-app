@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.NutritionColor
+import java.time.LocalDate
 
 @Composable
 internal fun EnergyBarChart(
@@ -22,6 +23,8 @@ internal fun EnergyBarChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     PeriodHistoryChart(
         title = stringResource(R.string.metric_calories_in),
@@ -32,6 +35,8 @@ internal fun EnergyBarChart(
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.energy(data.sumOf { it.energyKcal }).text}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.energy(it).text },
     )
 }

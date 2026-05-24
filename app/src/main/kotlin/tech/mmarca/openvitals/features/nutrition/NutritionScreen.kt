@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
+import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
@@ -43,10 +44,13 @@ import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.NutritionColor
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 enum class NutritionMetric {
@@ -126,6 +130,7 @@ private fun NutritionMetricScreen(
     metric: NutritionMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -144,6 +149,7 @@ private fun NutritionMetricScreen(
             period = period,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            chartDaySelection = chartDaySelection,
             onDecreaseGoal = viewModel::decreaseDailyGoal,
             onIncreaseGoal = viewModel::increaseDailyGoal,
         )
@@ -156,6 +162,7 @@ private fun LazyListScope.nutritionMetricContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -201,8 +208,28 @@ private fun LazyListScope.nutritionMetricContent(
                 summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${metricData.total.text}",
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
                 valueFormatter = { metricData.valueDisplayFormatter(it).text },
             )
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            item {
+                val zone = ZoneId.systemDefault()
+                PaginatedEntryList(
+                    title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+                    entries = state.entries
+                        .filter { it.time.atZone(zone).toLocalDate() == selectedDate }
+                        .sortedByDescending { it.time },
+                ) { entry, rowModifier ->
+                    NutritionEntryRow(
+                        entry = entry,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = rowModifier,
+                    )
+                }
+            }
         }
         nutritionDataConfidence(
             state = state,

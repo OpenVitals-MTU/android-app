@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -98,6 +100,8 @@ fun PeriodMonthHeatmap(
     summaryText: String,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val cells = remember(values, period) { periodMonthHeatmapCells(values, period) }
     val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
@@ -139,6 +143,7 @@ fun PeriodMonthHeatmap(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     rowCells.forEach { cell ->
+                        val date = cell.date
                         val cellColor = heatmapCellColor(
                             value = cell.value,
                             minPositiveValue = minPositiveValue,
@@ -146,16 +151,32 @@ fun PeriodMonthHeatmap(
                             isWithinLoadedPeriod = cell.isWithinLoadedPeriod,
                             accentColor = accentColor,
                         )
+                        val isSelected = date != null && date == selectedDate
+                        val cellModifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .background(cellColor, MaterialTheme.shapes.small)
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(2.dp, accentColor, MaterialTheme.shapes.small)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .then(
+                                if (date != null && cell.isWithinLoadedPeriod && onDateSelected != null) {
+                                    Modifier.clickable { onDateSelected(date) }
+                                } else {
+                                    Modifier
+                                },
+                            )
                         Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .background(cellColor, MaterialTheme.shapes.small),
+                            modifier = cellModifier,
                             contentAlignment = Alignment.Center,
                         ) {
-                            cell.date?.let { date ->
+                            date?.let {
                                 Text(
-                                    text = dayFormatter.format(date),
+                                    text = dayFormatter.format(it),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
@@ -235,6 +256,8 @@ fun PeriodHistoryChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     yearAggregation: PeriodBarAggregation = PeriodBarAggregation.SUM,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
     when (selectedRange) {
@@ -246,6 +269,8 @@ fun PeriodHistoryChart(
             summaryText = summaryText,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = modifier,
+            selectedDate = selectedDate,
+            onDateSelected = onDateSelected,
         )
         TimeRange.YEAR -> PeriodYearHeatmap(
             title = title,
@@ -266,6 +291,8 @@ fun PeriodHistoryChart(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = modifier,
             yearAggregation = yearAggregation,
+            selectedDate = selectedDate,
+            onDateSelected = onDateSelected,
             valueFormatter = valueFormatter,
         )
     }

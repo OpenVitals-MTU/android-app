@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
+import java.time.LocalDate
 import java.time.ZoneId
 
 @Composable
@@ -25,6 +26,8 @@ internal fun BodyFatLineChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val sorted = entries.sortedBy { it.time }
     val maxPct = sorted.maxOfOrNull { it.percent } ?: 30.0
@@ -41,6 +44,8 @@ internal fun BodyFatLineChart(
         } · ${stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.percent(it).text },
     )
 }
@@ -53,6 +58,8 @@ internal fun WeightLineChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val sorted = entries.sortedBy { it.time }
     val maxKg = sorted.maxOfOrNull { it.weightKg } ?: 100.0
@@ -69,6 +76,8 @@ internal fun WeightLineChart(
         } · ${stringResource(R.string.summary_entries, unitFormatter.count(sorted.size))}",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.weight(it).text },
     )
 }

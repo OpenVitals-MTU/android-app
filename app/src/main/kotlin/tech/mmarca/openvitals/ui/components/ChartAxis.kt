@@ -33,6 +33,7 @@ fun YAxisChart(
     labels: List<String>,
     chartHeight: Dp,
     modifier: Modifier = Modifier,
+    canvasModifier: Modifier = Modifier,
     axisWidth: Dp = ChartYAxisWidth,
     axisGap: Dp = ChartAxisGap,
     content: DrawScope.() -> Unit,
@@ -63,7 +64,8 @@ fun YAxisChart(
         Canvas(
             modifier = Modifier
                 .weight(1f)
-                .height(chartHeight),
+                .height(chartHeight)
+                .then(canvasModifier),
             onDraw = content,
         )
     }

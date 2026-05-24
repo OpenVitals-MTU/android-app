@@ -43,6 +43,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
@@ -52,8 +53,10 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
@@ -166,6 +169,7 @@ private fun ActivityMetricScreen(
     metric: ActivityMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -184,6 +188,7 @@ private fun ActivityMetricScreen(
                 period,
                 unitFormatter,
                 dateTimeFormatterProvider,
+                chartDaySelection,
                 viewModel::decreaseDailyGoal,
                 viewModel::increaseDailyGoal,
             )
@@ -192,6 +197,7 @@ private fun ActivityMetricScreen(
                 period,
                 unitFormatter,
                 dateTimeFormatterProvider,
+                chartDaySelection,
                 viewModel::decreaseDailyGoal,
                 viewModel::increaseDailyGoal,
             )
@@ -200,6 +206,7 @@ private fun ActivityMetricScreen(
                 period,
                 unitFormatter,
                 dateTimeFormatterProvider,
+                chartDaySelection,
                 viewModel::decreaseDailyGoal,
                 viewModel::increaseDailyGoal,
             )
@@ -208,6 +215,7 @@ private fun ActivityMetricScreen(
                 period,
                 unitFormatter,
                 dateTimeFormatterProvider,
+                chartDaySelection,
                 viewModel::decreaseDailyGoal,
                 viewModel::increaseDailyGoal,
             )
@@ -216,6 +224,7 @@ private fun ActivityMetricScreen(
                 period,
                 unitFormatter,
                 dateTimeFormatterProvider,
+                chartDaySelection,
                 viewModel::decreaseDailyGoal,
                 viewModel::increaseDailyGoal,
             )
@@ -224,6 +233,7 @@ private fun ActivityMetricScreen(
                 period,
                 unitFormatter,
                 dateTimeFormatterProvider,
+                chartDaySelection,
                 viewModel::decreaseDailyGoal,
                 viewModel::increaseDailyGoal,
             )
@@ -236,6 +246,7 @@ private fun LazyListScope.stepsContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -263,8 +274,20 @@ private fun LazyListScope.stepsContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            activityDailyEntries(
+                entries = state.dailySteps.filter { it.steps > 0L && it.date == selectedDate },
+                date = { it.date },
+                value = { DisplayValue(unitFormatter.count(it.steps), stringResource(R.string.unit_steps)) },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = StepsColor,
+                titleDate = selectedDate,
+            )
         }
         activityGoal(
             state = state,
@@ -341,6 +364,7 @@ private fun LazyListScope.distanceContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -369,8 +393,20 @@ private fun LazyListScope.distanceContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            activityDailyEntries(
+                entries = state.dailySteps.filter { it.distanceMeters > 0.0 && it.date == selectedDate },
+                date = { it.date },
+                value = { unitFormatter.distance(it.distanceMeters) },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = DistanceColor,
+                titleDate = selectedDate,
+            )
         }
         val values = state.dailySteps.map { it.distanceMeters }
         activityGoal(
@@ -431,6 +467,7 @@ private fun LazyListScope.caloriesContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -459,8 +496,20 @@ private fun LazyListScope.caloriesContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            activityDailyEntries(
+                entries = state.nutrition.filter { it.caloriesBurnedKcal > 0.0 && it.date == selectedDate },
+                date = { it.date },
+                value = { unitFormatter.energy(it.caloriesBurnedKcal) },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = CaloriesColor,
+                titleDate = selectedDate,
+            )
         }
         val values = state.nutrition.map { it.caloriesBurnedKcal }
         activityGoal(
@@ -521,6 +570,7 @@ private fun LazyListScope.activeCaloriesContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -549,8 +599,20 @@ private fun LazyListScope.activeCaloriesContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            activityDailyEntries(
+                entries = state.dailySteps.filter { it.activeCaloriesKcal != null && it.date == selectedDate },
+                date = { it.date },
+                value = { unitFormatter.energy(it.activeCaloriesKcal ?: 0.0) },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = ActiveCaloriesColor,
+                titleDate = selectedDate,
+            )
         }
         val values = state.dailySteps.map { it.activeCaloriesKcal ?: 0.0 }
         activityGoal(
@@ -616,6 +678,7 @@ private fun LazyListScope.floorsContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -644,8 +707,22 @@ private fun LazyListScope.floorsContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            activityDailyEntries(
+                entries = state.dailySteps.filter { it.floorsClimbed != null && it.date == selectedDate },
+                date = { it.date },
+                value = {
+                    DisplayValue(unitFormatter.count((it.floorsClimbed ?: 0).toLong()), stringResource(R.string.unit_floors))
+                },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = FloorsColor,
+                titleDate = selectedDate,
+            )
         }
         val values = state.dailySteps.map { (it.floorsClimbed ?: 0).toDouble() }
         activityGoal(
@@ -717,6 +794,7 @@ private fun LazyListScope.elevationContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
@@ -745,8 +823,20 @@ private fun LazyListScope.elevationContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            activityDailyEntries(
+                entries = state.dailySteps.filter { it.elevationGainedMeters != null && it.date == selectedDate },
+                date = { it.date },
+                value = { unitFormatter.elevation(it.elevationGainedMeters ?: 0.0) },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = ElevationColor,
+                titleDate = selectedDate,
+            )
         }
         val values = state.dailySteps.map { it.elevationGainedMeters ?: 0.0 }
         activityGoal(
@@ -962,11 +1052,12 @@ private fun <T> LazyListScope.activityDailyEntries(
     value: @Composable (T) -> DisplayValue,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     accentColor: Color,
+    titleDate: LocalDate? = null,
 ) {
     val sortedEntries = entries.sortedByDescending(date)
     item {
         PaginatedEntryList(
-            title = stringResource(R.string.section_entries),
+            title = entryListTitle(titleDate, dateTimeFormatterProvider),
             entries = sortedEntries,
         ) { entry, rowModifier ->
             ActivityDailyEntryRow(

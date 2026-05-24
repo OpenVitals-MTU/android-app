@@ -43,6 +43,8 @@ internal fun RespiratoryRateChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val dailyValues = entries
         .groupBy { it.time.atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
@@ -62,6 +64,8 @@ internal fun RespiratoryRateChart(
         }",
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier.fillMaxWidth(),
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.respiratoryRate(it).text },
     )
 }
@@ -142,6 +146,8 @@ internal fun VitalsLineChart(
     accentColor: Color,
     summary: String,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
     PeriodHistoryChart(
@@ -153,6 +159,8 @@ internal fun VitalsLineChart(
         summaryText = summary,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = valueFormatter,
     )
 }

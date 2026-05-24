@@ -58,10 +58,13 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.abs
 
@@ -73,6 +76,7 @@ fun HydrationScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -114,6 +118,18 @@ fun HydrationScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                )
+            }
+            chartDaySelection.selectedDate?.let { selectedDate ->
+                hydrationEntries(
+                    entries = state.hydrationEntries.filter {
+                        it.startTime.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
+                    },
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    titleDate = selectedDate,
                 )
             }
             item {
@@ -386,6 +402,8 @@ private fun HydrationHistoryChart(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val values = data.map { PeriodChartValue(date = it.date, value = it.liters) }
     val summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
@@ -401,6 +419,8 @@ private fun HydrationHistoryChart(
         summaryText = summaryText,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.hydration(it).text },
     )
 }
@@ -432,11 +452,12 @@ private fun LazyListScope.hydrationEntries(
     entries: List<HydrationEntry>,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    titleDate: LocalDate? = null,
 ) {
     val sortedEntries = entries.sortedByDescending { it.startTime }
     item {
         PaginatedEntryList(
-            title = stringResource(R.string.section_entries),
+            title = entryListTitle(titleDate, dateTimeFormatterProvider),
             entries = sortedEntries,
         ) { entry, rowModifier ->
             HydrationEntryRow(

@@ -41,6 +41,7 @@ import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
 import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
@@ -50,11 +51,14 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
+import java.time.LocalDate
 import java.time.ZoneId
 
 enum class BodyMetric {
@@ -175,6 +179,7 @@ private fun BodyMetricScreen(
     metric: BodyMetric,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -188,7 +193,7 @@ private fun BodyMetricScreen(
         onSelectDate = viewModel::selectDate,
     ) { period ->
         when (metric) {
-            BodyMetric.WEIGHT -> weightContent(state, period, unitFormatter, dateTimeFormatterProvider)
+            BodyMetric.WEIGHT -> weightContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
             BodyMetric.HEIGHT -> singleBodyMetricContent(
                 state = state,
                 period = period,
@@ -254,7 +259,7 @@ private fun BodyMetricScreen(
                     )
                 },
             )
-            BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider)
+            BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
                 state = state,
                 period = period,
@@ -410,6 +415,7 @@ private fun LazyListScope.weightContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     if (state.weightEntries.isNotEmpty()) {
         item { SectionHeader(stringResource(R.string.section_weight)) }
@@ -430,7 +436,27 @@ private fun LazyListScope.weightContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
             )
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            item {
+                val zone = ZoneId.systemDefault()
+                PaginatedEntryList(
+                    title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+                    entries = state.weightEntries
+                        .filter { it.time.atZone(zone).toLocalDate() == selectedDate }
+                        .sortedByDescending { it.time },
+                ) { entry, rowModifier ->
+                    WeightEntryRow(
+                        entry = entry,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = rowModifier,
+                    )
+                }
+            }
         }
         bodyEntryDataConfidence(
             period = period,
@@ -475,6 +501,7 @@ private fun LazyListScope.bodyFatContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
 ) {
     val latest = state.latestBodyFatPercent
     if (latest != null) {
@@ -498,6 +525,21 @@ private fun LazyListScope.bodyFatContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                )
+            }
+            chartDaySelection.selectedDate?.let { selectedDate ->
+                bodyReadingEntries(
+                    entries = state.bodyFatEntries.filter {
+                        it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
+                    },
+                    value = { unitFormatter.percent(it.percent).text },
+                    source = { it.source },
+                    time = { it.time },
+                    accentColor = BodyFatColor,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    titleDate = selectedDate,
                 )
             }
         }
@@ -837,11 +879,12 @@ private fun <T> LazyListScope.bodyReadingEntries(
     time: (T) -> java.time.Instant,
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    titleDate: LocalDate? = null,
 ) {
     val sortedEntries = entries.sortedByDescending(time)
     item {
         PaginatedEntryList(
-            title = stringResource(R.string.section_entries),
+            title = entryListTitle(titleDate, dateTimeFormatterProvider),
             entries = sortedEntries,
         ) { entry, rowModifier ->
             BodyReadingRow(
