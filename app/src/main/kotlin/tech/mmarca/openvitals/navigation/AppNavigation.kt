@@ -29,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -51,6 +52,7 @@ import tech.mmarca.openvitals.features.activity.ActivityScreen
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
 import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
+import tech.mmarca.openvitals.features.activity.dailyGoalKey
 import tech.mmarca.openvitals.features.body.BodyMetric
 import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
@@ -71,6 +73,7 @@ import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
 import tech.mmarca.openvitals.features.nutrition.NutritionMetric
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
+import tech.mmarca.openvitals.features.nutrition.dailyGoalKey
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
 import tech.mmarca.openvitals.features.settings.SettingsScreen
@@ -254,7 +257,11 @@ fun AppNavigation(
                         repository = activityRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
                         selectedMetric = ActivityMetric.STEPS,
+                        initialDailyGoal = preferencesRepository.dailyGoalFor(ActivityMetric.STEPS.dailyGoalKey),
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
+                        onDailyGoalChanged = { goal ->
+                            preferencesRepository.setDailyGoalFor(ActivityMetric.STEPS.dailyGoalKey, goal)
+                        },
                     )
                 }
                 ActivityScreen(
@@ -269,7 +276,11 @@ fun AppNavigation(
                     ActivitiesViewModel(
                         repository = activityRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
+                        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
+                        onDailyGoalChanged = { goal ->
+                            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES, goal)
+                        },
                     )
                 }
                 ActivitiesScreen(
@@ -303,8 +314,12 @@ fun AppNavigation(
                         repository = sleepRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
                         initialSleepRangeMode = preferencesRepository.sleepRangeMode,
+                        initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
                         sleepRangeModeFlow = preferencesRepository.sleepRangeModeFlow,
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
+                        onDailyGoalChanged = { goal ->
+                            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
+                        },
                     )
                 }
                 SleepScreen(
@@ -388,7 +403,11 @@ fun AppNavigation(
                         repository = nutritionRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
                         selectedMetric = NutritionMetric.CALORIES_IN,
+                        initialDailyGoal = preferencesRepository.dailyGoalFor(NutritionMetric.CALORIES_IN.dailyGoalKey),
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
+                        onDailyGoalChanged = { goal ->
+                            preferencesRepository.setDailyGoalFor(NutritionMetric.CALORIES_IN.dailyGoalKey, goal)
+                        },
                     )
                 }
                 NutritionScreen(
@@ -403,7 +422,11 @@ fun AppNavigation(
                     MindfulnessViewModel(
                         repository = mindfulnessRepository,
                         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+                        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
                         onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
+                        onDailyGoalChanged = { goal ->
+                            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
+                        },
                     )
                 }
                 MindfulnessScreen(
@@ -488,7 +511,11 @@ private fun MetricRouteContent(
                 repository = activityRepository,
                 initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
                 selectedMetric = activityMetric,
+                initialDailyGoal = preferencesRepository.dailyGoalFor(activityMetric.dailyGoalKey),
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
+                onDailyGoalChanged = { goal ->
+                    preferencesRepository.setDailyGoalFor(activityMetric.dailyGoalKey, goal)
+                },
             )
         }
         ActivityScreen(
@@ -543,7 +570,11 @@ private fun MetricRouteContent(
                 repository = nutritionRepository,
                 initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
                 selectedMetric = nutritionMetric,
+                initialDailyGoal = preferencesRepository.dailyGoalFor(nutritionMetric.dailyGoalKey),
                 onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
+                onDailyGoalChanged = { goal ->
+                    preferencesRepository.setDailyGoalFor(nutritionMetric.dailyGoalKey, goal)
+                },
             )
         }
         NutritionScreen(
@@ -561,7 +592,11 @@ private fun MetricRouteContent(
                 ActivitiesViewModel(
                     repository = activityRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
+                    initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
+                    onDailyGoalChanged = { goal ->
+                        preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES, goal)
+                    },
                 )
             }
             ActivitiesScreen(
@@ -577,8 +612,12 @@ private fun MetricRouteContent(
                     repository = sleepRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
                     initialSleepRangeMode = preferencesRepository.sleepRangeMode,
+                    initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
                     sleepRangeModeFlow = preferencesRepository.sleepRangeModeFlow,
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
+                    onDailyGoalChanged = { goal ->
+                        preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
+                    },
                 )
             }
             SleepScreen(
@@ -609,7 +648,11 @@ private fun MetricRouteContent(
                 MindfulnessViewModel(
                     repository = mindfulnessRepository,
                     initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+                    initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
                     onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
+                    onDailyGoalChanged = { goal ->
+                        preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
+                    },
                 )
             }
             MindfulnessScreen(

@@ -22,11 +22,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.DailyGoalDirection
+import tech.mmarca.openvitals.core.insights.DailyGoalValue
+import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.ui.components.DailyGoalCard
+import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -71,12 +76,54 @@ fun ActivityScreen(
         onSelectDate = viewModel::selectDate,
     ) { period ->
         when (metric) {
-            ActivityMetric.STEPS -> stepsContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            ActivityMetric.DISTANCE -> distanceContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            ActivityMetric.CALORIES_BURNED -> caloriesContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            ActivityMetric.ACTIVE_CALORIES -> activeCaloriesContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            ActivityMetric.FLOORS -> floorsContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            ActivityMetric.ELEVATION -> elevationContent(state, period, unitFormatter, dateTimeFormatterProvider)
+            ActivityMetric.STEPS -> stepsContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                viewModel::decreaseDailyGoal,
+                viewModel::increaseDailyGoal,
+            )
+            ActivityMetric.DISTANCE -> distanceContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                viewModel::decreaseDailyGoal,
+                viewModel::increaseDailyGoal,
+            )
+            ActivityMetric.CALORIES_BURNED -> caloriesContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                viewModel::decreaseDailyGoal,
+                viewModel::increaseDailyGoal,
+            )
+            ActivityMetric.ACTIVE_CALORIES -> activeCaloriesContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                viewModel::decreaseDailyGoal,
+                viewModel::increaseDailyGoal,
+            )
+            ActivityMetric.FLOORS -> floorsContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                viewModel::decreaseDailyGoal,
+                viewModel::increaseDailyGoal,
+            )
+            ActivityMetric.ELEVATION -> elevationContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                viewModel::decreaseDailyGoal,
+                viewModel::increaseDailyGoal,
+            )
         }
     }
 }
@@ -86,6 +133,8 @@ private fun LazyListScope.stepsContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.dailySteps.isNotEmpty()) {
         item {
@@ -114,6 +163,20 @@ private fun LazyListScope.stepsContent(
                 )
             }
         }
+        activityGoal(
+            state = state,
+            period = period,
+            values = state.dailySteps.map { DailyGoalValue(it.date, it.steps.toDouble()) },
+            unitFormatter = unitFormatter,
+            icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
+            accentColor = StepsColor,
+            direction = ActivityMetric.STEPS.dailyGoalKey.direction,
+            goalFormatter = {
+                DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_steps))
+            },
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             total = { DisplayValue(unitFormatter.count(state.dailySteps.sumOf { it.steps }), stringResource(R.string.unit_steps)) },
@@ -132,6 +195,7 @@ private fun LazyListScope.stepsContent(
             activeDays = state.dailySteps.count { it.steps > 0L },
             icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
             accentColor = StepsColor,
+            includeHeader = false,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_steps, R.string.message_no_step_updates, Icons.AutoMirrored.Outlined.DirectionsWalk, StepsColor)
@@ -143,6 +207,8 @@ private fun LazyListScope.distanceContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.dailySteps.any { it.distanceMeters > 0.0 }) {
         item {
@@ -173,6 +239,18 @@ private fun LazyListScope.distanceContent(
             }
         }
         val values = state.dailySteps.map { it.distanceMeters }
+        activityGoal(
+            state = state,
+            period = period,
+            values = state.dailySteps.map { DailyGoalValue(it.date, it.distanceMeters) },
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.Straighten,
+            accentColor = DistanceColor,
+            direction = ActivityMetric.DISTANCE.dailyGoalKey.direction,
+            goalFormatter = { unitFormatter.distance(it) },
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             total = { unitFormatter.distance(values.sum()) },
@@ -181,6 +259,7 @@ private fun LazyListScope.distanceContent(
             activeDays = values.count { it > 0.0 },
             icon = Icons.Outlined.Straighten,
             accentColor = DistanceColor,
+            includeHeader = false,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_distance, R.string.message_no_distance_updates, Icons.Outlined.Straighten, DistanceColor)
@@ -192,6 +271,8 @@ private fun LazyListScope.caloriesContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.nutrition.any { it.caloriesBurnedKcal > 0.0 }) {
         item {
@@ -222,6 +303,18 @@ private fun LazyListScope.caloriesContent(
             }
         }
         val values = state.nutrition.map { it.caloriesBurnedKcal }
+        activityGoal(
+            state = state,
+            period = period,
+            values = state.nutrition.map { DailyGoalValue(it.date, it.caloriesBurnedKcal) },
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.LocalFireDepartment,
+            accentColor = CaloriesColor,
+            direction = ActivityMetric.CALORIES_BURNED.dailyGoalKey.direction,
+            goalFormatter = { unitFormatter.energy(it) },
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             total = { unitFormatter.energy(values.sum()) },
@@ -230,6 +323,7 @@ private fun LazyListScope.caloriesContent(
             activeDays = values.count { it > 0.0 },
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = CaloriesColor,
+            includeHeader = false,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_calories_burned, R.string.message_no_calories_burned, Icons.Outlined.LocalFireDepartment, CaloriesColor)
@@ -241,6 +335,8 @@ private fun LazyListScope.activeCaloriesContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.dailySteps.any { it.activeCaloriesKcal != null }) {
         item {
@@ -271,6 +367,18 @@ private fun LazyListScope.activeCaloriesContent(
             }
         }
         val values = state.dailySteps.map { it.activeCaloriesKcal ?: 0.0 }
+        activityGoal(
+            state = state,
+            period = period,
+            values = state.dailySteps.map { DailyGoalValue(it.date, it.activeCaloriesKcal ?: 0.0) },
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.LocalFireDepartment,
+            accentColor = ActiveCaloriesColor,
+            direction = ActivityMetric.ACTIVE_CALORIES.dailyGoalKey.direction,
+            goalFormatter = { unitFormatter.energy(it) },
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             total = { unitFormatter.energy(values.sum()) },
@@ -279,6 +387,7 @@ private fun LazyListScope.activeCaloriesContent(
             activeDays = values.count { it > 0.0 },
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = ActiveCaloriesColor,
+            includeHeader = false,
         )
     } else if (!state.isLoading) {
         noMetricData(
@@ -295,6 +404,8 @@ private fun LazyListScope.floorsContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.dailySteps.any { it.floorsClimbed != null }) {
         item {
@@ -325,6 +436,20 @@ private fun LazyListScope.floorsContent(
             }
         }
         val values = state.dailySteps.map { (it.floorsClimbed ?: 0).toDouble() }
+        activityGoal(
+            state = state,
+            period = period,
+            values = state.dailySteps.map { DailyGoalValue(it.date, (it.floorsClimbed ?: 0).toDouble()) },
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.Stairs,
+            accentColor = FloorsColor,
+            direction = ActivityMetric.FLOORS.dailyGoalKey.direction,
+            goalFormatter = {
+                DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_floors))
+            },
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             total = { DisplayValue(unitFormatter.count(values.sum().roundToLong()), stringResource(R.string.unit_floors)) },
@@ -338,6 +463,7 @@ private fun LazyListScope.floorsContent(
             activeDays = values.count { it > 0.0 },
             icon = Icons.Outlined.Stairs,
             accentColor = FloorsColor,
+            includeHeader = false,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_floors_climbed, R.string.message_no_floors_climbed, Icons.Outlined.Stairs, FloorsColor)
@@ -349,6 +475,8 @@ private fun LazyListScope.elevationContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.dailySteps.any { it.elevationGainedMeters != null }) {
         item {
@@ -379,6 +507,18 @@ private fun LazyListScope.elevationContent(
             }
         }
         val values = state.dailySteps.map { it.elevationGainedMeters ?: 0.0 }
+        activityGoal(
+            state = state,
+            period = period,
+            values = state.dailySteps.map { DailyGoalValue(it.date, it.elevationGainedMeters ?: 0.0) },
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.Terrain,
+            accentColor = ElevationColor,
+            direction = ActivityMetric.ELEVATION.dailyGoalKey.direction,
+            goalFormatter = { unitFormatter.elevation(it) },
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         activityStatistics(
             unitFormatter = unitFormatter,
             total = { unitFormatter.elevation(values.sum()) },
@@ -387,9 +527,52 @@ private fun LazyListScope.elevationContent(
             activeDays = values.count { it > 0.0 },
             icon = Icons.Outlined.Terrain,
             accentColor = ElevationColor,
+            includeHeader = false,
         )
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_elevation_gained, R.string.message_no_elevation, Icons.Outlined.Terrain, ElevationColor)
+    }
+}
+
+private fun LazyListScope.activityGoal(
+    state: ActivityUiState,
+    period: DatePeriod,
+    values: List<DailyGoalValue>,
+    unitFormatter: UnitFormatter,
+    icon: ImageVector,
+    accentColor: Color,
+    direction: DailyGoalDirection,
+    goalFormatter: @Composable (Double) -> DisplayValue,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+) {
+    val progress = dailyGoalProgress(
+        values = values,
+        period = period,
+        target = state.dailyGoal,
+        direction = direction,
+    )
+    item {
+        DailyGoalCard(
+            goal = goalFormatter(state.dailyGoal),
+            progress = progress,
+            icon = icon,
+            accentColor = accentColor,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+            modifier = metricModifier(),
+        )
+    }
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        DailyGoalStatistics(
+            progress = progress,
+            averageGap = goalFormatter(progress.averageGapToGoal),
+            unitFormatter = unitFormatter,
+            icon = icon,
+            accentColor = accentColor,
+            modifier = metricModifier(),
+        )
     }
 }
 
@@ -401,8 +584,11 @@ private fun LazyListScope.activityStatistics(
     activeDays: Int,
     icon: ImageVector,
     accentColor: Color,
+    includeHeader: Boolean = true,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    if (includeHeader) {
+        item { SectionHeader(stringResource(R.string.section_statistics)) }
+    }
     item {
         val totalValue = total()
         val averageValue = average()

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
@@ -28,11 +29,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.DailyGoalValue
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.ui.components.DailyGoalCard
+import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -78,9 +84,18 @@ fun ActivitiesScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            workoutGoal(
+                state = state,
+                period = period,
+                values = workoutDailyGoalValues(state.workouts),
+                unitFormatter = unitFormatter,
+                onDecreaseGoal = viewModel::decreaseDailyGoal,
+                onIncreaseGoal = viewModel::increaseDailyGoal,
+            )
             workoutStatistics(
                 workouts = state.workouts,
                 unitFormatter = unitFormatter,
+                includeHeader = false,
             )
             item { SectionHeader(stringResource(R.string.section_activities)) }
             items(state.workouts) { workout ->
@@ -140,11 +155,53 @@ private fun WorkoutHistoryChart(
     )
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.workoutStatistics(
+private fun LazyListScope.workoutGoal(
+    state: ActivitiesUiState,
+    period: DatePeriod,
+    values: List<DailyGoalValue>,
+    unitFormatter: UnitFormatter,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+) {
+    val goalKey = MetricDailyGoalKey.WORKOUT_MINUTES
+    val progress = dailyGoalProgress(
+        values = values,
+        period = period,
+        target = state.dailyGoalMinutes,
+        direction = goalKey.direction,
+    )
+    item {
+        DailyGoalCard(
+            goal = unitFormatter.minutes(state.dailyGoalMinutes.roundToLong()),
+            progress = progress,
+            icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+            accentColor = WorkoutColor,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+            modifier = metricModifier(),
+        )
+    }
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        DailyGoalStatistics(
+            progress = progress,
+            averageGap = unitFormatter.minutes(progress.averageGapToGoal.roundToLong()),
+            unitFormatter = unitFormatter,
+            icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+            accentColor = WorkoutColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.workoutStatistics(
     workouts: List<ExerciseData>,
     unitFormatter: UnitFormatter,
+    includeHeader: Boolean = true,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    if (includeHeader) {
+        item { SectionHeader(stringResource(R.string.section_statistics)) }
+    }
     item {
         val totalMs = workouts.sumOf { it.durationMs.coerceAtLeast(0L) }
         val averageMs = workouts.takeIf { it.isNotEmpty() }
@@ -183,10 +240,27 @@ private fun androidx.compose.foundation.lazy.LazyListScope.workoutStatistics(
                     accentColor = WorkoutColor,
                 ),
             ),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = metricModifier(),
         )
     }
 }
+
+private fun workoutDailyGoalValues(workouts: List<ExerciseData>): List<DailyGoalValue> {
+    val zone = ZoneId.systemDefault()
+    return workouts
+        .groupBy { it.startTime.atZone(zone).toLocalDate() }
+        .map { (date, dayWorkouts) ->
+            DailyGoalValue(
+                date = date,
+                value = dayWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
+            )
+        }
+}
+
+private fun metricModifier(): Modifier =
+    Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 8.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -17,6 +18,7 @@ data class ActivitiesUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
+    val dailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
     val workouts: List<ExerciseData> = emptyList(),
     val error: String? = null,
 )
@@ -24,10 +26,18 @@ data class ActivitiesUiState(
 class ActivitiesViewModel(
     private val repository: ActivityRepository,
     initialRange: TimeRange = TimeRange.WEEK,
+    initialDailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
     private val onRangeSelected: (TimeRange) -> Unit = {},
+    private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ActivitiesUiState(selectedRange = initialRange))
+    private val goalKey = MetricDailyGoalKey.WORKOUT_MINUTES
+    private val _uiState = MutableStateFlow(
+        ActivitiesUiState(
+            selectedRange = initialRange,
+            dailyGoalMinutes = goalKey.normalize(initialDailyGoalMinutes),
+        )
+    )
     val uiState: StateFlow<ActivitiesUiState> = _uiState.asStateFlow()
 
     init {
@@ -57,6 +67,20 @@ class ActivitiesViewModel(
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodSelection.selectDate(date))
         load()
+    }
+
+    fun increaseDailyGoal() {
+        setDailyGoalMinutes(_uiState.value.dailyGoalMinutes + goalKey.step)
+    }
+
+    fun decreaseDailyGoal() {
+        setDailyGoalMinutes(_uiState.value.dailyGoalMinutes - goalKey.step)
+    }
+
+    fun setDailyGoalMinutes(minutes: Double) {
+        val goal = goalKey.normalize(minutes)
+        onDailyGoalChanged(goal)
+        _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
     }
 
     fun load() {

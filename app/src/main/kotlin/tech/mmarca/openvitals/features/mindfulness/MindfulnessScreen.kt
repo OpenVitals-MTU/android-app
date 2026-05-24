@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -27,11 +28,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.DailyGoalValue
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.ui.components.DailyGoalCard
+import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -97,9 +103,18 @@ fun MindfulnessScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            mindfulnessGoal(
+                state = state,
+                period = period,
+                values = mindfulnessDailyGoalValues(state.sessions),
+                unitFormatter = unitFormatter,
+                onDecreaseGoal = viewModel::decreaseDailyGoal,
+                onIncreaseGoal = viewModel::increaseDailyGoal,
+            )
             mindfulnessStatistics(
                 sessions = state.sessions,
                 unitFormatter = unitFormatter,
+                includeHeader = false,
             )
             item { SectionHeader(stringResource(R.string.section_sessions)) }
             items(state.sessions) { session ->
@@ -149,11 +164,53 @@ private fun MindfulnessHistoryChart(
     )
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.mindfulnessStatistics(
+private fun LazyListScope.mindfulnessGoal(
+    state: MindfulnessUiState,
+    period: DatePeriod,
+    values: List<DailyGoalValue>,
+    unitFormatter: UnitFormatter,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+) {
+    val goalKey = MetricDailyGoalKey.MINDFULNESS_MINUTES
+    val progress = dailyGoalProgress(
+        values = values,
+        period = period,
+        target = state.dailyGoalMinutes,
+        direction = goalKey.direction,
+    )
+    item {
+        DailyGoalCard(
+            goal = unitFormatter.minutes(state.dailyGoalMinutes.roundToLong()),
+            progress = progress,
+            icon = Icons.Outlined.SelfImprovement,
+            accentColor = MindfulnessColor,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+            modifier = metricModifier(),
+        )
+    }
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        DailyGoalStatistics(
+            progress = progress,
+            averageGap = unitFormatter.minutes(progress.averageGapToGoal.roundToLong()),
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.SelfImprovement,
+            accentColor = MindfulnessColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.mindfulnessStatistics(
     sessions: List<MindfulnessSession>,
     unitFormatter: UnitFormatter,
+    includeHeader: Boolean = true,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    if (includeHeader) {
+        item { SectionHeader(stringResource(R.string.section_statistics)) }
+    }
     item {
         val totalMs = sessions.sumOf { it.durationMs.coerceAtLeast(0L) }
         val averageMs = sessions.takeIf { it.isNotEmpty() }
@@ -192,10 +249,27 @@ private fun androidx.compose.foundation.lazy.LazyListScope.mindfulnessStatistics
                     accentColor = MindfulnessColor,
                 ),
             ),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = metricModifier(),
         )
     }
 }
+
+private fun mindfulnessDailyGoalValues(sessions: List<MindfulnessSession>): List<DailyGoalValue> {
+    val zone = ZoneId.systemDefault()
+    return sessions
+        .groupBy { it.startTime.atZone(zone).toLocalDate() }
+        .map { (date, daySessions) ->
+            DailyGoalValue(
+                date = date,
+                value = daySessions.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
+            )
+        }
+}
+
+private fun metricModifier(): Modifier =
+    Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 8.dp)
 
 @Composable
 private fun MindfulnessSummary(

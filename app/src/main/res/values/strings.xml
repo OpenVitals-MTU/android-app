@@ -186,8 +186,13 @@
     <string name="stat_longest_goal_streak">Longest streak</string>
     <string name="stat_goals_met">Goals met</string>
     <string name="stat_success_rate">Success rate</string>
+    <string name="stat_average_gap">Avg gap</string>
     <string name="legend_less">Less</string>
     <string name="legend_more">More</string>
+    <string name="daily_goal">Daily goal</string>
+    <string name="goal_progress">%1$d of %2$d tracked days met</string>
+    <string name="cd_decrease_daily_goal">Decrease daily goal</string>
+    <string name="cd_increase_daily_goal">Increase daily goal</string>
     <string name="hydration_daily_goal">Daily goal</string>
     <string name="hydration_goal_progress">%1$d of %2$d tracked days met</string>
     <string name="cd_decrease_hydration_goal">Decrease hydration goal</string>

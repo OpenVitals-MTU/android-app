@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.sleep
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
@@ -23,6 +24,7 @@ data class SleepUiState(
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    val dailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
     val sessions: List<SleepData> = emptyList(),
     val error: String? = null,
 )
@@ -31,14 +33,18 @@ class SleepViewModel(
     private val repository: SleepRepository,
     initialRange: TimeRange = TimeRange.WEEK,
     initialSleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    initialDailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
     sleepRangeModeFlow: Flow<SleepRangeMode>? = null,
     private val onRangeSelected: (TimeRange) -> Unit = {},
+    private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
+    private val goalKey = MetricDailyGoalKey.SLEEP_HOURS
     private val _uiState = MutableStateFlow(
         SleepUiState(
             selectedRange = initialRange,
             sleepRangeMode = initialSleepRangeMode,
+            dailyGoalHours = goalKey.normalize(initialDailyGoalHours),
         )
     )
     val uiState: StateFlow<SleepUiState> = _uiState.asStateFlow()
@@ -79,6 +85,20 @@ class SleepViewModel(
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodSelection.selectDate(date))
         load()
+    }
+
+    fun increaseDailyGoal() {
+        setDailyGoalHours(_uiState.value.dailyGoalHours + goalKey.step)
+    }
+
+    fun decreaseDailyGoal() {
+        setDailyGoalHours(_uiState.value.dailyGoalHours - goalKey.step)
+    }
+
+    fun setDailyGoalHours(hours: Double) {
+        val goal = goalKey.normalize(hours)
+        onDailyGoalChanged(goal)
+        _uiState.value = _uiState.value.copy(dailyGoalHours = goal)
     }
 
     fun load() {

@@ -18,11 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.DailyGoalValue
+import tech.mmarca.openvitals.core.insights.dailyGoalProgress
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
+import tech.mmarca.openvitals.ui.components.DailyGoalCard
+import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -73,6 +77,8 @@ fun NutritionScreen(
             period = period,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onDecreaseGoal = viewModel::decreaseDailyGoal,
+            onIncreaseGoal = viewModel::increaseDailyGoal,
         )
     }
 }
@@ -83,6 +89,8 @@ private fun LazyListScope.nutritionMetricContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
 ) {
     val metricData = nutritionMetricData(metric, state.dailyMacros, unitFormatter)
     if (state.dailyMacros.isEmpty() && !state.isLoading) {
@@ -127,9 +135,19 @@ private fun LazyListScope.nutritionMetricContent(
                 valueFormatter = { metricData.valueDisplayFormatter(it).text },
             )
         }
+        nutritionGoal(
+            metric = metric,
+            state = state,
+            period = period,
+            metricData = metricData,
+            unitFormatter = unitFormatter,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+        )
         nutritionStatistics(
             metricData = metricData,
             unitFormatter = unitFormatter,
+            includeHeader = false,
         )
     }
 
@@ -182,13 +200,55 @@ private fun nutritionMetricData(
             color = fatMetricColor,
             valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
         )
+}
+
+private fun LazyListScope.nutritionGoal(
+    metric: NutritionMetric,
+    state: NutritionUiState,
+    period: DatePeriod,
+    metricData: NutritionMetricData,
+    unitFormatter: UnitFormatter,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+) {
+    val progress = dailyGoalProgress(
+        values = metricData.values.map { DailyGoalValue(date = it.date, value = it.value) },
+        period = period,
+        target = state.dailyGoal,
+        direction = metric.dailyGoalKey.direction,
+    )
+    item {
+        DailyGoalCard(
+            goal = metricData.valueDisplayFormatter(state.dailyGoal),
+            progress = progress,
+            icon = Icons.Outlined.Restaurant,
+            accentColor = metricData.color,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+            modifier = metricModifier(),
+        )
     }
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        DailyGoalStatistics(
+            progress = progress,
+            averageGap = metricData.valueDisplayFormatter(progress.averageGapToGoal),
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.Restaurant,
+            accentColor = metricData.color,
+            modifier = metricModifier(),
+        )
+    }
+}
 
 private fun LazyListScope.nutritionStatistics(
     metricData: NutritionMetricData,
     unitFormatter: UnitFormatter,
+    includeHeader: Boolean = true,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    if (includeHeader) {
+        item { SectionHeader(stringResource(R.string.section_statistics)) }
+    }
     item {
         val values = metricData.values.map { it.value }
         val loggedDays = values.count { it > 0.0 }

@@ -20,14 +20,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.DailyGoalValue
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.insights.dailyGoalProgress
+import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepSessionsForRange
+import tech.mmarca.openvitals.ui.components.DailyGoalCard
+import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -105,9 +112,18 @@ fun SleepScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
+                sleepGoal(
+                    state = state,
+                    period = period,
+                    durationPoints = durationPoints,
+                    unitFormatter = unitFormatter,
+                    onDecreaseGoal = viewModel::decreaseDailyGoal,
+                    onIncreaseGoal = viewModel::increaseDailyGoal,
+                )
                 sleepStatistics(
                     durationPoints = durationPoints,
                     unitFormatter = unitFormatter,
+                    includeHeader = false,
                 )
 
                 if (dailySessions.size > 1) {
@@ -141,9 +157,18 @@ fun SleepScreen(
                         durationPoints = durationPoints,
                     )
                 }
+                sleepGoal(
+                    state = state,
+                    period = period,
+                    durationPoints = durationPoints,
+                    unitFormatter = unitFormatter,
+                    onDecreaseGoal = viewModel::decreaseDailyGoal,
+                    onIncreaseGoal = viewModel::increaseDailyGoal,
+                )
                 sleepStatistics(
                     durationPoints = durationPoints,
                     unitFormatter = unitFormatter,
+                    includeHeader = false,
                 )
 
                 item { SectionHeader(stringResource(R.string.section_sleep_sessions)) }
@@ -197,11 +222,53 @@ private fun dailySleepTimeRangeText(
     return "${dateFormatter.format(selectedDate)}  ·  $ranges"
 }
 
+private fun LazyListScope.sleepGoal(
+    state: SleepUiState,
+    period: DatePeriod,
+    durationPoints: List<SleepDurationPoint>,
+    unitFormatter: UnitFormatter,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+) {
+    val goalKey = MetricDailyGoalKey.SLEEP_HOURS
+    val progress = dailyGoalProgress(
+        values = durationPoints.map { DailyGoalValue(date = it.date, value = it.hours) },
+        period = period,
+        target = state.dailyGoalHours,
+        direction = goalKey.direction,
+    )
+    item {
+        DailyGoalCard(
+            goal = sleepHoursDisplay(state.dailyGoalHours, unitFormatter),
+            progress = progress,
+            icon = Icons.Outlined.Bed,
+            accentColor = SleepColor,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+            modifier = metricModifier(),
+        )
+    }
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        DailyGoalStatistics(
+            progress = progress,
+            averageGap = sleepHoursDisplay(progress.averageGapToGoal, unitFormatter),
+            unitFormatter = unitFormatter,
+            icon = Icons.Outlined.Bed,
+            accentColor = SleepColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
 private fun LazyListScope.sleepStatistics(
     durationPoints: List<SleepDurationPoint>,
     unitFormatter: UnitFormatter,
+    includeHeader: Boolean = true,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    if (includeHeader) {
+        item { SectionHeader(stringResource(R.string.section_statistics)) }
+    }
     item {
         val nights = durationPoints.filter { it.hours > 0.0 }
         val totalHours = nights.sumOf { it.hours }
@@ -239,7 +306,15 @@ private fun LazyListScope.sleepStatistics(
                     accentColor = SleepColor,
                 ),
             ),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = metricModifier(),
         )
     }
 }
+
+private fun metricModifier(): Modifier =
+    Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 8.dp)
+
+private fun sleepHoursDisplay(hours: Double, unitFormatter: UnitFormatter): DisplayValue =
+    DisplayValue(unitFormatter.duration((hours * 3_600_000).roundToLong()), "")

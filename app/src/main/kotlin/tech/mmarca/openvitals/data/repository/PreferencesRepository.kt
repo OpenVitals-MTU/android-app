@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.content.Context
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.AppLanguage
@@ -73,6 +74,16 @@ class PreferencesRepository(context: Context) {
 
     fun setTimeRangeFor(key: PeriodRangePreferenceKey, range: TimeRange) {
         prefs.edit().putString(key.storageKey, range.name).apply()
+    }
+
+    fun dailyGoalFor(key: MetricDailyGoalKey): Double =
+        prefs.getFloat(key.storageKey, key.defaultValue.toFloat()).toDouble()
+            .let(key::normalize)
+
+    fun setDailyGoalFor(key: MetricDailyGoalKey, value: Double) {
+        prefs.edit()
+            .putFloat(key.storageKey, key.normalize(value).toFloat())
+            .apply()
     }
 
     fun dashboardWidgetOrder(): List<String>? =

@@ -186,8 +186,13 @@
     <string name="stat_longest_goal_streak">Racha más larga</string>
     <string name="stat_goals_met">Objetivos cumplidos</string>
     <string name="stat_success_rate">Tasa de éxito</string>
+    <string name="stat_average_gap">Diferencia media</string>
     <string name="legend_less">Menos</string>
     <string name="legend_more">Más</string>
+    <string name="daily_goal">Objetivo diario</string>
+    <string name="goal_progress">%1$d de %2$d días registrados cumplidos</string>
+    <string name="cd_decrease_daily_goal">Reducir objetivo diario</string>
+    <string name="cd_increase_daily_goal">Aumentar objetivo diario</string>
     <string name="hydration_daily_goal">Objetivo diario</string>
     <string name="hydration_goal_progress">%1$d de %2$d días registrados cumplidos</string>
     <string name="cd_decrease_hydration_goal">Reducir objetivo de hidratación</string>

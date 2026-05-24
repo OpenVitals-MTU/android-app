@@ -18,6 +18,7 @@ data class NutritionUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
+    val dailyGoal: Double = NutritionMetric.CALORIES_IN.dailyGoalKey.defaultValue,
     val dailyMacros: List<DailyMacros> = emptyList(),
     val entries: List<NutritionEntry> = emptyList(),
     val error: String? = null,
@@ -32,10 +33,18 @@ class NutritionViewModel(
     private val repository: NutritionRepository,
     initialRange: TimeRange = TimeRange.WEEK,
     private val selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
+    initialDailyGoal: Double = selectedMetric.dailyGoalKey.defaultValue,
     private val onRangeSelected: (TimeRange) -> Unit = {},
+    private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(NutritionUiState(selectedRange = initialRange))
+    private val goalKey = selectedMetric.dailyGoalKey
+    private val _uiState = MutableStateFlow(
+        NutritionUiState(
+            selectedRange = initialRange,
+            dailyGoal = goalKey.normalize(initialDailyGoal),
+        )
+    )
     val uiState: StateFlow<NutritionUiState> = _uiState.asStateFlow()
 
     init {
@@ -65,6 +74,20 @@ class NutritionViewModel(
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodSelection.selectDate(date))
         load()
+    }
+
+    fun increaseDailyGoal() {
+        setDailyGoal(_uiState.value.dailyGoal + goalKey.step)
+    }
+
+    fun decreaseDailyGoal() {
+        setDailyGoal(_uiState.value.dailyGoal - goalKey.step)
+    }
+
+    fun setDailyGoal(goal: Double) {
+        val normalized = goalKey.normalize(goal)
+        onDailyGoalChanged(normalized)
+        _uiState.value = _uiState.value.copy(dailyGoal = normalized)
     }
 
     fun load() {
