@@ -1,0 +1,5 @@
+Add customizable dashboard widgets with drag-and-drop editing.
+Add dedicated detail screens for individual metrics.
+Add period history, goals, statistics, comparisons, and personal baselines.
+Add cross-metric insights, metric context, and data confidence notes.
+Improve chart axes, dashboard widget layout, and yearly metric loading.
