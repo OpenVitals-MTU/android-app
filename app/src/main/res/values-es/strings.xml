@@ -169,6 +169,8 @@
     <string name="stat_daily_average">Media diaria</string>
     <string name="stat_total_intake">Ingesta total</string>
     <string name="stat_best_day">Mejor día</string>
+    <string name="legend_less">Menos</string>
+    <string name="legend_more">Más</string>
 
     <string name="message_no_dashboard_data">No hay datos del panel disponibles.</string>
     <string name="message_missing_permissions_title">Faltan algunos permisos</string>

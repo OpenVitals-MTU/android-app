@@ -169,6 +169,8 @@
     <string name="stat_daily_average">Daily average</string>
     <string name="stat_total_intake">Total intake</string>
     <string name="stat_best_day">Best day</string>
+    <string name="legend_less">Less</string>
+    <string name="legend_more">More</string>
 
     <string name="message_no_dashboard_data">No dashboard data available.</string>
     <string name="message_missing_permissions_title">Some permissions are missing</string>
