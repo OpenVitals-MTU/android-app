@@ -5,8 +5,13 @@ import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.HeartPeriodData
+import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
 import tech.mmarca.openvitals.data.repository.HeartRepository
+import tech.mmarca.openvitals.data.repository.VitalsPeriodData
+import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -38,6 +43,52 @@ class HeartViewModelTest {
         coEvery { repo.loadHrvRmssd(any()) } returns null
         coEvery { repo.loadDailyRestingHR(any(), any()) } returns emptyList()
         coEvery { repo.loadDailyHRV(any(), any()) } returns emptyList()
+        coEvery { repo.loadHeartPeriod(any(), any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val metric = secondArg<HeartPeriodMetric>()
+            val windows = query.windows
+            when (metric) {
+                HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
+                    HeartPeriodData(
+                        daySamples = repo.loadHeartRateSamples(query.selectedDate),
+                        previousDaySamples = repo.loadHeartRateSamples(windows.previous.start),
+                        baselineDailySummaries = repo.loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
+                    )
+                } else {
+                    HeartPeriodData(
+                        dailySummaries = repo.loadDailyHeartRateSummaries(windows.current.start, windows.current.end),
+                        previousDailySummaries = repo.loadDailyHeartRateSummaries(windows.previous.start, windows.previous.end),
+                        baselineDailySummaries = repo.loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
+                    )
+                }
+                HeartPeriodMetric.RESTING_HEART_RATE -> if (query.range == TimeRange.DAY) {
+                    HeartPeriodData(
+                        dayRestingBpm = repo.loadRestingHeartRate(query.selectedDate),
+                        previousDayRestingBpm = repo.loadRestingHeartRate(windows.previous.start),
+                        baselineDailyRestingHR = repo.loadDailyRestingHR(windows.baseline.start, windows.baseline.end),
+                    )
+                } else {
+                    HeartPeriodData(
+                        dailyRestingHR = repo.loadDailyRestingHR(windows.current.start, windows.current.end),
+                        previousDailyRestingHR = repo.loadDailyRestingHR(windows.previous.start, windows.previous.end),
+                        baselineDailyRestingHR = repo.loadDailyRestingHR(windows.baseline.start, windows.baseline.end),
+                    )
+                }
+                HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
+                    HeartPeriodData(
+                        dayHrvMs = repo.loadHrvRmssd(query.selectedDate),
+                        previousDayHrvMs = repo.loadHrvRmssd(windows.previous.start),
+                        baselineDailyHrv = repo.loadDailyHRV(windows.baseline.start, windows.baseline.end),
+                    )
+                } else {
+                    HeartPeriodData(
+                        dailyHrv = repo.loadDailyHRV(windows.current.start, windows.current.end),
+                        previousDailyHrv = repo.loadDailyHRV(windows.previous.start, windows.previous.end),
+                        baselineDailyHrv = repo.loadDailyHRV(windows.baseline.start, windows.baseline.end),
+                    )
+                }
+            }
+        }
     }
 
     private fun emptyVitalsRepo() = mockk<VitalsRepository>().also { repo ->
@@ -48,6 +99,43 @@ class HeartViewModelTest {
         coEvery { repo.loadRespiratoryRate(any(), any()) } returns emptyList()
         coEvery { repo.loadBodyTemperature(any(), any()) } returns emptyList()
         coEvery { repo.loadVo2Max(any(), any()) } returns emptyList()
+        coEvery { repo.loadVitalsPeriod(any(), any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val metric = secondArg<VitalsPeriodMetric>()
+            val windows = query.windows
+            when (metric) {
+                VitalsPeriodMetric.BLOOD_PRESSURE -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    bloodPressure = repo.loadBloodPressure(windows.current.start, windows.current.end),
+                    previousBloodPressure = repo.loadBloodPressure(windows.previous.start, windows.previous.end),
+                    baselineBloodPressure = repo.loadBloodPressure(windows.baseline.start, windows.baseline.end),
+                )
+                VitalsPeriodMetric.SPO2 -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    spO2 = repo.loadSpO2(windows.current.start, windows.current.end),
+                    previousSpO2 = repo.loadSpO2(windows.previous.start, windows.previous.end),
+                    baselineSpO2 = repo.loadSpO2(windows.baseline.start, windows.baseline.end),
+                )
+                VitalsPeriodMetric.VO2_MAX -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    vo2Max = repo.loadVo2Max(windows.current.start, windows.current.end),
+                    previousVo2Max = repo.loadVo2Max(windows.previous.start, windows.previous.end),
+                    baselineVo2Max = repo.loadVo2Max(windows.baseline.start, windows.baseline.end),
+                )
+                VitalsPeriodMetric.RESPIRATORY_RATE -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    respiratoryRate = repo.loadRespiratoryRate(windows.current.start, windows.current.end),
+                    previousRespiratoryRate = repo.loadRespiratoryRate(windows.previous.start, windows.previous.end),
+                    baselineRespiratoryRate = repo.loadRespiratoryRate(windows.baseline.start, windows.baseline.end),
+                )
+                VitalsPeriodMetric.BODY_TEMPERATURE -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    bodyTemperature = repo.loadBodyTemperature(windows.current.start, windows.current.end),
+                    previousBodyTemperature = repo.loadBodyTemperature(windows.previous.start, windows.previous.end),
+                    baselineBodyTemperature = repo.loadBodyTemperature(windows.baseline.start, windows.baseline.end),
+                )
+            }
+        }
     }
 
     // ─── Initial state ────────────────────────────────────────────────────────
@@ -247,9 +335,7 @@ class HeartViewModelTest {
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<HeartRepository>()
-        coEvery { repo.loadDailyHeartRateSummaries(any(), any()) } throws RuntimeException("error")
-        coEvery { repo.loadDailyRestingHR(any(), any()) } returns emptyList()
-        coEvery { repo.loadDailyHRV(any(), any()) } returns emptyList()
+        coEvery { repo.loadHeartPeriod(any(), any()) } throws RuntimeException("error")
 
         val vm = HeartViewModel(repo, emptyVitalsRepo())
 

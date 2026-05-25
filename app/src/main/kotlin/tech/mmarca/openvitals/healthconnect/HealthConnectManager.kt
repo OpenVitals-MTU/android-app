@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
@@ -38,6 +39,8 @@ import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Instant
 import java.time.LocalDate
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Facade over Health Connect services.
@@ -46,7 +49,10 @@ import java.time.LocalDate
  * permissions, availability, paging, reading, and mapping live in focused
  * Health Connect boundary classes.
  */
-class HealthConnectManager(private val context: Context) {
+@Singleton
+class HealthConnectManager @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
     private val diagnostics = HealthConnectDiagnostics(context)
     private val availabilityService = HealthConnectAvailabilityService(context, diagnostics)
     private val permissionService = HealthConnectPermissionService(

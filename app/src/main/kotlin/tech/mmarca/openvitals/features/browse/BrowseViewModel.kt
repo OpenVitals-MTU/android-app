@@ -2,17 +2,22 @@ package tech.mmarca.openvitals.features.browse
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
+import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.core.period.PeriodSelection
-import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
-import tech.mmarca.openvitals.core.period.periodFor
 import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +39,7 @@ data class BrowseUiState(
     val error: String? = null,
 )
 
+@HiltViewModel
 class BrowseViewModel(
     private val activityRepository: ActivityRepository,
     private val sleepRepository: SleepRepository,
@@ -42,6 +48,23 @@ class BrowseViewModel(
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
+    @Inject
+    constructor(
+        activityRepository: ActivityRepository,
+        sleepRepository: SleepRepository,
+        bodyRepository: BodyRepository,
+        preferencesRepository: PreferencesRepository,
+    ) : this(
+        activityRepository = activityRepository,
+        sleepRepository = sleepRepository,
+        bodyRepository = bodyRepository,
+        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BROWSE),
+        onRangeSelected = { range ->
+            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.BROWSE, range)
+        },
+    )
+
+    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
     private val _uiState = MutableStateFlow(BrowseUiState(selectedRange = initialRange))
     val uiState: StateFlow<BrowseUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
@@ -56,36 +79,36 @@ class BrowseViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        onRangeSelected(range)
-        applyPeriodSelection(periodSelection.selectRange(range))
+        applyPeriodSelection(periodDriver.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        applyPeriodSelection(periodSelection.previousPeriod())
+        applyPeriodSelection(periodDriver.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val current = periodSelection
-        val next = current.nextPeriod()
-        if (next != current) {
+        periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        applyPeriodSelection(periodSelection.selectDate(date))
+        applyPeriodSelection(periodDriver.selectDate(date))
         load()
     }
 
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val category = _uiState.value.selectedCategory
-            val range = _uiState.value.selectedRange
-            val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
-            val period = periodFor(range, date)
+            val query = PeriodLoadQuery(
+                range = periodDriver.selection.selectedRange,
+                anchorDate = periodDriver.selection.selectedDate,
+            )
+            val date = query.selectedDate
+            val period = query.windows.current
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
                 when (category) {
@@ -111,9 +134,6 @@ class BrowseViewModel(
             }
         }
     }
-
-    private val periodSelection: PeriodSelection
-        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(

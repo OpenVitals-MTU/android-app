@@ -2,7 +2,9 @@ package tech.mmarca.openvitals.features.hydration
 
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.HydrationPeriodData
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -28,6 +30,16 @@ class HydrationViewModelTest {
     private fun emptyRepo() = mockk<HydrationRepository>().also { repo ->
         coEvery { repo.loadDailyHydration(any(), any()) } returns emptyList()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
+        coEvery { repo.loadHydrationPeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val windows = query.windows
+            HydrationPeriodData(
+                dailyHydration = repo.loadDailyHydration(windows.current.start, windows.current.end),
+                previousDailyHydration = repo.loadDailyHydration(windows.previous.start, windows.previous.end),
+                baselineDailyHydration = repo.loadDailyHydration(windows.baseline.start, windows.baseline.end),
+                hydrationEntries = repo.loadHydrationEntries(windows.current.start, windows.current.end),
+            )
+        }
     }
 
     @Test fun `initial range is WEEK`() = runTest {
@@ -161,8 +173,7 @@ class HydrationViewModelTest {
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<HydrationRepository>()
-        coEvery { repo.loadDailyHydration(any(), any()) } throws RuntimeException("timeout")
-        coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
+        coEvery { repo.loadHydrationPeriod(any()) } throws RuntimeException("timeout")
 
         val vm = HydrationViewModel(repo)
 
@@ -177,7 +188,7 @@ class HydrationViewModelTest {
         vm.selectRange(TimeRange.MONTH)
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
-        coVerify(atLeast = 2) { repo.loadDailyHydration(any(), any()) }
+        coVerify(atLeast = 2) { repo.loadHydrationPeriod(any()) }
     }
 
     @Test fun `selectRange saves selected range`() = runTest {

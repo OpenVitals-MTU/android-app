@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.features.mindfulness
 
 import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.MindfulnessPeriodData
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -27,6 +29,15 @@ class MindfulnessViewModelTest {
 
     private fun emptyRepo() = mockk<MindfulnessRepository>().also { repo ->
         coEvery { repo.loadMindfulnessSessions(any(), any()) } returns emptyList()
+        coEvery { repo.loadMindfulnessPeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val windows = query.windows
+            MindfulnessPeriodData(
+                sessions = repo.loadMindfulnessSessions(windows.current.start, windows.current.end),
+                previousSessions = repo.loadMindfulnessSessions(windows.previous.start, windows.previous.end),
+                baselineSessions = repo.loadMindfulnessSessions(windows.baseline.start, windows.baseline.end),
+            )
+        }
     }
 
     @Test fun `initial range is WEEK`() = runTest {
@@ -59,7 +70,7 @@ class MindfulnessViewModelTest {
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<MindfulnessRepository>()
-        coEvery { repo.loadMindfulnessSessions(any(), any()) } throws RuntimeException("timeout")
+        coEvery { repo.loadMindfulnessPeriod(any()) } throws RuntimeException("timeout")
 
         val vm = MindfulnessViewModel(repo)
 
@@ -74,7 +85,7 @@ class MindfulnessViewModelTest {
         vm.selectRange(TimeRange.MONTH)
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
-        coVerify(atLeast = 2) { repo.loadMindfulnessSessions(any(), any()) }
+        coVerify(atLeast = 2) { repo.loadMindfulnessPeriod(any()) }
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {

@@ -8,13 +8,19 @@ import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.model.CycleData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CycleRepository(private val hc: HealthConnectManager) {
+@Singleton
+class CycleRepository @Inject constructor(
+    private val hc: HealthConnectManager,
+) {
 
     companion object {
         private const val TAG = "CycleRepository"
@@ -35,6 +41,16 @@ class CycleRepository(private val hc: HealthConnectManager) {
         val granted = grantedPermissionsIfAvailable()
         return phase4Permissions.filterNot { it in granted }.toSet()
     }
+
+    suspend fun loadCyclePeriod(query: PeriodLoadQuery): CyclePeriodData =
+        coroutineScope {
+            val data = async { loadCycleData(query.windows.current.start, query.windows.current.end) }
+            val missingPermissions = async { missingPermissions() }
+            CyclePeriodData(
+                data = data.await(),
+                missingPermissions = missingPermissions.await(),
+            )
+        }
 
     suspend fun loadCycleData(start: LocalDate, end: LocalDate): CycleData {
         val granted = grantedPermissionsIfAvailable()
@@ -86,3 +102,8 @@ class CycleRepository(private val hc: HealthConnectManager) {
         }
     }
 }
+
+data class CyclePeriodData(
+    val data: CycleData,
+    val missingPermissions: Set<String>,
+)

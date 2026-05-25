@@ -1,18 +1,23 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
+import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
-import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
-import tech.mmarca.openvitals.core.period.PeriodSelection
-import tech.mmarca.openvitals.core.period.baselinePeriodBefore
-import tech.mmarca.openvitals.core.period.periodFor
-import tech.mmarca.openvitals.core.period.previousPeriodFor
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +37,7 @@ data class ActivityUiState(
     val error: String? = null,
 )
 
+@HiltViewModel
 class ActivityViewModel(
     private val repository: ActivityRepository,
     initialRange: TimeRange = TimeRange.WEEK,
@@ -41,7 +47,31 @@ class ActivityViewModel(
     private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
+    @Inject
+    constructor(
+        repository: ActivityRepository,
+        preferencesRepository: PreferencesRepository,
+        savedStateHandle: SavedStateHandle,
+    ) : this(
+        repository = repository,
+        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
+        selectedMetric = activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
+        initialDailyGoal = preferencesRepository.dailyGoalFor(
+            activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey
+        ),
+        onRangeSelected = { range ->
+            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.STEPS, range)
+        },
+        onDailyGoalChanged = { goal ->
+            preferencesRepository.setDailyGoalFor(
+                activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey,
+                goal,
+            )
+        },
+    )
+
     private val goalKey = selectedMetric.dailyGoalKey
+    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
     private val _uiState = MutableStateFlow(
         ActivityUiState(
             selectedRange = initialRange,
@@ -56,27 +86,24 @@ class ActivityViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        onRangeSelected(range)
-        applyPeriodSelection(periodSelection.selectRange(range))
+        applyPeriodSelection(periodDriver.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        applyPeriodSelection(periodSelection.previousPeriod())
+        applyPeriodSelection(periodDriver.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val current = periodSelection
-        val next = current.nextPeriod()
-        if (next != current) {
+        periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        applyPeriodSelection(periodSelection.selectDate(date))
+        applyPeriodSelection(periodDriver.selectDate(date))
         load()
     }
 
@@ -96,59 +123,30 @@ class ActivityViewModel(
 
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
-            val range = _uiState.value.selectedRange
-            val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
-            val period = periodFor(range, date)
-            val previousPeriod = previousPeriodFor(range, date)
-            val baselinePeriod = baselinePeriodBefore(period)
+            val query = PeriodLoadQuery(
+                range = periodDriver.selection.selectedRange,
+                anchorDate = periodDriver.selection.selectedDate,
+            )
+            val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val dailySteps = if (selectedMetric.usesDailySteps) {
-                    repository.loadDailySteps(period.start, period.end)
-                } else {
-                    emptyList()
-                }
-                val previousDailySteps = if (selectedMetric.usesDailySteps) {
-                    repository.loadDailySteps(previousPeriod.start, previousPeriod.end)
-                } else {
-                    emptyList()
-                }
-                val baselineDailySteps = if (selectedMetric.usesDailySteps) {
-                    repository.loadDailySteps(baselinePeriod.start, baselinePeriod.end)
-                } else {
-                    emptyList()
-                }
-                val nutrition = if (selectedMetric.usesDailyNutrition) {
-                    repository.loadDailyNutrition(period.start, period.end)
-                } else {
-                    emptyList()
-                }
-                val previousNutrition = if (selectedMetric.usesDailyNutrition) {
-                    repository.loadDailyNutrition(previousPeriod.start, previousPeriod.end)
-                } else {
-                    emptyList()
-                }
-                val baselineNutrition = if (selectedMetric.usesDailyNutrition) {
-                    repository.loadDailyNutrition(baselinePeriod.start, baselinePeriod.end)
-                } else {
-                    emptyList()
-                }
-                val activityProgress = if (range == TimeRange.DAY) {
-                    repository.loadActivityProgress(period.start)
-                } else {
-                    emptyList()
-                }
+                repository.loadActivityPeriod(
+                    query = query,
+                    includeSteps = selectedMetric.usesDailySteps,
+                    includeNutrition = selectedMetric.usesDailyNutrition,
+                )
+            }.onSuccess { result ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    dailySteps = dailySteps,
-                    previousDailySteps = previousDailySteps,
-                    baselineDailySteps = baselineDailySteps,
-                    nutrition = nutrition,
-                    previousNutrition = previousNutrition,
-                    baselineNutrition = baselineNutrition,
-                    activityProgress = activityProgress,
+                    dailySteps = result.dailySteps,
+                    previousDailySteps = result.previousDailySteps,
+                    baselineDailySteps = result.baselineDailySteps,
+                    nutrition = result.nutrition,
+                    previousNutrition = result.previousNutrition,
+                    baselineNutrition = result.baselineNutrition,
+                    activityProgress = result.activityProgress,
                 )
             }.onFailure {
                 if (!isCurrent) return@load
@@ -160,9 +158,6 @@ class ActivityViewModel(
             }
         }
     }
-
-    private val periodSelection: PeriodSelection
-        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(
@@ -177,3 +172,13 @@ private val ActivityMetric.usesDailySteps: Boolean
 
 private val ActivityMetric.usesDailyNutrition: Boolean
     get() = this == ActivityMetric.CALORIES_BURNED
+
+private fun activityMetricFromRoute(metricId: String?): ActivityMetric =
+    when (metricId) {
+        "DISTANCE" -> ActivityMetric.DISTANCE
+        "CALORIES_OUT" -> ActivityMetric.CALORIES_BURNED
+        "ACTIVE_CALORIES" -> ActivityMetric.ACTIVE_CALORIES
+        "FLOORS" -> ActivityMetric.FLOORS
+        "ELEVATION" -> ActivityMetric.ELEVATION
+        else -> ActivityMetric.STEPS
+    }

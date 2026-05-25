@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
@@ -18,8 +19,13 @@ import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class BodyRepository(private val hc: HealthConnectManager) {
+@Singleton
+class BodyRepository @Inject constructor(
+    private val hc: HealthConnectManager,
+) {
 
     companion object {
         private const val TAG = "BodyRepository"
@@ -34,6 +40,48 @@ class BodyRepository(private val hc: HealthConnectManager) {
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
+
+    suspend fun loadBodyPeriod(query: PeriodLoadQuery, metric: BodyPeriodMetric): BodyPeriodData {
+        val windows = query.windows
+        return when (metric) {
+            BodyPeriodMetric.WEIGHT -> BodyPeriodData(
+                weightEntries = loadWeightEntries(windows.current.start, windows.current.end),
+                previousWeightEntries = loadWeightEntries(windows.previous.start, windows.previous.end),
+                baselineWeightEntries = loadWeightEntries(windows.baseline.start, windows.baseline.end),
+            )
+            BodyPeriodMetric.HEIGHT -> BodyPeriodData(
+                heightEntries = loadHeightEntries(windows.current.start, windows.current.end),
+                previousHeightEntries = loadHeightEntries(windows.previous.start, windows.previous.end),
+                baselineHeightEntries = loadHeightEntries(windows.baseline.start, windows.baseline.end),
+            )
+            BodyPeriodMetric.BMI -> BodyPeriodData(
+                weightEntries = loadWeightEntries(windows.current.start, windows.current.end),
+                previousWeightEntries = loadWeightEntries(windows.previous.start, windows.previous.end),
+                baselineWeightEntries = loadWeightEntries(windows.baseline.start, windows.baseline.end),
+                heightCm = loadLatestHeight(),
+            )
+            BodyPeriodMetric.BODY_FAT -> BodyPeriodData(
+                bodyFatEntries = loadBodyFatEntries(windows.current.start, windows.current.end),
+                previousBodyFatEntries = loadBodyFatEntries(windows.previous.start, windows.previous.end),
+                baselineBodyFatEntries = loadBodyFatEntries(windows.baseline.start, windows.baseline.end),
+            )
+            BodyPeriodMetric.LEAN_MASS -> BodyPeriodData(
+                leanMassEntries = loadLeanBodyMassEntries(windows.current.start, windows.current.end),
+                previousLeanMassEntries = loadLeanBodyMassEntries(windows.previous.start, windows.previous.end),
+                baselineLeanMassEntries = loadLeanBodyMassEntries(windows.baseline.start, windows.baseline.end),
+            )
+            BodyPeriodMetric.BMR -> BodyPeriodData(
+                bmrEntries = loadBmrEntries(windows.current.start, windows.current.end),
+                previousBmrEntries = loadBmrEntries(windows.previous.start, windows.previous.end),
+                baselineBmrEntries = loadBmrEntries(windows.baseline.start, windows.baseline.end),
+            )
+            BodyPeriodMetric.BONE_MASS -> BodyPeriodData(
+                boneMassEntries = loadBoneMassEntries(windows.current.start, windows.current.end),
+                previousBoneMassEntries = loadBoneMassEntries(windows.previous.start, windows.previous.end),
+                baselineBoneMassEntries = loadBoneMassEntries(windows.baseline.start, windows.baseline.end),
+            )
+        }
+    }
 
     suspend fun loadWeightEntries(start: LocalDate, end: LocalDate): List<WeightEntry> {
         val granted = grantedPermissionsIfAvailable()
@@ -121,3 +169,38 @@ class BodyRepository(private val hc: HealthConnectManager) {
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()
 }
+
+enum class BodyPeriodMetric {
+    WEIGHT,
+    HEIGHT,
+    BMI,
+    BODY_FAT,
+    LEAN_MASS,
+    BMR,
+    BONE_MASS,
+}
+
+data class BodyPeriodData(
+    val weightEntries: List<WeightEntry> = emptyList(),
+    val previousWeightEntries: List<WeightEntry> = emptyList(),
+    val baselineWeightEntries: List<WeightEntry> = emptyList(),
+    val heightCm: Double? = null,
+    val heightEntries: List<HeightEntry> = emptyList(),
+    val previousHeightEntries: List<HeightEntry> = emptyList(),
+    val baselineHeightEntries: List<HeightEntry> = emptyList(),
+    val bodyFatEntries: List<BodyFatEntry> = emptyList(),
+    val previousBodyFatEntries: List<BodyFatEntry> = emptyList(),
+    val baselineBodyFatEntries: List<BodyFatEntry> = emptyList(),
+    val leanMassKg: Double? = null,
+    val leanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+    val previousLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+    val baselineLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
+    val bmrKcal: Double? = null,
+    val bmrEntries: List<BmrEntry> = emptyList(),
+    val previousBmrEntries: List<BmrEntry> = emptyList(),
+    val baselineBmrEntries: List<BmrEntry> = emptyList(),
+    val boneMassKg: Double? = null,
+    val boneMassEntries: List<BoneMassEntry> = emptyList(),
+    val previousBoneMassEntries: List<BoneMassEntry> = emptyList(),
+    val baselineBoneMassEntries: List<BoneMassEntry> = emptyList(),
+)

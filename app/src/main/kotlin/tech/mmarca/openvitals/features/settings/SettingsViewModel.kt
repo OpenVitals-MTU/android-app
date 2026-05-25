@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
@@ -11,6 +12,7 @@ import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,7 +55,8 @@ data class SettingsPermissionCategory(
     @StringRes val unavailableReasonRes: Int? = null,
 )
 
-class SettingsViewModel(
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {

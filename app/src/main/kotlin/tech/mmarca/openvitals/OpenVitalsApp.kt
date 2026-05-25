@@ -2,96 +2,17 @@ package tech.mmarca.openvitals
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
-import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
-import tech.mmarca.openvitals.core.performance.DispatcherProvider
-import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
-import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.repository.ActivityRepository
-import tech.mmarca.openvitals.data.repository.BodyRepository
-import tech.mmarca.openvitals.data.repository.CycleRepository
-import tech.mmarca.openvitals.data.repository.HeartRepository
-import tech.mmarca.openvitals.data.repository.HealthRepository
-import tech.mmarca.openvitals.data.repository.HydrationRepository
-import tech.mmarca.openvitals.data.repository.MindfulnessRepository
-import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.SleepRepository
-import tech.mmarca.openvitals.data.repository.VitalsRepository
-import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
+@HiltAndroidApp
 class OpenVitalsApp : Application() {
+
+    @Inject lateinit var preferencesRepository: PreferencesRepository
 
     override fun onCreate() {
         super.onCreate()
         AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())
-    }
-
-    val preferencesRepository: PreferencesRepository by lazy {
-        PreferencesRepository(this)
-    }
-
-    val healthConnectManager: HealthConnectManager by lazy {
-        HealthConnectManager(this)
-    }
-
-    val dispatcherProvider: DispatcherProvider by lazy {
-        DefaultDispatcherProvider
-    }
-
-    val healthConnectQueryCache: HealthConnectQueryCache by lazy {
-        HealthConnectQueryCache()
-    }
-
-    val unitFormatter: UnitFormatter by lazy {
-        UnitFormatter(preferencesRepository)
-    }
-
-    val dateTimeFormatterProvider: DateTimeFormatterProvider by lazy {
-        DateTimeFormatterProvider()
-    }
-
-    val healthRepository: HealthRepository by lazy {
-        HealthRepository(
-            hc = healthConnectManager,
-            dispatchers = dispatcherProvider,
-            queryCache = healthConnectQueryCache,
-        )
-    }
-
-    val activityRepository: ActivityRepository by lazy {
-        ActivityRepository(healthConnectManager)
-    }
-
-    val sleepRepository: SleepRepository by lazy {
-        SleepRepository(healthConnectManager)
-    }
-
-    val heartRepository: HeartRepository by lazy {
-        HeartRepository(healthConnectManager)
-    }
-
-    val bodyRepository: BodyRepository by lazy {
-        BodyRepository(healthConnectManager)
-    }
-
-    val hydrationRepository: HydrationRepository by lazy {
-        HydrationRepository(healthConnectManager)
-    }
-
-    val nutritionRepository: NutritionRepository by lazy {
-        NutritionRepository(healthConnectManager)
-    }
-
-    val mindfulnessRepository: MindfulnessRepository by lazy {
-        MindfulnessRepository(healthConnectManager)
-    }
-
-    val vitalsRepository: VitalsRepository by lazy {
-        VitalsRepository(healthConnectManager)
-    }
-
-    val cycleRepository: CycleRepository by lazy {
-        CycleRepository(healthConnectManager)
     }
 }

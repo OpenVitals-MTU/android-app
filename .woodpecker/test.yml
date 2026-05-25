@@ -12,10 +12,7 @@ steps:
       - test -n "$${sdk_root}"
       - printf 'sdk.dir=%s\n' "$${sdk_root}" > local.properties
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
-      - gradle_version="$$(sed -n 's#distributionUrl=.*gradle-\([0-9.]*\)-bin.zip#\1#p' gradle/wrapper/gradle-wrapper.properties)"
-      - test -n "$${gradle_version}"
-      - curl -fsSLo /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-$${gradle_version}-bin.zip"
-      - rm -rf /tmp/gradle-dist
-      - unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-      - export PATH="/tmp/gradle-dist/gradle-$${gradle_version}/bin:$${PATH}"
-      - gradle --no-daemon :app:testDebugUnitTest
+      - test -f gradle/wrapper/gradle-wrapper.jar
+      - chmod +x gradlew
+      - ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - git diff --check

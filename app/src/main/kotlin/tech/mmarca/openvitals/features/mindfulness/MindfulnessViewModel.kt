@@ -2,19 +2,22 @@ package tech.mmarca.openvitals.features.mindfulness
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import tech.mmarca.openvitals.data.model.MindfulnessSession
+import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
-import tech.mmarca.openvitals.core.period.baselinePeriodBefore
-import tech.mmarca.openvitals.core.period.periodFor
-import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +37,7 @@ data class MindfulnessUiState(
     val totalMinutes: Long get() = sessions.sumOf { it.durationMinutes }
 }
 
+@HiltViewModel
 class MindfulnessViewModel(
     private val repository: MindfulnessRepository,
     private val sleepRepository: SleepRepository? = null,
@@ -44,7 +48,27 @@ class MindfulnessViewModel(
     private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
+    @Inject
+    constructor(
+        repository: MindfulnessRepository,
+        sleepRepository: SleepRepository,
+        preferencesRepository: PreferencesRepository,
+    ) : this(
+        repository = repository,
+        sleepRepository = sleepRepository,
+        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
+        initialSleepRangeMode = preferencesRepository.sleepRangeMode,
+        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
+        onRangeSelected = { range ->
+            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.MINDFULNESS, range)
+        },
+        onDailyGoalChanged = { goal ->
+            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
+        },
+    )
+
     private val goalKey = MetricDailyGoalKey.MINDFULNESS_MINUTES
+    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
     private val _uiState = MutableStateFlow(
         MindfulnessUiState(
             selectedRange = initialRange,
@@ -60,27 +84,24 @@ class MindfulnessViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        onRangeSelected(range)
-        applyPeriodSelection(periodSelection.selectRange(range))
+        applyPeriodSelection(periodDriver.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        applyPeriodSelection(periodSelection.previousPeriod())
+        applyPeriodSelection(periodDriver.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val current = periodSelection
-        val next = current.nextPeriod()
-        if (next != current) {
+        periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        applyPeriodSelection(periodSelection.selectDate(date))
+        applyPeriodSelection(periodDriver.selectDate(date))
         load()
     }
 
@@ -100,11 +121,12 @@ class MindfulnessViewModel(
 
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
-            val range = _uiState.value.selectedRange
-            val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
-            val period = periodFor(range, date)
-            val previousPeriod = previousPeriodFor(range, date)
-            val baselinePeriod = baselinePeriodBefore(period)
+            val query = PeriodLoadQuery(
+                range = periodDriver.selection.selectedRange,
+                anchorDate = periodDriver.selection.selectedDate,
+            )
+            val period = query.windows.current
+            val date = query.selectedDate
             val sleepRangeMode = _uiState.value.sleepRangeMode
             val sleepQueryStart = when (sleepRangeMode) {
                 SleepRangeMode.ROLLING_24H -> period.start
@@ -113,10 +135,11 @@ class MindfulnessViewModel(
             }
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
+                val periodData = repository.loadMindfulnessPeriod(query)
                 MindfulnessLoadResult(
-                    sessions = repository.loadMindfulnessSessions(period.start, period.end),
-                    previousSessions = repository.loadMindfulnessSessions(previousPeriod.start, previousPeriod.end),
-                    baselineSessions = repository.loadMindfulnessSessions(baselinePeriod.start, baselinePeriod.end),
+                    sessions = periodData.sessions,
+                    previousSessions = periodData.previousSessions,
+                    baselineSessions = periodData.baselineSessions,
                     crossSleepSessions = sleepRepository?.loadSleepSessions(sleepQueryStart, period.end).orEmpty(),
                 )
             }
@@ -148,9 +171,6 @@ class MindfulnessViewModel(
         val baselineSessions: List<MindfulnessSession>,
         val crossSleepSessions: List<SleepData>,
     )
-
-    private val periodSelection: PeriodSelection
-        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(

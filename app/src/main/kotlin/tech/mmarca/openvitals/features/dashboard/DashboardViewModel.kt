@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.performance.RefreshMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
@@ -12,6 +13,7 @@ import tech.mmarca.openvitals.data.model.mergeLoaded
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +30,8 @@ data class DashboardUiState(
     val isEditingDashboard: Boolean = false,
 )
 
-class DashboardViewModel(
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val prefs: PreferencesRepository,
 ) : ViewModel() {

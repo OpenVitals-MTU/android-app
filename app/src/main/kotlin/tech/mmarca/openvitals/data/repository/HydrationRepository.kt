@@ -3,14 +3,20 @@ package tech.mmarca.openvitals.data.repository
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class HydrationRepository(private val hc: HealthConnectManager) {
+@Singleton
+class HydrationRepository @Inject constructor(
+    private val hc: HealthConnectManager,
+) {
 
     companion object {
         private const val TAG = "HydrationRepository"
@@ -20,6 +26,16 @@ class HydrationRepository(private val hc: HealthConnectManager) {
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
+
+    suspend fun loadHydrationPeriod(query: PeriodLoadQuery): HydrationPeriodData {
+        val windows = query.windows
+        return HydrationPeriodData(
+            dailyHydration = loadDailyHydration(windows.current.start, windows.current.end),
+            previousDailyHydration = loadDailyHydration(windows.previous.start, windows.previous.end),
+            baselineDailyHydration = loadDailyHydration(windows.baseline.start, windows.baseline.end),
+            hydrationEntries = loadHydrationEntries(windows.current.start, windows.current.end),
+        )
+    }
 
     suspend fun loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration> {
         val granted = grantedPermissionsIfAvailable()
@@ -43,3 +59,10 @@ class HydrationRepository(private val hc: HealthConnectManager) {
         )
     }
 }
+
+data class HydrationPeriodData(
+    val dailyHydration: List<DailyHydration> = emptyList(),
+    val previousDailyHydration: List<DailyHydration> = emptyList(),
+    val baselineDailyHydration: List<DailyHydration> = emptyList(),
+    val hydrationEntries: List<HydrationEntry> = emptyList(),
+)

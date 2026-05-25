@@ -11,13 +11,10 @@ steps:
       - test -n "$${sdk_root}"
       - printf 'sdk.dir=%s\n' "$${sdk_root}" > local.properties
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
-      - gradle_version="$$(sed -n 's#distributionUrl=.*gradle-\([0-9.]*\)-bin.zip#\1#p' gradle/wrapper/gradle-wrapper.properties)"
-      - test -n "$${gradle_version}"
-      - curl -fsSLo /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-$${gradle_version}-bin.zip"
-      - rm -rf /tmp/gradle-dist
-      - unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-      - export PATH="/tmp/gradle-dist/gradle-$${gradle_version}/bin:$${PATH}"
-      - gradle --no-daemon :app:testDebugUnitTest
+      - test -f gradle/wrapper/gradle-wrapper.jar
+      - chmod +x gradlew
+      - ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug
+      - git diff --check
 
   - name: build-release-artifacts
     depends_on:
@@ -45,13 +42,9 @@ steps:
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
-      - gradle_version="$$(sed -n 's#distributionUrl=.*gradle-\([0-9.]*\)-bin.zip#\1#p' gradle/wrapper/gradle-wrapper.properties)"
-      - test -n "$${gradle_version}"
-      - curl -fsSLo /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-$${gradle_version}-bin.zip"
-      - rm -rf /tmp/gradle-dist
-      - unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-      - export PATH="/tmp/gradle-dist/gradle-$${gradle_version}/bin:$${PATH}"
-      - gradle --no-daemon --stacktrace :app:assembleRelease :app:bundleRelease
+      - test -f gradle/wrapper/gradle-wrapper.jar
+      - chmod +x gradlew
+      - ./gradlew --no-daemon --stacktrace :app:assembleRelease :app:bundleRelease
       - apk_path="$$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)"
       - aab_path="$$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -n 1)"
       - test -n "$${apk_path}"

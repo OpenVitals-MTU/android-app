@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kover)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 val releaseStoreFilePath = System.getenv("OPENVITALS_RELEASE_STORE_FILE")
@@ -102,6 +104,7 @@ dependencies {
     // Activity + Navigation
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // Lifecycle + ViewModel
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -113,6 +116,10 @@ dependencies {
 
     // Health Connect
     implementation(libs.health.connect.client)
+
+    // Dependency injection
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
 
     // Testing
     testImplementation(libs.junit4)

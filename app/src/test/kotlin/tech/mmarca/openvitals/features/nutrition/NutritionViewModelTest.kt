@@ -2,7 +2,9 @@ package tech.mmarca.openvitals.features.nutrition
 
 import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.NutritionPeriodData
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -28,6 +30,16 @@ class NutritionViewModelTest {
     private fun emptyRepo() = mockk<NutritionRepository>().also { repo ->
         coEvery { repo.loadDailyMacros(any(), any()) } returns emptyList()
         coEvery { repo.loadNutritionEntries(any(), any()) } returns emptyList()
+        coEvery { repo.loadNutritionPeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val windows = query.windows
+            NutritionPeriodData(
+                dailyMacros = repo.loadDailyMacros(windows.current.start, windows.current.end),
+                previousDailyMacros = repo.loadDailyMacros(windows.previous.start, windows.previous.end),
+                baselineDailyMacros = repo.loadDailyMacros(windows.baseline.start, windows.baseline.end),
+                entries = repo.loadNutritionEntries(windows.current.start, windows.current.end),
+            )
+        }
     }
 
     @Test fun `initial range is WEEK`() = runTest {
@@ -78,8 +90,7 @@ class NutritionViewModelTest {
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<NutritionRepository>()
-        coEvery { repo.loadDailyMacros(any(), any()) } throws RuntimeException("timeout")
-        coEvery { repo.loadNutritionEntries(any(), any()) } returns emptyList()
+        coEvery { repo.loadNutritionPeriod(any()) } throws RuntimeException("timeout")
 
         val vm = NutritionViewModel(repo)
 
@@ -94,7 +105,7 @@ class NutritionViewModelTest {
         vm.selectRange(TimeRange.MONTH)
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
-        coVerify(atLeast = 2) { repo.loadDailyMacros(any(), any()) }
+        coVerify(atLeast = 2) { repo.loadNutritionPeriod(any()) }
     }
 
     @Test fun `year range loads raw meal entries`() = runTest {

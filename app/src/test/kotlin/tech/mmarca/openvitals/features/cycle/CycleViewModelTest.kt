@@ -15,7 +15,9 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.CycleData
 import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.CyclePeriodData
 import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -34,6 +36,14 @@ class CycleViewModelTest {
         every { repo.phase4Permissions } returns setOf("cycle")
         coEvery { repo.missingPermissions() } returns missingPermissions
         coEvery { repo.loadCycleData(any(), any()) } returns data
+        coEvery { repo.loadCyclePeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val period = query.windows.current
+            CyclePeriodData(
+                data = repo.loadCycleData(period.start, period.end),
+                missingPermissions = repo.missingPermissions(),
+            )
+        }
     }
 
     @Test fun `initial range is MONTH`() = runTest {
@@ -102,8 +112,7 @@ class CycleViewModelTest {
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<CycleRepository>()
         every { repo.phase4Permissions } returns setOf("cycle")
-        coEvery { repo.missingPermissions() } throws RuntimeException("timeout")
-        coEvery { repo.loadCycleData(any(), any()) } returns CycleData()
+        coEvery { repo.loadCyclePeriod(any()) } throws RuntimeException("timeout")
 
         val vm = CycleViewModel(repo)
 

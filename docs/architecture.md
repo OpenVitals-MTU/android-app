@@ -10,7 +10,7 @@ The repo is still a single Android app module. The goal is not to force a multi-
 
 - App namespace: `tech.mmarca.openvitals`
 - Project shape: one Android app module under `app/`
-- Dependency wiring: manual, in [`OpenVitalsApp`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
+- Dependency wiring: Hilt in the single `:app` module, rooted at [`OpenVitalsApp`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
 - UI stack: Jetpack Compose + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - Shared period shell: in place and used by all metric detail/list screens
@@ -68,7 +68,7 @@ The canonical interaction model for metric screens is:
 - forward navigation capped at the current period
 - last selected range remembered independently per detail/list screen
 
-This pattern is implemented today by shared primitives in `ui/components`.
+This pattern is implemented today by period primitives in `core/period` and shell components in `ui/components`.
 
 ### 4. ViewModels own screen state and orchestration
 
@@ -98,7 +98,6 @@ They should not keep growing into one large grab-bag repository with screen-spec
 
 The current app does not need:
 
-- a DI framework
 - a reducer/effect architecture
 - a multi-module split
 - a cache/database architecture for all metrics
@@ -114,7 +113,7 @@ These are logical layers inside one module, not Gradle modules.
 Responsibilities:
 
 - app startup
-- manual dependency wiring
+- Hilt application/component setup
 - theme setup
 - route registration
 - top app bar and global navigation shell
@@ -123,14 +122,15 @@ Current files:
 
 - [`OpenVitalsApp.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
 - [`MainActivity.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/MainActivity.kt)
+- [`di/AppModule.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/di/AppModule.kt)
 - [`navigation/AppNavigation.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/navigation/AppNavigation.kt)
 - [`navigation/Screen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/navigation/Screen.kt)
 
 Notes:
 
-- `OpenVitalsApp` manually exposes lazy repository instances.
+- `OpenVitalsApp` owns the Hilt application component and locale bootstrap.
 - `MainActivity` owns the onboarding-complete preference and chooses the start destination.
-- `AppNavigation` constructs screen-specific ViewModels with `remember(...)` and passes repositories explicitly.
+- `AppNavigation` owns route registration only; route composables obtain `@HiltViewModel` instances through `hiltViewModel()`.
 
 ### Data access
 
@@ -182,7 +182,7 @@ Current files:
 
 Important current detail:
 
-- `TimeRange`, `DatePeriod`, `periodFor`, `periodTitle`, and `periodSubtitle` live in `core/period`
+- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodSelectionDriver`, and period formatting helpers live in `core/period`
 - `PeriodRangePreferenceKey` lives in `core/period`; `PreferencesRepository` persists the last selected `TimeRange` per detail/list screen
 - `PeriodNavigator` remains a UI component in `ui/components`
 
@@ -330,7 +330,7 @@ The content lambda should render:
 - `Week / Month / Year` content
 - optional list/breakdown sections
 
-When registering a new period-based screen, add a `PeriodRangePreferenceKey` and wire its saved range through `AppNavigation` into the screen ViewModel. Persist only range changes; selected dates remain screen state.
+When registering a new period-based screen, add a `PeriodRangePreferenceKey` and inject `PreferencesRepository` into the screen ViewModel so the saved range is owned with the rest of the feature state. Persist only range changes; selected dates remain screen state.
 
 ### 5. Keep visuals local to the feature
 
@@ -368,10 +368,10 @@ Each repository should:
 
 Prefer APIs shaped like:
 
-- `loadX(date)`
-- `loadX(start, end)`
+- `loadXPeriod(PeriodLoadQuery, featureOptions)`
+- feature-specific query/result objects when period windows need current, previous, and baseline data
 
-and gradually converge toward a more explicit shared period/query model if duplication grows.
+Keep granular APIs only when they are real browse/detail reads rather than compatibility paths for migrated screens.
 
 ### Compose existing repositories when the feature is an aggregate browser
 
@@ -402,23 +402,19 @@ and gradually converge toward a more explicit shared period/query model if dupli
 
 These are real seams in the current codebase, but they are not urgent enough to block feature work.
 
-### 1. Period state logic is still duplicated across ViewModels
+### 1. Some screen files are still too broad
 
-`selectRange`, `previousPeriod`, `nextPeriod`, `selectDate`, and the load pattern are repeated in multiple ViewModels.
-
-This is the clearest remaining candidate for shared extraction.
+Several feature screens still keep route/content/cards/charts in one file.
 
 Good future targets:
 
-- `core/period`
-- a reusable period-state helper
-- a small detail-screen contract/helper, but not a giant abstract base ViewModel
+- split route/container composables from chart/card/list sections
+- keep feature-specific visuals inside the feature package
+- move only reusable shell pieces to `ui/components`
 
-### 2. Period primitives are split across `data` and `ui`
+### 2. Derived UI summaries should stay ViewModel-prepared
 
-`TimeRange` is in `data/model`, while `DatePeriod` and helpers are in `ui/components`.
-
-That works, but it is not the cleanest long-term boundary.
+Hydration, nutrition, heart/vitals, and body now prepare common summary values in state. Continue this pattern when a value requires sorting, grouping, or scanning a list.
 
 ### 3. Shared UI primitives are still grouped in broad files
 

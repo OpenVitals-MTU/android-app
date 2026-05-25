@@ -35,7 +35,7 @@ keystore.properties
 .woodpecker/*.env
 .woodpecker/secrets/
 .woodpecker/tmp/
-*.jar
+!gradle/wrapper/gradle-wrapper.jar
 
 # Generated
 gen/

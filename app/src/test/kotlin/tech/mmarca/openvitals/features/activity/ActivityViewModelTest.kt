@@ -3,7 +3,9 @@ package tech.mmarca.openvitals.features.activity
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.ActivityPeriodData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -30,6 +32,21 @@ class ActivityViewModelTest {
         coEvery { repo.loadDailySteps(any(), any()) } returns emptyList()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns emptyList()
         coEvery { repo.loadActivityProgress(any()) } returns emptyList()
+        coEvery { repo.loadActivityPeriod(any(), any(), any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val includeSteps = secondArg<Boolean>()
+            val includeNutrition = thirdArg<Boolean>()
+            val windows = query.windows
+            ActivityPeriodData(
+                dailySteps = if (includeSteps) repo.loadDailySteps(windows.current.start, windows.current.end) else emptyList(),
+                previousDailySteps = if (includeSteps) repo.loadDailySteps(windows.previous.start, windows.previous.end) else emptyList(),
+                baselineDailySteps = if (includeSteps) repo.loadDailySteps(windows.baseline.start, windows.baseline.end) else emptyList(),
+                nutrition = if (includeNutrition) repo.loadDailyNutrition(windows.current.start, windows.current.end) else emptyList(),
+                previousNutrition = if (includeNutrition) repo.loadDailyNutrition(windows.previous.start, windows.previous.end) else emptyList(),
+                baselineNutrition = if (includeNutrition) repo.loadDailyNutrition(windows.baseline.start, windows.baseline.end) else emptyList(),
+                activityProgress = if (query.range == TimeRange.DAY) repo.loadActivityProgress(windows.current.start) else emptyList(),
+            )
+        }
     }
 
     // ─── Initial state ────────────────────────────────────────────────────────
@@ -63,9 +80,7 @@ class ActivityViewModelTest {
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<ActivityRepository>()
-        coEvery { repo.loadDailySteps(any(), any()) } throws RuntimeException("timeout")
-        coEvery { repo.loadDailyNutrition(any(), any()) } returns emptyList()
-        coEvery { repo.loadActivityProgress(any()) } returns emptyList()
+        coEvery { repo.loadActivityPeriod(any(), any(), any()) } throws RuntimeException("timeout")
 
         val vm = ActivityViewModel(repo)
 
@@ -85,8 +100,8 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         val vm = ActivityViewModel(repo)
         vm.selectRange(TimeRange.MONTH)
-        // init load + selectRange load = 2 calls to loadDailySteps
-        coVerify(atLeast = 2) { repo.loadDailySteps(any(), any()) }
+        // init load + selectRange load = 2 bundled period calls
+        coVerify(atLeast = 2) { repo.loadActivityPeriod(any(), any(), any()) }
     }
 
     // ─── previousPeriod ───────────────────────────────────────────────────────

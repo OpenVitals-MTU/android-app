@@ -3,14 +3,21 @@ package tech.mmarca.openvitals.data.repository
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.mergeSleepSessions
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class SleepRepository(private val hc: HealthConnectManager) {
+@Singleton
+class SleepRepository @Inject constructor(
+    private val hc: HealthConnectManager,
+) {
 
     companion object {
         private const val TAG = "SleepRepository"
@@ -20,6 +27,15 @@ class SleepRepository(private val hc: HealthConnectManager) {
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
+
+    suspend fun loadSleepPeriod(query: PeriodLoadQuery, sleepRangeMode: SleepRangeMode): SleepPeriodData {
+        val windows = query.windows
+        return SleepPeriodData(
+            sessions = loadSleepSessions(sleepQueryStart(windows.current.start, sleepRangeMode), windows.current.end),
+            previousSessions = loadSleepSessions(sleepQueryStart(windows.previous.start, sleepRangeMode), windows.previous.end),
+            baselineSessions = loadSleepSessions(sleepQueryStart(windows.baseline.start, sleepRangeMode), windows.baseline.end),
+        )
+    }
 
     suspend fun loadSleepSessions(start: LocalDate, end: LocalDate): List<SleepData> {
         val granted = grantedPermissionsIfAvailable()
@@ -45,4 +61,17 @@ class SleepRepository(private val hc: HealthConnectManager) {
         }
         return hc.readSleepSession(id)
     }
+
+    private fun sleepQueryStart(start: LocalDate, sleepRangeMode: SleepRangeMode): LocalDate =
+        when (sleepRangeMode) {
+            SleepRangeMode.ROLLING_24H -> start
+            SleepRangeMode.NOON,
+            SleepRangeMode.EVENING_18H -> start.minusDays(1)
+        }
 }
+
+data class SleepPeriodData(
+    val sessions: List<SleepData> = emptyList(),
+    val previousSessions: List<SleepData> = emptyList(),
+    val baselineSessions: List<SleepData> = emptyList(),
+)

@@ -4,9 +4,12 @@ import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.data.repository.BodyPeriodData
+import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -40,6 +43,49 @@ class BodyViewModelTest {
         coEvery { repo.loadBmrEntries(any(), any()) } returns emptyList()
         coEvery { repo.loadLatestBoneMass() } returns null
         coEvery { repo.loadBoneMassEntries(any(), any()) } returns emptyList()
+        coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val metric = secondArg<BodyPeriodMetric>()
+            val windows = query.windows
+            when (metric) {
+                BodyPeriodMetric.WEIGHT -> BodyPeriodData(
+                    weightEntries = repo.loadWeightEntries(windows.current.start, windows.current.end),
+                    previousWeightEntries = repo.loadWeightEntries(windows.previous.start, windows.previous.end),
+                    baselineWeightEntries = repo.loadWeightEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.HEIGHT -> BodyPeriodData(
+                    heightEntries = repo.loadHeightEntries(windows.current.start, windows.current.end),
+                    previousHeightEntries = repo.loadHeightEntries(windows.previous.start, windows.previous.end),
+                    baselineHeightEntries = repo.loadHeightEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.BMI -> BodyPeriodData(
+                    weightEntries = repo.loadWeightEntries(windows.current.start, windows.current.end),
+                    previousWeightEntries = repo.loadWeightEntries(windows.previous.start, windows.previous.end),
+                    baselineWeightEntries = repo.loadWeightEntries(windows.baseline.start, windows.baseline.end),
+                    heightCm = repo.loadLatestHeight(),
+                )
+                BodyPeriodMetric.BODY_FAT -> BodyPeriodData(
+                    bodyFatEntries = repo.loadBodyFatEntries(windows.current.start, windows.current.end),
+                    previousBodyFatEntries = repo.loadBodyFatEntries(windows.previous.start, windows.previous.end),
+                    baselineBodyFatEntries = repo.loadBodyFatEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.LEAN_MASS -> BodyPeriodData(
+                    leanMassEntries = repo.loadLeanBodyMassEntries(windows.current.start, windows.current.end),
+                    previousLeanMassEntries = repo.loadLeanBodyMassEntries(windows.previous.start, windows.previous.end),
+                    baselineLeanMassEntries = repo.loadLeanBodyMassEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.BMR -> BodyPeriodData(
+                    bmrEntries = repo.loadBmrEntries(windows.current.start, windows.current.end),
+                    previousBmrEntries = repo.loadBmrEntries(windows.previous.start, windows.previous.end),
+                    baselineBmrEntries = repo.loadBmrEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.BONE_MASS -> BodyPeriodData(
+                    boneMassEntries = repo.loadBoneMassEntries(windows.current.start, windows.current.end),
+                    previousBoneMassEntries = repo.loadBoneMassEntries(windows.previous.start, windows.previous.end),
+                    baselineBoneMassEntries = repo.loadBoneMassEntries(windows.baseline.start, windows.baseline.end),
+                )
+            }
+        }
     }
 
     private fun weightAt(weightKg: Double, epochSeconds: Long) =
@@ -163,12 +209,7 @@ class BodyViewModelTest {
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<BodyRepository>()
-        coEvery { repo.loadWeightEntries(any(), any()) } throws RuntimeException("timeout")
-        coEvery { repo.loadLatestHeight() } returns null
-        coEvery { repo.loadBodyFatEntries(any(), any()) } returns emptyList()
-        coEvery { repo.loadLatestLeanBodyMass() } returns null
-        coEvery { repo.loadLatestBMR() } returns null
-        coEvery { repo.loadLatestBoneMass() } returns null
+        coEvery { repo.loadBodyPeriod(any(), any()) } throws RuntimeException("timeout")
 
         val vm = BodyViewModel(repo)
 
@@ -297,7 +338,7 @@ class BodyViewModelTest {
         val vm = BodyViewModel(repo)
         vm.selectRange(TimeRange.YEAR)
         // init load + selectRange load = 2 calls
-        io.mockk.coVerify(atLeast = 2) { repo.loadWeightEntries(any(), any()) }
+        io.mockk.coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), any()) }
     }
 
     // ─── previousPeriod / nextPeriod ──────────────────────────────────────────

@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -8,11 +9,16 @@ import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class PreferencesRepository(context: Context) {
+@Singleton
+class PreferencesRepository @Inject constructor(
+    @ApplicationContext context: Context,
+) {
 
     private val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
     private val _unitSystem = MutableStateFlow(readUnitSystem())

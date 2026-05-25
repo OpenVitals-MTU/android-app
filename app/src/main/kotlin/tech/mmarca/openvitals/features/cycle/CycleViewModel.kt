@@ -2,18 +2,21 @@ package tech.mmarca.openvitals.features.cycle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.data.model.CycleData
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.model.CycleData
 import tech.mmarca.openvitals.data.repository.CycleRepository
-import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
+import javax.inject.Inject
 
 data class CycleUiState(
     val isLoading: Boolean = true,
@@ -24,12 +27,26 @@ data class CycleUiState(
     val error: String? = null,
 )
 
+@HiltViewModel
 class CycleViewModel(
     private val repository: CycleRepository,
     initialRange: TimeRange = TimeRange.MONTH,
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
+    @Inject
+    constructor(
+        repository: CycleRepository,
+        preferencesRepository: PreferencesRepository,
+    ) : this(
+        repository = repository,
+        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
+        onRangeSelected = { range ->
+            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.CYCLE, range)
+        },
+    )
+
+    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
     private val _uiState = MutableStateFlow(CycleUiState(selectedRange = initialRange))
     val uiState: StateFlow<CycleUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
@@ -41,27 +58,24 @@ class CycleViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        onRangeSelected(range)
-        applyPeriodSelection(periodSelection.selectRange(range))
+        applyPeriodSelection(periodDriver.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        applyPeriodSelection(periodSelection.previousPeriod())
+        applyPeriodSelection(periodDriver.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val current = periodSelection
-        val next = current.nextPeriod()
-        if (next != current) {
+        periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        applyPeriodSelection(periodSelection.selectDate(date))
+        applyPeriodSelection(periodDriver.selectDate(date))
         load()
     }
 
@@ -71,19 +85,14 @@ class CycleViewModel(
 
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
-            val range = _uiState.value.selectedRange
-            val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
-            val period = periodFor(range, date)
+            val query = PeriodLoadQuery(
+                range = periodDriver.selection.selectedRange,
+                anchorDate = periodDriver.selection.selectedDate,
+            )
+            val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                coroutineScope {
-                    val missingPermissions = async { repository.missingPermissions() }
-                    val data = async { repository.loadCycleData(period.start, period.end) }
-                    CycleLoadResult(
-                        data = data.await(),
-                        missingPermissions = missingPermissions.await(),
-                    )
-                }
+                repository.loadCyclePeriod(query)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -103,9 +112,6 @@ class CycleViewModel(
         }
     }
 
-    private val periodSelection: PeriodSelection
-        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
-
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(
             selectedRange = selection.selectedRange,
@@ -113,8 +119,3 @@ class CycleViewModel(
         )
     }
 }
-
-private data class CycleLoadResult(
-    val data: CycleData,
-    val missingPermissions: Set<String>,
-)

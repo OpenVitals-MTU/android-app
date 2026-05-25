@@ -94,7 +94,7 @@ Health Connect platform notes:
 2. Clone this repository.
 3. Open the project in Android Studio, or build from the command line.
 
-In a complete checkout with the Gradle wrapper jar present:
+In a complete checkout:
 
 ```bash
 ./gradlew assembleDebug
@@ -105,8 +105,6 @@ To install on a connected device or emulator:
 ```bash
 ./gradlew installDebug
 ```
-
-This checkout currently has `gradle/wrapper/gradle-wrapper.properties` but not `gradle/wrapper/gradle-wrapper.jar`. Restore the wrapper jar or use a compatible local Gradle installation before relying on the wrapper commands.
 
 After launching the app:
 
@@ -123,7 +121,7 @@ OpenVitals is intentionally simple today:
 - Jetpack Compose UI
 - Navigation Compose
 - `ViewModel` + `StateFlow`
-- manual dependency wiring in `OpenVitalsApp`
+- Hilt constructor injection for repositories, services, and ViewModels
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - local preferences for onboarding completion, acknowledged permissions, unit system, and cycle-tracking opt-in

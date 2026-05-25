@@ -1,17 +1,22 @@
 package tech.mmarca.openvitals.features.nutrition
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
+import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.NutritionEntry
-import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.core.period.PeriodSelection
-import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.NutritionRepository
-import tech.mmarca.openvitals.core.period.baselinePeriodBefore
-import tech.mmarca.openvitals.core.period.periodFor
-import tech.mmarca.openvitals.core.period.previousPeriodFor
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,14 +30,14 @@ data class NutritionUiState(
     val previousDailyMacros: List<DailyMacros> = emptyList(),
     val baselineDailyMacros: List<DailyMacros> = emptyList(),
     val entries: List<NutritionEntry> = emptyList(),
+    val totalEnergyKcal: Double = 0.0,
+    val totalProteinGrams: Double = 0.0,
+    val totalCarbsGrams: Double = 0.0,
+    val totalFatGrams: Double = 0.0,
     val error: String? = null,
-) {
-    val totalEnergyKcal: Double get() = dailyMacros.sumOf { it.energyKcal }
-    val totalProteinGrams: Double get() = dailyMacros.sumOf { it.proteinGrams }
-    val totalCarbsGrams: Double get() = dailyMacros.sumOf { it.carbsGrams }
-    val totalFatGrams: Double get() = dailyMacros.sumOf { it.fatGrams }
-}
+)
 
+@HiltViewModel
 class NutritionViewModel(
     private val repository: NutritionRepository,
     initialRange: TimeRange = TimeRange.WEEK,
@@ -42,7 +47,31 @@ class NutritionViewModel(
     private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
+    @Inject
+    constructor(
+        repository: NutritionRepository,
+        preferencesRepository: PreferencesRepository,
+        savedStateHandle: SavedStateHandle,
+    ) : this(
+        repository = repository,
+        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
+        selectedMetric = nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
+        initialDailyGoal = preferencesRepository.dailyGoalFor(
+            nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey
+        ),
+        onRangeSelected = { range ->
+            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.NUTRITION, range)
+        },
+        onDailyGoalChanged = { goal ->
+            preferencesRepository.setDailyGoalFor(
+                nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey,
+                goal,
+            )
+        },
+    )
+
     private val goalKey = selectedMetric.dailyGoalKey
+    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
     private val _uiState = MutableStateFlow(
         NutritionUiState(
             selectedRange = initialRange,
@@ -57,27 +86,24 @@ class NutritionViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        onRangeSelected(range)
-        applyPeriodSelection(periodSelection.selectRange(range))
+        applyPeriodSelection(periodDriver.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        applyPeriodSelection(periodSelection.previousPeriod())
+        applyPeriodSelection(periodDriver.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val current = periodSelection
-        val next = current.nextPeriod()
-        if (next != current) {
+        periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        applyPeriodSelection(periodSelection.selectDate(date))
+        applyPeriodSelection(periodDriver.selectDate(date))
         load()
     }
 
@@ -97,21 +123,17 @@ class NutritionViewModel(
 
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
-            val range = _uiState.value.selectedRange
-            val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
-            val period = periodFor(range, date)
-            val previousPeriod = previousPeriodFor(range, date)
-            val baselinePeriod = baselinePeriodBefore(period)
+            val query = PeriodLoadQuery(
+                range = periodDriver.selection.selectedRange,
+                anchorDate = periodDriver.selection.selectedDate,
+            )
+            val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                NutritionLoadResult(
-                    dailyMacros = repository.loadDailyMacros(period.start, period.end),
-                    previousDailyMacros = repository.loadDailyMacros(previousPeriod.start, previousPeriod.end),
-                    baselineDailyMacros = repository.loadDailyMacros(baselinePeriod.start, baselinePeriod.end),
-                    entries = repository.loadNutritionEntries(period.start, period.end),
-                )
+                repository.loadNutritionPeriod(query)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                val totals = result.dailyMacros.totals()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -119,6 +141,10 @@ class NutritionViewModel(
                     previousDailyMacros = result.previousDailyMacros,
                     baselineDailyMacros = result.baselineDailyMacros,
                     entries = result.entries,
+                    totalEnergyKcal = totals.energyKcal,
+                    totalProteinGrams = totals.proteinGrams,
+                    totalCarbsGrams = totals.carbsGrams,
+                    totalFatGrams = totals.fatGrams,
                 )
             }.onFailure { error ->
                 if (!isCurrent) return@load
@@ -131,16 +157,6 @@ class NutritionViewModel(
         }
     }
 
-    private data class NutritionLoadResult(
-        val dailyMacros: List<DailyMacros>,
-        val previousDailyMacros: List<DailyMacros>,
-        val baselineDailyMacros: List<DailyMacros>,
-        val entries: List<NutritionEntry>,
-    )
-
-    private val periodSelection: PeriodSelection
-        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
-
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(
             selectedRange = selection.selectedRange,
@@ -148,3 +164,21 @@ class NutritionViewModel(
         )
     }
 }
+
+private fun nutritionMetricFromRoute(metricId: String?): NutritionMetric =
+    runCatching { metricId?.let(NutritionMetric::valueOf) }.getOrNull() ?: NutritionMetric.CALORIES_IN
+
+private data class NutritionTotals(
+    val energyKcal: Double,
+    val proteinGrams: Double,
+    val carbsGrams: Double,
+    val fatGrams: Double,
+)
+
+private fun List<DailyMacros>.totals(): NutritionTotals =
+    NutritionTotals(
+        energyKcal = sumOf { it.energyKcal },
+        proteinGrams = sumOf { it.proteinGrams },
+        carbsGrams = sumOf { it.carbsGrams },
+        fatGrams = sumOf { it.fatGrams },
+    )

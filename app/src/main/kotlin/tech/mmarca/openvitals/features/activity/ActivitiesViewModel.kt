@@ -2,18 +2,21 @@ package tech.mmarca.openvitals.features.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import tech.mmarca.openvitals.data.model.DailyRestingHR
-import tech.mmarca.openvitals.data.model.ExerciseData
+import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
+import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.model.DailyRestingHR
+import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
-import tech.mmarca.openvitals.core.period.baselinePeriodBefore
-import tech.mmarca.openvitals.core.period.periodFor
-import tech.mmarca.openvitals.core.period.previousPeriodFor
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +33,7 @@ data class ActivitiesUiState(
     val error: String? = null,
 )
 
+@HiltViewModel
 class ActivitiesViewModel(
     private val repository: ActivityRepository,
     private val heartRepository: HeartRepository? = null,
@@ -39,7 +43,26 @@ class ActivitiesViewModel(
     private val onDailyGoalChanged: (Double) -> Unit = {},
 ) : ViewModel() {
 
+    @Inject
+    constructor(
+        repository: ActivityRepository,
+        heartRepository: HeartRepository,
+        preferencesRepository: PreferencesRepository,
+    ) : this(
+        repository = repository,
+        heartRepository = heartRepository,
+        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
+        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
+        onRangeSelected = { range ->
+            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.ACTIVITIES, range)
+        },
+        onDailyGoalChanged = { goal ->
+            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES, goal)
+        },
+    )
+
     private val goalKey = MetricDailyGoalKey.WORKOUT_MINUTES
+    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
     private val _uiState = MutableStateFlow(
         ActivitiesUiState(
             selectedRange = initialRange,
@@ -54,27 +77,24 @@ class ActivitiesViewModel(
     }
 
     fun selectRange(range: TimeRange) {
-        onRangeSelected(range)
-        applyPeriodSelection(periodSelection.selectRange(range))
+        applyPeriodSelection(periodDriver.selectRange(range))
         load()
     }
 
     fun previousPeriod() {
-        applyPeriodSelection(periodSelection.previousPeriod())
+        applyPeriodSelection(periodDriver.previousPeriod())
         load()
     }
 
     fun nextPeriod() {
-        val current = periodSelection
-        val next = current.nextPeriod()
-        if (next != current) {
+        periodDriver.nextPeriod()?.let { next ->
             applyPeriodSelection(next)
             load()
         }
     }
 
     fun selectDate(date: LocalDate) {
-        applyPeriodSelection(periodSelection.selectDate(date))
+        applyPeriodSelection(periodDriver.selectDate(date))
         load()
     }
 
@@ -94,18 +114,22 @@ class ActivitiesViewModel(
 
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
-            val range = _uiState.value.selectedRange
-            val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
-            val period = periodFor(range, date)
-            val previousPeriod = previousPeriodFor(range, date)
-            val baselinePeriod = baselinePeriodBefore(period)
+            val query = PeriodLoadQuery(
+                range = periodDriver.selection.selectedRange,
+                anchorDate = periodDriver.selection.selectedDate,
+            )
+            val windows = query.windows
+            val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
+                val periodData = repository.loadActivitiesPeriod(query)
                 ActivitiesLoadResult(
-                    workouts = repository.loadWorkouts(period.start, period.end),
-                    previousWorkouts = repository.loadWorkouts(previousPeriod.start, previousPeriod.end),
-                    baselineWorkouts = repository.loadWorkouts(baselinePeriod.start, baselinePeriod.end),
-                    crossDailyRestingHR = heartRepository?.loadDailyRestingHR(period.start, period.end).orEmpty(),
+                    workouts = periodData.workouts,
+                    previousWorkouts = periodData.previousWorkouts,
+                    baselineWorkouts = periodData.baselineWorkouts,
+                    crossDailyRestingHR = heartRepository
+                        ?.loadDailyRestingHR(windows.current.start, windows.current.end)
+                        .orEmpty(),
                 )
             }
                 .onSuccess { result ->
@@ -136,9 +160,6 @@ class ActivitiesViewModel(
         val baselineWorkouts: List<ExerciseData>,
         val crossDailyRestingHR: List<DailyRestingHR>,
     )
-
-    private val periodSelection: PeriodSelection
-        get() = PeriodSelection(_uiState.value.selectedRange, _uiState.value.selectedDate)
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(

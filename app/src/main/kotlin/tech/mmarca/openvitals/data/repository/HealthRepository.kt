@@ -51,9 +51,12 @@ import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @OptIn(ExperimentalMindfulnessSessionApi::class)
-class HealthRepository(
+@Singleton
+class HealthRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),

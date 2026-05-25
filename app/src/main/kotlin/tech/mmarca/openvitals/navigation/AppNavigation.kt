@@ -19,9 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,22 +27,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
-import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.repository.ActivityRepository
-import tech.mmarca.openvitals.data.repository.BodyRepository
-import tech.mmarca.openvitals.data.repository.CycleRepository
-import tech.mmarca.openvitals.data.repository.HeartRepository
-import tech.mmarca.openvitals.data.repository.HealthRepository
-import tech.mmarca.openvitals.data.repository.HydrationRepository
-import tech.mmarca.openvitals.data.repository.MindfulnessRepository
-import tech.mmarca.openvitals.data.repository.NutritionRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.SleepRepository
-import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
 import tech.mmarca.openvitals.features.activity.ActiveCaloriesScreen
@@ -57,7 +41,6 @@ import tech.mmarca.openvitals.features.activity.DistanceScreen
 import tech.mmarca.openvitals.features.activity.ElevationScreen
 import tech.mmarca.openvitals.features.activity.FloorsScreen
 import tech.mmarca.openvitals.features.activity.StepsScreen
-import tech.mmarca.openvitals.features.activity.dailyGoalKey
 import tech.mmarca.openvitals.features.body.BmiScreen
 import tech.mmarca.openvitals.features.body.BmrScreen
 import tech.mmarca.openvitals.features.body.BodyFatScreen
@@ -94,7 +77,6 @@ import tech.mmarca.openvitals.features.nutrition.FatScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionMetric
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.nutrition.ProteinScreen
-import tech.mmarca.openvitals.features.nutrition.dailyGoalKey
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
 import tech.mmarca.openvitals.features.settings.SettingsScreen
@@ -107,17 +89,6 @@ import tech.mmarca.openvitals.features.sleep.SleepViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(
-    repository: HealthRepository,
-    activityRepository: ActivityRepository,
-    sleepRepository: SleepRepository,
-    heartRepository: HeartRepository,
-    bodyRepository: BodyRepository,
-    hydrationRepository: HydrationRepository,
-    nutritionRepository: NutritionRepository,
-    mindfulnessRepository: MindfulnessRepository,
-    vitalsRepository: VitalsRepository,
-    cycleRepository: CycleRepository,
-    preferencesRepository: PreferencesRepository,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     startDestination: String,
@@ -211,9 +182,7 @@ fun AppNavigation(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(Screen.Onboarding.route) {
-                val onboardingViewModel = appViewModel {
-                    OnboardingViewModel(repository, preferencesRepository)
-                }
+                val onboardingViewModel = hiltViewModel<OnboardingViewModel>()
                 OnboardingScreen(
                     viewModel = onboardingViewModel,
                     onOnboardingComplete = {
@@ -226,9 +195,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Dashboard.route) {
-                val dashboardViewModel = appViewModel {
-                    DashboardViewModel(repository, preferencesRepository)
-                }
+                val dashboardViewModel = hiltViewModel<DashboardViewModel>()
                 DashboardScreen(
                     viewModel = dashboardViewModel,
                     unitFormatter = unitFormatter,
@@ -251,16 +218,6 @@ fun AppNavigation(
                     ?.toDashboardWidgetIdOrNull()
                 MetricRouteContent(
                     metricId = metricId,
-                    activityRepository = activityRepository,
-                    sleepRepository = sleepRepository,
-                    heartRepository = heartRepository,
-                    bodyRepository = bodyRepository,
-                    hydrationRepository = hydrationRepository,
-                    nutritionRepository = nutritionRepository,
-                    mindfulnessRepository = mindfulnessRepository,
-                    vitalsRepository = vitalsRepository,
-                    cycleRepository = cycleRepository,
-                    preferencesRepository = preferencesRepository,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onOpenActivity = { activityId ->
@@ -273,18 +230,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Steps.route) {
-                val activityViewModel = appViewModel {
-                    ActivityViewModel(
-                        repository = activityRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
-                        selectedMetric = ActivityMetric.STEPS,
-                        initialDailyGoal = preferencesRepository.dailyGoalFor(ActivityMetric.STEPS.dailyGoalKey),
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
-                        onDailyGoalChanged = { goal ->
-                            preferencesRepository.setDailyGoalFor(ActivityMetric.STEPS.dailyGoalKey, goal)
-                        },
-                    )
-                }
+                val activityViewModel = hiltViewModel<ActivityViewModel>()
                 StepsScreen(
                     viewModel = activityViewModel,
                     unitFormatter = unitFormatter,
@@ -293,18 +239,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Activity.route) {
-                val activitiesViewModel = appViewModel {
-                    ActivitiesViewModel(
-                        repository = activityRepository,
-                        heartRepository = heartRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
-                        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
-                        onDailyGoalChanged = { goal ->
-                            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES, goal)
-                        },
-                    )
-                }
+                val activitiesViewModel = hiltViewModel<ActivitiesViewModel>()
                 ActivitiesScreen(
                     viewModel = activitiesViewModel,
                     unitFormatter = unitFormatter,
@@ -318,11 +253,8 @@ fun AppNavigation(
             composable(
                 route = Screen.ActivityDetail.route,
                 arguments = listOf(navArgument(ACTIVITY_DETAIL_ID_ARG) { type = NavType.StringType }),
-            ) { backStackEntry ->
-                val activityId = backStackEntry.arguments?.getString(ACTIVITY_DETAIL_ID_ARG).orEmpty()
-                val activityDetailViewModel = appViewModel {
-                    ActivityDetailViewModel(activityRepository, activityId)
-                }
+            ) {
+                val activityDetailViewModel = hiltViewModel<ActivityDetailViewModel>()
                 ActivityDetailScreen(
                     viewModel = activityDetailViewModel,
                     unitFormatter = unitFormatter,
@@ -331,20 +263,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Sleep.route) {
-                val sleepViewModel = appViewModel {
-                    SleepViewModel(
-                        repository = sleepRepository,
-                        heartRepository = heartRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
-                        initialSleepRangeMode = preferencesRepository.sleepRangeMode,
-                        initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
-                        sleepRangeModeFlow = preferencesRepository.sleepRangeModeFlow,
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
-                        onDailyGoalChanged = { goal ->
-                            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
-                        },
-                    )
-                }
+                val sleepViewModel = hiltViewModel<SleepViewModel>()
                 SleepScreen(
                     viewModel = sleepViewModel,
                     unitFormatter = unitFormatter,
@@ -358,11 +277,8 @@ fun AppNavigation(
             composable(
                 route = Screen.SleepDetail.route,
                 arguments = listOf(navArgument(SLEEP_DETAIL_ID_ARG) { type = NavType.StringType }),
-            ) { backStackEntry ->
-                val sleepId = backStackEntry.arguments?.getString(SLEEP_DETAIL_ID_ARG).orEmpty()
-                val sleepDetailViewModel = appViewModel {
-                    SleepDetailViewModel(sleepRepository, sleepId)
-                }
+            ) {
+                val sleepDetailViewModel = hiltViewModel<SleepDetailViewModel>()
                 SleepDetailScreen(
                     viewModel = sleepDetailViewModel,
                     unitFormatter = unitFormatter,
@@ -371,15 +287,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Heart.route) {
-                val heartViewModel = appViewModel {
-                    HeartViewModel(
-                        repository = heartRepository,
-                        vitalsRepository = vitalsRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
-                        selectedMetric = HeartMetric.AVERAGE_HEART_RATE,
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
-                    )
-                }
+                val heartViewModel = hiltViewModel<HeartViewModel>()
                 AverageHeartRateScreen(
                     viewModel = heartViewModel,
                     unitFormatter = unitFormatter,
@@ -388,14 +296,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Body.route) {
-                val bodyViewModel = appViewModel {
-                    BodyViewModel(
-                        repository = bodyRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
-                        selectedMetric = BodyMetric.WEIGHT,
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
-                    )
-                }
+                val bodyViewModel = hiltViewModel<BodyViewModel>()
                 WeightScreen(
                     viewModel = bodyViewModel,
                     unitFormatter = unitFormatter,
@@ -404,16 +305,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Hydration.route) {
-                val hydrationViewModel = appViewModel {
-                    HydrationViewModel(
-                        repository = hydrationRepository,
-                        bodyRepository = bodyRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
-                        initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
-                        onDailyGoalChanged = { goal -> preferencesRepository.hydrationDailyGoalLiters = goal },
-                    )
-                }
+                val hydrationViewModel = hiltViewModel<HydrationViewModel>()
                 HydrationScreen(
                     viewModel = hydrationViewModel,
                     unitFormatter = unitFormatter,
@@ -422,18 +314,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Nutrition.route) {
-                val nutritionViewModel = appViewModel {
-                    NutritionViewModel(
-                        repository = nutritionRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
-                        selectedMetric = NutritionMetric.CALORIES_IN,
-                        initialDailyGoal = preferencesRepository.dailyGoalFor(NutritionMetric.CALORIES_IN.dailyGoalKey),
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
-                        onDailyGoalChanged = { goal ->
-                            preferencesRepository.setDailyGoalFor(NutritionMetric.CALORIES_IN.dailyGoalKey, goal)
-                        },
-                    )
-                }
+                val nutritionViewModel = hiltViewModel<NutritionViewModel>()
                 CaloriesInScreen(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
@@ -442,19 +323,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Mindfulness.route) {
-                val mindfulnessViewModel = appViewModel {
-                    MindfulnessViewModel(
-                        repository = mindfulnessRepository,
-                        sleepRepository = sleepRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
-                        initialSleepRangeMode = preferencesRepository.sleepRangeMode,
-                        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
-                        onDailyGoalChanged = { goal ->
-                            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
-                        },
-                    )
-                }
+                val mindfulnessViewModel = hiltViewModel<MindfulnessViewModel>()
                 MindfulnessScreen(
                     viewModel = mindfulnessViewModel,
                     unitFormatter = unitFormatter,
@@ -463,13 +332,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Cycle.route) {
-                val cycleViewModel = appViewModel {
-                    CycleViewModel(
-                        repository = cycleRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.CYCLE),
-                    )
-                }
+                val cycleViewModel = hiltViewModel<CycleViewModel>()
                 CycleScreen(
                     viewModel = cycleViewModel,
                     unitFormatter = unitFormatter,
@@ -478,15 +341,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Browse.route) {
-                val browseViewModel = appViewModel {
-                    BrowseViewModel(
-                        activityRepository = activityRepository,
-                        sleepRepository = sleepRepository,
-                        bodyRepository = bodyRepository,
-                        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BROWSE),
-                        onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BROWSE),
-                    )
-                }
+                val browseViewModel = hiltViewModel<BrowseViewModel>()
                 BrowseScreen(
                     viewModel = browseViewModel,
                     unitFormatter = unitFormatter,
@@ -501,9 +356,7 @@ fun AppNavigation(
             }
 
             composable(Screen.Settings.route) {
-                val settingsViewModel = appViewModel {
-                    SettingsViewModel(repository, preferencesRepository)
-                }
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     onBack = { navController.popBackStack() },
@@ -516,34 +369,13 @@ fun AppNavigation(
 @Composable
 private fun MetricRouteContent(
     metricId: DashboardWidgetId?,
-    activityRepository: ActivityRepository,
-    sleepRepository: SleepRepository,
-    heartRepository: HeartRepository,
-    bodyRepository: BodyRepository,
-    hydrationRepository: HydrationRepository,
-    nutritionRepository: NutritionRepository,
-    mindfulnessRepository: MindfulnessRepository,
-    vitalsRepository: VitalsRepository,
-    cycleRepository: CycleRepository,
-    preferencesRepository: PreferencesRepository,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivity: (String) -> Unit,
     onOpenSleepSession: (String) -> Unit,
 ) {
     metricId?.toActivityMetricOrNull()?.let { activityMetric ->
-        val activityViewModel = appViewModel {
-            ActivityViewModel(
-                repository = activityRepository,
-                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
-                selectedMetric = activityMetric,
-                initialDailyGoal = preferencesRepository.dailyGoalFor(activityMetric.dailyGoalKey),
-                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.STEPS),
-                onDailyGoalChanged = { goal ->
-                    preferencesRepository.setDailyGoalFor(activityMetric.dailyGoalKey, goal)
-                },
-            )
-        }
+        val activityViewModel = hiltViewModel<ActivityViewModel>()
         ActivityMetricRouteScreen(
             metric = activityMetric,
             viewModel = activityViewModel,
@@ -554,15 +386,7 @@ private fun MetricRouteContent(
     }
 
     metricId?.toHeartMetricOrNull()?.let { heartMetric ->
-        val heartViewModel = appViewModel {
-            HeartViewModel(
-                repository = heartRepository,
-                vitalsRepository = vitalsRepository,
-                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
-                selectedMetric = heartMetric,
-                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HEART),
-            )
-        }
+        val heartViewModel = hiltViewModel<HeartViewModel>()
         HeartMetricRouteScreen(
             metric = heartMetric,
             viewModel = heartViewModel,
@@ -573,14 +397,7 @@ private fun MetricRouteContent(
     }
 
     metricId?.toBodyMetricOrNull()?.let { bodyMetric ->
-        val bodyViewModel = appViewModel {
-            BodyViewModel(
-                repository = bodyRepository,
-                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
-                selectedMetric = bodyMetric,
-                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.BODY),
-            )
-        }
+        val bodyViewModel = hiltViewModel<BodyViewModel>()
         BodyMetricRouteScreen(
             metric = bodyMetric,
             viewModel = bodyViewModel,
@@ -591,18 +408,7 @@ private fun MetricRouteContent(
     }
 
     metricId?.toNutritionMetricOrNull()?.let { nutritionMetric ->
-        val nutritionViewModel = appViewModel {
-            NutritionViewModel(
-                repository = nutritionRepository,
-                initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
-                selectedMetric = nutritionMetric,
-                initialDailyGoal = preferencesRepository.dailyGoalFor(nutritionMetric.dailyGoalKey),
-                onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.NUTRITION),
-                onDailyGoalChanged = { goal ->
-                    preferencesRepository.setDailyGoalFor(nutritionMetric.dailyGoalKey, goal)
-                },
-            )
-        }
+        val nutritionViewModel = hiltViewModel<NutritionViewModel>()
         NutritionMetricRouteScreen(
             metric = nutritionMetric,
             viewModel = nutritionViewModel,
@@ -614,18 +420,7 @@ private fun MetricRouteContent(
 
     when (metricId) {
         DashboardWidgetId.WORKOUT -> {
-            val activitiesViewModel = appViewModel {
-                ActivitiesViewModel(
-                    repository = activityRepository,
-                    heartRepository = heartRepository,
-                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
-                    initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
-                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.ACTIVITIES),
-                    onDailyGoalChanged = { goal ->
-                        preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES, goal)
-                    },
-                )
-            }
+            val activitiesViewModel = hiltViewModel<ActivitiesViewModel>()
             ActivitiesScreen(
                 viewModel = activitiesViewModel,
                 unitFormatter = unitFormatter,
@@ -634,20 +429,7 @@ private fun MetricRouteContent(
             )
         }
         DashboardWidgetId.SLEEP -> {
-            val sleepViewModel = appViewModel {
-                SleepViewModel(
-                    repository = sleepRepository,
-                    heartRepository = heartRepository,
-                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
-                    initialSleepRangeMode = preferencesRepository.sleepRangeMode,
-                    initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
-                    sleepRangeModeFlow = preferencesRepository.sleepRangeModeFlow,
-                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.SLEEP),
-                    onDailyGoalChanged = { goal ->
-                        preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
-                    },
-                )
-            }
+            val sleepViewModel = hiltViewModel<SleepViewModel>()
             SleepScreen(
                 viewModel = sleepViewModel,
                 unitFormatter = unitFormatter,
@@ -656,16 +438,7 @@ private fun MetricRouteContent(
             )
         }
         DashboardWidgetId.HYDRATION -> {
-            val hydrationViewModel = appViewModel {
-                HydrationViewModel(
-                    repository = hydrationRepository,
-                    bodyRepository = bodyRepository,
-                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
-                    initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
-                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.HYDRATION),
-                    onDailyGoalChanged = { goal -> preferencesRepository.hydrationDailyGoalLiters = goal },
-                )
-            }
+            val hydrationViewModel = hiltViewModel<HydrationViewModel>()
             HydrationScreen(
                 viewModel = hydrationViewModel,
                 unitFormatter = unitFormatter,
@@ -673,19 +446,7 @@ private fun MetricRouteContent(
             )
         }
         DashboardWidgetId.MINDFULNESS -> {
-            val mindfulnessViewModel = appViewModel {
-                MindfulnessViewModel(
-                    repository = mindfulnessRepository,
-                    sleepRepository = sleepRepository,
-                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
-                    initialSleepRangeMode = preferencesRepository.sleepRangeMode,
-                    initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
-                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.MINDFULNESS),
-                    onDailyGoalChanged = { goal ->
-                        preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
-                    },
-                )
-            }
+            val mindfulnessViewModel = hiltViewModel<MindfulnessViewModel>()
             MindfulnessScreen(
                 viewModel = mindfulnessViewModel,
                 unitFormatter = unitFormatter,
@@ -693,13 +454,7 @@ private fun MetricRouteContent(
             )
         }
         DashboardWidgetId.CYCLE -> {
-            val cycleViewModel = appViewModel {
-                CycleViewModel(
-                    repository = cycleRepository,
-                    initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
-                    onRangeSelected = preferencesRepository.rangeSaver(PeriodRangePreferenceKey.CYCLE),
-                )
-            }
+            val cycleViewModel = hiltViewModel<CycleViewModel>()
             CycleScreen(
                 viewModel = cycleViewModel,
                 unitFormatter = unitFormatter,
@@ -783,9 +538,6 @@ private fun NutritionMetricRouteScreen(
         NutritionMetric.FAT -> FatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
     }
 }
-
-private fun PreferencesRepository.rangeSaver(key: PeriodRangePreferenceKey): (TimeRange) -> Unit =
-    { range -> setTimeRangeFor(key, range) }
 
 private fun String.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
     runCatching { DashboardWidgetId.valueOf(this) }.getOrNull()
@@ -874,21 +626,3 @@ private data class DashboardTopBarState(
     val isEditing: Boolean = false,
     val onToggleEdit: () -> Unit = {},
 )
-
-@Composable
-private inline fun <reified VM : ViewModel> appViewModel(
-    noinline create: () -> VM,
-): VM = viewModel(factory = OpenVitalsViewModelFactory(create))
-
-private class OpenVitalsViewModelFactory<VM : ViewModel>(
-    private val create: () -> VM,
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val viewModel = create()
-        require(modelClass.isInstance(viewModel)) {
-            "Expected ${modelClass.name}, but created ${viewModel::class.java.name}"
-        }
-        return viewModel as T
-    }
-}

@@ -2,8 +2,10 @@ package tech.mmarca.openvitals.features.sleep
 
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.repository.SleepPeriodData
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -29,6 +31,21 @@ class SleepViewModelTest {
 
     private fun emptyRepo() = mockk<SleepRepository>().also { repo ->
         coEvery { repo.loadSleepSessions(any(), any()) } returns emptyList()
+        coEvery { repo.loadSleepPeriod(any(), any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val sleepRangeMode = secondArg<SleepRangeMode>()
+            val windows = query.windows
+            fun queryStart(date: LocalDate) = when (sleepRangeMode) {
+                SleepRangeMode.ROLLING_24H -> date
+                SleepRangeMode.NOON,
+                SleepRangeMode.EVENING_18H -> date.minusDays(1)
+            }
+            SleepPeriodData(
+                sessions = repo.loadSleepSessions(queryStart(windows.current.start), windows.current.end),
+                previousSessions = repo.loadSleepSessions(queryStart(windows.previous.start), windows.previous.end),
+                baselineSessions = repo.loadSleepSessions(queryStart(windows.baseline.start), windows.baseline.end),
+            )
+        }
     }
 
     private fun sleepSession(offsetDays: Long = 0) = SleepData(
@@ -75,7 +92,7 @@ class SleepViewModelTest {
 
     @Test fun `load failure sets error message`() = runTest {
         val repo = mockk<SleepRepository>()
-        coEvery { repo.loadSleepSessions(any(), any()) } throws RuntimeException("offline")
+        coEvery { repo.loadSleepPeriod(any(), any()) } throws RuntimeException("offline")
 
         val vm = SleepViewModel(repo)
 
@@ -91,7 +108,7 @@ class SleepViewModelTest {
         vm.selectRange(TimeRange.MONTH)
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
-        coVerify(atLeast = 2) { repo.loadSleepSessions(any(), any()) }
+        coVerify(atLeast = 2) { repo.loadSleepPeriod(any(), any()) }
     }
 
     @Test fun `initial non-midnight sleep range loads the previous day too`() = runTest {
