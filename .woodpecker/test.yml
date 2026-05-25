@@ -16,3 +16,28 @@ steps:
       - chmod +x gradlew
       - ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
       - git diff --check
+
+  - name: mirror-github
+    depends_on:
+      - test
+    image: alpine:3.20
+    environment:
+      GITHUB_MIRROR_SSH_KEY:
+        from_secret: GITHUB_MIRROR_SSH_KEY
+    commands:
+      - set -eu
+      - test -n "$${GITHUB_MIRROR_SSH_KEY}"
+      - apk add --no-cache git openssh-client
+      - mkdir -p "$${HOME}/.ssh" .woodpecker/tmp
+      - chmod 700 "$${HOME}/.ssh"
+      - ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> "$${HOME}/.ssh/known_hosts"
+      - mirror_key_path="$${CI_WORKSPACE}/.woodpecker/tmp/github-mirror-key"
+      - printf '%s\n' "$${GITHUB_MIRROR_SSH_KEY}" | tr -d '\r' > "$${mirror_key_path}"
+      - chmod 600 "$${mirror_key_path}"
+      - export GIT_SSH_COMMAND="ssh -i $${mirror_key_path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+      - git remote remove github-mirror 2>/dev/null || true
+      - git remote add github-mirror git@github.com:mmarca-tech/OpenVitals.git
+      - git push github-mirror "HEAD:refs/heads/main"
+    when:
+      - event: push
+        branch: main

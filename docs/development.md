@@ -46,3 +46,8 @@ git diff --check
 ```
 
 Release CI also uses the wrapper for test/lint and release artifact builds.
+
+After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
+`git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
+`GITHUB_MIRROR_SSH_KEY` with a private SSH key whose public key is installed as a
+write-enabled deploy key on the GitHub mirror repository.
