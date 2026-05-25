@@ -50,6 +50,7 @@
     <string name="screen_manual_entry">Add entry</string>
     <string name="screen_hydration_entry">Hydration entry</string>
     <string name="screen_body_measurement_entry">Body measurement entry</string>
+    <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
     <string name="bottom_nav_dashboard">Dashboard</string>
     <string name="bottom_nav_add_entry">Add entry</string>
@@ -58,16 +59,29 @@
     <string name="manual_entry_weight_body">Log a Health Connect weight entry.</string>
     <string name="manual_entry_height_body">Log a Health Connect height entry.</string>
     <string name="manual_entry_body_fat_body">Log a Health Connect body fat entry.</string>
+    <string name="manual_entry_blood_pressure_body">Log a Health Connect blood pressure entry.</string>
+    <string name="manual_entry_spo2_body">Log a Health Connect SpO2 entry.</string>
+    <string name="manual_entry_respiratory_rate_body">Log a Health Connect respiratory rate entry.</string>
+    <string name="manual_entry_body_temperature_body">Log a Health Connect body temperature entry.</string>
     <string name="manual_entry_add_widgets">Add entry widgets</string>
     <string name="manual_entry_all_widgets_added">All entry widgets are already shown.</string>
     <string name="manual_entry_write_permission_title">Hydration write permission</string>
     <string name="manual_entry_body_write_permission_title">%1$s write permission</string>
+    <string name="manual_entry_vitals_write_permission_title">%1$s write permission</string>
     <string name="body_entry_subtitle">%1$s entries are saved directly to Health Connect.</string>
     <string name="body_entry_permission_needed">To add %1$s entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
     <string name="body_entry_value_label">%1$s (%2$s)</string>
     <string name="body_entry_add_selected">Add %1$s</string>
     <string name="body_entry_invalid_value">Enter a valid value for this measurement.</string>
     <string name="body_entry_write_failed">Could not save body measurement: %1$s</string>
+    <string name="vitals_entry_subtitle">%1$s entries are saved directly to Health Connect.</string>
+    <string name="vitals_entry_permission_needed">To add %1$s entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
+    <string name="vitals_entry_value_label">%1$s (%2$s)</string>
+    <string name="vitals_entry_systolic_label">Systolic (mmHg)</string>
+    <string name="vitals_entry_diastolic_label">Diastolic (mmHg)</string>
+    <string name="vitals_entry_add_selected">Add %1$s</string>
+    <string name="vitals_entry_invalid_value">Enter a valid value for this vital.</string>
+    <string name="vitals_entry_write_failed">Could not save vital: %1$s</string>
 
     <string name="range_day">Day</string>
     <string name="range_week">Week</string>

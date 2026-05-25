@@ -37,6 +37,7 @@ import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
+import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Instant
@@ -94,6 +95,7 @@ class HealthConnectManager @Inject constructor(
     val mindfulnessPermissions: Set<String> get() = permissionService.mindfulnessPermissions
     val additionalDataAccessPermissions: Set<String> get() = permissionService.additionalDataAccessPermissions
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
+    val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val phase1Permissions: Set<String> get() = permissionService.phase1Permissions
     val phase2Permissions: Set<String> get() = permissionService.phase2Permissions
@@ -361,6 +363,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readLatestVo2Max(date: LocalDate): Vo2MaxEntry? =
         vitalsReader.readLatestVo2Max(date)
+
+    suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String =
+        vitalsReader.writeVitalsMeasurementEntry(request)
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)

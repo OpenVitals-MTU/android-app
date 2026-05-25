@@ -5,6 +5,10 @@ enum class ManualEntryWidgetId {
     WEIGHT,
     HEIGHT,
     BODY_FAT,
+    BLOOD_PRESSURE,
+    SPO2,
+    RESPIRATORY_RATE,
+    BODY_TEMPERATURE,
 }
 
 val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
@@ -12,6 +16,10 @@ val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
     ManualEntryWidgetId.WEIGHT,
     ManualEntryWidgetId.HEIGHT,
     ManualEntryWidgetId.BODY_FAT,
+    ManualEntryWidgetId.BLOOD_PRESSURE,
+    ManualEntryWidgetId.SPO2,
+    ManualEntryWidgetId.RESPIRATORY_RATE,
+    ManualEntryWidgetId.BODY_TEMPERATURE,
 )
 
 fun customizableManualEntryWidgetIds(widgetIds: List<ManualEntryWidgetId>): List<ManualEntryWidgetId> =

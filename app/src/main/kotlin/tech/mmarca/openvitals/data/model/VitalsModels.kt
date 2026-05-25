@@ -32,3 +32,17 @@ data class Vo2MaxEntry(
     val vo2MaxMlPerKgPerMin: Double,
     val source: String,
 )
+
+enum class VitalsMeasurementType {
+    BLOOD_PRESSURE,
+    SPO2,
+    RESPIRATORY_RATE,
+    BODY_TEMPERATURE,
+}
+
+data class VitalsMeasurementWriteRequest(
+    val type: VitalsMeasurementType,
+    val time: Instant,
+    val value: Double,
+    val secondaryValue: Double? = null,
+)

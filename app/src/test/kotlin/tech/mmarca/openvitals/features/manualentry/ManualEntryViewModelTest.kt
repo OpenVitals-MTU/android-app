@@ -13,9 +13,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -28,6 +30,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -38,6 +41,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(
                 storedWidgetOrder = listOf(ManualEntryWidgetId.HYDRATION.name),
             ),
@@ -50,6 +54,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -63,16 +68,13 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = preferencesRepository,
         )
 
         vm.removeWidget(ManualEntryWidgetId.HYDRATION)
 
-        val expected = listOf(
-            ManualEntryWidgetId.WEIGHT,
-            ManualEntryWidgetId.HEIGHT,
-            ManualEntryWidgetId.BODY_FAT,
-        )
+        val expected = DefaultManualEntryWidgetIds - ManualEntryWidgetId.HYDRATION
         assertEquals(expected, vm.uiState.value.widgets)
         verify { preferencesRepository.setManualEntryWidgetOrder(expected.map { it.name }) }
     }
@@ -82,6 +84,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -95,6 +98,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = true),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -108,6 +112,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -121,6 +126,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteHydrationPermission)),
         )
 
@@ -135,6 +141,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -151,6 +158,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -165,6 +173,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(canWrite = false),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -179,6 +188,7 @@ class ManualEntryViewModelTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(canWrite = false),
+            vitalsRepository = vitalsRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteWeightPermission)),
         )
 
@@ -186,6 +196,35 @@ class ManualEntryViewModelTest {
 
         assertFalse(vm.uiState.value.showBodyWritePermissionPrompt)
         assertEquals(BodyMeasurementType.WEIGHT, vm.uiState.value.pendingBodyEntryNavigation)
+    }
+
+    @Test fun `vitals measurement tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(canWrite = false),
+            preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
+        )
+
+        vm.onVitalsMeasurementWidgetTapped(VitalsMeasurementType.BLOOD_PRESSURE)
+
+        assertTrue(vm.uiState.value.showVitalsWritePermissionPrompt)
+        assertEquals(VitalsMeasurementType.BLOOD_PRESSURE, vm.uiState.value.vitalsWritePermissionPromptType)
+        assertNull(vm.uiState.value.pendingVitalsEntryNavigation)
+    }
+
+    @Test fun `vitals measurement tap opens entry when write permission was acknowledged`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(canWrite = false),
+            preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteBloodPressurePermission)),
+        )
+
+        vm.onVitalsMeasurementWidgetTapped(VitalsMeasurementType.BLOOD_PRESSURE)
+
+        assertFalse(vm.uiState.value.showVitalsWritePermissionPrompt)
+        assertEquals(VitalsMeasurementType.BLOOD_PRESSURE, vm.uiState.value.pendingVitalsEntryNavigation)
     }
 
     private fun prefs(
@@ -215,8 +254,17 @@ class ManualEntryViewModelTest {
             coEvery { repo.hasBodyWritePermission(any()) } returns canWrite
         }
 
+    private fun vitalsRepo(
+        canWrite: Boolean = false,
+    ): VitalsRepository =
+        mockk<VitalsRepository>().also { repo ->
+            every { repo.vitalsWritePermissions(any()) } returns setOf(WriteBloodPressurePermission)
+            coEvery { repo.hasVitalsWritePermission(any()) } returns canWrite
+        }
+
     private companion object {
         private const val WriteHydrationPermission = "write_hydration"
         private const val WriteWeightPermission = "write_weight"
+        private const val WriteBloodPressurePermission = "write_blood_pressure"
     }
 }

@@ -13,6 +13,8 @@ import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -36,6 +38,19 @@ class VitalsRepository @Inject constructor(
     private val readRespiratoryRatePermission = HealthPermission.getReadPermission(RespiratoryRateRecord::class)
     private val readBodyTemperaturePermission = HealthPermission.getReadPermission(BodyTemperatureRecord::class)
     private val readVo2MaxPermission = HealthPermission.getReadPermission(Vo2MaxRecord::class)
+    private val writeBloodPressurePermission = HealthPermission.getWritePermission(BloodPressureRecord::class)
+    private val writeSpO2Permission = HealthPermission.getWritePermission(OxygenSaturationRecord::class)
+    private val writeRespiratoryRatePermission = HealthPermission.getWritePermission(RespiratoryRateRecord::class)
+    private val writeBodyTemperaturePermission = HealthPermission.getWritePermission(BodyTemperatureRecord::class)
+
+    fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> = setOf(
+        when (type) {
+            VitalsMeasurementType.BLOOD_PRESSURE -> writeBloodPressurePermission
+            VitalsMeasurementType.SPO2 -> writeSpO2Permission
+            VitalsMeasurementType.RESPIRATORY_RATE -> writeRespiratoryRatePermission
+            VitalsMeasurementType.BODY_TEMPERATURE -> writeBodyTemperaturePermission
+        }
+    )
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -124,6 +139,18 @@ class VitalsRepository @Inject constructor(
             return emptyList()
         }
         return hc.readVo2MaxEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
+    suspend fun hasVitalsWritePermission(type: VitalsMeasurementType): Boolean =
+        vitalsWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
+
+    suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String {
+        val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missing=$missingPermissions")
+            throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
+        }
+        return hc.writeVitalsMeasurementEntry(request)
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()

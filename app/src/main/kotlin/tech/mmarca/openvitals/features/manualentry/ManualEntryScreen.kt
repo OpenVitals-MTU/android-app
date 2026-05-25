@@ -65,6 +65,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
@@ -78,6 +79,7 @@ fun ManualEntryScreen(
     viewModel: ManualEntryViewModel,
     onOpenHydrationEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
+    onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -91,10 +93,16 @@ fun ManualEntryScreen(
     ) {
         viewModel.onBodyWritePermissionResult()
     }
+    val requestVitalsWritePermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        viewModel.onVitalsWritePermissionResult()
+    }
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
+        onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
     )
     val specsById = specs.associateBy { it.id }
     val visibleIds = state.widgets.filter { it in specsById }
@@ -117,6 +125,13 @@ fun ManualEntryScreen(
         if (type != null) {
             viewModel.onBodyEntryNavigationHandled()
             onOpenBodyMeasurementEntry(type)
+        }
+    }
+    LaunchedEffect(state.pendingVitalsEntryNavigation) {
+        val type = state.pendingVitalsEntryNavigation
+        if (type != null) {
+            viewModel.onVitalsEntryNavigationHandled()
+            onOpenVitalsMeasurementEntry(type)
         }
     }
 
@@ -163,6 +178,20 @@ fun ManualEntryScreen(
             )
         }
     }
+
+    if (state.showVitalsWritePermissionPrompt) {
+        state.vitalsWritePermissionPromptType?.let { type ->
+            VitalsWritePermissionPrompt(
+                type = type,
+                onDismiss = viewModel::dismissVitalsWritePermissionPrompt,
+                onOpenEntry = viewModel::continueVitalsEntryFromWritePermissionPrompt,
+                onGrant = {
+                    viewModel.grantVitalsWritePermissionFromPrompt()
+                    requestVitalsWritePermissions.launch(state.vitalsWritePermissions)
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -200,6 +229,31 @@ private fun BodyWritePermissionPrompt(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_body_write_permission_title, title)) },
         text = { Text(stringResource(R.string.body_entry_permission_needed, title)) },
+        confirmButton = {
+            Button(onClick = onGrant) {
+                Text(stringResource(R.string.action_grant))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onOpenEntry) {
+                Text(stringResource(R.string.action_open))
+            }
+        },
+    )
+}
+
+@Composable
+private fun VitalsWritePermissionPrompt(
+    type: VitalsMeasurementType,
+    onDismiss: () -> Unit,
+    onOpenEntry: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    val title = stringResource(type.titleRes())
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.manual_entry_vitals_write_permission_title, title)) },
+        text = { Text(stringResource(R.string.vitals_entry_permission_needed, title)) },
         confirmButton = {
             Button(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
@@ -424,6 +478,7 @@ private fun manualEntryWidgetSpecs(
     isEditingWidgets: Boolean,
     onOpenHydrationEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
+    onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
     return listOf(
@@ -462,7 +517,35 @@ private fun manualEntryWidgetSpecs(
             messageRes = R.string.manual_entry_body_fat_body,
             isEditingWidgets = isEditingWidgets,
             onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
-        )
+        ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.BLOOD_PRESSURE,
+            type = VitalsMeasurementType.BLOOD_PRESSURE,
+            messageRes = R.string.manual_entry_blood_pressure_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.SPO2,
+            type = VitalsMeasurementType.SPO2,
+            messageRes = R.string.manual_entry_spo2_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.RESPIRATORY_RATE,
+            type = VitalsMeasurementType.RESPIRATORY_RATE,
+            messageRes = R.string.manual_entry_respiratory_rate_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.BODY_TEMPERATURE,
+            type = VitalsMeasurementType.BODY_TEMPERATURE,
+            messageRes = R.string.manual_entry_body_temperature_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
     )
 }
 
@@ -475,6 +558,32 @@ private fun bodyMeasurementWidgetSpec(
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
 ): ManualEntryWidgetSpec {
     val click = if (isEditingWidgets) null else ({ onOpenBodyMeasurementEntry(type) })
+    return ManualEntryWidgetSpec(
+        id = id,
+        title = stringResource(type.titleRes()),
+        content = { modifier ->
+            MetricCardPlaceholder(
+                title = stringResource(type.titleRes()),
+                icon = type.icon(),
+                accentColor = type.accentColor(),
+                message = stringResource(messageRes),
+                contentAtBottom = true,
+                modifier = modifier,
+                onClick = click,
+            )
+        },
+    )
+}
+
+@Composable
+private fun vitalsMeasurementWidgetSpec(
+    id: ManualEntryWidgetId,
+    type: VitalsMeasurementType,
+    messageRes: Int,
+    isEditingWidgets: Boolean,
+    onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
+): ManualEntryWidgetSpec {
+    val click = if (isEditingWidgets) null else ({ onOpenVitalsMeasurementEntry(type) })
     return ManualEntryWidgetSpec(
         id = id,
         title = stringResource(type.titleRes()),

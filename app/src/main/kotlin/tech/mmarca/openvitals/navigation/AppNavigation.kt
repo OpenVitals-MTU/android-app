@@ -76,12 +76,15 @@ import tech.mmarca.openvitals.features.heart.Vo2MaxScreen
 import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.BodyMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.BodyMeasurementEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.HydrationEntryScreen
 import tech.mmarca.openvitals.features.manualentry.HydrationEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.ManualEntryScreen
 import tech.mmarca.openvitals.features.manualentry.ManualEntryViewModel
+import tech.mmarca.openvitals.features.manualentry.VitalsMeasurementEntryScreen
+import tech.mmarca.openvitals.features.manualentry.VitalsMeasurementEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.titleRes
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
@@ -122,6 +125,11 @@ fun AppNavigation(
     } else {
         null
     }
+    val currentVitalsMeasurementType = if (currentRoute == Screen.VitalsMeasurementEntry.route) {
+        navBackStackEntry?.arguments?.getString(VITALS_MEASUREMENT_TYPE_ARG)?.toVitalsMeasurementTypeOrNull()
+    } else {
+        null
+    }
     var dashboardTopBarState by remember { mutableStateOf(TopBarEditState()) }
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
 
@@ -141,6 +149,9 @@ fun AppNavigation(
         Screen.BodyMeasurementEntry.route -> currentBodyMeasurementType
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_body_measurement_entry)
+        Screen.VitalsMeasurementEntry.route -> currentVitalsMeasurementType
+            ?.let { stringResource(it.titleRes()) }
+            ?: stringResource(R.string.screen_vitals_measurement_entry)
         Screen.Steps.route -> stringResource(R.string.screen_steps)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
@@ -267,6 +278,9 @@ fun AppNavigation(
                     onOpenBodyMeasurementEntry = { type ->
                         navController.navigate(Screen.BodyMeasurementEntry.createRoute(type.name))
                     },
+                    onOpenVitalsMeasurementEntry = { type ->
+                        navController.navigate(Screen.VitalsMeasurementEntry.createRoute(type.name))
+                    },
                     onEditStateChanged = { isEditing, onToggleEdit ->
                         manualEntryTopBarState = TopBarEditState(isEditing, onToggleEdit)
                     },
@@ -293,6 +307,22 @@ fun AppNavigation(
                 BodyMeasurementEntryScreen(
                     type = type,
                     viewModel = bodyMeasurementViewModel,
+                    unitFormatter = unitFormatter,
+                )
+            }
+
+            composable(
+                route = Screen.VitalsMeasurementEntry.route,
+                arguments = listOf(navArgument(VITALS_MEASUREMENT_TYPE_ARG) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments
+                    ?.getString(VITALS_MEASUREMENT_TYPE_ARG)
+                    ?.toVitalsMeasurementTypeOrNull()
+                    ?: VitalsMeasurementType.BLOOD_PRESSURE
+                val vitalsMeasurementViewModel = hiltViewModel<VitalsMeasurementEntryViewModel>()
+                VitalsMeasurementEntryScreen(
+                    type = type,
+                    viewModel = vitalsMeasurementViewModel,
                     unitFormatter = unitFormatter,
                 )
             }
@@ -671,6 +701,9 @@ private fun String.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
 
 private fun String.toBodyMeasurementTypeOrNull(): BodyMeasurementType? =
     runCatching { BodyMeasurementType.valueOf(this) }.getOrNull()
+
+private fun String.toVitalsMeasurementTypeOrNull(): VitalsMeasurementType? =
+    runCatching { VitalsMeasurementType.valueOf(this) }.getOrNull()
 
 private fun DashboardWidgetId.toActivityMetricOrNull(): ActivityMetric? =
     when (this) {
