@@ -2,10 +2,12 @@ package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -21,6 +23,8 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.DashboardMetric
+import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -30,6 +34,7 @@ class HealthRepositoryDashboardTest {
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
     private val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
+    private val menstruationPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
 
     @Before
     fun setUp() {
@@ -55,7 +60,12 @@ class HealthRepositoryDashboardTest {
         )
         coEvery { hc.readDistanceMeters(date) } returns 1234.0
 
-        val data = HealthRepository(hc).loadDashboard(date)
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.STEPS, DashboardMetric.DISTANCE),
+            )
+        )
 
         assertEquals(0L, data.steps)
         assertEquals(1234.0, data.distanceMeters, 0.01)
@@ -82,12 +92,57 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(sleepPermission)
         coEvery { hc.readSleepSessions(any(), any()) } returns listOf(nextDaySleep, eveningSleep)
 
-        val data = HealthRepository(hc).loadDashboard(date, SleepRangeMode.EVENING_18H)
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                sleepRangeMode = SleepRangeMode.EVENING_18H,
+                visibleMetrics = setOf(DashboardMetric.SLEEP),
+            )
+        )
 
         assertNotNull(data.sleep)
         assertEquals(eveningSleep.startTime, data.sleep!!.startTime)
         assertEquals(nextDaySleep.endTime, data.sleep.endTime)
         assertEquals(Duration.ofHours(7).plusMinutes(39).toMillis(), data.sleep.durationMs)
+    }
+
+    @Test fun `loadDashboard skips hidden dashboard metrics`() = runTest {
+        val date = LocalDate.of(2026, 5, 16)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.readSteps(date) } returns 9876L
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.STEPS),
+            )
+        )
+
+        assertEquals(9876L, data.steps)
+        assertEquals(setOf(DashboardMetric.STEPS), data.loadedMetrics)
+        coVerify(exactly = 0) { hc.readDistanceMeters(any()) }
+    }
+
+    @Test fun `loadDashboard skips cycle reads when cycle tracking is disabled`() = runTest {
+        val date = LocalDate.of(2026, 5, 16)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(menstruationPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(menstruationPermission)
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.CYCLE),
+                trackCycle = false,
+            )
+        )
+
+        assertEquals(emptySet<DashboardMetric>(), data.loadedMetrics)
+        coVerify(exactly = 0) { hc.readMenstruationPeriods(any(), any()) }
     }
 
     private fun sleep(

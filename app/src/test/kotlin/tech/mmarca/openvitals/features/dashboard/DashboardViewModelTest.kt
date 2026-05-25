@@ -1,7 +1,10 @@
 package tech.mmarca.openvitals.features.dashboard
 
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.core.performance.RefreshMode
 import tech.mmarca.openvitals.data.model.DashboardData
+import tech.mmarca.openvitals.data.model.DashboardMetric
+import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -10,6 +13,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,7 +48,7 @@ class DashboardViewModelTest {
     @Test fun `initial state has isLoading true before coroutine runs`() {
         val repo = mockk<HealthRepository>()
         // Block the coroutine by never completing — use a suspended mock
-        coEvery { repo.loadDashboard(any(), any()) } coAnswers { kotlinx.coroutines.awaitCancellation() }
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers { kotlinx.coroutines.awaitCancellation() }
 
         // With UnconfinedTestDispatcher the launch starts but suspends at awaitCancellation,
         // so we can inspect the intermediate state right after init sets isLoading = true
@@ -58,7 +62,7 @@ class DashboardViewModelTest {
     @Test fun `load success populates data and clears loading`() = runTest {
         val data = DashboardData(date = today)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -70,7 +74,7 @@ class DashboardViewModelTest {
 
     @Test fun `load failure sets errorMessage and clears loading`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } throws RuntimeException("network error")
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } throws RuntimeException("network error")
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -82,7 +86,7 @@ class DashboardViewModelTest {
 
     @Test fun `load failure with null message uses Unknown error fallback`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } throws RuntimeException()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } throws RuntimeException()
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -93,19 +97,19 @@ class DashboardViewModelTest {
 
     @Test fun `load clamps future date to today`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
         val futureDate = today.plusDays(10)
         vm.load(futureDate)
 
         assertEquals(today, vm.uiState.value.selectedDate)
-        coVerify { repo.loadDashboard(today, SleepRangeMode.EVENING_18H) }
+        coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.EVENING_18H }) }
     }
 
     @Test fun `selectDate clamps future date to today`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(today.plusDays(5))
@@ -117,7 +121,7 @@ class DashboardViewModelTest {
 
     @Test fun `previousDay decrements selectedDate by one day`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
         vm.previousDay()
@@ -127,19 +131,19 @@ class DashboardViewModelTest {
 
     @Test fun `nextDay is blocked when selectedDate is today`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
         vm.nextDay()
 
         assertEquals(today, vm.uiState.value.selectedDate)
         // load called once by init, not again by blocked nextDay
-        coVerify(exactly = 1) { repo.loadDashboard(any(), any()) }
+        coVerify(exactly = 1) { repo.loadDashboard(any<DashboardQuery>()) }
     }
 
     @Test fun `nextDay advances from yesterday to today`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(yesterday)
@@ -153,7 +157,7 @@ class DashboardViewModelTest {
     @Test fun `floorsClimbed is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = 12)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -163,7 +167,7 @@ class DashboardViewModelTest {
     @Test fun `floorsClimbed is null in state when not reported`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = null)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -173,7 +177,7 @@ class DashboardViewModelTest {
     @Test fun `elevationGainedMeters is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, elevationGainedMeters = 85.0)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -183,7 +187,7 @@ class DashboardViewModelTest {
     @Test fun `elevationGainedMeters is null in state when not reported`() = runTest {
         val data = DashboardData(date = today, elevationGainedMeters = null)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -193,7 +197,7 @@ class DashboardViewModelTest {
     @Test fun `floorsClimbed zero is non-null — permission granted no stair data`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = 0)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -203,7 +207,7 @@ class DashboardViewModelTest {
     @Test fun `caloriesInKcal is exposed through state when present`() = runTest {
         val data = DashboardData(date = today, caloriesInKcal = 1_850.0)
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -219,7 +223,7 @@ class DashboardViewModelTest {
             latestVo2Max = 42.1,
         )
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns data
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -233,27 +237,87 @@ class DashboardViewModelTest {
 
     @Test fun `refresh reloads current date`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
         vm.refresh()
 
         // init + refresh = 2 calls
-        coVerify(exactly = 2) { repo.loadDashboard(today, SleepRangeMode.EVENING_18H) }
+        coVerify(exactly = 2) { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.EVENING_18H }) }
     }
 
     @Test fun `load passes sleep range mode from preferences`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         DashboardViewModel(repo, prefs(sleepRangeMode = SleepRangeMode.NOON))
 
-        coVerify { repo.loadDashboard(today, SleepRangeMode.NOON) }
+        coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
+    }
+
+    @Test fun `load scopes dashboard query to first fixed widgets`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            queries += firstArg<DashboardQuery>()
+            DashboardData(date = today)
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.SLEEP.name,
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.HYDRATION.name,
+            DashboardWidgetId.DISTANCE.name,
+            DashboardWidgetId.WEIGHT.name,
+        )
+
+        DashboardViewModel(repo, prefs)
+
+        assertEquals(
+            setOf(
+                DashboardMetric.SLEEP,
+                DashboardMetric.STEPS,
+                DashboardMetric.HYDRATION,
+                DashboardMetric.DISTANCE,
+            ),
+            queries.first().visibleMetrics,
+        )
+    }
+
+    @Test fun `refresh passes force refresh mode`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            queries += firstArg<DashboardQuery>()
+            DashboardData(date = today)
+        }
+
+        val vm = DashboardViewModel(repo, prefs())
+        vm.refresh()
+
+        assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
+    }
+
+    @Test fun `newer load wins when navigation requests overlap`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            if (query.date == yesterday) {
+                delay(100)
+            }
+            DashboardData(date = query.date)
+        }
+
+        val vm = DashboardViewModel(repo, prefs())
+        vm.load(yesterday)
+        vm.load(today)
+
+        assertEquals(today, vm.uiState.value.data?.date)
     }
 
     @Test fun `trackCycle flag follows preferences`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs(trackCycle = true))
 
@@ -262,7 +326,7 @@ class DashboardViewModelTest {
 
     @Test fun `refreshPreferences updates trackCycle without loading dashboard`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val prefs = prefs(trackCycle = false)
         every { prefs.trackCycle } returnsMany listOf(false, true)
         val vm = DashboardViewModel(repo, prefs)
@@ -270,12 +334,12 @@ class DashboardViewModelTest {
         vm.refreshPreferences()
 
         assertTrue(vm.uiState.value.trackCycle)
-        coVerify(exactly = 1) { repo.loadDashboard(today, SleepRangeMode.EVENING_18H) }
+        coVerify(exactly = 1) { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.EVENING_18H }) }
     }
 
     @Test fun `refreshPreferences reloads dashboard when sleep range mode changes`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val prefs = prefs(sleepRangeMode = SleepRangeMode.EVENING_18H)
         every { prefs.sleepRangeMode } returnsMany listOf(
             SleepRangeMode.EVENING_18H,
@@ -287,12 +351,12 @@ class DashboardViewModelTest {
         vm.refreshPreferences()
 
         assertEquals(SleepRangeMode.NOON, vm.uiState.value.sleepRangeMode)
-        coVerify { repo.loadDashboard(today, SleepRangeMode.NOON) }
+        coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
     }
 
     @Test fun `dashboard widgets default to full widget set`() = runTest {
         val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs())
 
@@ -306,7 +370,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.SLEEP.name,
             DashboardWidgetId.STEPS.name,
         )
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs)
 
@@ -320,7 +384,7 @@ class DashboardViewModelTest {
         val repo = mockk<HealthRepository>()
         val prefs = prefs()
         every { prefs.dashboardWidgetOrder() } returns listOf("unknown", DashboardWidgetId.STEPS.name)
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs)
 
@@ -334,7 +398,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.BROWSE.name,
             DashboardWidgetId.STEPS.name,
         )
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = DashboardViewModel(repo, prefs)
 
@@ -344,7 +408,7 @@ class DashboardViewModelTest {
     @Test fun `dashboard widget remove add and move persist order`() = runTest {
         val repo = mockk<HealthRepository>()
         val prefs = prefs()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val vm = DashboardViewModel(repo, prefs)
 
         vm.removeDashboardWidget(DashboardWidgetId.DISTANCE)
@@ -363,7 +427,7 @@ class DashboardViewModelTest {
     @Test fun `dashboard widget add ignores fixed browse widget`() = runTest {
         val repo = mockk<HealthRepository>()
         val prefs = prefs()
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val vm = DashboardViewModel(repo, prefs)
 
         vm.addDashboardWidget(DashboardWidgetId.BROWSE)
@@ -380,7 +444,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.CALORIES_OUT.name,
             DashboardWidgetId.SLEEP.name,
         )
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val vm = DashboardViewModel(repo, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.CALORIES_OUT)
@@ -406,7 +470,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.SLEEP.name,
             DashboardWidgetId.HYDRATION.name,
         )
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val vm = DashboardViewModel(repo, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.HYDRATION, DashboardWidgetId.DISTANCE)
@@ -433,7 +497,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.SLEEP.name,
             DashboardWidgetId.HYDRATION.name,
         )
-        coEvery { repo.loadDashboard(any(), any()) } returns DashboardData(date = today)
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         val vm = DashboardViewModel(repo, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.HYDRATION)

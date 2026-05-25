@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.body
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
@@ -18,7 +19,6 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class BodyUiState(
     val isLoading: Boolean = true,
@@ -91,6 +91,7 @@ class BodyViewModel(
 
     private val _uiState = MutableStateFlow(BodyUiState(selectedRange = initialRange))
     val uiState: StateFlow<BodyUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load()
@@ -122,7 +123,7 @@ class BodyViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
@@ -170,6 +171,7 @@ class BodyViewModel(
                 }
             }
                 .onSuccess { result ->
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
@@ -198,6 +200,7 @@ class BodyViewModel(
                     )
                 }
                 .onFailure {
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,

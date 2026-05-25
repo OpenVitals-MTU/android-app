@@ -62,7 +62,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.State
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -144,7 +145,7 @@ fun DashboardScreen(
     onOpenBrowse: () -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val dashboardData = state.data
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -336,7 +337,7 @@ private fun DashboardWidgetSections(
     var sectionBounds by remember { mutableStateOf<Rect?>(null) }
     var fixedSectionBounds by remember { mutableStateOf<Rect?>(null) }
     var carouselSectionBounds by remember { mutableStateOf<Rect?>(null) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    val dragOffsetState = remember { mutableStateOf(Offset.Zero) }
     var draggedWidgetStartBounds by remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current
     val edgeScrollThresholdPx = with(density) { DashboardCarouselEdgeScrollThreshold.toPx() }
@@ -357,7 +358,7 @@ private fun DashboardWidgetSections(
 
     LaunchedEffect(draggingWidgetId) {
         if (draggingWidgetId == null) {
-            dragOffset = Offset.Zero
+            dragOffsetState.value = Offset.Zero
             draggedWidgetStartBounds = null
         }
     }
@@ -372,7 +373,7 @@ private fun DashboardWidgetSections(
         while (true) {
             val draggedBounds = draggedWidgetStartBounds ?: widgetBounds[widgetId]
             if (widgetId in carouselIds && draggedBounds != null && !pagerState.isScrollInProgress) {
-                val draggedCenterX = draggedBounds.center.x + dragOffset.x
+                val draggedCenterX = draggedBounds.center.x + dragOffsetState.value.x
                 val currentPage = pagerState.currentPage
                 val targetPage = when {
                     draggedCenterX <= section.left + edgeScrollThresholdPx -> currentPage - 1
@@ -408,7 +409,7 @@ private fun DashboardWidgetSections(
                 draggedWidgetStartBounds = draggedWidgetStartBounds,
                 widgetBounds = widgetBounds,
                 onDraggingWidgetChanged = onGridDraggingWidgetChanged,
-                onDragOffsetChanged = { offset -> dragOffset = offset },
+                onDragOffsetChanged = { offset -> dragOffsetState.value = offset },
                 onMoveWidgetToTarget = onMoveWidgetToTarget,
                 onRemoveWidget = onRemoveWidget,
                 modifier = Modifier
@@ -428,7 +429,7 @@ private fun DashboardWidgetSections(
                         .onGloballyPositioned { coordinates -> carouselSectionBounds = coordinates.boundsInRoot() }
                         .zIndex(if (draggingWidgetId in carouselIds) 2f else 0f),
                     pageSpacing = 12.dp,
-                    beyondViewportPageCount = carouselPages.lastIndex.coerceAtLeast(0),
+                    beyondViewportPageCount = 1.coerceAtMost(carouselPages.lastIndex),
                 ) { page ->
                     val pageIds = carouselPages.getOrNull(page).orEmpty()
                     DashboardWidgetGridRows(
@@ -440,7 +441,7 @@ private fun DashboardWidgetSections(
                         draggedWidgetStartBounds = draggedWidgetStartBounds,
                         widgetBounds = widgetBounds,
                         onDraggingWidgetChanged = onGridDraggingWidgetChanged,
-                        onDragOffsetChanged = { offset -> dragOffset = offset },
+                        onDragOffsetChanged = { offset -> dragOffsetState.value = offset },
                         onMoveWidgetToTarget = onMoveWidgetToTarget,
                         onRemoveWidget = onRemoveWidget,
                     )
@@ -477,7 +478,7 @@ private fun DashboardWidgetSections(
             widgetBounds = widgetBounds,
             draggedWidgetStartBounds = draggedWidgetStartBounds,
             sectionBounds = sectionBounds,
-            dragOffset = dragOffset,
+            dragOffsetState = dragOffsetState,
         )
     }
 }
@@ -611,20 +612,25 @@ private fun DashboardWidgetTile(
 ) {
     var dragOffset by remember(spec.id, isEditingDashboard) { mutableStateOf(Offset.Zero) }
     var isDragging by remember(spec.id, isEditingDashboard) { mutableStateOf(false) }
-    val wiggleTransition = rememberInfiniteTransition(label = "DashboardWidgetWiggle")
-    val wiggleRotation by wiggleTransition.animateFloat(
-        initialValue = -DashboardEditWiggleDegrees,
-        targetValue = DashboardEditWiggleDegrees,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 140,
-                delayMillis = (spec.id.ordinal % 4) * 35,
-                easing = LinearEasing,
+    val wiggleRotation = if (isEditingDashboard) {
+        val wiggleTransition = rememberInfiniteTransition(label = "DashboardWidgetWiggle")
+        val rotation by wiggleTransition.animateFloat(
+            initialValue = -DashboardEditWiggleDegrees,
+            targetValue = DashboardEditWiggleDegrees,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = 140,
+                    delayMillis = (spec.id.ordinal % 4) * 35,
+                    easing = LinearEasing,
+                ),
+                repeatMode = RepeatMode.Reverse,
             ),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "DashboardWidgetWiggleRotation",
-    )
+            label = "DashboardWidgetWiggleRotation",
+        )
+        rotation
+    } else {
+        0f
+    }
     val viewConfiguration = LocalViewConfiguration.current
     val dragViewConfiguration = remember(viewConfiguration) {
         object : ViewConfiguration by viewConfiguration {
@@ -721,13 +727,14 @@ private fun DashboardDraggedWidgetOverlay(
     widgetBounds: Map<DashboardWidgetId, Rect>,
     draggedWidgetStartBounds: Rect?,
     sectionBounds: Rect?,
-    dragOffset: Offset,
+    dragOffsetState: State<Offset>,
 ) {
     val widgetId = draggingWidgetId ?: return
     val spec = specsById[widgetId] ?: return
     val bounds = draggedWidgetStartBounds ?: widgetBounds[widgetId] ?: return
     val section = sectionBounds ?: return
     val density = LocalDensity.current
+    val dragOffset by dragOffsetState
 
     Box(
         modifier = Modifier

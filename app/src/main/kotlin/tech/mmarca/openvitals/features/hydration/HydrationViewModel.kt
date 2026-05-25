@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.BodyRepository
@@ -16,7 +17,6 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 private const val DefaultHydrationDailyGoalLiters = 2.0
 private const val HydrationGoalStepLiters = 0.25
@@ -88,6 +88,7 @@ class HydrationViewModel(
         )
     )
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load()
@@ -133,7 +134,7 @@ class HydrationViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
@@ -149,6 +150,7 @@ class HydrationViewModel(
                     crossWeightEntries = bodyRepository?.loadWeightEntries(period.start, period.end).orEmpty(),
                 )
             }.onSuccess { result ->
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -159,6 +161,7 @@ class HydrationViewModel(
                     crossWeightEntries = result.crossWeightEntries,
                 )
             }.onFailure { error ->
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,

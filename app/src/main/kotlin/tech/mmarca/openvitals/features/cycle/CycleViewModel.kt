@@ -7,7 +7,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.model.CycleData
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -32,6 +32,7 @@ class CycleViewModel(
 
     private val _uiState = MutableStateFlow(CycleUiState(selectedRange = initialRange))
     val uiState: StateFlow<CycleUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     val cyclePermissions: Set<String> get() = repository.phase4Permissions
 
@@ -69,7 +70,7 @@ class CycleViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
@@ -84,6 +85,7 @@ class CycleViewModel(
                     )
                 }
             }.onSuccess { result ->
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -91,6 +93,7 @@ class CycleViewModel(
                     missingPermissions = result.missingPermissions,
                 )
             }.onFailure { error ->
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,

@@ -12,8 +12,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 class HealthConnectReaderSupportTest {
 
@@ -59,31 +61,26 @@ class HealthConnectReaderSupportTest {
         assertEquals(7, result)
     }
 
-    @Test fun `withLogging serializes concurrent reads`() = runTest {
+    @Test fun `withLogging allows bounded concurrent reads`() = runTest {
         val support = support()
-        val events = mutableListOf<String>()
+        val activeReads = AtomicInteger(0)
+        val maxActiveReads = AtomicInteger(0)
 
         awaitAll(
-            async {
-                support.withLogging("first", fallback = Unit) {
-                    events += "first-start"
-                    delay(100)
-                    events += "first-end"
+            *(0 until 8).map { index ->
+                async {
+                    support.withLogging("read-$index", fallback = Unit) {
+                        val active = activeReads.incrementAndGet()
+                        maxActiveReads.updateAndGet { currentMax -> maxOf(currentMax, active) }
+                        delay(100)
+                        activeReads.decrementAndGet()
+                    }
                 }
-            },
-            async {
-                support.withLogging("second", fallback = Unit) {
-                    events += "second-start"
-                    delay(100)
-                    events += "second-end"
-                }
-            },
+            }.toTypedArray(),
         )
 
-        assertEquals(
-            listOf("first-start", "first-end", "second-start", "second-end"),
-            events,
-        )
+        assertTrue(maxActiveReads.get() > 1)
+        assertTrue(maxActiveReads.get() <= 4)
     }
 
     private fun support(): HealthConnectReaderSupport {

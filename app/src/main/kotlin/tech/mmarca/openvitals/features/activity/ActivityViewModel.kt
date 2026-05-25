@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.core.period.PeriodSelection
@@ -15,7 +16,6 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class ActivityUiState(
     val isLoading: Boolean = true,
@@ -49,6 +49,7 @@ class ActivityViewModel(
         )
     )
     val uiState: StateFlow<ActivityUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load()
@@ -94,7 +95,7 @@ class ActivityViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
@@ -137,6 +138,7 @@ class ActivityViewModel(
                 } else {
                     emptyList()
                 }
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -149,6 +151,7 @@ class ActivityViewModel(
                     activityProgress = activityProgress,
                 )
             }.onFailure {
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,

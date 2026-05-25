@@ -36,7 +36,22 @@ internal class VitalsHealthReader(
 
     suspend fun readLatestBloodPressure(date: LocalDate): BloodPressureEntry? {
         val (start, end) = support.dayRange(date)
-        return readBloodPressureEntries(start, end).maxByOrNull { it.time }
+        return support.withNullableLogging("readLatestBloodPressure[$date][$start..$end]") {
+            support.client().readRecordsPaged(
+                recordType = BloodPressureRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+                maxRecords = 1,
+            ).firstOrNull()?.let { record ->
+                BloodPressureEntry(
+                    time = record.time,
+                    systolicMmHg = record.systolic.inMillimetersOfMercury.toInt(),
+                    diastolicMmHg = record.diastolic.inMillimetersOfMercury.toInt(),
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
     }
 
     suspend fun readSpO2Entries(start: Instant, end: Instant): List<SpO2Entry> =
@@ -57,7 +72,21 @@ internal class VitalsHealthReader(
 
     suspend fun readLatestSpO2(date: LocalDate): SpO2Entry? {
         val (start, end) = support.dayRange(date)
-        return readSpO2Entries(start, end).maxByOrNull { it.time }
+        return support.withNullableLogging("readLatestSpO2[$date][$start..$end]") {
+            support.client().readRecordsPaged(
+                recordType = OxygenSaturationRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+                maxRecords = 1,
+            ).firstOrNull()?.let { record ->
+                SpO2Entry(
+                    time = record.time,
+                    percent = record.percentage.value,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
     }
 
     suspend fun readRespiratoryRateEntries(start: Instant, end: Instant): List<RespiratoryRateEntry> =
@@ -109,6 +138,20 @@ internal class VitalsHealthReader(
 
     suspend fun readLatestVo2Max(date: LocalDate): Vo2MaxEntry? {
         val (start, end) = support.dayRange(date)
-        return readVo2MaxEntries(start, end).maxByOrNull { it.time }
+        return support.withNullableLogging("readLatestVo2Max[$date][$start..$end]") {
+            support.client().readRecordsPaged(
+                recordType = Vo2MaxRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+                maxRecords = 1,
+            ).firstOrNull()?.let { record ->
+                Vo2MaxEntry(
+                    time = record.time,
+                    vo2MaxMlPerKgPerMin = record.vo2MillilitersPerMinuteKilogram,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
     }
 }

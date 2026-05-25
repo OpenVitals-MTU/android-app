@@ -6,7 +6,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,8 +39,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     )
                 }
-                val unitSystem by app.preferencesRepository.unitSystemFlow.collectAsState()
-                val appLanguage by app.preferencesRepository.appLanguageFlow.collectAsState()
+                val unitSystem by app.preferencesRepository.unitSystemFlow.collectAsStateWithLifecycle()
+                val appLanguage by app.preferencesRepository.appLanguageFlow.collectAsStateWithLifecycle()
                 val unitFormatter = remember(unitSystem) {
                     UnitFormatter(unitSystemProvider = { unitSystem })
                 }

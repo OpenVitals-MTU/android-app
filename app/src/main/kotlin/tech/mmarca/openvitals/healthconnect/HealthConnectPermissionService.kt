@@ -40,6 +40,8 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 
@@ -195,7 +197,7 @@ internal class HealthConnectPermissionService(
         return available
     }
 
-    suspend fun grantedPermissions(): Set<String> =
+    suspend fun grantedPermissions(): Set<String> = withContext(Dispatchers.IO) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             managedPermissions.filterTo(mutableSetOf()) { permission ->
                 ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
@@ -209,6 +211,7 @@ internal class HealthConnectPermissionService(
                 Log.d(TAG, "grantedPermissions(client) count=${granted.size} granted=${granted.sorted()}")
             }
         }
+    }
 
     suspend fun hasPermission(permission: String): Boolean =
         grantedPermissions().contains(permission)

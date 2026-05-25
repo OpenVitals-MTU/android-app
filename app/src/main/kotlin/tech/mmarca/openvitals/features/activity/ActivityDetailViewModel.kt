@@ -2,12 +2,12 @@ package tech.mmarca.openvitals.features.activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class ActivityDetailUiState(
     val isLoading: Boolean = true,
@@ -22,6 +22,7 @@ class ActivityDetailViewModel(
 
     private val _uiState = MutableStateFlow(ActivityDetailUiState())
     val uiState: StateFlow<ActivityDetailUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load()
@@ -36,10 +37,11 @@ class ActivityDetailViewModel(
             return
         }
 
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching { repository.loadWorkout(activityId) }
                 .onSuccess { workout ->
+                    if (!isCurrent) return@load
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
                         workout = workout,
@@ -47,6 +49,7 @@ class ActivityDetailViewModel(
                     )
                 }
                 .onFailure {
+                    if (!isCurrent) return@load
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
                         error = it.message ?: "Unable to load activity.",

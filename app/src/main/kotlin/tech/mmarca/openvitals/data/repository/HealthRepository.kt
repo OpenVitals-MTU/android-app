@@ -31,20 +31,33 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.data.model.DashboardData
+import tech.mmarca.openvitals.data.model.DashboardMetric
+import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepRangeWindowFor
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import tech.mmarca.openvitals.healthconnect.HealthConnectQueryKey
+import tech.mmarca.openvitals.healthconnect.currentDayTtlMillis
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 
 @OptIn(ExperimentalMindfulnessSessionApi::class)
-class HealthRepository(private val hc: HealthConnectManager) {
+class HealthRepository(
+    private val hc: HealthConnectManager,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+) {
 
     companion object {
         private const val TAG = "HealthRepository"
@@ -126,29 +139,84 @@ class HealthRepository(private val hc: HealthConnectManager) {
 
     // ─── Dashboard ────────────────────────────────────────────────────────────
 
-    suspend fun loadDashboard(date: LocalDate = LocalDate.now()): DashboardData =
-        loadDashboard(date, SleepRangeMode.EVENING_18H)
+    suspend fun loadDashboard(query: DashboardQuery): DashboardData =
+        withContext(dispatchers.io) {
+            val startedAt = System.currentTimeMillis()
+            val granted = grantedPermissionsIfAvailable()
+            val loadMetrics = query.visibleMetrics.metricsAllowedByPreferences(query.trackCycle)
+            val cacheKey = HealthConnectQueryKey(
+                operation = "dashboard",
+                parts = listOf(
+                    query.date.toString(),
+                    query.sleepRangeMode.name,
+                    query.trackCycle.toString(),
+                    loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
+                ),
+                permissions = granted.permissionFingerprint(),
+            )
 
-    suspend fun loadDashboard(
-        date: LocalDate,
-        sleepRangeMode: SleepRangeMode,
+            val data = queryCache.getOrPut(
+                key = cacheKey,
+                refreshMode = query.refreshMode,
+                ttlMillis = currentDayTtlMillis(query.date),
+            ) {
+                loadDashboardUncached(query, loadMetrics, granted)
+            }
+            Log.d(
+                TAG,
+                "loadDashboard completed date=${query.date} metrics=${loadMetrics.size} " +
+                    "durationMs=${System.currentTimeMillis() - startedAt}",
+            )
+            data
+        }
+
+    private suspend fun loadDashboardUncached(
+        query: DashboardQuery,
+        metrics: Set<DashboardMetric>,
+        granted: Set<String>,
     ): DashboardData = coroutineScope {
-        val granted = grantedPermissionsIfAvailable()
-        Log.d(TAG, "loadDashboard date=$date granted=${granted.sorted()}")
+        val date = query.date
+        val sleepRangeMode = query.sleepRangeMode
+        Log.d(
+            TAG,
+            "loadDashboard date=$date metrics=${metrics.sortedBy { it.name }} granted=${granted.sorted()}",
+        )
 
-        fun <T> readIfGranted(permission: String, name: String, block: suspend () -> T) =
-            if (permission in granted) async { dashboardMetric(name, block) } else null
+        fun wants(metric: DashboardMetric): Boolean = metric in metrics
+        fun wantsAny(vararg targets: DashboardMetric): Boolean = targets.any { it in metrics }
+
+        fun <T> readIfNeeded(
+            enabled: Boolean,
+            permission: String,
+            name: String,
+            block: suspend () -> T,
+        ) = if (enabled && permission in granted) {
+            async { dashboardMetric(name, block) }
+        } else {
+            null
+        }
 
         val zone = ZoneId.systemDefault()
         val dayStart = date.atStartOfDay(zone).toInstant()
         val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
 
-        val steps = readIfGranted(readStepsPermission, "steps") { hc.readSteps(date) }
-        val distance = readIfGranted(readDistancePermission, "distance") { hc.readDistanceMeters(date) }
-        val workout = readIfGranted(readExercisePermission, "latest workout") { hc.readLatestWorkout(date) }
-        val sleep = readIfGranted(readSleepPermission, "sleep") { readDashboardSleep(date, sleepRangeMode) }
-        val calories = readIfGranted(readCaloriesPermission, "calories") { hc.readCaloriesKcal(date) }
+        val steps = readIfNeeded(wants(DashboardMetric.STEPS), readStepsPermission, "steps") {
+            hc.readSteps(date)
+        }
+        val distance = readIfNeeded(wants(DashboardMetric.DISTANCE), readDistancePermission, "distance") {
+            hc.readDistanceMeters(date)
+        }
+        val workout = readIfNeeded(wants(DashboardMetric.WORKOUT), readExercisePermission, "latest workout") {
+            hc.readLatestWorkout(date)
+        }
+        val sleep = readIfNeeded(wants(DashboardMetric.SLEEP), readSleepPermission, "sleep") {
+            readDashboardSleep(date, sleepRangeMode)
+        }
+        val calories = readIfNeeded(wants(DashboardMetric.CALORIES_OUT), readCaloriesPermission, "calories") {
+            hc.readCaloriesKcal(date)
+        }
         val activeCalories = if (
+            wants(DashboardMetric.ACTIVE_CALORIES) &&
             readActiveCaloriesPermission in granted &&
             readStepsPermission in granted &&
             readDistancePermission in granted
@@ -163,48 +231,118 @@ class HealthRepository(private val hc: HealthConnectManager) {
         } else {
             null
         }
-        val caloriesIn = readIfGranted(readNutritionPermission, "calories in") { hc.readCaloriesInKcal(date) }
-        val macros = readIfGranted(readNutritionPermission, "macros") {
+        val caloriesIn = readIfNeeded(wants(DashboardMetric.CALORIES_IN), readNutritionPermission, "calories in") {
+            hc.readCaloriesInKcal(date)
+        }
+        val macros = readIfNeeded(
+            wantsAny(DashboardMetric.PROTEIN, DashboardMetric.CARBS, DashboardMetric.FAT),
+            readNutritionPermission,
+            "macros",
+        ) {
             hc.readDailyMacros(date, date).firstOrNull()
         }
-        val hydration = readIfGranted(readHydrationPermission, "hydration") { hc.readHydrationLiters(date) }
-        val weight = readIfGranted(readWeightPermission, "weight") { hc.readLatestWeight(date) }
-        val height = readIfGranted(readHeightPermission, "height") { hc.readLatestHeight() }
-        val bodyFat = readIfGranted(readBodyFatPermission, "body fat") { hc.readLatestBodyFat() }
-        val leanMass = readIfGranted(readLeanMassPermission, "lean mass") { hc.readLatestLeanBodyMass() }
-        val bmr = readIfGranted(readBmrPermission, "BMR") { hc.readLatestBMR() }
-        val boneMass = readIfGranted(readBoneMassPermission, "bone mass") { hc.readLatestBoneMass() }
-        val heartRate = readIfGranted(readHeartRatePermission, "heart rate") { hc.readAvgHeartRate(date) }
-        val restingHR = readIfGranted(readRestingHRPermission, "resting heart rate") { hc.readRestingHeartRate(date) }
-        val hrv = readIfGranted(readHrvPermission, "HRV") { hc.readHrvRmssd(date) }
-        val bloodPressure = readIfGranted(readBloodPressurePermission, "blood pressure") {
+        val hydration = readIfNeeded(wants(DashboardMetric.HYDRATION), readHydrationPermission, "hydration") {
+            hc.readHydrationLiters(date)
+        }
+        val weight = readIfNeeded(
+            wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI),
+            readWeightPermission,
+            "weight",
+        ) {
+            hc.readLatestWeight(date)
+        }
+        val height = readIfNeeded(
+            wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI),
+            readHeightPermission,
+            "height",
+        ) {
+            hc.readLatestHeight()
+        }
+        val bodyFat = readIfNeeded(wants(DashboardMetric.BODY_FAT), readBodyFatPermission, "body fat") {
+            hc.readLatestBodyFat()
+        }
+        val leanMass = readIfNeeded(wants(DashboardMetric.LEAN_MASS), readLeanMassPermission, "lean mass") {
+            hc.readLatestLeanBodyMass()
+        }
+        val bmr = readIfNeeded(wants(DashboardMetric.BMR), readBmrPermission, "BMR") {
+            hc.readLatestBMR()
+        }
+        val boneMass = readIfNeeded(wants(DashboardMetric.BONE_MASS), readBoneMassPermission, "bone mass") {
+            hc.readLatestBoneMass()
+        }
+        val heartRate = readIfNeeded(wants(DashboardMetric.AVG_HEART_RATE), readHeartRatePermission, "heart rate") {
+            hc.readAvgHeartRate(date)
+        }
+        val restingHR = readIfNeeded(
+            wants(DashboardMetric.RESTING_HEART_RATE),
+            readRestingHRPermission,
+            "resting heart rate",
+        ) {
+            hc.readRestingHeartRate(date)
+        }
+        val hrv = readIfNeeded(wants(DashboardMetric.HRV), readHrvPermission, "HRV") {
+            hc.readHrvRmssd(date)
+        }
+        val bloodPressure = readIfNeeded(
+            wants(DashboardMetric.BLOOD_PRESSURE),
+            readBloodPressurePermission,
+            "blood pressure",
+        ) {
             hc.readLatestBloodPressure(date)
         }
-        val spO2 = readIfGranted(readSpO2Permission, "SpO2") { hc.readLatestSpO2(date) }
-        val vo2Max = readIfGranted(readVo2MaxPermission, "VO2 max") { hc.readLatestVo2Max(date) }
-        val respiratoryRate = readIfGranted(readRespiratoryRatePermission, "respiratory rate") {
+        val spO2 = readIfNeeded(wants(DashboardMetric.SPO2), readSpO2Permission, "SpO2") {
+            hc.readLatestSpO2(date)
+        }
+        val vo2Max = readIfNeeded(wants(DashboardMetric.VO2_MAX), readVo2MaxPermission, "VO2 max") {
+            hc.readLatestVo2Max(date)
+        }
+        val respiratoryRate = readIfNeeded(
+            wants(DashboardMetric.RESPIRATORY_RATE),
+            readRespiratoryRatePermission,
+            "respiratory rate",
+        ) {
             hc.readRespiratoryRateEntries(dayStart, dayEnd)
                 .map { it.breathsPerMinute }
                 .average()
                 .takeUnless { it.isNaN() }
         }
-        val bodyTemperature = readIfGranted(readBodyTemperaturePermission, "body temperature") {
+        val bodyTemperature = readIfNeeded(
+            wants(DashboardMetric.BODY_TEMPERATURE),
+            readBodyTemperaturePermission,
+            "body temperature",
+        ) {
             hc.readBodyTemperatureEntries(dayStart, dayEnd)
                 .maxByOrNull { it.time }
                 ?.temperatureCelsius
         }
-        val floors = readIfGranted(readFloorsPermission, "floors") { hc.readFloorsClimbed(date) }
-        val elevation = readIfGranted(readElevationPermission, "elevation") { hc.readElevationGained(date) }
-        val mindfulnessMinutes = readIfGranted(readMindfulnessPermission, "mindfulness") {
+        val floors = readIfNeeded(wants(DashboardMetric.FLOORS), readFloorsPermission, "floors") {
+            hc.readFloorsClimbed(date)
+        }
+        val elevation = readIfNeeded(wants(DashboardMetric.ELEVATION), readElevationPermission, "elevation") {
+            hc.readElevationGained(date)
+        }
+        val mindfulnessMinutes = readIfNeeded(
+            wants(DashboardMetric.MINDFULNESS),
+            readMindfulnessPermission,
+            "mindfulness",
+        ) {
             hc.readMindfulnessMinutes(date)
         }
-        val menstruationPeriods = readIfGranted(readMenstruationPeriodPermission, "menstruation periods") {
+        val menstruationPeriods = readIfNeeded(
+            wants(DashboardMetric.CYCLE),
+            readMenstruationPeriodPermission,
+            "menstruation periods",
+        ) {
             hc.readMenstruationPeriods(dayStart, dayEnd)
         }
-        val ovulationTests = readIfGranted(readOvulationTestPermission, "ovulation tests") {
+        val ovulationTests = readIfNeeded(wants(DashboardMetric.CYCLE), readOvulationTestPermission, "ovulation tests") {
             hc.readOvulationTests(dayStart, dayEnd)
         }
-        val basalBodyTemperature = readIfGranted(readBasalBodyTemperaturePermission, "basal body temperature") {
+        val basalBodyTemperature = readIfNeeded(
+            wants(DashboardMetric.CYCLE),
+            readBasalBodyTemperaturePermission,
+            "basal body temperature",
+        ) {
             hc.readBasalBodyTemperatureEntries(dayStart, dayEnd)
                 .maxByOrNull { it.time }
                 ?.temperatureCelsius
@@ -262,6 +400,7 @@ class HealthRepository(private val hc: HealthConnectManager) {
             ovulationTestCount = ovulationTests?.await()?.size,
             latestBasalBodyTemperatureCelsius = basalBodyTemperature?.await(),
             missingPermissions = missingPerms,
+            loadedMetrics = metrics,
         )
     }
 
@@ -280,4 +419,11 @@ class HealthRepository(private val hc: HealthConnectManager) {
         runCatching { block() }
             .onFailure { Log.w(TAG, "Skipping dashboard metric $name after Health Connect failure", it) }
             .getOrNull()
+
+    private fun Set<DashboardMetric>.metricsAllowedByPreferences(trackCycle: Boolean): Set<DashboardMetric> =
+        if (trackCycle) {
+            this
+        } else {
+            this - DashboardMetric.CYCLE
+        }
 }

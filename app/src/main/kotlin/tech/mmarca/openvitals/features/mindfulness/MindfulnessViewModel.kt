@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
@@ -17,7 +18,6 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class MindfulnessUiState(
     val isLoading: Boolean = true,
@@ -53,6 +53,7 @@ class MindfulnessViewModel(
         )
     )
     val uiState: StateFlow<MindfulnessUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load()
@@ -98,7 +99,7 @@ class MindfulnessViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
@@ -120,6 +121,7 @@ class MindfulnessViewModel(
                 )
             }
                 .onSuccess { result ->
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
@@ -130,6 +132,7 @@ class MindfulnessViewModel(
                     )
                 }
                 .onFailure { error ->
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,

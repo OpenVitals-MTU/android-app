@@ -5,16 +5,18 @@ import androidx.health.connect.client.HealthConnectClient
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 
 internal class HealthConnectReaderSupport(
     private val clientProvider: () -> HealthConnectClient,
     private val diagnostics: HealthConnectDiagnostics,
     private val rateLimitMessage: (Long) -> String,
 ) {
-    private val readMutex = Mutex()
+    private val readSemaphore = Semaphore(MaxConcurrentReads)
 
     fun client(): HealthConnectClient = clientProvider()
 
@@ -35,7 +37,7 @@ internal class HealthConnectReaderSupport(
         operation: String,
         fallback: T,
         block: suspend () -> T,
-    ): T = readMutex.withLock {
+    ): T {
         var hasRetriedRateLimit = false
         var result: Result<T>? = null
 
@@ -44,9 +46,13 @@ internal class HealthConnectReaderSupport(
             Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
 
             try {
-                result = Result.success(block().also {
-                    Log.d(TAG, "Finished $operation successfully")
-                })
+                result = readSemaphore.withPermit {
+                    withContext(Dispatchers.IO) {
+                        Result.success(block().also {
+                            Log.d(TAG, "Finished $operation successfully")
+                        })
+                    }
+                }
             } catch (t: Throwable) {
                 if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
                     val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
@@ -63,7 +69,7 @@ internal class HealthConnectReaderSupport(
             }
         }
 
-        result.getOrThrow()
+        return result.getOrThrow()
     }
 
     private suspend fun waitForActiveRateLimit(operation: String) {
@@ -88,5 +94,6 @@ internal class HealthConnectReaderSupport(
 
     private companion object {
         private const val TAG = "HealthConnectManager"
+        private const val MaxConcurrentReads = 4
     }
 }

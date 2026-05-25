@@ -2,6 +2,8 @@ package tech.mmarca.openvitals
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -16,6 +18,7 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 
 class OpenVitalsApp : Application() {
 
@@ -32,6 +35,14 @@ class OpenVitalsApp : Application() {
         HealthConnectManager(this)
     }
 
+    val dispatcherProvider: DispatcherProvider by lazy {
+        DefaultDispatcherProvider
+    }
+
+    val healthConnectQueryCache: HealthConnectQueryCache by lazy {
+        HealthConnectQueryCache()
+    }
+
     val unitFormatter: UnitFormatter by lazy {
         UnitFormatter(preferencesRepository)
     }
@@ -41,7 +52,11 @@ class OpenVitalsApp : Application() {
     }
 
     val healthRepository: HealthRepository by lazy {
-        HealthRepository(healthConnectManager)
+        HealthRepository(
+            hc = healthConnectManager,
+            dispatchers = dispatcherProvider,
+            queryCache = healthConnectQueryCache,
+        )
     }
 
     val activityRepository: ActivityRepository by lazy {

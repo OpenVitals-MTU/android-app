@@ -2,15 +2,19 @@ package tech.mmarca.openvitals.features.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.performance.RefreshMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardData
+import tech.mmarca.openvitals.data.model.DashboardMetric
+import tech.mmarca.openvitals.data.model.DashboardQuery
+import tech.mmarca.openvitals.data.model.mergeLoaded
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val selectedDate: LocalDate = LocalDate.now(),
@@ -35,13 +39,14 @@ class DashboardViewModel(
         )
     )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load(_uiState.value.selectedDate)
     }
 
     fun refresh() {
-        load(_uiState.value.selectedDate)
+        load(_uiState.value.selectedDate, RefreshMode.FORCE)
     }
 
     fun refreshPreferences() {
@@ -60,11 +65,20 @@ class DashboardViewModel(
         }
     }
 
-    fun load(date: LocalDate) {
+    fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val trackCycle = prefs.trackCycle
             val sleepRangeMode = prefs.sleepRangeMode
+            val dashboardWidgets = _uiState.value.dashboardWidgets
+            val primaryMetrics = dashboardWidgets
+                .take(DashboardFixedWidgetCount)
+                .mapNotNull { it.toDashboardMetricOrNull() }
+                .toSet()
+            val remainingMetrics = dashboardWidgets
+                .drop(DashboardFixedWidgetCount)
+                .mapNotNull { it.toDashboardMetricOrNull() }
+                .toSet()
             _uiState.value = _uiState.value.copy(
                 selectedDate = clampedDate,
                 isLoading = true,
@@ -72,18 +86,38 @@ class DashboardViewModel(
                 trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
             )
-            runCatching { repository.loadDashboard(clampedDate, sleepRangeMode) }
+            runCatching {
+                repository.loadDashboard(
+                    DashboardQuery(
+                        date = clampedDate,
+                        sleepRangeMode = sleepRangeMode,
+                        visibleMetrics = primaryMetrics,
+                        trackCycle = trackCycle,
+                        refreshMode = refreshMode,
+                    )
+                )
+            }
                 .onSuccess { data ->
+                    if (!isCurrent) return@load
                     val unacknowledged = data.missingPermissions - prefs.acknowledgedPermissions()
                     _uiState.value = _uiState.value.copy(
                         data = data,
-                        isLoading = false,
+                        isLoading = remainingMetrics.isNotEmpty() && data.loadedMetrics.isNotEmpty(),
                         showPermissionsCallout = unacknowledged.isNotEmpty(),
                         trackCycle = prefs.trackCycle,
                         sleepRangeMode = sleepRangeMode,
                     )
+                    loadRemainingDashboardMetrics(
+                        date = clampedDate,
+                        sleepRangeMode = sleepRangeMode,
+                        visibleMetrics = remainingMetrics,
+                        trackCycle = trackCycle,
+                        refreshMode = refreshMode,
+                        isCurrentLoad = { isCurrent },
+                    )
                 }
                 .onFailure { error ->
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Unknown error",
@@ -170,5 +204,49 @@ class DashboardViewModel(
         val customizableWidgets = customizableDashboardWidgetIds(widgets)
         prefs.setDashboardWidgetOrder(customizableWidgets.map { it.name })
         _uiState.value = _uiState.value.copy(dashboardWidgets = customizableWidgets)
+    }
+
+    private suspend fun loadRemainingDashboardMetrics(
+        date: LocalDate,
+        sleepRangeMode: SleepRangeMode,
+        visibleMetrics: Set<DashboardMetric>,
+        trackCycle: Boolean,
+        refreshMode: RefreshMode,
+        isCurrentLoad: () -> Boolean,
+    ) {
+        val currentData = _uiState.value.data ?: return
+        if (visibleMetrics.isEmpty() || currentData.loadedMetrics.isEmpty()) {
+            _uiState.value = _uiState.value.copy(isLoading = false)
+            return
+        }
+
+        runCatching {
+            repository.loadDashboard(
+                DashboardQuery(
+                    date = date,
+                    sleepRangeMode = sleepRangeMode,
+                    visibleMetrics = visibleMetrics,
+                    trackCycle = trackCycle,
+                    refreshMode = refreshMode,
+                )
+            )
+        }
+            .onSuccess { remainingData ->
+                if (!isCurrentLoad()) return
+                val mergedData = (_uiState.value.data ?: currentData).mergeLoaded(remainingData)
+                val unacknowledged = mergedData.missingPermissions - prefs.acknowledgedPermissions()
+                _uiState.value = _uiState.value.copy(
+                    data = mergedData,
+                    isLoading = false,
+                    showPermissionsCallout = unacknowledged.isNotEmpty(),
+                )
+            }
+            .onFailure { error ->
+                if (!isCurrentLoad()) return
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = error.message ?: "Unknown error",
+                )
+            }
     }
 }

@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.dashboard
 
+import tech.mmarca.openvitals.data.model.DashboardMetric
+
 enum class DashboardWidgetId {
     STEPS,
     DISTANCE,
@@ -85,4 +87,38 @@ fun dashboardWidgetIdsFromStored(storedIds: List<String>?): List<DashboardWidget
         .let(::customizableDashboardWidgetIds)
 
     return parsedIds.ifEmpty { DefaultDashboardWidgetIds }
+}
+
+fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) {
+    DashboardWidgetId.STEPS -> DashboardMetric.STEPS
+    DashboardWidgetId.DISTANCE -> DashboardMetric.DISTANCE
+    DashboardWidgetId.CALORIES_OUT -> DashboardMetric.CALORIES_OUT
+    DashboardWidgetId.ACTIVE_CALORIES -> DashboardMetric.ACTIVE_CALORIES
+    DashboardWidgetId.FLOORS -> DashboardMetric.FLOORS
+    DashboardWidgetId.ELEVATION -> DashboardMetric.ELEVATION
+    DashboardWidgetId.WORKOUT -> DashboardMetric.WORKOUT
+    DashboardWidgetId.SLEEP -> DashboardMetric.SLEEP
+    DashboardWidgetId.HYDRATION -> DashboardMetric.HYDRATION
+    DashboardWidgetId.CALORIES_IN -> DashboardMetric.CALORIES_IN
+    DashboardWidgetId.PROTEIN -> DashboardMetric.PROTEIN
+    DashboardWidgetId.CARBS -> DashboardMetric.CARBS
+    DashboardWidgetId.FAT -> DashboardMetric.FAT
+    DashboardWidgetId.WEIGHT -> DashboardMetric.WEIGHT
+    DashboardWidgetId.HEIGHT -> DashboardMetric.HEIGHT
+    DashboardWidgetId.BMI -> DashboardMetric.BMI
+    DashboardWidgetId.BODY_FAT -> DashboardMetric.BODY_FAT
+    DashboardWidgetId.LEAN_MASS -> DashboardMetric.LEAN_MASS
+    DashboardWidgetId.BMR -> DashboardMetric.BMR
+    DashboardWidgetId.BONE_MASS -> DashboardMetric.BONE_MASS
+    DashboardWidgetId.AVG_HEART_RATE -> DashboardMetric.AVG_HEART_RATE
+    DashboardWidgetId.RESTING_HEART_RATE -> DashboardMetric.RESTING_HEART_RATE
+    DashboardWidgetId.HRV -> DashboardMetric.HRV
+    DashboardWidgetId.BLOOD_PRESSURE -> DashboardMetric.BLOOD_PRESSURE
+    DashboardWidgetId.SPO2 -> DashboardMetric.SPO2
+    DashboardWidgetId.VO2_MAX -> DashboardMetric.VO2_MAX
+    DashboardWidgetId.RESPIRATORY_RATE -> DashboardMetric.RESPIRATORY_RATE
+    DashboardWidgetId.BODY_TEMPERATURE -> DashboardMetric.BODY_TEMPERATURE
+    DashboardWidgetId.MINDFULNESS -> DashboardMetric.MINDFULNESS
+    DashboardWidgetId.CYCLE -> DashboardMetric.CYCLE
+    DashboardWidgetId.BROWSE -> null
 }

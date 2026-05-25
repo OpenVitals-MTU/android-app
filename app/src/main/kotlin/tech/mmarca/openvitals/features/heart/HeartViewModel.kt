@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.heart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
@@ -22,7 +23,6 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class HeartUiState(
     val isLoading: Boolean = true,
@@ -86,6 +86,7 @@ class HeartViewModel(
     private val _uiState = MutableStateFlow(HeartUiState(selectedRange = initialRange))
     val uiState: StateFlow<HeartUiState> = _uiState.asStateFlow()
     val vitalsPermissions: Set<String> get() = vitalsRepository.phase3Permissions
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         load()
@@ -121,7 +122,7 @@ class HeartViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val period = periodFor(range, date)
@@ -201,6 +202,7 @@ class HeartViewModel(
                     )
                 }
             }.onSuccess { result ->
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -237,6 +239,7 @@ class HeartViewModel(
                     baselineVo2Max = result.baselineVo2Max,
                 )
             }.onFailure {
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,

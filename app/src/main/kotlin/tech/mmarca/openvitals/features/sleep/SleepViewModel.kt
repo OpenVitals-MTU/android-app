@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.sleep
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.baselinePeriodBefore
@@ -21,7 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 data class SleepUiState(
     val isLoading: Boolean = true,
@@ -56,6 +56,7 @@ class SleepViewModel(
         )
     )
     val uiState: StateFlow<SleepUiState> = _uiState.asStateFlow()
+    private val loadCoordinator = LoadCoordinator()
 
     init {
         sleepRangeModeFlow
@@ -110,7 +111,7 @@ class SleepViewModel(
     }
 
     fun load() {
-        viewModelScope.launch {
+        loadCoordinator.launch(viewModelScope) load@{
             val range = _uiState.value.selectedRange
             val date = _uiState.value.selectedDate.coerceAtMost(LocalDate.now())
             val sleepRangeMode = _uiState.value.sleepRangeMode
@@ -142,6 +143,7 @@ class SleepViewModel(
                 )
             }
                 .onSuccess { result ->
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
@@ -153,6 +155,7 @@ class SleepViewModel(
                     )
                 }
                 .onFailure {
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
