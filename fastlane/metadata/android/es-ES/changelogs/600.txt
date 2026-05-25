@@ -1,0 +1,1 @@
+OpenVitals ahora tiene una zona para añadir entradas, manteniendo el panel solo de lectura y guardando los datos manuales directamente en Health Connect. Puedes registrar hidratación con bebida y tamaño, medidas corporales, signos vitales y sesiones de mindfulness con temporizador, campanas o minutos manuales. También incluye mejoras de arquitectura, rendimiento, CI y release.

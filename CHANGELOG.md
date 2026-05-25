@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0 - 2026-05-25
+
+### English
+
+- OpenVitals now has a dedicated Add entry area. The dashboard remains read-only, while manual entries are saved directly to Health Connect.
+- Hydration entries can be added with drink and serving choices inspired by HydroTracker, including daily total context and clear write-permission messaging.
+- Manual entries now cover weight, height, body fat percentage, blood pressure, blood oxygen, respiratory rate, and body temperature.
+- Mindfulness entries now support a configurable sitting timer with interval bells from DailySitting, plus manual minute entry and save/discard controls.
+- The app architecture was modernized with Hilt, shared period queries, cached Health Connect reads, and CI/release improvements including the GitHub mirror.
+
+### Español
+
+- OpenVitals ahora tiene una zona dedicada para añadir entradas. El panel sigue siendo solo de lectura, y las entradas manuales se guardan directamente en Health Connect.
+- La hidratación se puede registrar con tipo de bebida y tamaño de vaso, inspirados en HydroTracker, con el total diario y permisos de escritura explicados en el momento adecuado.
+- Las entradas manuales ahora incluyen peso, altura, porcentaje de grasa corporal, presión arterial, oxígeno en sangre, frecuencia respiratoria y temperatura corporal.
+- Mindfulness incorpora un temporizador configurable con campanas de intervalo tomadas de DailySitting, además de entrada manual de minutos y controles para guardar o descartar.
+- La arquitectura se modernizó con Hilt, consultas por periodo compartidas, lecturas de Health Connect en caché y mejoras de CI/release, incluido el espejo en GitHub.
+
 ## 0.5.2 - 2026-05-24
 
 - Show timeframe-scoped entry lists across metric detail screens with a paginated "Load 10 more" flow.
