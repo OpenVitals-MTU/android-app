@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
@@ -86,6 +87,7 @@ class HealthConnectManager @Inject constructor(
     val routePermissions: Set<String> get() = permissionService.routePermissions
     val heartPermissions: Set<String> get() = permissionService.heartPermissions
     val bodyPermissions: Set<String> get() = permissionService.bodyPermissions
+    val bodyWritePermissions: Set<String> get() = permissionService.bodyWritePermissions
     val activityExtrasPermissions: Set<String> get() = permissionService.activityExtrasPermissions
     val nutritionHydrationPermissions: Set<String> get() = permissionService.nutritionHydrationPermissions
     val hydrationWritePermissions: Set<String> get() = permissionService.hydrationWritePermissions
@@ -297,6 +299,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readBoneMassEntries(start: Instant, end: Instant): List<BoneMassEntry> =
         bodyReader.readBoneMassEntries(start, end)
+
+    suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String =
+        bodyReader.writeBodyMeasurementEntry(request)
 
     suspend fun readDailyNutrition(
         startDate: LocalDate,

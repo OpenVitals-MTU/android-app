@@ -161,7 +161,7 @@ Current files:
 
 Current boundary shape:
 
-- `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, writes explicit hydration entries, and maps results into app models.
+- `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, writes explicit manual entries, and maps results into app models.
 - `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
 - Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
 

@@ -8,6 +8,8 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
@@ -37,6 +39,17 @@ class BodyRepository @Inject constructor(
     private val readLeanMassPermission = HealthPermission.getReadPermission(LeanBodyMassRecord::class)
     private val readBMRPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readBoneMassPermission = HealthPermission.getReadPermission(BoneMassRecord::class)
+    private val writeWeightPermission = HealthPermission.getWritePermission(WeightRecord::class)
+    private val writeHeightPermission = HealthPermission.getWritePermission(HeightRecord::class)
+    private val writeBodyFatPermission = HealthPermission.getWritePermission(BodyFatRecord::class)
+
+    fun bodyWritePermissions(type: BodyMeasurementType): Set<String> = setOf(
+        when (type) {
+            BodyMeasurementType.WEIGHT -> writeWeightPermission
+            BodyMeasurementType.HEIGHT -> writeHeightPermission
+            BodyMeasurementType.BODY_FAT -> writeBodyFatPermission
+        }
+    )
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -165,6 +178,18 @@ class BodyRepository @Inject constructor(
             return emptyList()
         }
         return hc.readBoneMassEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
+    suspend fun hasBodyWritePermission(type: BodyMeasurementType): Boolean =
+        bodyWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
+
+    suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String {
+        val missingPermissions = bodyWritePermissions(request.type) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping writeBodyMeasurementEntry type=${request.type} missing=$missingPermissions")
+            throw SecurityException("Missing Health Connect body write permission.")
+        }
+        return hc.writeBodyMeasurementEntry(request)
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()

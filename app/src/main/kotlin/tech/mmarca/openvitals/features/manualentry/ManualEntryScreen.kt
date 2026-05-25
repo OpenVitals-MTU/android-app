@@ -64,6 +64,7 @@ import androidx.compose.ui.zIndex
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
@@ -76,6 +77,7 @@ private const val ManualEntryEditWiggleDegrees = 0.45f
 fun ManualEntryScreen(
     viewModel: ManualEntryViewModel,
     onOpenHydrationEntry: () -> Unit,
+    onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -84,9 +86,15 @@ fun ManualEntryScreen(
     ) {
         viewModel.onHydrationWritePermissionResult()
     }
+    val requestBodyWritePermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        viewModel.onBodyWritePermissionResult()
+    }
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
+        onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
     )
     val specsById = specs.associateBy { it.id }
     val visibleIds = state.widgets.filter { it in specsById }
@@ -102,6 +110,13 @@ fun ManualEntryScreen(
         if (state.pendingHydrationEntryNavigation) {
             viewModel.onHydrationEntryNavigationHandled()
             onOpenHydrationEntry()
+        }
+    }
+    LaunchedEffect(state.pendingBodyEntryNavigation) {
+        val type = state.pendingBodyEntryNavigation
+        if (type != null) {
+            viewModel.onBodyEntryNavigationHandled()
+            onOpenBodyMeasurementEntry(type)
         }
     }
 
@@ -134,6 +149,20 @@ fun ManualEntryScreen(
             },
         )
     }
+
+    if (state.showBodyWritePermissionPrompt) {
+        state.bodyWritePermissionPromptType?.let { type ->
+            BodyWritePermissionPrompt(
+                type = type,
+                onDismiss = viewModel::dismissBodyWritePermissionPrompt,
+                onOpenEntry = viewModel::continueBodyEntryFromWritePermissionPrompt,
+                onGrant = {
+                    viewModel.grantBodyWritePermissionFromPrompt()
+                    requestBodyWritePermissions.launch(state.bodyWritePermissions)
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -146,6 +175,31 @@ private fun HydrationWritePermissionPrompt(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_write_permission_title)) },
         text = { Text(stringResource(R.string.hydration_tracker_permission_needed)) },
+        confirmButton = {
+            Button(onClick = onGrant) {
+                Text(stringResource(R.string.action_grant))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onOpenEntry) {
+                Text(stringResource(R.string.action_open))
+            }
+        },
+    )
+}
+
+@Composable
+private fun BodyWritePermissionPrompt(
+    type: BodyMeasurementType,
+    onDismiss: () -> Unit,
+    onOpenEntry: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    val title = stringResource(type.titleRes())
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.manual_entry_body_write_permission_title, title)) },
+        text = { Text(stringResource(R.string.body_entry_permission_needed, title)) },
         confirmButton = {
             Button(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
@@ -369,6 +423,7 @@ private fun LazyListScope.hiddenManualEntryWidgets(
 private fun manualEntryWidgetSpecs(
     isEditingWidgets: Boolean,
     onOpenHydrationEntry: () -> Unit,
+    onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
     return listOf(
@@ -386,7 +441,54 @@ private fun manualEntryWidgetSpecs(
                     onClick = hydrationClick,
                 )
             },
+        ),
+        bodyMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.WEIGHT,
+            type = BodyMeasurementType.WEIGHT,
+            messageRes = R.string.manual_entry_weight_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
+        ),
+        bodyMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.HEIGHT,
+            type = BodyMeasurementType.HEIGHT,
+            messageRes = R.string.manual_entry_height_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
+        ),
+        bodyMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.BODY_FAT,
+            type = BodyMeasurementType.BODY_FAT,
+            messageRes = R.string.manual_entry_body_fat_body,
+            isEditingWidgets = isEditingWidgets,
+            onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
         )
+    )
+}
+
+@Composable
+private fun bodyMeasurementWidgetSpec(
+    id: ManualEntryWidgetId,
+    type: BodyMeasurementType,
+    messageRes: Int,
+    isEditingWidgets: Boolean,
+    onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
+): ManualEntryWidgetSpec {
+    val click = if (isEditingWidgets) null else ({ onOpenBodyMeasurementEntry(type) })
+    return ManualEntryWidgetSpec(
+        id = id,
+        title = stringResource(type.titleRes()),
+        content = { modifier ->
+            MetricCardPlaceholder(
+                title = stringResource(type.titleRes()),
+                icon = type.icon(),
+                accentColor = type.accentColor(),
+                message = stringResource(messageRes),
+                contentAtBottom = true,
+                modifier = modifier,
+                onClick = click,
+            )
+        },
     )
 }
 

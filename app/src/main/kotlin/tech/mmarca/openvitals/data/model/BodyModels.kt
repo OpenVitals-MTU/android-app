@@ -2,6 +2,18 @@ package tech.mmarca.openvitals.data.model
 
 import java.time.Instant
 
+enum class BodyMeasurementType {
+    WEIGHT,
+    HEIGHT,
+    BODY_FAT,
+}
+
+data class BodyMeasurementWriteRequest(
+    val type: BodyMeasurementType,
+    val time: Instant,
+    val value: Double,
+)
+
 data class WeightEntry(
     val time: Instant,
     val weightKg: Double,

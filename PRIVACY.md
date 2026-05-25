@@ -18,7 +18,7 @@ OpenVitals is designed to keep health data on your device.
 - No analytics SDKs are included.
 - No health data is sold or shared with third parties.
 - OpenVitals reads Health Connect data only after you grant the relevant Android permissions.
-- OpenVitals writes hydration entries only when you explicitly log them.
+- OpenVitals writes entries only when you explicitly log them.
 
 ## Data OpenVitals Accesses
 
@@ -28,7 +28,7 @@ If you grant permission, OpenVitals may access the following data from Health Co
 - Sleep data, including sleep sessions, duration, and sleep stages.
 - Heart and recovery data, including heart rate, resting heart rate, and heart rate variability.
 - Body data, including weight, height, body fat, lean body mass, bone mass, and basal metabolic rate.
-- Nutrition and hydration data, including hydration, meals, calories, and macronutrients. Hydration entries you log in OpenVitals are written to Health Connect.
+- Nutrition and hydration data, including hydration, meals, calories, and macronutrients. Entries you log in OpenVitals are written to Health Connect.
 - Mindfulness session data, when supported by Health Connect on your device.
 - Vitals data, including blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max.
 - Optional cycle tracking data, including menstruation, ovulation tests, cervical mucus, and basal body temperature. This access is off by default and is requested only after you explicitly enable cycle tracking.
@@ -37,7 +37,7 @@ OpenVitals only accesses the categories you choose to grant in Health Connect.
 
 ## How Data Is Used
 
-OpenVitals uses granted Health Connect data to show dashboards, charts, summaries, lists, and details inside the app. When you log hydration in OpenVitals, the app writes that hydration entry to Health Connect so Health Connect remains the source of truth.
+OpenVitals uses granted Health Connect data to show dashboards, charts, summaries, lists, and details inside the app. When you log an entry in OpenVitals, the app writes that entry to Health Connect so Health Connect remains the source of truth.
 
 The app does not use health data for advertising, profiling, credit decisions, insurance decisions, employment decisions, or any purpose unrelated to showing your health data back to you in the app.
 
@@ -51,7 +51,7 @@ OpenVitals does not include advertising SDKs or analytics SDKs.
 
 OpenVitals stores app preferences locally on your device, such as display unit settings and whether optional cycle tracking is enabled.
 
-Health Connect remains the source of truth for health data. OpenVitals reads from Health Connect, displays the data in the app, and writes only hydration entries you explicitly log. The current app does not request the Android `INTERNET` permission.
+Health Connect remains the source of truth for health data. OpenVitals reads from Health Connect, displays the data in the app, and writes only entries you explicitly log. The current app does not request the Android `INTERNET` permission.
 
 ## Data Retention And Deletion
 

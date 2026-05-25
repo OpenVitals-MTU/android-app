@@ -1,12 +1,22 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.util.Log
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.kilograms
+import androidx.health.connect.client.units.meters
+import androidx.health.connect.client.units.percent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
@@ -15,6 +25,8 @@ import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.UUID
 
 internal class BodyHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -199,4 +211,60 @@ internal class BodyHealthReader(
                 )
             }
         }
+
+    suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String = withContext(Dispatchers.IO) {
+        validateBodyMeasurement(request)
+
+        val time = request.time
+        val zone = ZoneId.systemDefault()
+        val clientRecordId = "openvitals_body_${request.type.name.lowercase()}_${time.toEpochMilli()}_${UUID.randomUUID()}"
+        val metadata = Metadata.manualEntry(
+            device = Device(type = Device.TYPE_PHONE),
+            clientRecordId = clientRecordId,
+        )
+        val record = when (request.type) {
+            BodyMeasurementType.WEIGHT -> WeightRecord(
+                time = time,
+                zoneOffset = zone.rules.getOffset(time),
+                weight = request.value.kilograms,
+                metadata = metadata,
+            )
+            BodyMeasurementType.HEIGHT -> HeightRecord(
+                time = time,
+                zoneOffset = zone.rules.getOffset(time),
+                height = (request.value / CentimetersPerMeter).meters,
+                metadata = metadata,
+            )
+            BodyMeasurementType.BODY_FAT -> BodyFatRecord(
+                time = time,
+                zoneOffset = zone.rules.getOffset(time),
+                percentage = request.value.percent,
+                metadata = metadata,
+            )
+        }
+
+        Log.d(TAG, "Writing body record type=${request.type} value=${request.value} ${support.diagnosticsSummary()}")
+        support.client().insertRecords(listOf(record))
+        clientRecordId
+    }
+
+    private fun validateBodyMeasurement(request: BodyMeasurementWriteRequest) {
+        when (request.type) {
+            BodyMeasurementType.WEIGHT -> require(request.value > 0.0 && request.value <= MaxWeightKg) {
+                "Weight must be greater than 0 kg and no more than ${MaxWeightKg.toInt()} kg."
+            }
+            BodyMeasurementType.HEIGHT -> require(request.value > 0.0 && request.value <= MaxHeightCm) {
+                "Height must be greater than 0 cm and no more than ${MaxHeightCm.toInt()} cm."
+            }
+            BodyMeasurementType.BODY_FAT -> require(request.value >= 0.0 && request.value <= MaxBodyFatPercent) {
+                "Body fat must be between 0% and ${MaxBodyFatPercent.toInt()}%."
+            }
+        }
+    }
 }
+
+private const val TAG = "BodyHealthReader"
+private const val CentimetersPerMeter = 100.0
+private const val MaxWeightKg = 1000.0
+private const val MaxHeightCm = 300.0
+private const val MaxBodyFatPercent = 100.0

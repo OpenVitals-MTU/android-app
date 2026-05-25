@@ -5,12 +5,16 @@ import android.net.Uri
 const val ACTIVITY_DETAIL_ID_ARG = "activityId"
 const val SLEEP_DETAIL_ID_ARG = "sleepId"
 const val METRIC_ID_ARG = "metricId"
+const val BODY_MEASUREMENT_TYPE_ARG = "bodyMeasurementType"
 
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
     data object Dashboard : Screen("dashboard")
     data object ManualEntry : Screen("manual_entry")
     data object HydrationEntry : Screen("manual_entry/hydration")
+    data object BodyMeasurementEntry : Screen("manual_entry/body/{$BODY_MEASUREMENT_TYPE_ARG}") {
+        fun createRoute(type: String): String = "manual_entry/body/${Uri.encode(type)}"
+    }
     data object Steps : Screen("steps")
     data object Activity : Screen("activity")
     data object ActivityDetail : Screen("activity_detail/{$ACTIVITY_DETAIL_ID_ARG}") {

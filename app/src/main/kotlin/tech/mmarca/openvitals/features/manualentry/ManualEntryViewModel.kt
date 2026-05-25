@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
@@ -19,11 +21,18 @@ data class ManualEntryUiState(
     val canWriteHydration: Boolean = false,
     val showHydrationWritePermissionPrompt: Boolean = false,
     val pendingHydrationEntryNavigation: Boolean = false,
+    val bodyWritePermissions: Set<String> = emptySet(),
+    val isCheckingBodyWritePermission: Boolean = false,
+    val showBodyWritePermissionPrompt: Boolean = false,
+    val bodyWritePermissionPromptType: BodyMeasurementType? = null,
+    val bodyWritePermissionRequestType: BodyMeasurementType? = null,
+    val pendingBodyEntryNavigation: BodyMeasurementType? = null,
 )
 
 @HiltViewModel
 class ManualEntryViewModel @Inject constructor(
     private val hydrationRepository: HydrationRepository,
+    private val bodyRepository: BodyRepository,
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
@@ -65,6 +74,37 @@ class ManualEntryViewModel @Inject constructor(
         }
     }
 
+    fun onBodyMeasurementWidgetTapped(type: BodyMeasurementType) {
+        if (_uiState.value.isCheckingBodyWritePermission) return
+        viewModelScope.launch {
+            val writePermissions = bodyRepository.bodyWritePermissions(type)
+            _uiState.value = _uiState.value.copy(
+                isCheckingBodyWritePermission = true,
+                bodyWritePermissions = writePermissions,
+                showBodyWritePermissionPrompt = false,
+                bodyWritePermissionPromptType = null,
+                pendingBodyEntryNavigation = null,
+            )
+            runCatching {
+                bodyRepository.hasBodyWritePermission(type)
+            }.onSuccess { canWrite ->
+                val unacknowledgedWritePermissions = writePermissions - preferencesRepository.acknowledgedPermissions()
+                val shouldShowPrompt = !canWrite && unacknowledgedWritePermissions.isNotEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isCheckingBodyWritePermission = false,
+                    showBodyWritePermissionPrompt = shouldShowPrompt,
+                    bodyWritePermissionPromptType = if (shouldShowPrompt) type else null,
+                    pendingBodyEntryNavigation = if (shouldShowPrompt) null else type,
+                )
+            }.onFailure {
+                _uiState.value = _uiState.value.copy(
+                    isCheckingBodyWritePermission = false,
+                    pendingBodyEntryNavigation = type,
+                )
+            }
+        }
+    }
+
     fun continueHydrationEntryFromWritePermissionPrompt() {
         acknowledgeHydrationWritePermissionPrompt()
         _uiState.value = _uiState.value.copy(
@@ -98,6 +138,47 @@ class ManualEntryViewModel @Inject constructor(
 
     fun onHydrationEntryNavigationHandled() {
         _uiState.value = _uiState.value.copy(pendingHydrationEntryNavigation = false)
+    }
+
+    fun continueBodyEntryFromWritePermissionPrompt() {
+        val type = _uiState.value.bodyWritePermissionPromptType ?: return
+        acknowledgeBodyWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showBodyWritePermissionPrompt = false,
+            bodyWritePermissionPromptType = null,
+            pendingBodyEntryNavigation = type,
+        )
+    }
+
+    fun dismissBodyWritePermissionPrompt() {
+        acknowledgeBodyWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showBodyWritePermissionPrompt = false,
+            bodyWritePermissionPromptType = null,
+        )
+    }
+
+    fun grantBodyWritePermissionFromPrompt() {
+        val type = _uiState.value.bodyWritePermissionPromptType ?: return
+        acknowledgeBodyWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showBodyWritePermissionPrompt = false,
+            bodyWritePermissionPromptType = null,
+            bodyWritePermissionRequestType = type,
+        )
+    }
+
+    fun onBodyWritePermissionResult() {
+        val type = _uiState.value.bodyWritePermissionRequestType ?: return
+        _uiState.value = _uiState.value.copy(
+            isCheckingBodyWritePermission = false,
+            bodyWritePermissionRequestType = null,
+            pendingBodyEntryNavigation = type,
+        )
+    }
+
+    fun onBodyEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingBodyEntryNavigation = null)
     }
 
     fun toggleWidgetEdit() {
@@ -137,6 +218,13 @@ class ManualEntryViewModel @Inject constructor(
 
     private fun acknowledgeHydrationWritePermissionPrompt() {
         val writePermissions = _uiState.value.hydrationWritePermissions
+        if (writePermissions.isNotEmpty()) {
+            preferencesRepository.acknowledgePermissions(writePermissions)
+        }
+    }
+
+    private fun acknowledgeBodyWritePermissionPrompt() {
+        val writePermissions = _uiState.value.bodyWritePermissions
         if (writePermissions.isNotEmpty()) {
             preferencesRepository.acknowledgePermissions(writePermissions)
         }

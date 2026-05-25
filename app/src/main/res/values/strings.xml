@@ -49,14 +49,25 @@
     <string name="screen_settings">Settings</string>
     <string name="screen_manual_entry">Add entry</string>
     <string name="screen_hydration_entry">Hydration entry</string>
+    <string name="screen_body_measurement_entry">Body measurement entry</string>
 
     <string name="bottom_nav_dashboard">Dashboard</string>
     <string name="bottom_nav_add_entry">Add entry</string>
     <string name="manual_entry_hydration_title">Hydration</string>
     <string name="manual_entry_hydration_body">Log a Health Connect hydration entry.</string>
+    <string name="manual_entry_weight_body">Log a Health Connect weight entry.</string>
+    <string name="manual_entry_height_body">Log a Health Connect height entry.</string>
+    <string name="manual_entry_body_fat_body">Log a Health Connect body fat entry.</string>
     <string name="manual_entry_add_widgets">Add entry widgets</string>
     <string name="manual_entry_all_widgets_added">All entry widgets are already shown.</string>
     <string name="manual_entry_write_permission_title">Hydration write permission</string>
+    <string name="manual_entry_body_write_permission_title">%1$s write permission</string>
+    <string name="body_entry_subtitle">%1$s entries are saved directly to Health Connect.</string>
+    <string name="body_entry_permission_needed">To add %1$s entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
+    <string name="body_entry_value_label">%1$s (%2$s)</string>
+    <string name="body_entry_add_selected">Add %1$s</string>
+    <string name="body_entry_invalid_value">Enter a valid value for this measurement.</string>
+    <string name="body_entry_write_failed">Could not save body measurement: %1$s</string>
 
     <string name="range_day">Day</string>
     <string name="range_week">Week</string>
@@ -446,7 +457,7 @@
     <string name="settings_privacy_no_analytics">No analytics SDK</string>
     <string name="settings_privacy_no_ads">No ads or third-party tracking</string>
     <string name="settings_privacy_on_device">Data stays on your device</string>
-    <string name="settings_privacy_read_only">Read-only except hydration entries you explicitly log</string>
+    <string name="settings_privacy_read_only">Read-only except entries you explicitly log</string>
     <string name="settings_debug_availability">HC availability: %1$s</string>
     <string name="settings_debug_granted_permissions">Granted permissions: %1$d/%2$d</string>
     <string name="settings_app_version">Version %1$s (%2$d)</string>
@@ -606,6 +617,6 @@
     <string name="data_confidence_warning_no_sources">This aggregate does not expose source-level details.</string>
 
     <string name="privacy_policy_title">Privacy policy</string>
-    <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Hydration entries you log are written to Health Connect.</string>
+    <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log are written to Health Connect.</string>
     <string name="privacy_policy_body_2">This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.</string>
 </resources>
