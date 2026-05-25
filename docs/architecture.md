@@ -14,7 +14,7 @@ The repo is still a single Android app module. The goal is not to force a multi-
 - UI stack: Jetpack Compose + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - Shared period shell: in place and used by all metric detail/list screens
-- Feature repositories: in place for activity, sleep, heart, and body
+- Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Room and WorkManager are intentionally absent until a concrete cache or background refresh design exists
 
@@ -139,6 +139,7 @@ Responsibilities:
 - Health Connect availability checks
 - permission queries
 - record reads and aggregate reads
+- explicit hydration entry writes to Health Connect
 - mapping Health Connect responses into app models
 - feature-facing repository APIs
 
@@ -150,11 +151,17 @@ Current files:
 - [`data/repository/SleepRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/SleepRepository.kt)
 - [`data/repository/HeartRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HeartRepository.kt)
 - [`data/repository/BodyRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/BodyRepository.kt)
+- [`data/repository/HydrationRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/HydrationRepository.kt)
+- [`data/repository/NutritionRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/NutritionRepository.kt)
+- [`data/repository/MindfulnessRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/MindfulnessRepository.kt)
+- [`data/repository/CycleRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/CycleRepository.kt)
+- [`data/repository/VitalsRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/VitalsRepository.kt)
+- [`data/repository/PreferencesRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/PreferencesRepository.kt)
 - feature-oriented model files under [`data/model`](../app/src/main/kotlin/tech/mmarca/openvitals/data/model)
 
 Current boundary shape:
 
-- `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, and maps results into app models.
+- `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, writes explicit hydration entries, and maps results into app models.
 - `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
 - Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
 
@@ -304,9 +311,9 @@ Keep derived fields in the state only when they genuinely simplify the UI.
 
 Today the shared period model is:
 
-- `TimeRange`, `DatePeriod`, and `periodFor(...)` in `core/period`
+- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, and `PeriodSelectionDriver` in `core/period`
 
-The feature should load data against the selected period rather than inventing custom navigation rules.
+The feature should load data against the selected period query rather than inventing custom navigation rules.
 
 ### 3. Keep the ViewModel in charge
 
@@ -357,6 +364,11 @@ Follow the current pattern:
 - `SleepRepository`
 - `HeartRepository`
 - `BodyRepository`
+- `HydrationRepository`
+- `NutritionRepository`
+- `MindfulnessRepository`
+- `CycleRepository`
+- `VitalsRepository`
 
 Each repository should:
 

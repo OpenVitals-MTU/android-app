@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.HydrationRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -23,6 +24,8 @@ class HydrationRepository @Inject constructor(
     }
 
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
+    private val writeHydrationPermission = HealthPermission.getWritePermission(HydrationRecord::class)
+    val hydrationWritePermissions: Set<String> get() = setOf(writeHydrationPermission)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -57,6 +60,18 @@ class HydrationRepository @Inject constructor(
             start = start.atStartOfDay(zone).toInstant(),
             end = end.plusDays(1).atStartOfDay(zone).toInstant(),
         )
+    }
+
+    suspend fun hasHydrationWritePermission(): Boolean =
+        writeHydrationPermission in grantedPermissionsIfAvailable()
+
+    suspend fun writeHydrationEntry(request: HydrationWriteRequest): String {
+        val granted = grantedPermissionsIfAvailable()
+        if (writeHydrationPermission !in granted) {
+            Log.w(TAG, "Skipping writeHydrationEntry missing=$writeHydrationPermission")
+            throw SecurityException("Missing Health Connect hydration write permission.")
+        }
+        return hc.writeHydrationEntry(request)
     }
 }
 

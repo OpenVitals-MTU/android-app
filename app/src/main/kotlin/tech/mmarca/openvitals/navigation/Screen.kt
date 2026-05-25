@@ -9,6 +9,8 @@ const val METRIC_ID_ARG = "metricId"
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
     data object Dashboard : Screen("dashboard")
+    data object ManualEntry : Screen("manual_entry")
+    data object HydrationEntry : Screen("manual_entry/hydration")
     data object Steps : Screen("steps")
     data object Activity : Screen("activity")
     data object ActivityDetail : Screen("activity_detail/{$ACTIVITY_DETAIL_ID_ARG}") {

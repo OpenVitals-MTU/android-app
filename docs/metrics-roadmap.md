@@ -20,5 +20,5 @@ Most first-pass metric coverage is implemented. Current roadmap work is cleanup 
 - Room
 - WorkManager
 - multi-module split
-- write-back to Health Connect
+- write-back to Health Connect beyond explicit hydration logging
 - account sync or cloud storage

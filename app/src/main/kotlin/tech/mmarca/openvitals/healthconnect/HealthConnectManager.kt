@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.HeightEntry
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
@@ -87,6 +88,7 @@ class HealthConnectManager @Inject constructor(
     val bodyPermissions: Set<String> get() = permissionService.bodyPermissions
     val activityExtrasPermissions: Set<String> get() = permissionService.activityExtrasPermissions
     val nutritionHydrationPermissions: Set<String> get() = permissionService.nutritionHydrationPermissions
+    val hydrationWritePermissions: Set<String> get() = permissionService.hydrationWritePermissions
     val mindfulnessPermissions: Set<String> get() = permissionService.mindfulnessPermissions
     val additionalDataAccessPermissions: Set<String> get() = permissionService.additionalDataAccessPermissions
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
@@ -186,6 +188,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readHydrationEntries(start: Instant, end: Instant): List<HydrationEntry> =
         hydrationReader.readHydrationEntries(start, end)
+
+    suspend fun writeHydrationEntry(request: HydrationWriteRequest): String =
+        hydrationReader.writeHydrationEntry(request)
 
     suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
         activityReader.readLatestWorkout(date)

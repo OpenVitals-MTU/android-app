@@ -6,7 +6,7 @@
 
 OpenVitals is an Android app for exploring your Health Connect data on-device.
 
-It is built around a simple idea: your health data should stay yours. The app is local-first, read-only, dashboard-first, and designed to work without an account, cloud sync, ads, or analytics.
+It is built around a simple idea: your health data should stay yours. The app is local-first, dashboard-first, and designed to work without an account, cloud sync, ads, or analytics.
 
 OpenVitals is still in an early stage, but the core product direction is already in place: a daily dashboard, period-based detail screens, feature-first architecture, categorized Health Connect permissions, and local display preferences for units.
 
@@ -30,7 +30,7 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Read-only access to Health Connect data; the app does not write health data back
+- Read access to Health Connect data, plus explicit hydration entry logging back to Health Connect
 
 ## Current coverage
 
@@ -39,7 +39,7 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
-- Hydration: daily and period hydration totals
+- Hydration: daily and period hydration totals, Health Connect-backed quick entry logging
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect
 - Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when explicitly enabled during onboarding or in Settings
@@ -100,11 +100,30 @@ In a complete checkout:
 ./gradlew assembleDebug
 ```
 
+To run the same basic checks used by CI:
+
+```bash
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+git diff --check
+```
+
 To install on a connected device or emulator:
 
 ```bash
 ./gradlew installDebug
 ```
+
+On Windows, Gradle or Android Studio can occasionally keep lint cache jars open under `app/build`. If cleaning fails with a locked `lint-cache` jar, stop Gradle daemons first:
+
+```powershell
+.\gradlew.bat --stop
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -like '*org.gradle.launcher.daemon.bootstrap.GradleDaemon*' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+Remove-Item -LiteralPath app/build -Recurse -Force
+```
+
+More local development notes are in [`docs/development.md`](docs/development.md).
 
 After launching the app:
 
@@ -134,13 +153,14 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 - [`app/`](app): Android app module
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
-- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): shared preference and presentation primitives
+- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): shared period, performance, preference, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components
 - [`docs/`](docs): architecture notes, playbooks, and roadmap
 
 ## Documentation
 
 - [`plan.md`](plan.md): product direction and scope
+- [`docs/development.md`](docs/development.md): local build, verification, CI, and Windows cleanup notes
 - [`docs/architecture.md`](docs/architecture.md): current architecture and target direction
 - [`docs/feature-playbook.md`](docs/feature-playbook.md): checklist for adding a new metric feature
 - [`docs/metrics-roadmap.md`](docs/metrics-roadmap.md): metric coverage gaps and future feature roadmap

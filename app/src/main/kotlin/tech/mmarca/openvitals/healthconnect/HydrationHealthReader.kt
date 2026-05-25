@@ -1,16 +1,24 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Volume
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.HydrationWriteRequest
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal class HydrationHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -76,7 +84,39 @@ internal class HydrationHealthReader(
                 )
             }
         }
+
+    suspend fun writeHydrationEntry(request: HydrationWriteRequest): String = withContext(Dispatchers.IO) {
+        require(request.volumeLiters > 0.0) { "Hydration volume must be greater than zero." }
+        require(request.volumeLiters <= MaxHydrationRecordLiters) {
+            "Hydration volume must not exceed ${MaxHydrationRecordLiters.toInt()} L."
+        }
+
+        val startTime = request.time
+        val endTime = startTime.plusSeconds(1)
+        val zone = ZoneId.systemDefault()
+        val clientRecordId = "openvitals_hydration_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
+        val volumeMilliliters = request.volumeLiters * MillilitersPerLiter
+        val record = HydrationRecord(
+            startTime = startTime,
+            startZoneOffset = zone.rules.getOffset(startTime),
+            endTime = endTime,
+            endZoneOffset = zone.rules.getOffset(endTime),
+            volume = Volume.milliliters(volumeMilliliters),
+            metadata = Metadata.manualEntry(
+                device = Device(type = Device.TYPE_PHONE),
+                clientRecordId = clientRecordId,
+            ),
+        )
+
+        Log.d(TAG, "Writing hydration record volumeLiters=${request.volumeLiters} ${support.diagnosticsSummary()}")
+        support.client().insertRecords(listOf(record))
+        clientRecordId
+    }
 }
+
+private const val TAG = "HydrationHealthReader"
+private const val MaxHydrationRecordLiters = 100.0
+private const val MillilitersPerLiter = 1000.0
 
 internal suspend fun HealthConnectClient.readHydrationRecordsByDate(
     start: Instant,

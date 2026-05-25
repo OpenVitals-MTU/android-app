@@ -90,6 +90,10 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(NutritionRecord::class),
     )
 
+    val hydrationWritePermissions: Set<String> = setOf(
+        HealthPermission.getWritePermission(HydrationRecord::class),
+    )
+
     val mindfulnessPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
@@ -144,9 +148,11 @@ internal class HealthConnectPermissionService(
 
     val requestableManagedPermissions: Set<String> get() = requestableAllPermissions + phase4Permissions
 
-    val allPermissions: Set<String> get() = requestableAllPermissions + manualOnlyPermissions
+    val allPermissions: Set<String> get() =
+        requestableAllPermissions + manualOnlyPermissions + hydrationWritePermissions
 
-    val managedPermissions: Set<String> get() = requestableManagedPermissions + manualOnlyPermissions
+    val managedPermissions: Set<String> get() =
+        requestableManagedPermissions + manualOnlyPermissions + hydrationWritePermissions
 
     fun grantModeFor(permission: String): PermissionGrantMode =
         if (permission in manualOnlyPermissions) {

@@ -21,6 +21,11 @@ data class HydrationEntry(
     val source: String,
 )
 
+data class HydrationWriteRequest(
+    val time: Instant,
+    val volumeLiters: Double,
+)
+
 data class NutritionEntry(
     val time: Instant,
     val mealType: Int,

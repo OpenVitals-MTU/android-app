@@ -6,6 +6,8 @@
     <string name="cd_settings">Ajustes</string>
     <string name="cd_edit_dashboard">Editar panel</string>
     <string name="cd_finish_dashboard_editing">Terminar edición del panel</string>
+    <string name="cd_edit_manual_entry_widgets">Editar widgets de añadir entrada</string>
+    <string name="cd_finish_manual_entry_editing">Terminar edición de widgets de añadir entrada</string>
     <string name="cd_move_widget_up">Mover widget arriba</string>
     <string name="cd_move_widget_down">Mover widget abajo</string>
     <string name="cd_remove_widget">Quitar widget</string>
@@ -14,6 +16,7 @@
     <string name="cd_previous_period">Periodo anterior</string>
     <string name="cd_next_period">Periodo siguiente</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_add">Añadir</string>
     <string name="action_close">Cerrar</string>
     <string name="action_details">Detalles</string>
     <string name="action_enable">Activar</string>
@@ -44,6 +47,16 @@
     <string name="screen_cycle">Ciclo</string>
     <string name="screen_browse">Explorar</string>
     <string name="screen_settings">Ajustes</string>
+    <string name="screen_manual_entry">Añadir entrada</string>
+    <string name="screen_hydration_entry">Entrada de hidratación</string>
+
+    <string name="bottom_nav_dashboard">Panel</string>
+    <string name="bottom_nav_add_entry">Añadir</string>
+    <string name="manual_entry_hydration_title">Hidratación</string>
+    <string name="manual_entry_hydration_body">Registra una entrada de hidratación en Health Connect.</string>
+    <string name="manual_entry_add_widgets">Añadir widgets de entrada</string>
+    <string name="manual_entry_all_widgets_added">Todos los widgets de entrada ya están visibles.</string>
+    <string name="manual_entry_write_permission_title">Permiso de escritura de hidratación</string>
 
     <string name="range_day">Día</string>
     <string name="range_week">Semana</string>
@@ -285,6 +298,32 @@
     <string name="cd_increase_daily_goal">Aumentar objetivo diario</string>
     <string name="hydration_daily_goal">Objetivo diario</string>
     <string name="hydration_goal_progress">%1$d de %2$d días registrados cumplidos</string>
+    <string name="hydration_tracker_title">Registrar hidratación</string>
+    <string name="hydration_tracker_subtitle">Guardado directamente en Health Connect</string>
+    <string name="hydration_tracker_permission_needed">Para el panel, OpenVitals solo pide permisos de visualización. Para añadir esta entrada manual, necesitamos permiso de escritura. OpenVitals no almacenará estos datos; las entradas se guardan en Health Connect.</string>
+    <string name="hydration_drink_type">Tipo de bebida</string>
+    <string name="hydration_container_size">Tamaño</string>
+    <string name="hydration_add_selected">Añadir %1$s</string>
+    <string name="hydration_bhi_write_explanation">Los tipos de bebida usan multiplicadores inspirados en el Beverage Hydration Index de Maughan et al. 2016. OpenVitals calcula la hidratación efectiva desde el tamaño seleccionado: %1$s seleccionado, %2$s escrito en Health Connect. Health Connect solo almacena el volumen de hidratación, no el tipo de bebida ni el tamaño del vaso.</string>
+    <string name="hydration_invalid_amount">Introduce una cantidad mayor que cero y no superior a 100 L.</string>
+    <string name="hydration_write_failed">No se pudo guardar la entrada de hidratación: %1$s</string>
+    <string name="hydration_beverage_water">Agua</string>
+    <string name="hydration_beverage_coffee">Café</string>
+    <string name="hydration_beverage_tea">Té</string>
+    <string name="hydration_beverage_soft_drink">Refresco</string>
+    <string name="hydration_beverage_energy_drink">Bebida energética</string>
+    <string name="hydration_beverage_sports_drink">Bebida deportiva</string>
+    <string name="hydration_beverage_ors">SRO</string>
+    <string name="hydration_beverage_milk">Leche</string>
+    <string name="hydration_beverage_fruit_juice">Zumo de fruta</string>
+    <string name="hydration_container_coffee_cup">Taza de café</string>
+    <string name="hydration_container_tea_cup">Taza de té</string>
+    <string name="hydration_container_small_cup">Vaso pequeño</string>
+    <string name="hydration_container_medium_glass">Vaso mediano</string>
+    <string name="hydration_container_large_glass">Vaso grande</string>
+    <string name="hydration_container_water_bottle">Botella de agua</string>
+    <string name="hydration_container_large_bottle">Botella grande</string>
+    <string name="hydration_container_custom">Personalizado</string>
     <string name="cd_decrease_hydration_goal">Reducir objetivo de hidratación</string>
     <string name="cd_increase_hydration_goal">Aumentar objetivo de hidratación</string>
     <string name="unit_percent_symbol">%</string>
@@ -407,7 +446,7 @@
     <string name="settings_privacy_no_analytics">Sin SDK de analíticas</string>
     <string name="settings_privacy_no_ads">Sin anuncios ni seguimiento de terceros</string>
     <string name="settings_privacy_on_device">Los datos permanecen en tu dispositivo</string>
-    <string name="settings_privacy_read_only">Solo lectura: no se escribe nada</string>
+    <string name="settings_privacy_read_only">Solo lectura salvo las entradas de hidratación que registres explícitamente</string>
     <string name="settings_debug_availability">Disponibilidad de HC: %1$s</string>
     <string name="settings_debug_granted_permissions">Permisos concedidos: %1$d/%2$d</string>
     <string name="settings_app_version">Versión %1$s (%2$d)</string>
@@ -567,6 +606,6 @@
     <string name="data_confidence_warning_no_sources">Este agregado no expone detalles por origen.</string>
 
     <string name="privacy_policy_title">Política de privacidad</string>
-    <string name="privacy_policy_body_1">OpenVitals lee datos de Health Connect para mostrar pasos, entrenamientos, sueño, frecuencia cardiaca, peso, calorías, hidratación, nutrición, mindfulness y constantes en tu dispositivo.</string>
+    <string name="privacy_policy_body_1">OpenVitals lee datos de Health Connect para mostrar pasos, entrenamientos, sueño, frecuencia cardiaca, peso, calorías, hidratación, nutrición, mindfulness y constantes en tu dispositivo. Las entradas de hidratación que registres se escriben en Health Connect.</string>
     <string name="privacy_policy_body_2">Esta app no sube tus datos de salud a un servicio en la nube, no incluye anuncios y no comparte datos con terceros.</string>
 </resources>

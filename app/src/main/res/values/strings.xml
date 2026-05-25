@@ -6,6 +6,8 @@
     <string name="cd_settings">Settings</string>
     <string name="cd_edit_dashboard">Edit dashboard</string>
     <string name="cd_finish_dashboard_editing">Finish editing dashboard</string>
+    <string name="cd_edit_manual_entry_widgets">Edit add entry widgets</string>
+    <string name="cd_finish_manual_entry_editing">Finish editing add entry widgets</string>
     <string name="cd_move_widget_up">Move widget up</string>
     <string name="cd_move_widget_down">Move widget down</string>
     <string name="cd_remove_widget">Remove widget</string>
@@ -14,6 +16,7 @@
     <string name="cd_previous_period">Previous period</string>
     <string name="cd_next_period">Next period</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_add">Add</string>
     <string name="action_close">Close</string>
     <string name="action_details">Details</string>
     <string name="action_enable">Enable</string>
@@ -44,6 +47,16 @@
     <string name="screen_cycle">Cycle</string>
     <string name="screen_browse">Browse</string>
     <string name="screen_settings">Settings</string>
+    <string name="screen_manual_entry">Add entry</string>
+    <string name="screen_hydration_entry">Hydration entry</string>
+
+    <string name="bottom_nav_dashboard">Dashboard</string>
+    <string name="bottom_nav_add_entry">Add entry</string>
+    <string name="manual_entry_hydration_title">Hydration</string>
+    <string name="manual_entry_hydration_body">Log a Health Connect hydration entry.</string>
+    <string name="manual_entry_add_widgets">Add entry widgets</string>
+    <string name="manual_entry_all_widgets_added">All entry widgets are already shown.</string>
+    <string name="manual_entry_write_permission_title">Hydration write permission</string>
 
     <string name="range_day">Day</string>
     <string name="range_week">Week</string>
@@ -285,6 +298,32 @@
     <string name="cd_increase_daily_goal">Increase daily goal</string>
     <string name="hydration_daily_goal">Daily goal</string>
     <string name="hydration_goal_progress">%1$d of %2$d tracked days met</string>
+    <string name="hydration_tracker_title">Log hydration</string>
+    <string name="hydration_tracker_subtitle">Saved directly to Health Connect</string>
+    <string name="hydration_tracker_permission_needed">For the dashboard, OpenVitals only asks for view permissions. To add this manual entry, we need write permission. OpenVitals will not store this data; entries are saved in Health Connect.</string>
+    <string name="hydration_drink_type">Drink type</string>
+    <string name="hydration_container_size">Size</string>
+    <string name="hydration_add_selected">Add %1$s</string>
+    <string name="hydration_bhi_write_explanation">Drink types use Beverage Hydration Index-style multipliers based on Maughan et al. 2016. OpenVitals calculates effective hydration from the selected size: %1$s selected, %2$s written to Health Connect. Health Connect stores only the hydration volume, not drink type or cup size.</string>
+    <string name="hydration_invalid_amount">Enter an amount greater than zero and no more than 100 L.</string>
+    <string name="hydration_write_failed">Could not save hydration entry: %1$s</string>
+    <string name="hydration_beverage_water">Water</string>
+    <string name="hydration_beverage_coffee">Coffee</string>
+    <string name="hydration_beverage_tea">Tea</string>
+    <string name="hydration_beverage_soft_drink">Soft drink</string>
+    <string name="hydration_beverage_energy_drink">Energy drink</string>
+    <string name="hydration_beverage_sports_drink">Sports drink</string>
+    <string name="hydration_beverage_ors">ORS</string>
+    <string name="hydration_beverage_milk">Milk</string>
+    <string name="hydration_beverage_fruit_juice">Fruit juice</string>
+    <string name="hydration_container_coffee_cup">Coffee cup</string>
+    <string name="hydration_container_tea_cup">Tea cup</string>
+    <string name="hydration_container_small_cup">Small cup</string>
+    <string name="hydration_container_medium_glass">Medium glass</string>
+    <string name="hydration_container_large_glass">Large glass</string>
+    <string name="hydration_container_water_bottle">Water bottle</string>
+    <string name="hydration_container_large_bottle">Large bottle</string>
+    <string name="hydration_container_custom">Custom</string>
     <string name="cd_decrease_hydration_goal">Decrease hydration goal</string>
     <string name="cd_increase_hydration_goal">Increase hydration goal</string>
     <string name="unit_percent_symbol">%</string>
@@ -407,7 +446,7 @@
     <string name="settings_privacy_no_analytics">No analytics SDK</string>
     <string name="settings_privacy_no_ads">No ads or third-party tracking</string>
     <string name="settings_privacy_on_device">Data stays on your device</string>
-    <string name="settings_privacy_read_only">Read-only - nothing is written back</string>
+    <string name="settings_privacy_read_only">Read-only except hydration entries you explicitly log</string>
     <string name="settings_debug_availability">HC availability: %1$s</string>
     <string name="settings_debug_granted_permissions">Granted permissions: %1$d/%2$d</string>
     <string name="settings_app_version">Version %1$s (%2$d)</string>
@@ -567,6 +606,6 @@
     <string name="data_confidence_warning_no_sources">This aggregate does not expose source-level details.</string>
 
     <string name="privacy_policy_title">Privacy policy</string>
-    <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device.</string>
+    <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Hydration entries you log are written to Health Connect.</string>
     <string name="privacy_policy_body_2">This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.</string>
 </resources>

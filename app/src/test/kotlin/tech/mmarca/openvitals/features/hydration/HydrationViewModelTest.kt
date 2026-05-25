@@ -11,6 +11,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.LocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HydrationViewModelTest {
 
     @get:Rule
@@ -63,6 +65,15 @@ class HydrationViewModelTest {
         assertFalse(state.isLoading)
         assertTrue(state.dailyHydration.isEmpty())
         assertTrue(state.hydrationEntries.isEmpty())
+    }
+
+    @Test fun `initial load does not inspect write permissions`() = runTest {
+        val repo = emptyRepo()
+
+        HydrationViewModel(repo)
+
+        coVerify(exactly = 0) { repo.hasHydrationWritePermission() }
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
     }
 
     @Test fun `load success populates hydration and derived totals`() = runTest {
@@ -240,4 +251,5 @@ class HydrationViewModelTest {
 
         assertEquals(today, vm.uiState.value.selectedDate)
     }
+
 }

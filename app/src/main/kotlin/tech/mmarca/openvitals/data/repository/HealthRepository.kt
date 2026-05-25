@@ -111,6 +111,7 @@ class HealthRepository @Inject constructor(
     val bodyPermissions get() = hc.bodyPermissions
     val activityExtrasPermissions get() = hc.activityExtrasPermissions
     val nutritionHydrationPermissions get() = hc.nutritionHydrationPermissions
+    val hydrationWritePermissions get() = hc.hydrationWritePermissions
     val mindfulnessPermissions get() = hc.mindfulnessPermissions
     val additionalDataAccessPermissions get() = hc.additionalDataAccessPermissions
     val vitalsPermissions get() = hc.vitalsPermissions
