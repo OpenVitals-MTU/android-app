@@ -8,6 +8,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.MindfulnessBellSound
+import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -123,6 +125,37 @@ class PreferencesRepository @Inject constructor(
             .apply()
     }
 
+    fun mindfulnessTimerConfig(): MindfulnessTimerConfig =
+        MindfulnessTimerConfig(
+            durationMinutes = prefs.getInt(
+                KEY_MINDFULNESS_TIMER_DURATION_MINUTES,
+                DEFAULT_MINDFULNESS_TIMER_DURATION_MINUTES,
+            ).coerceIn(MIN_MINDFULNESS_TIMER_MINUTES, MAX_MINDFULNESS_TIMER_MINUTES),
+            intervalMinutes = prefs.getInt(KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES, 0)
+                .takeIf { it > 0 }
+                ?.coerceIn(MIN_MINDFULNESS_TIMER_MINUTES, MAX_MINDFULNESS_TIMER_MINUTES),
+            bellSound = prefs.getString(KEY_MINDFULNESS_TIMER_BELL_SOUND, null)
+                ?.toMindfulnessBellSound()
+                ?: MindfulnessBellSound.STRUCK,
+        ).let { config ->
+            config.copy(intervalMinutes = config.intervalMinutes?.takeIf { it < config.durationMinutes })
+        }
+
+    fun setMindfulnessTimerConfig(config: MindfulnessTimerConfig) {
+        val duration = config.durationMinutes.coerceIn(
+            MIN_MINDFULNESS_TIMER_MINUTES,
+            MAX_MINDFULNESS_TIMER_MINUTES,
+        )
+        val interval = config.intervalMinutes
+            ?.coerceIn(MIN_MINDFULNESS_TIMER_MINUTES, (duration - 1).coerceAtLeast(MIN_MINDFULNESS_TIMER_MINUTES))
+            ?.takeIf { duration > MIN_MINDFULNESS_TIMER_MINUTES }
+        prefs.edit()
+            .putInt(KEY_MINDFULNESS_TIMER_DURATION_MINUTES, duration)
+            .putInt(KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES, interval ?: 0)
+            .putString(KEY_MINDFULNESS_TIMER_BELL_SOUND, config.bellSound.name)
+            .apply()
+    }
+
     private fun readUnitSystem(): UnitSystem =
         prefs.getString(KEY_UNIT_SYSTEM, null)
             ?.let { value -> runCatching { UnitSystem.valueOf(value) }.getOrNull() }
@@ -143,6 +176,13 @@ class PreferencesRepository @Inject constructor(
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
     }
 
+    private fun String.toMindfulnessBellSound(): MindfulnessBellSound? =
+        when (this) {
+            "SOFT" -> MindfulnessBellSound.STRUCK
+            "DEEP" -> MindfulnessBellSound.TEMPLE
+            else -> runCatching { MindfulnessBellSound.valueOf(this) }.getOrNull()
+        }
+
     companion object {
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
@@ -154,10 +194,16 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
+        private const val KEY_MINDFULNESS_TIMER_DURATION_MINUTES = "mindfulness_timer_duration_minutes"
+        private const val KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES = "mindfulness_timer_interval_minutes"
+        private const val KEY_MINDFULNESS_TIMER_BELL_SOUND = "mindfulness_timer_bell_sound"
         private const val KEY_VALUE_SEPARATOR = ","
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
         private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0
+        private const val DEFAULT_MINDFULNESS_TIMER_DURATION_MINUTES = 10
+        private const val MIN_MINDFULNESS_TIMER_MINUTES = 1
+        private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

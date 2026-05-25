@@ -104,6 +104,10 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
 
+    val mindfulnessWritePermissions: Set<String> = setOf(
+        HealthPermission.getWritePermission(MindfulnessSessionRecord::class),
+    )
+
     val additionalDataAccessPermissions: Set<String>
         get() = buildSet {
             if (isHealthDataHistoryAvailable()) {
@@ -166,14 +170,16 @@ internal class HealthConnectPermissionService(
             manualOnlyPermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
-            vitalsWritePermissions
+            vitalsWritePermissions +
+            mindfulnessWritePermissions
 
     val managedPermissions: Set<String> get() =
         requestableManagedPermissions +
             manualOnlyPermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
-            vitalsWritePermissions
+            vitalsWritePermissions +
+            mindfulnessWritePermissions
 
     fun grantModeFor(permission: String): PermissionGrantMode =
         if (permission in manualOnlyPermissions) {

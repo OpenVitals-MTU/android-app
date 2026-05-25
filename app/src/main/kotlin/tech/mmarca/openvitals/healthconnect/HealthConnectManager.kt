@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.OvulationTestEntry
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
@@ -93,6 +94,7 @@ class HealthConnectManager @Inject constructor(
     val nutritionHydrationPermissions: Set<String> get() = permissionService.nutritionHydrationPermissions
     val hydrationWritePermissions: Set<String> get() = permissionService.hydrationWritePermissions
     val mindfulnessPermissions: Set<String> get() = permissionService.mindfulnessPermissions
+    val mindfulnessWritePermissions: Set<String> get() = permissionService.mindfulnessWritePermissions
     val additionalDataAccessPermissions: Set<String> get() = permissionService.additionalDataAccessPermissions
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
     val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
@@ -324,6 +326,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readMindfulnessMinutes(date: LocalDate): Int =
         mindfulnessReader.readMindfulnessMinutes(date)
+
+    suspend fun writeMindfulnessSessionEntry(request: MindfulnessSessionWriteRequest): String =
+        mindfulnessReader.writeMindfulnessSessionEntry(request)
 
     suspend fun readMenstruationFlowEntries(start: Instant, end: Instant): List<MenstruationFlowEntry> =
         cycleReader.readMenstruationFlowEntries(start, end)

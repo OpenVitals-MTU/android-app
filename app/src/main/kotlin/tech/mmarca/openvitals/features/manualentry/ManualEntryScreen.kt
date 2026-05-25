@@ -31,8 +31,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,7 +54,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -59,6 +64,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.health.connect.client.PermissionController
@@ -66,18 +72,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
-import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 
-private const val ManualEntryGridColumns = 2
+private const val ManualEntryGridColumns = 3
 private const val ManualEntryDragLongPressMillis = 500L
 private const val ManualEntryEditWiggleDegrees = 0.45f
+private val ManualEntryTileIconSize = 34.dp
 
 @Composable
 fun ManualEntryScreen(
     viewModel: ManualEntryViewModel,
     onOpenHydrationEntry: () -> Unit,
+    onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
@@ -98,9 +106,15 @@ fun ManualEntryScreen(
     ) {
         viewModel.onVitalsWritePermissionResult()
     }
+    val requestMindfulnessWritePermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        viewModel.onMindfulnessWritePermissionResult()
+    }
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
+        onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
     )
@@ -118,6 +132,12 @@ fun ManualEntryScreen(
         if (state.pendingHydrationEntryNavigation) {
             viewModel.onHydrationEntryNavigationHandled()
             onOpenHydrationEntry()
+        }
+    }
+    LaunchedEffect(state.pendingMindfulnessEntryNavigation) {
+        if (state.pendingMindfulnessEntryNavigation) {
+            viewModel.onMindfulnessEntryNavigationHandled()
+            onOpenMindfulnessEntry()
         }
     }
     LaunchedEffect(state.pendingBodyEntryNavigation) {
@@ -192,6 +212,17 @@ fun ManualEntryScreen(
             )
         }
     }
+
+    if (state.showMindfulnessWritePermissionPrompt) {
+        MindfulnessWritePermissionPrompt(
+            onDismiss = viewModel::dismissMindfulnessWritePermissionPrompt,
+            onOpenEntry = viewModel::continueMindfulnessEntryFromWritePermissionPrompt,
+            onGrant = {
+                viewModel.grantMindfulnessWritePermissionFromPrompt()
+                requestMindfulnessWritePermissions.launch(state.mindfulnessWritePermissions)
+            },
+        )
+    }
 }
 
 @Composable
@@ -204,6 +235,29 @@ private fun HydrationWritePermissionPrompt(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_write_permission_title)) },
         text = { Text(stringResource(R.string.hydration_tracker_permission_needed)) },
+        confirmButton = {
+            Button(onClick = onGrant) {
+                Text(stringResource(R.string.action_grant))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onOpenEntry) {
+                Text(stringResource(R.string.action_open))
+            }
+        },
+    )
+}
+
+@Composable
+private fun MindfulnessWritePermissionPrompt(
+    onDismiss: () -> Unit,
+    onOpenEntry: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.manual_entry_mindfulness_write_permission_title)) },
+        text = { Text(stringResource(R.string.mindfulness_entry_permission_needed)) },
         confirmButton = {
             Button(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
@@ -294,9 +348,9 @@ private fun ManualEntryWidgetGrid(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
                         .animateContentSize(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     rowSpecs.forEach { spec ->
                         ManualEntryWidgetTile(
@@ -477,72 +531,78 @@ private fun LazyListScope.hiddenManualEntryWidgets(
 private fun manualEntryWidgetSpecs(
     isEditingWidgets: Boolean,
     onOpenHydrationEntry: () -> Unit,
+    onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
+    val mindfulnessClick = if (isEditingWidgets) null else onOpenMindfulnessEntry
     return listOf(
         ManualEntryWidgetSpec(
             id = ManualEntryWidgetId.HYDRATION,
             title = stringResource(R.string.manual_entry_hydration_title),
             content = { modifier ->
-                MetricCardPlaceholder(
+                ManualEntryMetricTile(
                     title = stringResource(R.string.manual_entry_hydration_title),
                     icon = Icons.Outlined.LocalDrink,
                     accentColor = HydrationColor,
-                    message = stringResource(R.string.manual_entry_hydration_body),
-                    contentAtBottom = true,
                     modifier = modifier,
                     onClick = hydrationClick,
+                )
+            },
+        ),
+        ManualEntryWidgetSpec(
+            id = ManualEntryWidgetId.MINDFULNESS,
+            title = stringResource(R.string.metric_mindfulness),
+            content = { modifier ->
+                ManualEntryMetricTile(
+                    title = stringResource(R.string.metric_mindfulness),
+                    icon = Icons.Outlined.SelfImprovement,
+                    accentColor = MindfulnessColor,
+                    modifier = modifier,
+                    onClick = mindfulnessClick,
                 )
             },
         ),
         bodyMeasurementWidgetSpec(
             id = ManualEntryWidgetId.WEIGHT,
             type = BodyMeasurementType.WEIGHT,
-            messageRes = R.string.manual_entry_weight_body,
             isEditingWidgets = isEditingWidgets,
             onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
         ),
         bodyMeasurementWidgetSpec(
             id = ManualEntryWidgetId.HEIGHT,
             type = BodyMeasurementType.HEIGHT,
-            messageRes = R.string.manual_entry_height_body,
             isEditingWidgets = isEditingWidgets,
             onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
         ),
         bodyMeasurementWidgetSpec(
             id = ManualEntryWidgetId.BODY_FAT,
             type = BodyMeasurementType.BODY_FAT,
-            messageRes = R.string.manual_entry_body_fat_body,
             isEditingWidgets = isEditingWidgets,
             onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
         ),
         vitalsMeasurementWidgetSpec(
             id = ManualEntryWidgetId.BLOOD_PRESSURE,
             type = VitalsMeasurementType.BLOOD_PRESSURE,
-            messageRes = R.string.manual_entry_blood_pressure_body,
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),
         vitalsMeasurementWidgetSpec(
             id = ManualEntryWidgetId.SPO2,
             type = VitalsMeasurementType.SPO2,
-            messageRes = R.string.manual_entry_spo2_body,
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),
         vitalsMeasurementWidgetSpec(
             id = ManualEntryWidgetId.RESPIRATORY_RATE,
             type = VitalsMeasurementType.RESPIRATORY_RATE,
-            messageRes = R.string.manual_entry_respiratory_rate_body,
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),
         vitalsMeasurementWidgetSpec(
             id = ManualEntryWidgetId.BODY_TEMPERATURE,
             type = VitalsMeasurementType.BODY_TEMPERATURE,
-            messageRes = R.string.manual_entry_body_temperature_body,
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),
@@ -553,7 +613,6 @@ private fun manualEntryWidgetSpecs(
 private fun bodyMeasurementWidgetSpec(
     id: ManualEntryWidgetId,
     type: BodyMeasurementType,
-    messageRes: Int,
     isEditingWidgets: Boolean,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
 ): ManualEntryWidgetSpec {
@@ -562,12 +621,10 @@ private fun bodyMeasurementWidgetSpec(
         id = id,
         title = stringResource(type.titleRes()),
         content = { modifier ->
-            MetricCardPlaceholder(
+            ManualEntryMetricTile(
                 title = stringResource(type.titleRes()),
                 icon = type.icon(),
                 accentColor = type.accentColor(),
-                message = stringResource(messageRes),
-                contentAtBottom = true,
                 modifier = modifier,
                 onClick = click,
             )
@@ -579,7 +636,6 @@ private fun bodyMeasurementWidgetSpec(
 private fun vitalsMeasurementWidgetSpec(
     id: ManualEntryWidgetId,
     type: VitalsMeasurementType,
-    messageRes: Int,
     isEditingWidgets: Boolean,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): ManualEntryWidgetSpec {
@@ -588,17 +644,61 @@ private fun vitalsMeasurementWidgetSpec(
         id = id,
         title = stringResource(type.titleRes()),
         content = { modifier ->
-            MetricCardPlaceholder(
+            ManualEntryMetricTile(
                 title = stringResource(type.titleRes()),
                 icon = type.icon(),
                 accentColor = type.accentColor(),
-                message = stringResource(messageRes),
-                contentAtBottom = true,
                 modifier = modifier,
                 onClick = click,
             )
         },
     )
+}
+
+@Composable
+private fun ManualEntryMetricTile(
+    title: String,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor.copy(alpha = 0.75f),
+                modifier = Modifier.size(ManualEntryTileIconSize),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 private fun closestManualEntryWidgetId(

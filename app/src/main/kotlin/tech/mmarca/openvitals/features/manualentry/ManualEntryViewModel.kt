@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 
@@ -35,6 +36,10 @@ data class ManualEntryUiState(
     val vitalsWritePermissionPromptType: VitalsMeasurementType? = null,
     val vitalsWritePermissionRequestType: VitalsMeasurementType? = null,
     val pendingVitalsEntryNavigation: VitalsMeasurementType? = null,
+    val mindfulnessWritePermissions: Set<String> = emptySet(),
+    val isCheckingMindfulnessWritePermission: Boolean = false,
+    val showMindfulnessWritePermissionPrompt: Boolean = false,
+    val pendingMindfulnessEntryNavigation: Boolean = false,
 )
 
 @HiltViewModel
@@ -42,6 +47,7 @@ class ManualEntryViewModel @Inject constructor(
     private val hydrationRepository: HydrationRepository,
     private val bodyRepository: BodyRepository,
     private val vitalsRepository: VitalsRepository,
+    private val mindfulnessRepository: MindfulnessRepository,
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
@@ -140,6 +146,35 @@ class ManualEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isCheckingVitalsWritePermission = false,
                     pendingVitalsEntryNavigation = type,
+                )
+            }
+        }
+    }
+
+    fun onMindfulnessWidgetTapped() {
+        if (_uiState.value.isCheckingMindfulnessWritePermission) return
+        viewModelScope.launch {
+            val writePermissions = mindfulnessRepository.mindfulnessWritePermissions
+            _uiState.value = _uiState.value.copy(
+                isCheckingMindfulnessWritePermission = true,
+                mindfulnessWritePermissions = writePermissions,
+                showMindfulnessWritePermissionPrompt = false,
+                pendingMindfulnessEntryNavigation = false,
+            )
+            runCatching {
+                mindfulnessRepository.hasMindfulnessWritePermission()
+            }.onSuccess { canWrite ->
+                val unacknowledgedWritePermissions = writePermissions - preferencesRepository.acknowledgedPermissions()
+                val shouldShowPrompt = !canWrite && unacknowledgedWritePermissions.isNotEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isCheckingMindfulnessWritePermission = false,
+                    showMindfulnessWritePermissionPrompt = shouldShowPrompt,
+                    pendingMindfulnessEntryNavigation = !shouldShowPrompt,
+                )
+            }.onFailure {
+                _uiState.value = _uiState.value.copy(
+                    isCheckingMindfulnessWritePermission = false,
+                    pendingMindfulnessEntryNavigation = true,
                 )
             }
         }
@@ -262,6 +297,37 @@ class ManualEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(pendingVitalsEntryNavigation = null)
     }
 
+    fun continueMindfulnessEntryFromWritePermissionPrompt() {
+        acknowledgeMindfulnessWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showMindfulnessWritePermissionPrompt = false,
+            pendingMindfulnessEntryNavigation = true,
+        )
+    }
+
+    fun dismissMindfulnessWritePermissionPrompt() {
+        acknowledgeMindfulnessWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showMindfulnessWritePermissionPrompt = false)
+    }
+
+    fun grantMindfulnessWritePermissionFromPrompt() {
+        acknowledgeMindfulnessWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showMindfulnessWritePermissionPrompt = false)
+    }
+
+    fun onMindfulnessWritePermissionResult() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCheckingMindfulnessWritePermission = false,
+                pendingMindfulnessEntryNavigation = true,
+            )
+        }
+    }
+
+    fun onMindfulnessEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingMindfulnessEntryNavigation = false)
+    }
+
     fun toggleWidgetEdit() {
         _uiState.value = _uiState.value.copy(isEditingWidgets = !_uiState.value.isEditingWidgets)
     }
@@ -313,6 +379,13 @@ class ManualEntryViewModel @Inject constructor(
 
     private fun acknowledgeVitalsWritePermissionPrompt() {
         val writePermissions = _uiState.value.vitalsWritePermissions
+        if (writePermissions.isNotEmpty()) {
+            preferencesRepository.acknowledgePermissions(writePermissions)
+        }
+    }
+
+    private fun acknowledgeMindfulnessWritePermissionPrompt() {
+        val writePermissions = _uiState.value.mindfulnessWritePermissions
         if (writePermissions.isNotEmpty()) {
             preferencesRepository.acknowledgePermissions(writePermissions)
         }

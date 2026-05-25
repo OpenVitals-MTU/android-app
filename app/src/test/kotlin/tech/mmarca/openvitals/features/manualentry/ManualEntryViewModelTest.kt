@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -31,6 +32,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -42,6 +44,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(
                 storedWidgetOrder = listOf(ManualEntryWidgetId.HYDRATION.name),
             ),
@@ -55,6 +58,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -69,6 +73,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -85,6 +90,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -99,6 +105,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(canWrite = true),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(),
         )
 
@@ -113,6 +120,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -127,6 +135,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteHydrationPermission)),
         )
 
@@ -142,6 +151,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -159,6 +169,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(canWrite = false),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = preferencesRepository,
         )
 
@@ -174,6 +185,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(canWrite = false),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -189,6 +201,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(canWrite = false),
             vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteWeightPermission)),
         )
 
@@ -203,6 +216,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(canWrite = false),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
         )
 
@@ -218,6 +232,7 @@ class ManualEntryViewModelTest {
             hydrationRepository = hydrationRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(canWrite = false),
+            mindfulnessRepository = mindfulnessRepo(),
             preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteBloodPressurePermission)),
         )
 
@@ -225,6 +240,69 @@ class ManualEntryViewModelTest {
 
         assertFalse(vm.uiState.value.showVitalsWritePermissionPrompt)
         assertEquals(VitalsMeasurementType.BLOOD_PRESSURE, vm.uiState.value.pendingVitalsEntryNavigation)
+    }
+
+    @Test fun `mindfulness tap opens entry when write permission is granted`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(canWrite = true),
+            preferencesRepository = prefs(),
+        )
+
+        vm.onMindfulnessWidgetTapped()
+
+        assertFalse(vm.uiState.value.showMindfulnessWritePermissionPrompt)
+        assertTrue(vm.uiState.value.pendingMindfulnessEntryNavigation)
+    }
+
+    @Test fun `mindfulness tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(canWrite = false),
+            preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
+        )
+
+        vm.onMindfulnessWidgetTapped()
+
+        assertTrue(vm.uiState.value.showMindfulnessWritePermissionPrompt)
+        assertFalse(vm.uiState.value.pendingMindfulnessEntryNavigation)
+    }
+
+    @Test fun `mindfulness tap opens entry when write permission was acknowledged`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(canWrite = false),
+            preferencesRepository = prefs(acknowledgedPermissions = setOf(WriteMindfulnessPermission)),
+        )
+
+        vm.onMindfulnessWidgetTapped()
+
+        assertFalse(vm.uiState.value.showMindfulnessWritePermissionPrompt)
+        assertTrue(vm.uiState.value.pendingMindfulnessEntryNavigation)
+    }
+
+    @Test fun `opening mindfulness entry from prompt acknowledges write permission`() = runTest {
+        val preferencesRepository = prefs()
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(canWrite = false),
+            preferencesRepository = preferencesRepository,
+        )
+
+        vm.onMindfulnessWidgetTapped()
+        vm.continueMindfulnessEntryFromWritePermissionPrompt()
+
+        assertFalse(vm.uiState.value.showMindfulnessWritePermissionPrompt)
+        assertTrue(vm.uiState.value.pendingMindfulnessEntryNavigation)
+        verify { preferencesRepository.acknowledgePermissions(setOf(WriteMindfulnessPermission)) }
     }
 
     private fun prefs(
@@ -262,8 +340,17 @@ class ManualEntryViewModelTest {
             coEvery { repo.hasVitalsWritePermission(any()) } returns canWrite
         }
 
+    private fun mindfulnessRepo(
+        canWrite: Boolean = false,
+    ): MindfulnessRepository =
+        mockk<MindfulnessRepository>().also { repo ->
+            every { repo.mindfulnessWritePermissions } returns setOf(WriteMindfulnessPermission)
+            coEvery { repo.hasMindfulnessWritePermission() } returns canWrite
+        }
+
     private companion object {
         private const val WriteHydrationPermission = "write_hydration"
+        private const val WriteMindfulnessPermission = "write_mindfulness"
         private const val WriteWeightPermission = "write_weight"
         private const val WriteBloodPressurePermission = "write_blood_pressure"
     }

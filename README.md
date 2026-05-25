@@ -177,6 +177,7 @@ Most near-term metric expansion is already implemented. Remaining roadmap items 
 ## License
 
 OpenVitals is licensed under the [`GNU Affero General Public License v3.0 or later`](LICENSE).
+Third-party asset notices are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Status
 

@@ -83,6 +83,8 @@ import tech.mmarca.openvitals.features.manualentry.HydrationEntryScreen
 import tech.mmarca.openvitals.features.manualentry.HydrationEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.ManualEntryScreen
 import tech.mmarca.openvitals.features.manualentry.ManualEntryViewModel
+import tech.mmarca.openvitals.features.manualentry.MindfulnessEntryScreen
+import tech.mmarca.openvitals.features.manualentry.MindfulnessEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.VitalsMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.VitalsMeasurementEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.titleRes
@@ -146,6 +148,7 @@ fun AppNavigation(
         Screen.Dashboard.route -> stringResource(R.string.screen_dashboard)
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
+        Screen.MindfulnessEntry.route -> stringResource(R.string.screen_mindfulness_entry)
         Screen.BodyMeasurementEntry.route -> currentBodyMeasurementType
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_body_measurement_entry)
@@ -275,6 +278,9 @@ fun AppNavigation(
                     onOpenHydrationEntry = {
                         navController.navigate(Screen.HydrationEntry.route)
                     },
+                    onOpenMindfulnessEntry = {
+                        navController.navigate(Screen.MindfulnessEntry.route)
+                    },
                     onOpenBodyMeasurementEntry = { type ->
                         navController.navigate(Screen.BodyMeasurementEntry.createRoute(type.name))
                     },
@@ -293,6 +299,11 @@ fun AppNavigation(
                     viewModel = hydrationViewModel,
                     unitFormatter = unitFormatter,
                 )
+            }
+
+            composable(Screen.MindfulnessEntry.route) {
+                val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
+                MindfulnessEntryScreen(viewModel = mindfulnessEntryViewModel)
             }
 
             composable(
