@@ -96,10 +96,8 @@ steps:
           --aab ".woodpecker/tmp/OpenVitals-$${CI_COMMIT_TAG}.aab" \
           --track internal \
           --release_status completed \
-          --skip_upload_metadata \
-          --skip_upload_changelogs \
-          --skip_upload_images \
-          --skip_upload_screenshots \
+          --metadata_path fastlane/metadata/android \
+          --sync_image_upload \
           --timeout 600
 
   - name: create-play-production-draft

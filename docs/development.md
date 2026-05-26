@@ -53,6 +53,10 @@ track with Fastlane `supply`, uploads Play metadata and screenshots from
 draft. Configure the Woodpecker secret
 `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with the base64-encoded JSON key for a
 Google Play service account that has release access to `tech.mmarca.openvitals`.
+For the current release pipeline, that service account needs app-level Play
+Console permissions to release to testing tracks, manage store presence, and
+release to production. The store-presence permission is required because
+Fastlane uploads listing text, changelogs, icon, and screenshots.
 Prerelease tags such as `-alpha`, `-beta`, and `-rc` publish to internal only.
 
 After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
