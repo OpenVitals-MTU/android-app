@@ -21,10 +21,19 @@ enum class MindfulnessBellSound {
     HARMONY,
 }
 
+enum class MindfulnessBackgroundSound {
+    NONE,
+    BOWL,
+    MEDITATION,
+    CHIMES,
+    DREAMSCAPE,
+}
+
 data class MindfulnessTimerConfig(
     val durationMinutes: Int,
     val intervalMinutes: Int?,
     val bellSound: MindfulnessBellSound,
+    val backgroundSound: MindfulnessBackgroundSound = MindfulnessBackgroundSound.NONE,
 )
 
 data class MindfulnessSessionWriteRequest(

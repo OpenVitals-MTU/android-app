@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,8 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -176,14 +181,9 @@ private fun HydrationTrackerCard(
                 )
             }
 
-            Text(
-                text = stringResource(
-                    R.string.hydration_bhi_write_explanation,
-                    hydrationAmountLabel(state.selectedContainer.volumeLiters, unitFormatter),
-                    hydrationAmountLabel(state.selectedContainerEffectiveLiters, unitFormatter),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            HydrationWriteInfo(
+                originalAmount = hydrationAmountLabel(state.selectedContainer.volumeLiters, unitFormatter),
+                effectiveAmount = hydrationAmountLabel(state.selectedContainerEffectiveLiters, unitFormatter),
             )
 
             state.entryError?.let { entryError ->
@@ -249,7 +249,7 @@ private fun HydrationBeverageCarousel(
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 2.dp),
+            contentPadding = PaddingValues(start = 2.dp, end = 24.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             items(beverages, key = { it.name }) { beverage ->
@@ -291,7 +291,7 @@ private fun HydrationContainerCarousel(
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 2.dp),
+            contentPadding = PaddingValues(start = 2.dp, end = 24.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             items(options, key = { it.id }) { option ->
@@ -368,6 +368,38 @@ private fun HydrationContainerOptionItem(
                 style = MaterialTheme.typography.labelMedium,
                 textAlign = TextAlign.Center,
             )
+        }
+    }
+}
+
+@Composable
+private fun HydrationWriteInfo(
+    originalAmount: String,
+    effectiveAmount: String,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        TextButton(onClick = { expanded = !expanded }) {
+            Text(stringResource(if (expanded) R.string.action_close else R.string.action_details))
+        }
+        AnimatedVisibility(visible = expanded) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.hydration_bhi_write_explanation,
+                        originalAmount,
+                        effectiveAmount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
         }
     }
 }

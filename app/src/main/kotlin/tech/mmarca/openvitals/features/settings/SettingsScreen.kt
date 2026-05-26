@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.settings
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -19,16 +21,21 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -89,11 +96,18 @@ fun SettingsScreen(
         FullScreenLoading()
         return
     }
+    var debugExpanded by rememberSaveable { mutableStateOf(false) }
 
-    LazyColumn(
+    Box(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 920.dp),
+            contentPadding = PaddingValues(vertical = 8.dp),
+        ) {
         // ─── Health Connect status ────────────────────────────────────────
         item { SectionHeader(stringResource(R.string.section_health_connect)) }
 
@@ -226,41 +240,66 @@ fun SettingsScreen(
         // ─── Debug ───────────────────────────────────────────────────────
         item { SectionHeader(stringResource(R.string.section_debug)) }
 
-        item {
-            Card(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    val visibleGranted = state.visiblePermissions.filter { it in state.grantedPermissions }
-                    Text(
-                        text = stringResource(R.string.settings_debug_availability, state.availability),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.settings_debug_granted_permissions,
-                            visibleGranted.size,
-                            state.visiblePermissions.size,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    )
-                    visibleGranted.sorted().forEach { perm ->
-                        Text(
-                            text = "  ✓ ${perm.substringAfterLast('.')}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        )
+            item {
+                Card(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.section_debug),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { debugExpanded = !debugExpanded }) {
+                                Text(stringResource(if (debugExpanded) R.string.action_close else R.string.action_details))
+                            }
+                        }
+                        if (debugExpanded) {
+                            val visibleGranted = state.visiblePermissions.filter { it in state.grantedPermissions }
+                            Text(
+                                text = stringResource(R.string.settings_debug_availability, state.availability),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_debug_granted_permissions,
+                                    visibleGranted.size,
+                                    state.visiblePermissions.size,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            )
+                            visibleGranted.sorted().forEach { perm ->
+                                Text(
+                                    text = "  ✓ ${perm.substringAfterLast('.')}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_debug_granted_permissions,
+                                    state.grantedPermissions.size,
+                                    state.visiblePermissions.size,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
-        }
 
         item {
             Text(
@@ -278,6 +317,7 @@ fun SettingsScreen(
             )
         }
     }
+}
 }
 
 @Composable
@@ -329,13 +369,19 @@ private fun SleepRangeModeCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Row(
-                modifier = Modifier.padding(top = 12.dp),
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
             ) {
-                SleepRangeMode.entries.forEach { mode ->
-                    FilterChip(
+                SleepRangeMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
                         selected = selected == mode,
                         onClick = { onSelect(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = SleepRangeMode.entries.size,
+                        ),
                         label = {
                             Text(
                                 when (mode) {
@@ -349,7 +395,6 @@ private fun SleepRangeModeCard(
                                 }
                             )
                         },
-                        modifier = Modifier.padding(end = 8.dp),
                     )
                 }
             }
@@ -377,13 +422,19 @@ private fun UnitSystemCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Row(
-                modifier = Modifier.padding(top = 12.dp),
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
             ) {
-                UnitSystem.entries.forEach { unitSystem ->
-                    FilterChip(
+                UnitSystem.entries.forEachIndexed { index, unitSystem ->
+                    SegmentedButton(
                         selected = selected == unitSystem,
                         onClick = { onSelect(unitSystem) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = UnitSystem.entries.size,
+                        ),
                         label = {
                             Text(
                                 when (unitSystem) {
@@ -392,7 +443,6 @@ private fun UnitSystemCard(
                                 }
                             )
                         },
-                        modifier = Modifier.padding(end = 8.dp),
                     )
                 }
             }

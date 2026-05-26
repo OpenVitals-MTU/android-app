@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,15 +12,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.TimeRange
 
@@ -82,24 +84,7 @@ fun MetricCard(
                 Spacer(Modifier.weight(1f))
             }
             Spacer(Modifier.height(12.dp))
-            Row(
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.alignByBaseline(),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = unit,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.alignByBaseline(),
-                )
-            }
+            MetricValueRow(value = value, unit = unit)
             if (subtitle != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -180,7 +165,7 @@ fun MetricCardPlaceholder(
 @Composable
 fun SourceChip(source: String, modifier: Modifier = Modifier) {
     val displayName = sourceDisplayName(source)
-    androidx.compose.material3.SuggestionChip(
+    androidx.compose.material3.AssistChip(
         onClick = {},
         label = {
             Text(
@@ -216,22 +201,26 @@ fun SectionHeader(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimeRangeSelector(
     selected: TimeRange,
     onSelect: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    SingleChoiceSegmentedButtonRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TimeRange.entries.forEach { range ->
-            androidx.compose.material3.FilterChip(
+        TimeRange.entries.forEachIndexed { index, range ->
+            SegmentedButton(
                 selected = range == selected,
                 onClick = { onSelect(range) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = TimeRange.entries.size,
+                ),
                 label = { Text(timeRangeLabel(range)) },
             )
         }

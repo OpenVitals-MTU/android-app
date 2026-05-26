@@ -99,7 +99,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.compose.material3.adaptive)
+    implementation(libs.androidx.compose.material3.adaptive.layout)
+    implementation(libs.androidx.compose.material3.adaptive.navigation)
+    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     // Activity + Navigation
     implementation(libs.androidx.activity.compose)
@@ -125,6 +130,8 @@ dependencies {
     testImplementation(libs.junit4)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(composeBom)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }
 
 tasks.withType<Test>().configureEach {

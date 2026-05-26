@@ -1,28 +1,22 @@
 package tech.mmarca.openvitals.navigation
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -104,8 +98,10 @@ import tech.mmarca.openvitals.features.sleep.SleepDetailScreen
 import tech.mmarca.openvitals.features.sleep.SleepDetailViewModel
 import tech.mmarca.openvitals.features.sleep.SleepScreen
 import tech.mmarca.openvitals.features.sleep.SleepViewModel
+import tech.mmarca.openvitals.ui.components.MetricAction
+import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
+import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(
     unitFormatter: UnitFormatter,
@@ -135,14 +131,52 @@ fun AppNavigation(
     var dashboardTopBarState by remember { mutableStateOf(TopBarEditState()) }
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
 
-    val showTopBar = currentRoute != Screen.Onboarding.route
-    val showBottomBar = currentRoute == Screen.Dashboard.route || currentRoute == Screen.ManualEntry.route
+    val topLevelDestinations = remember {
+        listOf(
+            OpenVitalsNavigationDestination(
+                route = Screen.Dashboard.route,
+                labelRes = R.string.bottom_nav_dashboard,
+                icon = Icons.Outlined.Dashboard,
+            ),
+            OpenVitalsNavigationDestination(
+                route = Screen.Browse.route,
+                labelRes = R.string.screen_browse,
+                icon = Icons.Outlined.FolderOpen,
+            ),
+            OpenVitalsNavigationDestination(
+                route = Screen.Settings.route,
+                labelRes = R.string.screen_settings,
+                icon = Icons.Outlined.Settings,
+            ),
+        )
+    }
+    val topLevelRoutes = remember(topLevelDestinations) {
+        topLevelDestinations.map { it.route }.toSet()
+    }
+    val taskRoutes = remember {
+        setOf(
+            Screen.ManualEntry.route,
+            Screen.HydrationEntry.route,
+            Screen.MindfulnessEntry.route,
+            Screen.BodyMeasurementEntry.route,
+            Screen.VitalsMeasurementEntry.route,
+        )
+    }
+
+    val showTopBar = currentRoute != null && currentRoute != Screen.Onboarding.route
+    val isTaskRoute = currentRoute?.let { it in taskRoutes } == true
+    val showNavigation = showTopBar && !isTaskRoute
     val canNavigateBack =
         currentRoute != null &&
             currentRoute != Screen.Onboarding.route &&
-            currentRoute != Screen.Dashboard.route &&
-            currentRoute != Screen.ManualEntry.route &&
+            currentRoute !in topLevelRoutes &&
             navController.previousBackStackEntry != null
+    val navigationSelectedRoute = currentRoute?.takeIf { it in topLevelRoutes }
+    val addEntryAction = addEntryActionForCurrentRoute(
+        currentRoute = currentRoute,
+        currentMetricId = currentMetricId,
+        onNavigate = { route -> navController.navigate(route) },
+    )
 
     val topBarTitle = when (currentRoute) {
         Screen.Dashboard.route -> stringResource(R.string.screen_dashboard)
@@ -172,69 +206,50 @@ fun AppNavigation(
         else -> ""
     }
 
-    Scaffold(
-        topBar = {
-            if (showTopBar) {
-                TopAppBar(
-                    title = { Text(topBarTitle) },
-                    navigationIcon = {
-                        if (canNavigateBack) {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = stringResource(R.string.cd_back),
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        val topBarEditState = when (currentRoute) {
-                            Screen.Dashboard.route -> dashboardTopBarState
-                            Screen.ManualEntry.route -> manualEntryTopBarState
-                            else -> null
-                        }
-                        if (topBarEditState != null) {
-                            IconButton(onClick = topBarEditState.onToggleEdit) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Edit,
-                                    contentDescription = stringResource(
-                                        when {
-                                            currentRoute == Screen.Dashboard.route && topBarEditState.isEditing ->
-                                                R.string.cd_finish_dashboard_editing
-                                            currentRoute == Screen.Dashboard.route -> R.string.cd_edit_dashboard
-                                            topBarEditState.isEditing -> R.string.cd_finish_manual_entry_editing
-                                            else -> R.string.cd_edit_manual_entry_widgets
-                                        }
-                                    ),
-                                    tint = if (topBarEditState.isEditing) {
-                                        androidx.compose.material3.MaterialTheme.colorScheme.primary
-                                    } else {
-                                        androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                )
-                            }
-                        }
-                        if (currentRoute != Screen.Settings.route) {
-                            IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                                Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_settings))
-                            }
-                        }
-                    },
-                )
+    OpenVitalsAdaptiveScaffold(
+        title = topBarTitle,
+        navigationDestinations = topLevelDestinations,
+        currentRoute = navigationSelectedRoute,
+        showTopBar = showTopBar,
+        showNavigation = showNavigation,
+        canNavigateBack = canNavigateBack,
+        onNavigateBack = { navController.popBackStack() },
+        onNavigate = { route ->
+            navController.navigate(route) {
+                popUpTo(Screen.Dashboard.route) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
             }
         },
-        bottomBar = {
-            if (showBottomBar) {
-                OpenVitalsBottomNavigation(
-                    currentRoute = currentRoute,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(Screen.Dashboard.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                )
+        navigationIcon = Icons.AutoMirrored.Outlined.ArrowBack,
+        navigationContentDescription = stringResource(R.string.cd_back),
+        action = addEntryAction,
+        topBarActions = {
+            val topBarEditState = when (currentRoute) {
+                Screen.Dashboard.route -> dashboardTopBarState
+                Screen.ManualEntry.route -> manualEntryTopBarState
+                else -> null
+            }
+            if (topBarEditState != null) {
+                IconButton(onClick = topBarEditState.onToggleEdit) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(
+                            when {
+                                currentRoute == Screen.Dashboard.route && topBarEditState.isEditing ->
+                                    R.string.cd_finish_dashboard_editing
+                                currentRoute == Screen.Dashboard.route -> R.string.cd_edit_dashboard
+                                topBarEditState.isEditing -> R.string.cd_finish_manual_entry_editing
+                                else -> R.string.cd_edit_manual_entry_widgets
+                            }
+                        ),
+                        tint = if (topBarEditState.isEditing) {
+                            androidx.compose.material3.MaterialTheme.colorScheme.primary
+                        } else {
+                            androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -495,44 +510,43 @@ fun AppNavigation(
     }
 }
 
-@Composable
-private fun OpenVitalsBottomNavigation(
+private fun addEntryActionForCurrentRoute(
     currentRoute: String?,
+    currentMetricId: DashboardWidgetId?,
     onNavigate: (String) -> Unit,
-) {
-    val destinations = listOf(
-        BottomNavigationDestination(
-            route = Screen.Dashboard.route,
-            labelRes = R.string.bottom_nav_dashboard,
-            icon = Icons.Outlined.Dashboard,
-        ),
-        BottomNavigationDestination(
-            route = Screen.ManualEntry.route,
-            labelRes = R.string.bottom_nav_add_entry,
-            icon = Icons.Outlined.AddCircleOutline,
-        ),
-    )
+): MetricAction? {
+    val destinationRoute = when {
+        currentRoute == Screen.Dashboard.route -> Screen.ManualEntry.route
+        currentRoute == Screen.Hydration.route -> Screen.HydrationEntry.route
+        currentRoute == Screen.Mindfulness.route -> Screen.MindfulnessEntry.route
+        currentRoute == Screen.Body.route -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
+        currentRoute == Screen.Metric.route -> currentMetricId?.entryRoute()
+        else -> null
+    } ?: return null
 
-    NavigationBar {
-        destinations.forEach { destination ->
-            NavigationBarItem(
-                selected = currentRoute == destination.route,
-                onClick = {
-                    if (currentRoute != destination.route) {
-                        onNavigate(destination.route)
-                    }
-                },
-                icon = {
-                    Icon(
-                        imageVector = destination.icon,
-                        contentDescription = null,
-                    )
-                },
-                label = { Text(stringResource(destination.labelRes)) },
-            )
-        }
-    }
+    return MetricAction(
+        labelRes = R.string.action_add,
+        icon = Icons.Outlined.Add,
+        onClick = { onNavigate(destinationRoute) },
+    )
 }
+
+private fun DashboardWidgetId.entryRoute(): String? =
+    when (this) {
+        DashboardWidgetId.HYDRATION -> Screen.HydrationEntry.route
+        DashboardWidgetId.MINDFULNESS -> Screen.MindfulnessEntry.route
+        DashboardWidgetId.WEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
+        DashboardWidgetId.HEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.HEIGHT.name)
+        DashboardWidgetId.BODY_FAT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.BODY_FAT.name)
+        DashboardWidgetId.BLOOD_PRESSURE ->
+            Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BLOOD_PRESSURE.name)
+        DashboardWidgetId.SPO2 -> Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.SPO2.name)
+        DashboardWidgetId.RESPIRATORY_RATE ->
+            Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.RESPIRATORY_RATE.name)
+        DashboardWidgetId.BODY_TEMPERATURE ->
+            Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BODY_TEMPERATURE.name)
+        else -> null
+    }
 
 @Composable
 private fun MetricRouteContent(
@@ -799,10 +813,4 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
 private data class TopBarEditState(
     val isEditing: Boolean = false,
     val onToggleEdit: () -> Unit = {},
-)
-
-private data class BottomNavigationDestination(
-    val route: String,
-    @param:StringRes val labelRes: Int,
-    val icon: ImageVector,
 )

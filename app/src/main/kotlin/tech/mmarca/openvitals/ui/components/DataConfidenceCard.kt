@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -42,13 +44,34 @@ fun DataConfidenceCard(
         DataConfidenceLevel.MEDIUM -> MaterialTheme.colorScheme.tertiary
         DataConfidenceLevel.LOW -> MaterialTheme.colorScheme.error
     }
+    val levelText = dataConfidenceLevelText(confidence.level)
+    val coverageText = stringResource(
+        R.string.data_confidence_coverage,
+        confidence.trackedDays,
+        confidence.expectedDays,
+        confidence.coveragePercent,
+    )
+    val samplesText = stringResource(R.string.data_confidence_samples, confidence.sampleCount)
+    val sourceText = dataSourceText(confidence)
+    val valueKindText = dataValueKindText(confidence.valueKind)
+    val warningTexts = confidence.warnings.take(3).map { warning -> dataWarningText(warning) }
+    val semanticSummary = ChartSemanticsSummary(
+        label = stringResource(R.string.data_confidence_title),
+        value = levelText,
+        trend = listOf(coverageText, samplesText, sourceText, valueKindText)
+            .plus(warningTexts)
+            .joinToString(separator = ". "),
+    ).contentDescription
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = semanticSummary
+            }
             .border(
                 width = 1.dp,
-                color = levelColor.copy(alpha = 0.35f),
+                color = levelColor.copy(alpha = 0.25f),
                 shape = shape,
             ),
         shape = shape,
@@ -72,7 +95,7 @@ fun DataConfidenceCard(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = dataConfidenceLevelText(confidence.level),
+                        text = levelText,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = levelColor,
@@ -81,34 +104,29 @@ fun DataConfidenceCard(
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(
-                    R.string.data_confidence_coverage,
-                    confidence.trackedDays,
-                    confidence.expectedDays,
-                    confidence.coveragePercent,
-                ),
+                text = coverageText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringResource(R.string.data_confidence_samples, confidence.sampleCount),
+                text = samplesText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = dataSourceText(confidence),
+                text = sourceText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = dataValueKindText(confidence.valueKind),
+                text = valueKindText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            confidence.warnings.take(3).forEach { warning ->
+            warningTexts.forEach { warningText ->
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "- ${dataWarningText(warning)}",
+                    text = "- $warningText",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

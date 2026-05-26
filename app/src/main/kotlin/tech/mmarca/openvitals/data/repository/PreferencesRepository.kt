@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.data.model.MindfulnessBellSound
 import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
 import java.util.Locale
@@ -137,6 +138,9 @@ class PreferencesRepository @Inject constructor(
             bellSound = prefs.getString(KEY_MINDFULNESS_TIMER_BELL_SOUND, null)
                 ?.toMindfulnessBellSound()
                 ?: MindfulnessBellSound.STRUCK,
+            backgroundSound = prefs.getString(KEY_MINDFULNESS_TIMER_BACKGROUND_SOUND, null)
+                ?.toMindfulnessBackgroundSound()
+                ?: MindfulnessBackgroundSound.NONE,
         ).let { config ->
             config.copy(intervalMinutes = config.intervalMinutes?.takeIf { it < config.durationMinutes })
         }
@@ -153,6 +157,7 @@ class PreferencesRepository @Inject constructor(
             .putInt(KEY_MINDFULNESS_TIMER_DURATION_MINUTES, duration)
             .putInt(KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES, interval ?: 0)
             .putString(KEY_MINDFULNESS_TIMER_BELL_SOUND, config.bellSound.name)
+            .putString(KEY_MINDFULNESS_TIMER_BACKGROUND_SOUND, config.backgroundSound.name)
             .apply()
     }
 
@@ -183,6 +188,9 @@ class PreferencesRepository @Inject constructor(
             else -> runCatching { MindfulnessBellSound.valueOf(this) }.getOrNull()
         }
 
+    private fun String.toMindfulnessBackgroundSound(): MindfulnessBackgroundSound? =
+        runCatching { MindfulnessBackgroundSound.valueOf(this) }.getOrNull()
+
     companion object {
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
@@ -197,6 +205,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_MINDFULNESS_TIMER_DURATION_MINUTES = "mindfulness_timer_duration_minutes"
         private const val KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES = "mindfulness_timer_interval_minutes"
         private const val KEY_MINDFULNESS_TIMER_BELL_SOUND = "mindfulness_timer_bell_sound"
+        private const val KEY_MINDFULNESS_TIMER_BACKGROUND_SOUND = "mindfulness_timer_background_sound"
         private const val KEY_VALUE_SEPARATOR = ","
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25

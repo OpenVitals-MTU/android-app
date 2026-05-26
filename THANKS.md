@@ -9,4 +9,14 @@ OpenVitals is an independent project, but some parts of the manual-entry work we
 
 ## Assets
 
+Thanks to the sound creators whose public-domain and Creative Commons 0 audio makes the offline mindfulness timer feel calmer and more complete:
+
+- BambooBeast
+- inoshirodesign
+- midge-f
+- newagesoup
+- mellowarrior
+- nixonvote
+- Bigvegie
+
 Bundled audio asset licenses and source links are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

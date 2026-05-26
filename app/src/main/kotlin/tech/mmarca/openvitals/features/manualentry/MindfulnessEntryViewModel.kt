@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.data.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.data.model.MindfulnessBellSound
 import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
@@ -21,6 +22,8 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 private const val MinSessionMinutes = 1
 private const val MaxSessionMinutes = 24 * 60
 private const val TimerTickMillis = 1_000L
+private const val BellPreviewMillis = 1_500L
+private const val BackgroundPreviewMillis = 2_000L
 private const val DefaultSessionTitle = "Meditation"
 
 enum class MindfulnessEntryError {
@@ -35,6 +38,13 @@ enum class MindfulnessEntryError {
 data class MindfulnessBellEvent(
     val id: Long,
     val sound: MindfulnessBellSound,
+    val previewMillis: Long? = null,
+)
+
+data class MindfulnessBackgroundEvent(
+    val id: Long,
+    val sound: MindfulnessBackgroundSound,
+    val previewMillis: Long,
 )
 
 data class MindfulnessEntryUiState(
@@ -42,6 +52,7 @@ data class MindfulnessEntryUiState(
     val intervalEnabled: Boolean = false,
     val intervalMinutesText: String = "",
     val bellSound: MindfulnessBellSound = MindfulnessBellSound.STRUCK,
+    val backgroundSound: MindfulnessBackgroundSound = MindfulnessBackgroundSound.NONE,
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
     val mindfulnessAvailable: Boolean = true,
@@ -56,6 +67,7 @@ data class MindfulnessEntryUiState(
     val entryError: MindfulnessEntryError? = null,
     val writeErrorMessage: String? = null,
     val bellEvent: MindfulnessBellEvent? = null,
+    val backgroundEvent: MindfulnessBackgroundEvent? = null,
 )
 
 @HiltViewModel
@@ -69,6 +81,7 @@ class MindfulnessEntryViewModel @Inject constructor(
     private var completedStart: Instant? = null
     private var completedEnd: Instant? = null
     private var bellEventId = 0L
+    private var backgroundEventId = 0L
 
     private val _uiState = MutableStateFlow(initialState())
     val uiState: StateFlow<MindfulnessEntryUiState> = _uiState.asStateFlow()
@@ -136,7 +149,37 @@ class MindfulnessEntryViewModel @Inject constructor(
     }
 
     fun updateBellSound(sound: MindfulnessBellSound) {
-        updateTimerFields { copy(bellSound = sound) }
+        if (!canUpdateTimerFields()) return
+        bellEventId += 1
+        _uiState.value = _uiState.value.copy(
+            bellSound = sound,
+            entryError = null,
+            writeErrorMessage = null,
+            bellEvent = MindfulnessBellEvent(
+                id = bellEventId,
+                sound = sound,
+                previewMillis = BellPreviewMillis,
+            ),
+        )
+    }
+
+    fun updateBackgroundSound(sound: MindfulnessBackgroundSound) {
+        if (!canUpdateTimerFields()) return
+        backgroundEventId += 1
+        _uiState.value = _uiState.value.copy(
+            backgroundSound = sound,
+            entryError = null,
+            writeErrorMessage = null,
+            backgroundEvent = if (sound == MindfulnessBackgroundSound.NONE) {
+                null
+            } else {
+                MindfulnessBackgroundEvent(
+                    id = backgroundEventId,
+                    sound = sound,
+                    previewMillis = BackgroundPreviewMillis,
+                )
+            },
+        )
     }
 
     fun updateManualMinutes(text: String) {
@@ -166,6 +209,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             intervalEnabled = config.intervalMinutes != null,
             intervalMinutesText = config.intervalMinutes?.toString().orEmpty(),
             bellSound = config.bellSound,
+            backgroundSound = config.backgroundSound,
             remainingSeconds = config.durationMinutes * 60,
             totalSeconds = config.durationMinutes * 60,
             isTimerRunning = true,
@@ -403,6 +447,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             durationMinutes = duration,
             intervalMinutes = interval,
             bellSound = _uiState.value.bellSound,
+            backgroundSound = _uiState.value.backgroundSound,
         )
     }
 
@@ -422,6 +467,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             intervalEnabled = config.intervalMinutes != null,
             intervalMinutesText = config.intervalMinutes?.toString().orEmpty(),
             bellSound = config.bellSound,
+            backgroundSound = config.backgroundSound,
             remainingSeconds = config.durationMinutes * 60,
             totalSeconds = config.durationMinutes * 60,
         )
@@ -430,6 +476,11 @@ class MindfulnessEntryViewModel @Inject constructor(
     override fun onCleared() {
         timerJob?.cancel()
         super.onCleared()
+    }
+
+    private fun canUpdateTimerFields(): Boolean {
+        val state = _uiState.value
+        return !state.isTimerRunning && !state.isTimerPaused && !state.timerCompleted
     }
 }
 

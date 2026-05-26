@@ -17,6 +17,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.data.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.data.model.MindfulnessBellSound
 import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
@@ -54,6 +55,7 @@ class MindfulnessEntryViewModelTest {
         vm.updateIntervalEnabled(true)
         vm.updateIntervalMinutes("5")
         vm.updateBellSound(MindfulnessBellSound.HARMONY)
+        vm.updateBackgroundSound(MindfulnessBackgroundSound.DREAMSCAPE)
         vm.startTimer()
 
         verify {
@@ -62,11 +64,54 @@ class MindfulnessEntryViewModelTest {
                     durationMinutes = 20,
                     intervalMinutes = 5,
                     bellSound = MindfulnessBellSound.HARMONY,
+                    backgroundSound = MindfulnessBackgroundSound.DREAMSCAPE,
                 )
             )
         }
         assertNull(vm.uiState.value.entryError)
         assertTrue(vm.uiState.value.isTimerRunning)
+    }
+
+    @Test fun `changing bell sound emits short preview`() = runTest {
+        val vm = MindfulnessEntryViewModel(
+            repository = repo(canWrite = true),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        vm.updateBellSound(MindfulnessBellSound.TEMPLE)
+
+        val event = vm.uiState.value.bellEvent
+        assertEquals(MindfulnessBellSound.TEMPLE, event?.sound)
+        assertEquals(1_500L, event?.previewMillis)
+    }
+
+    @Test fun `changing background sound emits short preview`() = runTest {
+        val vm = MindfulnessEntryViewModel(
+            repository = repo(canWrite = true),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        vm.updateBackgroundSound(MindfulnessBackgroundSound.CHIMES)
+
+        val event = vm.uiState.value.backgroundEvent
+        assertEquals(MindfulnessBackgroundSound.CHIMES, event?.sound)
+        assertEquals(2_000L, event?.previewMillis)
+    }
+
+    @Test fun `selecting no background sound clears background preview`() = runTest {
+        val vm = MindfulnessEntryViewModel(
+            repository = repo(canWrite = true),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        vm.updateBackgroundSound(MindfulnessBackgroundSound.DREAMSCAPE)
+        vm.updateBackgroundSound(MindfulnessBackgroundSound.NONE)
+
+        assertEquals(MindfulnessBackgroundSound.NONE, vm.uiState.value.backgroundSound)
+        assertNull(vm.uiState.value.backgroundEvent)
     }
 
     @Test fun `manual entry writes mindfulness session duration`() = runTest {

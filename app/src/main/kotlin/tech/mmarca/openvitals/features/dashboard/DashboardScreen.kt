@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -83,6 +84,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -263,58 +268,66 @@ private fun DashboardContent(
         }
     }
 
-    androidx.compose.foundation.lazy.LazyColumn(
-        contentPadding = PaddingValues(vertical = 8.dp),
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        item {
-            DayNavigator(
-                date = data.date,
-                canGoForward = canGoForward,
-                onPreviousDay = onPreviousDay,
-                onNextDay = onNextDay,
-                onOpenCalendar = onOpenCalendar,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-        }
-
-        if (showPermissionsCallout) {
+        androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 1080.dp),
+            contentPadding = PaddingValues(vertical = 8.dp),
+        ) {
             item {
-                PermissionCallout(
-                    title = stringResource(R.string.message_missing_permissions_title),
-                    body = stringResource(R.string.message_missing_permissions_body),
-                    onGrant = onGrantPermissions,
-                    onDismiss = onDismissPermissionsCallout,
+                DayNavigator(
+                    date = data.date,
+                    canGoForward = canGoForward,
+                    onPreviousDay = onPreviousDay,
+                    onNextDay = onNextDay,
+                    onOpenCalendar = onOpenCalendar,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-        }
 
-        item {
-            DashboardWidgetSections(
-                visibleIds = visibleIds,
-                specsById = specsById,
+            if (showPermissionsCallout) {
+                item {
+                    PermissionCallout(
+                        title = stringResource(R.string.message_missing_permissions_title),
+                        body = stringResource(R.string.message_missing_permissions_body),
+                        onGrant = onGrantPermissions,
+                        onDismiss = onDismissPermissionsCallout,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
+
+            item {
+                DashboardWidgetSections(
+                    visibleIds = visibleIds,
+                    specsById = specsById,
+                    isEditingDashboard = isEditingDashboard,
+                    draggingWidgetId = draggingWidgetId,
+                    widgetBounds = widgetBounds,
+                    onDraggingWidgetChanged = { widgetId -> draggingWidgetId = widgetId },
+                    onMoveWidgetToTarget = onMoveWidgetToTarget,
+                    onRemoveWidget = onRemoveWidget,
+                )
+            }
+
+            if (isEditingDashboard) {
+                hiddenDashboardWidgets(
+                    hiddenSpecs = hiddenSpecs,
+                    onAddWidget = onAddWidget,
+                )
+            }
+
+            browseDashboardItem(
+                onOpenBrowse = onOpenBrowse,
                 isEditingDashboard = isEditingDashboard,
-                draggingWidgetId = draggingWidgetId,
-                widgetBounds = widgetBounds,
-                onDraggingWidgetChanged = { widgetId -> draggingWidgetId = widgetId },
-                onMoveWidgetToTarget = onMoveWidgetToTarget,
-                onRemoveWidget = onRemoveWidget,
             )
+
+            item { Spacer(Modifier.height(16.dp)) }
         }
-
-        if (isEditingDashboard) {
-            hiddenDashboardWidgets(
-                hiddenSpecs = hiddenSpecs,
-                onAddWidget = onAddWidget,
-            )
-        }
-
-        browseDashboardItem(
-            onOpenBrowse = onOpenBrowse,
-            isEditingDashboard = isEditingDashboard,
-        )
-
-        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
@@ -511,6 +524,9 @@ private fun DashboardWidgetGridRows(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 rowSpecs.forEach { spec ->
+                    val visibleIndex = ids.indexOf(spec.id)
+                    val previousId = ids.getOrNull(visibleIndex - 1)
+                    val nextId = ids.getOrNull(visibleIndex + 1)
                     DashboardWidgetTile(
                         spec = spec,
                         specsById = specsById,
@@ -532,6 +548,12 @@ private fun DashboardWidgetGridRows(
                             }
                         },
                         onRemove = { onRemoveWidget(spec.id) },
+                        onMovePrevious = previousId?.let { targetId ->
+                            { onMoveWidgetToTarget(spec.id, targetId) }
+                        },
+                        onMoveNext = nextId?.let { targetId ->
+                            { onMoveWidgetToTarget(spec.id, targetId) }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
@@ -608,6 +630,8 @@ private fun DashboardWidgetTile(
     onDragOffsetChanged: (Offset) -> Unit,
     onDrop: (Offset) -> Unit,
     onRemove: () -> Unit,
+    onMovePrevious: (() -> Unit)?,
+    onMoveNext: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     var dragOffset by remember(spec.id, isEditingDashboard) { mutableStateOf(Offset.Zero) }
@@ -670,6 +694,40 @@ private fun DashboardWidgetTile(
     } else {
         Modifier
     }
+    val removeWidgetLabel = stringResource(R.string.cd_remove_widget)
+    val movePreviousLabel = stringResource(R.string.cd_move_widget_up)
+    val moveNextLabel = stringResource(R.string.cd_move_widget_down)
+    val editSemanticsModifier = if (isEditingDashboard) {
+        Modifier.semantics {
+            contentDescription = spec.title
+            customActions = buildList {
+                onMovePrevious?.let { action ->
+                    add(
+                        CustomAccessibilityAction(movePreviousLabel) {
+                            action()
+                            true
+                        }
+                    )
+                }
+                onMoveNext?.let { action ->
+                    add(
+                        CustomAccessibilityAction(moveNextLabel) {
+                            action()
+                            true
+                        }
+                    )
+                }
+                add(
+                    CustomAccessibilityAction(removeWidgetLabel) {
+                        onRemove()
+                        true
+                    }
+                )
+            }
+        }
+    } else {
+        Modifier
+    }
 
     CompositionLocalProvider(
         LocalViewConfiguration provides if (isEditingDashboard) dragViewConfiguration else viewConfiguration,
@@ -682,6 +740,7 @@ private fun DashboardWidgetTile(
                     alpha = if (isDragging) 0f else 1f
                     rotationZ = if (isEditingDashboard && !isDragging) wiggleRotation else 0f
                 }
+                .then(editSemanticsModifier)
                 .then(dragModifier),
         ) {
             AnimatedContent(
@@ -698,13 +757,13 @@ private fun DashboardWidgetTile(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)
-                        .size(24.dp)
+                        .size(48.dp)
                         .background(
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
                             shape = CircleShape,
                         )
                         .clickable(
-                            onClickLabel = stringResource(R.string.cd_remove_widget),
+                            onClickLabel = removeWidgetLabel,
                             onClick = onRemove,
                         ),
                 ) {
@@ -712,7 +771,7 @@ private fun DashboardWidgetTile(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(15.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

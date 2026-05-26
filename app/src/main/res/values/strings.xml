@@ -80,11 +80,17 @@
     <string name="mindfulness_entry_interval_bell">Interval bell</string>
     <string name="mindfulness_entry_interval_minutes">Interval (min)</string>
     <string name="mindfulness_entry_bell_sound">Bell sound</string>
+    <string name="mindfulness_entry_background_sound">Background sound</string>
     <string name="mindfulness_bell_struck">Soft strike</string>
     <string name="mindfulness_bell_rubbed">Warm bowl</string>
     <string name="mindfulness_bell_bright">Bright bowl</string>
     <string name="mindfulness_bell_temple">Temple bowl</string>
     <string name="mindfulness_bell_harmony">Harmony</string>
+    <string name="mindfulness_background_none">None</string>
+    <string name="mindfulness_background_bowl">Bowl</string>
+    <string name="mindfulness_background_meditation">Meditation</string>
+    <string name="mindfulness_background_chimes">Chimes</string>
+    <string name="mindfulness_background_dreamscape">Dreamscape</string>
     <string name="mindfulness_entry_start_timer">Start</string>
     <string name="mindfulness_entry_stop_timer">Stop</string>
     <string name="mindfulness_entry_resume_timer">Resume</string>

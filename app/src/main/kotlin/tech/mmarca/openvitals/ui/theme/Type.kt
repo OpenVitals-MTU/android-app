@@ -15,6 +15,7 @@ val AppTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
+        fontFeatureSettings = "tnum",
     ),
     headlineSmall = TextStyle(
         fontWeight = FontWeight.SemiBold,

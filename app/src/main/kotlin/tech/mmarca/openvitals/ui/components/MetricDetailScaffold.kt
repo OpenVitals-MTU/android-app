@@ -1,10 +1,13 @@
 package tech.mmarca.openvitals.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -14,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -32,6 +36,7 @@ fun MetricDetailScaffold(
     onPreviousPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    primaryAction: MetricAction? = null,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
 ) {
@@ -43,31 +48,50 @@ fun MetricDetailScaffold(
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
-        LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
-            headerItems()
-            item {
-                TimeRangeSelector(
-                    selected = selectedRange,
-                    onSelect = onSelectRange,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 920.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
+            ) {
+                headerItems()
+                item {
+                    TimeRangeSelector(
+                        selected = selectedRange,
+                        onSelect = onSelectRange,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
+                item {
+                    PeriodNavigator(
+                        selectedRange = selectedRange,
+                        period = period,
+                        canGoForward = !period.end.isEqual(LocalDate.now()),
+                        onPreviousPeriod = onPreviousPeriod,
+                        onNextPeriod = onNextPeriod,
+                        onOpenCalendar = { showDatePicker = true },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+                primaryAction?.let { action ->
+                    item {
+                        CompactMetricActionButton(
+                            action = action,
+                            expanded = true,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+                error?.let { err ->
+                    item { ErrorMessage(err) }
+                }
+                content(period)
+                item { Spacer(Modifier.height(16.dp)) }
             }
-            item {
-                PeriodNavigator(
-                    selectedRange = selectedRange,
-                    period = period,
-                    canGoForward = !period.end.isEqual(LocalDate.now()),
-                    onPreviousPeriod = onPreviousPeriod,
-                    onNextPeriod = onNextPeriod,
-                    onOpenCalendar = { showDatePicker = true },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            error?.let { err ->
-                item { ErrorMessage(err) }
-            }
-            content(period)
-            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 

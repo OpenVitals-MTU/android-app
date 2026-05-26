@@ -36,8 +36,8 @@ fun PeriodNavigator(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(

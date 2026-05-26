@@ -3,13 +3,17 @@ package tech.mmarca.openvitals.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Primary brand
-val Blue80 = Color(0xFF9ECAFF)
-val BlueGrey80 = Color(0xFFBBC7DB)
-val Teal80 = Color(0xFF83D6D8)
+val OpenVitalsBlue = Color(0xFF006E8F)
+val OpenVitalsGreen = Color(0xFF2F6F4F)
+val OpenVitalsCoral = Color(0xFF9B4438)
 
-val Blue40 = Color(0xFF1B6CA8)
-val BlueGrey40 = Color(0xFF4A6077)
-val Teal40 = Color(0xFF006E71)
+val Blue80 = Color(0xFF82D2F2)
+val BlueGrey80 = Color(0xFFC6C7D0)
+val Teal80 = Color(0xFF80D7BE)
+
+val Blue40 = OpenVitalsBlue
+val BlueGrey40 = Color(0xFF5E5F68)
+val Teal40 = OpenVitalsGreen
 
 // Metric accent colours
 val StepsColor = Color(0xFF4CAF50)
