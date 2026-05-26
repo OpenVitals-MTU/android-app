@@ -2,13 +2,13 @@
     <img width="160" alt="OpenVitals logo" src="docs/images/readme-logo.png">
 </p>
 
-# OpenVitals: a privacy-first Health Connect dashboard
+# OpenVitals: a privacy-first Health Connect dashboard and manual entry app
 
-OpenVitals is an Android app for exploring your Health Connect data on-device.
+OpenVitals is an Android app for exploring your Health Connect data on-device and adding supported manual metrics back into Health Connect.
 
-It is built around a simple idea: your health data should stay yours. The app is local-first, dashboard-first, and designed to work without an account, cloud sync, ads, or analytics.
+It is built around a simple idea: your health data should stay yours. The app is local-first, dashboard-first for viewing data, and explicit about writes: supported manual entries are saved to Health Connect, not to an OpenVitals health-record database.
 
-OpenVitals is still in an early stage, but the core product direction is already in place: a daily dashboard, period-based detail screens, feature-first architecture, categorized Health Connect permissions, and local display preferences for units.
+OpenVitals is still in an early stage, but the core product direction is already in place: a daily dashboard, a separate manual-entry area, period-based detail screens, feature-first architecture, categorized Health Connect permissions, and local display preferences for units.
 
 ## Screenshots
 
@@ -22,15 +22,17 @@ OpenVitals is still in an early stage, but the core product direction is already
 ## Features
 
 - Daily dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, records, and opt-in cycle data
+- Bottom navigation for the read-only dashboard and a separate Add entry area
 - Period-based detail screens with `Day / Week / Month / Year` navigation
-- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Browse, Onboarding, and Settings
+- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Browse, Manual entry, Onboarding, and Settings
 - Categorized Health Connect onboarding permissions, with Activity & sleep required, dashboard categories optional, and cycle tracking behind a separate explicit opt-in
+- Lazy write-permission requests from Add entry and metric entry screens, keeping dashboard permissions read-only
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Read access to Health Connect data, plus explicit hydration entry logging back to Health Connect
+- Explicit manual entry logging for hydration, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
 
 ## Current coverage
 
@@ -39,9 +41,10 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
-- Hydration: daily and period hydration totals, Health Connect-backed quick entry logging
+- Manual entry: hydration, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
+- Hydration: daily and period hydration totals, plus Health Connect-backed drink logging with drink and serving choices
 - Nutrition: calories in, meals, and macros
-- Mindfulness: session list and total duration when supported by Health Connect
+- Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging
 - Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when explicitly enabled during onboarding or in Settings
 - Browse: workout, sleep, and weight records by selected period
 
@@ -56,21 +59,11 @@ OpenVitals is still in an early stage, but the core product direction is already
   - Activity & sleep: required for the dashboard
   - Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals: optional
   - Cycle tracking: sensitive optional access, requested only after explicitly enabling it during onboarding or in Settings
+  - Manual entry write access: requested only when you use Add entry or a metric entry screen that needs it
 - Permissions can be managed later in Settings
-- Health Connect remains the source of truth; OpenVitals reads only the data you choose to share
+- Health Connect remains the source of truth; OpenVitals does not store health records locally
 
 The current manifest does not request the `INTERNET` permission.
-
-## Permission model
-
-OpenVitals keeps normal dashboard access separate from sensitive opt-in cycle tracking:
-
-| Phase | Health Connect access | When requested |
-|---|---|---|
-| Phase 1 | Steps, distance, exercise, sleep | Required onboarding category |
-| Phase 2 | Heart, recovery, body, activity extras, hydration, nutrition, mindfulness | Optional onboarding categories or Settings |
-| Phase 3 | Blood pressure, SpO2, respiratory rate, body temperature, VO2 max | Optional onboarding category or Heart & Vitals screen |
-| Phase 4 | Menstruation, ovulation, cervical mucus, basal body temperature | Explicit cycle-tracking opt-in during onboarding or Settings |
 
 ## Platform requirements
 
@@ -130,7 +123,7 @@ After launching the app:
 1. Complete onboarding
 2. Grant Activity & sleep, then optionally grant the dashboard categories you want to expose
 3. Enable Cycle tracking only if you want period, ovulation, cervical mucus, and basal temperature data shown
-4. Use the dashboard as the main entry point into detail screens
+4. Use Dashboard for read-only summaries and Add entry for explicit Health Connect logging
 
 ## Architecture at a glance
 
@@ -143,7 +136,7 @@ OpenVitals is intentionally simple today:
 - Hilt constructor injection for repositories, services, and ViewModels
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
-- local preferences for onboarding completion, acknowledged permissions, unit system, and cycle-tracking opt-in
+- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, timer settings, and cycle-tracking opt-in
 - shared presentation formatters for units and date/time labels
 
 The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).
@@ -167,18 +160,8 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 - [`docs/units-localization-plan.md`](docs/units-localization-plan.md): display-unit and localization architecture notes
 - [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
 
-## Roadmap
-
-Most near-term metric expansion is already implemented. Remaining roadmap items tracked in [`docs/metrics-roadmap.md`](docs/metrics-roadmap.md) include:
-
-- continued period/formatter cleanup
-- future localization pass for hardcoded UI text
 
 ## License
 
 OpenVitals is licensed under the [`GNU Affero General Public License v3.0 or later`](LICENSE).
 Third-party asset notices are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-## Status
-
-OpenVitals is actively being shaped into a consistent Health Connect dashboard app. The current codebase already has the shared period-based detail architecture in place, but the product surface and project documentation are still evolving.

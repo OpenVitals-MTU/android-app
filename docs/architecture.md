@@ -16,6 +16,7 @@ The repo is still a single Android app module. The goal is not to force a multi-
 - Shared period shell: in place and used by all metric detail/list screens
 - Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
+- Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
 - Room and WorkManager are intentionally absent until a concrete cache or background refresh design exists
 
 Most importantly, `body` and `browse` are no longer special legacy exceptions in the UI architecture. They now follow the same period-based shell as the other detail screens.
@@ -139,7 +140,7 @@ Responsibilities:
 - Health Connect availability checks
 - permission queries
 - record reads and aggregate reads
-- explicit hydration entry writes to Health Connect
+- explicit manual-entry writes to Health Connect
 - mapping Health Connect responses into app models
 - feature-facing repository APIs
 
@@ -164,6 +165,7 @@ Current boundary shape:
 - `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, writes explicit manual entries, and maps results into app models.
 - `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
 - Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
+- Manual entry ViewModels use the same feature repositories for writes, so write permission and write behavior stay below the UI route.
 
 This is a meaningful improvement over the earlier centralized repository approach. New feature reads should follow the feature-repository pattern, not expand `HealthRepository`.
 
@@ -211,6 +213,7 @@ Current feature packages:
 - [`features/heart`](../app/src/main/kotlin/tech/mmarca/openvitals/features/heart)
 - [`features/body`](../app/src/main/kotlin/tech/mmarca/openvitals/features/body)
 - [`features/browse`](../app/src/main/kotlin/tech/mmarca/openvitals/features/browse)
+- [`features/manualentry`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry)
 - [`features/settings`](../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
 One practical note: `features/activity` currently contains two screen families:
@@ -249,6 +252,23 @@ Shared pieces it uses:
 The dashboard should stay summary-first. It should not become a second copy of detail-screen logic.
 
 Dashboard metric cards route to metric-specific detail destinations. Metrics that share a repository can still reuse the same feature package and ViewModel, but navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter. The rendered detail view should focus on the selected metric instead of showing every related metric in one grouped screen. The records browser remains a fixed dashboard action rather than a customizable metric card.
+
+### Manual entry
+
+Manual entry is a separate screen family from the dashboard. It is the only app area that should initiate Health Connect write flows.
+
+Current files:
+
+- [`features/manualentry/ManualEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryScreen.kt)
+- [`features/manualentry/ManualEntryViewModel.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryViewModel.kt)
+- [`features/manualentry/HydrationEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/HydrationEntryScreen.kt)
+- [`features/manualentry/BodyMeasurementEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/BodyMeasurementEntryScreen.kt)
+- [`features/manualentry/VitalsMeasurementEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/VitalsMeasurementEntryScreen.kt)
+- [`features/manualentry/MindfulnessEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/MindfulnessEntryScreen.kt)
+
+The current manual entry widgets cover hydration, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
+
+Write permissions are requested lazily from Add entry or the specific metric entry route. Onboarding and the dashboard should only request read permissions. Each write goes directly to Health Connect; OpenVitals keeps only local UI preferences such as widget order and mindfulness timer settings.
 
 ### Period-based detail/list screens
 

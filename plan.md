@@ -24,7 +24,7 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
 1. Local-first
 2. No account
 3. No cloud sync in v1
-4. Read-only by default; explicit hydration logging writes only to Health Connect
+4. Read-only dashboard by default; explicit manual entries write only to Health Connect
 5. Per-metric permissions only
 6. Explain exactly why each permission is needed
 7. Degrade gracefully when some permissions are denied
@@ -42,14 +42,14 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
 * weight/body measurements if available
 * calories if available
 * hydration if available
-* hydration entry logging, stored only in Health Connect
+* manual entry logging for hydration, body measurements, vitals, and mindfulness, stored only in Health Connect
 * source attribution by app/device
 * trends for 7d / 30d / 90d
 * record browser for raw entries
 
 ### Excluded
 
-* write-back to Health Connect outside explicit hydration logging
+* write-back to Health Connect outside explicit manual entry flows
 * social features
 * account sync
 * wearables integration outside Health Connect
@@ -62,7 +62,7 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
 ### 1. Onboarding
 
 * explain that data stays on device
-* explain that the app reads from Health Connect only
+* explain that the dashboard reads from Health Connect and explicit manual entries write back to Health Connect
 * show platform check:
 
   * Health Connect available

@@ -6,8 +6,9 @@ Most first-pass metric coverage is implemented. Current roadmap work is cleanup 
 
 - Continue migrating detail screens toward bundled period query APIs.
 - Keep dashboard reads scoped to visible widgets and user-enabled categories.
+- Keep manual-entry writes isolated to Add entry and metric entry routes.
 - Split oversized feature screen files by route, content, cards, charts, and rows.
-- Add tests around hidden dashboard widgets, disabled cycle tracking, and stale-load cancellation.
+- Add tests around hidden dashboard widgets, manual-entry widget ordering, disabled cycle tracking, and stale-load cancellation.
 
 ## Later
 
@@ -20,5 +21,5 @@ Most first-pass metric coverage is implemented. Current roadmap work is cleanup 
 - Room
 - WorkManager
 - multi-module split
-- write-back to Health Connect beyond explicit hydration logging
+- write-back to Health Connect outside explicit manual-entry flows
 - account sync or cloud storage
