@@ -72,6 +72,70 @@ steps:
         fi
       - "printf '%s\\n' \"$${CI_COMMIT_TAG}: OpenVitals\" > \"$${title_file}\""
 
+  - name: publish-play-internal
+    depends_on:
+      - build-release-artifacts
+    image: ruby:3.3
+    environment:
+      FASTLANE_DISABLE_COLORS: "1"
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
+        from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
+    commands:
+      - set -eu
+      - test -n "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}"
+      - gem install fastlane -NV
+      - play_key_path="$${CI_WORKSPACE}/.woodpecker/tmp/google-play-service-account.json"
+      - printf '%s' "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}" | base64 -d > "$${play_key_path}"
+      - test -s "$${play_key_path}"
+      - test -f ".woodpecker/tmp/OpenVitals-$${CI_COMMIT_TAG}.aab"
+      - |
+        fastlane supply \
+          --package_name tech.mmarca.openvitals \
+          --json_key "$${play_key_path}" \
+          --aab ".woodpecker/tmp/OpenVitals-$${CI_COMMIT_TAG}.aab" \
+          --track internal \
+          --release_status completed \
+          --metadata_path fastlane/metadata/android \
+          --sync_image_upload \
+          --timeout 600
+
+  - name: create-play-production-draft
+    depends_on:
+      - publish-play-internal
+    image: ruby:3.3
+    environment:
+      FASTLANE_DISABLE_COLORS: "1"
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
+        from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
+    commands:
+      - set -eu
+      - test -n "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}"
+      - gem install fastlane -NV
+      - play_key_path="$${CI_WORKSPACE}/.woodpecker/tmp/google-play-service-account.json"
+      - printf '%s' "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}" | base64 -d > "$${play_key_path}"
+      - test -s "$${play_key_path}"
+      - version_code="$$(sed -n 's/.*versionCode = \\([0-9][0-9]*\\).*/\\1/p' app/build.gradle.kts | head -n 1)"
+      - test -n "$${version_code}"
+      - |
+        fastlane supply \
+          --package_name tech.mmarca.openvitals \
+          --json_key "$${play_key_path}" \
+          --track internal \
+          --track_promote_to production \
+          --track_promote_release_status draft \
+          --version_code "$${version_code}" \
+          --skip_upload_apk \
+          --skip_upload_aab \
+          --skip_upload_metadata \
+          --skip_upload_changelogs \
+          --skip_upload_images \
+          --skip_upload_screenshots \
+          --timeout 600
+    when:
+      - evaluate: 'not (CI_COMMIT_TAG contains "-alpha" || CI_COMMIT_TAG contains "-beta" || CI_COMMIT_TAG contains "-rc")'
+
   - name: publish-release
     image: woodpeckerci/plugin-release
     depends_on:

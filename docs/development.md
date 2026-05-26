@@ -47,6 +47,14 @@ git diff --check
 
 Release CI also uses the wrapper for test/lint and release artifact builds.
 
+Release CI publishes the signed Android App Bundle to the Google Play internal
+track with Fastlane `supply`, uploads Play metadata and screenshots from
+`fastlane/metadata/android`, and promotes stable release tags to a production
+draft. Configure the Woodpecker secret
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with the base64-encoded JSON key for a
+Google Play service account that has release access to `tech.mmarca.openvitals`.
+Prerelease tags such as `-alpha`, `-beta`, and `-rc` publish to internal only.
+
 After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
 `git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
 `GITHUB_MIRROR_SSH_KEY` with a private SSH key whose public key is installed as a
