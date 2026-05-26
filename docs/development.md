@@ -75,4 +75,4 @@ For a stable release:
 git diff --check
 ```
 
-6. Commit the release prep, tag the commit with the version name, and push both the branch and tag.
+6. Commit the release prep, tag the commit as `v<versionName>` such as `v0.6.1`, and push both the branch and tag. The release pipeline is filtered to `refs/tags/v*`.
