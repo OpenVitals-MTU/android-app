@@ -1,0 +1,1 @@
+Renovacion Material 3 con navegacion adaptativa para Panel, Explorar y Ajustes, mas acciones contextuales para anadir entradas. Las pantallas de entrada manual tienen controles mas claros y acciones principales mas visibles. Mindfulness anade previsualizacion de campanas, sonidos de fondo en bucle y temporizador circular animado con entrada solo en minutos.

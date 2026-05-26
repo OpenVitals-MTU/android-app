@@ -1,0 +1,1 @@
+Material 3 refresh with adaptive Dashboard, Browse, and Settings navigation plus contextual Add entry actions. Manual entry screens now have cleaner controls and stronger primary actions. Mindfulness adds bell previews, optional looping background sounds, and a circular animated timer with minutes-only input. Includes updated Play screenshots and sound asset notices.

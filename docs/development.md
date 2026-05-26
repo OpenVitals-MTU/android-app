@@ -59,3 +59,20 @@ After a successful `main` push pipeline, Woodpecker mirrors the checked commit t
 `git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
 `GITHUB_MIRROR_SSH_KEY` with a private SSH key whose public key is installed as a
 write-enabled deploy key on the GitHub mirror repository.
+
+## Release Checklist
+
+For a stable release:
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
+2. Add Play changelog files under `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
+3. Add the release notes to `CHANGELOG.md`.
+4. Update README or docs when the user-facing navigation, permissions, screenshots, or bundled assets change.
+5. Run:
+
+```bash
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+git diff --check
+```
+
+6. Commit the release prep, tag the commit with the version name, and push both the branch and tag.

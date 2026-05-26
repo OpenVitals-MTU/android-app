@@ -11,7 +11,7 @@ The repo is still a single Android app module. The goal is not to force a multi-
 - App namespace: `tech.mmarca.openvitals`
 - Project shape: one Android app module under `app/`
 - Dependency wiring: Hilt in the single `:app` module, rooted at [`OpenVitalsApp`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
-- UI stack: Jetpack Compose + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
+- UI stack: Jetpack Compose + Material 3 adaptive navigation + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - Shared period shell: in place and used by all metric detail/list screens
 - Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
@@ -117,7 +117,7 @@ Responsibilities:
 - Hilt application/component setup
 - theme setup
 - route registration
-- top app bar and global navigation shell
+- adaptive top app bar, navigation suite, and global action shell
 
 Current files:
 
@@ -126,12 +126,14 @@ Current files:
 - [`di/AppModule.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/di/AppModule.kt)
 - [`navigation/AppNavigation.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/navigation/AppNavigation.kt)
 - [`navigation/Screen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/navigation/Screen.kt)
+- [`ui/components/OpenVitalsAdaptiveScaffold.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/OpenVitalsAdaptiveScaffold.kt)
 
 Notes:
 
 - `OpenVitalsApp` owns the Hilt application component and locale bootstrap.
 - `MainActivity` owns the onboarding-complete preference and chooses the start destination.
-- `AppNavigation` owns route registration only; route composables obtain `@HiltViewModel` instances through `hiltViewModel()`.
+- `AppNavigation` owns route registration and top-level destination selection; route composables obtain `@HiltViewModel` instances through `hiltViewModel()`.
+- `OpenVitalsAdaptiveScaffold` owns the Material 3 top app bar, `NavigationSuiteScaffold`, and contextual Add action.
 
 ### Data access
 
@@ -255,7 +257,7 @@ Dashboard metric cards route to metric-specific detail destinations. Metrics tha
 
 ### Manual entry
 
-Manual entry is a separate screen family from the dashboard. It is the only app area that should initiate Health Connect write flows.
+Manual entry is a separate screen family from the dashboard. It is the only app area that should initiate Health Connect write flows. The Add entry picker is reached through contextual create actions on the dashboard and supported metric screens, not as a primary browsing destination.
 
 Current files:
 
@@ -268,7 +270,7 @@ Current files:
 
 The current manual entry widgets cover hydration, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
 
-Write permissions are requested lazily from Add entry or the specific metric entry route. Onboarding and the dashboard should only request read permissions. Each write goes directly to Health Connect; OpenVitals keeps only local UI preferences such as widget order and mindfulness timer settings.
+Write permissions are requested lazily from Add entry or the specific metric entry route. Onboarding and the dashboard should only request read permissions. Each write goes directly to Health Connect; OpenVitals keeps only local UI preferences such as widget order and mindfulness timer/background-sound settings.
 
 ### Period-based detail/list screens
 

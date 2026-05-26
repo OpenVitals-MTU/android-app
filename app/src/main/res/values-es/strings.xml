@@ -85,6 +85,12 @@
     <string name="mindfulness_bell_bright">Cuenco claro</string>
     <string name="mindfulness_bell_temple">Cuenco de templo</string>
     <string name="mindfulness_bell_harmony">Armonía</string>
+    <string name="mindfulness_entry_background_sound">Sonido de fondo</string>
+    <string name="mindfulness_background_none">Ninguno</string>
+    <string name="mindfulness_background_bowl">Cuenco</string>
+    <string name="mindfulness_background_meditation">Meditación</string>
+    <string name="mindfulness_background_chimes">Campanillas</string>
+    <string name="mindfulness_background_dreamscape">Paisaje sonoro</string>
     <string name="mindfulness_entry_start_timer">Iniciar</string>
     <string name="mindfulness_entry_stop_timer">Detener</string>
     <string name="mindfulness_entry_resume_timer">Reanudar</string>
