@@ -1,8 +1,8 @@
 # Third Party Notices
 
-## DailySitting Bell Sounds
+## Bundled Bell Sounds
 
-Bundled mindfulness timer bell sounds are copied from DailySitting for offline timer playback.
+Bundled mindfulness timer bell sounds are included for offline timer playback.
 
 - `bowl_struck.ogg`: `SingingBowl1.ogg` by BambooBeast, Wikimedia Commons, public domain. Source: https://commons.wikimedia.org/wiki/File:SingingBowl1.ogg
 - `bowl_rubbed.ogg`: `SingingBowl2.ogg` by BambooBeast, Wikimedia Commons, public domain. Source: https://commons.wikimedia.org/wiki/File:SingingBowl2.ogg

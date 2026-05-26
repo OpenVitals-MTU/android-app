@@ -44,7 +44,7 @@ class HydrationEntryViewModelTest {
         assertTrue(vm.uiState.value.canWriteHydration)
     }
 
-    @Test fun `container presets match HydroTracker defaults`() = runTest {
+    @Test fun `container presets use expected defaults`() = runTest {
         val vm = HydrationEntryViewModel(entryRepo())
         advanceUntilIdle()
 

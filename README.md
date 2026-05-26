@@ -164,4 +164,4 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 ## License
 
 OpenVitals is licensed under the [`GNU Affero General Public License v3.0 or later`](LICENSE).
-Third-party asset notices are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Project thanks are listed in [`THANKS.md`](THANKS.md), and third-party asset notices are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
