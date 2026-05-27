@@ -51,7 +51,9 @@ Release CI is beta-first. A `v*` tag publishes signed APK and Android App Bundle
 assets to Codeberg as a prerelease, and publishes the signed App Bundle to the
 Google Play open testing track with the Fastlane `android open_testing` lane. The
 beta upload also uploads Play metadata and screenshots from
-`fastlane/metadata/android`.
+`fastlane/metadata/android`. Codeberg prerelease publishing depends only on the
+signed artifact build, so a Play Console permission failure should not block the
+Codeberg beta assets.
 
 Production is an approved promotion, not a second upload. After the beta build is
 accepted, start a Woodpecker deployment from the successful tag pipeline with the
@@ -68,7 +70,14 @@ access to `tech.mmarca.openvitals`. For the current release pipeline, that
 service account needs app-level Play Console permissions to release to testing
 tracks, manage store presence, and release to production. The store-presence
 permission is required because Fastlane uploads listing text, changelogs, icon,
-and screenshots.
+and screenshots. If Google Play fails at the final "Uploading all changes to
+Google Play" step with `The caller does not have permission`, check that the
+service account is linked in Play Console API access and has permissions for
+viewing app information, managing store presence, releasing to testing tracks,
+releasing to production, and sending changes for review. If the account is
+allowed to stage edits but not send them for review, set the Woodpecker
+environment variable `OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true`; the
+release will then need to be sent for review manually in Play Console.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
 edit repository releases. In Woodpecker project settings, enable deployments so a

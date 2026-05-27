@@ -120,20 +120,21 @@ steps:
     image: ruby:3.3
     environment:
       FASTLANE_DISABLE_COLORS: "1"
+      FASTLANE_OPT_OUT_USAGE: "1"
       FASTLANE_SKIP_UPDATE_CHECK: "1"
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
         from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
     commands:
       - set -eu
       - test -n "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}"
-      - gem install fastlane -NV
+      - bundle install --jobs 4 --retry 3
       - play_key_path="$${CI_WORKSPACE}/.woodpecker/tmp/google-play-service-account.json"
       - printf '%s' "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}" | base64 -d > "$${play_key_path}"
       - test -s "$${play_key_path}"
       - release_tag="$$(cat .woodpecker/tmp/release-tag.txt)"
       - test -f ".woodpecker/tmp/OpenVitals-$${release_tag}.aab"
       - |
-        fastlane android open_testing \
+        bundle exec fastlane android open_testing \
           json_key:"$${play_key_path}" \
           aab:".woodpecker/tmp/OpenVitals-$${release_tag}.aab"
     when:
@@ -142,7 +143,7 @@ steps:
   - name: publish-codeberg-beta
     image: woodpeckerci/plugin-release
     depends_on:
-      - publish-play-open-testing
+      - build-release-artifacts
     settings:
       api_key:
         from_secret: CODEBERG_RELEASE_API_KEY
@@ -167,20 +168,21 @@ steps:
     image: ruby:3.3
     environment:
       FASTLANE_DISABLE_COLORS: "1"
+      FASTLANE_OPT_OUT_USAGE: "1"
       FASTLANE_SKIP_UPDATE_CHECK: "1"
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
         from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
     commands:
       - set -eu
       - test -n "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}"
-      - gem install fastlane -NV
+      - bundle install --jobs 4 --retry 3
       - play_key_path="$${CI_WORKSPACE}/.woodpecker/tmp/google-play-service-account.json"
       - printf '%s' "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}" | base64 -d > "$${play_key_path}"
       - test -s "$${play_key_path}"
       - version_code="$$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
       - test -n "$${version_code}"
       - |
-        fastlane android promote_production \
+        bundle exec fastlane android promote_production \
           json_key:"$${play_key_path}" \
           version_code:"$${version_code}"
     when:

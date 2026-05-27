@@ -1,3 +1,5 @@
+opt_out_usage
+
 default_platform(:android)
 
 OPENVITALS_PACKAGE_NAME = "tech.mmarca.openvitals"
@@ -20,6 +22,7 @@ platform :android do
       release_status: "completed",
       metadata_path: OPENVITALS_METADATA_PATH,
       sync_image_upload: true,
+      changes_not_sent_for_review: ENV["OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW"] == "true",
       timeout: 600
     )
   end
@@ -45,6 +48,7 @@ platform :android do
       skip_upload_changelogs: true,
       skip_upload_images: true,
       skip_upload_screenshots: true,
+      changes_not_sent_for_review: ENV["OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW"] == "true",
       timeout: 600
     )
   end
