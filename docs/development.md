@@ -53,7 +53,9 @@ Google Play open testing track with the Fastlane `android open_testing` lane. Th
 beta upload also uploads Play metadata and screenshots from
 `fastlane/metadata/android`. Codeberg prerelease publishing depends only on the
 signed artifact build, so a Play Console permission failure should not block the
-Codeberg beta assets.
+Codeberg beta assets. If a tag pipeline is rerun after Google Play already has
+the release version code in open testing or production, the Fastlane
+`android open_testing` lane skips the duplicate AAB upload.
 
 Production is an approved promotion, not a second upload. After the beta build is
 accepted, start a Woodpecker deployment from the successful tag pipeline with the
