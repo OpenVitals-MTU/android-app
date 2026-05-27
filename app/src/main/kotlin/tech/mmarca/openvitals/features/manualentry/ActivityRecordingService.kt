@@ -19,6 +19,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,10 +30,12 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 
 @AndroidEntryPoint
 class ActivityRecordingService : Service() {
     @Inject lateinit var controller: ActivityRecordingController
+    @Inject lateinit var unitFormatter: UnitFormatter
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val locationManager: LocationManager by lazy {
@@ -178,14 +182,18 @@ class ActivityRecordingService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val contentText = notificationText(state)
         val builder = NotificationCompat.Builder(this, ChannelId)
             .setSmallIcon(R.drawable.ic_stat_activity_recording)
             .setContentTitle(getString(R.string.activity_recording_notification_title))
-            .setContentText(notificationText(state))
+            .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(contentIntent)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
-            .setOngoing(state.isActive)
+            .setOngoing(true)
+            .setAutoCancel(false)
             .setSilent(true)
 
         if (state.status == ActivityRecordingStatus.RECORDING) {
@@ -206,21 +214,34 @@ class ActivityRecordingService : Service() {
             getString(R.string.action_discard),
             servicePendingIntent(ActionDiscard, RequestDiscard),
         )
-        return builder.build()
+        return builder.build().apply {
+            flags = flags or Notification.FLAG_ONGOING_EVENT or Notification.FLAG_NO_CLEAR
+        }
     }
 
-    private fun notificationText(state: ActivityRecordingState): String =
-        when (state.status) {
+    private fun notificationText(state: ActivityRecordingState): String {
+        val now = Instant.now()
+        val totalTime = formatNotificationElapsed(state.elapsedDuration(now))
+        val movingTime = formatNotificationElapsed(state.movingDuration(now))
+        val distance = unitFormatter.distance(state.distanceMeters).text
+        return when (state.status) {
             ActivityRecordingStatus.RECORDING -> getString(
                 R.string.activity_recording_notification_recording,
+                totalTime,
+                movingTime,
+                distance,
                 state.points.size,
             )
             ActivityRecordingStatus.PAUSED -> getString(
                 R.string.activity_recording_notification_paused,
+                totalTime,
+                movingTime,
+                distance,
                 state.points.size,
             )
             ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
         }
+    }
 
     private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent =
         PendingIntent.getService(
@@ -252,6 +273,18 @@ class ActivityRecordingService : Service() {
 
         fun intent(context: Context, action: String): Intent =
             Intent(context, ActivityRecordingService::class.java).setAction(action)
+    }
+}
+
+private fun formatNotificationElapsed(duration: Duration): String {
+    val totalSeconds = duration.seconds.coerceAtLeast(0L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
     }
 }
 

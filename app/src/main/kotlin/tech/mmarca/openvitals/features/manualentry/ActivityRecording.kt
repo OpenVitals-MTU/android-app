@@ -77,6 +77,14 @@ class ActivityRecordingController @Inject constructor(
             )
             return false
         }
+        if (!hasNotificationPermission(context)) {
+            updateAndPersist(
+                _state.value.copy(
+                    errorMessage = context.getString(R.string.activity_recording_error_notification_permission),
+                )
+            )
+            return false
+        }
         if (initialFix?.activityGpsFixQuality()?.isPrecise != true) {
             updateAndPersist(
                 _state.value.copy(
@@ -249,6 +257,13 @@ class ActivityRecordingController @Inject constructor(
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
+                ) == PackageManager.PERMISSION_GRANTED
+
+        fun hasNotificationPermission(context: Context): Boolean =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
                 ) == PackageManager.PERMISSION_GRANTED
     }
 }

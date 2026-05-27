@@ -39,6 +39,7 @@ enum class ActivityEntryError {
     MISSING_WRITE_PERMISSION,
     ROUTE_IMPORT_FAILED,
     LOCATION_PERMISSION_NEEDED,
+    NOTIFICATION_PERMISSION_NEEDED,
     RECORDING_FAILED,
     WRITE_FAILED,
 }
@@ -315,6 +316,14 @@ class ActivityEntryViewModel(
     fun reportLocationPermissionNeeded() {
         _uiState.value = _uiState.value.copy(
             entryError = ActivityEntryError.LOCATION_PERMISSION_NEEDED,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+    }
+
+    fun reportNotificationPermissionNeeded() {
+        _uiState.value = _uiState.value.copy(
+            entryError = ActivityEntryError.NOTIFICATION_PERMISSION_NEEDED,
             detailMessage = null,
             validationErrors = emptySet(),
         )

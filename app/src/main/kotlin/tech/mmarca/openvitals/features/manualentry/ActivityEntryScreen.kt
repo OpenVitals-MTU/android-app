@@ -118,12 +118,18 @@ fun ActivityEntryScreen(
     ) { grants ->
         val hasPreciseLocationPermission = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             hasActivityRecordingPreciseLocationPermission(context)
+        val hasNotificationPermission = grants[Manifest.permission.POST_NOTIFICATIONS] == true ||
+            hasActivityRecordingNotificationPermission(context)
         val action = pendingSourceAction
         pendingSourceAction = null
-        if (hasPreciseLocationPermission && action != null) {
+        if (hasPreciseLocationPermission && hasNotificationPermission && action != null) {
             performSourceAction(action)
         } else if (action == ActivityEntrySourceAction.RECORD_GPS) {
-            viewModel.reportLocationPermissionNeeded()
+            if (!hasPreciseLocationPermission) {
+                viewModel.reportLocationPermissionNeeded()
+            } else {
+                viewModel.reportNotificationPermissionNeeded()
+            }
         }
     }
     fun continueSourceActionAfterWritePermission(action: ActivityEntrySourceAction) {
@@ -1453,6 +1459,7 @@ private fun activityEntryErrorText(
         message ?: stringResource(R.string.unknown_error),
     )
     ActivityEntryError.LOCATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_location_permission_needed)
+    ActivityEntryError.NOTIFICATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_notification_permission_needed)
     ActivityEntryError.RECORDING_FAILED -> stringResource(
         R.string.activity_entry_recording_failed,
         message ?: stringResource(R.string.unknown_error),
@@ -1480,13 +1487,10 @@ private fun hasActivityRecordingPreciseLocationPermission(context: Context): Boo
 
 private fun needsActivityRecordingRuntimePermission(context: Context): Boolean =
     !hasActivityRecordingPreciseLocationPermission(context) ||
-        (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS,
-                ) != PackageManager.PERMISSION_GRANTED
-            )
+        !hasActivityRecordingNotificationPermission(context)
+
+private fun hasActivityRecordingNotificationPermission(context: Context): Boolean =
+    ActivityRecordingController.hasNotificationPermission(context)
 
 private fun Context.isGpsProviderEnabled(): Boolean =
     runCatching {
