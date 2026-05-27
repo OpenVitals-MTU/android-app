@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
@@ -24,6 +25,10 @@ data class ManualEntryUiState(
     val canWriteHydration: Boolean = false,
     val showHydrationWritePermissionPrompt: Boolean = false,
     val pendingHydrationEntryNavigation: Boolean = false,
+    val activityWritePermissions: Set<String> = emptySet(),
+    val isCheckingActivityWritePermission: Boolean = false,
+    val showActivityWritePermissionPrompt: Boolean = false,
+    val pendingActivityEntryNavigation: Boolean = false,
     val bodyWritePermissions: Set<String> = emptySet(),
     val isCheckingBodyWritePermission: Boolean = false,
     val showBodyWritePermissionPrompt: Boolean = false,
@@ -45,6 +50,7 @@ data class ManualEntryUiState(
 @HiltViewModel
 class ManualEntryViewModel @Inject constructor(
     private val hydrationRepository: HydrationRepository,
+    private val activityRepository: ActivityRepository,
     private val bodyRepository: BodyRepository,
     private val vitalsRepository: VitalsRepository,
     private val mindfulnessRepository: MindfulnessRepository,
@@ -84,6 +90,35 @@ class ManualEntryViewModel @Inject constructor(
                     isCheckingHydrationWritePermission = false,
                     canWriteHydration = false,
                     pendingHydrationEntryNavigation = true,
+                )
+            }
+        }
+    }
+
+    fun onActivityWidgetTapped() {
+        if (_uiState.value.isCheckingActivityWritePermission) return
+        viewModelScope.launch {
+            val writePermissions = activityRepository.activityWritePermissions()
+            _uiState.value = _uiState.value.copy(
+                isCheckingActivityWritePermission = true,
+                activityWritePermissions = writePermissions,
+                showActivityWritePermissionPrompt = false,
+                pendingActivityEntryNavigation = false,
+            )
+            runCatching {
+                activityRepository.hasActivityWritePermission()
+            }.onSuccess { canWriteActivity ->
+                val unacknowledgedWritePermissions = writePermissions - preferencesRepository.acknowledgedPermissions()
+                val shouldShowPrompt = !canWriteActivity && unacknowledgedWritePermissions.isNotEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isCheckingActivityWritePermission = false,
+                    showActivityWritePermissionPrompt = shouldShowPrompt,
+                    pendingActivityEntryNavigation = !shouldShowPrompt,
+                )
+            }.onFailure {
+                _uiState.value = _uiState.value.copy(
+                    isCheckingActivityWritePermission = false,
+                    pendingActivityEntryNavigation = true,
                 )
             }
         }
@@ -213,6 +248,37 @@ class ManualEntryViewModel @Inject constructor(
 
     fun onHydrationEntryNavigationHandled() {
         _uiState.value = _uiState.value.copy(pendingHydrationEntryNavigation = false)
+    }
+
+    fun continueActivityEntryFromWritePermissionPrompt() {
+        acknowledgeActivityWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showActivityWritePermissionPrompt = false,
+            pendingActivityEntryNavigation = true,
+        )
+    }
+
+    fun dismissActivityWritePermissionPrompt() {
+        acknowledgeActivityWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showActivityWritePermissionPrompt = false)
+    }
+
+    fun grantActivityWritePermissionFromPrompt() {
+        acknowledgeActivityWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showActivityWritePermissionPrompt = false)
+    }
+
+    fun onActivityWritePermissionResult() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCheckingActivityWritePermission = false,
+                pendingActivityEntryNavigation = true,
+            )
+        }
+    }
+
+    fun onActivityEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingActivityEntryNavigation = false)
     }
 
     fun continueBodyEntryFromWritePermissionPrompt() {
@@ -365,6 +431,13 @@ class ManualEntryViewModel @Inject constructor(
 
     private fun acknowledgeHydrationWritePermissionPrompt() {
         val writePermissions = _uiState.value.hydrationWritePermissions
+        if (writePermissions.isNotEmpty()) {
+            preferencesRepository.acknowledgePermissions(writePermissions)
+        }
+    }
+
+    private fun acknowledgeActivityWritePermissionPrompt() {
+        val writePermissions = _uiState.value.activityWritePermissions
         if (writePermissions.isNotEmpty()) {
             preferencesRepository.acknowledgePermissions(writePermissions)
         }

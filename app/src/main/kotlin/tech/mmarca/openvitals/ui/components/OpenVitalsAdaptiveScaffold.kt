@@ -11,16 +11,14 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 
 data class OpenVitalsNavigationDestination(
@@ -62,16 +60,13 @@ fun OpenVitalsAdaptiveScaffold(
     topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scaffoldContent: @Composable () -> Unit = {
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier = Modifier.fillMaxSize(),
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 if (showTopBar) {
-                    LargeTopAppBar(
+                    TopAppBar(
                         title = { Text(title) },
                         navigationIcon = {
                             if (canNavigateBack) {
@@ -84,7 +79,6 @@ fun OpenVitalsAdaptiveScaffold(
                             }
                         },
                         actions = topBarActions,
-                        scrollBehavior = scrollBehavior,
                     )
                 }
             },

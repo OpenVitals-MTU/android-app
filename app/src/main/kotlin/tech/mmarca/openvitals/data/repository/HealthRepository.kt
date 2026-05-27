@@ -107,6 +107,7 @@ class HealthRepository @Inject constructor(
     val phase4Permissions get() = hc.phase4Permissions
     val corePermissions get() = hc.corePermissions
     val routePermissions get() = hc.routePermissions
+    val activityWritePermissions get() = hc.activityWritePermissions
     val heartPermissions get() = hc.heartPermissions
     val bodyPermissions get() = hc.bodyPermissions
     val activityExtrasPermissions get() = hc.activityExtrasPermissions

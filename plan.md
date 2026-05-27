@@ -42,7 +42,7 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
 * weight/body measurements if available
 * calories if available
 * hydration if available
-* manual entry logging for hydration, body measurements, vitals, and mindfulness, stored only in Health Connect
+* manual entry logging for hydration, activities with optional GPX/KMZ route import, body measurements, vitals, and mindfulness, stored only in Health Connect
 * source attribution by app/device
 * trends for 7d / 30d / 90d
 * record browser for raw entries
@@ -460,4 +460,4 @@ That is enough to prove the concept before adding every metric.
 * homescreen quick stats
 * markdown-like health journal notes stored locally
 * local encrypted export of app preferences
-* optional companion importer for GPX and CSV into Health Connect
+* optional companion importer for GPX/KMZ and CSV into Health Connect

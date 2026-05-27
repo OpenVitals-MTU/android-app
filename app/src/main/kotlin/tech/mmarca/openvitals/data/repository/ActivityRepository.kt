@@ -9,6 +9,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -38,6 +39,12 @@ class ActivityRepository @Inject constructor(
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readActiveCaloriesPermission = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
+    private val writeExercisePermission = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
+    private val writeDistancePermission = HealthPermission.getWritePermission(DistanceRecord::class)
+    private val writeElevationPermission = HealthPermission.getWritePermission(ElevationGainedRecord::class)
+    private val writeActiveCaloriesPermission = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
+    private val writeTotalCaloriesPermission = HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class)
+    private val writeExerciseRoutePermission = HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -131,6 +138,74 @@ class ActivityRepository @Inject constructor(
             return emptyList()
         }
         return hc.readDailyNutrition(start, end, includeHydration = false)
+    }
+
+    fun activityWritePermissions(): Set<String> =
+        activityWritePermissions(
+            includeRoute = true,
+            includeDistance = true,
+            includeElevation = true,
+            includeActiveCalories = true,
+            includeTotalCalories = true,
+        )
+
+    fun activityWritePermissions(
+        includeRoute: Boolean,
+        includeDistance: Boolean,
+        includeElevation: Boolean,
+        includeActiveCalories: Boolean,
+        includeTotalCalories: Boolean,
+    ): Set<String> = buildSet {
+        add(writeExercisePermission)
+        if (includeRoute) add(writeExerciseRoutePermission)
+        if (includeDistance) add(writeDistancePermission)
+        if (includeElevation) add(writeElevationPermission)
+        if (includeActiveCalories) add(writeActiveCaloriesPermission)
+        if (includeTotalCalories) add(writeTotalCaloriesPermission)
+    }
+
+    fun activityWritePermissions(request: ActivityWriteRequest): Set<String> =
+        activityWritePermissions(
+            includeRoute = request.routePoints.isNotEmpty(),
+            includeDistance = request.distanceMeters != null,
+            includeElevation = request.elevationGainedMeters != null,
+            includeActiveCalories = request.activeCaloriesKcal != null,
+            includeTotalCalories = request.totalCaloriesKcal != null,
+        )
+
+    suspend fun hasActivityWritePermission(): Boolean =
+        hasActivityWritePermission(
+            includeRoute = true,
+            includeDistance = true,
+            includeElevation = true,
+            includeActiveCalories = true,
+            includeTotalCalories = true,
+        )
+
+    suspend fun hasActivityWritePermission(
+        includeRoute: Boolean,
+        includeDistance: Boolean,
+        includeElevation: Boolean,
+        includeActiveCalories: Boolean,
+        includeTotalCalories: Boolean,
+    ): Boolean {
+        val required = activityWritePermissions(
+            includeRoute = includeRoute,
+            includeDistance = includeDistance,
+            includeElevation = includeElevation,
+            includeActiveCalories = includeActiveCalories,
+            includeTotalCalories = includeTotalCalories,
+        )
+        return required.all { permission -> permission in grantedPermissionsIfAvailable() }
+    }
+
+    suspend fun writeActivityEntry(request: ActivityWriteRequest): String {
+        val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping writeActivityEntry missing=$missingPermissions")
+            throw SecurityException("Missing Health Connect activity write permission.")
+        }
+        return hc.writeActivityEntry(request)
     }
 }
 

@@ -8,6 +8,12 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
     <!-- Manual-only Health Connect permission; Android ignores standard request-dialog attempts. -->
     <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE_ROUTE" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
 
     <!-- Health Connect permissions - Phase 2 -->
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
@@ -52,6 +58,17 @@
     <!-- Health Connect permissions - optional data access modes -->
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
+    <!-- Live activity recording permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
 
     <!-- Query for Health Connect package (needed on Android 11+) -->
     <queries>
@@ -104,6 +121,11 @@
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".features.manualentry.ActivityRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <activity-alias
             android:name=".ViewPermissionUsageActivity"
