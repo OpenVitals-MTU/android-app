@@ -1,0 +1,13 @@
+OpenVitals es una app Android privada para consultar tus datos de Health Connect y anadir metricas manuales compatibles de vuelta en Health Connect. No requiere cuenta, no sincroniza datos en la nube, no tiene anuncios y no incluye analiticas.
+
+Funciones:
+
+* Panel diario con tarjetas de actividad, recuperacion, ingesta, cuerpo, corazon, signos vitales, mindfulness, registros y datos de ciclo opcionales
+* Navegacion adaptativa Material 3 con Anadir entrada como accion contextual
+* Entradas para hidratacion, actividades con importacion GPX/KML/KMZ o grabacion GPS, medidas corporales, signos vitales y sesiones de mindfulness
+* Pantallas por periodo con navegacion Dia / Semana / Mes / Ano
+* Flujo de onboarding de Health Connect con comprobaciones de disponibilidad y permisos de lectura por categoria
+* Permisos de escritura solo cuando anades una entrada manual compatible
+* Tirar para actualizar, selector de rango, navegacion por periodo y seleccion de fecha en calendario
+* Temporizador de mindfulness con previsualizacion de campanas y sonidos de fondo opcionales en bucle
+* Funciona sin conexion a internet

@@ -133,15 +133,9 @@ steps:
       - release_tag="$$(cat .woodpecker/tmp/release-tag.txt)"
       - test -f ".woodpecker/tmp/OpenVitals-$${release_tag}.aab"
       - |
-        fastlane supply \
-          --package_name tech.mmarca.openvitals \
-          --json_key "$${play_key_path}" \
-          --aab ".woodpecker/tmp/OpenVitals-$${release_tag}.aab" \
-          --track beta \
-          --release_status completed \
-          --metadata_path fastlane/metadata/android \
-          --sync_image_upload \
-          --timeout 600
+        fastlane android open_testing \
+          json_key:"$${play_key_path}" \
+          aab:".woodpecker/tmp/OpenVitals-$${release_tag}.aab"
     when:
       - event: tag
 
@@ -186,20 +180,9 @@ steps:
       - version_code="$$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
       - test -n "$${version_code}"
       - |
-        fastlane supply \
-          --package_name tech.mmarca.openvitals \
-          --json_key "$${play_key_path}" \
-          --track beta \
-          --track_promote_to production \
-          --track_promote_release_status completed \
-          --version_code "$${version_code}" \
-          --skip_upload_apk \
-          --skip_upload_aab \
-          --skip_upload_metadata \
-          --skip_upload_changelogs \
-          --skip_upload_images \
-          --skip_upload_screenshots \
-          --timeout 600
+        fastlane android promote_production \
+          json_key:"$${play_key_path}" \
+          version_code:"$${version_code}"
     when:
       - event: deployment
         evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'

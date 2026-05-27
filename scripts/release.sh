@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:?Usage: scripts/release.sh <version>  (e.g. 0.2.0)}"
+VERSION="${1:?Usage: scripts/release.sh <version>  (e.g. 0.7.0)}"
+TAG="v$VERSION"
+RELEASE_NOTES_FILE="docs/releases/$VERSION.md"
 
 if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
     echo "Error: version must be in X.Y.Z format" >&2
@@ -16,9 +18,13 @@ VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
 sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/" app/build.gradle.kts
 sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION\"/" app/build.gradle.kts
 
-git add app/build.gradle.kts
+git add app/build.gradle.kts CHANGELOG.md README.md docs fastlane .woodpecker/release.yml
 git commit -m "chore: release $VERSION"
-git tag "v$VERSION"
-git push origin main "v$VERSION"
+if [ -f "$RELEASE_NOTES_FILE" ]; then
+    git tag -a "$TAG" -F "$RELEASE_NOTES_FILE"
+else
+    git tag -a "$TAG" -m "OpenVitals $VERSION"
+fi
+git push origin main "$TAG"
 
 echo "Released v$VERSION (versionCode $VERSION_CODE)"

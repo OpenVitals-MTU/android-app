@@ -4,10 +4,11 @@ Features:
 
 * Daily dashboard with cards for activity, recovery, intake, body, heart, vitals, mindfulness, records, and optional cycle data
 * Material 3 adaptive navigation with Add entry as a contextual create action
-* Add entry support for hydration, body measurements, vitals, and mindfulness sessions
+* Add entry support for hydration, activities with GPX/KML/KMZ route import or GPS recording, body measurements, vitals, and mindfulness sessions
 * Period-based detail screens with Day / Week / Month / Year navigation
 * Health Connect onboarding flow with availability checks and categorized read permissions
 * Write permissions requested only when you add a supported manual entry
 * Pull-to-refresh, range selection, period navigation, and calendar date picking
+* Persistent recording notification while GPS activity recording is active
 * Mindfulness timer with bell previews and optional looping background sounds
 * Works without an internet connection

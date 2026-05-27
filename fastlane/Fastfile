@@ -1,0 +1,51 @@
+default_platform(:android)
+
+OPENVITALS_PACKAGE_NAME = "tech.mmarca.openvitals"
+OPENVITALS_METADATA_PATH = "fastlane/metadata/android"
+
+platform :android do
+  desc "Upload the signed Android App Bundle to Google Play open testing with store metadata"
+  lane :open_testing do |options|
+    json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
+    aab = options[:aab] || ENV["OPENVITALS_RELEASE_AAB"]
+
+    UI.user_error!("json_key is required") if json_key.to_s.empty?
+    UI.user_error!("aab is required") if aab.to_s.empty?
+
+    supply(
+      package_name: OPENVITALS_PACKAGE_NAME,
+      json_key: json_key,
+      aab: aab,
+      track: "beta",
+      release_status: "completed",
+      metadata_path: OPENVITALS_METADATA_PATH,
+      sync_image_upload: true,
+      timeout: 600
+    )
+  end
+
+  desc "Promote the accepted Google Play open testing release to production"
+  lane :promote_production do |options|
+    json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
+    version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
+
+    UI.user_error!("json_key is required") if json_key.to_s.empty?
+    UI.user_error!("version_code is required") if version_code.to_s.empty?
+
+    supply(
+      package_name: OPENVITALS_PACKAGE_NAME,
+      json_key: json_key,
+      track: "beta",
+      track_promote_to: "production",
+      track_promote_release_status: "completed",
+      version_code: version_code,
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      timeout: 600
+    )
+  end
+end

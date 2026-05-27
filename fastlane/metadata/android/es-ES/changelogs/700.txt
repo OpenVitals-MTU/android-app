@@ -1,0 +1,1 @@
+Anade entradas de actividad para sesiones de Health Connect. Importa rutas GPX/KML/KMZ, revisa distancia/elevacion y guarda entrenamientos con ruta. Graba actividades con GPS, pausa/reanuda, descarta y muestra una notificacion persistente. Las actividades importadas y grabadas estiman calorias activas y totales. El flujo publica betas en pruebas abiertas antes de produccion.
