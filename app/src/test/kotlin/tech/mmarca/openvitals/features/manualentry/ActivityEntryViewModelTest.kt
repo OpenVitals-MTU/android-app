@@ -11,6 +11,7 @@ import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -230,6 +231,50 @@ class ActivityEntryViewModelTest {
         assertFalse(vm.uiState.value.isSavingEntry)
     }
 
+    @Test fun `manual activity entry does not estimate calories`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startManualEntry()
+        advanceUntilIdle()
+
+        assertEquals("", vm.uiState.value.activeCaloriesText)
+        assertEquals("", vm.uiState.value.totalCaloriesText)
+    }
+
+    @Test fun `recorded activity without enough route points estimates calories`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val recorder = mockk<ActivityRecordingController>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            startTime = start,
+            endTime = start.plusSeconds(30 * 60),
+            points = emptyList(),
+            pauseIntervals = emptyList(),
+            distanceMeters = 0.0,
+            elevationGainedMeters = 0.0,
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
+        assertEquals("308", vm.uiState.value.activeCaloriesText)
+        assertEquals("343", vm.uiState.value.totalCaloriesText)
+    }
+
     @Test fun `activity entry keeps full write permissions when optional fields change`() = runTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
@@ -277,6 +322,8 @@ class ActivityEntryViewModelTest {
         assertEquals("0.4", vm.uiState.value.distanceText)
         assertEquals("12", vm.uiState.value.elevationText)
         assertEquals("11", vm.uiState.value.durationMinutesText)
+        assertEquals("113", vm.uiState.value.activeCaloriesText)
+        assertEquals("126", vm.uiState.value.totalCaloriesText)
     }
 
     private fun activityRepo(canWrite: Boolean): ActivityRepository =

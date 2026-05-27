@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +34,10 @@ private const val MilesToMeters = 1609.344
 private const val FeetToMeters = 0.3048
 private const val MaxActivityDurationMinutes = 7 * 24 * 60L
 private const val MinRecordedRoutePoints = 2
+private const val DefaultCalorieEstimateWeightKg = 70.0
+private const val RestingMet = 1.0
+private const val RunningKcalPerKgKm = 1.0
+private const val WalkingKcalPerKgKm = 0.55
 
 enum class ActivityEntryError {
     INVALID_VALUE,
@@ -511,6 +516,7 @@ class ActivityEntryViewModel(
     private fun applyRouteImport(routeImport: RouteFileImport, unitSystem: UnitSystem) {
         val currentState = _uiState.value
         val start = routeImport.startTime.atZone(clock.zone)
+        val selectedActivityType = inferActivityType(routeImport, currentState.selectedActivityType)
         val routeDurationMinutes = if (routeImport.hasImportedTimeRange) {
             val routeDurationSeconds = Duration.between(routeImport.startTime, routeImport.endTime).seconds.coerceAtLeast(1)
             ceil((routeDurationSeconds + 1).toDouble() / 60.0)
@@ -520,13 +526,22 @@ class ActivityEntryViewModel(
         } else {
             currentState.durationMinutesText.ifBlank { "30" }
         }
+        val calorieEstimate = activityCalorieEstimate(
+            activityType = selectedActivityType,
+            distanceMeters = routeImport.distanceMeters,
+            durationMinutesText = routeDurationMinutes,
+        ).takeIf {
+            currentState.activeCaloriesText.isBlank() && currentState.totalCaloriesText.isBlank()
+        }
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.ROUTE_IMPORT,
-            selectedActivityType = inferActivityType(routeImport, currentState.selectedActivityType),
+            selectedActivityType = selectedActivityType,
             titleText = currentState.titleText.ifBlank { routeImport.name.orEmpty() },
             notesText = currentState.notesText.ifBlank { routeImport.description.orEmpty() },
             distanceText = currentState.distanceText.ifBlank { routeDistanceInputText(routeImport, unitSystem) },
             elevationText = currentState.elevationText.ifBlank { routeElevationInputText(routeImport, unitSystem) },
+            activeCaloriesText = calorieEstimate?.activeCaloriesText ?: currentState.activeCaloriesText,
+            totalCaloriesText = calorieEstimate?.totalCaloriesText ?: currentState.totalCaloriesText,
             importedRoute = routeImport,
             recordedPauseIntervals = emptyList(),
             startDateText = if (routeImport.hasImportedTimeRange) {
@@ -569,14 +584,26 @@ class ActivityEntryViewModel(
     }
 
     private fun applyRecordingWithoutRoute(snapshot: ActivityRecordingSnapshot) {
+        val currentState = _uiState.value
         val start = snapshot.startTime.atZone(clock.zone)
         val durationMinutes = ceil(
             Duration.between(snapshot.startTime, snapshot.endTime).seconds
                 .coerceAtLeast(1)
                 .toDouble() / 60.0
         ).toLong().coerceIn(1, MaxActivityDurationMinutes)
+        val selectedActivityType = DefaultActivityEntryTypes
+            .firstOrNull { it.exerciseType == snapshot.exerciseType }
+            ?: currentState.selectedActivityType
+        val calorieEstimate = activityCalorieEstimate(
+            activityType = selectedActivityType,
+            distanceMeters = null,
+            durationMinutesText = durationMinutes.toString(),
+        ).takeIf {
+            currentState.activeCaloriesText.isBlank() && currentState.totalCaloriesText.isBlank()
+        }
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
+            selectedActivityType = selectedActivityType,
             importedRoute = null,
             recordedPauseIntervals = snapshot.pauseIntervals,
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
@@ -584,6 +611,8 @@ class ActivityEntryViewModel(
             durationMinutesText = durationMinutes.toString(),
             distanceText = "",
             elevationText = "",
+            activeCaloriesText = calorieEstimate?.activeCaloriesText ?: currentState.activeCaloriesText,
+            totalCaloriesText = calorieEstimate?.totalCaloriesText ?: currentState.totalCaloriesText,
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),
@@ -825,6 +854,73 @@ private fun inferActivityType(
 private fun String.containsAny(vararg values: String): Boolean =
     values.any(::contains)
 
+private data class ActivityCalorieEstimate(
+    val activeCaloriesText: String,
+    val totalCaloriesText: String,
+)
+
+private fun activityCalorieEstimate(
+    activityType: ActivityEntryType,
+    distanceMeters: Double?,
+    durationMinutesText: String,
+): ActivityCalorieEstimate? {
+    if (!activityType.supportsGpsRoute) return null
+    val durationMinutes = durationMinutesText.trim().toLongOrNull()
+        ?.takeIf { it in 1..MaxActivityDurationMinutes }
+        ?: return null
+    val hours = durationMinutes / 60.0
+    val met = activityMet(activityType.exerciseType) ?: return null
+    val restingCalories = DefaultCalorieEstimateWeightKg * hours * RestingMet
+    val activeByMet = (met - RestingMet)
+        .coerceAtLeast(0.0) * DefaultCalorieEstimateWeightKg * hours
+    val activeByDistance = distanceBasedActiveCalories(
+        exerciseType = activityType.exerciseType,
+        distanceMeters = distanceMeters,
+    ) ?: 0.0
+    val activeCalories = maxOf(activeByMet, activeByDistance).takeIf { it > 0.0 } ?: return null
+
+    return ActivityCalorieEstimate(
+        activeCaloriesText = activeCalories.toCaloriesInputText(),
+        totalCaloriesText = (activeCalories + restingCalories).toCaloriesInputText(),
+    )
+}
+
+private fun activityMet(exerciseType: Int): Double? =
+    when (exerciseType) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> 9.8
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> 7.5
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> 3.5
+        ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> 6.0
+        ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> 4.0
+        ExerciseSessionRecord.EXERCISE_TYPE_ROWING,
+        ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> 7.0
+        ExerciseSessionRecord.EXERCISE_TYPE_SKIING -> 7.0
+        ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING -> 5.3
+        ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> 8.0
+        ExerciseSessionRecord.EXERCISE_TYPE_SKATING -> 7.0
+        ExerciseSessionRecord.EXERCISE_TYPE_SAILING -> 3.0
+        ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> 3.0
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> 8.0
+        ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> 4.8
+        else -> null
+    }
+
+private fun distanceBasedActiveCalories(
+    exerciseType: Int,
+    distanceMeters: Double?,
+): Double? {
+    val distanceKm = distanceMeters?.takeIf { it > 0.0 }?.div(1000.0) ?: return null
+    val kcalPerKgKm = when (exerciseType) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+        ExerciseSessionRecord.EXERCISE_TYPE_HIKING,
+        ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> RunningKcalPerKgKm
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+        ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> WalkingKcalPerKgKm
+        else -> return null
+    }
+    return DefaultCalorieEstimateWeightKg * distanceKm * kcalPerKgKm
+}
+
 private fun parseDistanceMeters(text: String, unitSystem: UnitSystem): Double? {
     val value = text.toPositiveDoubleOrNull() ?: return null
     return when (unitSystem) {
@@ -894,6 +990,11 @@ private fun Double.toInputText(maxFractionDigits: Int): String =
         .format(Locale.US, this)
         .trimEnd('0')
         .trimEnd('.')
+
+private fun Double.toCaloriesInputText(): String =
+    roundToInt()
+        .coerceAtLeast(1)
+        .toString()
 
 private fun String.toPositiveDoubleOrNull(): Double? =
     trim()
