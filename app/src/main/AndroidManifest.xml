@@ -59,6 +59,17 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 
+    <!-- Live activity recording permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+
     <!-- Query for Health Connect package (needed on Android 11+) -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
@@ -110,6 +121,11 @@
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".features.manualentry.ActivityRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <activity-alias
             android:name=".ViewPermissionUsageActivity"

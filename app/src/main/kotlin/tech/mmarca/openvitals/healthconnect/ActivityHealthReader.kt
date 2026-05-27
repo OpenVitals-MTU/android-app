@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRoute
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.Record
@@ -19,6 +20,7 @@ import androidx.health.connect.client.units.kilocalories
 import androidx.health.connect.client.units.meters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -344,6 +346,7 @@ internal class ActivityHealthReader(
         )
         val startOffset = zone.rules.getOffset(request.startTime)
         val endOffset = zone.rules.getOffset(request.endTime)
+        val exerciseSegments = request.toExerciseSegments()
         val session = ExerciseSessionRecord(
             startTime = request.startTime,
             startZoneOffset = startOffset,
@@ -353,6 +356,7 @@ internal class ActivityHealthReader(
             exerciseType = request.exerciseType,
             title = request.title?.trim()?.takeIf { it.isNotBlank() },
             notes = request.notes?.trim()?.takeIf { it.isNotBlank() },
+            segments = exerciseSegments,
             exerciseRoute = request.routePoints.toExerciseRouteOrNull(),
         )
 
@@ -410,7 +414,8 @@ internal class ActivityHealthReader(
         Log.d(
             TAG,
             "Writing activity entry type=${request.exerciseType} " +
-                "routePoints=${request.routePoints.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
+                "routePoints=${request.routePoints.size} pauses=${request.pauseIntervals.size} " +
+                "segments=${exerciseSegments.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
         support.client().insertRecords(listOf(session) + extraRecords)
         sessionClientRecordId
@@ -428,6 +433,16 @@ internal class ActivityHealthReader(
         request.elevationGainedMeters?.let { require(it >= 0.0 && it <= MaxActivityElevationMeters) { "Elevation gain is out of range." } }
         request.activeCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Active calories are out of range." } }
         request.totalCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Total calories are out of range." } }
+        val sortedPauses = request.pauseIntervals.sortedBy { it.startTime }
+        sortedPauses.forEach { interval ->
+            require(interval.startTime.isBefore(interval.endTime)) { "Pause start must be before pause end." }
+            require(!interval.startTime.isBefore(request.startTime) && !interval.endTime.isAfter(request.endTime)) {
+                "Pause intervals must be inside the activity time range."
+            }
+        }
+        sortedPauses.zipWithNext { previous, next ->
+            require(!previous.endTime.isAfter(next.startTime)) { "Pause intervals must not overlap." }
+        }
         require(request.routePoints.isEmpty() || request.routePoints.size >= MinRoutePointCount) {
             "Route must contain at least $MinRoutePointCount points."
         }
@@ -461,3 +476,64 @@ internal class ActivityHealthReader(
         private const val MaxActivityCaloriesKcal = 1_000_000.0
     }
 }
+
+internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {
+    val activeSegmentType = exerciseType.toActiveExerciseSegmentType()
+    val sortedPauses = pauseIntervals.sortedBy { it.startTime }
+    return buildList {
+        var activeStart = startTime
+        sortedPauses.forEach { pause ->
+            if (activeStart.isBefore(pause.startTime)) {
+                add(
+                    ExerciseSegment(
+                        startTime = activeStart,
+                        endTime = pause.startTime,
+                        segmentType = activeSegmentType,
+                    )
+                )
+            }
+            add(
+                ExerciseSegment(
+                    startTime = pause.startTime,
+                    endTime = pause.endTime,
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE,
+                )
+            )
+            if (activeStart.isBefore(pause.endTime)) {
+                activeStart = pause.endTime
+            }
+        }
+        if (activeStart.isBefore(endTime)) {
+            add(
+                ExerciseSegment(
+                    startTime = activeStart,
+                    endTime = endTime,
+                    segmentType = activeSegmentType,
+                )
+            )
+        }
+    }
+}
+
+private fun Int.toActiveExerciseSegmentType(): Int =
+    when (this) {
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING_STATIONARY
+        ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_ELLIPTICAL
+        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING ->
+            ExerciseSegment.EXERCISE_SEGMENT_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING
+        ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
+        ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_PILATES
+        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_ROWING_MACHINE
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL
+        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_STAIR_CLIMBING
+        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_STAIR_CLIMBING_MACHINE
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_OPEN_WATER
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_POOL
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_WALKING
+        ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_WEIGHTLIFTING
+        ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_WHEELCHAIR
+        ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_YOGA
+        else -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
+    }

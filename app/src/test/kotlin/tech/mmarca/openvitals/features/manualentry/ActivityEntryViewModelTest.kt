@@ -20,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -161,6 +162,31 @@ class ActivityEntryViewModelTest {
         assertEquals(expectedStart, request.routePoints.first().time)
         assertTrue(request.routePoints.last().time.isBefore(request.endTime))
         assertTrue(request.routePoints.first().time != originalStart)
+    }
+
+    @Test fun `buildWriteRequest includes recorded pause intervals inside session`() {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val pauseStart = start.plusSeconds(600)
+        val pauseEnd = start.plusSeconds(900)
+        val zoneStart = start.atZone(ZoneId.systemDefault())
+        val state = ActivityEntryUiState(
+            startDateText = zoneStart.toLocalDate().toString(),
+            startTimeText = zoneStart.toLocalTime().let { "${it.hour}:${it.minute.toString().padStart(2, '0')}" },
+            durationMinutesText = "45",
+            recordedPauseIntervals = listOf(
+                ActivityPauseInterval(
+                    startTime = pauseStart,
+                    endTime = pauseEnd,
+                )
+            ),
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(1, request.pauseIntervals.size)
+        assertEquals(pauseStart, request.pauseIntervals.first().startTime)
+        assertEquals(pauseEnd, request.pauseIntervals.first().endTime)
     }
 
     @Test fun `missing activity write permission prevents write`() = runTest {

@@ -89,21 +89,56 @@ Still needed:
 
 ## Phase 4: Live GPS Recorder
 
-Status: Not started
+Status: Mostly done
+
+Implemented:
+
+- Added Android runtime permission flow for GPS recording:
+  - Health Connect activity write permissions are requested first.
+  - Location permissions are requested before starting the recorder.
+  - Android 13+ notification permission is requested with the recording permission set.
+- Added location and foreground-service manifest permissions.
+- Added an optional GPS hardware feature declaration so devices without GPS can still install the app.
+- Added a foreground `ActivityRecordingService` with `foregroundServiceType="location"`.
+- Added a persistent activity recording notification with pause/resume and discard actions.
+- Added a singleton activity recording controller that:
+  - starts recording from Activity Entry
+  - pauses and resumes location updates
+  - finishes a recording into the existing Activity Entry review form
+  - discards an in-progress recording
+  - keeps in-progress state across screen recreation and process recreation using app-private preferences
+- Persists pause intervals during recording and writes them to Health Connect as pause exercise segments.
+- Added a focused live recording screen with route preview, distance, total time, moving time, speed, elevation gain, point count, accuracy, pause/resume, finish, and discard controls.
+- `Record activity` now opens a ready screen first; recording starts only after the user taps `Start`.
+- The ready screen now acquires GPS before start and disables `Start` until there is a fresh precise GPS fix.
+- Finishing a recording opens the existing activity edit/confirm form so title, notes, calories, type, distance, and elevation can be reviewed before saving.
+- Added location accuracy filtering:
+  - recording now requires precise location, not approximate/coarse location
+  - live route samples now come from the GPS provider only
+  - non-GPS samples, samples without accuracy, samples above 30 m accuracy, stale samples, and samples timestamped before the recording start are dropped
+  - implausible GPS jumps are dropped when the implied speed is unrealistic
+  - last accuracy and dropped-point count are tracked
+- Added OpenTracks/FitoTrack-inspired sampling:
+  - 1 second GPS provider polling
+  - 0 meter provider distance threshold so the app can apply its own filtering
+  - 500 ms minimum sample spacing
+  - activity-aware minimum accepted sample distance: lower for open-water swimming, moderate for walking/running/hiking, higher for cycling/skiing/sailing
+- Computes live distance and elevation gain from accepted GPS points.
+- Finishing a recording creates the same route-backed entry shape used by GPX/KMZ import, so final save still uses the Phase 1 Health Connect activity write path.
+- If a recording finishes without enough GPS points, the screen falls back to a manual activity entry with the recorded start time and duration.
+- Checked OpenTracks and FitoTrack GPS recording behavior before tuning:
+  - OpenTracks records against `LocationManager.GPS_PROVIDER`, requests high accuracy updates, and filters poor-accuracy fixes.
+  - FitoTrack records against `LocationManager.GPS_PROVIDER`, samples every second, treats fixes above 30 m as bad signal, treats signal as lost after 10 seconds, and skips samples too close in time or distance.
 
 Still needed:
 
-- Android runtime location permissions.
-- Foreground location service.
-- Persistent recording notification.
-- Start, pause, resume, finish, and discard recording flow.
-- Temporary in-progress recording state for process death or accidental navigation.
-- Live route preview while recording.
-- Location accuracy handling.
-- Battery behavior and sampling interval decisions.
-- Final write to Health Connect using the same activity write path created in Phase 1.
-
-This phase is intentionally separate because the app currently has no location stack, no foreground service, and no runtime location permission flow.
+- Real-device validation of foreground service startup on Android 14+ and Android 15/16 target behavior.
+- Real-device validation that the persistent notification appears as expected when notification permission is granted or denied.
+- Real-device validation of GPS quality, distance, elevation gain, pause/resume behavior, and Health Connect pause segment display.
+- Writes active exercise segments around pause segments so Health Connect receives active, pause, active intervals for paused recordings.
+- Tune the 30 m accuracy threshold, stale-fix threshold, and activity-aware sample distances after outdoor testing.
+- Add richer recovery UI for restored in-progress recordings after process death.
+- Nearby Devices permission is not requested for this MVP because it does not improve phone GPS precision by itself. It is only useful if OpenVitals later supports Bluetooth sensors or external GNSS devices.
 
 ## Verification So Far
 

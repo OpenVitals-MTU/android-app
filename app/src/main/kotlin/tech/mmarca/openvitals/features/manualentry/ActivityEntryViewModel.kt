@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import android.location.Location
 import android.net.Uri
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -18,7 +20,10 @@ import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
@@ -27,11 +32,14 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 private const val MilesToMeters = 1609.344
 private const val FeetToMeters = 0.3048
 private const val MaxActivityDurationMinutes = 7 * 24 * 60L
+private const val MinRecordedRoutePoints = 2
 
 enum class ActivityEntryError {
     INVALID_VALUE,
     MISSING_WRITE_PERMISSION,
     ROUTE_IMPORT_FAILED,
+    LOCATION_PERMISSION_NEEDED,
+    RECORDING_FAILED,
     WRITE_FAILED,
 }
 
@@ -39,6 +47,7 @@ enum class ActivityEntryMode {
     CHOOSE_SOURCE,
     MANUAL,
     ROUTE_IMPORT,
+    RECORDING,
 }
 
 enum class ActivityEntryField {
@@ -83,6 +92,7 @@ data class ActivityEntryUiState(
     val activeCaloriesText: String = "",
     val totalCaloriesText: String = "",
     val importedRoute: RouteFileImport? = null,
+    val recordedPauseIntervals: List<ActivityPauseInterval> = emptyList(),
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
     val isCheckingPermission: Boolean = true,
@@ -100,6 +110,7 @@ data class ActivityEntryUiState(
 class ActivityEntryViewModel(
     private val repository: ActivityRepository,
     private val routeFileImporter: RouteFileImporter? = null,
+    private val activityRecorder: ActivityRecordingController? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel() {
 
@@ -107,17 +118,29 @@ class ActivityEntryViewModel(
     constructor(
         repository: ActivityRepository,
         routeFileImporter: RouteFileImporter,
+        activityRecorder: ActivityRecordingController,
     ) : this(
         repository = repository,
         routeFileImporter = routeFileImporter,
+        activityRecorder = activityRecorder,
         clock = Clock.systemDefaultZone(),
     )
 
     private val _uiState = MutableStateFlow(initialActivityEntryState(clock, repository))
     val uiState: StateFlow<ActivityEntryUiState> = _uiState.asStateFlow()
+    private val fallbackRecordingState = MutableStateFlow(ActivityRecordingState())
+    val recordingState: StateFlow<ActivityRecordingState> =
+        activityRecorder?.state ?: fallbackRecordingState.asStateFlow()
 
     init {
         refreshPermission()
+        activityRecorder?.state
+            ?.onEach { recording ->
+                if (recording.isActive) {
+                    applyRecordingProgress(recording)
+                }
+            }
+            ?.launchIn(viewModelScope)
     }
 
     fun refreshPermission() {
@@ -153,6 +176,7 @@ class ActivityEntryViewModel(
         _uiState.value = _uiState.value.copy(
             selectedActivityType = type,
             importedRoute = retainedRoute,
+            recordedPauseIntervals = if (retainedRoute == null) emptyList() else _uiState.value.recordedPauseIntervals,
             mode = if (retainedRoute == null && _uiState.value.mode == ActivityEntryMode.ROUTE_IMPORT) {
                 ActivityEntryMode.MANUAL
             } else {
@@ -169,6 +193,7 @@ class ActivityEntryViewModel(
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             importedRoute = null,
+            recordedPauseIntervals = emptyList(),
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),
@@ -279,11 +304,133 @@ class ActivityEntryViewModel(
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             importedRoute = null,
+            recordedPauseIntervals = emptyList(),
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),
         )
         refreshPermission()
+    }
+
+    fun reportLocationPermissionNeeded() {
+        _uiState.value = _uiState.value.copy(
+            entryError = ActivityEntryError.LOCATION_PERMISSION_NEEDED,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+    }
+
+    fun prepareGpsRecording() {
+        val currentState = _uiState.value
+        if (!currentState.selectedActivityType.supportsGpsRoute) {
+            _uiState.value = currentState.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = null,
+                validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
+            )
+            return
+        }
+
+        val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
+        _uiState.value = currentState.copy(
+            mode = ActivityEntryMode.RECORDING,
+            importedRoute = null,
+            recordedPauseIntervals = emptyList(),
+            distanceText = "",
+            elevationText = "",
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+    }
+
+    fun startGpsRecording(initialFix: Location? = null) {
+        val recorder = activityRecorder
+        if (recorder == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.RECORDING_FAILED,
+                detailMessage = "GPS recording is not available.",
+                validationErrors = emptySet(),
+            )
+            return
+        }
+        val currentState = _uiState.value
+        if (!currentState.selectedActivityType.supportsGpsRoute) {
+            _uiState.value = currentState.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = null,
+                validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
+            )
+            return
+        }
+
+        val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
+        _uiState.value = currentState.copy(
+            mode = ActivityEntryMode.RECORDING,
+            importedRoute = null,
+            recordedPauseIntervals = emptyList(),
+            startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(now),
+            startTimeText = TimeFormatter.format(now.toLocalTime()),
+            durationMinutesText = "1",
+            distanceText = "",
+            elevationText = "",
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        if (!recorder.startRecording(currentState.selectedActivityType.exerciseType, initialFix)) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.RECORDING_FAILED,
+                detailMessage = recorder.state.value.errorMessage,
+                validationErrors = emptySet(),
+            )
+        }
+    }
+
+    fun pauseGpsRecording() {
+        activityRecorder?.pauseRecording()
+    }
+
+    fun resumeGpsRecording() {
+        activityRecorder?.resumeRecording()
+    }
+
+    fun discardGpsRecording() {
+        activityRecorder?.discardRecording()
+        chooseSource()
+    }
+
+    fun finishGpsRecording(unitSystem: UnitSystem) {
+        val snapshot = activityRecorder?.finishRecording()
+        if (snapshot == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.RECORDING_FAILED,
+                detailMessage = "No active GPS recording was found.",
+                validationErrors = emptySet(),
+            )
+            return
+        }
+
+        if (snapshot.points.size >= MinRecordedRoutePoints) {
+            applyRouteImport(
+                RouteFileImport(
+                    fileName = null,
+                    points = snapshot.points,
+                    distanceMeters = snapshot.distanceMeters,
+                    elevationGainedMeters = snapshot.elevationGainedMeters,
+                    startTime = snapshot.startTime,
+                    endTime = snapshot.endTime,
+                    hasRecordedTimestamps = true,
+                    hasImportedTimeRange = true,
+                    originalPointCount = snapshot.points.size,
+                ),
+                unitSystem,
+            )
+            _uiState.value = _uiState.value.copy(recordedPauseIntervals = snapshot.pauseIntervals)
+        } else {
+            applyRecordingWithoutRoute(snapshot)
+        }
     }
 
     fun addEntry(unitSystem: UnitSystem) {
@@ -372,6 +519,7 @@ class ActivityEntryViewModel(
             distanceText = currentState.distanceText.ifBlank { routeDistanceInputText(routeImport, unitSystem) },
             elevationText = currentState.elevationText.ifBlank { routeElevationInputText(routeImport, unitSystem) },
             importedRoute = routeImport,
+            recordedPauseIntervals = emptyList(),
             startDateText = if (routeImport.hasImportedTimeRange) {
                 DateTimeFormatter.ISO_LOCAL_DATE.format(start)
             } else {
@@ -384,6 +532,49 @@ class ActivityEntryViewModel(
             },
             durationMinutesText = routeDurationMinutes,
             isImportingRoute = false,
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+    }
+
+    private fun applyRecordingProgress(recording: ActivityRecordingState) {
+        val start = recording.startTime ?: return
+        val startDateTime = start.atZone(clock.zone)
+        val durationMinutes = ceil(
+            recording.elapsedDuration(Instant.now(clock)).seconds
+                .coerceAtLeast(1)
+                .toDouble() / 60.0
+        ).toLong().coerceIn(1, MaxActivityDurationMinutes)
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.RECORDING,
+            importedRoute = null,
+            startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(startDateTime),
+            startTimeText = TimeFormatter.format(startDateTime.toLocalTime()),
+            durationMinutesText = durationMinutes.toString(),
+            entryError = recording.errorMessage?.let { ActivityEntryError.RECORDING_FAILED },
+            detailMessage = recording.errorMessage,
+            validationErrors = emptySet(),
+        )
+    }
+
+    private fun applyRecordingWithoutRoute(snapshot: ActivityRecordingSnapshot) {
+        val start = snapshot.startTime.atZone(clock.zone)
+        val durationMinutes = ceil(
+            Duration.between(snapshot.startTime, snapshot.endTime).seconds
+                .coerceAtLeast(1)
+                .toDouble() / 60.0
+        ).toLong().coerceIn(1, MaxActivityDurationMinutes)
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.MANUAL,
+            importedRoute = null,
+            recordedPauseIntervals = snapshot.pauseIntervals,
+            startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
+            startTimeText = TimeFormatter.format(start.toLocalTime()),
+            durationMinutesText = durationMinutes.toString(),
+            distanceText = "",
+            elevationText = "",
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),
@@ -478,6 +669,7 @@ internal fun buildWriteRequest(
         title = state.titleText.trim().takeIf { it.isNotBlank() },
         notes = state.notesText.trim().takeIf { it.isNotBlank() },
         routePoints = routePoints,
+        pauseIntervals = state.recordedPauseIntervals.insideActivityRange(start, end),
         distanceMeters = distanceMeters,
         elevationGainedMeters = elevationMeters,
         activeCaloriesKcal = activeCalories,
@@ -676,6 +868,17 @@ private fun List<ExerciseRoutePoint>.withActivityTimeRange(
         point.copy(time = start.plusMillis(offset))
     }
 }
+
+private fun List<ActivityPauseInterval>.insideActivityRange(
+    start: java.time.Instant,
+    end: java.time.Instant,
+): List<ActivityPauseInterval> =
+    sortedBy { it.startTime }
+        .filter { interval ->
+            !interval.startTime.isBefore(start) &&
+                interval.startTime.isBefore(interval.endTime) &&
+                !interval.endTime.isAfter(end)
+        }
 
 private fun Double.toInputText(maxFractionDigits: Int): String =
     "%.${maxFractionDigits}f"

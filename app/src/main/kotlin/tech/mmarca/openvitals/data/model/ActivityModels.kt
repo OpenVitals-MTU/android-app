@@ -77,6 +77,11 @@ data class ExerciseRoutePoint(
     val verticalAccuracyMeters: Double?,
 )
 
+data class ActivityPauseInterval(
+    val startTime: Instant,
+    val endTime: Instant,
+)
+
 data class ActivityWriteRequest(
     val exerciseType: Int,
     val startTime: Instant,
@@ -84,6 +89,7 @@ data class ActivityWriteRequest(
     val title: String? = null,
     val notes: String? = null,
     val routePoints: List<ExerciseRoutePoint> = emptyList(),
+    val pauseIntervals: List<ActivityPauseInterval> = emptyList(),
     val distanceMeters: Double? = null,
     val elevationGainedMeters: Double? = null,
     val activeCaloriesKcal: Double? = null,

@@ -1,9 +1,19 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import android.annotation.SuppressLint
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Build
+import android.os.Looper
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,9 +28,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +55,8 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,15 +71,20 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.coroutines.delay
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.features.activity.RoutePreview
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
@@ -74,6 +96,8 @@ fun ActivityEntryScreen(
     unitFormatter: UnitFormatter,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val recordingState by viewModel.recordingState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var pendingSourceAction by remember { mutableStateOf<ActivityEntrySourceAction?>(null) }
     val importRouteFile = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -86,20 +110,43 @@ fun ActivityEntryScreen(
         when (action) {
             ActivityEntrySourceAction.MANUAL -> viewModel.startManualEntry()
             ActivityEntrySourceAction.IMPORT_ROUTE_FILE -> importRouteFile.launch(RouteImportMimeTypes)
+            ActivityEntrySourceAction.RECORD_GPS -> viewModel.prepareGpsRecording()
+        }
+    }
+    val requestLocationPermissions = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        val hasPreciseLocationPermission = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            hasActivityRecordingPreciseLocationPermission(context)
+        val action = pendingSourceAction
+        pendingSourceAction = null
+        if (hasPreciseLocationPermission && action != null) {
+            performSourceAction(action)
+        } else if (action == ActivityEntrySourceAction.RECORD_GPS) {
+            viewModel.reportLocationPermissionNeeded()
+        }
+    }
+    fun continueSourceActionAfterWritePermission(action: ActivityEntrySourceAction) {
+        if (action == ActivityEntrySourceAction.RECORD_GPS && needsActivityRecordingRuntimePermission(context)) {
+            pendingSourceAction = action
+            requestLocationPermissions.launch(activityRecordingRuntimePermissions())
+        } else {
+            performSourceAction(action)
         }
     }
     val requestWritePermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
-    ) {
+    ) { grantedPermissions ->
         viewModel.refreshPermission()
-        pendingSourceAction?.let { action ->
-            pendingSourceAction = null
-            performSourceAction(action)
+        val action = pendingSourceAction
+        pendingSourceAction = null
+        if (action != null && grantedPermissions.containsAll(state.writePermissions)) {
+            continueSourceActionAfterWritePermission(action)
         }
     }
     fun performSourceActionAfterPermission(action: ActivityEntrySourceAction) {
         if (state.canWrite) {
-            performSourceAction(action)
+            continueSourceActionAfterWritePermission(action)
         } else {
             pendingSourceAction = action
             requestWritePermissions.launch(state.writePermissions)
@@ -112,7 +159,31 @@ fun ActivityEntryScreen(
 
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         item {
-            if (state.mode == ActivityEntryMode.CHOOSE_SOURCE) {
+            if (recordingState.isActive) {
+                ActivityRecordingScreen(
+                    state = recordingState,
+                    unitFormatter = unitFormatter,
+                    onPauseRecording = viewModel::pauseGpsRecording,
+                    onResumeRecording = viewModel::resumeGpsRecording,
+                    onFinishRecording = {
+                        viewModel.finishGpsRecording(unitFormatter.unitSystem())
+                    },
+                    onDiscardRecording = viewModel::discardGpsRecording,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            } else if (state.mode == ActivityEntryMode.RECORDING) {
+                ActivityRecordingSetupScreen(
+                    state = state,
+                    unitFormatter = unitFormatter,
+                    onSelectActivityType = viewModel::selectActivityType,
+                    onStartRecording = viewModel::startGpsRecording,
+                    onChooseSource = viewModel::chooseSource,
+                    onRequestWritePermission = {
+                        requestWritePermissions.launch(state.writePermissions)
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            } else if (state.mode == ActivityEntryMode.CHOOSE_SOURCE) {
                 ActivityEntrySourceCard(
                     state = state,
                     onStartManualEntry = {
@@ -120,6 +191,9 @@ fun ActivityEntryScreen(
                     },
                     onImportRouteFile = {
                         performSourceActionAfterPermission(ActivityEntrySourceAction.IMPORT_ROUTE_FILE)
+                    },
+                    onRecordGpsActivity = {
+                        performSourceActionAfterPermission(ActivityEntrySourceAction.RECORD_GPS)
                     },
                     onRequestWritePermission = {
                         requestWritePermissions.launch(state.writePermissions)
@@ -158,6 +232,7 @@ fun ActivityEntryScreen(
 private enum class ActivityEntrySourceAction {
     MANUAL,
     IMPORT_ROUTE_FILE,
+    RECORD_GPS,
 }
 
 @Composable
@@ -165,6 +240,7 @@ private fun ActivityEntrySourceCard(
     state: ActivityEntryUiState,
     onStartManualEntry: () -> Unit,
     onImportRouteFile: () -> Unit,
+    onRecordGpsActivity: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -204,6 +280,22 @@ private fun ActivityEntrySourceCard(
             }
 
             OutlinedButton(
+                onClick = onRecordGpsActivity,
+                enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.MyLocation,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.activity_entry_record_gps),
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+
+            OutlinedButton(
                 onClick = onImportRouteFile,
                 enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -231,6 +323,234 @@ private fun ActivityEntrySourceCard(
 }
 
 @Composable
+private fun ActivityRecordingSetupScreen(
+    state: ActivityEntryUiState,
+    unitFormatter: UnitFormatter,
+    onSelectActivityType: (ActivityEntryType) -> Unit,
+    onStartRecording: (Location) -> Unit,
+    onChooseSource: () -> Unit,
+    onRequestWritePermission: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val gpsFixState = rememberPreRecordingGpsFixState(
+        enabled = state.canWrite && !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
+    )
+    val latestPreciseFix = gpsFixState.latestPreciseFix
+    val enabled = state.canWrite &&
+        !state.isCheckingPermission &&
+        !state.isImportingRoute &&
+        !state.isSavingEntry &&
+        latestPreciseFix != null
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ActivityEntryHeader(
+                state = state,
+                onRequestWritePermission = onRequestWritePermission,
+            )
+
+            Text(
+                text = stringResource(R.string.activity_entry_recording_ready_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            ActivityTypeSelector(
+                types = state.activityTypes.filter { it.supportsGpsRoute },
+                selectedType = state.selectedActivityType,
+                onSelectActivityType = onSelectActivityType,
+                errorText = state.validationErrorText(ActivityEntryField.ACTIVITY_TYPE),
+            )
+
+            PreRecordingGpsFixStatus(
+                state = gpsFixState,
+                unitFormatter = unitFormatter,
+            )
+
+            Button(
+                onClick = {
+                    latestPreciseFix?.let(onStartRecording)
+                },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.action_start),
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+
+            OutlinedButton(
+                onClick = onChooseSource,
+                enabled = !state.isSavingEntry && !state.isImportingRoute,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.activity_entry_choose_another_source))
+            }
+
+            state.entryError?.let { error ->
+                Text(
+                    text = activityEntryErrorText(error, state.detailMessage),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+private data class PreRecordingGpsFixState(
+    val hasPrecisePermission: Boolean,
+    val gpsProviderEnabled: Boolean,
+    val latestLocation: Location?,
+    val fixQuality: ActivityGpsFixQuality?,
+) {
+    val latestPreciseFix: Location?
+        get() = latestLocation?.takeIf {
+            hasPrecisePermission && gpsProviderEnabled && fixQuality?.isPrecise == true
+        }
+}
+
+@SuppressLint("MissingPermission")
+@Composable
+private fun rememberPreRecordingGpsFixState(enabled: Boolean): PreRecordingGpsFixState {
+    val context = LocalContext.current
+    val hasPrecisePermission = hasActivityRecordingPreciseLocationPermission(context)
+    var latestLocation by remember { mutableStateOf<Location?>(null) }
+    var gpsProviderEnabled by remember {
+        mutableStateOf(context.isGpsProviderEnabled())
+    }
+    var now by remember { mutableStateOf(Instant.now()) }
+
+    LaunchedEffect(context, enabled, hasPrecisePermission) {
+        while (enabled) {
+            now = Instant.now()
+            if (hasPrecisePermission) {
+                gpsProviderEnabled = context.isGpsProviderEnabled()
+            }
+            delay(1_000L)
+        }
+    }
+
+    DisposableEffect(context, enabled, hasPrecisePermission, gpsProviderEnabled) {
+        if (!enabled || !hasPrecisePermission || !gpsProviderEnabled) {
+            onDispose { }
+        } else {
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val listener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    latestLocation = Location(location)
+                }
+
+                override fun onProviderDisabled(provider: String) {
+                    if (provider == LocationManager.GPS_PROVIDER) {
+                        gpsProviderEnabled = false
+                    }
+                }
+
+                override fun onProviderEnabled(provider: String) {
+                    if (provider == LocationManager.GPS_PROVIDER) {
+                        gpsProviderEnabled = true
+                    }
+                }
+            }
+
+            runCatching {
+                locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    PreRecordingGpsIntervalMillis,
+                    PreRecordingGpsDistanceMeters,
+                    listener,
+                    Looper.getMainLooper(),
+                )
+                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?.let { latestLocation = Location(it) }
+            }.onFailure {
+                gpsProviderEnabled = false
+            }
+
+            onDispose {
+                runCatching {
+                    locationManager.removeUpdates(listener)
+                }
+            }
+        }
+    }
+
+    val fixQuality = latestLocation?.activityGpsFixQuality(now = now)
+    return PreRecordingGpsFixState(
+        hasPrecisePermission = hasPrecisePermission,
+        gpsProviderEnabled = gpsProviderEnabled,
+        latestLocation = latestLocation,
+        fixQuality = fixQuality,
+    )
+}
+
+@Composable
+private fun PreRecordingGpsFixStatus(
+    state: PreRecordingGpsFixState,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val fixQuality = state.fixQuality
+    val accuracyText = fixQuality?.accuracyMeters?.let { unitFormatter.elevation(it).text }
+    val statusText = when {
+        !state.hasPrecisePermission -> stringResource(R.string.activity_entry_location_permission_needed)
+        !state.gpsProviderEnabled -> stringResource(R.string.activity_entry_recording_gps_disabled)
+        fixQuality?.isPrecise == true && accuracyText != null -> stringResource(
+            R.string.activity_entry_recording_gps_ready,
+            accuracyText,
+        )
+        accuracyText != null -> stringResource(
+            R.string.activity_entry_recording_gps_waiting_accuracy,
+            accuracyText,
+        )
+        else -> stringResource(R.string.activity_entry_recording_gps_waiting)
+    }
+    val statusColor = if (state.latestPreciseFix != null) {
+        WorkoutColor
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.MyLocation,
+                contentDescription = null,
+                tint = statusColor,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = statusColor,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
 private fun ActivityEntryCard(
     state: ActivityEntryUiState,
     unitFormatter: UnitFormatter,
@@ -250,7 +570,10 @@ private fun ActivityEntryCard(
     onAddEntry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission && !state.isImportingRoute
+    val enabled = state.canWrite &&
+        !state.isSavingEntry &&
+        !state.isCheckingPermission &&
+        !state.isImportingRoute
     val durationError = state.validationErrorText(ActivityEntryField.DURATION)
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -315,6 +638,7 @@ private fun ActivityEntryCard(
             ActivityMetricInputs(
                 state = state,
                 unitSystem = unitFormatter.unitSystem(),
+                enabled = true,
                 onDistanceChanged = onDistanceChanged,
                 onElevationChanged = onElevationChanged,
                 onActiveCaloriesChanged = onActiveCaloriesChanged,
@@ -634,6 +958,7 @@ private fun ActivityTimePickerDialog(
 private fun ActivityMetricInputs(
     state: ActivityEntryUiState,
     unitSystem: UnitSystem,
+    enabled: Boolean,
     onDistanceChanged: (String) -> Unit,
     onElevationChanged: (String) -> Unit,
     onActiveCaloriesChanged: (String) -> Unit,
@@ -651,7 +976,7 @@ private fun ActivityMetricInputs(
         OutlinedTextField(
             value = state.distanceText,
             onValueChange = onDistanceChanged,
-            enabled = !state.isSavingEntry && state.selectedActivityType.supportsDistance,
+            enabled = enabled && !state.isSavingEntry && state.selectedActivityType.supportsDistance,
             singleLine = true,
             label = {
                 Text(
@@ -669,7 +994,7 @@ private fun ActivityMetricInputs(
         OutlinedTextField(
             value = state.elevationText,
             onValueChange = onElevationChanged,
-            enabled = !state.isSavingEntry && state.selectedActivityType.supportsElevation,
+            enabled = enabled && !state.isSavingEntry && state.selectedActivityType.supportsElevation,
             singleLine = true,
             label = {
                 Text(
@@ -693,7 +1018,7 @@ private fun ActivityMetricInputs(
         OutlinedTextField(
             value = state.activeCaloriesText,
             onValueChange = onActiveCaloriesChanged,
-            enabled = !state.isSavingEntry,
+            enabled = enabled && !state.isSavingEntry,
             singleLine = true,
             label = { Text(stringResource(R.string.metric_active_calories)) },
             isError = activeCaloriesError != null,
@@ -704,13 +1029,295 @@ private fun ActivityMetricInputs(
         OutlinedTextField(
             value = state.totalCaloriesText,
             onValueChange = onTotalCaloriesChanged,
-            enabled = !state.isSavingEntry,
+            enabled = enabled && !state.isSavingEntry,
             singleLine = true,
             label = { Text(stringResource(R.string.metric_calories_burned)) },
             isError = totalCaloriesError != null,
             supportingText = totalCaloriesError?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun ActivityRecordingScreen(
+    state: ActivityRecordingState,
+    unitFormatter: UnitFormatter,
+    onPauseRecording: () -> Unit,
+    onResumeRecording: () -> Unit,
+    onFinishRecording: () -> Unit,
+    onDiscardRecording: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var now by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(state.status) {
+        while (state.isActive) {
+            now = Instant.now()
+            delay(1_000L)
+        }
+    }
+
+    val totalTime = state.elapsedDuration(now)
+    val movingTime = state.movingDuration(now)
+    val distance = unitFormatter.distance(state.distanceMeters)
+    val elevation = unitFormatter.elevation(state.elevationGainedMeters)
+    val speed = recordingSpeed(
+        distanceMeters = state.distanceMeters,
+        duration = movingTime,
+        unitSystem = unitFormatter.unitSystem(),
+        unitFormatter = unitFormatter,
+    )
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.MyLocation,
+                contentDescription = null,
+                tint = WorkoutColor,
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                text = stringResource(R.string.activity_entry_recording_title),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(
+                    if (state.status == ActivityRecordingStatus.PAUSED) {
+                        R.string.activity_entry_recording_paused
+                    } else {
+                        R.string.activity_entry_recording_active
+                    }
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (state.points.size >= 2) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                RoutePreview(
+                    points = state.points,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                )
+            }
+        } else {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.activity_entry_recording_waiting_for_gps),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                RecordingStat(
+                    value = distance,
+                    label = stringResource(R.string.activity_entry_recording_distance),
+                    modifier = Modifier.weight(1f),
+                )
+                RecordingStat(
+                    value = DisplayValue(formatRecordingElapsed(totalTime), ""),
+                    label = stringResource(R.string.activity_entry_recording_total_time),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                RecordingStat(
+                    value = speed,
+                    label = stringResource(R.string.activity_entry_recording_speed),
+                    modifier = Modifier.weight(1f),
+                )
+                RecordingStat(
+                    value = DisplayValue(formatRecordingElapsed(movingTime), ""),
+                    label = stringResource(R.string.activity_entry_recording_moving_time),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                RecordingStat(
+                    value = elevation,
+                    label = stringResource(R.string.activity_entry_recording_elevation_gain),
+                    modifier = Modifier.weight(1f),
+                )
+                RecordingStat(
+                    value = DisplayValue(state.points.size.toString(), ""),
+                    label = stringResource(R.string.activity_entry_recording_points),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        state.lastAccuracyMeters?.let { accuracyMeters ->
+            Text(
+                text = stringResource(
+                    R.string.activity_entry_recording_accuracy,
+                    unitFormatter.elevation(accuracyMeters).text,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        state.errorMessage?.let { errorMessage ->
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.activity_entry_recording_finish_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (state.status == ActivityRecordingStatus.PAUSED) {
+                        OutlinedButton(
+                            onClick = onResumeRecording,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.action_resume),
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = onPauseRecording,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Pause,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.action_pause),
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = onFinishRecording,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Stop,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.action_finish),
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onDiscardRecording,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_discard),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecordingStat(
+    value: DisplayValue,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = value.value,
+                style = MaterialTheme.typography.displaySmall,
+                maxLines = 1,
+            )
+            if (value.unit.isNotBlank()) {
+                Text(
+                    text = value.unit,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 3.dp, bottom = 5.dp),
+                )
+            }
+        }
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelLarge,
+            color = WorkoutColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -845,10 +1452,72 @@ private fun activityEntryErrorText(
         R.string.activity_entry_route_import_failed,
         message ?: stringResource(R.string.unknown_error),
     )
+    ActivityEntryError.LOCATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_location_permission_needed)
+    ActivityEntryError.RECORDING_FAILED -> stringResource(
+        R.string.activity_entry_recording_failed,
+        message ?: stringResource(R.string.unknown_error),
+    )
     ActivityEntryError.WRITE_FAILED -> stringResource(
         R.string.activity_entry_write_failed,
         message ?: stringResource(R.string.unknown_error),
     )
+}
+
+private fun activityRecordingRuntimePermissions(): Array<String> =
+    buildList {
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }.toTypedArray()
+
+private fun hasActivityRecordingPreciseLocationPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+
+private fun needsActivityRecordingRuntimePermission(context: Context): Boolean =
+    !hasActivityRecordingPreciseLocationPermission(context) ||
+        (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) != PackageManager.PERMISSION_GRANTED
+            )
+
+private fun Context.isGpsProviderEnabled(): Boolean =
+    runCatching {
+        (getSystemService(Context.LOCATION_SERVICE) as LocationManager)
+            .isProviderEnabled(LocationManager.GPS_PROVIDER)
+    }.getOrDefault(false)
+
+private fun formatRecordingElapsed(duration: Duration): String {
+    val totalSeconds = duration.seconds.coerceAtLeast(0L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
+    }
+}
+
+private fun recordingSpeed(
+    distanceMeters: Double,
+    duration: Duration,
+    unitSystem: UnitSystem,
+    unitFormatter: UnitFormatter,
+): DisplayValue {
+    val hours = duration.seconds.toDouble() / 3600.0
+    val metersPerHour = if (hours > 0.0) distanceMeters / hours else 0.0
+    return when (unitSystem) {
+        UnitSystem.METRIC -> DisplayValue(unitFormatter.decimal(metersPerHour / 1000.0, 1), "km/h")
+        UnitSystem.IMPERIAL -> DisplayValue(unitFormatter.decimal(metersPerHour / 1609.344, 1), "mph")
+    }
 }
 
 private val RouteImportMimeTypes = arrayOf(
@@ -863,3 +1532,5 @@ private val RouteImportMimeTypes = arrayOf(
 )
 
 private val ActivityEntryTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
+private const val PreRecordingGpsIntervalMillis = 1_000L
+private const val PreRecordingGpsDistanceMeters = 0f
