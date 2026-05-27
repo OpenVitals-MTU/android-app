@@ -71,6 +71,8 @@ import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.features.manualentry.ActivityEntryScreen
+import tech.mmarca.openvitals.features.manualentry.ActivityEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.BodyMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.BodyMeasurementEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.HydrationEntryScreen
@@ -157,6 +159,7 @@ fun AppNavigation(
         setOf(
             Screen.ManualEntry.route,
             Screen.HydrationEntry.route,
+            Screen.ActivityEntry.route,
             Screen.MindfulnessEntry.route,
             Screen.BodyMeasurementEntry.route,
             Screen.VitalsMeasurementEntry.route,
@@ -182,6 +185,7 @@ fun AppNavigation(
         Screen.Dashboard.route -> stringResource(R.string.screen_dashboard)
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
+        Screen.ActivityEntry.route -> stringResource(R.string.screen_activity_entry)
         Screen.MindfulnessEntry.route -> stringResource(R.string.screen_mindfulness_entry)
         Screen.BodyMeasurementEntry.route -> currentBodyMeasurementType
             ?.let { stringResource(it.titleRes()) }
@@ -293,6 +297,9 @@ fun AppNavigation(
                     onOpenHydrationEntry = {
                         navController.navigate(Screen.HydrationEntry.route)
                     },
+                    onOpenActivityEntry = {
+                        navController.navigate(Screen.ActivityEntry.route)
+                    },
                     onOpenMindfulnessEntry = {
                         navController.navigate(Screen.MindfulnessEntry.route)
                     },
@@ -312,6 +319,14 @@ fun AppNavigation(
                 val hydrationViewModel = hiltViewModel<HydrationEntryViewModel>()
                 HydrationEntryScreen(
                     viewModel = hydrationViewModel,
+                    unitFormatter = unitFormatter,
+                )
+            }
+
+            composable(Screen.ActivityEntry.route) {
+                val activityEntryViewModel = hiltViewModel<ActivityEntryViewModel>()
+                ActivityEntryScreen(
+                    viewModel = activityEntryViewModel,
                     unitFormatter = unitFormatter,
                 )
             }
@@ -518,6 +533,7 @@ private fun addEntryActionForCurrentRoute(
     val destinationRoute = when {
         currentRoute == Screen.Dashboard.route -> Screen.ManualEntry.route
         currentRoute == Screen.Hydration.route -> Screen.HydrationEntry.route
+        currentRoute == Screen.Activity.route -> Screen.ActivityEntry.route
         currentRoute == Screen.Mindfulness.route -> Screen.MindfulnessEntry.route
         currentRoute == Screen.Body.route -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
         currentRoute == Screen.Metric.route -> currentMetricId?.entryRoute()
@@ -538,6 +554,7 @@ private fun DashboardWidgetId.entryRoute(): String? =
         DashboardWidgetId.WEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
         DashboardWidgetId.HEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.HEIGHT.name)
         DashboardWidgetId.BODY_FAT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.BODY_FAT.name)
+        DashboardWidgetId.WORKOUT -> Screen.ActivityEntry.route
         DashboardWidgetId.BLOOD_PRESSURE ->
             Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BLOOD_PRESSURE.name)
         DashboardWidgetId.SPO2 -> Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.SPO2.name)

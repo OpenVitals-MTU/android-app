@@ -4,21 +4,32 @@ import android.util.Log
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.kilocalories
+import androidx.health.connect.client.units.meters
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
+import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.data.model.StepProgressPoint
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
 
 internal class ActivityHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -322,7 +333,131 @@ internal class ActivityHealthReader(
             )
         }
 
+    suspend fun writeActivityEntry(request: ActivityWriteRequest): String = withContext(Dispatchers.IO) {
+        validateActivityWriteRequest(request)
+
+        val zone = ZoneId.systemDefault()
+        val sessionClientRecordId = "openvitals_activity_${request.startTime.toEpochMilli()}_${UUID.randomUUID()}"
+        val sessionMetadata = Metadata.manualEntry(
+            clientRecordId = sessionClientRecordId,
+            device = Device(type = Device.TYPE_PHONE),
+        )
+        val startOffset = zone.rules.getOffset(request.startTime)
+        val endOffset = zone.rules.getOffset(request.endTime)
+        val session = ExerciseSessionRecord(
+            startTime = request.startTime,
+            startZoneOffset = startOffset,
+            endTime = request.endTime,
+            endZoneOffset = endOffset,
+            metadata = sessionMetadata,
+            exerciseType = request.exerciseType,
+            title = request.title?.trim()?.takeIf { it.isNotBlank() },
+            notes = request.notes?.trim()?.takeIf { it.isNotBlank() },
+            exerciseRoute = request.routePoints.toExerciseRouteOrNull(),
+        )
+
+        val extraRecords = buildList<Record> {
+            request.distanceMeters?.let { meters ->
+                add(
+                    DistanceRecord(
+                        startTime = request.startTime,
+                        startZoneOffset = startOffset,
+                        endTime = request.endTime,
+                        endZoneOffset = endOffset,
+                        distance = meters.meters,
+                        metadata = manualActivityMetricMetadata("distance", request.startTime),
+                    )
+                )
+            }
+            request.elevationGainedMeters?.let { meters ->
+                add(
+                    ElevationGainedRecord(
+                        startTime = request.startTime,
+                        startZoneOffset = startOffset,
+                        endTime = request.endTime,
+                        endZoneOffset = endOffset,
+                        elevation = meters.meters,
+                        metadata = manualActivityMetricMetadata("elevation", request.startTime),
+                    )
+                )
+            }
+            request.activeCaloriesKcal?.let { kcal ->
+                add(
+                    ActiveCaloriesBurnedRecord(
+                        startTime = request.startTime,
+                        startZoneOffset = startOffset,
+                        endTime = request.endTime,
+                        endZoneOffset = endOffset,
+                        energy = kcal.kilocalories,
+                        metadata = manualActivityMetricMetadata("active_calories", request.startTime),
+                    )
+                )
+            }
+            request.totalCaloriesKcal?.let { kcal ->
+                add(
+                    TotalCaloriesBurnedRecord(
+                        startTime = request.startTime,
+                        startZoneOffset = startOffset,
+                        endTime = request.endTime,
+                        endZoneOffset = endOffset,
+                        energy = kcal.kilocalories,
+                        metadata = manualActivityMetricMetadata("total_calories", request.startTime),
+                    )
+                )
+            }
+        }
+
+        Log.d(
+            TAG,
+            "Writing activity entry type=${request.exerciseType} " +
+                "routePoints=${request.routePoints.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
+        )
+        support.client().insertRecords(listOf(session) + extraRecords)
+        sessionClientRecordId
+    }
+
+    private fun manualActivityMetricMetadata(kind: String, startTime: Instant): Metadata =
+        Metadata.manualEntry(
+            clientRecordId = "openvitals_activity_${kind}_${startTime.toEpochMilli()}_${UUID.randomUUID()}",
+            device = Device(type = Device.TYPE_PHONE),
+        )
+
+    private fun validateActivityWriteRequest(request: ActivityWriteRequest) {
+        require(request.startTime.isBefore(request.endTime)) { "Activity start must be before end." }
+        request.distanceMeters?.let { require(it > 0.0 && it <= MaxActivityDistanceMeters) { "Distance must be greater than 0 m." } }
+        request.elevationGainedMeters?.let { require(it >= 0.0 && it <= MaxActivityElevationMeters) { "Elevation gain is out of range." } }
+        request.activeCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Active calories are out of range." } }
+        request.totalCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Total calories are out of range." } }
+        require(request.routePoints.isEmpty() || request.routePoints.size >= MinRoutePointCount) {
+            "Route must contain at least $MinRoutePointCount points."
+        }
+        request.routePoints.forEach { point ->
+            require(!point.time.isBefore(request.startTime) && point.time.isBefore(request.endTime)) {
+                "Route points must be inside the activity time range."
+            }
+        }
+    }
+
+    private fun List<ExerciseRoutePoint>.toExerciseRouteOrNull(): ExerciseRoute? {
+        if (isEmpty()) return null
+        val route = sortedBy { it.time }.map { point ->
+            ExerciseRoute.Location(
+                time = point.time,
+                latitude = point.latitude,
+                longitude = point.longitude,
+                horizontalAccuracy = point.horizontalAccuracyMeters?.meters,
+                verticalAccuracy = point.verticalAccuracyMeters?.meters,
+                altitude = point.altitudeMeters?.meters,
+            )
+        }
+        return ExerciseRoute(route)
+    }
+
     private companion object {
         private const val TAG = "HealthConnectManager"
+        private const val MinRoutePointCount = 2
+        private const val MaxActivityDistanceMeters = 1_000_000.0
+        private const val MaxActivityElevationMeters = 1_000_000.0
+        private const val MaxActivityCaloriesKcal = 1_000_000.0
     }
 }

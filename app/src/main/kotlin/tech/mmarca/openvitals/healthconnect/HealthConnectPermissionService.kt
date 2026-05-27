@@ -63,6 +63,15 @@ internal class HealthConnectPermissionService(
         READ_EXERCISE_ROUTES_PERMISSION,
     )
 
+    val activityWritePermissions: Set<String> = setOf(
+        HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+        HealthPermission.getWritePermission(DistanceRecord::class),
+        HealthPermission.getWritePermission(ElevationGainedRecord::class),
+        HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
+        HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE,
+    )
+
     val heartPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
@@ -168,6 +177,7 @@ internal class HealthConnectPermissionService(
     val allPermissions: Set<String> get() =
         requestableAllPermissions +
             manualOnlyPermissions +
+            activityWritePermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
@@ -176,6 +186,7 @@ internal class HealthConnectPermissionService(
     val managedPermissions: Set<String> get() =
         requestableManagedPermissions +
             manualOnlyPermissions +
+            activityWritePermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +

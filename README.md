@@ -32,7 +32,7 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Explicit manual entry logging for hydration, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
+- Explicit manual entry logging for hydration, activities with optional GPX route import, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
 
 ## Current coverage
 
@@ -41,7 +41,7 @@ OpenVitals is still in an early stage, but the core product direction is already
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
-- Manual entry: hydration, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
+- Manual entry: hydration, activity sessions with optional GPX route import, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
 - Hydration: daily and period hydration totals, plus Health Connect-backed drink logging with drink and serving choices
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds

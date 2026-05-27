@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocalDrink
@@ -75,6 +76,7 @@ import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
+import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 private const val ManualEntryGridColumns = 3
 private const val ManualEntryDragLongPressMillis = 500L
@@ -85,6 +87,7 @@ private val ManualEntryTileIconSize = 34.dp
 fun ManualEntryScreen(
     viewModel: ManualEntryViewModel,
     onOpenHydrationEntry: () -> Unit,
+    onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
@@ -101,6 +104,11 @@ fun ManualEntryScreen(
     ) {
         viewModel.onBodyWritePermissionResult()
     }
+    val requestActivityWritePermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        viewModel.onActivityWritePermissionResult()
+    }
     val requestVitalsWritePermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) {
@@ -114,6 +122,7 @@ fun ManualEntryScreen(
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
+        onOpenActivityEntry = viewModel::onActivityWidgetTapped,
         onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
@@ -132,6 +141,12 @@ fun ManualEntryScreen(
         if (state.pendingHydrationEntryNavigation) {
             viewModel.onHydrationEntryNavigationHandled()
             onOpenHydrationEntry()
+        }
+    }
+    LaunchedEffect(state.pendingActivityEntryNavigation) {
+        if (state.pendingActivityEntryNavigation) {
+            viewModel.onActivityEntryNavigationHandled()
+            onOpenActivityEntry()
         }
     }
     LaunchedEffect(state.pendingMindfulnessEntryNavigation) {
@@ -181,6 +196,17 @@ fun ManualEntryScreen(
             onGrant = {
                 viewModel.grantHydrationWritePermissionFromPrompt()
                 requestWritePermissions.launch(state.hydrationWritePermissions)
+            },
+        )
+    }
+
+    if (state.showActivityWritePermissionPrompt) {
+        ActivityWritePermissionPrompt(
+            onDismiss = viewModel::dismissActivityWritePermissionPrompt,
+            onOpenEntry = viewModel::continueActivityEntryFromWritePermissionPrompt,
+            onGrant = {
+                viewModel.grantActivityWritePermissionFromPrompt()
+                requestActivityWritePermissions.launch(state.activityWritePermissions)
             },
         )
     }
@@ -258,6 +284,29 @@ private fun MindfulnessWritePermissionPrompt(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_mindfulness_write_permission_title)) },
         text = { Text(stringResource(R.string.mindfulness_entry_permission_needed)) },
+        confirmButton = {
+            Button(onClick = onGrant) {
+                Text(stringResource(R.string.action_grant))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onOpenEntry) {
+                Text(stringResource(R.string.action_open))
+            }
+        },
+    )
+}
+
+@Composable
+private fun ActivityWritePermissionPrompt(
+    onDismiss: () -> Unit,
+    onOpenEntry: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.manual_entry_activity_write_permission_title)) },
+        text = { Text(stringResource(R.string.activity_entry_permission_needed)) },
         confirmButton = {
             Button(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
@@ -531,11 +580,13 @@ private fun LazyListScope.hiddenManualEntryWidgets(
 private fun manualEntryWidgetSpecs(
     isEditingWidgets: Boolean,
     onOpenHydrationEntry: () -> Unit,
+    onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
+    val activityClick = if (isEditingWidgets) null else onOpenActivityEntry
     val mindfulnessClick = if (isEditingWidgets) null else onOpenMindfulnessEntry
     return listOf(
         ManualEntryWidgetSpec(
@@ -548,6 +599,19 @@ private fun manualEntryWidgetSpecs(
                     accentColor = HydrationColor,
                     modifier = modifier,
                     onClick = hydrationClick,
+                )
+            },
+        ),
+        ManualEntryWidgetSpec(
+            id = ManualEntryWidgetId.ACTIVITY,
+            title = stringResource(R.string.manual_entry_activity_title),
+            content = { modifier ->
+                ManualEntryMetricTile(
+                    title = stringResource(R.string.manual_entry_activity_title),
+                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    accentColor = WorkoutColor,
+                    modifier = modifier,
+                    onClick = activityClick,
                 )
             },
         ),

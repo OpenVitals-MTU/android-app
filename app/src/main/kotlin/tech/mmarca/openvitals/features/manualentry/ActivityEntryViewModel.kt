@@ -1,0 +1,692 @@
+package tech.mmarca.openvitals.features.manualentry
+
+import android.net.Uri
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Clock
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import javax.inject.Inject
+import kotlin.math.ceil
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.ActivityWriteRequest
+import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.data.repository.ActivityRepository
+
+private const val MilesToMeters = 1609.344
+private const val FeetToMeters = 0.3048
+private const val MaxActivityDurationMinutes = 7 * 24 * 60L
+
+enum class ActivityEntryError {
+    INVALID_VALUE,
+    MISSING_WRITE_PERMISSION,
+    ROUTE_IMPORT_FAILED,
+    WRITE_FAILED,
+}
+
+enum class ActivityEntryMode {
+    CHOOSE_SOURCE,
+    MANUAL,
+    ROUTE_IMPORT,
+}
+
+enum class ActivityEntryField {
+    ACTIVITY_TYPE,
+    START_DATE,
+    START_TIME,
+    DURATION,
+    DISTANCE,
+    ELEVATION,
+    ACTIVE_CALORIES,
+    TOTAL_CALORIES,
+}
+
+enum class ActivityEntryValidationError(
+    val field: ActivityEntryField,
+) {
+    ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE(ActivityEntryField.ACTIVITY_TYPE),
+    START_DATE_INVALID(ActivityEntryField.START_DATE),
+    START_TIME_INVALID(ActivityEntryField.START_TIME),
+    START_TIME_AFTER_ROUTE_START(ActivityEntryField.START_TIME),
+    DURATION_INVALID(ActivityEntryField.DURATION),
+    DISTANCE_INVALID(ActivityEntryField.DISTANCE),
+    DISTANCE_UNSUPPORTED(ActivityEntryField.DISTANCE),
+    ELEVATION_INVALID(ActivityEntryField.ELEVATION),
+    ELEVATION_UNSUPPORTED(ActivityEntryField.ELEVATION),
+    ACTIVE_CALORIES_INVALID(ActivityEntryField.ACTIVE_CALORIES),
+    TOTAL_CALORIES_INVALID(ActivityEntryField.TOTAL_CALORIES),
+    TOTAL_CALORIES_BELOW_ACTIVE(ActivityEntryField.TOTAL_CALORIES),
+}
+
+data class ActivityEntryUiState(
+    val mode: ActivityEntryMode = ActivityEntryMode.CHOOSE_SOURCE,
+    val activityTypes: List<ActivityEntryType> = DefaultActivityEntryTypes,
+    val selectedActivityType: ActivityEntryType = DefaultActivityEntryTypes.first(),
+    val titleText: String = "",
+    val notesText: String = "",
+    val startDateText: String = "",
+    val startTimeText: String = "",
+    val durationMinutesText: String = "30",
+    val distanceText: String = "",
+    val elevationText: String = "",
+    val activeCaloriesText: String = "",
+    val totalCaloriesText: String = "",
+    val importedRoute: RouteFileImport? = null,
+    val writePermissions: Set<String> = emptySet(),
+    val canWrite: Boolean = false,
+    val isCheckingPermission: Boolean = true,
+    val isImportingRoute: Boolean = false,
+    val isSavingEntry: Boolean = false,
+    val entryError: ActivityEntryError? = null,
+    val detailMessage: String? = null,
+    val validationErrors: Set<ActivityEntryValidationError> = emptySet(),
+) {
+    val routePoints: List<ExerciseRoutePoint>
+        get() = importedRoute?.points.orEmpty()
+}
+
+@HiltViewModel
+class ActivityEntryViewModel(
+    private val repository: ActivityRepository,
+    private val routeFileImporter: RouteFileImporter? = null,
+    private val clock: Clock = Clock.systemDefaultZone(),
+) : ViewModel() {
+
+    @Inject
+    constructor(
+        repository: ActivityRepository,
+        routeFileImporter: RouteFileImporter,
+    ) : this(
+        repository = repository,
+        routeFileImporter = routeFileImporter,
+        clock = Clock.systemDefaultZone(),
+    )
+
+    private val _uiState = MutableStateFlow(initialActivityEntryState(clock, repository))
+    val uiState: StateFlow<ActivityEntryUiState> = _uiState.asStateFlow()
+
+    init {
+        refreshPermission()
+    }
+
+    fun refreshPermission() {
+        val permissions = currentRequiredPermissions()
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCheckingPermission = true,
+                writePermissions = permissions,
+                detailMessage = null,
+            )
+            runCatching {
+                repository.hasActivityWritePermission()
+            }.onSuccess { canWrite ->
+                _uiState.value = _uiState.value.copy(
+                    isCheckingPermission = false,
+                    canWrite = canWrite,
+                    writePermissions = currentRequiredPermissions(),
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isCheckingPermission = false,
+                    canWrite = false,
+                    entryError = ActivityEntryError.WRITE_FAILED,
+                    detailMessage = error.message,
+                    writePermissions = currentRequiredPermissions(),
+                )
+            }
+        }
+    }
+
+    fun selectActivityType(type: ActivityEntryType) {
+        val retainedRoute = _uiState.value.importedRoute?.takeIf { type.supportsGpsRoute }
+        _uiState.value = _uiState.value.copy(
+            selectedActivityType = type,
+            importedRoute = retainedRoute,
+            mode = if (retainedRoute == null && _uiState.value.mode == ActivityEntryMode.ROUTE_IMPORT) {
+                ActivityEntryMode.MANUAL
+            } else {
+                _uiState.value.mode
+            },
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+    }
+
+    fun startManualEntry() {
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.MANUAL,
+            importedRoute = null,
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+    }
+
+    fun chooseSource() {
+        _uiState.value = initialActivityEntryState(clock, repository).copy(
+            canWrite = _uiState.value.canWrite,
+            isCheckingPermission = _uiState.value.isCheckingPermission,
+        )
+        refreshPermission()
+    }
+
+    fun updateTitle(text: String) {
+        updateState { copy(titleText = text, entryError = null, detailMessage = null) }
+    }
+
+    fun updateNotes(text: String) {
+        updateState { copy(notesText = text, entryError = null, detailMessage = null) }
+    }
+
+    fun updateStartDate(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.START_DATE, ActivityEntryField.START_TIME)) {
+            copy(startDateText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun updateStartTime(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.START_TIME)) {
+            copy(startTimeText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun updateDurationMinutes(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.DURATION)) {
+            copy(durationMinutesText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun updateDistance(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.DISTANCE)) {
+            copy(distanceText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun updateElevation(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.ELEVATION)) {
+            copy(elevationText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun updateActiveCalories(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.ACTIVE_CALORIES, ActivityEntryField.TOTAL_CALORIES)) {
+            copy(activeCaloriesText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun updateTotalCalories(text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.TOTAL_CALORIES)) {
+            copy(totalCaloriesText = text, entryError = null, detailMessage = null)
+        }
+    }
+
+    fun importRouteFile(uri: Uri, unitSystem: UnitSystem) {
+        val importer = routeFileImporter
+        if (importer == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
+                detailMessage = "Route file import is not available.",
+                validationErrors = emptySet(),
+            )
+            return
+        }
+        if (!_uiState.value.selectedActivityType.supportsGpsRoute) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = "Selected activity type does not support GPS routes.",
+                validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isImportingRoute = true,
+                entryError = null,
+                detailMessage = null,
+                validationErrors = emptySet(),
+            )
+            runCatching { importer.import(uri) }
+                .onSuccess { routeImport ->
+                    applyRouteImport(routeImport, unitSystem)
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isImportingRoute = false,
+                        entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
+                        detailMessage = error.message,
+                        validationErrors = emptySet(),
+                    )
+                }
+        }
+    }
+
+    fun clearImportedRoute() {
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.MANUAL,
+            importedRoute = null,
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+    }
+
+    fun addEntry(unitSystem: UnitSystem) {
+        if (_uiState.value.mode == ActivityEntryMode.CHOOSE_SOURCE) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = null,
+                validationErrors = emptySet(),
+            )
+            return
+        }
+
+        val validationErrors = validateActivityEntry(_uiState.value, unitSystem)
+        if (validationErrors.isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = null,
+                validationErrors = validationErrors,
+            )
+            return
+        }
+
+        val request = buildWriteRequest(_uiState.value, unitSystem)
+        if (request == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = null,
+                validationErrors = validationErrors,
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSavingEntry = true,
+                entryError = null,
+                detailMessage = null,
+                validationErrors = emptySet(),
+                writePermissions = repository.activityWritePermissions(),
+            )
+            val hasPermission = repository.hasActivityWritePermission()
+            if (!hasPermission) {
+                _uiState.value = _uiState.value.copy(
+                    isSavingEntry = false,
+                    canWrite = false,
+                    entryError = ActivityEntryError.MISSING_WRITE_PERMISSION,
+                    detailMessage = null,
+                    validationErrors = emptySet(),
+                )
+                return@launch
+            }
+
+            runCatching {
+                repository.writeActivityEntry(request)
+            }.onSuccess {
+                _uiState.value = clearedAfterSaveState(clock, repository, _uiState.value.selectedActivityType)
+                refreshPermission()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isSavingEntry = false,
+                    entryError = ActivityEntryError.WRITE_FAILED,
+                    detailMessage = error.message,
+                    validationErrors = emptySet(),
+                )
+            }
+        }
+    }
+
+    private fun applyRouteImport(routeImport: RouteFileImport, unitSystem: UnitSystem) {
+        val currentState = _uiState.value
+        val start = routeImport.startTime.atZone(clock.zone)
+        val routeDurationMinutes = if (routeImport.hasImportedTimeRange) {
+            val routeDurationSeconds = Duration.between(routeImport.startTime, routeImport.endTime).seconds.coerceAtLeast(1)
+            ceil((routeDurationSeconds + 1).toDouble() / 60.0)
+                .toLong()
+                .coerceIn(1, MaxActivityDurationMinutes)
+                .toString()
+        } else {
+            currentState.durationMinutesText.ifBlank { "30" }
+        }
+        _uiState.value = _uiState.value.copy(
+            mode = ActivityEntryMode.ROUTE_IMPORT,
+            selectedActivityType = inferActivityType(routeImport, currentState.selectedActivityType),
+            titleText = currentState.titleText.ifBlank { routeImport.name.orEmpty() },
+            notesText = currentState.notesText.ifBlank { routeImport.description.orEmpty() },
+            distanceText = currentState.distanceText.ifBlank { routeDistanceInputText(routeImport, unitSystem) },
+            elevationText = currentState.elevationText.ifBlank { routeElevationInputText(routeImport, unitSystem) },
+            importedRoute = routeImport,
+            startDateText = if (routeImport.hasImportedTimeRange) {
+                DateTimeFormatter.ISO_LOCAL_DATE.format(start)
+            } else {
+                currentState.startDateText
+            },
+            startTimeText = if (routeImport.hasImportedTimeRange) {
+                TimeFormatter.format(start.toLocalTime())
+            } else {
+                currentState.startTimeText
+            },
+            durationMinutesText = routeDurationMinutes,
+            isImportingRoute = false,
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        refreshPermission()
+    }
+
+    private fun updateState(
+        clearFields: Set<ActivityEntryField> = emptySet(),
+        update: ActivityEntryUiState.() -> ActivityEntryUiState,
+    ) {
+        val previous = _uiState.value
+        val updated = previous.update()
+        val permissions = currentRequiredPermissions()
+        _uiState.value = updated.copy(
+            writePermissions = permissions,
+            canWrite = updated.canWrite && permissions == previous.writePermissions,
+            validationErrors = updated.validationErrors.filterNot { it.field in clearFields }.toSet(),
+        )
+    }
+
+    private fun currentRequiredPermissions(): Set<String> =
+        repository.activityWritePermissions()
+}
+
+internal fun buildWriteRequest(
+    state: ActivityEntryUiState,
+    unitSystem: UnitSystem,
+): ActivityWriteRequest? {
+    if (validateActivityEntry(state, unitSystem).isNotEmpty()) return null
+
+    val startDate = state.startDateText.trim().let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        ?: return null
+    val startTime = state.startTimeText.trim().let { runCatching { LocalTime.parse(it, TimeFormatter) }.getOrNull() }
+        ?: return null
+    val durationMinutes = state.durationMinutesText.trim().toLongOrNull()
+        ?.takeIf { it in 1..MaxActivityDurationMinutes }
+        ?: return null
+    val zone = ZoneId.systemDefault()
+    val start = LocalDateTime.of(startDate, startTime).atZone(zone).toInstant()
+    var end = start.plus(Duration.ofMinutes(durationMinutes))
+    val importedRoute = state.importedRoute
+    var routePoints = importedRoute?.points.orEmpty()
+    if (routePoints.isNotEmpty()) {
+        if (!state.selectedActivityType.supportsGpsRoute) return null
+        if (importedRoute?.hasRecordedTimestamps == false) {
+            routePoints = routePoints.withActivityTimeRange(start, end)
+        } else {
+            val firstPoint = routePoints.first()
+            val lastPoint = routePoints.last()
+            if (firstPoint.time.isBefore(start)) return null
+            if (!lastPoint.time.isBefore(end)) {
+                end = lastPoint.time.plusSeconds(1)
+            }
+        }
+    }
+
+    val distanceMeters = when {
+        state.distanceText.isNotBlank() && importedRoute != null &&
+            state.distanceText.trim() == routeDistanceInputText(importedRoute, unitSystem) -> {
+            importedRoute.distanceMeters.takeIf { it > 0.0 }
+        }
+        state.distanceText.isNotBlank() -> parseDistanceMeters(state.distanceText, unitSystem) ?: return null
+        routePoints.isNotEmpty() -> state.importedRoute?.distanceMeters?.takeIf { it > 0.0 }
+        else -> null
+    }
+    val elevationMeters = when {
+        state.elevationText.isNotBlank() && importedRoute != null &&
+            state.elevationText.trim() == routeElevationInputText(importedRoute, unitSystem) -> {
+            importedRoute.elevationGainedMeters.takeIf { it > 0.0 }
+        }
+        state.elevationText.isNotBlank() -> parseElevationMeters(state.elevationText, unitSystem) ?: return null
+        routePoints.isNotEmpty() -> state.importedRoute?.elevationGainedMeters?.takeIf { it > 0.0 }
+        else -> null
+    }
+    val activeCalories = if (state.activeCaloriesText.isBlank()) {
+        null
+    } else {
+        state.activeCaloriesText.toPositiveDoubleOrNull() ?: return null
+    }
+    val totalCalories = if (state.totalCaloriesText.isBlank()) {
+        null
+    } else {
+        state.totalCaloriesText.toPositiveDoubleOrNull() ?: return null
+    }
+    if (activeCalories != null && totalCalories != null && totalCalories < activeCalories) return null
+
+    return ActivityWriteRequest(
+        exerciseType = state.selectedActivityType.exerciseType,
+        startTime = start,
+        endTime = end,
+        title = state.titleText.trim().takeIf { it.isNotBlank() },
+        notes = state.notesText.trim().takeIf { it.isNotBlank() },
+        routePoints = routePoints,
+        distanceMeters = distanceMeters,
+        elevationGainedMeters = elevationMeters,
+        activeCaloriesKcal = activeCalories,
+        totalCaloriesKcal = totalCalories,
+    )
+}
+
+internal fun validateActivityEntry(
+    state: ActivityEntryUiState,
+    unitSystem: UnitSystem,
+): Set<ActivityEntryValidationError> {
+    val errors = mutableSetOf<ActivityEntryValidationError>()
+    val startDate = state.startDateText.trim()
+        .let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val startTime = state.startTimeText.trim()
+        .let { runCatching { LocalTime.parse(it, TimeFormatter) }.getOrNull() }
+    val durationMinutes = state.durationMinutesText.trim().toLongOrNull()
+        ?.takeIf { it in 1..MaxActivityDurationMinutes }
+
+    if (startDate == null) errors += ActivityEntryValidationError.START_DATE_INVALID
+    if (startTime == null) errors += ActivityEntryValidationError.START_TIME_INVALID
+    if (durationMinutes == null) errors += ActivityEntryValidationError.DURATION_INVALID
+
+    val importedRoute = state.importedRoute
+    val routePoints = importedRoute?.points.orEmpty()
+    if (routePoints.isNotEmpty() && !state.selectedActivityType.supportsGpsRoute) {
+        errors += ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE
+    }
+    if (
+        routePoints.isNotEmpty() &&
+        importedRoute?.hasRecordedTimestamps != false &&
+        startDate != null &&
+        startTime != null
+    ) {
+        val start = LocalDateTime.of(startDate, startTime).atZone(ZoneId.systemDefault()).toInstant()
+        if (routePoints.first().time.isBefore(start)) {
+            errors += ActivityEntryValidationError.START_TIME_AFTER_ROUTE_START
+        }
+    }
+
+    if (state.distanceText.isNotBlank()) {
+        when {
+            !state.selectedActivityType.supportsDistance -> {
+                errors += ActivityEntryValidationError.DISTANCE_UNSUPPORTED
+            }
+            importedRoute != null &&
+                state.distanceText.trim() == routeDistanceInputText(importedRoute, unitSystem) -> Unit
+            parseDistanceMeters(state.distanceText, unitSystem) == null -> {
+                errors += ActivityEntryValidationError.DISTANCE_INVALID
+            }
+        }
+    }
+
+    if (state.elevationText.isNotBlank()) {
+        when {
+            !state.selectedActivityType.supportsElevation -> {
+                errors += ActivityEntryValidationError.ELEVATION_UNSUPPORTED
+            }
+            importedRoute != null &&
+                state.elevationText.trim() == routeElevationInputText(importedRoute, unitSystem) -> Unit
+            parseElevationMeters(state.elevationText, unitSystem) == null -> {
+                errors += ActivityEntryValidationError.ELEVATION_INVALID
+            }
+        }
+    }
+
+    val activeCalories = if (state.activeCaloriesText.isBlank()) {
+        null
+    } else {
+        state.activeCaloriesText.toPositiveDoubleOrNull()
+            ?: run {
+                errors += ActivityEntryValidationError.ACTIVE_CALORIES_INVALID
+                null
+            }
+    }
+    val totalCalories = if (state.totalCaloriesText.isBlank()) {
+        null
+    } else {
+        state.totalCaloriesText.toPositiveDoubleOrNull()
+            ?: run {
+                errors += ActivityEntryValidationError.TOTAL_CALORIES_INVALID
+                null
+            }
+    }
+    if (activeCalories != null && totalCalories != null && totalCalories < activeCalories) {
+        errors += ActivityEntryValidationError.TOTAL_CALORIES_BELOW_ACTIVE
+    }
+
+    return errors
+}
+
+private fun initialActivityEntryState(
+    clock: Clock,
+    repository: ActivityRepository,
+): ActivityEntryUiState {
+    val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
+    return ActivityEntryUiState(
+        startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(now),
+        startTimeText = TimeFormatter.format(now.toLocalTime()),
+        writePermissions = repository.activityWritePermissions(),
+    )
+}
+
+private fun clearedAfterSaveState(
+    clock: Clock,
+    repository: ActivityRepository,
+    selectedType: ActivityEntryType,
+): ActivityEntryUiState =
+    initialActivityEntryState(clock, repository).copy(selectedActivityType = selectedType)
+
+private fun inferActivityType(
+    routeImport: RouteFileImport,
+    currentType: ActivityEntryType,
+): ActivityEntryType {
+    val sourceText = listOfNotNull(routeImport.type, routeImport.name, routeImport.fileName)
+        .joinToString(separator = " ")
+        .lowercase()
+    val exerciseType = when {
+        sourceText.containsAny("snowboard") -> ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING
+        sourceText.containsAny("snowshoe") -> ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING
+        sourceText.containsAny("ski") -> ExerciseSessionRecord.EXERCISE_TYPE_SKIING
+        sourceText.containsAny("hike", "hiking") -> ExerciseSessionRecord.EXERCISE_TYPE_HIKING
+        sourceText.containsAny("run", "running", "jog") -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
+        sourceText.containsAny("bike", "biking", "bicycle", "cycling", "cycle", "ride") -> {
+            ExerciseSessionRecord.EXERCISE_TYPE_BIKING
+        }
+        sourceText.containsAny("walk", "walking") -> ExerciseSessionRecord.EXERCISE_TYPE_WALKING
+        sourceText.containsAny("wheelchair") -> ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR
+        sourceText.containsAny("row", "rowing") -> ExerciseSessionRecord.EXERCISE_TYPE_ROWING
+        sourceText.containsAny("paddle", "kayak", "canoe") -> ExerciseSessionRecord.EXERCISE_TYPE_PADDLING
+        sourceText.containsAny("skate", "skating") -> ExerciseSessionRecord.EXERCISE_TYPE_SKATING
+        sourceText.containsAny("sail", "sailing") -> ExerciseSessionRecord.EXERCISE_TYPE_SAILING
+        sourceText.containsAny("surf", "surfing") -> ExerciseSessionRecord.EXERCISE_TYPE_SURFING
+        sourceText.containsAny("swim", "swimming") -> ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER
+        sourceText.containsAny("golf") -> ExerciseSessionRecord.EXERCISE_TYPE_GOLF
+        else -> null
+    }
+    return DefaultActivityEntryTypes
+        .firstOrNull { it.exerciseType == exerciseType && it.supportsGpsRoute }
+        ?: currentType.takeIf { it.supportsGpsRoute }
+        ?: DefaultActivityEntryTypes.first()
+}
+
+private fun String.containsAny(vararg values: String): Boolean =
+    values.any(::contains)
+
+private fun parseDistanceMeters(text: String, unitSystem: UnitSystem): Double? {
+    val value = text.toPositiveDoubleOrNull() ?: return null
+    return when (unitSystem) {
+        UnitSystem.METRIC -> value * 1000.0
+        UnitSystem.IMPERIAL -> value * MilesToMeters
+    }
+}
+
+private fun parseElevationMeters(text: String, unitSystem: UnitSystem): Double? {
+    val value = text.toPositiveDoubleOrNull() ?: return null
+    return when (unitSystem) {
+        UnitSystem.METRIC -> value
+        UnitSystem.IMPERIAL -> value * FeetToMeters
+    }
+}
+
+private fun routeDistanceInputText(routeImport: RouteFileImport, unitSystem: UnitSystem): String {
+    val distance = routeImport.distanceMeters.takeIf { it > 0.0 } ?: return ""
+    val value = when (unitSystem) {
+        UnitSystem.METRIC -> distance / 1000.0
+        UnitSystem.IMPERIAL -> distance / MilesToMeters
+    }
+    return value.toInputText(maxFractionDigits = 2)
+}
+
+private fun routeElevationInputText(routeImport: RouteFileImport, unitSystem: UnitSystem): String {
+    val elevation = routeImport.elevationGainedMeters.takeIf { it > 0.0 } ?: return ""
+    val value = when (unitSystem) {
+        UnitSystem.METRIC -> elevation
+        UnitSystem.IMPERIAL -> elevation / FeetToMeters
+    }
+    return value.toInputText(maxFractionDigits = 1)
+}
+
+private fun List<ExerciseRoutePoint>.withActivityTimeRange(
+    start: java.time.Instant,
+    end: java.time.Instant,
+): List<ExerciseRoutePoint> {
+    if (isEmpty()) return emptyList()
+    val totalMillis = Duration.between(start, end)
+        .toMillis()
+        .coerceAtLeast(size.toLong())
+    val lastOffset = (totalMillis - 1).coerceAtLeast(0L)
+    return mapIndexed { index, point ->
+        val offset = if (size == 1) {
+            0L
+        } else {
+            lastOffset * index / (size - 1)
+        }
+        point.copy(time = start.plusMillis(offset))
+    }
+}
+
+private fun Double.toInputText(maxFractionDigits: Int): String =
+    "%.${maxFractionDigits}f"
+        .format(Locale.US, this)
+        .trimEnd('0')
+        .trimEnd('.')
+
+private fun String.toPositiveDoubleOrNull(): Double? =
+    trim()
+        .replace(',', '.')
+        .toDoubleOrNull()
+        ?.takeIf { it > 0.0 }
+
+private val TimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")

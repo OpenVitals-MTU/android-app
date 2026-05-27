@@ -14,6 +14,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
@@ -30,6 +31,7 @@ class ManualEntryViewModelTest {
     @Test fun `manual entry uses default widget order when preferences are empty`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -42,6 +44,7 @@ class ManualEntryViewModelTest {
     @Test fun `manual entry widget order loads from preferences`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -56,6 +59,7 @@ class ManualEntryViewModelTest {
     @Test fun `manual entry widget edit toggles`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -71,6 +75,7 @@ class ManualEntryViewModelTest {
         val preferencesRepository = prefs()
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -88,6 +93,7 @@ class ManualEntryViewModelTest {
         val preferencesRepository = prefs(storedWidgetOrder = emptyList())
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -103,6 +109,7 @@ class ManualEntryViewModelTest {
     @Test fun `hydration tap opens entry when write permission is granted`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = true),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -118,6 +125,7 @@ class ManualEntryViewModelTest {
     @Test fun `hydration tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -133,6 +141,7 @@ class ManualEntryViewModelTest {
     @Test fun `hydration tap skips prompt when write permission was already acknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -149,6 +158,7 @@ class ManualEntryViewModelTest {
         val preferencesRepository = prefs()
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -163,10 +173,44 @@ class ManualEntryViewModelTest {
         verify { preferencesRepository.acknowledgePermissions(setOf(WriteHydrationPermission)) }
     }
 
+    @Test fun `activity tap opens entry when write permission is granted`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(canWrite = true),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
+            preferencesRepository = prefs(),
+        )
+
+        vm.onActivityWidgetTapped()
+
+        assertFalse(vm.uiState.value.showActivityWritePermissionPrompt)
+        assertTrue(vm.uiState.value.pendingActivityEntryNavigation)
+    }
+
+    @Test fun `activity tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(canWrite = false),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(),
+            preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
+        )
+
+        vm.onActivityWidgetTapped()
+
+        assertTrue(vm.uiState.value.showActivityWritePermissionPrompt)
+        assertEquals(ActivityWritePermissions, vm.uiState.value.activityWritePermissions)
+        assertFalse(vm.uiState.value.pendingActivityEntryNavigation)
+    }
+
     @Test fun `granting from prompt acknowledges write permission before request`() = runTest {
         val preferencesRepository = prefs()
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(canWrite = false),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -183,6 +227,7 @@ class ManualEntryViewModelTest {
     @Test fun `body measurement tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(canWrite = false),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -199,6 +244,7 @@ class ManualEntryViewModelTest {
     @Test fun `body measurement tap opens entry when write permission was acknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(canWrite = false),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(),
@@ -214,6 +260,7 @@ class ManualEntryViewModelTest {
     @Test fun `vitals measurement tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(canWrite = false),
             mindfulnessRepository = mindfulnessRepo(),
@@ -230,6 +277,7 @@ class ManualEntryViewModelTest {
     @Test fun `vitals measurement tap opens entry when write permission was acknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(canWrite = false),
             mindfulnessRepository = mindfulnessRepo(),
@@ -245,6 +293,7 @@ class ManualEntryViewModelTest {
     @Test fun `mindfulness tap opens entry when write permission is granted`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = true),
@@ -260,6 +309,7 @@ class ManualEntryViewModelTest {
     @Test fun `mindfulness tap shows one time write permission prompt when missing and unacknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = false),
@@ -275,6 +325,7 @@ class ManualEntryViewModelTest {
     @Test fun `mindfulness tap opens entry when write permission was acknowledged`() = runTest {
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = false),
@@ -291,6 +342,7 @@ class ManualEntryViewModelTest {
         val preferencesRepository = prefs()
         val vm = ManualEntryViewModel(
             hydrationRepository = hydrationRepo(),
+            activityRepository = activityRepo(),
             bodyRepository = bodyRepo(),
             vitalsRepository = vitalsRepo(),
             mindfulnessRepository = mindfulnessRepo(canWrite = false),
@@ -324,6 +376,14 @@ class ManualEntryViewModelTest {
             coEvery { repo.hasHydrationWritePermission() } returns canWrite
         }
 
+    private fun activityRepo(
+        canWrite: Boolean = false,
+    ): ActivityRepository =
+        mockk<ActivityRepository>().also { repo ->
+            every { repo.activityWritePermissions() } returns ActivityWritePermissions
+            coEvery { repo.hasActivityWritePermission() } returns canWrite
+        }
+
     private fun bodyRepo(
         canWrite: Boolean = false,
     ): BodyRepository =
@@ -353,5 +413,13 @@ class ManualEntryViewModelTest {
         private const val WriteMindfulnessPermission = "write_mindfulness"
         private const val WriteWeightPermission = "write_weight"
         private const val WriteBloodPressurePermission = "write_blood_pressure"
+        private val ActivityWritePermissions = setOf(
+            "write_activity",
+            "write_route",
+            "write_distance",
+            "write_elevation",
+            "write_active_calories",
+            "write_total_calories",
+        )
     }
 }

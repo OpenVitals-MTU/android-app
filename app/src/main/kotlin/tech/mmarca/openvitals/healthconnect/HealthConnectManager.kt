@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
+import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
@@ -87,6 +88,7 @@ class HealthConnectManager @Inject constructor(
 
     val corePermissions: Set<String> get() = permissionService.corePermissions
     val routePermissions: Set<String> get() = permissionService.routePermissions
+    val activityWritePermissions: Set<String> get() = permissionService.activityWritePermissions
     val heartPermissions: Set<String> get() = permissionService.heartPermissions
     val bodyPermissions: Set<String> get() = permissionService.bodyPermissions
     val bodyWritePermissions: Set<String> get() = permissionService.bodyWritePermissions
@@ -225,6 +227,9 @@ class HealthConnectManager @Inject constructor(
             includeFloors = includeFloors,
             includeElevation = includeElevation,
         )
+
+    suspend fun writeActivityEntry(request: ActivityWriteRequest): String =
+        activityReader.writeActivityEntry(request)
 
     suspend fun readSleepSession(date: LocalDate): SleepData? =
         sleepReader.readSleepSession(date)
