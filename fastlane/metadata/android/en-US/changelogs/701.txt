@@ -1,0 +1,3 @@
+- Edit OpenVitals-created hydration, activity, mindfulness, body, and vitals entries.
+- Entries from other apps stay read-only.
+- Added ownership checks before Health Connect updates.

@@ -9,7 +9,7 @@ Que puedes hacer
 * Revisar pasos, distancia, calorias, pisos, elevacion y entrenamientos
 * Revisar sesiones de sueno, duracion y fases del sueno
 * Revisar frecuencia cardiaca, frecuencia en reposo, HRV, presion arterial, SpO2, frecuencia respiratoria, temperatura corporal, VO2 max, metricas corporales, hidratacion, nutricion y mindfulness cuando esten disponibles
-* Anadir hidratacion, medidas corporales, signos vitales, mindfulness y actividades directamente en Health Connect
+* Anadir y editar entradas creadas por OpenVitals de hidratacion, medidas corporales, signos vitales, mindfulness y actividades directamente en Health Connect
 * Importar rutas GPX, KML y KMZ, previsualizarlas y guardar entrenamientos con ruta
 * Grabar actividades GPS con pausa, reanudacion, finalizacion, descarte, previsualizacion de ruta, distancia, elevacion, tiempo en movimiento y notificacion persistente
 * Estimar calorias activas y totales en actividades importadas o grabadas antes de guardar

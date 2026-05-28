@@ -9,7 +9,7 @@ What you can do
 * Review steps, distance, calories, floors, elevation, and workout sessions
 * Review sleep sessions, duration, and sleep stages
 * Review heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, VO2 max, body metrics, hydration, nutrition, and mindfulness data when available
-* Add hydration, body measurements, vitals, mindfulness, and activity entries directly to Health Connect
+* Add and edit OpenVitals-created hydration, body measurement, vitals, mindfulness, and activity entries directly in Health Connect
 * Import GPX, KML, and KMZ activity routes, preview them, and save route-backed workouts
 * Record GPS activities with pause, resume, finish, discard, route preview, distance, elevation, moving time, and a persistent recording notification
 * Estimate active and total calories for imported and recorded activities before saving

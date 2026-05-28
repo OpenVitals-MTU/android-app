@@ -1,0 +1,3 @@
+- Bearbeite von OpenVitals erstellte Einträge für Flüssigkeit, Aktivitäten, Achtsamkeit, Körpermessungen und Vitalwerte.
+- Einträge anderer Apps bleiben schreibgeschützt.
+- Herkunftsprüfungen schützen Aktualisierungen in Health Connect.

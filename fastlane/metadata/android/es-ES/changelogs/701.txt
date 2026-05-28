@@ -1,0 +1,3 @@
+- Edita entradas creadas por OpenVitals: hidratación, actividad, mindfulness, cuerpo y signos vitales.
+- Las entradas de otras apps siguen siendo de solo lectura.
+- Se añadieron comprobaciones de origen antes de actualizar Health Connect.
