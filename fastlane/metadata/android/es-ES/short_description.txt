@@ -1,1 +1,1 @@
-Panel privado de Health Connect con entradas manuales.
+Panel privado de Health Connect con registro manual

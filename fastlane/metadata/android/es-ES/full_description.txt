@@ -1,13 +1,29 @@
-OpenVitals es una app Android privada para consultar tus datos de Health Connect y anadir metricas manuales compatibles de vuelta en Health Connect. No requiere cuenta, no sincroniza datos en la nube, no tiene anuncios y no incluye analiticas.
+OpenVitals es un panel privado para Health Connect en Android. Te ayuda a revisar actividad, sueno, corazon, cuerpo, hidratacion, nutricion, mindfulness, signos vitales, registros y datos de ciclo opcionales en una app local-first.
 
-Funciones:
+Tus datos de salud se quedan en tu dispositivo. OpenVitals no requiere cuenta, no sincroniza datos en la nube, no tiene anuncios, no incluye analiticas y no solicita permiso de internet. El panel lee Health Connect solo despues de que concedas permisos. Las entradas manuales se escriben en Health Connect solo cuando las guardas explicitamente.
 
-* Panel diario con tarjetas de actividad, recuperacion, ingesta, cuerpo, corazon, signos vitales, mindfulness, registros y datos de ciclo opcionales
-* Navegacion adaptativa Material 3 con Anadir entrada como accion contextual
-* Entradas para hidratacion, actividades con importacion GPX/KML/KMZ o grabacion GPS, medidas corporales, signos vitales y sesiones de mindfulness
-* Pantallas por periodo con navegacion Dia / Semana / Mes / Ano
-* Flujo de onboarding de Health Connect con comprobaciones de disponibilidad y permisos de lectura por categoria
-* Permisos de escritura solo cuando anades una entrada manual compatible
-* Tirar para actualizar, selector de rango, navegacion por periodo y seleccion de fecha en calendario
-* Temporizador de mindfulness con previsualizacion de campanas y sonidos de fondo opcionales en bucle
-* Funciona sin conexion a internet
+Que puedes hacer
+
+* Ver un panel diario de Health Connect con tarjetas de salud y fitness agrupadas
+* Explorar pantallas por periodo con vistas Dia, Semana, Mes y Ano
+* Revisar pasos, distancia, calorias, pisos, elevacion y entrenamientos
+* Revisar sesiones de sueno, duracion y fases del sueno
+* Revisar frecuencia cardiaca, frecuencia en reposo, HRV, presion arterial, SpO2, frecuencia respiratoria, temperatura corporal, VO2 max, metricas corporales, hidratacion, nutricion y mindfulness cuando esten disponibles
+* Anadir hidratacion, medidas corporales, signos vitales, mindfulness y actividades directamente en Health Connect
+* Importar rutas GPX, KML y KMZ, previsualizarlas y guardar entrenamientos con ruta
+* Grabar actividades GPS con pausa, reanudacion, finalizacion, descarte, previsualizacion de ruta, distancia, elevacion, tiempo en movimiento y notificacion persistente
+* Estimar calorias activas y totales en actividades importadas o grabadas antes de guardar
+* Elegir unidades metricas o imperiales
+* Activar datos sensibles de ciclo solo cuando quieras
+
+Por que OpenVitals
+
+* Privada por diseno: sin cuenta, sin nube, sin anuncios y sin analiticas
+* Panel primero: la pantalla principal es de solo lectura salvo que elijas anadir una entrada
+* Health Connect como fuente de verdad: OpenVitals no mantiene otra base de datos de salud
+* Permisos claros: las categorias de datos se piden por separado y se pueden cambiar despues
+* Codigo abierto: el codigo, las notas de version y las compilaciones estan disponibles para revision
+
+Requisitos
+
+OpenVitals requiere Health Connect. En Android 14 o superior, Health Connect forma parte de Android. En Android 13 o anterior, instala la app Health Connect por separado.

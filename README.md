@@ -2,13 +2,46 @@
     <img width="160" alt="OpenVitals logo" src="docs/images/readme-logo.png">
 </p>
 
-# OpenVitals: a privacy-first Health Connect dashboard and manual entry app
+# OpenVitals
 
-OpenVitals is an Android app for exploring your Health Connect data on-device and adding supported manual metrics back into Health Connect.
+Privacy-first Health Connect dashboard, activity tracker, and manual entry app for Android.
 
-It is built around a simple idea: your health data should stay yours. The app is local-first, dashboard-first for viewing data, and explicit about writes: supported manual entries are saved to Health Connect, not to an OpenVitals health-record database.
+OpenVitals helps you review Health Connect data, record or import workouts, and add supported manual entries without creating an account or sending health data to an OpenVitals server. The dashboard is read-only by default; writes happen only when you explicitly save an entry back to Health Connect.
 
-OpenVitals is still in an early stage, but the core product direction is already in place: a daily dashboard, contextual manual-entry actions, period-based detail screens, feature-first architecture, categorized Health Connect permissions, and local display preferences for units.
+## Install
+
+| Channel | Link | Best for |
+| --- | --- | --- |
+| Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) | Most Android users |
+| Codeberg releases | [Download signed APKs](https://codeberg.org/mmarca-tech/OpenVitals/releases) | Users who prefer direct releases |
+| Source | [Codeberg](https://codeberg.org/mmarca-tech/OpenVitals) / [GitHub mirror](https://github.com/mmarca-tech/OpenVitals) | Review, build, and contribute |
+
+## Why OpenVitals
+
+- No account, no ads, no analytics SDKs, no cloud health-data sync
+- No app-level `INTERNET` permission in the current manifest
+- Health Connect remains the source of truth
+- Manual entries are written only after an explicit save action
+- Sensitive cycle data is opt-in and disabled by default
+- Open source under AGPL-3.0-or-later
+
+## Highlights
+
+- Daily dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, records, and optional cycle data
+- Period detail screens with `Day / Week / Month / Year` navigation
+- Health Connect permission onboarding with clear data categories
+- Manual logging for hydration, body measurements, vitals, mindfulness, and activities
+- GPX/KML/KMZ route import and GPS activity recording with review before saving
+- Metric and imperial unit support
+
+## Help Improve It
+
+OpenVitals is still early. Useful feedback is specific: device model, Android version, Health Connect provider version, which permissions were granted, and what screen or workflow failed.
+
+- Try the latest beta from Google Play or Codeberg releases
+- Report bugs and feature requests on [Codeberg issues](https://codeberg.org/mmarca-tech/OpenVitals/issues)
+- Star or follow the project on [Codeberg](https://codeberg.org/mmarca-tech/OpenVitals) or the [GitHub mirror](https://github.com/mmarca-tech/OpenVitals)
+- Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
 
 ## Screenshots
 
