@@ -12,9 +12,9 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 
 | Channel | Link | Best for |
 | --- | --- | --- |
-| Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) | Most Android users |
-| Codeberg releases | [Download signed APKs](https://codeberg.org/mmarca-tech/OpenVitals/releases) | Users who prefer direct releases |
-| Source | [Codeberg](https://codeberg.org/mmarca-tech/OpenVitals) / [GitHub mirror](https://github.com/mmarca-tech/OpenVitals) | Review, build, and contribute |
+| Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) |  |
+| Codeberg releases | [Download signed APKs](https://codeberg.org/mmarca-tech/OpenVitals/releases) ||
+| Source | [Codeberg](https://codeberg.org/mmarca-tech/OpenVitals) / [GitHub mirror](https://github.com/mmarca-tech/OpenVitals) | |
 
 ## Why OpenVitals
 
