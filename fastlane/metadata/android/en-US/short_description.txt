@@ -1,1 +1,1 @@
-Private Health Connect dashboard, tracker, and manual entry app
+Private Health Connect dashboard and manual entry app

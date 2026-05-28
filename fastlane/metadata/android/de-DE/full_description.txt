@@ -19,7 +19,7 @@ Was du tun kannst
 Warum OpenVitals
 
 * Privat by design: kein Konto, keine Cloud, keine Werbung und keine Analysen
-* Dashboard zuerst: der Startbildschirm ist schreibgeschützt, bis du selbst einen Eintrag hinzufügst
+* Fokus auf das Dashboard: der Startbildschirm ist schreibgeschützt, bis du selbst einen Eintrag hinzufügst
 * Health Connect als Quelle der Wahrheit: OpenVitals führt keine separate Gesundheitsdatenbank
 * Berechtigungen mit klarer Kontrolle: Datenkategorien werden transparent angefragt und können später geändert werden
 * Open Source: Code, Versionshinweise und Builds sind zur Prüfung verfügbar
