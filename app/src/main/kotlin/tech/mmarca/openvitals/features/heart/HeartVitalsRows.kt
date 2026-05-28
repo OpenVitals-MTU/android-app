@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -102,6 +105,8 @@ internal fun <T> SimpleVitalsList(
     time: (T) -> Instant,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    editable: (T) -> Boolean = { false },
+    onEdit: ((T) -> Unit)? = null,
 ) {
     val sortedEntries = entries.sortedByDescending(time)
     var visibleCount by remember(sortedEntries) {
@@ -125,6 +130,9 @@ internal fun <T> SimpleVitalsList(
                     source = source(entry),
                     time = time(entry).atZone(ZoneId.systemDefault()),
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEdit = onEdit
+                        ?.takeIf { editable(entry) }
+                        ?.let { edit -> { edit(entry) } },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 )
             }
@@ -150,6 +158,7 @@ internal fun VitalsReadingRow(
     source: String,
     time: ZonedDateTime,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -166,6 +175,16 @@ internal fun VitalsReadingRow(
         }
         Spacer(Modifier.width(12.dp))
         SourceChip(source = source)
+        if (onEdit != null) {
+            Spacer(Modifier.width(4.dp))
+            IconButton(onClick = onEdit) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = stringResource(R.string.cd_edit_entry),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

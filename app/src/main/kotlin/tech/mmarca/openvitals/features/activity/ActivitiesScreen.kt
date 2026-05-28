@@ -13,11 +13,13 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,6 +81,7 @@ fun ActivitiesScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivity: (String) -> Unit,
+    onEditActivity: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
@@ -119,6 +122,7 @@ fun ActivitiesScreen(
                             unitFormatter = unitFormatter,
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             onClick = { onOpenActivity(workout.id) },
+                            onEdit = workout.editAction(onEditActivity),
                             modifier = rowModifier,
                         )
                     }
@@ -163,6 +167,7 @@ fun ActivitiesScreen(
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onClick = { onOpenActivity(workout.id) },
+                        onEdit = workout.editAction(onEditActivity),
                         modifier = rowModifier,
                     )
                 }
@@ -435,6 +440,7 @@ private fun WorkoutListItem(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onClick: () -> Unit,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -486,6 +492,16 @@ private fun WorkoutListItem(
                 SourceChip(source = workout.source)
             }
             Spacer(Modifier.width(8.dp))
+            if (onEdit != null) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.cd_edit_entry),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+            }
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
@@ -494,3 +510,10 @@ private fun WorkoutListItem(
         }
     }
 }
+
+private fun ExerciseData.editAction(onEditActivity: (String) -> Unit): (() -> Unit)? =
+    if (isOpenVitalsEntry && id.isNotBlank()) {
+        { onEditActivity(id) }
+    } else {
+        null
+    }

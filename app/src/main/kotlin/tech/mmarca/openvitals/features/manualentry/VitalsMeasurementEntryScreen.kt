@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -56,6 +57,7 @@ fun VitalsMeasurementEntryScreen(
     type: VitalsMeasurementType,
     viewModel: VitalsMeasurementEntryViewModel,
     unitFormatter: UnitFormatter,
+    onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestWritePermissions = rememberLauncherForActivityResult(
@@ -64,8 +66,14 @@ fun VitalsMeasurementEntryScreen(
         viewModel.refreshPermission()
     }
 
-    LaunchedEffect(type) {
-        viewModel.setType(type)
+    LaunchedEffect(type, unitFormatter.unitSystem()) {
+        viewModel.setType(type, unitFormatter.unitSystem())
+    }
+    LaunchedEffect(state.saveCompleted) {
+        if (state.saveCompleted) {
+            viewModel.onSaveCompletedHandled()
+            onEntrySaved()
+        }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshPermission()
@@ -197,12 +205,16 @@ private fun VitalsMeasurementEntryCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.vitals_entry_add_selected, title),
+                    text = if (state.isEditMode) {
+                        stringResource(R.string.action_save)
+                    } else {
+                        stringResource(R.string.vitals_entry_add_selected, title)
+                    },
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

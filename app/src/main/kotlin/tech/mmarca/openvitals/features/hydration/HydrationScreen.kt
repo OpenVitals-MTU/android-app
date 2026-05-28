@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Remove
@@ -74,6 +75,7 @@ fun HydrationScreen(
     viewModel: HydrationViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
@@ -130,6 +132,7 @@ fun HydrationScreen(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     titleDate = selectedDate,
+                    onEditHydrationEntry = onEditHydrationEntry,
                 )
             }
             item {
@@ -166,6 +169,7 @@ fun HydrationScreen(
                 entries = state.hydrationEntries,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEditHydrationEntry = onEditHydrationEntry,
             )
         }
     }
@@ -453,6 +457,7 @@ private fun LazyListScope.hydrationEntries(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     titleDate: LocalDate? = null,
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     val sortedEntries = entries.sortedByDescending { it.startTime }
     item {
@@ -464,6 +469,11 @@ private fun LazyListScope.hydrationEntries(
                 entry = entry,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
+                    { onEditHydrationEntry(entry.id) }
+                } else {
+                    null
+                },
                 modifier = rowModifier,
             )
         }
@@ -475,6 +485,7 @@ private fun HydrationEntryRow(
     entry: HydrationEntry,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -507,6 +518,15 @@ private fun HydrationEntryRow(
                 style = MaterialTheme.typography.titleMedium,
                 color = HydrationColor,
             )
+            if (onEdit != null) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.cd_edit_entry),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

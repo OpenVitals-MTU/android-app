@@ -73,6 +73,24 @@ class HydrationRepository @Inject constructor(
         }
         return hc.writeHydrationEntry(request)
     }
+
+    suspend fun loadHydrationEntry(id: String): HydrationEntry? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readHydrationPermission !in granted) {
+            Log.w(TAG, "Skipping loadHydrationEntry id=$id missing=$readHydrationPermission")
+            return null
+        }
+        return hc.readHydrationEntry(id)
+    }
+
+    suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) {
+        val granted = grantedPermissionsIfAvailable()
+        if (writeHydrationPermission !in granted) {
+            Log.w(TAG, "Skipping updateHydrationEntry id=$id missing=$writeHydrationPermission")
+            throw SecurityException("Missing Health Connect hydration write permission.")
+        }
+        hc.updateHydrationEntry(id, request)
+    }
 }
 
 data class HydrationPeriodData(

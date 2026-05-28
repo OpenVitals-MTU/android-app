@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.data.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -151,6 +152,30 @@ class VitalsRepository @Inject constructor(
             throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
         }
         return hc.writeVitalsMeasurementEntry(request)
+    }
+
+    suspend fun loadVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? {
+        val readPermission = when (type) {
+            VitalsMeasurementType.BLOOD_PRESSURE -> readBloodPressurePermission
+            VitalsMeasurementType.SPO2 -> readSpO2Permission
+            VitalsMeasurementType.RESPIRATORY_RATE -> readRespiratoryRatePermission
+            VitalsMeasurementType.BODY_TEMPERATURE -> readBodyTemperaturePermission
+        }
+        val granted = grantedPermissionsIfAvailable()
+        if (readPermission !in granted) {
+            Log.w(TAG, "Skipping loadVitalsMeasurementEntry type=$type id=$id missing=$readPermission")
+            return null
+        }
+        return hc.readVitalsMeasurementEntry(type, id)
+    }
+
+    suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) {
+        val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} id=$id missing=$missingPermissions")
+            throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
+        }
+        hc.updateVitalsMeasurementEntry(id, request)
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()

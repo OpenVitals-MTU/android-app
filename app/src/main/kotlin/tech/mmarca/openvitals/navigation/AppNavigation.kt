@@ -120,12 +120,18 @@ fun AppNavigation(
     } else {
         null
     }
-    val currentBodyMeasurementType = if (currentRoute == Screen.BodyMeasurementEntry.route) {
+    val currentBodyMeasurementType = if (
+        currentRoute == Screen.BodyMeasurementEntry.route ||
+        currentRoute == Screen.BodyMeasurementEntryEdit.route
+    ) {
         navBackStackEntry?.arguments?.getString(BODY_MEASUREMENT_TYPE_ARG)?.toBodyMeasurementTypeOrNull()
     } else {
         null
     }
-    val currentVitalsMeasurementType = if (currentRoute == Screen.VitalsMeasurementEntry.route) {
+    val currentVitalsMeasurementType = if (
+        currentRoute == Screen.VitalsMeasurementEntry.route ||
+        currentRoute == Screen.VitalsMeasurementEntryEdit.route
+    ) {
         navBackStackEntry?.arguments?.getString(VITALS_MEASUREMENT_TYPE_ARG)?.toVitalsMeasurementTypeOrNull()
     } else {
         null
@@ -159,10 +165,15 @@ fun AppNavigation(
         setOf(
             Screen.ManualEntry.route,
             Screen.HydrationEntry.route,
+            Screen.HydrationEntryEdit.route,
             Screen.ActivityEntry.route,
+            Screen.ActivityEntryEdit.route,
             Screen.MindfulnessEntry.route,
+            Screen.MindfulnessEntryEdit.route,
             Screen.BodyMeasurementEntry.route,
+            Screen.BodyMeasurementEntryEdit.route,
             Screen.VitalsMeasurementEntry.route,
+            Screen.VitalsMeasurementEntryEdit.route,
         )
     }
 
@@ -185,12 +196,17 @@ fun AppNavigation(
         Screen.Dashboard.route -> stringResource(R.string.screen_dashboard)
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
+        Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
         Screen.ActivityEntry.route -> stringResource(R.string.screen_activity_entry)
+        Screen.ActivityEntryEdit.route -> stringResource(R.string.screen_activity_entry)
         Screen.MindfulnessEntry.route -> stringResource(R.string.screen_mindfulness_entry)
-        Screen.BodyMeasurementEntry.route -> currentBodyMeasurementType
+        Screen.MindfulnessEntryEdit.route -> stringResource(R.string.screen_mindfulness_entry)
+        Screen.BodyMeasurementEntry.route,
+        Screen.BodyMeasurementEntryEdit.route -> currentBodyMeasurementType
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_body_measurement_entry)
-        Screen.VitalsMeasurementEntry.route -> currentVitalsMeasurementType
+        Screen.VitalsMeasurementEntry.route,
+        Screen.VitalsMeasurementEntryEdit.route -> currentVitalsMeasurementType
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_vitals_measurement_entry)
         Screen.Steps.route -> stringResource(R.string.screen_steps)
@@ -323,6 +339,18 @@ fun AppNavigation(
                 )
             }
 
+            composable(
+                route = Screen.HydrationEntryEdit.route,
+                arguments = listOf(navArgument(HYDRATION_ENTRY_ID_ARG) { type = NavType.StringType }),
+            ) {
+                val hydrationViewModel = hiltViewModel<HydrationEntryViewModel>()
+                HydrationEntryScreen(
+                    viewModel = hydrationViewModel,
+                    unitFormatter = unitFormatter,
+                    onEntrySaved = { navController.popBackStack() },
+                )
+            }
+
             composable(Screen.ActivityEntry.route) {
                 val activityEntryViewModel = hiltViewModel<ActivityEntryViewModel>()
                 ActivityEntryScreen(
@@ -331,9 +359,32 @@ fun AppNavigation(
                 )
             }
 
+            composable(
+                route = Screen.ActivityEntryEdit.route,
+                arguments = listOf(navArgument(ACTIVITY_ENTRY_ID_ARG) { type = NavType.StringType }),
+            ) {
+                val activityEntryViewModel = hiltViewModel<ActivityEntryViewModel>()
+                ActivityEntryScreen(
+                    viewModel = activityEntryViewModel,
+                    unitFormatter = unitFormatter,
+                    onEntrySaved = { navController.popBackStack() },
+                )
+            }
+
             composable(Screen.MindfulnessEntry.route) {
                 val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
                 MindfulnessEntryScreen(viewModel = mindfulnessEntryViewModel)
+            }
+
+            composable(
+                route = Screen.MindfulnessEntryEdit.route,
+                arguments = listOf(navArgument(MINDFULNESS_ENTRY_ID_ARG) { type = NavType.StringType }),
+            ) {
+                val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
+                MindfulnessEntryScreen(
+                    viewModel = mindfulnessEntryViewModel,
+                    onEntrySaved = { navController.popBackStack() },
+                )
             }
 
             composable(
@@ -349,6 +400,26 @@ fun AppNavigation(
                     type = type,
                     viewModel = bodyMeasurementViewModel,
                     unitFormatter = unitFormatter,
+                )
+            }
+
+            composable(
+                route = Screen.BodyMeasurementEntryEdit.route,
+                arguments = listOf(
+                    navArgument(BODY_MEASUREMENT_TYPE_ARG) { type = NavType.StringType },
+                    navArgument(BODY_ENTRY_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments
+                    ?.getString(BODY_MEASUREMENT_TYPE_ARG)
+                    ?.toBodyMeasurementTypeOrNull()
+                    ?: BodyMeasurementType.WEIGHT
+                val bodyMeasurementViewModel = hiltViewModel<BodyMeasurementEntryViewModel>()
+                BodyMeasurementEntryScreen(
+                    type = type,
+                    viewModel = bodyMeasurementViewModel,
+                    unitFormatter = unitFormatter,
+                    onEntrySaved = { navController.popBackStack() },
                 )
             }
 
@@ -369,6 +440,26 @@ fun AppNavigation(
             }
 
             composable(
+                route = Screen.VitalsMeasurementEntryEdit.route,
+                arguments = listOf(
+                    navArgument(VITALS_MEASUREMENT_TYPE_ARG) { type = NavType.StringType },
+                    navArgument(VITALS_ENTRY_ID_ARG) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val type = backStackEntry.arguments
+                    ?.getString(VITALS_MEASUREMENT_TYPE_ARG)
+                    ?.toVitalsMeasurementTypeOrNull()
+                    ?: VitalsMeasurementType.BLOOD_PRESSURE
+                val vitalsMeasurementViewModel = hiltViewModel<VitalsMeasurementEntryViewModel>()
+                VitalsMeasurementEntryScreen(
+                    type = type,
+                    viewModel = vitalsMeasurementViewModel,
+                    unitFormatter = unitFormatter,
+                    onEntrySaved = { navController.popBackStack() },
+                )
+            }
+
+            composable(
                 route = Screen.Metric.route,
                 arguments = listOf(navArgument(METRIC_ID_ARG) { type = NavType.StringType }),
             ) { backStackEntry ->
@@ -382,8 +473,23 @@ fun AppNavigation(
                     onOpenActivity = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
                     },
+                    onEditActivity = { activityId ->
+                        navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
                     onOpenSleepSession = { sleepId ->
                         navController.navigate(Screen.SleepDetail.createRoute(sleepId))
+                    },
+                    onEditHydrationEntry = { entryId ->
+                        navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
+                    },
+                    onEditMindfulnessSession = { entryId ->
+                        navController.navigate(Screen.MindfulnessEntryEdit.createRoute(entryId))
+                    },
+                    onEditBodyMeasurement = { type, entryId ->
+                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
+                    },
+                    onEditVitalsMeasurement = { type, entryId ->
+                        navController.navigate(Screen.VitalsMeasurementEntryEdit.createRoute(type.name, entryId))
                     },
                 )
             }
@@ -406,6 +512,9 @@ fun AppNavigation(
                     onOpenActivity = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
                     },
+                    onEditActivity = { activityId ->
+                        navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
                 )
             }
 
@@ -418,6 +527,9 @@ fun AppNavigation(
                     viewModel = activityDetailViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditActivity = { activityId ->
+                        navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
                 )
             }
 
@@ -460,6 +572,9 @@ fun AppNavigation(
                     viewModel = bodyViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditBodyMeasurement = { type, entryId ->
+                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
+                    },
                 )
             }
 
@@ -469,6 +584,9 @@ fun AppNavigation(
                     viewModel = hydrationViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditHydrationEntry = { entryId ->
+                        navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
+                    },
                 )
             }
 
@@ -487,6 +605,9 @@ fun AppNavigation(
                     viewModel = mindfulnessViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditMindfulnessSession = { entryId ->
+                        navController.navigate(Screen.MindfulnessEntryEdit.createRoute(entryId))
+                    },
                 )
             }
 
@@ -510,6 +631,12 @@ fun AppNavigation(
                     },
                     onOpenSleepSession = { sleepId ->
                         navController.navigate(Screen.SleepDetail.createRoute(sleepId))
+                    },
+                    onEditActivity = { activityId ->
+                        navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
+                    onEditBodyMeasurement = { type, entryId ->
+                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
                     },
                 )
             }
@@ -571,7 +698,12 @@ private fun MetricRouteContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivity: (String) -> Unit,
+    onEditActivity: (String) -> Unit,
     onOpenSleepSession: (String) -> Unit,
+    onEditHydrationEntry: (String) -> Unit,
+    onEditMindfulnessSession: (String) -> Unit,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     metricId?.toActivityMetricOrNull()?.let { activityMetric ->
         val activityViewModel = hiltViewModel<ActivityViewModel>()
@@ -591,6 +723,7 @@ private fun MetricRouteContent(
             viewModel = heartViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEditVitalsMeasurement = onEditVitalsMeasurement,
         )
         return
     }
@@ -602,6 +735,7 @@ private fun MetricRouteContent(
             viewModel = bodyViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEditBodyMeasurement = onEditBodyMeasurement,
         )
         return
     }
@@ -625,6 +759,7 @@ private fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenActivity = onOpenActivity,
+                onEditActivity = onEditActivity,
             )
         }
         DashboardWidgetId.SLEEP -> {
@@ -642,6 +777,7 @@ private fun MetricRouteContent(
                 viewModel = hydrationViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEditHydrationEntry = onEditHydrationEntry,
             )
         }
         DashboardWidgetId.MINDFULNESS -> {
@@ -650,6 +786,7 @@ private fun MetricRouteContent(
                 viewModel = mindfulnessViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEditMindfulnessSession = onEditMindfulnessSession,
             )
         }
         DashboardWidgetId.CYCLE -> {
@@ -692,16 +829,32 @@ private fun HeartMetricRouteScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     when (metric) {
         HeartMetric.AVERAGE_HEART_RATE -> AverageHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         HeartMetric.RESTING_HEART_RATE -> RestingHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.BLOOD_PRESSURE -> BloodPressureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.SPO2 -> SpO2Screen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.BLOOD_PRESSURE -> BloodPressureScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditVitalsMeasurement,
+        )
+        HeartMetric.SPO2 -> SpO2Screen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditVitalsMeasurement)
         HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.BODY_TEMPERATURE -> BodyTemperatureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditVitalsMeasurement,
+        )
+        HeartMetric.BODY_TEMPERATURE -> BodyTemperatureScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditVitalsMeasurement,
+        )
     }
 }
 
@@ -711,12 +864,13 @@ private fun BodyMetricRouteScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ) {
     when (metric) {
-        BodyMetric.WEIGHT -> WeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.HEIGHT -> HeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BMI -> BmiScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BODY_FAT -> BodyFatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.WEIGHT -> WeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
+        BodyMetric.HEIGHT -> HeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
+        BodyMetric.BMI -> BmiScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
+        BodyMetric.BODY_FAT -> BodyFatScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
         BodyMetric.LEAN_MASS -> LeanMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         BodyMetric.BONE_MASS -> BoneMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)

@@ -12,11 +12,14 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,6 +79,7 @@ fun MindfulnessScreen(
     viewModel: MindfulnessViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditMindfulnessSession: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
@@ -137,6 +141,7 @@ fun MindfulnessScreen(
                             session = session,
                             unitFormatter = unitFormatter,
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            onEdit = session.editAction(onEditMindfulnessSession),
                             modifier = rowModifier,
                         )
                     }
@@ -178,6 +183,7 @@ fun MindfulnessScreen(
                         session = session,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onEdit = session.editAction(onEditMindfulnessSession),
                         modifier = rowModifier,
                     )
                 }
@@ -466,6 +472,7 @@ private fun MindfulnessSessionRow(
     session: MindfulnessSession,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -508,6 +515,23 @@ private fun MindfulnessSessionRow(
                 Spacer(Modifier.height(4.dp))
                 SourceChip(source = session.source)
             }
+            if (onEdit != null) {
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.cd_edit_entry),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
+
+private fun MindfulnessSession.editAction(onEditMindfulnessSession: (String) -> Unit): (() -> Unit)? =
+    if (isOpenVitalsEntry && id.isNotBlank()) {
+        { onEditMindfulnessSession(id) }
+    } else {
+        null
+    }

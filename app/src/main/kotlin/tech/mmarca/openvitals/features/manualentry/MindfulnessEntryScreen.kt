@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -72,6 +73,7 @@ import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 @Composable
 fun MindfulnessEntryScreen(
     viewModel: MindfulnessEntryViewModel,
+    onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestWritePermissions = rememberLauncherForActivityResult(
@@ -82,6 +84,12 @@ fun MindfulnessEntryScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshPermission()
+    }
+    LaunchedEffect(state.saveCompleted) {
+        if (state.saveCompleted) {
+            viewModel.onSaveCompletedHandled()
+            onEntrySaved()
+        }
     }
     MindfulnessBellEffect(state.bellEvent)
     MindfulnessBackgroundPreviewEffect(
@@ -94,30 +102,35 @@ fun MindfulnessEntryScreen(
     )
 
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
-        item {
-            MindfulnessTimerCard(
-                state = state,
-                onDurationChanged = viewModel::updateDurationMinutes,
-                onIntervalEnabledChanged = viewModel::updateIntervalEnabled,
-                onIntervalChanged = viewModel::updateIntervalMinutes,
-                onBellSoundChanged = viewModel::updateBellSound,
-                onBackgroundSoundChanged = viewModel::updateBackgroundSound,
-                onStartTimer = viewModel::startTimer,
-                onStopTimer = viewModel::stopTimer,
-                onResumeTimer = viewModel::resumeTimer,
-                onSaveTimerSession = viewModel::saveTimerSession,
-                onDiscardTimer = viewModel::discardTimer,
-                onRequestWritePermission = {
-                    requestWritePermissions.launch(state.writePermissions)
-                },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+        if (!state.isEditMode) {
+            item {
+                MindfulnessTimerCard(
+                    state = state,
+                    onDurationChanged = viewModel::updateDurationMinutes,
+                    onIntervalEnabledChanged = viewModel::updateIntervalEnabled,
+                    onIntervalChanged = viewModel::updateIntervalMinutes,
+                    onBellSoundChanged = viewModel::updateBellSound,
+                    onBackgroundSoundChanged = viewModel::updateBackgroundSound,
+                    onStartTimer = viewModel::startTimer,
+                    onStopTimer = viewModel::stopTimer,
+                    onResumeTimer = viewModel::resumeTimer,
+                    onSaveTimerSession = viewModel::saveTimerSession,
+                    onDiscardTimer = viewModel::discardTimer,
+                    onRequestWritePermission = {
+                        requestWritePermissions.launch(state.writePermissions)
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
         item {
             MindfulnessManualEntryCard(
                 state = state,
                 onMinutesChanged = viewModel::updateManualMinutes,
                 onAddEntry = viewModel::addManualEntry,
+                onRequestWritePermission = {
+                    requestWritePermissions.launch(state.writePermissions)
+                },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -575,6 +588,7 @@ private fun MindfulnessManualEntryCard(
     state: MindfulnessEntryUiState,
     onMinutesChanged: (String) -> Unit,
     onAddEntry: () -> Unit,
+    onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
@@ -590,6 +604,14 @@ private fun MindfulnessManualEntryCard(
                 text = stringResource(R.string.mindfulness_entry_manual_title),
                 style = MaterialTheme.typography.titleSmall,
             )
+            if (!state.canWrite && state.mindfulnessAvailable && !state.isCheckingPermission) {
+                OutlinedButton(
+                    onClick = onRequestWritePermission,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.action_grant))
+                }
+            }
             OutlinedTextField(
                 value = state.manualMinutesText,
                 onValueChange = onMinutesChanged,
@@ -605,13 +627,22 @@ private fun MindfulnessManualEntryCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.mindfulness_entry_add_minutes),
+                    text = stringResource(
+                        if (state.isEditMode) R.string.action_save else R.string.mindfulness_entry_add_minutes
+                    ),
                     modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+            state.entryError?.let { entryError ->
+                Text(
+                    text = mindfulnessEntryErrorText(entryError, state.writeErrorMessage),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }

@@ -11,12 +11,14 @@
     <string name="cd_move_widget_up">Move widget up</string>
     <string name="cd_move_widget_down">Move widget down</string>
     <string name="cd_remove_widget">Remove widget</string>
+    <string name="cd_edit_entry">Edit entry</string>
     <string name="cd_previous_day">Previous day</string>
     <string name="cd_next_day">Next day</string>
     <string name="cd_previous_period">Previous period</string>
     <string name="cd_next_period">Next period</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
+    <string name="action_save">Save</string>
     <string name="action_close">Close</string>
     <string name="action_details">Details</string>
     <string name="action_enable">Enable</string>

@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.healthconnect
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.metadata.Device
@@ -16,6 +17,7 @@ import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.data.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import java.time.Instant
@@ -27,6 +29,7 @@ import kotlinx.coroutines.withContext
 
 internal class VitalsHealthReader(
     private val support: HealthConnectReaderSupport,
+    private val appPackageName: String,
 ) {
     suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
         support.withLogging("readBloodPressureEntries[$start..$end]", emptyList()) {
@@ -41,6 +44,8 @@ internal class VitalsHealthReader(
                     systolicMmHg = record.systolic.inMillimetersOfMercury.toInt(),
                     diastolicMmHg = record.diastolic.inMillimetersOfMercury.toInt(),
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -60,6 +65,8 @@ internal class VitalsHealthReader(
                     systolicMmHg = record.systolic.inMillimetersOfMercury.toInt(),
                     diastolicMmHg = record.diastolic.inMillimetersOfMercury.toInt(),
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -77,6 +84,8 @@ internal class VitalsHealthReader(
                     time = record.time,
                     percent = record.percentage.value,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -95,6 +104,8 @@ internal class VitalsHealthReader(
                     time = record.time,
                     percent = record.percentage.value,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -111,6 +122,8 @@ internal class VitalsHealthReader(
                     time = record.time,
                     breathsPerMinute = record.rate,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -127,6 +140,8 @@ internal class VitalsHealthReader(
                     time = record.time,
                     temperatureCelsius = record.temperature.inCelsius,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -208,6 +223,69 @@ internal class VitalsHealthReader(
         clientRecordId
     }
 
+    suspend fun readVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? =
+        support.withNullableLogging("readVitalsMeasurementEntry[$type][$id]") {
+            when (type) {
+                VitalsMeasurementType.BLOOD_PRESSURE ->
+                    support.client().readRecord(BloodPressureRecord::class, id).record.toVitalsMeasurementEntry()
+                VitalsMeasurementType.SPO2 ->
+                    support.client().readRecord(OxygenSaturationRecord::class, id).record.toVitalsMeasurementEntry()
+                VitalsMeasurementType.RESPIRATORY_RATE ->
+                    support.client().readRecord(RespiratoryRateRecord::class, id).record.toVitalsMeasurementEntry()
+                VitalsMeasurementType.BODY_TEMPERATURE ->
+                    support.client().readRecord(BodyTemperatureRecord::class, id).record.toVitalsMeasurementEntry()
+            }
+        }
+
+    suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) =
+        withContext(Dispatchers.IO) {
+            validateVitalsMeasurement(request)
+
+            val existing: Record = when (request.type) {
+                VitalsMeasurementType.BLOOD_PRESSURE -> support.client().readRecord(BloodPressureRecord::class, id).record
+                VitalsMeasurementType.SPO2 -> support.client().readRecord(OxygenSaturationRecord::class, id).record
+                VitalsMeasurementType.RESPIRATORY_RATE -> support.client().readRecord(RespiratoryRateRecord::class, id).record
+                VitalsMeasurementType.BODY_TEMPERATURE -> support.client().readRecord(BodyTemperatureRecord::class, id).record
+            }
+            existing.requireOpenVitalsOrigin(appPackageName)
+
+            val time = request.time
+            val zone = ZoneId.systemDefault()
+            val metadata = Metadata.manualEntryWithId(
+                id = id,
+                device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
+            )
+            val record = when (request.type) {
+                VitalsMeasurementType.BLOOD_PRESSURE -> BloodPressureRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    metadata = metadata,
+                    systolic = request.value.millimetersOfMercury,
+                    diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
+                )
+                VitalsMeasurementType.SPO2 -> OxygenSaturationRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    percentage = request.value.percent,
+                    metadata = metadata,
+                )
+                VitalsMeasurementType.RESPIRATORY_RATE -> RespiratoryRateRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    rate = request.value,
+                    metadata = metadata,
+                )
+                VitalsMeasurementType.BODY_TEMPERATURE -> BodyTemperatureRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    metadata = metadata,
+                    temperature = request.value.celsius,
+                )
+            }
+
+            support.client().updateRecords(listOf(record))
+        }
+
     private fun validateVitalsMeasurement(request: VitalsMeasurementWriteRequest) {
         when (request.type) {
             VitalsMeasurementType.BLOOD_PRESSURE -> {
@@ -237,6 +315,47 @@ internal class VitalsHealthReader(
             }
         }
     }
+
+    private fun BloodPressureRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
+        VitalsMeasurementEntry(
+            id = metadata.id,
+            type = VitalsMeasurementType.BLOOD_PRESSURE,
+            time = time,
+            value = systolic.inMillimetersOfMercury,
+            secondaryValue = diastolic.inMillimetersOfMercury,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
+
+    private fun OxygenSaturationRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
+        VitalsMeasurementEntry(
+            id = metadata.id,
+            type = VitalsMeasurementType.SPO2,
+            time = time,
+            value = percentage.value,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
+
+    private fun RespiratoryRateRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
+        VitalsMeasurementEntry(
+            id = metadata.id,
+            type = VitalsMeasurementType.RESPIRATORY_RATE,
+            time = time,
+            value = rate,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
+
+    private fun BodyTemperatureRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
+        VitalsMeasurementEntry(
+            id = metadata.id,
+            type = VitalsMeasurementType.BODY_TEMPERATURE,
+            time = time,
+            value = temperature.inCelsius,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
 }
 
 private const val MinSystolicMmHg = 20.0

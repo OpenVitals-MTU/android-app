@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.ui.components.InlineLoading
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
@@ -28,6 +29,8 @@ fun BrowseScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivity: (String) -> Unit,
     onOpenSleepSession: (String) -> Unit,
+    onEditActivity: (String) -> Unit = {},
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -78,6 +81,11 @@ fun BrowseScreen(
                                     unitFormatter = unitFormatter,
                                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                                     onClick = { onOpenActivity(workout.id) },
+                                    onEdit = if (workout.isOpenVitalsEntry && workout.id.isNotBlank()) {
+                                        { onEditActivity(workout.id) }
+                                    } else {
+                                        null
+                                    },
                                     modifier = rowModifier,
                                 )
                             }
@@ -119,6 +127,11 @@ fun BrowseScreen(
                                     entry = entry,
                                     unitFormatter = unitFormatter,
                                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    onEdit = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
+                                        { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, entry.id) }
+                                    } else {
+                                        null
+                                    },
                                     modifier = rowModifier,
                                 )
                             }

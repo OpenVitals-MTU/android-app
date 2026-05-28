@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +19,7 @@ import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.navigation.MINDFULNESS_ENTRY_ID_ARG
 
 private const val MinSessionMinutes = 1
 private const val MaxSessionMinutes = 24 * 60
@@ -64,17 +66,28 @@ data class MindfulnessEntryUiState(
     val remainingSeconds: Int = 0,
     val totalSeconds: Int = 0,
     val manualMinutesText: String = "",
+    val editRecordId: String? = null,
+    val editStartTime: Instant? = null,
+    val saveCompleted: Boolean = false,
     val entryError: MindfulnessEntryError? = null,
     val writeErrorMessage: String? = null,
     val bellEvent: MindfulnessBellEvent? = null,
     val backgroundEvent: MindfulnessBackgroundEvent? = null,
-)
+) {
+    val isEditMode: Boolean
+        get() = editRecordId != null
+}
 
 @HiltViewModel
 class MindfulnessEntryViewModel @Inject constructor(
     private val repository: MindfulnessRepository,
     private val preferencesRepository: PreferencesRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    constructor(
+        repository: MindfulnessRepository,
+        preferencesRepository: PreferencesRepository,
+    ) : this(repository, preferencesRepository, SavedStateHandle())
 
     private var timerJob: Job? = null
     private var timerStart: Instant? = null
@@ -83,11 +96,14 @@ class MindfulnessEntryViewModel @Inject constructor(
     private var bellEventId = 0L
     private var backgroundEventId = 0L
 
-    private val _uiState = MutableStateFlow(initialState())
+    private val editRecordId: String? = savedStateHandle[MINDFULNESS_ENTRY_ID_ARG]
+
+    private val _uiState = MutableStateFlow(initialState(editRecordId))
     val uiState: StateFlow<MindfulnessEntryUiState> = _uiState.asStateFlow()
 
     init {
         refreshPermission()
+        loadEditEntry()
     }
 
     fun refreshPermission() {
@@ -185,6 +201,7 @@ class MindfulnessEntryViewModel @Inject constructor(
     fun updateManualMinutes(text: String) {
         _uiState.value = _uiState.value.copy(
             manualMinutesText = text,
+            saveCompleted = false,
             entryError = null,
             writeErrorMessage = null,
         )
@@ -317,7 +334,8 @@ class MindfulnessEntryViewModel @Inject constructor(
     }
 
     fun addManualEntry() {
-        val minutes = _uiState.value.manualMinutesText.toPositiveIntOrNull()
+        val current = _uiState.value
+        val minutes = current.manualMinutesText.toPositiveIntOrNull()
         if (minutes == null || minutes !in MinSessionMinutes..MaxSessionMinutes) {
             _uiState.value = _uiState.value.copy(
                 entryError = MindfulnessEntryError.INVALID_MANUAL_ENTRY,
@@ -325,8 +343,8 @@ class MindfulnessEntryViewModel @Inject constructor(
             )
             return
         }
-        val end = Instant.now()
-        val start = end.minus(Duration.ofMinutes(minutes.toLong()))
+        val start = current.editStartTime ?: Instant.now().minus(Duration.ofMinutes(minutes.toLong()))
+        val end = start.plus(Duration.ofMinutes(minutes.toLong()))
         writeSession(
             title = currentSessionTitle(),
             start = start,
@@ -334,12 +352,17 @@ class MindfulnessEntryViewModel @Inject constructor(
             onSuccess = {
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
-                    manualMinutesText = "",
+                    manualMinutesText = if (_uiState.value.isEditMode) _uiState.value.manualMinutesText else "",
+                    saveCompleted = _uiState.value.isEditMode,
                     entryError = null,
                     writeErrorMessage = null,
                 )
             },
         )
+    }
+
+    fun onSaveCompletedHandled() {
+        _uiState.value = _uiState.value.copy(saveCompleted = false)
     }
 
     private suspend fun runTimer(config: MindfulnessTimerConfig) {
@@ -405,13 +428,16 @@ class MindfulnessEntryViewModel @Inject constructor(
                 writeErrorMessage = null,
             )
             runCatching {
-                repository.writeMindfulnessSessionEntry(
-                    MindfulnessSessionWriteRequest(
-                        title = title,
-                        startTime = start,
-                        endTime = end,
-                    )
+                val request = MindfulnessSessionWriteRequest(
+                    title = title,
+                    startTime = start,
+                    endTime = end,
                 )
+                if (current.editRecordId == null) {
+                    repository.writeMindfulnessSessionEntry(request)
+                } else {
+                    repository.updateMindfulnessSessionEntry(current.editRecordId, request)
+                }
             }.onSuccess {
                 onSuccess()
             }.onFailure { error ->
@@ -424,8 +450,40 @@ class MindfulnessEntryViewModel @Inject constructor(
         }
     }
 
+    private fun loadEditEntry() {
+        val recordId = editRecordId ?: return
+        viewModelScope.launch {
+            runCatching {
+                repository.loadMindfulnessSession(recordId)
+            }.onSuccess { session ->
+                if (session == null || !session.isOpenVitalsEntry) {
+                    _uiState.value = _uiState.value.copy(
+                        entryError = MindfulnessEntryError.WRITE_FAILED,
+                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                    )
+                    return@onSuccess
+                }
+                val minutes = Duration.between(session.startTime, session.endTime)
+                    .toMinutes()
+                    .coerceAtLeast(MinSessionMinutes.toLong())
+                    .coerceAtMost(MaxSessionMinutes.toLong())
+                _uiState.value = _uiState.value.copy(
+                    manualMinutesText = minutes.toString(),
+                    editStartTime = session.startTime,
+                    entryError = null,
+                    writeErrorMessage = null,
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    entryError = MindfulnessEntryError.WRITE_FAILED,
+                    writeErrorMessage = error.message,
+                )
+            }
+        }
+    }
+
     private fun updateTimerFields(update: MindfulnessEntryUiState.() -> MindfulnessEntryUiState) {
-        if (_uiState.value.isTimerRunning || _uiState.value.isTimerPaused || _uiState.value.timerCompleted) return
+        if (_uiState.value.isEditMode || _uiState.value.isTimerRunning || _uiState.value.isTimerPaused || _uiState.value.timerCompleted) return
         _uiState.value = _uiState.value.update().copy(
             entryError = null,
             writeErrorMessage = null,
@@ -460,7 +518,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         )
     }
 
-    private fun initialState(): MindfulnessEntryUiState {
+    private fun initialState(editRecordId: String?): MindfulnessEntryUiState {
         val config = preferencesRepository.mindfulnessTimerConfig()
         return MindfulnessEntryUiState(
             durationMinutesText = config.durationMinutes.toString(),
@@ -470,6 +528,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             backgroundSound = config.backgroundSound,
             remainingSeconds = config.durationMinutes * 60,
             totalSeconds = config.durationMinutes * 60,
+            editRecordId = editRecordId,
         )
     }
 
@@ -480,7 +539,7 @@ class MindfulnessEntryViewModel @Inject constructor(
 
     private fun canUpdateTimerFields(): Boolean {
         val state = _uiState.value
-        return !state.isTimerRunning && !state.isTimerPaused && !state.timerCompleted
+        return !state.isEditMode && !state.isTimerRunning && !state.isTimerPaused && !state.timerCompleted
     }
 }
 

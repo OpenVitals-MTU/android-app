@@ -2,7 +2,9 @@ package tech.mmarca.openvitals.features.manualentry
 
 import android.location.Location
 import android.net.Uri
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,11 +26,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
+import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.data.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
 
 private const val MilesToMeters = 1609.344
 private const val FeetToMeters = 0.3048
@@ -107,9 +112,14 @@ data class ActivityEntryUiState(
     val entryError: ActivityEntryError? = null,
     val detailMessage: String? = null,
     val validationErrors: Set<ActivityEntryValidationError> = emptySet(),
+    val editRecordId: String? = null,
+    val saveCompleted: Boolean = false,
 ) {
     val routePoints: List<ExerciseRoutePoint>
         get() = importedRoute?.points.orEmpty()
+
+    val isEditMode: Boolean
+        get() = editRecordId != null
 }
 
 @HiltViewModel
@@ -118,6 +128,7 @@ class ActivityEntryViewModel(
     private val routeFileImporter: RouteFileImporter? = null,
     private val activityRecorder: ActivityRecordingController? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
+    private val editActivityId: String? = null,
 ) : ViewModel() {
 
     @Inject
@@ -125,14 +136,23 @@ class ActivityEntryViewModel(
         repository: ActivityRepository,
         routeFileImporter: RouteFileImporter,
         activityRecorder: ActivityRecordingController,
+        savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
         routeFileImporter = routeFileImporter,
         activityRecorder = activityRecorder,
         clock = Clock.systemDefaultZone(),
+        editActivityId = savedStateHandle[ACTIVITY_ENTRY_ID_ARG],
     )
 
-    private val _uiState = MutableStateFlow(initialActivityEntryState(clock, repository))
+    private var editEntryLoaded = false
+
+    private val _uiState = MutableStateFlow(
+        initialActivityEntryState(clock, repository).copy(
+            mode = if (editActivityId == null) ActivityEntryMode.CHOOSE_SOURCE else ActivityEntryMode.MANUAL,
+            editRecordId = editActivityId,
+        )
+    )
     val uiState: StateFlow<ActivityEntryUiState> = _uiState.asStateFlow()
     private val fallbackRecordingState = MutableStateFlow(ActivityRecordingState())
     val recordingState: StateFlow<ActivityRecordingState> =
@@ -208,9 +228,11 @@ class ActivityEntryViewModel(
     }
 
     fun chooseSource() {
+        if (_uiState.value.isEditMode) return
         _uiState.value = initialActivityEntryState(clock, repository).copy(
             canWrite = _uiState.value.canWrite,
             isCheckingPermission = _uiState.value.isCheckingPermission,
+            editRecordId = editActivityId,
         )
         refreshPermission()
     }
@@ -447,6 +469,40 @@ class ActivityEntryViewModel(
         }
     }
 
+    fun loadEditEntry(unitSystem: UnitSystem) {
+        val recordId = editActivityId ?: return
+        if (editEntryLoaded) return
+        editEntryLoaded = true
+        viewModelScope.launch {
+            runCatching {
+                repository.loadWorkout(recordId)
+            }.onSuccess { workout ->
+                if (workout == null || !workout.isOpenVitalsEntry) {
+                    _uiState.value = _uiState.value.copy(
+                        entryError = ActivityEntryError.WRITE_FAILED,
+                        detailMessage = "Only OpenVitals entries can be edited.",
+                        validationErrors = emptySet(),
+                    )
+                    return@onSuccess
+                }
+                val current = _uiState.value
+                _uiState.value = workout.toEditState(
+                    unitSystem = unitSystem,
+                    clock = clock,
+                    repository = repository,
+                    canWrite = current.canWrite,
+                    isCheckingPermission = current.isCheckingPermission,
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    entryError = ActivityEntryError.WRITE_FAILED,
+                    detailMessage = error.message,
+                    validationErrors = emptySet(),
+                )
+            }
+        }
+    }
+
     fun addEntry(unitSystem: UnitSystem) {
         if (_uiState.value.mode == ActivityEntryMode.CHOOSE_SOURCE) {
             _uiState.value = _uiState.value.copy(
@@ -476,6 +532,7 @@ class ActivityEntryViewModel(
             )
             return
         }
+        val editRecordId = _uiState.value.editRecordId
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -498,10 +555,24 @@ class ActivityEntryViewModel(
             }
 
             runCatching {
-                repository.writeActivityEntry(request)
+                if (editRecordId == null) {
+                    repository.writeActivityEntry(request)
+                } else {
+                    repository.updateActivityEntry(editRecordId, request)
+                }
             }.onSuccess {
-                _uiState.value = clearedAfterSaveState(clock, repository, _uiState.value.selectedActivityType)
-                refreshPermission()
+                if (editRecordId == null) {
+                    _uiState.value = clearedAfterSaveState(clock, repository, _uiState.value.selectedActivityType)
+                    refreshPermission()
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isSavingEntry = false,
+                        saveCompleted = true,
+                        entryError = null,
+                        detailMessage = null,
+                        validationErrors = emptySet(),
+                    )
+                }
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
@@ -511,6 +582,10 @@ class ActivityEntryViewModel(
                 )
             }
         }
+    }
+
+    fun onSaveCompletedHandled() {
+        _uiState.value = _uiState.value.copy(saveCompleted = false)
     }
 
     private fun applyRouteImport(routeImport: RouteFileImport, unitSystem: UnitSystem) {
@@ -817,6 +892,75 @@ private fun clearedAfterSaveState(
     selectedType: ActivityEntryType,
 ): ActivityEntryUiState =
     initialActivityEntryState(clock, repository).copy(selectedActivityType = selectedType)
+
+private fun ExerciseData.toEditState(
+    unitSystem: UnitSystem,
+    clock: Clock,
+    repository: ActivityRepository,
+    canWrite: Boolean,
+    isCheckingPermission: Boolean,
+): ActivityEntryUiState {
+    val selectedType = DefaultActivityEntryTypes
+        .firstOrNull { it.exerciseType == exerciseType }
+        ?: DefaultActivityEntryTypes.first()
+    val routeImport = route.takeIf { it.status == ExerciseRouteStatus.DATA && it.points.isNotEmpty() }
+        ?.let { routeData ->
+            RouteFileImport(
+                fileName = null,
+                points = routeData.points,
+                distanceMeters = totalDistanceMeters ?: 0.0,
+                elevationGainedMeters = elevationGainedMeters ?: 0.0,
+                startTime = startTime,
+                endTime = endTime,
+                name = title,
+                description = notes,
+                hasRecordedTimestamps = true,
+                hasImportedTimeRange = true,
+                originalPointCount = routeData.points.size,
+            )
+        }
+    val start = startTime.atZone(clock.zone)
+    val durationMinutes = ceil(
+        Duration.between(startTime, endTime).seconds.coerceAtLeast(1).toDouble() / 60.0
+    ).toLong().coerceIn(1, MaxActivityDurationMinutes)
+    return ActivityEntryUiState(
+        mode = if (routeImport == null) ActivityEntryMode.MANUAL else ActivityEntryMode.ROUTE_IMPORT,
+        selectedActivityType = selectedType,
+        titleText = title.orEmpty(),
+        notesText = notes.orEmpty(),
+        startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
+        startTimeText = TimeFormatter.format(start.toLocalTime()),
+        durationMinutesText = durationMinutes.toString(),
+        distanceText = totalDistanceMeters?.takeIf { it > 0.0 }?.toDistanceInputText(unitSystem).orEmpty(),
+        elevationText = elevationGainedMeters?.takeIf { it > 0.0 }?.toElevationInputText(unitSystem).orEmpty(),
+        activeCaloriesText = activeCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty(),
+        totalCaloriesText = totalCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty(),
+        importedRoute = routeImport,
+        recordedPauseIntervals = segments
+            .filter { it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE }
+            .map { ActivityPauseInterval(startTime = it.startTime, endTime = it.endTime) },
+        writePermissions = repository.activityWritePermissions(),
+        canWrite = canWrite,
+        isCheckingPermission = isCheckingPermission,
+        editRecordId = id,
+    )
+}
+
+private fun Double.toDistanceInputText(unitSystem: UnitSystem): String {
+    val value = when (unitSystem) {
+        UnitSystem.METRIC -> this / 1000.0
+        UnitSystem.IMPERIAL -> this / MilesToMeters
+    }
+    return value.toInputText(maxFractionDigits = 2)
+}
+
+private fun Double.toElevationInputText(unitSystem: UnitSystem): String {
+    val value = when (unitSystem) {
+        UnitSystem.METRIC -> this
+        UnitSystem.IMPERIAL -> this / FeetToMeters
+    }
+    return value.toInputText(maxFractionDigits = 1)
+}
 
 private fun inferActivityType(
     routeImport: RouteFileImport,

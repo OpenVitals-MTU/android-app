@@ -1,17 +1,21 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
+import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.navigation.VITALS_ENTRY_ID_ARG
 
 private const val MinSystolicMmHg = 20.0
 private const val MaxSystolicMmHg = 200.0
@@ -20,6 +24,8 @@ private const val MaxDiastolicMmHg = 180.0
 private const val MaxPercent = 100.0
 private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
+private const val FahrenheitFreezingPoint = 32.0
+private const val FahrenheitPerCelsius = 1.8
 
 enum class VitalsMeasurementEntryError {
     INVALID_VALUE,
@@ -35,25 +41,42 @@ data class VitalsMeasurementEntryUiState(
     val canWrite: Boolean = false,
     val isCheckingPermission: Boolean = true,
     val isSavingEntry: Boolean = false,
+    val editRecordId: String? = null,
+    val editTime: Instant? = null,
+    val saveCompleted: Boolean = false,
     val entryError: VitalsMeasurementEntryError? = null,
     val writeErrorMessage: String? = null,
-)
+) {
+    val isEditMode: Boolean
+        get() = editRecordId != null
+}
 
 @HiltViewModel
 class VitalsMeasurementEntryViewModel @Inject constructor(
     private val repository: VitalsRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    constructor(repository: VitalsRepository) : this(repository, SavedStateHandle())
 
-    private val _uiState = MutableStateFlow(VitalsMeasurementEntryUiState())
+    private val editRecordId: String? = savedStateHandle[VITALS_ENTRY_ID_ARG]
+
+    private val _uiState = MutableStateFlow(VitalsMeasurementEntryUiState(editRecordId = editRecordId))
     val uiState: StateFlow<VitalsMeasurementEntryUiState> = _uiState.asStateFlow()
 
-    fun setType(type: VitalsMeasurementType) {
+    fun setType(type: VitalsMeasurementType, unitSystem: UnitSystem = UnitSystem.METRIC) {
         if (_uiState.value.type == type) {
             refreshPermission()
+            if (_uiState.value.isEditMode && _uiState.value.editTime == null) {
+                loadEditEntry(type, unitSystem)
+            }
             return
         }
-        _uiState.value = VitalsMeasurementEntryUiState(type = type)
+        _uiState.value = VitalsMeasurementEntryUiState(
+            type = type,
+            editRecordId = editRecordId,
+        )
         refreshPermission()
+        loadEditEntry(type, unitSystem)
     }
 
     fun refreshPermission() {
@@ -87,6 +110,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
     fun updateInput(text: String) {
         _uiState.value = _uiState.value.copy(
             inputText = text,
+            saveCompleted = false,
             entryError = null,
             writeErrorMessage = null,
         )
@@ -95,6 +119,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
     fun updateSecondaryInput(text: String) {
         _uiState.value = _uiState.value.copy(
             secondaryInputText = text,
+            saveCompleted = false,
             entryError = null,
             writeErrorMessage = null,
         )
@@ -124,25 +149,62 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 writeErrorMessage = null,
             )
             runCatching {
-                repository.writeVitalsMeasurementEntry(
-                    VitalsMeasurementWriteRequest(
-                        type = current.type,
-                        time = Instant.now(),
-                        value = requireNotNull(value),
-                        secondaryValue = secondaryValue,
-                    )
+                val request = VitalsMeasurementWriteRequest(
+                    type = current.type,
+                    time = current.editTime ?: Instant.now(),
+                    value = requireNotNull(value),
+                    secondaryValue = secondaryValue,
                 )
+                if (current.editRecordId == null) {
+                    repository.writeVitalsMeasurementEntry(request)
+                } else {
+                    repository.updateVitalsMeasurementEntry(current.editRecordId, request)
+                }
             }.onSuccess {
                 _uiState.value = _uiState.value.copy(
-                    inputText = "",
-                    secondaryInputText = "",
+                    inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
+                    secondaryInputText = if (_uiState.value.isEditMode) _uiState.value.secondaryInputText else "",
                     isSavingEntry = false,
+                    saveCompleted = _uiState.value.isEditMode,
                     entryError = null,
                     writeErrorMessage = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
+                    entryError = VitalsMeasurementEntryError.WRITE_FAILED,
+                    writeErrorMessage = error.message,
+                )
+            }
+        }
+    }
+
+    fun onSaveCompletedHandled() {
+        _uiState.value = _uiState.value.copy(saveCompleted = false)
+    }
+
+    private fun loadEditEntry(type: VitalsMeasurementType, unitSystem: UnitSystem) {
+        val recordId = editRecordId ?: return
+        viewModelScope.launch {
+            runCatching {
+                repository.loadVitalsMeasurementEntry(type, recordId)
+            }.onSuccess { entry ->
+                if (entry == null || !entry.isOpenVitalsEntry) {
+                    _uiState.value = _uiState.value.copy(
+                        entryError = VitalsMeasurementEntryError.WRITE_FAILED,
+                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                    )
+                    return@onSuccess
+                }
+                _uiState.value = _uiState.value.copy(
+                    inputText = entry.value.toDisplayInput(type, unitSystem),
+                    secondaryInputText = entry.secondaryValue?.toInputText().orEmpty(),
+                    editTime = entry.time,
+                    entryError = null,
+                    writeErrorMessage = null,
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
                     entryError = VitalsMeasurementEntryError.WRITE_FAILED,
                     writeErrorMessage = error.message,
                 )
@@ -171,3 +233,21 @@ private fun isValidVitalsValue(
         VitalsMeasurementType.BODY_TEMPERATURE -> value > 0.0 && value <= MaxBodyTemperatureCelsius
     }
 }
+
+private fun Double.toDisplayInput(type: VitalsMeasurementType, unitSystem: UnitSystem): String {
+    val displayValue = when (type) {
+        VitalsMeasurementType.BODY_TEMPERATURE -> if (unitSystem == UnitSystem.IMPERIAL) {
+            this * FahrenheitPerCelsius + FahrenheitFreezingPoint
+        } else {
+            this
+        }
+        else -> this
+    }
+    return displayValue.toInputText()
+}
+
+private fun Double.toInputText(): String =
+    "%.2f"
+        .format(Locale.US, this)
+        .trimEnd('0')
+        .trimEnd('.')

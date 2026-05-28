@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 
 internal class HydrationHealthReader(
     private val support: HealthConnectReaderSupport,
+    private val appPackageName: String,
 ) {
     suspend fun readHydrationLiters(date: LocalDate): Double? {
         val zone = ZoneId.systemDefault()
@@ -81,8 +82,15 @@ internal class HydrationHealthReader(
                     endTime = record.endTime,
                     liters = record.volume.inLiters,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
+        }
+
+    suspend fun readHydrationEntry(id: String): HydrationEntry? =
+        support.withNullableLogging("readHydrationEntry[$id]") {
+            support.client().readRecord(HydrationRecord::class, id).record.toHydrationEntry()
         }
 
     suspend fun writeHydrationEntry(request: HydrationWriteRequest): String = withContext(Dispatchers.IO) {
@@ -112,6 +120,45 @@ internal class HydrationHealthReader(
         support.client().insertRecords(listOf(record))
         clientRecordId
     }
+
+    suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) = withContext(Dispatchers.IO) {
+        require(request.volumeLiters > 0.0) { "Hydration volume must be greater than zero." }
+        require(request.volumeLiters <= MaxHydrationRecordLiters) {
+            "Hydration volume must not exceed ${MaxHydrationRecordLiters.toInt()} L."
+        }
+
+        val existing = support.client().readRecord(HydrationRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+
+        val startTime = request.time
+        val endTime = startTime.plusSeconds(1)
+        val zone = ZoneId.systemDefault()
+        val volumeMilliliters = request.volumeLiters * MillilitersPerLiter
+        val record = HydrationRecord(
+            startTime = startTime,
+            startZoneOffset = zone.rules.getOffset(startTime),
+            endTime = endTime,
+            endZoneOffset = zone.rules.getOffset(endTime),
+            volume = Volume.milliliters(volumeMilliliters),
+            metadata = Metadata.manualEntryWithId(
+                id = id,
+                device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
+            ),
+        )
+
+        Log.d(TAG, "Updating hydration record id=$id volumeLiters=${request.volumeLiters} ${support.diagnosticsSummary()}")
+        support.client().updateRecords(listOf(record))
+    }
+
+    private fun HydrationRecord.toHydrationEntry(): HydrationEntry =
+        HydrationEntry(
+            startTime = startTime,
+            endTime = endTime,
+            liters = volume.inLiters,
+            source = metadata.dataOrigin.packageName,
+            id = metadata.id,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
 }
 
 private const val TAG = "HydrationHealthReader"

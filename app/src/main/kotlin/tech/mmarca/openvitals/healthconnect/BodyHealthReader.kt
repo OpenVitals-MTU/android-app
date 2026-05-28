@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -18,6 +19,7 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -30,6 +32,7 @@ import java.util.UUID
 
 internal class BodyHealthReader(
     private val support: HealthConnectReaderSupport,
+    private val appPackageName: String,
 ) {
     suspend fun readLatestWeight(date: LocalDate): WeightEntry? {
         val (start, end) = support.dayRange(date)
@@ -45,6 +48,8 @@ internal class BodyHealthReader(
                     time = record.time,
                     weightKg = record.weight.inKilograms,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -63,6 +68,8 @@ internal class BodyHealthReader(
                     time = record.time,
                     weightKg = record.weight.inKilograms,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -78,6 +85,8 @@ internal class BodyHealthReader(
                     time = record.time,
                     weightKg = record.weight.inKilograms,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -104,6 +113,8 @@ internal class BodyHealthReader(
                     time = record.time,
                     heightCm = record.height.inMeters * 100.0,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -130,6 +141,8 @@ internal class BodyHealthReader(
                     time = record.time,
                     percent = record.percentage.value,
                     source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -248,6 +261,60 @@ internal class BodyHealthReader(
         clientRecordId
     }
 
+    suspend fun readBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? =
+        support.withNullableLogging("readBodyMeasurementEntry[$type][$id]") {
+            when (type) {
+                BodyMeasurementType.WEIGHT ->
+                    support.client().readRecord(WeightRecord::class, id).record.toBodyMeasurementEntry()
+                BodyMeasurementType.HEIGHT ->
+                    support.client().readRecord(HeightRecord::class, id).record.toBodyMeasurementEntry()
+                BodyMeasurementType.BODY_FAT ->
+                    support.client().readRecord(BodyFatRecord::class, id).record.toBodyMeasurementEntry()
+            }
+        }
+
+    suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) =
+        withContext(Dispatchers.IO) {
+            validateBodyMeasurement(request)
+
+            val existing: Record = when (request.type) {
+                BodyMeasurementType.WEIGHT -> support.client().readRecord(WeightRecord::class, id).record
+                BodyMeasurementType.HEIGHT -> support.client().readRecord(HeightRecord::class, id).record
+                BodyMeasurementType.BODY_FAT -> support.client().readRecord(BodyFatRecord::class, id).record
+            }
+            existing.requireOpenVitalsOrigin(appPackageName)
+
+            val time = request.time
+            val zone = ZoneId.systemDefault()
+            val metadata = Metadata.manualEntryWithId(
+                id = id,
+                device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
+            )
+            val record = when (request.type) {
+                BodyMeasurementType.WEIGHT -> WeightRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    weight = request.value.kilograms,
+                    metadata = metadata,
+                )
+                BodyMeasurementType.HEIGHT -> HeightRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    height = (request.value / CentimetersPerMeter).meters,
+                    metadata = metadata,
+                )
+                BodyMeasurementType.BODY_FAT -> BodyFatRecord(
+                    time = time,
+                    zoneOffset = zone.rules.getOffset(time),
+                    percentage = request.value.percent,
+                    metadata = metadata,
+                )
+            }
+
+            Log.d(TAG, "Updating body record id=$id type=${request.type} value=${request.value} ${support.diagnosticsSummary()}")
+            support.client().updateRecords(listOf(record))
+        }
+
     private fun validateBodyMeasurement(request: BodyMeasurementWriteRequest) {
         when (request.type) {
             BodyMeasurementType.WEIGHT -> require(request.value > 0.0 && request.value <= MaxWeightKg) {
@@ -261,6 +328,36 @@ internal class BodyHealthReader(
             }
         }
     }
+
+    private fun WeightRecord.toBodyMeasurementEntry(): BodyMeasurementEntry =
+        BodyMeasurementEntry(
+            id = metadata.id,
+            type = BodyMeasurementType.WEIGHT,
+            time = time,
+            value = weight.inKilograms,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
+
+    private fun HeightRecord.toBodyMeasurementEntry(): BodyMeasurementEntry =
+        BodyMeasurementEntry(
+            id = metadata.id,
+            type = BodyMeasurementType.HEIGHT,
+            time = time,
+            value = height.inMeters * CentimetersPerMeter,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
+
+    private fun BodyFatRecord.toBodyMeasurementEntry(): BodyMeasurementEntry =
+        BodyMeasurementEntry(
+            id = metadata.id,
+            type = BodyMeasurementType.BODY_FAT,
+            time = time,
+            value = percentage.value,
+            source = metadata.dataOrigin.packageName,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
 }
 
 private const val TAG = "BodyHealthReader"

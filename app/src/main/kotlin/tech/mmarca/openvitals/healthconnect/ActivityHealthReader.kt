@@ -32,9 +32,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
+import kotlin.reflect.KClass
 
 internal class ActivityHealthReader(
     private val support: HealthConnectReaderSupport,
+    private val appPackageName: String,
 ) {
     suspend fun readSteps(date: LocalDate): Long {
         val (start, end) = support.dayRange(date)
@@ -243,7 +245,7 @@ internal class ActivityHealthReader(
                 ascendingOrder = false,
                 pageSize = 1,
                 maxRecords = 1,
-            ).firstOrNull()?.toExerciseData()
+            ).firstOrNull()?.toExerciseData(appPackageName = appPackageName)
         }
     }
 
@@ -255,7 +257,7 @@ internal class ActivityHealthReader(
                 ascendingOrder = false,
                 pageSize = 1,
                 maxRecords = 1,
-            ).firstOrNull()?.toExerciseData()
+            ).firstOrNull()?.toExerciseData(appPackageName = appPackageName)
         }
 
     suspend fun readExerciseSessions(start: Instant, end: Instant): List<ExerciseData> =
@@ -265,7 +267,7 @@ internal class ActivityHealthReader(
                 timeRangeFilter = TimeRangeFilter.between(start, end),
                 ascendingOrder = false,
                 pageSize = 50,
-            ).map { it.toExerciseData() }
+            ).map { it.toExerciseData(appPackageName = appPackageName) }
         }
 
     suspend fun readExerciseSession(
@@ -332,6 +334,7 @@ internal class ActivityHealthReader(
                 } else {
                     null
                 },
+                appPackageName = appPackageName,
             )
         }
 
@@ -344,72 +347,9 @@ internal class ActivityHealthReader(
             clientRecordId = sessionClientRecordId,
             device = Device(type = Device.TYPE_PHONE),
         )
-        val startOffset = zone.rules.getOffset(request.startTime)
-        val endOffset = zone.rules.getOffset(request.endTime)
         val exerciseSegments = request.toExerciseSegments()
-        val session = ExerciseSessionRecord(
-            startTime = request.startTime,
-            startZoneOffset = startOffset,
-            endTime = request.endTime,
-            endZoneOffset = endOffset,
-            metadata = sessionMetadata,
-            exerciseType = request.exerciseType,
-            title = request.title?.trim()?.takeIf { it.isNotBlank() },
-            notes = request.notes?.trim()?.takeIf { it.isNotBlank() },
-            segments = exerciseSegments,
-            exerciseRoute = request.routePoints.toExerciseRouteOrNull(),
-        )
-
-        val extraRecords = buildList<Record> {
-            request.distanceMeters?.let { meters ->
-                add(
-                    DistanceRecord(
-                        startTime = request.startTime,
-                        startZoneOffset = startOffset,
-                        endTime = request.endTime,
-                        endZoneOffset = endOffset,
-                        distance = meters.meters,
-                        metadata = manualActivityMetricMetadata("distance", request.startTime),
-                    )
-                )
-            }
-            request.elevationGainedMeters?.let { meters ->
-                add(
-                    ElevationGainedRecord(
-                        startTime = request.startTime,
-                        startZoneOffset = startOffset,
-                        endTime = request.endTime,
-                        endZoneOffset = endOffset,
-                        elevation = meters.meters,
-                        metadata = manualActivityMetricMetadata("elevation", request.startTime),
-                    )
-                )
-            }
-            request.activeCaloriesKcal?.let { kcal ->
-                add(
-                    ActiveCaloriesBurnedRecord(
-                        startTime = request.startTime,
-                        startZoneOffset = startOffset,
-                        endTime = request.endTime,
-                        endZoneOffset = endOffset,
-                        energy = kcal.kilocalories,
-                        metadata = manualActivityMetricMetadata("active_calories", request.startTime),
-                    )
-                )
-            }
-            request.totalCaloriesKcal?.let { kcal ->
-                add(
-                    TotalCaloriesBurnedRecord(
-                        startTime = request.startTime,
-                        startZoneOffset = startOffset,
-                        endTime = request.endTime,
-                        endZoneOffset = endOffset,
-                        energy = kcal.kilocalories,
-                        metadata = manualActivityMetricMetadata("total_calories", request.startTime),
-                    )
-                )
-            }
-        }
+        val session = request.toExerciseSessionRecord(sessionMetadata, exerciseSegments, zone)
+        val extraRecords = request.toManualActivityMetricRecords(zone)
 
         Log.d(
             TAG,
@@ -419,6 +359,141 @@ internal class ActivityHealthReader(
         )
         support.client().insertRecords(listOf(session) + extraRecords)
         sessionClientRecordId
+    }
+
+    suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) = withContext(Dispatchers.IO) {
+        validateActivityWriteRequest(request)
+
+        val existing = support.client().readRecord(ExerciseSessionRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+
+        val zone = ZoneId.systemDefault()
+        val exerciseSegments = request.toExerciseSegments()
+        val session = request.toExerciseSessionRecord(
+            metadata = Metadata.manualEntryWithId(
+                id = id,
+                device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
+            ),
+            exerciseSegments = exerciseSegments,
+            zone = zone,
+        )
+        val extraRecords = request.toManualActivityMetricRecords(zone)
+
+        Log.d(
+            TAG,
+            "Updating activity entry id=$id type=${request.exerciseType} " +
+                "routePoints=${request.routePoints.size} pauses=${request.pauseIntervals.size} " +
+                "segments=${exerciseSegments.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
+        )
+        support.client().updateRecords(listOf(session))
+        deleteManualActivityMetricRecords(existing.startTime, existing.endTime)
+        if (extraRecords.isNotEmpty()) {
+            support.client().insertRecords(extraRecords)
+        }
+    }
+
+    private fun ActivityWriteRequest.toExerciseSessionRecord(
+        metadata: Metadata,
+        exerciseSegments: List<ExerciseSegment>,
+        zone: ZoneId,
+    ): ExerciseSessionRecord =
+        ExerciseSessionRecord(
+            startTime = startTime,
+            startZoneOffset = zone.rules.getOffset(startTime),
+            endTime = endTime,
+            endZoneOffset = zone.rules.getOffset(endTime),
+            metadata = metadata,
+            exerciseType = exerciseType,
+            title = title?.trim()?.takeIf { it.isNotBlank() },
+            notes = notes?.trim()?.takeIf { it.isNotBlank() },
+            segments = exerciseSegments,
+            exerciseRoute = routePoints.toExerciseRouteOrNull(),
+        )
+
+    private fun ActivityWriteRequest.toManualActivityMetricRecords(zone: ZoneId): List<Record> {
+        val startOffset = zone.rules.getOffset(startTime)
+        val endOffset = zone.rules.getOffset(endTime)
+        return buildList {
+            distanceMeters?.let { meters ->
+                add(
+                    DistanceRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        distance = meters.meters,
+                        metadata = manualActivityMetricMetadata("distance", startTime),
+                    )
+                )
+            }
+            elevationGainedMeters?.let { meters ->
+                add(
+                    ElevationGainedRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        elevation = meters.meters,
+                        metadata = manualActivityMetricMetadata("elevation", startTime),
+                    )
+                )
+            }
+            activeCaloriesKcal?.let { kcal ->
+                add(
+                    ActiveCaloriesBurnedRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        energy = kcal.kilocalories,
+                        metadata = manualActivityMetricMetadata("active_calories", startTime),
+                    )
+                )
+            }
+            totalCaloriesKcal?.let { kcal ->
+                add(
+                    TotalCaloriesBurnedRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        energy = kcal.kilocalories,
+                        metadata = manualActivityMetricMetadata("total_calories", startTime),
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun deleteManualActivityMetricRecords(start: Instant, end: Instant) {
+        deleteManualActivityMetricRecords(DistanceRecord::class, "distance", start, end)
+        deleteManualActivityMetricRecords(ElevationGainedRecord::class, "elevation", start, end)
+        deleteManualActivityMetricRecords(ActiveCaloriesBurnedRecord::class, "active_calories", start, end)
+        deleteManualActivityMetricRecords(TotalCaloriesBurnedRecord::class, "total_calories", start, end)
+    }
+
+    private suspend fun <T : Record> deleteManualActivityMetricRecords(
+        recordType: KClass<T>,
+        kind: String,
+        start: Instant,
+        end: Instant,
+    ) {
+        val recordIds = support.client().readRecordsPaged(
+            recordType = recordType,
+            timeRangeFilter = TimeRangeFilter.between(start, end),
+            ascendingOrder = true,
+        ).filter { record ->
+            record.metadata.dataOrigin.packageName == appPackageName &&
+                record.metadata.clientRecordId?.startsWith("openvitals_activity_${kind}_") == true
+        }.map { record -> record.metadata.id }
+
+        if (recordIds.isNotEmpty()) {
+            support.client().deleteRecords(
+                recordType = recordType,
+                recordIdsList = recordIds,
+                clientRecordIdsList = emptyList(),
+            )
+        }
     }
 
     private fun manualActivityMetricMetadata(kind: String, startTime: Instant): Metadata =

@@ -36,6 +36,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -77,12 +78,14 @@ fun WeightScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.WEIGHT,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -91,12 +94,14 @@ fun HeightScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.HEIGHT,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -105,12 +110,14 @@ fun BmiScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BMI,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -119,12 +126,14 @@ fun BodyFatScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BODY_FAT,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -177,6 +186,7 @@ private fun BodyMetricScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: BodyMetric,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
@@ -193,7 +203,14 @@ private fun BodyMetricScreen(
         onSelectDate = viewModel::selectDate,
     ) { period ->
         when (metric) {
-            BodyMetric.WEIGHT -> weightContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
+            BodyMetric.WEIGHT -> weightContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                chartDaySelection,
+                onEditBodyMeasurement,
+            )
             BodyMetric.HEIGHT -> singleBodyMetricContent(
                 state = state,
                 period = period,
@@ -227,6 +244,8 @@ private fun BodyMetricScreen(
                         time = { it.time },
                         accentColor = WeightColor,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                        onEdit = { onEditBodyMeasurement(BodyMeasurementType.HEIGHT, it.id) },
                     )
                 },
             )
@@ -256,10 +275,18 @@ private fun BodyMetricScreen(
                         heightCm = state.heightCm,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onEditBodyMeasurement = onEditBodyMeasurement,
                     )
                 },
             )
-            BodyMetric.BODY_FAT -> bodyFatContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
+            BodyMetric.BODY_FAT -> bodyFatContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                chartDaySelection,
+                onEditBodyMeasurement,
+            )
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
                 state = state,
                 period = period,
@@ -416,6 +443,7 @@ private fun LazyListScope.weightContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ) {
     if (state.weightEntries.isNotEmpty()) {
         item { SectionHeader(stringResource(R.string.section_weight)) }
@@ -453,6 +481,7 @@ private fun LazyListScope.weightContent(
                         entry = entry,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onEdit = entry.editAction(BodyMeasurementType.WEIGHT, onEditBodyMeasurement),
                         modifier = rowModifier,
                     )
                 }
@@ -482,6 +511,7 @@ private fun LazyListScope.weightContent(
                     entry = entry,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEdit = entry.editAction(BodyMeasurementType.WEIGHT, onEditBodyMeasurement),
                     modifier = rowModifier,
                 )
             }
@@ -502,6 +532,7 @@ private fun LazyListScope.bodyFatContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ) {
     val latest = state.latestBodyFatPercent
     if (latest != null) {
@@ -540,6 +571,8 @@ private fun LazyListScope.bodyFatContent(
                     accentColor = BodyFatColor,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     titleDate = selectedDate,
+                    editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                    onEdit = { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
                 )
             }
         }
@@ -565,6 +598,8 @@ private fun LazyListScope.bodyFatContent(
             time = { it.time },
             accentColor = BodyFatColor,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+            onEdit = { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
         )
     } else if (!state.isLoading) {
         noBodyMetricData(
@@ -880,6 +915,8 @@ private fun <T> LazyListScope.bodyReadingEntries(
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     titleDate: LocalDate? = null,
+    editable: (T) -> Boolean = { false },
+    onEdit: ((T) -> Unit)? = null,
 ) {
     val sortedEntries = entries.sortedByDescending(time)
     item {
@@ -893,6 +930,9 @@ private fun <T> LazyListScope.bodyReadingEntries(
                 time = time(entry),
                 accentColor = accentColor,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = onEdit
+                    ?.takeIf { editable(entry) }
+                    ?.let { edit -> { edit(entry) } },
                 modifier = rowModifier,
             )
         }
@@ -904,6 +944,7 @@ private fun LazyListScope.bmiEntries(
     heightCm: Double?,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     val heightMeters = heightCm?.takeIf { it > 0.0 }?.let { it / 100.0 } ?: return
     bodyReadingEntries(
@@ -915,8 +956,20 @@ private fun LazyListScope.bmiEntries(
         time = { it.time },
         accentColor = WeightColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+        onEdit = { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },
     )
 }
+
+private fun WeightEntry.editAction(
+    type: BodyMeasurementType,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+): (() -> Unit)? =
+    if (isOpenVitalsEntry && id.isNotBlank()) {
+        { onEditBodyMeasurement(type, id) }
+    } else {
+        null
+    }
 
 private fun metricModifier(): Modifier =
     Modifier

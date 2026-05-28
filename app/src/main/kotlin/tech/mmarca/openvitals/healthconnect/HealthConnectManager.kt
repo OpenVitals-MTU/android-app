@@ -9,7 +9,9 @@ import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
+import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
@@ -39,7 +41,9 @@ import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
+import tech.mmarca.openvitals.data.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Instant
@@ -76,15 +80,15 @@ class HealthConnectManager @Inject constructor(
             )
         },
     )
-    private val activityReader = ActivityHealthReader(readerSupport)
-    private val hydrationReader = HydrationHealthReader(readerSupport)
+    private val activityReader = ActivityHealthReader(readerSupport, context.packageName)
+    private val hydrationReader = HydrationHealthReader(readerSupport, context.packageName)
     private val sleepReader = SleepHealthReader(readerSupport)
     private val heartReader = HeartHealthReader(readerSupport)
-    private val bodyReader = BodyHealthReader(readerSupport)
+    private val bodyReader = BodyHealthReader(readerSupport, context.packageName)
     private val nutritionReader = NutritionHealthReader(readerSupport)
-    private val mindfulnessReader = MindfulnessHealthReader(readerSupport)
+    private val mindfulnessReader = MindfulnessHealthReader(readerSupport, context.packageName)
     private val cycleReader = CycleHealthReader(readerSupport)
-    private val vitalsReader = VitalsHealthReader(readerSupport)
+    private val vitalsReader = VitalsHealthReader(readerSupport, context.packageName)
 
     val corePermissions: Set<String> get() = permissionService.corePermissions
     val routePermissions: Set<String> get() = permissionService.routePermissions
@@ -197,8 +201,14 @@ class HealthConnectManager @Inject constructor(
     suspend fun readHydrationEntries(start: Instant, end: Instant): List<HydrationEntry> =
         hydrationReader.readHydrationEntries(start, end)
 
+    suspend fun readHydrationEntry(id: String): HydrationEntry? =
+        hydrationReader.readHydrationEntry(id)
+
     suspend fun writeHydrationEntry(request: HydrationWriteRequest): String =
         hydrationReader.writeHydrationEntry(request)
+
+    suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) =
+        hydrationReader.updateHydrationEntry(id, request)
 
     suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
         activityReader.readLatestWorkout(date)
@@ -230,6 +240,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String =
         activityReader.writeActivityEntry(request)
+
+    suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) =
+        activityReader.updateActivityEntry(id, request)
 
     suspend fun readSleepSession(date: LocalDate): SleepData? =
         sleepReader.readSleepSession(date)
@@ -312,6 +325,12 @@ class HealthConnectManager @Inject constructor(
     suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String =
         bodyReader.writeBodyMeasurementEntry(request)
 
+    suspend fun readBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? =
+        bodyReader.readBodyMeasurementEntry(type, id)
+
+    suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) =
+        bodyReader.updateBodyMeasurementEntry(id, request)
+
     suspend fun readDailyNutrition(
         startDate: LocalDate,
         endDate: LocalDate,
@@ -329,11 +348,17 @@ class HealthConnectManager @Inject constructor(
     suspend fun readMindfulnessSessions(start: Instant, end: Instant): List<MindfulnessSession> =
         mindfulnessReader.readMindfulnessSessions(start, end)
 
+    suspend fun readMindfulnessSession(id: String): MindfulnessSession? =
+        mindfulnessReader.readMindfulnessSession(id)
+
     suspend fun readMindfulnessMinutes(date: LocalDate): Int =
         mindfulnessReader.readMindfulnessMinutes(date)
 
     suspend fun writeMindfulnessSessionEntry(request: MindfulnessSessionWriteRequest): String =
         mindfulnessReader.writeMindfulnessSessionEntry(request)
+
+    suspend fun updateMindfulnessSessionEntry(id: String, request: MindfulnessSessionWriteRequest) =
+        mindfulnessReader.updateMindfulnessSessionEntry(id, request)
 
     suspend fun readMenstruationFlowEntries(start: Instant, end: Instant): List<MenstruationFlowEntry> =
         cycleReader.readMenstruationFlowEntries(start, end)
@@ -376,6 +401,12 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String =
         vitalsReader.writeVitalsMeasurementEntry(request)
+
+    suspend fun readVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? =
+        vitalsReader.readVitalsMeasurementEntry(type, id)
+
+    suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) =
+        vitalsReader.updateVitalsMeasurementEntry(id, request)
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.Button
@@ -52,6 +53,7 @@ fun BodyMeasurementEntryScreen(
     type: BodyMeasurementType,
     viewModel: BodyMeasurementEntryViewModel,
     unitFormatter: UnitFormatter,
+    onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestWritePermissions = rememberLauncherForActivityResult(
@@ -60,8 +62,14 @@ fun BodyMeasurementEntryScreen(
         viewModel.refreshPermission()
     }
 
-    LaunchedEffect(type) {
-        viewModel.setType(type)
+    LaunchedEffect(type, unitFormatter.unitSystem()) {
+        viewModel.setType(type, unitFormatter.unitSystem())
+    }
+    LaunchedEffect(state.saveCompleted) {
+        if (state.saveCompleted) {
+            viewModel.onSaveCompletedHandled()
+            onEntrySaved()
+        }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshPermission()
@@ -174,12 +182,16 @@ private fun BodyMeasurementEntryCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.body_entry_add_selected, title),
+                    text = if (state.isEditMode) {
+                        stringResource(R.string.action_save)
+                    } else {
+                        stringResource(R.string.body_entry_add_selected, title)
+                    },
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

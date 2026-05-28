@@ -11,12 +11,14 @@
     <string name="cd_move_widget_up">Widget nach oben verschieben</string>
     <string name="cd_move_widget_down">Widget nach unten verschieben</string>
     <string name="cd_remove_widget">Widget entfernen</string>
+    <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_previous_day">Vorheriger Tag</string>
     <string name="cd_next_day">Nächster Tag</string>
     <string name="cd_previous_period">Vorheriger Zeitraum</string>
     <string name="cd_next_period">Nächster Zeitraum</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_add">Hinzufügen</string>
+    <string name="action_save">Speichern</string>
     <string name="action_close">Schließen</string>
     <string name="action_details">Details</string>
     <string name="action_enable">Aktivieren</string>

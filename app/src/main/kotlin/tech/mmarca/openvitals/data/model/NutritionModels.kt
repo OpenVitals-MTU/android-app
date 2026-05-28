@@ -19,6 +19,8 @@ data class HydrationEntry(
     val endTime: Instant,
     val liters: Double,
     val source: String,
+    val id: String = "",
+    val isOpenVitalsEntry: Boolean = false,
 )
 
 data class HydrationWriteRequest(

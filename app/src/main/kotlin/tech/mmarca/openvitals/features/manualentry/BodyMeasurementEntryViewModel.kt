@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,13 +10,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.repository.BodyRepository
+import tech.mmarca.openvitals.navigation.BODY_ENTRY_ID_ARG
 
 private const val MaxWeightKg = 1000.0
 private const val MaxHeightCm = 300.0
 private const val MaxBodyFatPercent = 100.0
+private const val PoundsPerKilogram = 2.2046226218
+private const val CentimetersPerInch = 2.54
 
 enum class BodyMeasurementEntryError {
     INVALID_VALUE,
@@ -30,25 +35,42 @@ data class BodyMeasurementEntryUiState(
     val canWrite: Boolean = false,
     val isCheckingPermission: Boolean = true,
     val isSavingEntry: Boolean = false,
+    val editRecordId: String? = null,
+    val editTime: Instant? = null,
+    val saveCompleted: Boolean = false,
     val entryError: BodyMeasurementEntryError? = null,
     val writeErrorMessage: String? = null,
-)
+) {
+    val isEditMode: Boolean
+        get() = editRecordId != null
+}
 
 @HiltViewModel
 class BodyMeasurementEntryViewModel @Inject constructor(
     private val repository: BodyRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    constructor(repository: BodyRepository) : this(repository, SavedStateHandle())
 
-    private val _uiState = MutableStateFlow(BodyMeasurementEntryUiState())
+    private val editRecordId: String? = savedStateHandle[BODY_ENTRY_ID_ARG]
+
+    private val _uiState = MutableStateFlow(BodyMeasurementEntryUiState(editRecordId = editRecordId))
     val uiState: StateFlow<BodyMeasurementEntryUiState> = _uiState.asStateFlow()
 
-    fun setType(type: BodyMeasurementType) {
+    fun setType(type: BodyMeasurementType, unitSystem: UnitSystem = UnitSystem.METRIC) {
         if (_uiState.value.type == type) {
             refreshPermission()
+            if (_uiState.value.isEditMode && _uiState.value.editTime == null) {
+                loadEditEntry(type, unitSystem)
+            }
             return
         }
-        _uiState.value = BodyMeasurementEntryUiState(type = type)
+        _uiState.value = BodyMeasurementEntryUiState(
+            type = type,
+            editRecordId = editRecordId,
+        )
         refreshPermission()
+        loadEditEntry(type, unitSystem)
     }
 
     fun refreshPermission() {
@@ -82,6 +104,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
     fun updateInput(text: String) {
         _uiState.value = _uiState.value.copy(
             inputText = text,
+            saveCompleted = false,
             entryError = null,
             writeErrorMessage = null,
         )
@@ -111,23 +134,59 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                 writeErrorMessage = null,
             )
             runCatching {
-                repository.writeBodyMeasurementEntry(
-                    BodyMeasurementWriteRequest(
-                        type = current.type,
-                        time = Instant.now(),
-                        value = canonicalValue,
-                    )
+                val request = BodyMeasurementWriteRequest(
+                    type = current.type,
+                    time = current.editTime ?: Instant.now(),
+                    value = canonicalValue,
                 )
+                if (current.editRecordId == null) {
+                    repository.writeBodyMeasurementEntry(request)
+                } else {
+                    repository.updateBodyMeasurementEntry(current.editRecordId, request)
+                }
             }.onSuccess {
                 _uiState.value = _uiState.value.copy(
-                    inputText = "",
+                    inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
                     isSavingEntry = false,
+                    saveCompleted = _uiState.value.isEditMode,
                     entryError = null,
                     writeErrorMessage = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
+                    entryError = BodyMeasurementEntryError.WRITE_FAILED,
+                    writeErrorMessage = error.message,
+                )
+            }
+        }
+    }
+
+    fun onSaveCompletedHandled() {
+        _uiState.value = _uiState.value.copy(saveCompleted = false)
+    }
+
+    private fun loadEditEntry(type: BodyMeasurementType, unitSystem: UnitSystem) {
+        val recordId = editRecordId ?: return
+        viewModelScope.launch {
+            runCatching {
+                repository.loadBodyMeasurementEntry(type, recordId)
+            }.onSuccess { entry ->
+                if (entry == null || !entry.isOpenVitalsEntry) {
+                    _uiState.value = _uiState.value.copy(
+                        entryError = BodyMeasurementEntryError.WRITE_FAILED,
+                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                    )
+                    return@onSuccess
+                }
+                _uiState.value = _uiState.value.copy(
+                    inputText = entry.value.toDisplayInput(type, unitSystem),
+                    editTime = entry.time,
+                    entryError = null,
+                    writeErrorMessage = null,
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
                     entryError = BodyMeasurementEntryError.WRITE_FAILED,
                     writeErrorMessage = error.message,
                 )
@@ -142,3 +201,18 @@ class BodyMeasurementEntryViewModel @Inject constructor(
             BodyMeasurementType.BODY_FAT -> this >= 0.0 && this <= MaxBodyFatPercent
         }
 }
+
+private fun Double.toDisplayInput(type: BodyMeasurementType, unitSystem: UnitSystem): String {
+    val displayValue = when (type) {
+        BodyMeasurementType.WEIGHT -> if (unitSystem == UnitSystem.IMPERIAL) this * PoundsPerKilogram else this
+        BodyMeasurementType.HEIGHT -> if (unitSystem == UnitSystem.IMPERIAL) this / CentimetersPerInch else this
+        BodyMeasurementType.BODY_FAT -> this
+    }
+    return displayValue.toInputText()
+}
+
+private fun Double.toInputText(): String =
+    "%.2f"
+        .format(java.util.Locale.US, this)
+        .trimEnd('0')
+        .trimEnd('.')

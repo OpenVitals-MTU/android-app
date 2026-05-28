@@ -207,6 +207,15 @@ class ActivityRepository @Inject constructor(
         }
         return hc.writeActivityEntry(request)
     }
+
+    suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
+        val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping updateActivityEntry id=$id missing=$missingPermissions")
+            throw SecurityException("Missing Health Connect activity write permission.")
+        }
+        hc.updateActivityEntry(id, request)
+    }
 }
 
 data class ActivityPeriodData(

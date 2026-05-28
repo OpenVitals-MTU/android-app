@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -94,6 +95,7 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 fun ActivityEntryScreen(
     viewModel: ActivityEntryViewModel,
     unitFormatter: UnitFormatter,
+    onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordingState by viewModel.recordingState.collectAsStateWithLifecycle()
@@ -162,6 +164,15 @@ fun ActivityEntryScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshPermission()
     }
+    LaunchedEffect(unitFormatter.unitSystem()) {
+        viewModel.loadEditEntry(unitFormatter.unitSystem())
+    }
+    LaunchedEffect(state.saveCompleted) {
+        if (state.saveCompleted) {
+            viewModel.onSaveCompletedHandled()
+            onEntrySaved()
+        }
+    }
 
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         item {
@@ -228,6 +239,7 @@ fun ActivityEntryScreen(
                     onAddEntry = {
                         viewModel.addEntry(unitFormatter.unitSystem())
                     },
+                    isEditMode = state.isEditMode,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -574,6 +586,7 @@ private fun ActivityEntryCard(
     onChooseSource: () -> Unit,
     onRequestWritePermission: () -> Unit,
     onAddEntry: () -> Unit,
+    isEditMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWrite &&
@@ -594,12 +607,14 @@ private fun ActivityEntryCard(
                 onRequestWritePermission = onRequestWritePermission,
             )
 
-            OutlinedButton(
-                onClick = onChooseSource,
-                enabled = !state.isSavingEntry && !state.isImportingRoute,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.activity_entry_choose_another_source))
+            if (!isEditMode) {
+                OutlinedButton(
+                    onClick = onChooseSource,
+                    enabled = !state.isSavingEntry && !state.isImportingRoute,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.activity_entry_choose_another_source))
+                }
             }
 
             ActivityTypeSelector(
@@ -672,12 +687,12 @@ private fun ActivityEntryCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    imageVector = if (isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.activity_entry_add),
+                    text = stringResource(if (isEditMode) R.string.action_save else R.string.activity_entry_add),
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

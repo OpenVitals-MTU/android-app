@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -190,6 +191,29 @@ class BodyRepository @Inject constructor(
             throw SecurityException("Missing Health Connect body write permission.")
         }
         return hc.writeBodyMeasurementEntry(request)
+    }
+
+    suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
+        val readPermission = when (type) {
+            BodyMeasurementType.WEIGHT -> readWeightPermission
+            BodyMeasurementType.HEIGHT -> readHeightPermission
+            BodyMeasurementType.BODY_FAT -> readBodyFatPermission
+        }
+        val granted = grantedPermissionsIfAvailable()
+        if (readPermission !in granted) {
+            Log.w(TAG, "Skipping loadBodyMeasurementEntry type=$type id=$id missing=$readPermission")
+            return null
+        }
+        return hc.readBodyMeasurementEntry(type, id)
+    }
+
+    suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) {
+        val missingPermissions = bodyWritePermissions(request.type) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping updateBodyMeasurementEntry type=${request.type} id=$id missing=$missingPermissions")
+            throw SecurityException("Missing Health Connect body write permission.")
+        }
+        hc.updateBodyMeasurementEntry(id, request)
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()

@@ -30,6 +30,7 @@ data class ExerciseData(
     val segments: List<ExerciseSegmentData> = emptyList(),
     val laps: List<ExerciseLapData> = emptyList(),
     val route: ExerciseRouteData = ExerciseRouteData(),
+    val isOpenVitalsEntry: Boolean = false,
 ) {
     val durationMinutes: Long get() = durationMs / 60_000
 }

@@ -25,6 +25,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     activeCaloriesKcal: Double? = null,
     floorsClimbed: Int? = null,
     elevationGainedMeters: Double? = null,
+    appPackageName: String? = null,
 ) = ExerciseData(
     id = metadata.id,
     title = title,
@@ -70,6 +71,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
         )
     },
     route = exerciseRouteResult.toExerciseRouteData(),
+    isOpenVitalsEntry = appPackageName?.let { isOpenVitalsRecord(metadata.dataOrigin.packageName, it) } ?: false,
 )
 
 private fun ExerciseRouteResult.toExerciseRouteData(): ExerciseRouteData = when (this) {
@@ -127,11 +129,12 @@ internal fun SleepSessionRecord.toSleepData(): SleepData {
 }
 
 @OptIn(ExperimentalMindfulnessSessionApi::class)
-internal fun MindfulnessSessionRecord.toMindfulnessSession() = MindfulnessSession(
+internal fun MindfulnessSessionRecord.toMindfulnessSession(appPackageName: String? = null) = MindfulnessSession(
     id = metadata.id,
     title = title,
     startTime = startTime,
     endTime = endTime,
     durationMs = endTime.toEpochMilli() - startTime.toEpochMilli(),
     source = metadata.dataOrigin.packageName,
+    isOpenVitalsEntry = appPackageName?.let { isOpenVitalsRecord(metadata.dataOrigin.packageName, it) } ?: false,
 )

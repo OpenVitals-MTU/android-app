@@ -5,15 +5,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.WeightEntry
@@ -27,6 +34,7 @@ internal fun WeightEntryRow(
     entry: WeightEntry,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     BodyReadingRow(
@@ -35,6 +43,7 @@ internal fun WeightEntryRow(
         time = entry.time,
         accentColor = WeightColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        onEdit = onEdit,
         modifier = modifier,
     )
 }
@@ -46,6 +55,7 @@ internal fun BodyReadingRow(
     time: Instant,
     accentColor: Color,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val localTime = time.atZone(ZoneId.systemDefault())
@@ -69,11 +79,23 @@ internal fun BodyReadingRow(
                 )
                 SourceChip(source = source)
             }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = accentColor,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = accentColor,
+                )
+                if (onEdit != null) {
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = stringResource(R.string.cd_edit_entry),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 }

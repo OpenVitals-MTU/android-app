@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material3.Button
@@ -31,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +58,7 @@ import tech.mmarca.openvitals.ui.theme.HydrationColor
 fun HydrationEntryScreen(
     viewModel: HydrationEntryViewModel,
     unitFormatter: UnitFormatter,
+    onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestWritePermissions = rememberLauncherForActivityResult(
@@ -66,6 +69,12 @@ fun HydrationEntryScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
+    }
+    LaunchedEffect(state.saveCompleted) {
+        if (state.saveCompleted) {
+            viewModel.onSaveCompletedHandled()
+            onEntrySaved()
+        }
     }
 
     LazyColumn {
@@ -168,15 +177,19 @@ private fun HydrationTrackerCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(
-                        R.string.hydration_add_selected,
-                        hydrationAmountLabel(state.selectedContainerEffectiveLiters, unitFormatter),
-                    ),
+                    text = if (state.isEditMode) {
+                        stringResource(R.string.action_save)
+                    } else {
+                        stringResource(
+                            R.string.hydration_add_selected,
+                            hydrationAmountLabel(state.selectedContainerEffectiveLiters, unitFormatter),
+                        )
+                    },
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

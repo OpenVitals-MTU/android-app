@@ -70,6 +70,28 @@ class MindfulnessRepository @Inject constructor(
         }
         return hc.writeMindfulnessSessionEntry(request)
     }
+
+    suspend fun loadMindfulnessSession(id: String): MindfulnessSession? {
+        val granted = grantedPermissionsIfAvailable()
+        if (readMindfulnessPermission !in granted) {
+            Log.w(TAG, "Skipping loadMindfulnessSession id=$id missing=$readMindfulnessPermission")
+            return null
+        }
+        return hc.readMindfulnessSession(id)
+    }
+
+    suspend fun updateMindfulnessSessionEntry(id: String, request: MindfulnessSessionWriteRequest) {
+        if (!isMindfulnessAvailable()) {
+            Log.w(TAG, "Skipping updateMindfulnessSessionEntry because mindfulness sessions are unavailable")
+            throw IllegalStateException("Mindfulness sessions are not available from this Health Connect provider.")
+        }
+        val missingPermissions = mindfulnessWritePermissions - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping updateMindfulnessSessionEntry id=$id missing=$missingPermissions")
+            throw IllegalStateException("Missing Health Connect write permission for mindfulness.")
+        }
+        hc.updateMindfulnessSessionEntry(id, request)
+    }
 }
 
 data class MindfulnessPeriodData(
