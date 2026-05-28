@@ -7,7 +7,8 @@ enum class AppLanguage(
 ) {
     SYSTEM(null),
     ENGLISH("en"),
-    SPANISH("es");
+    SPANISH("es"),
+    GERMAN("de");
 
     fun toLocaleListCompat(): LocaleListCompat =
         if (languageTag == null) {
