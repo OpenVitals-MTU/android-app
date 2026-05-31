@@ -17,6 +17,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class HeartRepository @Inject constructor(
@@ -34,46 +36,75 @@ class HeartRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadHeartPeriod(query: PeriodLoadQuery, metric: HeartPeriodMetric): HeartPeriodData {
+    suspend fun loadHeartPeriod(query: PeriodLoadQuery, metric: HeartPeriodMetric): HeartPeriodData = coroutineScope {
         val windows = query.windows
-        return when (metric) {
+        val granted = grantedPermissionsIfAvailable()
+        when (metric) {
             HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
+                val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
+                val previousDaySamples = async { loadHeartRateSamples(windows.previous.start, granted) }
+                val baselineDailySummaries = async {
+                    loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
+                }
                 HeartPeriodData(
-                    daySamples = loadHeartRateSamples(query.selectedDate),
-                    previousDaySamples = loadHeartRateSamples(windows.previous.start),
-                    baselineDailySummaries = loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
+                    daySamples = daySamples.await(),
+                    previousDaySamples = previousDaySamples.await(),
+                    baselineDailySummaries = baselineDailySummaries.await(),
                 )
             } else {
+                val dailySummaries = async {
+                    loadDailyHeartRateSummaries(windows.current.start, windows.current.end, granted)
+                }
+                val previousDailySummaries = async {
+                    loadDailyHeartRateSummaries(windows.previous.start, windows.previous.end, granted)
+                }
+                val baselineDailySummaries = async {
+                    loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
+                }
                 HeartPeriodData(
-                    dailySummaries = loadDailyHeartRateSummaries(windows.current.start, windows.current.end),
-                    previousDailySummaries = loadDailyHeartRateSummaries(windows.previous.start, windows.previous.end),
-                    baselineDailySummaries = loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
+                    dailySummaries = dailySummaries.await(),
+                    previousDailySummaries = previousDailySummaries.await(),
+                    baselineDailySummaries = baselineDailySummaries.await(),
                 )
             }
             HeartPeriodMetric.RESTING_HEART_RATE -> if (query.range == TimeRange.DAY) {
+                val dayRestingBpm = async { loadRestingHeartRate(query.selectedDate, granted) }
+                val previousDayRestingBpm = async { loadRestingHeartRate(windows.previous.start, granted) }
+                val baselineDailyRestingHR = async {
+                    loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted)
+                }
                 HeartPeriodData(
-                    dayRestingBpm = loadRestingHeartRate(query.selectedDate),
-                    previousDayRestingBpm = loadRestingHeartRate(windows.previous.start),
-                    baselineDailyRestingHR = loadDailyRestingHR(windows.baseline.start, windows.baseline.end),
+                    dayRestingBpm = dayRestingBpm.await(),
+                    previousDayRestingBpm = previousDayRestingBpm.await(),
+                    baselineDailyRestingHR = baselineDailyRestingHR.await(),
                 )
             } else {
+                val dailyRestingHR = async { loadDailyRestingHR(windows.current.start, windows.current.end, granted) }
+                val previousDailyRestingHR = async { loadDailyRestingHR(windows.previous.start, windows.previous.end, granted) }
+                val baselineDailyRestingHR = async { loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted) }
                 HeartPeriodData(
-                    dailyRestingHR = loadDailyRestingHR(windows.current.start, windows.current.end),
-                    previousDailyRestingHR = loadDailyRestingHR(windows.previous.start, windows.previous.end),
-                    baselineDailyRestingHR = loadDailyRestingHR(windows.baseline.start, windows.baseline.end),
+                    dailyRestingHR = dailyRestingHR.await(),
+                    previousDailyRestingHR = previousDailyRestingHR.await(),
+                    baselineDailyRestingHR = baselineDailyRestingHR.await(),
                 )
             }
             HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
+                val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
+                val previousDayHrvMs = async { loadHrvRmssd(windows.previous.start, granted) }
+                val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
                 HeartPeriodData(
-                    dayHrvMs = loadHrvRmssd(query.selectedDate),
-                    previousDayHrvMs = loadHrvRmssd(windows.previous.start),
-                    baselineDailyHrv = loadDailyHRV(windows.baseline.start, windows.baseline.end),
+                    dayHrvMs = dayHrvMs.await(),
+                    previousDayHrvMs = previousDayHrvMs.await(),
+                    baselineDailyHrv = baselineDailyHrv.await(),
                 )
             } else {
+                val dailyHrv = async { loadDailyHRV(windows.current.start, windows.current.end, granted) }
+                val previousDailyHrv = async { loadDailyHRV(windows.previous.start, windows.previous.end, granted) }
+                val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
                 HeartPeriodData(
-                    dailyHrv = loadDailyHRV(windows.current.start, windows.current.end),
-                    previousDailyHrv = loadDailyHRV(windows.previous.start, windows.previous.end),
-                    baselineDailyHrv = loadDailyHRV(windows.baseline.start, windows.baseline.end),
+                    dailyHrv = dailyHrv.await(),
+                    previousDailyHrv = previousDailyHrv.await(),
+                    baselineDailyHrv = baselineDailyHrv.await(),
                 )
             }
         }
@@ -81,8 +112,15 @@ class HeartRepository @Inject constructor(
 
     suspend fun loadHeartRateSamples(date: LocalDate): List<HeartRateSample> {
         val granted = grantedPermissionsIfAvailable()
+        return loadHeartRateSamples(date, granted)
+    }
+
+    private suspend fun loadHeartRateSamples(
+        date: LocalDate,
+        granted: Set<String>,
+    ): List<HeartRateSample> {
         if (readHeartRatePermission !in granted) {
-            Log.w(TAG, "Skipping loadHeartRateSamples date=$date missing=$readHeartRatePermission")
+            Log.w(TAG, "Skipping loadHeartRateSamples missingCount=1")
             return emptyList()
         }
         val zone = ZoneId.systemDefault()
@@ -91,10 +129,38 @@ class HeartRepository @Inject constructor(
         return hc.readHeartRateSamples(start, end)
     }
 
+    suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadHeartRateSamples(start, end, granted)
+    }
+
+    private suspend fun loadHeartRateSamples(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<HeartRateSample> {
+        if (readHeartRatePermission !in granted) {
+            Log.w(TAG, "Skipping loadHeartRateSamples missingCount=1")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        val startInstant = start.atStartOfDay(zone).toInstant()
+        val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
+        return hc.readHeartRateSamples(startInstant, endInstant)
+    }
+
     suspend fun loadDailyHeartRateSummaries(start: LocalDate, end: LocalDate): List<HeartRateSummary> {
         val granted = grantedPermissionsIfAvailable()
+        return loadDailyHeartRateSummaries(start, end, granted)
+    }
+
+    private suspend fun loadDailyHeartRateSummaries(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<HeartRateSummary> {
         if (readHeartRatePermission !in granted) {
-            Log.w(TAG, "Skipping loadDailyHeartRateSummaries start=$start end=$end missing=$readHeartRatePermission")
+            Log.w(TAG, "Skipping loadDailyHeartRateSummaries missingCount=1")
             return emptyList()
         }
         return hc.readDailyHeartRateSummaries(start, end)
@@ -102,14 +168,29 @@ class HeartRepository @Inject constructor(
 
     suspend fun loadRestingHeartRate(date: LocalDate): Long? {
         val granted = grantedPermissionsIfAvailable()
+        return loadRestingHeartRate(date, granted)
+    }
+
+    private suspend fun loadRestingHeartRate(
+        date: LocalDate,
+        granted: Set<String>,
+    ): Long? {
         if (readRestingHRPermission !in granted) return null
         return hc.readRestingHeartRate(date)
     }
 
     suspend fun loadDailyRestingHR(start: LocalDate, end: LocalDate): List<DailyRestingHR> {
         val granted = grantedPermissionsIfAvailable()
+        return loadDailyRestingHR(start, end, granted)
+    }
+
+    private suspend fun loadDailyRestingHR(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<DailyRestingHR> {
         if (readRestingHRPermission !in granted) {
-            Log.w(TAG, "Skipping loadDailyRestingHR start=$start end=$end missing=$readRestingHRPermission")
+            Log.w(TAG, "Skipping loadDailyRestingHR missingCount=1")
             return emptyList()
         }
         return hc.readDailyRestingHR(start, end)
@@ -117,14 +198,29 @@ class HeartRepository @Inject constructor(
 
     suspend fun loadHrvRmssd(date: LocalDate): Double? {
         val granted = grantedPermissionsIfAvailable()
+        return loadHrvRmssd(date, granted)
+    }
+
+    private suspend fun loadHrvRmssd(
+        date: LocalDate,
+        granted: Set<String>,
+    ): Double? {
         if (readHrvPermission !in granted) return null
         return hc.readHrvRmssd(date)
     }
 
     suspend fun loadDailyHRV(start: LocalDate, end: LocalDate): List<DailyHrv> {
         val granted = grantedPermissionsIfAvailable()
+        return loadDailyHRV(start, end, granted)
+    }
+
+    private suspend fun loadDailyHRV(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<DailyHrv> {
         if (readHrvPermission !in granted) {
-            Log.w(TAG, "Skipping loadDailyHRV start=$start end=$end missing=$readHrvPermission")
+            Log.w(TAG, "Skipping loadDailyHRV missingCount=1")
             return emptyList()
         }
         return hc.readDailyHRV(start, end)

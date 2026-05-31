@@ -303,7 +303,7 @@ internal class ActivityHealthReader(
                     if (HealthConnectRateLimitBackoff.isRateLimitFailure(it)) {
                         throw it
                     }
-                    Log.e(TAG, "Failed readExerciseSession aggregate id=$id ${support.diagnosticsSummary()}", it)
+                    Log.e(TAG, "Failed readExerciseSession aggregate ${support.diagnosticsSummary()}", it)
                 }.getOrNull()
             }
 
@@ -354,7 +354,7 @@ internal class ActivityHealthReader(
         Log.d(
             TAG,
             "Writing activity entry type=${request.exerciseType} " +
-                "routePoints=${request.routePoints.size} pauses=${request.pauseIntervals.size} " +
+                "hasRoute=${request.routePoints.isNotEmpty()} pauses=${request.pauseIntervals.size} " +
                 "segments=${exerciseSegments.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
         support.client().insertRecords(listOf(session) + extraRecords)
@@ -381,8 +381,8 @@ internal class ActivityHealthReader(
 
         Log.d(
             TAG,
-            "Updating activity entry id=$id type=${request.exerciseType} " +
-                "routePoints=${request.routePoints.size} pauses=${request.pauseIntervals.size} " +
+            "Updating activity entry type=${request.exerciseType} " +
+                "hasRoute=${request.routePoints.isNotEmpty()} pauses=${request.pauseIntervals.size} " +
                 "segments=${exerciseSegments.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
         support.client().updateRecords(listOf(session))

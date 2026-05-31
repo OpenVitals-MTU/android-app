@@ -1,4 +1,4 @@
-OpenVitals es un panel privado para Health Connect en Android. Te ayuda a revisar actividad, sueno, corazon, cuerpo, hidratacion, nutricion, mindfulness, signos vitales, registros y datos de ciclo opcionales en una app local.
+OpenVitals es un panel privado para Health Connect en Android. Te ayuda a revisar actividad, sueno, corazon, cuerpo, hidratacion, nutricion, mindfulness, signos vitales y datos de ciclo opcionales en una app local.
 
 Tus datos de salud se quedan en tu dispositivo. OpenVitals no requiere cuenta, no sincroniza datos en la nube, no tiene anuncios, no incluye analiticas y no solicita permiso de internet. El panel lee Health Connect solo despues de que concedas permisos. Las entradas manuales se escriben en Health Connect solo cuando las guardas explicitamente.
 

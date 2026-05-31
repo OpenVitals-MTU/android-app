@@ -1,5 +1,8 @@
 package tech.mmarca.openvitals.features.activity
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -33,8 +38,65 @@ fun ActivityDetailScreen(
     onEditActivity: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val error = state.error
     val workout = state.workout
+    val latestWorkout by rememberUpdatedState(workout)
+    fun showRouteExportFailure() {
+        Toast.makeText(
+            context,
+            R.string.activity_route_export_failed,
+            Toast.LENGTH_LONG,
+        ).show()
+    }
+    val saveGpxRoute = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityRouteExportFormat.GPX.mimeType),
+    ) { uri ->
+        val currentWorkout = latestWorkout ?: return@rememberLauncherForActivityResult
+        if (uri != null) {
+            context.saveActivityRouteExport(
+                workout = currentWorkout,
+                format = ActivityRouteExportFormat.GPX,
+                destination = uri,
+            )
+                .onSuccess {
+                    Toast.makeText(
+                        context,
+                        R.string.activity_route_export_saved,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                .onFailure { showRouteExportFailure() }
+        }
+    }
+    val saveKmzRoute = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityRouteExportFormat.KMZ.mimeType),
+    ) { uri ->
+        val currentWorkout = latestWorkout ?: return@rememberLauncherForActivityResult
+        if (uri != null) {
+            context.saveActivityRouteExport(
+                workout = currentWorkout,
+                format = ActivityRouteExportFormat.KMZ,
+                destination = uri,
+            )
+                .onSuccess {
+                    Toast.makeText(
+                        context,
+                        R.string.activity_route_export_saved,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                .onFailure { showRouteExportFailure() }
+        }
+    }
+    fun launchRouteExport(format: ActivityRouteExportFormat) {
+        val currentWorkout = latestWorkout ?: return
+        val fileName = currentWorkout.routeExportFileName(format)
+        when (format) {
+            ActivityRouteExportFormat.GPX -> saveGpxRoute.launch(fileName)
+            ActivityRouteExportFormat.KMZ -> saveKmzRoute.launch(fileName)
+        }
+    }
 
     when {
         state.isLoading -> FullScreenLoading()
@@ -44,6 +106,18 @@ fun ActivityDetailScreen(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditActivity = onEditActivity,
+            onOpenRouteInMap = {
+                context.openActivityRouteInMap(workout)
+                    .onFailure {
+                        Toast.makeText(
+                            context,
+                            R.string.activity_route_open_failed,
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+            },
+            onSaveRouteAsGpx = { launchRouteExport(ActivityRouteExportFormat.GPX) },
+            onSaveRouteAsKmz = { launchRouteExport(ActivityRouteExportFormat.KMZ) },
         )
     }
 }
@@ -54,6 +128,9 @@ private fun ActivityDetailContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditActivity: (String) -> Unit,
+    onOpenRouteInMap: () -> Unit,
+    onSaveRouteAsGpx: () -> Unit,
+    onSaveRouteAsKmz: () -> Unit,
 ) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         if (workout.isOpenVitalsEntry && workout.id.isNotBlank()) {
@@ -129,6 +206,9 @@ private fun ActivityDetailContent(
                 route = workout.route,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onOpenRouteInMap = onOpenRouteInMap,
+                onSaveRouteAsGpx = onSaveRouteAsGpx,
+                onSaveRouteAsKmz = onSaveRouteAsKmz,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),

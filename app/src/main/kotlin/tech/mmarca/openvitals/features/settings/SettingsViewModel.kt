@@ -47,12 +47,12 @@ data class SettingsUiState(
 
 data class SettingsPermissionCategory(
     val id: String,
-    @StringRes val titleRes: Int,
-    @StringRes val descriptionRes: Int,
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val descriptionRes: Int,
     val permissions: Set<String>,
     val manualPermissions: Set<String> = emptySet(),
     val available: Boolean = true,
-    @StringRes val unavailableReasonRes: Int? = null,
+    @param:StringRes val unavailableReasonRes: Int? = null,
 )
 
 @HiltViewModel
@@ -77,7 +77,7 @@ class SettingsViewModel @Inject constructor(
             val granted = if (avail == HealthConnectAvailability.AVAILABLE) {
                 repository.grantedPermissions()
             } else emptySet()
-            Log.d(TAG, "refresh availability=$avail granted=${granted.sorted()}")
+            Log.d(TAG, "refresh availability=$avail grantedCount=${granted.size}")
 
             _uiState.value = SettingsUiState(
                 isLoading = false,
@@ -116,7 +116,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun onPermissionsResult(granted: Set<String>) {
-        Log.d(TAG, "onPermissionsResult callbackGranted=${granted.sorted()}")
+        Log.d(TAG, "onPermissionsResult callbackGrantedCount=${granted.size}")
         refresh()
     }
 

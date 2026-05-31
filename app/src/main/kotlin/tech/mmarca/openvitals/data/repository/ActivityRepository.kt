@@ -18,14 +18,18 @@ import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class ActivityRepository @Inject constructor(
     private val hc: HealthConnectManager,
+    private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
 ) {
 
     companion object {
@@ -49,32 +53,67 @@ class ActivityRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadActivityPeriod(query: PeriodLoadQuery, includeSteps: Boolean, includeNutrition: Boolean): ActivityPeriodData {
+    suspend fun loadActivityPeriod(query: PeriodLoadQuery, includeSteps: Boolean, includeNutrition: Boolean): ActivityPeriodData = coroutineScope {
         val windows = query.windows
-        return ActivityPeriodData(
-            dailySteps = if (includeSteps) loadDailySteps(windows.current.start, windows.current.end) else emptyList(),
-            previousDailySteps = if (includeSteps) loadDailySteps(windows.previous.start, windows.previous.end) else emptyList(),
-            baselineDailySteps = if (includeSteps) loadDailySteps(windows.baseline.start, windows.baseline.end) else emptyList(),
-            nutrition = if (includeNutrition) loadDailyNutrition(windows.current.start, windows.current.end) else emptyList(),
-            previousNutrition = if (includeNutrition) loadDailyNutrition(windows.previous.start, windows.previous.end) else emptyList(),
-            baselineNutrition = if (includeNutrition) loadDailyNutrition(windows.baseline.start, windows.baseline.end) else emptyList(),
-            activityProgress = if (query.range == TimeRange.DAY) loadActivityProgress(windows.current.start) else emptyList(),
+        val granted = grantedPermissionsIfAvailable()
+        val dailySteps = async {
+            if (includeSteps) loadDailySteps(windows.current.start, windows.current.end, granted) else emptyList()
+        }
+        val previousDailySteps = async {
+            if (includeSteps) loadDailySteps(windows.previous.start, windows.previous.end, granted) else emptyList()
+        }
+        val baselineDailySteps = async {
+            if (includeSteps) loadDailySteps(windows.baseline.start, windows.baseline.end, granted) else emptyList()
+        }
+        val nutrition = async {
+            if (includeNutrition) loadDailyNutrition(windows.current.start, windows.current.end, granted) else emptyList()
+        }
+        val previousNutrition = async {
+            if (includeNutrition) loadDailyNutrition(windows.previous.start, windows.previous.end, granted) else emptyList()
+        }
+        val baselineNutrition = async {
+            if (includeNutrition) loadDailyNutrition(windows.baseline.start, windows.baseline.end, granted) else emptyList()
+        }
+        val activityProgress = async {
+            if (query.range == TimeRange.DAY) loadActivityProgress(windows.current.start, granted) else emptyList()
+        }
+        ActivityPeriodData(
+            dailySteps = dailySteps.await(),
+            previousDailySteps = previousDailySteps.await(),
+            baselineDailySteps = baselineDailySteps.await(),
+            nutrition = nutrition.await(),
+            previousNutrition = previousNutrition.await(),
+            baselineNutrition = baselineNutrition.await(),
+            activityProgress = activityProgress.await(),
         )
     }
 
-    suspend fun loadActivitiesPeriod(query: PeriodLoadQuery): ActivitiesPeriodData {
+    suspend fun loadActivitiesPeriod(query: PeriodLoadQuery): ActivitiesPeriodData = coroutineScope {
         val windows = query.windows
-        return ActivitiesPeriodData(
-            workouts = loadWorkouts(windows.current.start, windows.current.end),
-            previousWorkouts = loadWorkouts(windows.previous.start, windows.previous.end),
-            baselineWorkouts = loadWorkouts(windows.baseline.start, windows.baseline.end),
+        val granted = grantedPermissionsIfAvailable()
+        val workouts = async { loadWorkouts(windows.current.start, windows.current.end, granted) }
+        val previousWorkouts = async { loadWorkouts(windows.previous.start, windows.previous.end, granted) }
+        val baselineWorkouts = async { loadWorkouts(windows.baseline.start, windows.baseline.end, granted) }
+        ActivitiesPeriodData(
+            workouts = workouts.await(),
+            previousWorkouts = previousWorkouts.await(),
+            baselineWorkouts = baselineWorkouts.await(),
         )
     }
 
     suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> {
         val granted = grantedPermissionsIfAvailable()
-        if (readStepsPermission !in granted || readDistancePermission !in granted) {
-            Log.w(TAG, "Skipping loadDailySteps start=$start end=$end missing=${listOf(readStepsPermission, readDistancePermission).filterNot { it in granted }}")
+        return loadDailySteps(start, end, granted)
+    }
+
+    private suspend fun loadDailySteps(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<DailySteps> {
+        val missing = listOf(readStepsPermission, readDistancePermission).filterNot { it in granted }
+        if (missing.isNotEmpty()) {
+            Log.w(TAG, "Skipping loadDailySteps missingCount=${missing.size}")
             return emptyList()
         }
         return hc.readDailySteps(
@@ -88,8 +127,15 @@ class ActivityRepository @Inject constructor(
 
     suspend fun loadActivityProgress(date: LocalDate = LocalDate.now()): List<ActivityProgressPoint> {
         val granted = grantedPermissionsIfAvailable()
+        return loadActivityProgress(date, granted)
+    }
+
+    private suspend fun loadActivityProgress(
+        date: LocalDate,
+        granted: Set<String>,
+    ): List<ActivityProgressPoint> {
         if (readStepsPermission !in granted) {
-            Log.w(TAG, "Skipping loadActivityProgress date=$date missing=$readStepsPermission")
+            Log.w(TAG, "Skipping loadActivityProgress missingCount=1")
             return emptyList()
         }
         return hc.readActivityProgress(
@@ -104,8 +150,16 @@ class ActivityRepository @Inject constructor(
 
     suspend fun loadWorkouts(start: LocalDate, end: LocalDate): List<ExerciseData> {
         val granted = grantedPermissionsIfAvailable()
+        return loadWorkouts(start, end, granted)
+    }
+
+    private suspend fun loadWorkouts(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<ExerciseData> {
         if (readExercisePermission !in granted) {
-            Log.w(TAG, "Skipping loadWorkouts start=$start end=$end missing=$readExercisePermission")
+            Log.w(TAG, "Skipping loadWorkouts missingCount=1")
             return emptyList()
         }
         val zone = ZoneId.systemDefault()
@@ -117,7 +171,7 @@ class ActivityRepository @Inject constructor(
     suspend fun loadWorkout(id: String): ExerciseData? {
         val granted = grantedPermissionsIfAvailable()
         if (readExercisePermission !in granted) {
-            Log.w(TAG, "Skipping loadWorkout id=$id missing=$readExercisePermission")
+            Log.w(TAG, "Skipping loadWorkout missingCount=1")
             return null
         }
         return hc.readExerciseSession(
@@ -133,8 +187,16 @@ class ActivityRepository @Inject constructor(
 
     suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition> {
         val granted = grantedPermissionsIfAvailable()
+        return loadDailyNutrition(start, end, granted)
+    }
+
+    private suspend fun loadDailyNutrition(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<DailyNutrition> {
         if (readCaloriesPermission !in granted) {
-            Log.w(TAG, "Skipping loadDailyNutrition start=$start end=$end missing=$readCaloriesPermission")
+            Log.w(TAG, "Skipping loadDailyNutrition missingCount=1")
             return emptyList()
         }
         return hc.readDailyNutrition(start, end, includeHydration = false)
@@ -202,19 +264,22 @@ class ActivityRepository @Inject constructor(
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String {
         val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
-            Log.w(TAG, "Skipping writeActivityEntry missing=$missingPermissions")
+            Log.w(TAG, "Skipping writeActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        return hc.writeActivityEntry(request)
+        return hc.writeActivityEntry(request).also {
+            queryCache.invalidateOperations("dashboard")
+        }
     }
 
     suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
         val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
-            Log.w(TAG, "Skipping updateActivityEntry id=$id missing=$missingPermissions")
+            Log.w(TAG, "Skipping updateActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
         hc.updateActivityEntry(id, request)
+        queryCache.invalidateOperations("dashboard")
     }
 }
 

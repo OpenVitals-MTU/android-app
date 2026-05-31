@@ -11,7 +11,7 @@ The repo is still a single Android app module. The goal is not to force a multi-
 - App namespace: `tech.mmarca.openvitals`
 - Project shape: one Android app module under `app/`
 - Dependency wiring: Hilt in the single `:app` module, rooted at [`OpenVitalsApp`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
-- UI stack: Jetpack Compose + Material 3 adaptive navigation + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
+- UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - Shared period shell: in place and used by all metric detail/list screens
 - Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
@@ -19,7 +19,7 @@ The repo is still a single Android app module. The goal is not to force a multi-
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
 - Room and WorkManager are intentionally absent until a concrete cache or background refresh design exists
 
-Most importantly, `body` and `browse` are no longer special legacy exceptions in the UI architecture. They now follow the same period-based shell as the other detail screens.
+Most importantly, body and entry/session browsing now live in metric-owned detail screens. The former global Browse destination is no longer part of the app architecture.
 
 ## Architectural Principles
 
@@ -214,7 +214,6 @@ Current feature packages:
 - [`features/sleep`](../app/src/main/kotlin/tech/mmarca/openvitals/features/sleep)
 - [`features/heart`](../app/src/main/kotlin/tech/mmarca/openvitals/features/heart)
 - [`features/body`](../app/src/main/kotlin/tech/mmarca/openvitals/features/body)
-- [`features/browse`](../app/src/main/kotlin/tech/mmarca/openvitals/features/browse)
 - [`features/manualentry`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry)
 - [`features/settings`](../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
@@ -253,7 +252,7 @@ Shared pieces it uses:
 
 The dashboard should stay summary-first. It should not become a second copy of detail-screen logic.
 
-Dashboard metric cards route to metric-specific detail destinations. Metrics that share a repository can still reuse the same feature package and ViewModel, but navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter. The rendered detail view should focus on the selected metric instead of showing every related metric in one grouped screen. The records browser remains a fixed dashboard action rather than a customizable metric card.
+Dashboard metric cards route to metric-specific detail destinations. Metrics that share a repository can still reuse the same feature package and ViewModel, but navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter. The rendered detail view should focus on the selected metric instead of showing every related metric in one grouped screen. There is no global records browser or fixed dashboard browse action; entry and session lists belong behind the relevant metric card/detail screen.
 
 ### Manual entry
 
@@ -287,7 +286,6 @@ The aligned detail/list screens are:
 - nutrition
 - mindfulness
 - cycle
-- browse
 
 They all use [`MetricDetailScaffold`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt) as the shared shell.
 
@@ -407,11 +405,7 @@ Prefer APIs shaped like:
 - `loadXPeriod(PeriodLoadQuery, featureOptions)`
 - feature-specific query/result objects when period windows need current, previous, and baseline data
 
-Keep granular APIs only when they are real browse/detail reads rather than compatibility paths for migrated screens.
-
-### Compose existing repositories when the feature is an aggregate browser
-
-`BrowseViewModel` is a good current example. It composes activity, sleep, and body repositories rather than inventing a broad new repository abstraction.
+Keep granular APIs only when they are real detail or entry-list reads rather than compatibility paths for migrated screens. Avoid adding an aggregate browser layer unless product direction explicitly reintroduces one.
 
 ## What Should Stay Shared vs Local
 

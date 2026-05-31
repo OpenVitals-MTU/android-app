@@ -116,7 +116,7 @@ internal class HydrationHealthReader(
             ),
         )
 
-        Log.d(TAG, "Writing hydration record volumeLiters=${request.volumeLiters} ${support.diagnosticsSummary()}")
+        Log.d(TAG, "Writing hydration record ${support.diagnosticsSummary()}")
         support.client().insertRecords(listOf(record))
         clientRecordId
     }
@@ -146,7 +146,7 @@ internal class HydrationHealthReader(
             ),
         )
 
-        Log.d(TAG, "Updating hydration record id=$id volumeLiters=${request.volumeLiters} ${support.diagnosticsSummary()}")
+        Log.d(TAG, "Updating hydration record ${support.diagnosticsSummary()}")
         support.client().updateRecords(listOf(record))
     }
 

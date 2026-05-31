@@ -206,7 +206,7 @@ fun OnboardingScreen(
             )
         }
 
-        if (!state.phase2Granted || !state.phase3Granted) {
+        if (!state.phase2Granted) {
             FilledTonalButton(
                 onClick = { requestPermissions.launch(viewModel.onboardingPermissions) },
                 modifier = Modifier

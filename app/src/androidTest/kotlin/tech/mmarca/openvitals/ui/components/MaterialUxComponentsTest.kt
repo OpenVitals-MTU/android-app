@@ -3,9 +3,8 @@ package tech.mmarca.openvitals.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -43,14 +42,9 @@ class MaterialUxComponentsTest {
                             icon = Icons.Outlined.Dashboard,
                         ),
                         OpenVitalsNavigationDestination(
-                            route = "browse",
-                            labelRes = R.string.screen_browse,
-                            icon = Icons.Outlined.FolderOpen,
-                        ),
-                        OpenVitalsNavigationDestination(
-                            route = "settings",
-                            labelRes = R.string.screen_settings,
-                            icon = Icons.Outlined.Settings,
+                            route = "sleep",
+                            labelRes = R.string.screen_sleep,
+                            icon = Icons.Outlined.Bed,
                         ),
                     ),
                     currentRoute = "dashboard",
@@ -72,9 +66,9 @@ class MaterialUxComponentsTest {
             }
         }
 
-        composeRule.onNodeWithText("Browse").performClick()
+        composeRule.onNodeWithText("Sleep").performClick()
         composeRule.runOnIdle {
-            assertEquals("browse", selectedRoute)
+            assertEquals("sleep", selectedRoute)
         }
 
         composeRule.onNodeWithText("Add").performClick()

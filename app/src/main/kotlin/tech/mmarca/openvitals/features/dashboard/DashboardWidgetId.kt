@@ -31,15 +31,20 @@ enum class DashboardWidgetId {
     VO2_MAX,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    WEEKLY_CARDIO_LOAD,
+    CARDIO_LOAD,
     MINDFULNESS,
     CYCLE,
-    BROWSE,
 }
 
-const val DashboardFixedWidgetCount = 4
+const val DashboardWidgetGridColumns = 2
+const val DashboardFixedWidgetRows = 2
+const val DashboardCarouselWidgetRows = 3
+const val DashboardFixedWidgetCount = DashboardWidgetGridColumns * DashboardFixedWidgetRows
 
 val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.STEPS,
+    DashboardWidgetId.WEEKLY_CARDIO_LOAD,
     DashboardWidgetId.DISTANCE,
     DashboardWidgetId.CALORIES_OUT,
     DashboardWidgetId.ACTIVE_CALORIES,
@@ -71,10 +76,8 @@ val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.CYCLE,
 )
 
-private val FixedDashboardWidgetIds = setOf(DashboardWidgetId.BROWSE)
-
 fun customizableDashboardWidgetIds(widgetIds: List<DashboardWidgetId>): List<DashboardWidgetId> =
-    widgetIds.filterNot { it in FixedDashboardWidgetIds }.distinct()
+    widgetIds.distinct()
 
 fun dashboardWidgetIdsFromStored(storedIds: List<String>?): List<DashboardWidgetId> {
     if (storedIds == null) return DefaultDashboardWidgetIds
@@ -87,6 +90,50 @@ fun dashboardWidgetIdsFromStored(storedIds: List<String>?): List<DashboardWidget
         .let(::customizableDashboardWidgetIds)
 
     return parsedIds.ifEmpty { DefaultDashboardWidgetIds }
+}
+
+fun DashboardWidgetId.dashboardWidgetRowSpan(): Int = when (this) {
+    DashboardWidgetId.STEPS -> 2
+    DashboardWidgetId.WEEKLY_CARDIO_LOAD -> 2
+    else -> 1
+}
+
+fun dashboardWidgetIdsThatFitRows(
+    widgetIds: List<DashboardWidgetId>,
+    rows: Int,
+    columns: Int = DashboardWidgetGridColumns,
+): List<DashboardWidgetId> {
+    val usedRows = IntArray(columns)
+    return buildList {
+        widgetIds.forEach { widgetId ->
+            val rowSpan = widgetId.dashboardWidgetRowSpan().coerceIn(1, rows)
+            val column = usedRows.indices.firstOrNull { usedRows[it] + rowSpan <= rows }
+            if (column != null) {
+                usedRows[column] += rowSpan
+                add(widgetId)
+            }
+        }
+    }
+}
+
+fun dashboardWidgetIdsInGridPages(
+    widgetIds: List<DashboardWidgetId>,
+    rows: Int,
+    columns: Int = DashboardWidgetGridColumns,
+): List<List<DashboardWidgetId>> {
+    val pages = mutableListOf<List<DashboardWidgetId>>()
+    var remaining = widgetIds
+    while (remaining.isNotEmpty()) {
+        val page = dashboardWidgetIdsThatFitRows(
+            widgetIds = remaining,
+            rows = rows,
+            columns = columns,
+        ).ifEmpty { listOf(remaining.first()) }
+        pages += page
+        val pageIds = page.toSet()
+        remaining = remaining.filterNot { it in pageIds }
+    }
+    return pages
 }
 
 fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) {
@@ -118,7 +165,8 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.VO2_MAX -> DashboardMetric.VO2_MAX
     DashboardWidgetId.RESPIRATORY_RATE -> DashboardMetric.RESPIRATORY_RATE
     DashboardWidgetId.BODY_TEMPERATURE -> DashboardMetric.BODY_TEMPERATURE
+    DashboardWidgetId.WEEKLY_CARDIO_LOAD -> DashboardMetric.WEEKLY_CARDIO_LOAD
+    DashboardWidgetId.CARDIO_LOAD -> DashboardMetric.WEEKLY_CARDIO_LOAD
     DashboardWidgetId.MINDFULNESS -> DashboardMetric.MINDFULNESS
     DashboardWidgetId.CYCLE -> DashboardMetric.CYCLE
-    DashboardWidgetId.BROWSE -> null
 }

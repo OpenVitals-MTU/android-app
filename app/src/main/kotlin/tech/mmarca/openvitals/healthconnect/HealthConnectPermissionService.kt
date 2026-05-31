@@ -40,6 +40,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
@@ -170,12 +171,15 @@ internal class HealthConnectPermissionService(
     val manualOnlyPermissions: Set<String> get() = routePermissions
 
     val requestableAllPermissions: Set<String>
-        get() = phase1Permissions + phase2Permissions + phase3Permissions + additionalDataAccessPermissions
+        get() = phase1Permissions + phase2Permissions
 
-    val requestableManagedPermissions: Set<String> get() = requestableAllPermissions + phase4Permissions
+    val requestableManagedPermissions: Set<String>
+        get() = requestableAllPermissions + phase3Permissions + additionalDataAccessPermissions + phase4Permissions
 
     val allPermissions: Set<String> get() =
         requestableAllPermissions +
+            phase3Permissions +
+            additionalDataAccessPermissions +
             manualOnlyPermissions +
             activityWritePermissions +
             hydrationWritePermissions +
@@ -246,13 +250,13 @@ internal class HealthConnectPermissionService(
             managedPermissions.filterTo(mutableSetOf()) { permission ->
                 ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
             }.also { granted ->
-                Log.d(TAG, "grantedPermissions(runtime) count=${granted.size} granted=${granted.sorted()} ${diagnostics.summary()}")
+                Log.d(TAG, "grantedPermissions(runtime) count=${granted.size} ${diagnostics.summary()}")
             }
         } else {
             withLogging("permissionController.getGrantedPermissions", emptySet()) {
                 clientProvider().permissionController.getGrantedPermissions()
             }.also { granted ->
-                Log.d(TAG, "grantedPermissions(client) count=${granted.size} granted=${granted.sorted()}")
+                Log.d(TAG, "grantedPermissions(client) count=${granted.size}")
             }
         }
     }
@@ -272,6 +276,8 @@ internal class HealthConnectPermissionService(
         block().also {
             Log.d(TAG, "Finished $operation successfully")
         }
+    } catch (t: CancellationException) {
+        throw t
     } catch (t: Throwable) {
         Log.e(TAG, "Failed $operation ${diagnostics.summary()}", t)
         fallback

@@ -11,11 +11,11 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -62,7 +62,7 @@ fun OpenVitalsAdaptiveScaffold(
 ) {
     val scaffoldContent: @Composable () -> Unit = {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize(),
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 if (showTopBar) {
@@ -82,6 +82,29 @@ fun OpenVitalsAdaptiveScaffold(
                     )
                 }
             },
+            bottomBar = {
+                if (showNavigation) {
+                    NavigationBar {
+                        navigationDestinations.forEach { destination ->
+                            NavigationBarItem(
+                                icon = {
+                                    Icon(
+                                        imageVector = destination.icon,
+                                        contentDescription = stringResource(destination.labelRes),
+                                    )
+                                },
+                                label = { Text(stringResource(destination.labelRes)) },
+                                selected = currentRoute == destination.route,
+                                onClick = {
+                                    if (currentRoute != destination.route) {
+                                        onNavigate(destination.route)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            },
             floatingActionButton = {
                 action?.let { spec ->
                     ExtendedFloatingActionButton(
@@ -99,36 +122,7 @@ fun OpenVitalsAdaptiveScaffold(
             content = content,
         )
     }
-
-    if (showNavigation) {
-        NavigationSuiteScaffold(
-            navigationSuiteItems = {
-                navigationDestinations.forEach { destination ->
-                    item(
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = stringResource(destination.labelRes),
-                            )
-                        },
-                        label = { Text(stringResource(destination.labelRes)) },
-                        selected = currentRoute == destination.route,
-                        onClick = {
-                            if (currentRoute != destination.route) {
-                                onNavigate(destination.route)
-                            }
-                        },
-                    )
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.background,
-            modifier = modifier.fillMaxSize(),
-        ) {
-            scaffoldContent()
-        }
-    } else {
-        scaffoldContent()
-    }
+    scaffoldContent()
 }
 
 @Composable

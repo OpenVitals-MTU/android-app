@@ -3,14 +3,16 @@ package tech.mmarca.openvitals.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,12 +33,15 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
+import tech.mmarca.openvitals.features.activity.ActivityOverviewScreen
+import tech.mmarca.openvitals.features.activity.ActivityOverviewViewModel
 import tech.mmarca.openvitals.features.activity.ActiveCaloriesScreen
 import tech.mmarca.openvitals.features.activity.ActivityMetric
 import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
 import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
 import tech.mmarca.openvitals.features.activity.CaloriesOutScreen
+import tech.mmarca.openvitals.features.activity.CardioLoadDetailScreen
 import tech.mmarca.openvitals.features.activity.DistanceScreen
 import tech.mmarca.openvitals.features.activity.ElevationScreen
 import tech.mmarca.openvitals.features.activity.FloorsScreen
@@ -50,8 +55,6 @@ import tech.mmarca.openvitals.features.body.BoneMassScreen
 import tech.mmarca.openvitals.features.body.HeightScreen
 import tech.mmarca.openvitals.features.body.LeanMassScreen
 import tech.mmarca.openvitals.features.body.WeightScreen
-import tech.mmarca.openvitals.features.browse.BrowseScreen
-import tech.mmarca.openvitals.features.browse.BrowseViewModel
 import tech.mmarca.openvitals.features.cycle.CycleScreen
 import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardScreen
@@ -94,6 +97,10 @@ import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.nutrition.ProteinScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
+import tech.mmarca.openvitals.features.recovery.RecoveryScreen
+import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
+import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
+import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
 import tech.mmarca.openvitals.features.sleep.SleepDetailScreen
@@ -104,11 +111,19 @@ import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 
+private const val ActivitiesTabRoute = "tab_activities"
+private const val CardioLoadDetailRoute = "activity/cardio_load"
+private const val RecoveryTabRoute = "tab_recovery"
+private const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
+private const val SleepScoreDetailRoute = "recovery/sleep_score"
+
 @Composable
 fun AppNavigation(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     startDestination: String,
+    routeImportRequest: ExternalRouteImportRequest? = null,
+    onRouteImportRequestHandled: (Long) -> Unit = {},
     onOnboardingComplete: () -> Unit = {},
 ) {
     val navController = rememberNavController()
@@ -136,7 +151,6 @@ fun AppNavigation(
     } else {
         null
     }
-    var dashboardTopBarState by remember { mutableStateOf(TopBarEditState()) }
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
 
     val topLevelDestinations = remember {
@@ -147,19 +161,23 @@ fun AppNavigation(
                 icon = Icons.Outlined.Dashboard,
             ),
             OpenVitalsNavigationDestination(
-                route = Screen.Browse.route,
-                labelRes = R.string.screen_browse,
-                icon = Icons.Outlined.FolderOpen,
+                route = ActivitiesTabRoute,
+                labelRes = R.string.bottom_nav_activities,
+                icon = Icons.AutoMirrored.Outlined.DirectionsRun,
             ),
             OpenVitalsNavigationDestination(
-                route = Screen.Settings.route,
-                labelRes = R.string.screen_settings,
-                icon = Icons.Outlined.Settings,
+                route = RecoveryTabRoute,
+                labelRes = R.string.bottom_nav_recovery,
+                icon = Icons.Outlined.Bed,
             ),
         )
     }
-    val topLevelRoutes = remember(topLevelDestinations) {
-        topLevelDestinations.map { it.route }.toSet()
+    val topLevelRoutes = remember {
+        setOf(
+            Screen.Dashboard.route,
+            ActivitiesTabRoute,
+            RecoveryTabRoute,
+        )
     }
     val taskRoutes = remember {
         setOf(
@@ -179,7 +197,7 @@ fun AppNavigation(
 
     val showTopBar = currentRoute != null && currentRoute != Screen.Onboarding.route
     val isTaskRoute = currentRoute?.let { it in taskRoutes } == true
-    val showNavigation = showTopBar && !isTaskRoute
+    val showNavigation = currentRoute?.let { it in topLevelRoutes } == true
     val canNavigateBack =
         currentRoute != null &&
             currentRoute != Screen.Onboarding.route &&
@@ -192,8 +210,25 @@ fun AppNavigation(
         onNavigate = { route -> navController.navigate(route) },
     )
 
+    LaunchedEffect(routeImportRequest?.id, currentRoute) {
+        if (
+            routeImportRequest != null &&
+            currentRoute != null &&
+            currentRoute != Screen.Onboarding.route
+        ) {
+            navController.navigate(Screen.ActivityEntry.route) {
+                launchSingleTop = true
+            }
+        }
+    }
+
     val topBarTitle = when (currentRoute) {
-        Screen.Dashboard.route -> stringResource(R.string.screen_dashboard)
+        Screen.Dashboard.route -> stringResource(R.string.app_name)
+        ActivitiesTabRoute -> stringResource(R.string.bottom_nav_activities)
+        RecoveryTabRoute -> stringResource(R.string.bottom_nav_recovery)
+        CardioLoadDetailRoute -> stringResource(R.string.metric_cardio_load)
+        SleepEfficiencyDetailRoute -> stringResource(R.string.recovery_sleep_efficiency)
+        SleepScoreDetailRoute -> stringResource(R.string.recovery_sleep_score)
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
@@ -221,7 +256,6 @@ fun AppNavigation(
         Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
         Screen.Mindfulness.route -> stringResource(R.string.screen_mindfulness)
         Screen.Cycle.route -> stringResource(R.string.screen_cycle)
-        Screen.Browse.route -> stringResource(R.string.screen_browse)
         Screen.Settings.route -> stringResource(R.string.screen_settings)
         else -> ""
     }
@@ -235,10 +269,12 @@ fun AppNavigation(
         canNavigateBack = canNavigateBack,
         onNavigateBack = { navController.popBackStack() },
         onNavigate = { route ->
-            navController.navigate(route) {
-                popUpTo(Screen.Dashboard.route) { saveState = true }
-                launchSingleTop = true
-                restoreState = true
+            if (route in topLevelRoutes) {
+                navController.navigate(route) {
+                    popUpTo(Screen.Dashboard.route) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
         },
         navigationIcon = Icons.AutoMirrored.Outlined.ArrowBack,
@@ -246,7 +282,6 @@ fun AppNavigation(
         action = addEntryAction,
         topBarActions = {
             val topBarEditState = when (currentRoute) {
-                Screen.Dashboard.route -> dashboardTopBarState
                 Screen.ManualEntry.route -> manualEntryTopBarState
                 else -> null
             }
@@ -268,6 +303,20 @@ fun AppNavigation(
                         } else {
                             androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                         },
+                    )
+                }
+            }
+            if (showTopBar && !isTaskRoute && currentRoute != Screen.Settings.route) {
+                IconButton(
+                    onClick = {
+                        navController.navigate(Screen.Settings.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = stringResource(R.string.cd_settings),
                     )
                 }
             }
@@ -298,11 +347,84 @@ fun AppNavigation(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
-                    onOpenMetric = { metricId -> navController.navigate(Screen.Metric.createRoute(metricId.name)) },
-                    onOpenBrowse = { navController.navigate(Screen.Browse.route) },
-                    onEditStateChanged = { isEditing, onToggleEdit ->
-                        dashboardTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                    onOpenMetric = { metricId ->
+                        when (metricId) {
+                            DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+                            DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
+                            else -> navController.navigate(Screen.Metric.createRoute(metricId.name))
+                        }
                     },
+                    onOpenActivity = { activityId ->
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    },
+                    onOpenLog = { navController.navigate(Screen.ManualEntry.route) },
+                    onStartActivity = {
+                        navController.navigate(Screen.ActivityEntry.route)
+                    },
+                )
+            }
+
+            composable(ActivitiesTabRoute) {
+                val activityOverviewViewModel = hiltViewModel<ActivityOverviewViewModel>()
+                ActivityOverviewScreen(
+                    viewModel = activityOverviewViewModel,
+                    unitFormatter = unitFormatter,
+                    onOpenCardioLoad = {
+                        navController.navigate(CardioLoadDetailRoute)
+                    },
+                    onOpenSteps = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.STEPS.name))
+                    },
+                    onOpenDistance = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.DISTANCE.name))
+                    },
+                    onOpenEnergyBurned = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.CALORIES_OUT.name))
+                    },
+                    onOpenHrv = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
+                    },
+                )
+            }
+
+            composable(CardioLoadDetailRoute) {
+                val activityOverviewViewModel = hiltViewModel<ActivityOverviewViewModel>()
+                CardioLoadDetailScreen(
+                    viewModel = activityOverviewViewModel,
+                    unitFormatter = unitFormatter,
+                )
+            }
+
+            composable(RecoveryTabRoute) {
+                val recoveryViewModel = hiltViewModel<RecoveryViewModel>()
+                RecoveryScreen(
+                    viewModel = recoveryViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenSleepScore = {
+                        navController.navigate(SleepScoreDetailRoute)
+                    },
+                    onOpenSleepEfficiency = {
+                        navController.navigate(SleepEfficiencyDetailRoute)
+                    },
+                )
+            }
+
+            composable(SleepEfficiencyDetailRoute) {
+                val recoveryViewModel = hiltViewModel<RecoveryViewModel>()
+                SleepEfficiencyDetailScreen(
+                    viewModel = recoveryViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
+
+            composable(SleepScoreDetailRoute) {
+                val recoveryViewModel = hiltViewModel<RecoveryViewModel>()
+                SleepScoreDetailScreen(
+                    viewModel = recoveryViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                 )
             }
 
@@ -356,6 +478,9 @@ fun AppNavigation(
                 ActivityEntryScreen(
                     viewModel = activityEntryViewModel,
                     unitFormatter = unitFormatter,
+                    pendingRouteImportUri = routeImportRequest?.uri,
+                    pendingRouteImportRequestId = routeImportRequest?.id,
+                    onPendingRouteImportHandled = onRouteImportRequestHandled,
                 )
             }
 
@@ -620,27 +745,6 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Browse.route) {
-                val browseViewModel = hiltViewModel<BrowseViewModel>()
-                BrowseScreen(
-                    viewModel = browseViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onOpenActivity = { activityId ->
-                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
-                    },
-                    onOpenSleepSession = { sleepId ->
-                        navController.navigate(Screen.SleepDetail.createRoute(sleepId))
-                    },
-                    onEditActivity = { activityId ->
-                        navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
-                    },
-                    onEditBodyMeasurement = { type, entryId ->
-                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
-                    },
-                )
-            }
-
             composable(Screen.Settings.route) {
                 val settingsViewModel = hiltViewModel<SettingsViewModel>()
                 SettingsScreen(
@@ -658,7 +762,6 @@ private fun addEntryActionForCurrentRoute(
     onNavigate: (String) -> Unit,
 ): MetricAction? {
     val destinationRoute = when {
-        currentRoute == Screen.Dashboard.route -> Screen.ManualEntry.route
         currentRoute == Screen.Hydration.route -> Screen.HydrationEntry.route
         currentRoute == Screen.Activity.route -> Screen.ActivityEntry.route
         currentRoute == Screen.Mindfulness.route -> Screen.MindfulnessEntry.route
@@ -795,6 +898,14 @@ private fun MetricRouteContent(
                 viewModel = cycleViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+        }
+        DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+        DashboardWidgetId.CARDIO_LOAD -> {
+            val activityOverviewViewModel = hiltViewModel<ActivityOverviewViewModel>()
+            CardioLoadDetailScreen(
+                viewModel = activityOverviewViewModel,
+                unitFormatter = unitFormatter,
             )
         }
         else -> {
@@ -976,9 +1087,10 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.VO2_MAX -> R.string.metric_vo2_max
         DashboardWidgetId.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
         DashboardWidgetId.BODY_TEMPERATURE -> R.string.metric_body_temp
+        DashboardWidgetId.WEEKLY_CARDIO_LOAD -> R.string.metric_weekly_cardio_load
+        DashboardWidgetId.CARDIO_LOAD -> R.string.metric_weekly_cardio_load
         DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
         DashboardWidgetId.CYCLE -> R.string.metric_cycle
-        DashboardWidgetId.BROWSE -> R.string.metric_browse
     }
 
 private data class TopBarEditState(

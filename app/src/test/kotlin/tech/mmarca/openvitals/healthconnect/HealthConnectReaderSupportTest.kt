@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -59,6 +60,21 @@ class HealthConnectReaderSupportTest {
         }
 
         assertEquals(7, result)
+    }
+
+    @Test fun `withLogging rethrows cancellation`() = runTest {
+        val support = support()
+        var cancelled = false
+
+        try {
+            support.withLogging("read[id]", fallback = 7) {
+                throw CancellationException("cancelled")
+            }
+        } catch (error: CancellationException) {
+            cancelled = true
+        }
+
+        assertTrue(cancelled)
     }
 
     @Test fun `withLogging allows bounded concurrent reads`() = runTest {

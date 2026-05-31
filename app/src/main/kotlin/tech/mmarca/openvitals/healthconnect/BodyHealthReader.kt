@@ -256,7 +256,7 @@ internal class BodyHealthReader(
             )
         }
 
-        Log.d(TAG, "Writing body record type=${request.type} value=${request.value} ${support.diagnosticsSummary()}")
+        Log.d(TAG, "Writing body record type=${request.type} ${support.diagnosticsSummary()}")
         support.client().insertRecords(listOf(record))
         clientRecordId
     }
@@ -311,7 +311,7 @@ internal class BodyHealthReader(
                 )
             }
 
-            Log.d(TAG, "Updating body record id=$id type=${request.type} value=${request.value} ${support.diagnosticsSummary()}")
+            Log.d(TAG, "Updating body record type=${request.type} ${support.diagnosticsSummary()}")
             support.client().updateRecords(listOf(record))
         }
 

@@ -5,8 +5,9 @@
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 
-# Keep data classes used with reflection
--keepclassmembers class dev.manu.hcdashboard.data.model.** {
-    <fields>;
-    <init>(...);
+# Strip low-value release logs. Warnings and errors remain for operational failures.
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+    public static int i(...);
 }

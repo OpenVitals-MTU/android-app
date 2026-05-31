@@ -32,15 +32,15 @@ data class OnboardingUiState(
 
 data class OnboardingPermissionCategory(
     val id: String,
-    @StringRes val titleRes: Int,
-    @StringRes val descriptionRes: Int,
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val descriptionRes: Int,
     val permissions: Set<String>,
     val manualPermissions: Set<String> = emptySet(),
     val required: Boolean = false,
     val optIn: Boolean = false,
     val grantMode: PermissionGrantMode = PermissionGrantMode.REQUESTABLE,
     val available: Boolean = true,
-    @StringRes val unavailableReasonRes: Int? = null,
+    @param:StringRes val unavailableReasonRes: Int? = null,
 )
 
 @HiltViewModel
@@ -148,7 +148,7 @@ class OnboardingViewModel @Inject constructor(
             }
             val mindfulnessAvailable = repository.isMindfulnessAvailable()
             val granted = repository.grantedPermissions()
-            Log.d(TAG, "checkState granted=${granted.sorted()}")
+            Log.d(TAG, "checkState grantedCount=${granted.size}")
             _uiState.value = OnboardingUiState(
                 availability = avail,
                 grantedPermissions = granted,
@@ -171,9 +171,9 @@ class OnboardingViewModel @Inject constructor(
 
     fun onPermissionsResult(granted: Set<String>) {
         viewModelScope.launch {
-            Log.d(TAG, "onPermissionsResult callbackGranted=${granted.sorted()}")
+            Log.d(TAG, "onPermissionsResult callbackGrantedCount=${granted.size}")
             val allGranted = repository.grantedPermissions()
-            Log.d(TAG, "onPermissionsResult allGranted=${allGranted.sorted()}")
+            Log.d(TAG, "onPermissionsResult allGrantedCount=${allGranted.size}")
             _uiState.value = _uiState.value.copy(
                 grantedPermissions = allGranted,
                 phase1Granted = repository.phase1Permissions.all { it in allGranted },

@@ -60,7 +60,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class HealthConnectManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) {
     private val diagnostics = HealthConnectDiagnostics(context)
     private val availabilityService = HealthConnectAvailabilityService(context, diagnostics)

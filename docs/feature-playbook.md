@@ -19,7 +19,7 @@ Follow this checklist when adding or extending a metric screen.
 
 - Prefer bundled period APIs that return current, previous, and baseline data from one public call.
 - Keep Health Connect permissions and record types below the repository layer.
-- Keep granular APIs only for real browse/detail reads.
+- Keep granular APIs only for real entry-list/detail reads.
 
 ## 4. Wire Through Hilt
 

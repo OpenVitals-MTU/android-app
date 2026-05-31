@@ -1,7 +1,8 @@
 package tech.mmarca.openvitals.features.dashboard
 
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.RefreshMode
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
@@ -39,6 +40,8 @@ class DashboardViewModelTest {
         every { it.acknowledgePermissions(any()) } returns Unit
         every { it.trackCycle } returns trackCycle
         every { it.sleepRangeMode } returns sleepRangeMode
+        every { it.dailyGoalFor(any()) } answers { firstArg<MetricDailyGoalKey>().defaultValue }
+        every { it.hydrationDailyGoalLiters } returns 2.0
         every { it.dashboardWidgetOrder() } returns null
         every { it.setDashboardWidgetOrder(any()) } returns Unit
     }
@@ -255,7 +258,7 @@ class DashboardViewModelTest {
         coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
     }
 
-    @Test fun `load scopes dashboard query to first fixed widgets`() = runTest {
+    @Test fun `load scopes dashboard query to dashboard focus widgets`() = runTest {
         val repo = mockk<HealthRepository>()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -275,13 +278,106 @@ class DashboardViewModelTest {
 
         assertEquals(
             setOf(
-                DashboardMetric.SLEEP,
                 DashboardMetric.STEPS,
-                DashboardMetric.HYDRATION,
                 DashboardMetric.DISTANCE,
+                DashboardMetric.CALORIES_OUT,
+                DashboardMetric.WORKOUT,
             ),
             queries.first().visibleMetrics,
         )
+    }
+
+    @Test fun `deferred dashboard metrics merge after fast dashboard load`() = runTest {
+        val repo = mockk<HealthRepository>()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            queries += query
+            when (query.visibleMetrics.singleOrNull()) {
+                DashboardMetric.HYDRATION -> DashboardData(
+                    date = today,
+                    hydrationLiters = 1.5,
+                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
+                )
+                else -> DashboardData(
+                    date = today,
+                    steps = 100,
+                    loadedMetrics = setOf(
+                        DashboardMetric.STEPS,
+                        DashboardMetric.DISTANCE,
+                        DashboardMetric.CALORIES_OUT,
+                        DashboardMetric.WORKOUT,
+                    ),
+                )
+            }
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.HYDRATION.name,
+        )
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(100L, vm.uiState.value.data?.steps)
+        assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
+        assertTrue(queries.first().visibleMetrics.contains(DashboardMetric.STEPS))
+        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.HYDRATION) })
+        assertTrue(vm.uiState.value.pendingWidgets.isEmpty())
+    }
+
+    @Test fun `stale deferred dashboard load cannot overwrite newer data`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            if (query.date == yesterday && query.visibleMetrics == setOf(DashboardMetric.HYDRATION)) {
+                delay(100)
+            }
+            when {
+                query.date == yesterday && DashboardMetric.HYDRATION in query.visibleMetrics -> DashboardData(
+                    date = yesterday,
+                    hydrationLiters = 9.0,
+                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
+                )
+                query.date == yesterday -> DashboardData(
+                    date = yesterday,
+                    steps = 1,
+                    loadedMetrics = setOf(
+                        DashboardMetric.STEPS,
+                        DashboardMetric.DISTANCE,
+                        DashboardMetric.CALORIES_OUT,
+                        DashboardMetric.WORKOUT,
+                    ),
+                )
+                query.date == today && DashboardMetric.HYDRATION in query.visibleMetrics -> DashboardData(
+                    date = today,
+                    hydrationLiters = 2.0,
+                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
+                )
+                else -> DashboardData(
+                    date = today,
+                    steps = 2,
+                    loadedMetrics = setOf(
+                        DashboardMetric.STEPS,
+                        DashboardMetric.DISTANCE,
+                        DashboardMetric.CALORIES_OUT,
+                        DashboardMetric.WORKOUT,
+                    ),
+                )
+            }
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.HYDRATION.name,
+        )
+
+        val vm = DashboardViewModel(repo, prefs)
+        vm.load(yesterday)
+        vm.load(today)
+
+        assertEquals(today, vm.uiState.value.data?.date)
+        assertEquals(2.0, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
     }
 
     @Test fun `refresh passes force refresh mode`() = runTest {
@@ -363,6 +459,21 @@ class DashboardViewModelTest {
         assertEquals(DefaultDashboardWidgetIds, vm.uiState.value.dashboardWidgets)
     }
 
+    @Test fun `dashboard daily goals follow preferences`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+        val prefs = prefs()
+        every { prefs.dailyGoalFor(MetricDailyGoalKey.STEPS) } returns 12_000.0
+        every { prefs.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS) } returns 7.5
+        every { prefs.hydrationDailyGoalLiters } returns 3.0
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(12_000.0, vm.uiState.value.dailyGoals.steps, 0.001)
+        assertEquals(7.5, vm.uiState.value.dailyGoals.sleepHours, 0.001)
+        assertEquals(3.0, vm.uiState.value.dailyGoals.hydrationLiters, 0.001)
+    }
+
     @Test fun `dashboard widgets restore saved order`() = runTest {
         val repo = mockk<HealthRepository>()
         val prefs = prefs()
@@ -391,11 +502,11 @@ class DashboardViewModelTest {
         assertEquals(listOf(DashboardWidgetId.STEPS), vm.uiState.value.dashboardWidgets)
     }
 
-    @Test fun `dashboard widgets ignore fixed browse saved id`() = runTest {
+    @Test fun `dashboard widgets ignore legacy browse saved id`() = runTest {
         val repo = mockk<HealthRepository>()
         val prefs = prefs()
         every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.BROWSE.name,
+            "BROWSE",
             DashboardWidgetId.STEPS.name,
         )
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
@@ -422,17 +533,6 @@ class DashboardViewModelTest {
             DashboardWidgetId.DISTANCE,
             vm.uiState.value.dashboardWidgets[vm.uiState.value.dashboardWidgets.lastIndex - 1],
         )
-    }
-
-    @Test fun `dashboard widget add ignores fixed browse widget`() = runTest {
-        val repo = mockk<HealthRepository>()
-        val prefs = prefs()
-        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = DashboardViewModel(repo, prefs)
-
-        vm.addDashboardWidget(DashboardWidgetId.BROWSE)
-
-        assertFalse(DashboardWidgetId.BROWSE in vm.uiState.value.dashboardWidgets)
     }
 
     @Test fun `dashboard widget moves to target drop position`() = runTest {

@@ -4,21 +4,28 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
@@ -245,11 +253,15 @@ private fun HeartMetricScreen(
     ) { period ->
         when (metric) {
             HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(
-                state,
-                period,
-                unitFormatter,
-                dateTimeFormatterProvider,
-                chartDaySelection,
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+                onDecreaseHighHeartRateThreshold = viewModel::decreaseHighHeartRateThreshold,
+                onIncreaseHighHeartRateThreshold = viewModel::increaseHighHeartRateThreshold,
+                onDecreaseLowHeartRateThreshold = viewModel::decreaseLowHeartRateThreshold,
+                onIncreaseLowHeartRateThreshold = viewModel::increaseLowHeartRateThreshold,
             )
             HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(
                 state,
@@ -304,6 +316,10 @@ private fun LazyListScope.averageHeartRateContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
+    onDecreaseHighHeartRateThreshold: () -> Unit,
+    onIncreaseHighHeartRateThreshold: () -> Unit,
+    onDecreaseLowHeartRateThreshold: () -> Unit,
+    onIncreaseLowHeartRateThreshold: () -> Unit,
 ) {
     when {
         state.selectedRange == TimeRange.DAY && state.daySamples.isNotEmpty() -> {
@@ -316,6 +332,14 @@ private fun LazyListScope.averageHeartRateContent(
                     modifier = metricModifier(),
                 )
             }
+            heartRateThresholdChecks(
+                state = state,
+                unitFormatter = unitFormatter,
+                onDecreaseHighHeartRateThreshold = onDecreaseHighHeartRateThreshold,
+                onIncreaseHighHeartRateThreshold = onIncreaseHighHeartRateThreshold,
+                onDecreaseLowHeartRateThreshold = onDecreaseLowHeartRateThreshold,
+                onIncreaseLowHeartRateThreshold = onIncreaseLowHeartRateThreshold,
+            )
             heartRawDataConfidence(
                 period = period,
                 entries = state.daySamples,
@@ -355,6 +379,14 @@ private fun LazyListScope.averageHeartRateContent(
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
+            heartRateThresholdChecks(
+                state = state,
+                unitFormatter = unitFormatter,
+                onDecreaseHighHeartRateThreshold = onDecreaseHighHeartRateThreshold,
+                onIncreaseHighHeartRateThreshold = onIncreaseHighHeartRateThreshold,
+                onDecreaseLowHeartRateThreshold = onDecreaseLowHeartRateThreshold,
+                onIncreaseLowHeartRateThreshold = onIncreaseLowHeartRateThreshold,
+            )
             chartDaySelection.selectedDate?.let { selectedDate ->
                 item {
                     PaginatedEntryList(
@@ -405,6 +437,143 @@ private fun LazyListScope.averageHeartRateContent(
             accentColor = HeartColor,
         )
     }
+}
+
+private fun LazyListScope.heartRateThresholdChecks(
+    state: HeartUiState,
+    unitFormatter: UnitFormatter,
+    onDecreaseHighHeartRateThreshold: () -> Unit,
+    onIncreaseHighHeartRateThreshold: () -> Unit,
+    onDecreaseLowHeartRateThreshold: () -> Unit,
+    onIncreaseLowHeartRateThreshold: () -> Unit,
+) {
+    item {
+        SectionHeader(
+            text = stringResource(R.string.heart_rate_health_checks_title),
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+    item {
+        Row(
+            modifier = metricModifier(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            HeartRateThresholdCheckCard(
+                check = state.highHeartRateCheck,
+                title = stringResource(R.string.heart_rate_high_title),
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+                onDecreaseThreshold = onDecreaseHighHeartRateThreshold,
+                onIncreaseThreshold = onIncreaseHighHeartRateThreshold,
+                modifier = Modifier.weight(1f),
+            )
+            HeartRateThresholdCheckCard(
+                check = state.lowHeartRateCheck,
+                title = stringResource(R.string.heart_rate_low_title),
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+                onDecreaseThreshold = onDecreaseLowHeartRateThreshold,
+                onIncreaseThreshold = onIncreaseLowHeartRateThreshold,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeartRateThresholdCheckCard(
+    check: HeartRateThresholdCheck,
+    title: String,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+    onDecreaseThreshold: () -> Unit,
+    onIncreaseThreshold: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (check.type == HeartRateThresholdCheckType.HIGH) {
+                        Icons.Outlined.Favorite
+                    } else {
+                        Icons.Outlined.FavoriteBorder
+                    },
+                    contentDescription = null,
+                    tint = HeartColor,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = if (check.hasData) unitFormatter.count(check.count) else stringResource(R.string.no_data),
+                style = MaterialTheme.typography.headlineSmall,
+                color = HeartColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = heartRateThresholdSubtitle(check, selectedRange),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                IconButton(
+                    onClick = onDecreaseThreshold,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Remove,
+                        contentDescription = stringResource(R.string.cd_decrease_hr_threshold),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onIncreaseThreshold,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = stringResource(R.string.cd_increase_hr_threshold),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun heartRateThresholdSubtitle(
+    check: HeartRateThresholdCheck,
+    selectedRange: TimeRange,
+): String {
+    val stringRes = when (check.type) {
+        HeartRateThresholdCheckType.HIGH -> if (selectedRange == TimeRange.DAY) {
+            R.string.heart_rate_samples_at_or_above
+        } else {
+            R.string.heart_rate_days_at_or_above
+        }
+        HeartRateThresholdCheckType.LOW -> if (selectedRange == TimeRange.DAY) {
+            R.string.heart_rate_samples_at_or_below
+        } else {
+            R.string.heart_rate_days_at_or_below
+        }
+    }
+    return stringResource(stringRes, check.thresholdBpm)
 }
 
 private fun LazyListScope.restingHeartRateContent(

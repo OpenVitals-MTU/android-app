@@ -35,7 +35,8 @@ The codebase already has aligned period-based detail screens for:
 - heart
 - activities
 - body
-- browse
+
+The global Browse feature has been removed. Entries and sessions should be browsable from the relevant dashboard widget/detail screen instead of through a standalone app destination.
 
 These features already show the intended direction.
 

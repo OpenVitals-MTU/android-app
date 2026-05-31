@@ -160,7 +160,7 @@ class OnboardingViewModelTest {
         assertTrue(vm.uiState.value.phase1Granted)
     }
 
-    @Test fun `onboardingPermissions exposes the full selector request set`() = runTest {
+    @Test fun `onboardingPermissions exposes dashboard request set only`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
@@ -175,9 +175,6 @@ class OnboardingViewModelTest {
                 "activity",
                 "nutrition",
                 "mindfulness",
-                "history",
-                "background",
-                "vitals",
             ),
             vm.onboardingPermissions,
         )
@@ -434,10 +431,7 @@ class OnboardingViewModelTest {
             "activity",
             "nutrition",
             "mindfulness",
-            "history",
-            "background",
-            "vitals",
         )
-        private val allPermissions = standardPermissions + "cycle"
+        private val allPermissions = standardPermissions + setOf("history", "background", "vitals", "cycle")
     }
 }

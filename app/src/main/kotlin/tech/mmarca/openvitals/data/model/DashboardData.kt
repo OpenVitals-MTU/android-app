@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.data.model
 
 import java.time.LocalDate
+import kotlin.math.roundToInt
+import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
 
 data class DashboardData(
     val date: LocalDate,
@@ -10,6 +12,7 @@ data class DashboardData(
     val activeCaloriesKcal: Double? = null,
     val hydrationLiters: Double = 0.0,
     val workout: ExerciseData? = null,
+    val workouts: List<ExerciseData> = emptyList(),
     val sleep: SleepData? = null,
     val weightKg: Double = 0.0,
     val heightCm: Double? = null,
@@ -31,6 +34,7 @@ data class DashboardData(
     val latestVo2Max: Double? = null,
     val avgRespiratoryRate: Double? = null,
     val latestBodyTemperatureCelsius: Double? = null,
+    val weeklyCardioLoad: DashboardWeeklyCardioLoad? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val mindfulnessMinutes: Int? = null,
@@ -49,6 +53,7 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         activeCaloriesKcal = if (DashboardMetric.ACTIVE_CALORIES in other.loadedMetrics) other.activeCaloriesKcal else activeCaloriesKcal,
         hydrationLiters = if (DashboardMetric.HYDRATION in other.loadedMetrics) other.hydrationLiters else hydrationLiters,
         workout = if (DashboardMetric.WORKOUT in other.loadedMetrics) other.workout else workout,
+        workouts = if (DashboardMetric.WORKOUT in other.loadedMetrics) other.workouts else workouts,
         sleep = if (DashboardMetric.SLEEP in other.loadedMetrics) other.sleep else sleep,
         weightKg = if (DashboardMetric.WEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
             other.weightKg
@@ -98,6 +103,11 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         } else {
             latestBodyTemperatureCelsius
         },
+        weeklyCardioLoad = if (DashboardMetric.WEEKLY_CARDIO_LOAD in other.loadedMetrics) {
+            other.weeklyCardioLoad
+        } else {
+            weeklyCardioLoad
+        },
         floorsClimbed = if (DashboardMetric.FLOORS in other.loadedMetrics) other.floorsClimbed else floorsClimbed,
         elevationGainedMeters = if (DashboardMetric.ELEVATION in other.loadedMetrics) {
             other.elevationGainedMeters
@@ -123,3 +133,33 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         missingPermissions = missingPermissions + other.missingPermissions,
         loadedMetrics = loadedMetrics + other.loadedMetrics,
     )
+
+data class DashboardWeeklyCardioLoad(
+    val currentScore: Int,
+    val targetScore: Int,
+    val todayScore: Int,
+    val confidence: CardioLoadConfidence,
+    val targetSource: DashboardWeeklyCardioLoadTargetSource,
+) {
+    val progressFraction: Float
+        get() = if (targetScore > 0) {
+            (currentScore / targetScore.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+    val progressPercent: Int
+        get() = (progressFraction * 100f).roundToInt()
+
+    val todayProgressPercent: Int
+        get() = if (targetScore > 0) {
+            (todayScore * 100.0 / targetScore).roundToInt().coerceAtLeast(0)
+        } else {
+            0
+        }
+}
+
+enum class DashboardWeeklyCardioLoadTargetSource {
+    RECENT_HISTORY,
+    CURRENT_PACE,
+}

@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodWindows
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
@@ -18,14 +19,18 @@ import tech.mmarca.openvitals.data.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class VitalsRepository @Inject constructor(
     private val hc: HealthConnectManager,
+    private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
 ) {
 
     companion object {
@@ -61,46 +66,85 @@ class VitalsRepository @Inject constructor(
         return phase3Permissions.filterNot { it in granted }.toSet()
     }
 
-    suspend fun loadVitalsPeriod(query: PeriodLoadQuery, metric: VitalsPeriodMetric): VitalsPeriodData {
+    suspend fun loadVitalsPeriod(query: PeriodLoadQuery, metric: VitalsPeriodMetric): VitalsPeriodData = coroutineScope {
         val windows = query.windows
-        return when (metric) {
-            VitalsPeriodMetric.BLOOD_PRESSURE -> VitalsPeriodData(
-                missingVitalsPermissions = missingPermissions(),
-                bloodPressure = loadBloodPressure(windows.current.start, windows.current.end),
-                previousBloodPressure = loadBloodPressure(windows.previous.start, windows.previous.end),
-                baselineBloodPressure = loadBloodPressure(windows.baseline.start, windows.baseline.end),
-            )
-            VitalsPeriodMetric.SPO2 -> VitalsPeriodData(
-                missingVitalsPermissions = missingPermissions(),
-                spO2 = loadSpO2(windows.current.start, windows.current.end),
-                previousSpO2 = loadSpO2(windows.previous.start, windows.previous.end),
-                baselineSpO2 = loadSpO2(windows.baseline.start, windows.baseline.end),
-            )
-            VitalsPeriodMetric.VO2_MAX -> VitalsPeriodData(
-                missingVitalsPermissions = missingPermissions(),
-                vo2Max = loadVo2Max(windows.current.start, windows.current.end),
-                previousVo2Max = loadVo2Max(windows.previous.start, windows.previous.end),
-                baselineVo2Max = loadVo2Max(windows.baseline.start, windows.baseline.end),
-            )
-            VitalsPeriodMetric.RESPIRATORY_RATE -> VitalsPeriodData(
-                missingVitalsPermissions = missingPermissions(),
-                respiratoryRate = loadRespiratoryRate(windows.current.start, windows.current.end),
-                previousRespiratoryRate = loadRespiratoryRate(windows.previous.start, windows.previous.end),
-                baselineRespiratoryRate = loadRespiratoryRate(windows.baseline.start, windows.baseline.end),
-            )
-            VitalsPeriodMetric.BODY_TEMPERATURE -> VitalsPeriodData(
-                missingVitalsPermissions = missingPermissions(),
-                bodyTemperature = loadBodyTemperature(windows.current.start, windows.current.end),
-                previousBodyTemperature = loadBodyTemperature(windows.previous.start, windows.previous.end),
-                baselineBodyTemperature = loadBodyTemperature(windows.baseline.start, windows.baseline.end),
-            )
+        val granted = grantedPermissionsIfAvailable()
+        val missingPermissions = phase3Permissions.filterNot { it in granted }.toSet()
+        when (metric) {
+            VitalsPeriodMetric.BLOOD_PRESSURE -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadBloodPressure(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    bloodPressure = entries.current,
+                    previousBloodPressure = entries.previous,
+                    baselineBloodPressure = entries.baseline,
+                )
+            }
+            VitalsPeriodMetric.SPO2 -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadSpO2(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    spO2 = entries.current,
+                    previousSpO2 = entries.previous,
+                    baselineSpO2 = entries.baseline,
+                )
+            }
+            VitalsPeriodMetric.VO2_MAX -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadVo2Max(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    vo2Max = entries.current,
+                    previousVo2Max = entries.previous,
+                    baselineVo2Max = entries.baseline,
+                )
+            }
+            VitalsPeriodMetric.RESPIRATORY_RATE -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadRespiratoryRate(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    respiratoryRate = entries.current,
+                    previousRespiratoryRate = entries.previous,
+                    baselineRespiratoryRate = entries.baseline,
+                )
+            }
+            VitalsPeriodMetric.BODY_TEMPERATURE -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadBodyTemperature(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    bodyTemperature = entries.current,
+                    previousBodyTemperature = entries.previous,
+                    baselineBodyTemperature = entries.baseline,
+                )
+            }
         }
+    }
+
+    private suspend fun <T> loadPeriodTriplet(
+        windows: PeriodWindows,
+        loader: suspend (LocalDate, LocalDate) -> List<T>,
+    ): VitalsPeriodTriplet<T> = coroutineScope {
+        val current = async { loader(windows.current.start, windows.current.end) }
+        val previous = async { loader(windows.previous.start, windows.previous.end) }
+        val baseline = async { loader(windows.baseline.start, windows.baseline.end) }
+        VitalsPeriodTriplet(
+            current = current.await(),
+            previous = previous.await(),
+            baseline = baseline.await(),
+        )
     }
 
     suspend fun loadBloodPressure(start: LocalDate, end: LocalDate): List<BloodPressureEntry> {
         val granted = grantedPermissionsIfAvailable()
+        return loadBloodPressure(start, end, granted)
+    }
+
+    private suspend fun loadBloodPressure(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<BloodPressureEntry> {
         if (readBloodPressurePermission !in granted) {
-            Log.w(TAG, "Skipping loadBloodPressure start=$start end=$end missing=$readBloodPressurePermission")
+            Log.w(TAG, "Skipping loadBloodPressure missingCount=1")
             return emptyList()
         }
         return hc.readBloodPressureEntries(start.toInstant(), end.plusDays(1).toInstant())
@@ -108,8 +152,16 @@ class VitalsRepository @Inject constructor(
 
     suspend fun loadSpO2(start: LocalDate, end: LocalDate): List<SpO2Entry> {
         val granted = grantedPermissionsIfAvailable()
+        return loadSpO2(start, end, granted)
+    }
+
+    private suspend fun loadSpO2(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<SpO2Entry> {
         if (readSpO2Permission !in granted) {
-            Log.w(TAG, "Skipping loadSpO2 start=$start end=$end missing=$readSpO2Permission")
+            Log.w(TAG, "Skipping loadSpO2 missingCount=1")
             return emptyList()
         }
         return hc.readSpO2Entries(start.toInstant(), end.plusDays(1).toInstant())
@@ -117,8 +169,16 @@ class VitalsRepository @Inject constructor(
 
     suspend fun loadRespiratoryRate(start: LocalDate, end: LocalDate): List<RespiratoryRateEntry> {
         val granted = grantedPermissionsIfAvailable()
+        return loadRespiratoryRate(start, end, granted)
+    }
+
+    private suspend fun loadRespiratoryRate(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<RespiratoryRateEntry> {
         if (readRespiratoryRatePermission !in granted) {
-            Log.w(TAG, "Skipping loadRespiratoryRate start=$start end=$end missing=$readRespiratoryRatePermission")
+            Log.w(TAG, "Skipping loadRespiratoryRate missingCount=1")
             return emptyList()
         }
         return hc.readRespiratoryRateEntries(start.toInstant(), end.plusDays(1).toInstant())
@@ -126,8 +186,16 @@ class VitalsRepository @Inject constructor(
 
     suspend fun loadBodyTemperature(start: LocalDate, end: LocalDate): List<BodyTempEntry> {
         val granted = grantedPermissionsIfAvailable()
+        return loadBodyTemperature(start, end, granted)
+    }
+
+    private suspend fun loadBodyTemperature(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<BodyTempEntry> {
         if (readBodyTemperaturePermission !in granted) {
-            Log.w(TAG, "Skipping loadBodyTemperature start=$start end=$end missing=$readBodyTemperaturePermission")
+            Log.w(TAG, "Skipping loadBodyTemperature missingCount=1")
             return emptyList()
         }
         return hc.readBodyTemperatureEntries(start.toInstant(), end.plusDays(1).toInstant())
@@ -135,8 +203,16 @@ class VitalsRepository @Inject constructor(
 
     suspend fun loadVo2Max(start: LocalDate, end: LocalDate): List<Vo2MaxEntry> {
         val granted = grantedPermissionsIfAvailable()
+        return loadVo2Max(start, end, granted)
+    }
+
+    private suspend fun loadVo2Max(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<Vo2MaxEntry> {
         if (readVo2MaxPermission !in granted) {
-            Log.w(TAG, "Skipping loadVo2Max start=$start end=$end missing=$readVo2MaxPermission")
+            Log.w(TAG, "Skipping loadVo2Max missingCount=1")
             return emptyList()
         }
         return hc.readVo2MaxEntries(start.toInstant(), end.plusDays(1).toInstant())
@@ -148,10 +224,12 @@ class VitalsRepository @Inject constructor(
     suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String {
         val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
-            Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missing=$missingPermissions")
+            Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
         }
-        return hc.writeVitalsMeasurementEntry(request)
+        return hc.writeVitalsMeasurementEntry(request).also {
+            queryCache.invalidateOperations("dashboard")
+        }
     }
 
     suspend fun loadVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? {
@@ -163,7 +241,7 @@ class VitalsRepository @Inject constructor(
         }
         val granted = grantedPermissionsIfAvailable()
         if (readPermission !in granted) {
-            Log.w(TAG, "Skipping loadVitalsMeasurementEntry type=$type id=$id missing=$readPermission")
+            Log.w(TAG, "Skipping loadVitalsMeasurementEntry type=$type missingCount=1")
             return null
         }
         return hc.readVitalsMeasurementEntry(type, id)
@@ -172,14 +250,21 @@ class VitalsRepository @Inject constructor(
     suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) {
         val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
-            Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} id=$id missing=$missingPermissions")
+            Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
         }
         hc.updateVitalsMeasurementEntry(id, request)
+        queryCache.invalidateOperations("dashboard")
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()
 }
+
+private data class VitalsPeriodTriplet<T>(
+    val current: List<T>,
+    val previous: List<T>,
+    val baseline: List<T>,
+)
 
 enum class VitalsPeriodMetric {
     BLOOD_PRESSURE,

@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Looper
 import android.text.format.DateFormat
@@ -95,6 +96,9 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 fun ActivityEntryScreen(
     viewModel: ActivityEntryViewModel,
     unitFormatter: UnitFormatter,
+    pendingRouteImportUri: Uri? = null,
+    pendingRouteImportRequestId: Long? = null,
+    onPendingRouteImportHandled: (Long) -> Unit = {},
     onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -166,6 +170,14 @@ fun ActivityEntryScreen(
     }
     LaunchedEffect(unitFormatter.unitSystem()) {
         viewModel.loadEditEntry(unitFormatter.unitSystem())
+    }
+    LaunchedEffect(pendingRouteImportRequestId, pendingRouteImportUri, unitFormatter.unitSystem()) {
+        val requestId = pendingRouteImportRequestId
+        val uri = pendingRouteImportUri
+        if (requestId != null && uri != null) {
+            viewModel.importRouteFile(uri, unitFormatter.unitSystem())
+            onPendingRouteImportHandled(requestId)
+        }
     }
     LaunchedEffect(state.saveCompleted) {
         if (state.saveCompleted) {

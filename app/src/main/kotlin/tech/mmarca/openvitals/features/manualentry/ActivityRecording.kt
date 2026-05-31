@@ -12,13 +12,19 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
@@ -62,10 +68,10 @@ data class ActivityRecordingSnapshot(
 @Singleton
 class ActivityRecordingController @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val recordingStore: ActivityRecordingStore = ActivityRecordingStore(context),
 ) {
-    private val preferences: SharedPreferences =
-        context.getSharedPreferences(RecordingPreferencesName, Context.MODE_PRIVATE)
-    private val _state = MutableStateFlow(preferences.restoreRecordingState())
+    private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _state = MutableStateFlow(recordingStore.restore())
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
     fun startRecording(exerciseType: Int, initialFix: Location?): Boolean {
@@ -95,13 +101,16 @@ class ActivityRecordingController @Inject constructor(
         }
 
         val now = Instant.now()
+        persistenceScope.coroutineContext.cancelChildren()
+        recordingStore.clear()
         updateAndPersist(
             ActivityRecordingState(
                 status = ActivityRecordingStatus.RECORDING,
                 exerciseType = exerciseType,
                 startTime = now,
                 lastLocationTime = null,
-            )
+            ),
+            replaceRoutePoints = true,
         )
         ContextCompat.startForegroundService(
             context,
@@ -223,7 +232,8 @@ class ActivityRecordingController @Inject constructor(
                 lastAccuracyMeters = accuracy,
                 lastLocationTime = point.time,
                 errorMessage = null,
-            )
+            ),
+            routePointToAppend = point,
         )
     }
 
@@ -232,13 +242,28 @@ class ActivityRecordingController @Inject constructor(
     }
 
     private fun clearRecording() {
+        persistenceScope.coroutineContext.cancelChildren()
         _state.value = ActivityRecordingState()
-        preferences.edit().clear().apply()
+        recordingStore.clear()
     }
 
-    private fun updateAndPersist(state: ActivityRecordingState) {
+    private fun updateAndPersist(
+        state: ActivityRecordingState,
+        routePointToAppend: ExerciseRoutePoint? = null,
+        replaceRoutePoints: Boolean = false,
+    ) {
         _state.value = state
-        preferences.storeRecordingState(state)
+        recordingStore.storeMetadata(state)
+        if (replaceRoutePoints) {
+            persistenceScope.launch {
+                recordingStore.replaceRoutePoints(state.points)
+            }
+        }
+        routePointToAppend?.let { point ->
+            persistenceScope.launch {
+                recordingStore.appendRoutePoint(point)
+            }
+        }
     }
 
     private fun stopRecordingService() {
@@ -265,6 +290,56 @@ class ActivityRecordingController @Inject constructor(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS,
                 ) == PackageManager.PERMISSION_GRANTED
+    }
+}
+
+@Singleton
+class ActivityRecordingStore @Inject constructor(
+    @ApplicationContext context: Context,
+) {
+    private val preferences: SharedPreferences =
+        context.getSharedPreferences(RecordingPreferencesName, Context.MODE_PRIVATE)
+    private val routePointsFile = File(context.filesDir, RecordingRoutePointsFileName)
+
+    fun restore(): ActivityRecordingState {
+        val restored = preferences.restoreRecordingState()
+        val filePoints = routePointsFile
+            .takeIf { it.exists() }
+            ?.readText()
+            .orEmpty()
+            .decodeRoutePoints()
+        return if (filePoints.isNotEmpty()) {
+            restored.copy(points = filePoints)
+        } else {
+            restored
+        }
+    }
+
+    fun storeMetadata(state: ActivityRecordingState) {
+        if (state.status == ActivityRecordingStatus.IDLE) {
+            clear()
+        } else {
+            preferences.storeRecordingMetadata(state)
+        }
+    }
+
+    fun replaceRoutePoints(points: List<ExerciseRoutePoint>) {
+        if (points.isEmpty()) {
+            routePointsFile.delete()
+        } else {
+            routePointsFile.writeText(points.encodeRoutePoints())
+        }
+        preferences.edit().putString(KeyPoints, points.encodeRoutePoints()).apply()
+    }
+
+    fun appendRoutePoint(point: ExerciseRoutePoint) {
+        routePointsFile.parentFile?.mkdirs()
+        routePointsFile.appendText(point.encodeRoutePoint() + "\n")
+    }
+
+    fun clear() {
+        preferences.edit().clear().apply()
+        routePointsFile.delete()
     }
 }
 
@@ -421,12 +496,7 @@ private fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
     )
 }
 
-private fun SharedPreferences.storeRecordingState(state: ActivityRecordingState) {
-    if (state.status == ActivityRecordingStatus.IDLE) {
-        edit().clear().apply()
-        return
-    }
-
+private fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingState) {
     edit()
         .putString(KeyStatus, state.status.name)
         .putInt(KeyExerciseType, state.exerciseType ?: MissingInt)
@@ -435,7 +505,6 @@ private fun SharedPreferences.storeRecordingState(state: ActivityRecordingState)
         .putLong(KeyPausedStartedAt, state.pausedStartedAt?.toEpochMilli() ?: MissingLong)
         .putLong(KeyTotalPausedMillis, state.totalPausedMillis)
         .putString(KeyPauseIntervals, state.pauseIntervals.encodePauseIntervals())
-        .putString(KeyPoints, state.points.encodeRoutePoints())
         .putFloat(KeyDistanceMeters, state.distanceMeters.toFloat())
         .putFloat(KeyElevationMeters, state.elevationGainedMeters.toFloat())
         .putFloat(KeyLastAccuracyMeters, state.lastAccuracyMeters?.toFloat() ?: MissingFloat)
@@ -468,16 +537,17 @@ private fun String.decodePauseIntervals(): List<ActivityPauseInterval> =
         .toList()
 
 private fun List<ExerciseRoutePoint>.encodeRoutePoints(): String =
-    joinToString(separator = "\n") { point ->
-        listOf(
-            point.time.toEpochMilli().toString(),
-            point.latitude.toString(),
-            point.longitude.toString(),
-            point.altitudeMeters?.toString().orEmpty(),
-            point.horizontalAccuracyMeters?.toString().orEmpty(),
-            point.verticalAccuracyMeters?.toString().orEmpty(),
-        ).joinToString(separator = ",")
-    }
+    joinToString(separator = "\n") { point -> point.encodeRoutePoint() }
+
+private fun ExerciseRoutePoint.encodeRoutePoint(): String =
+    listOf(
+        time.toEpochMilli().toString(),
+        latitude.toString(),
+        longitude.toString(),
+        altitudeMeters?.toString().orEmpty(),
+        horizontalAccuracyMeters?.toString().orEmpty(),
+        verticalAccuracyMeters?.toString().orEmpty(),
+    ).joinToString(separator = ",")
 
 private fun String.decodeRoutePoints(): List<ExerciseRoutePoint> =
     lineSequence()
@@ -502,6 +572,7 @@ private fun Long.toInstantOrNull(): Instant? =
     takeIf { it != MissingLong }?.let(Instant::ofEpochMilli)
 
 private const val RecordingPreferencesName = "activity_recording"
+private const val RecordingRoutePointsFileName = "activity_recording_points.csv"
 private const val MaxAcceptedAccuracyMeters = 30.0
 private const val MaxLocationAgeMillis = 10_000L
 private const val MaxLocationFutureSkewSeconds = 5L

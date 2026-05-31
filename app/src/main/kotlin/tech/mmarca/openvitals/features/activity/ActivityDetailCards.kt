@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -208,6 +212,9 @@ internal fun RouteCard(
     route: ExerciseRouteData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenRouteInMap: (() -> Unit)? = null,
+    onSaveRouteAsGpx: (() -> Unit)? = null,
+    onSaveRouteAsKmz: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     DetailSectionCard(title = stringResource(R.string.detail_route), modifier = modifier) {
@@ -226,6 +233,57 @@ internal fun RouteCard(
                             .fillMaxWidth()
                             .height(180.dp),
                     )
+                    if (onOpenRouteInMap != null) {
+                        OutlinedButton(
+                            onClick = onOpenRouteInMap,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Map,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.activity_route_open_in_map),
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
+                    }
+                    if (onSaveRouteAsGpx != null && onSaveRouteAsKmz != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = onSaveRouteAsGpx,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FileDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.activity_route_export_gpx),
+                                    modifier = Modifier.padding(start = 6.dp),
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = onSaveRouteAsKmz,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FileDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.activity_route_export_kmz),
+                                    modifier = Modifier.padding(start = 6.dp),
+                                )
+                            }
+                        }
+                    }
                     DetailRow(stringResource(R.string.detail_status), stringResource(R.string.detail_status_available))
                     DetailRow(stringResource(R.string.detail_points), route.points.size.toString())
                     route.points.minByOrNull { it.time }?.let { point ->

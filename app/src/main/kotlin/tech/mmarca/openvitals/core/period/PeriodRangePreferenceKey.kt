@@ -13,5 +13,4 @@ enum class PeriodRangePreferenceKey(
     NUTRITION("detail_range_nutrition", TimeRange.WEEK),
     MINDFULNESS("detail_range_mindfulness", TimeRange.WEEK),
     CYCLE("detail_range_cycle", TimeRange.MONTH),
-    BROWSE("detail_range_browse", TimeRange.MONTH),
 }

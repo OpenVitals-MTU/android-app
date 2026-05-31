@@ -45,7 +45,7 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
 * manual entry logging for hydration, activities with optional GPX/KMZ route import, body measurements, vitals, and mindfulness, stored only in Health Connect
 * source attribution by app/device
 * trends for 7d / 30d / 90d
-* record browser for raw entries
+* entry/session lists from the relevant metric detail screens
 
 ### Excluded
 
@@ -82,14 +82,13 @@ Cards:
 * Latest weight if available
 * Weekly activity score
 
-### 3. Explore tabs
+### 3. Metric destinations
 
 * Activity
 * Sleep
 * Body
 * Heart
 * Nutrition
-* Browse
 
 ### 4. Detail screens
 
@@ -131,7 +130,6 @@ Each metric gets:
 * feature-sleep
 * feature-body
 * feature-heart
-* feature-browse
 * feature-settings
 * integration-healthconnect
 
@@ -207,7 +205,7 @@ Use raw reads for:
 * sleep session list
 * weight entries
 * hydration entries
-* source browser
+* source breakdowns on detail screens
 
 ### Time ranges
 
@@ -265,14 +263,14 @@ Sections:
 * calories consumed if present
 * calories burned if present
 
-### Browse
+### Entry browsing
 
-A power-user screen:
+Entry and session browsing is metric-owned:
 
-* choose record type
-* choose date range
-* filter by source app/device
-* inspect raw records
+* open the relevant dashboard widget
+* use the metric detail screen's period controls
+* inspect entries, sessions, or source details for that metric
+* avoid a standalone global raw-record browser
 
 ## Source attribution
 
@@ -376,7 +374,7 @@ Load detailed history lazily when entering a tab.
 
 ### Phase 3: Power-user features
 
-* raw record browser
+* advanced per-metric entry filters
 * advanced filters
 * background refresh
 * history reads beyond 30 days
@@ -426,7 +424,6 @@ tech.mmarca.openvitals/
   features/sleep/
   features/heart/
   features/body/
-  features/browse/
   features/settings/
 ```
 

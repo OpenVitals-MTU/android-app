@@ -109,3 +109,10 @@ git diff --check
 
 6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag such as `v0.7.0` using `docs/releases/<versionName>.md` as the tag message, and push both the branch and tag. The tag pipeline publishes the beta release to Codeberg and Google Play open testing.
 7. After beta approval, start a Woodpecker deployment from the successful tag pipeline with deploy target `production`. The deployment promotes the Play release to production and marks the Codeberg release stable.
+
+For a beta-only prerelease, use the same prep steps with a prerelease
+`versionName` and tag such as `1.0.0-beta.1` / `v1.0.0-beta.1`. Keep the Play
+`versionCode` unique and increasing, and add matching Fastlane changelog files
+for that exact code. The tag pipeline still publishes to Codeberg prerelease and
+Google Play open testing, while the production deployment path rejects
+`-alpha`, `-beta`, and `-rc` tags.

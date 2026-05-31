@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.healthconnect
 
 import java.time.LocalDate
+import java.util.LinkedHashMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -14,9 +15,17 @@ data class HealthConnectQueryKey(
 
 class HealthConnectQueryCache(
     private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val maxEntries: Int = DefaultMaxEntries,
 ) {
     private val mutex = Mutex()
-    private val entries = mutableMapOf<HealthConnectQueryKey, CacheEntry>()
+    private val entries = object : LinkedHashMap<HealthConnectQueryKey, CacheEntry>(
+        maxEntries.coerceAtLeast(1),
+        0.75f,
+        true,
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<HealthConnectQueryKey, CacheEntry>?): Boolean =
+            size > maxEntries.coerceAtLeast(1)
+    }
     private val inFlight = mutableMapOf<HealthConnectQueryKey, CompletableDeferred<Any?>>()
 
     suspend fun <T> getOrPut(
@@ -29,13 +38,16 @@ class HealthConnectQueryCache(
         val lookup = mutex.withLock {
             if (refreshMode == RefreshMode.FORCE) {
                 entries.remove(key)
+                inFlight.remove(key)
             }
 
             entries[key]
                 ?.takeUnless { it.isExpired(now, ttlMillis) }
                 ?.let { cached -> return cached.value.uncheckedCast() }
 
-            inFlight[key]?.let { return@withLock CacheLookup.Pending(it) }
+            if (refreshMode != RefreshMode.FORCE) {
+                inFlight[key]?.let { return@withLock CacheLookup.Pending(it) }
+            }
 
             CompletableDeferred<Any?>().also { deferred ->
                 inFlight[key] = deferred
@@ -50,14 +62,18 @@ class HealthConnectQueryCache(
         return try {
             val value = loader()
             mutex.withLock {
-                entries[key] = CacheEntry(value, nowMillis())
-                inFlight.remove(key)
+                if (inFlight[key] === pending) {
+                    entries[key] = CacheEntry(value, nowMillis())
+                    inFlight.remove(key)
+                }
             }
             pending.complete(value)
             value
         } catch (t: Throwable) {
             mutex.withLock {
-                inFlight.remove(key)
+                if (inFlight[key] === pending) {
+                    inFlight.remove(key)
+                }
             }
             pending.completeExceptionally(t)
             throw t
@@ -68,6 +84,15 @@ class HealthConnectQueryCache(
         mutex.withLock {
             entries.remove(key)
             inFlight.remove(key)
+        }
+    }
+
+    suspend fun invalidateOperations(vararg operations: String) {
+        val operationSet = operations.toSet()
+        if (operationSet.isEmpty()) return
+        mutex.withLock {
+            entries.keys.removeAll { it.operation in operationSet }
+            inFlight.keys.removeAll { it.operation in operationSet }
         }
     }
 
@@ -92,6 +117,10 @@ class HealthConnectQueryCache(
     private sealed interface CacheLookup {
         data class Pending(val deferred: CompletableDeferred<Any?>) : CacheLookup
         data class Owner(val deferred: CompletableDeferred<Any?>) : CacheLookup
+    }
+
+    private companion object {
+        private const val DefaultMaxEntries = 128
     }
 }
 

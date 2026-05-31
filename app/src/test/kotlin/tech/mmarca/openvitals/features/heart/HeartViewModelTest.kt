@@ -231,6 +231,71 @@ class HeartViewModelTest {
         assertTrue(vm.uiState.value.dailyHrv.isEmpty())
     }
 
+    @Test fun `heart rate checks count samples in day range using configured thresholds`() = runTest {
+        val samples = listOf(
+            HeartRateSample(Instant.ofEpochSecond(1_000), 55L, "test"),
+            HeartRateSample(Instant.ofEpochSecond(2_000), 70L, "test"),
+            HeartRateSample(Instant.ofEpochSecond(3_000), 110L, "test"),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadHeartRateSamples(any()) } returns samples
+
+        val vm = HeartViewModel(
+            repository = repo,
+            vitalsRepository = emptyVitalsRepo(),
+            initialRange = TimeRange.DAY,
+            initialHighHeartRateThresholdBpm = 110,
+            initialLowHeartRateThresholdBpm = 60,
+        )
+
+        assertEquals(110, vm.uiState.value.highHeartRateCheck.thresholdBpm)
+        assertEquals(60, vm.uiState.value.lowHeartRateCheck.thresholdBpm)
+        assertEquals(1, vm.uiState.value.highHeartRateCheck.count)
+        assertEquals(1, vm.uiState.value.lowHeartRateCheck.count)
+    }
+
+    @Test fun `heart rate checks count days in multi-day ranges`() = runTest {
+        val summaries = listOf(
+            HeartRateSummary(today.minusDays(1), avgBpm = 82L, minBpm = 60L, maxBpm = 120L),
+            HeartRateSummary(today, avgBpm = 70L, minBpm = 48L, maxBpm = 100L),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHeartRateSummaries(any(), any()) } returns summaries
+
+        val vm = HeartViewModel(
+            repository = repo,
+            vitalsRepository = emptyVitalsRepo(),
+            initialHighHeartRateThresholdBpm = 110,
+            initialLowHeartRateThresholdBpm = 55,
+        )
+
+        assertEquals(1, vm.uiState.value.highHeartRateCheck.count)
+        assertEquals(1, vm.uiState.value.lowHeartRateCheck.count)
+    }
+
+    @Test fun `updating high heart rate threshold persists and recalculates checks`() = runTest {
+        val repo = emptyRepo()
+        coEvery { repo.loadHeartRateSamples(any()) } returns listOf(
+            HeartRateSample(Instant.ofEpochSecond(1_000), 116L, "test"),
+            HeartRateSample(Instant.ofEpochSecond(2_000), 121L, "test"),
+        )
+        var savedThreshold = -1
+        val vm = HeartViewModel(
+            repository = repo,
+            vitalsRepository = emptyVitalsRepo(),
+            initialRange = TimeRange.DAY,
+            onHighHeartRateThresholdChanged = { threshold -> savedThreshold = threshold },
+        )
+
+        assertEquals(1, vm.uiState.value.highHeartRateCheck.count)
+
+        vm.decreaseHighHeartRateThreshold()
+
+        assertEquals(115, savedThreshold)
+        assertEquals(115, vm.uiState.value.highHeartRateCheck.thresholdBpm)
+        assertEquals(2, vm.uiState.value.highHeartRateCheck.count)
+    }
+
     // ─── A1: multi-day resting HR + HRV trends ────────────────────────────────
 
     @Test fun `WEEK range loads dailyRestingHR trend`() = runTest {

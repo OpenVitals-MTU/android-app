@@ -144,11 +144,45 @@ class RouteFileParserTest {
         assertTrue(failure.isFailure)
     }
 
+    @Test fun `parseFile rejects oversized raw route file before parsing`() {
+        val failure = runCatching {
+            RouteFileParser.parseFile(ByteArray(MaxRouteFileBytes + 1), fileName = "large.gpx")
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals("Route file is too large.", failure.exceptionOrNull()?.message)
+    }
+
+    @Test fun `parseFile rejects oversized KMZ route entry before XML parsing`() {
+        val failure = runCatching {
+            RouteFileParser.parseFile(oversizedKmzBytes(), fileName = "large.kmz")
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals("KMZ route entry is too large.", failure.exceptionOrNull()?.message)
+    }
+
     private fun kmzBytes(kmlText: String): ByteArray {
         val output = ByteArrayOutputStream()
         ZipOutputStream(output).use { zip ->
             zip.putNextEntry(ZipEntry("doc.kml"))
             zip.write(kmlText.toByteArray(Charsets.UTF_8))
+            zip.closeEntry()
+        }
+        return output.toByteArray()
+    }
+
+    private fun oversizedKmzBytes(): ByteArray {
+        val output = ByteArrayOutputStream()
+        val chunk = ByteArray(8 * 1024) { 'a'.code.toByte() }
+        var remaining = MaxKmzRouteEntryBytes + 1
+        ZipOutputStream(output).use { zip ->
+            zip.putNextEntry(ZipEntry("doc.kml"))
+            while (remaining > 0) {
+                val size = minOf(remaining, chunk.size)
+                zip.write(chunk, 0, size)
+                remaining -= size
+            }
             zip.closeEntry()
         }
         return output.toByteArray()

@@ -33,6 +33,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+private const val HeartRateThresholdStepBpm = 5
+private const val HeartRateThresholdMinimumGapBpm = 5
+
+enum class HeartRateThresholdCheckType {
+    HIGH,
+    LOW,
+}
+
+data class HeartRateThresholdCheck(
+    val type: HeartRateThresholdCheckType,
+    val thresholdBpm: Int,
+    val count: Int = 0,
+    val hasData: Boolean = false,
+)
+
 data class HeartUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -74,6 +89,14 @@ data class HeartUiState(
     val latestBodyTemperature: BodyTempEntry? = null,
     val latestVo2Max: Vo2MaxEntry? = null,
     val missingVitalsPermissions: Set<String> = emptySet(),
+    val highHeartRateCheck: HeartRateThresholdCheck = HeartRateThresholdCheck(
+        type = HeartRateThresholdCheckType.HIGH,
+        thresholdBpm = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
+    ),
+    val lowHeartRateCheck: HeartRateThresholdCheck = HeartRateThresholdCheck(
+        type = HeartRateThresholdCheckType.LOW,
+        thresholdBpm = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
+    ),
     val error: String? = null,
 )
 
@@ -84,6 +107,10 @@ class HeartViewModel(
     initialRange: TimeRange = TimeRange.WEEK,
     private val selectedMetric: HeartMetric = HeartMetric.AVERAGE_HEART_RATE,
     private val onRangeSelected: (TimeRange) -> Unit = {},
+    initialHighHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
+    initialLowHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
+    private val onHighHeartRateThresholdChanged: (Int) -> Unit = {},
+    private val onLowHeartRateThresholdChanged: (Int) -> Unit = {},
 ) : ViewModel() {
 
     @Inject
@@ -100,10 +127,30 @@ class HeartViewModel(
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.HEART, range)
         },
+        initialHighHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
+        initialLowHeartRateThresholdBpm = preferencesRepository.lowHeartRateThresholdBpm,
+        onHighHeartRateThresholdChanged = { threshold ->
+            preferencesRepository.highHeartRateThresholdBpm = threshold
+        },
+        onLowHeartRateThresholdChanged = { threshold ->
+            preferencesRepository.lowHeartRateThresholdBpm = threshold
+        },
     )
 
     private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
-    private val _uiState = MutableStateFlow(HeartUiState(selectedRange = initialRange))
+    private val _uiState = MutableStateFlow(
+        HeartUiState(
+            selectedRange = initialRange,
+            highHeartRateCheck = HeartRateThresholdCheck(
+                type = HeartRateThresholdCheckType.HIGH,
+                thresholdBpm = initialHighHeartRateThresholdBpm,
+            ),
+            lowHeartRateCheck = HeartRateThresholdCheck(
+                type = HeartRateThresholdCheckType.LOW,
+                thresholdBpm = initialLowHeartRateThresholdBpm,
+            ),
+        )
+    )
     val uiState: StateFlow<HeartUiState> = _uiState.asStateFlow()
     val vitalsPermissions: Set<String> get() = vitalsRepository.phase3Permissions
     private val loadCoordinator = LoadCoordinator()
@@ -164,6 +211,16 @@ class HeartViewModel(
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val vitalsSummary = result.vitalsSummary()
+                val highHeartRateCheck = result.heartRateThresholdCheck(
+                    selectedRange = query.range,
+                    type = HeartRateThresholdCheckType.HIGH,
+                    thresholdBpm = _uiState.value.highHeartRateCheck.thresholdBpm,
+                )
+                val lowHeartRateCheck = result.heartRateThresholdCheck(
+                    selectedRange = query.range,
+                    type = HeartRateThresholdCheckType.LOW,
+                    thresholdBpm = _uiState.value.lowHeartRateCheck.thresholdBpm,
+                )
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -204,6 +261,8 @@ class HeartViewModel(
                     latestRespiratoryRate = vitalsSummary.latestRespiratoryRate,
                     latestBodyTemperature = vitalsSummary.latestBodyTemperature,
                     latestVo2Max = vitalsSummary.latestVo2Max,
+                    highHeartRateCheck = highHeartRateCheck,
+                    lowHeartRateCheck = lowHeartRateCheck,
                 )
             }.onFailure {
                 if (!isCurrent) return@load
@@ -220,6 +279,56 @@ class HeartViewModel(
         _uiState.value = _uiState.value.copy(
             selectedRange = selection.selectedRange,
             selectedDate = selection.selectedDate,
+        )
+    }
+
+    fun increaseHighHeartRateThreshold() {
+        setHighHeartRateThreshold(_uiState.value.highHeartRateCheck.thresholdBpm + HeartRateThresholdStepBpm)
+    }
+
+    fun decreaseHighHeartRateThreshold() {
+        setHighHeartRateThreshold(_uiState.value.highHeartRateCheck.thresholdBpm - HeartRateThresholdStepBpm)
+    }
+
+    fun increaseLowHeartRateThreshold() {
+        setLowHeartRateThreshold(_uiState.value.lowHeartRateCheck.thresholdBpm + HeartRateThresholdStepBpm)
+    }
+
+    fun decreaseLowHeartRateThreshold() {
+        setLowHeartRateThreshold(_uiState.value.lowHeartRateCheck.thresholdBpm - HeartRateThresholdStepBpm)
+    }
+
+    private fun setHighHeartRateThreshold(thresholdBpm: Int) {
+        val current = _uiState.value
+        val normalized = thresholdBpm
+            .coerceAtLeast(current.lowHeartRateCheck.thresholdBpm + HeartRateThresholdMinimumGapBpm)
+            .coerceIn(
+                PreferencesRepository.MIN_HIGH_HEART_RATE_THRESHOLD_BPM,
+                PreferencesRepository.MAX_HIGH_HEART_RATE_THRESHOLD_BPM,
+            )
+        onHighHeartRateThresholdChanged(normalized)
+        _uiState.value = current.copy(
+            highHeartRateCheck = current.heartRateThresholdCheck(
+                type = HeartRateThresholdCheckType.HIGH,
+                thresholdBpm = normalized,
+            )
+        )
+    }
+
+    private fun setLowHeartRateThreshold(thresholdBpm: Int) {
+        val current = _uiState.value
+        val normalized = thresholdBpm
+            .coerceAtMost(current.highHeartRateCheck.thresholdBpm - HeartRateThresholdMinimumGapBpm)
+            .coerceIn(
+                PreferencesRepository.MIN_LOW_HEART_RATE_THRESHOLD_BPM,
+                PreferencesRepository.MAX_LOW_HEART_RATE_THRESHOLD_BPM,
+            )
+        onLowHeartRateThresholdChanged(normalized)
+        _uiState.value = current.copy(
+            lowHeartRateCheck = current.heartRateThresholdCheck(
+                type = HeartRateThresholdCheckType.LOW,
+                thresholdBpm = normalized,
+            )
         )
     }
 }
@@ -280,6 +389,65 @@ private fun HeartLoadResult.vitalsSummary(): HeartVitalsSummary =
         latestBodyTemperature = bodyTemperature.maxByOrNull { it.time },
         latestVo2Max = vo2Max.maxByOrNull { it.time },
     )
+
+private fun HeartLoadResult.heartRateThresholdCheck(
+    selectedRange: TimeRange,
+    type: HeartRateThresholdCheckType,
+    thresholdBpm: Int,
+): HeartRateThresholdCheck {
+    val hasData = if (selectedRange == TimeRange.DAY) {
+        daySamples.isNotEmpty()
+    } else {
+        dailySummaries.isNotEmpty()
+    }
+    val count = when (type) {
+        HeartRateThresholdCheckType.HIGH -> if (selectedRange == TimeRange.DAY) {
+            daySamples.count { it.beatsPerMinute >= thresholdBpm }
+        } else {
+            dailySummaries.count { it.maxBpm >= thresholdBpm }
+        }
+        HeartRateThresholdCheckType.LOW -> if (selectedRange == TimeRange.DAY) {
+            daySamples.count { it.beatsPerMinute <= thresholdBpm }
+        } else {
+            dailySummaries.count { it.minBpm <= thresholdBpm }
+        }
+    }
+    return HeartRateThresholdCheck(
+        type = type,
+        thresholdBpm = thresholdBpm,
+        count = count,
+        hasData = hasData,
+    )
+}
+
+private fun HeartUiState.heartRateThresholdCheck(
+    type: HeartRateThresholdCheckType,
+    thresholdBpm: Int,
+): HeartRateThresholdCheck {
+    val hasData = if (selectedRange == TimeRange.DAY) {
+        daySamples.isNotEmpty()
+    } else {
+        dailySummaries.isNotEmpty()
+    }
+    val count = when (type) {
+        HeartRateThresholdCheckType.HIGH -> if (selectedRange == TimeRange.DAY) {
+            daySamples.count { it.beatsPerMinute >= thresholdBpm }
+        } else {
+            dailySummaries.count { it.maxBpm >= thresholdBpm }
+        }
+        HeartRateThresholdCheckType.LOW -> if (selectedRange == TimeRange.DAY) {
+            daySamples.count { it.beatsPerMinute <= thresholdBpm }
+        } else {
+            dailySummaries.count { it.minBpm <= thresholdBpm }
+        }
+    }
+    return HeartRateThresholdCheck(
+        type = type,
+        thresholdBpm = thresholdBpm,
+        count = count,
+        hasData = hasData,
+    )
+}
 
 private fun HeartMetric.toHeartPeriodMetric(): HeartPeriodMetric =
     when (this) {

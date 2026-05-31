@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -25,6 +26,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
+import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -34,6 +36,7 @@ class HealthRepositoryDashboardTest {
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
     private val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
+    private val exercisePermission = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     private val menstruationPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
 
     @Before
@@ -126,6 +129,58 @@ class HealthRepositoryDashboardTest {
         coVerify(exactly = 0) { hc.readDistanceMeters(any()) }
     }
 
+    @Test fun `loadDashboard reports missing permissions only for visible metrics`() = runTest {
+        val date = LocalDate.of(2026, 5, 16)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission, distancePermission, sleepPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        coEvery { hc.readSteps(date) } returns 9876L
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.STEPS, DashboardMetric.DISTANCE),
+            )
+        )
+
+        assertEquals(setOf(distancePermission), data.missingPermissions)
+        assertEquals(9876L, data.steps)
+        coVerify(exactly = 0) { hc.readSleepSessions(any(), any()) }
+    }
+
+    @Test fun `loadDashboard loads all workouts for selected day`() = runTest {
+        val date = LocalDate.of(2026, 5, 16)
+        val latestWorkout = workout(
+            id = "run-2",
+            start = "2026-05-16T18:00:00Z",
+            end = "2026-05-16T18:45:00Z",
+            duration = Duration.ofMinutes(45),
+        )
+        val earlierWorkout = workout(
+            id = "walk-1",
+            start = "2026-05-16T08:00:00Z",
+            end = "2026-05-16T08:30:00Z",
+            duration = Duration.ofMinutes(30),
+        )
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(exercisePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(exercisePermission)
+        coEvery { hc.readExerciseSessions(any(), any()) } returns listOf(latestWorkout, earlierWorkout)
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.WORKOUT),
+            )
+        )
+
+        assertEquals(listOf(latestWorkout, earlierWorkout), data.workouts)
+        assertEquals(latestWorkout, data.workout)
+        assertEquals(setOf(DashboardMetric.WORKOUT), data.loadedMetrics)
+    }
+
     @Test fun `loadDashboard skips cycle reads when cycle tracking is disabled`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
         val hc = mockk<HealthConnectManager>()
@@ -152,6 +207,21 @@ class HealthRepositoryDashboardTest {
         duration: Duration,
     ) = SleepData(
         id = id,
+        startTime = Instant.parse(start),
+        endTime = Instant.parse(end),
+        durationMs = duration.toMillis(),
+        source = "gadgetbridge",
+    )
+
+    private fun workout(
+        id: String,
+        start: String,
+        end: String,
+        duration: Duration,
+    ) = ExerciseData(
+        id = id,
+        title = null,
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
         startTime = Instant.parse(start),
         endTime = Instant.parse(end),
         durationMs = duration.toMillis(),

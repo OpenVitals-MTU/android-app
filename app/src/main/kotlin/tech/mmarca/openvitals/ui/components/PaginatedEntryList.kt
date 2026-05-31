@@ -7,6 +7,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,16 +33,21 @@ fun <T> PaginatedEntryList(
         mutableIntStateOf(entries.size.coerceAtMost(effectivePageSize))
     }
     val boundedVisibleCount = visibleCount.coerceAtMost(entries.size)
+    val visibleEntries = remember(entries, boundedVisibleCount) {
+        entries.take(boundedVisibleCount)
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         SectionHeader(title)
-        entries.take(boundedVisibleCount).forEach { entry ->
-            rowContent(
-                entry,
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+        visibleEntries.forEach { entry ->
+            key(entry) {
+                rowContent(
+                    entry,
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
         if (boundedVisibleCount < entries.size) {
             OutlinedButton(

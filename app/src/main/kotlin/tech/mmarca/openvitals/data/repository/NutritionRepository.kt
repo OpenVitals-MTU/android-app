@@ -12,6 +12,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class NutritionRepository @Inject constructor(
@@ -27,20 +29,33 @@ class NutritionRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadNutritionPeriod(query: PeriodLoadQuery): NutritionPeriodData {
+    suspend fun loadNutritionPeriod(query: PeriodLoadQuery): NutritionPeriodData = coroutineScope {
         val windows = query.windows
-        return NutritionPeriodData(
-            dailyMacros = loadDailyMacros(windows.current.start, windows.current.end),
-            previousDailyMacros = loadDailyMacros(windows.previous.start, windows.previous.end),
-            baselineDailyMacros = loadDailyMacros(windows.baseline.start, windows.baseline.end),
-            entries = loadNutritionEntries(windows.current.start, windows.current.end),
+        val granted = grantedPermissionsIfAvailable()
+        val dailyMacros = async { loadDailyMacros(windows.current.start, windows.current.end, granted) }
+        val previousDailyMacros = async { loadDailyMacros(windows.previous.start, windows.previous.end, granted) }
+        val baselineDailyMacros = async { loadDailyMacros(windows.baseline.start, windows.baseline.end, granted) }
+        val entries = async { loadNutritionEntries(windows.current.start, windows.current.end, granted) }
+        NutritionPeriodData(
+            dailyMacros = dailyMacros.await(),
+            previousDailyMacros = previousDailyMacros.await(),
+            baselineDailyMacros = baselineDailyMacros.await(),
+            entries = entries.await(),
         )
     }
 
     suspend fun loadDailyMacros(start: LocalDate, end: LocalDate): List<DailyMacros> {
         val granted = grantedPermissionsIfAvailable()
+        return loadDailyMacros(start, end, granted)
+    }
+
+    private suspend fun loadDailyMacros(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<DailyMacros> {
         if (readNutritionPermission !in granted) {
-            Log.w(TAG, "Skipping loadDailyMacros start=$start end=$end missing=$readNutritionPermission")
+            Log.w(TAG, "Skipping loadDailyMacros missingCount=1")
             return emptyList()
         }
         return hc.readDailyMacros(start, end)
@@ -48,8 +63,16 @@ class NutritionRepository @Inject constructor(
 
     suspend fun loadNutritionEntries(start: LocalDate, end: LocalDate): List<NutritionEntry> {
         val granted = grantedPermissionsIfAvailable()
+        return loadNutritionEntries(start, end, granted)
+    }
+
+    private suspend fun loadNutritionEntries(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<NutritionEntry> {
         if (readNutritionPermission !in granted) {
-            Log.w(TAG, "Skipping loadNutritionEntries start=$start end=$end missing=$readNutritionPermission")
+            Log.w(TAG, "Skipping loadNutritionEntries missingCount=1")
             return emptyList()
         }
         val zone = ZoneId.systemDefault()

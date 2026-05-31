@@ -1,4 +1,4 @@
-OpenVitals is a private Android dashboard for Health Connect. It helps you review activity, sleep, heart, body, hydration, nutrition, mindfulness, vitals, records, and optional cycle data in one local app.
+OpenVitals is a private Android dashboard for Health Connect. It helps you review activity, sleep, heart, body, hydration, nutrition, mindfulness, vitals, and optional cycle data in one local app.
 
 Your health data stays on your device. OpenVitals has no account, no cloud sync, no ads, no analytics SDKs, and no app-level internet permission. The dashboard reads from Health Connect only after you grant permissions. Manual entries are written back to Health Connect only when you explicitly save them.
 

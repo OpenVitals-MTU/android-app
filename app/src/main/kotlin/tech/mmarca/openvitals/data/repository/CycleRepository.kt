@@ -62,7 +62,7 @@ class CycleRepository @Inject constructor(
             val flows = if (readMenstruationPermission in granted) {
                 async { hc.readMenstruationFlowEntries(startInstant, endInstant) }
             } else {
-                Log.w(TAG, "Skipping menstruation flow start=$start end=$end missing=$readMenstruationPermission")
+                Log.w(TAG, "Skipping menstruation flow missingCount=1")
                 null
             }
             val periods = if (readMenstruationPermission in granted) {
@@ -73,22 +73,19 @@ class CycleRepository @Inject constructor(
             val ovulationTests = if (readOvulationTestPermission in granted) {
                 async { hc.readOvulationTests(startInstant, endInstant) }
             } else {
-                Log.w(TAG, "Skipping ovulation tests start=$start end=$end missing=$readOvulationTestPermission")
+                Log.w(TAG, "Skipping ovulation tests missingCount=1")
                 null
             }
             val cervicalMucus = if (readCervicalMucusPermission in granted) {
                 async { hc.readCervicalMucusEntries(startInstant, endInstant) }
             } else {
-                Log.w(TAG, "Skipping cervical mucus start=$start end=$end missing=$readCervicalMucusPermission")
+                Log.w(TAG, "Skipping cervical mucus missingCount=1")
                 null
             }
             val basalBodyTemperature = if (readBasalBodyTemperaturePermission in granted) {
                 async { hc.readBasalBodyTemperatureEntries(startInstant, endInstant) }
             } else {
-                Log.w(
-                    TAG,
-                    "Skipping basal body temperature start=$start end=$end missing=$readBasalBodyTemperaturePermission",
-                )
+                Log.w(TAG, "Skipping basal body temperature missingCount=1")
                 null
             }
 

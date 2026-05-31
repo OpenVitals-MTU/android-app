@@ -27,7 +27,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 
 ## Highlights
 
-- Daily dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, records, and optional cycle data
+- Daily dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, and optional cycle data
 - Period detail screens with `Day / Week / Month / Year` navigation
 - Health Connect permission onboarding with clear data categories
 - Manual logging for hydration, body measurements, vitals, mindfulness, and activities
@@ -54,10 +54,10 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 ## Features
 
-- Daily dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, records, and opt-in cycle data
-- Material 3 adaptive navigation for Dashboard, Browse, and Settings, with Add entry exposed as a contextual create action
+- Daily dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, and opt-in cycle data
+- Material 3 app shell with Settings as a top-bar icon and Add entry exposed as a contextual create action
 - Period-based detail screens with `Day / Week / Month / Year` navigation
-- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Browse, Manual entry, Onboarding, and Settings
+- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
 - Categorized Health Connect onboarding permissions, with Activity & sleep required, dashboard categories optional, and cycle tracking behind a separate explicit opt-in
 - Lazy write-permission requests from Add entry and metric entry screens, keeping dashboard permissions read-only
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
@@ -79,7 +79,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds
 - Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when explicitly enabled during onboarding or in Settings
-- Browse: workout, sleep, and weight records by selected period
+- Entry and session lists are reached from the relevant metric detail screen rather than a global records browser
 
 ## Privacy
 
@@ -163,7 +163,7 @@ After launching the app:
 OpenVitals is intentionally simple today:
 
 - one Android app module
-- Jetpack Compose UI with Material 3 adaptive navigation and theming
+- Jetpack Compose UI with Material 3 app shell and theming
 - Navigation Compose
 - `ViewModel` + `StateFlow`
 - Hilt constructor injection for repositories, services, and ViewModels

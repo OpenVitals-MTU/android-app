@@ -1,86 +1,79 @@
 package tech.mmarca.openvitals.healthconnect
 
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.core.performance.RefreshMode
 
 class HealthConnectQueryCacheTest {
 
-    @Test fun `current day entries expire after ttl`() = runTest {
-        var now = 0L
-        var loads = 0
-        val cache = HealthConnectQueryCache { now }
-        val key = HealthConnectQueryKey("steps", listOf("2026-05-25"))
+    @Test fun `cache evicts least recently used entry when bounded`() = runTest {
+        val cache = HealthConnectQueryCache(maxEntries = 2)
+        val first = HealthConnectQueryKey("dashboard", listOf("first"))
+        val second = HealthConnectQueryKey("dashboard", listOf("second"))
+        val third = HealthConnectQueryKey("dashboard", listOf("third"))
 
-        assertEquals(1, cache.getOrPut(key, ttlMillis = 60_000L) { ++loads })
-        now = 59_999L
-        assertEquals(1, cache.getOrPut(key, ttlMillis = 60_000L) { ++loads })
-        now = 60_001L
-        assertEquals(2, cache.getOrPut(key, ttlMillis = 60_000L) { ++loads })
-        assertEquals(2, loads)
+        assertEquals("one", cache.getOrPut(first) { "one" })
+        assertEquals("two", cache.getOrPut(second) { "two" })
+        assertEquals("one", cache.getOrPut(first) { "one-reloaded" })
+        assertEquals("three", cache.getOrPut(third) { "three" })
+
+        assertEquals("two-reloaded", cache.getOrPut(second) { "two-reloaded" })
+        assertEquals("one-reloaded", cache.getOrPut(first) { "one-reloaded" })
     }
 
-    @Test fun `historical entries reuse cache without ttl`() = runTest {
-        var loads = 0
-        val cache = HealthConnectQueryCache()
-        val key = HealthConnectQueryKey("steps", listOf("2026-05-01"))
+    @Test fun `cache honors ttl and force refresh`() = runTest {
+        var now = 1_000L
+        val cache = HealthConnectQueryCache(nowMillis = { now })
+        val key = HealthConnectQueryKey("dashboard", listOf("today"))
 
-        assertEquals(1, cache.getOrPut(key) { ++loads })
-        assertEquals(1, cache.getOrPut(key) { ++loads })
-        assertEquals(1, loads)
+        assertEquals(1, cache.getOrPut(key, ttlMillis = 100L) { 1 })
+        assertEquals(1, cache.getOrPut(key, ttlMillis = 100L) { 2 })
+
+        now += 101L
+
+        assertEquals(3, cache.getOrPut(key, ttlMillis = 100L) { 3 })
+        assertEquals(4, cache.getOrPut(key, refreshMode = RefreshMode.FORCE, ttlMillis = 100L) { 4 })
     }
 
-    @Test fun `manual refresh reloads cached query`() = runTest {
-        var loads = 0
+    @Test fun `force refresh starts new load instead of joining stale in flight load`() = runTest {
         val cache = HealthConnectQueryCache()
-        val key = HealthConnectQueryKey("steps", listOf("2026-05-01"))
+        val key = HealthConnectQueryKey("dashboard", listOf("today"))
+        val normalStarted = CompletableDeferred<Unit>()
+        val finishNormal = CompletableDeferred<Unit>()
 
-        assertEquals(1, cache.getOrPut(key) { ++loads })
-        assertEquals(2, cache.getOrPut(key, refreshMode = RefreshMode.FORCE) { ++loads })
-        assertEquals(2, loads)
-    }
-
-    @Test fun `permission fingerprint creates separate cache entries`() = runTest {
-        var loads = 0
-        val cache = HealthConnectQueryCache()
-        val stepsOnly = HealthConnectQueryKey("dashboard", permissions = "steps")
-        val stepsAndSleep = HealthConnectQueryKey("dashboard", permissions = "sleep|steps")
-
-        assertEquals(1, cache.getOrPut(stepsOnly) { ++loads })
-        assertEquals(2, cache.getOrPut(stepsAndSleep) { ++loads })
-        assertEquals(1, cache.getOrPut(stepsOnly) { ++loads })
-        assertEquals(2, loads)
-    }
-
-    @Test fun `in flight query is shared by concurrent callers`() = runTest {
-        var loads = 0
-        val cache = HealthConnectQueryCache()
-        val key = HealthConnectQueryKey("steps", listOf("2026-05-01"))
-        val started = CompletableDeferred<Unit>()
-        val finish = CompletableDeferred<Unit>()
-
-        val first = async {
+        val normal = async {
             cache.getOrPut(key) {
-                loads++
-                started.complete(Unit)
-                finish.await()
-                "ok"
+                normalStarted.complete(Unit)
+                finishNormal.await()
+                "normal"
             }
         }
-        started.await()
-        val second = async {
-            cache.getOrPut(key) {
-                loads++
-                "duplicate"
-            }
-        }
-        finish.complete(Unit)
+        normalStarted.await()
 
-        assertEquals("ok", first.await())
-        assertEquals("ok", second.await())
-        assertEquals(1, loads)
+        assertEquals(
+            "force",
+            cache.getOrPut(key, refreshMode = RefreshMode.FORCE) { "force" },
+        )
+
+        finishNormal.complete(Unit)
+        assertEquals("normal", normal.await())
+        assertEquals("force", cache.getOrPut(key) { "reloaded" })
+    }
+
+    @Test fun `invalidateOperations clears only matching operations`() = runTest {
+        val cache = HealthConnectQueryCache()
+        val dashboard = HealthConnectQueryKey("dashboard", listOf("today"))
+        val other = HealthConnectQueryKey("other", listOf("today"))
+
+        assertEquals("dashboard", cache.getOrPut(dashboard) { "dashboard" })
+        assertEquals("other", cache.getOrPut(other) { "other" })
+
+        cache.invalidateOperations("dashboard")
+
+        assertEquals("dashboard-new", cache.getOrPut(dashboard) { "dashboard-new" })
+        assertEquals("other", cache.getOrPut(other) { "other-new" })
     }
 }

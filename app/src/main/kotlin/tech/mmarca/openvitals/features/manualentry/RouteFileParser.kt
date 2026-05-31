@@ -5,6 +5,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.io.StringReader
 import java.time.Duration
 import java.time.Instant
@@ -48,7 +50,7 @@ class RouteFileImporter @Inject constructor(
     suspend fun import(uri: Uri): RouteFileImport = withContext(Dispatchers.IO) {
         val fileName = uri.displayName(context)
         val routeBytes = context.contentResolver.openInputStream(uri)
-            ?.use { it.readBytes() }
+            ?.use { it.readBytesBounded(MaxRouteFileBytes, "Route file is too large.") }
             ?: throw IllegalArgumentException("Unable to read route file.")
 
         RouteFileParser.parseFile(routeBytes, fileName = fileName)
@@ -57,6 +59,9 @@ class RouteFileImporter @Inject constructor(
 
 internal object RouteFileParser {
     fun parseFile(fileBytes: ByteArray, fileName: String? = null): RouteFileImport {
+        require(fileBytes.size <= MaxRouteFileBytes) {
+            "Route file is too large."
+        }
         try {
             if (fileBytes.isZipArchive() || fileName.hasExtension("kmz")) {
                 return KmzRouteParser.parse(fileBytes, fileName = fileName)
@@ -418,9 +423,12 @@ private fun ByteArray.zipRouteCandidates(): List<ZipRouteCandidate> {
         while (true) {
             val entry = zipInput.nextEntry ?: break
             if (!entry.isDirectory && (entry.name.hasExtension("gpx") || entry.name.hasExtension("kml"))) {
+                require(entry.size <= MaxKmzRouteEntryBytes || entry.size == -1L) {
+                    "KMZ route entry is too large."
+                }
                 candidates += ZipRouteCandidate(
                     name = entry.name,
-                    bytes = zipInput.readBytes(),
+                    bytes = zipInput.readBytesBounded(MaxKmzRouteEntryBytes, "KMZ route entry is too large."),
                 )
             }
             zipInput.closeEntry()
@@ -439,6 +447,22 @@ private fun routeCandidateComparator(): Comparator<ZipRouteCandidate> =
 private fun String?.hasExtension(extension: String): Boolean =
     this?.substringAfterLast('.', missingDelimiterValue = "")
         ?.equals(extension, ignoreCase = true) == true
+
+private fun InputStream.readBytesBounded(maxBytes: Int, message: String): ByteArray {
+    val output = ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    var total = 0
+    while (true) {
+        val read = read(buffer)
+        if (read == -1) break
+        total += read
+        if (total > maxBytes) {
+            throw IllegalArgumentException(message)
+        }
+        output.write(buffer, 0, read)
+    }
+    return output.toByteArray()
+}
 
 private fun simplifyRoutePoints(points: List<ExerciseRoutePoint>): List<ExerciseRoutePoint> {
     if (points.size <= MaxImportedRoutePoints) return points
@@ -486,6 +510,8 @@ private fun haversineMeters(
 private val PointTags = setOf("trkpt", "rtept")
 private const val MinRoutePoints = 2
 private const val MaxImportedRoutePoints = 2_000
+internal const val MaxRouteFileBytes = 15 * 1024 * 1024
+internal const val MaxKmzRouteEntryBytes = 15 * 1024 * 1024
 private const val DefaultSyntheticRouteDurationSeconds = 30 * 60L
 private const val SyntheticRoutePointSpacingSeconds = 10L
 private val SyntheticRouteStartTime: Instant = Instant.EPOCH

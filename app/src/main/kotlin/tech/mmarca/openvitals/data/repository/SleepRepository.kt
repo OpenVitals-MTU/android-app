@@ -13,6 +13,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class SleepRepository @Inject constructor(
@@ -28,19 +30,31 @@ class SleepRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadSleepPeriod(query: PeriodLoadQuery, sleepRangeMode: SleepRangeMode): SleepPeriodData {
+    suspend fun loadSleepPeriod(query: PeriodLoadQuery, sleepRangeMode: SleepRangeMode): SleepPeriodData = coroutineScope {
         val windows = query.windows
-        return SleepPeriodData(
-            sessions = loadSleepSessions(sleepQueryStart(windows.current.start, sleepRangeMode), windows.current.end),
-            previousSessions = loadSleepSessions(sleepQueryStart(windows.previous.start, sleepRangeMode), windows.previous.end),
-            baselineSessions = loadSleepSessions(sleepQueryStart(windows.baseline.start, sleepRangeMode), windows.baseline.end),
+        val granted = grantedPermissionsIfAvailable()
+        val sessions = async { loadSleepSessions(sleepQueryStart(windows.current.start, sleepRangeMode), windows.current.end, granted) }
+        val previousSessions = async { loadSleepSessions(sleepQueryStart(windows.previous.start, sleepRangeMode), windows.previous.end, granted) }
+        val baselineSessions = async { loadSleepSessions(sleepQueryStart(windows.baseline.start, sleepRangeMode), windows.baseline.end, granted) }
+        SleepPeriodData(
+            sessions = sessions.await(),
+            previousSessions = previousSessions.await(),
+            baselineSessions = baselineSessions.await(),
         )
     }
 
     suspend fun loadSleepSessions(start: LocalDate, end: LocalDate): List<SleepData> {
         val granted = grantedPermissionsIfAvailable()
+        return loadSleepSessions(start, end, granted)
+    }
+
+    private suspend fun loadSleepSessions(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<SleepData> {
         if (readSleepPermission !in granted) {
-            Log.w(TAG, "Skipping loadSleepSessions start=$start end=$end missing=$readSleepPermission")
+            Log.w(TAG, "Skipping loadSleepSessions missingCount=1")
             return emptyList()
         }
         val zone = ZoneId.systemDefault()
@@ -56,7 +70,7 @@ class SleepRepository @Inject constructor(
     suspend fun loadSleepSession(id: String): SleepData? {
         val granted = grantedPermissionsIfAvailable()
         if (readSleepPermission !in granted) {
-            Log.w(TAG, "Skipping loadSleepSession id=$id missing=$readSleepPermission")
+            Log.w(TAG, "Skipping loadSleepSession missingCount=1")
             return null
         }
         return hc.readSleepSession(id)

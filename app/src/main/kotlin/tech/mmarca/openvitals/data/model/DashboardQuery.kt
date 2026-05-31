@@ -41,6 +41,7 @@ enum class DashboardMetric {
     VO2_MAX,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    WEEKLY_CARDIO_LOAD,
     MINDFULNESS,
     CYCLE,
 }

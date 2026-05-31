@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
@@ -38,32 +39,34 @@ internal class HealthConnectReaderSupport(
         fallback: T,
         block: suspend () -> T,
     ): T {
+        val safeOperation = operation.privacySafeOperationName()
         var hasRetriedRateLimit = false
         var result: Result<T>? = null
 
         while (result == null) {
-            waitForActiveRateLimit(operation)
-            Log.d(TAG, "Starting $operation ${diagnosticsSummary()}")
+            waitForActiveRateLimit(safeOperation)
+            Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
 
             try {
                 result = readSemaphore.withPermit {
                     withContext(Dispatchers.IO) {
                         Result.success(block().also {
-                            Log.d(TAG, "Finished $operation successfully")
+                            Log.d(TAG, "Finished $safeOperation successfully")
                         })
                     }
                 }
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
                     val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
-                    Log.w(TAG, "Rate limited $operation ${diagnosticsSummary()}", t)
+                    Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
                     if (!hasRetriedRateLimit) {
                         hasRetriedRateLimit = true
                         delay(rateLimit.retryAfterMillis)
                         continue
                     }
                 } else {
-                    Log.e(TAG, "Failed $operation ${diagnosticsSummary()}", t)
+                    Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
                 }
                 result = Result.success(fallback)
             }
@@ -97,3 +100,6 @@ internal class HealthConnectReaderSupport(
         private const val MaxConcurrentReads = 4
     }
 }
+
+private fun String.privacySafeOperationName(): String =
+    substringBefore('[')

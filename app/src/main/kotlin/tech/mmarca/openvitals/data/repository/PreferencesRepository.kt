@@ -76,6 +76,34 @@ class PreferencesRepository @Inject constructor(
                 .apply()
         }
 
+    var highHeartRateThresholdBpm: Int
+        get() = prefs.getInt(
+            KEY_HIGH_HEART_RATE_THRESHOLD_BPM,
+            DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
+        ).coerceIn(MIN_HIGH_HEART_RATE_THRESHOLD_BPM, MAX_HIGH_HEART_RATE_THRESHOLD_BPM)
+        set(value) {
+            prefs.edit()
+                .putInt(
+                    KEY_HIGH_HEART_RATE_THRESHOLD_BPM,
+                    value.coerceIn(MIN_HIGH_HEART_RATE_THRESHOLD_BPM, MAX_HIGH_HEART_RATE_THRESHOLD_BPM),
+                )
+                .apply()
+        }
+
+    var lowHeartRateThresholdBpm: Int
+        get() = prefs.getInt(
+            KEY_LOW_HEART_RATE_THRESHOLD_BPM,
+            DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
+        ).coerceIn(MIN_LOW_HEART_RATE_THRESHOLD_BPM, MAX_LOW_HEART_RATE_THRESHOLD_BPM)
+        set(value) {
+            prefs.edit()
+                .putInt(
+                    KEY_LOW_HEART_RATE_THRESHOLD_BPM,
+                    value.coerceIn(MIN_LOW_HEART_RATE_THRESHOLD_BPM, MAX_LOW_HEART_RATE_THRESHOLD_BPM),
+                )
+                .apply()
+        }
+
     fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
         prefs.getString(key.storageKey, null)
             ?.let { value -> runCatching { TimeRange.valueOf(value) }.getOrNull() }
@@ -202,6 +230,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
+        private const val KEY_HIGH_HEART_RATE_THRESHOLD_BPM = "high_heart_rate_threshold_bpm"
+        private const val KEY_LOW_HEART_RATE_THRESHOLD_BPM = "low_heart_rate_threshold_bpm"
         private const val KEY_MINDFULNESS_TIMER_DURATION_MINUTES = "mindfulness_timer_duration_minutes"
         private const val KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES = "mindfulness_timer_interval_minutes"
         private const val KEY_MINDFULNESS_TIMER_BELL_SOUND = "mindfulness_timer_bell_sound"
@@ -210,6 +240,12 @@ class PreferencesRepository @Inject constructor(
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
         private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0
+        const val DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM = 120
+        const val DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM = 50
+        const val MIN_HIGH_HEART_RATE_THRESHOLD_BPM = 80
+        const val MAX_HIGH_HEART_RATE_THRESHOLD_BPM = 220
+        const val MIN_LOW_HEART_RATE_THRESHOLD_BPM = 30
+        const val MAX_LOW_HEART_RATE_THRESHOLD_BPM = 100
         private const val DEFAULT_MINDFULNESS_TIMER_DURATION_MINUTES = 10
         private const val MIN_MINDFULNESS_TIMER_MINUTES = 1
         private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60
