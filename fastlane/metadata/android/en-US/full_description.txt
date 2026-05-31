@@ -27,3 +27,7 @@ Why OpenVitals
 Requirements
 
 OpenVitals requires Health Connect. On Android 14 and newer, Health Connect is part of Android. On Android 13 and older, install the Health Connect app separately.
+
+Health disclaimer
+
+OpenVitals is for general wellness and informational use only. It is not a medical device and does not provide medical advice. It does not diagnose, treat, cure, or prevent any disease or medical condition. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.

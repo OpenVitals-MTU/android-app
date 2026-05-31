@@ -1,0 +1,1 @@
+Se añadió un aviso de salud claro en el onboarding, Ajustes, la justificación de permisos y la ficha de Google Play: OpenVitals no es un dispositivo médico, no ofrece asesoramiento médico y no diagnostica, trata, cura ni previene afecciones médicas.

@@ -57,6 +57,12 @@ class PermissionsRationaleActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 8.dp),
                             )
+                            Text(
+                                text = stringResource(R.string.privacy_policy_body_3),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
                             Button(
                                 onClick = ::finish,
                                 modifier = Modifier.padding(top = 20.dp),

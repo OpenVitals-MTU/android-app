@@ -642,6 +642,8 @@
     <string name="onboarding_tagline">Your health data, on your device</string>
     <string name="onboarding_privacy_title">Privacy first</string>
     <string name="onboarding_privacy_body">No account required. Data stays on your device. No cloud upload, no analytics, no ads.</string>
+    <string name="health_disclaimer_title">Health disclaimer</string>
+    <string name="health_disclaimer_body">OpenVitals is for general wellness and informational use only. It is not a medical device and does not provide medical advice. It does not diagnose, treat, cure, or prevent any disease or medical condition. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.</string>
     <string name="onboarding_health_connect_title">Powered by Health Connect</string>
     <string name="onboarding_health_connect_body">Reads from the secure on-device Android health store. Works with all data imported into Health Connect.</string>
     <string name="onboarding_permissions_header">PERMISSIONS</string>
@@ -877,4 +879,5 @@
     <string name="privacy_policy_title">Privacy policy</string>
     <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log, including imported GPX/KMZ activity routes, are written to Health Connect.</string>
     <string name="privacy_policy_body_2">This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.</string>
+    <string name="privacy_policy_body_3">OpenVitals is not a medical device and does not diagnose, treat, cure, or prevent any disease or medical condition. It is not a substitute for medical advice, diagnosis, or treatment from a qualified healthcare professional.</string>
 </resources>

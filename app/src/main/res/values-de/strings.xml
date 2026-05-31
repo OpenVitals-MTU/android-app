@@ -642,6 +642,8 @@
     <string name="onboarding_tagline">Deine Gesundheitsdaten auf deinem Gerät</string>
     <string name="onboarding_privacy_title">Datenschutz zuerst</string>
     <string name="onboarding_privacy_body">Kein Konto erforderlich. Daten bleiben auf deinem Gerät. Kein Cloud-Upload, keine Analysen, keine Werbung.</string>
+    <string name="health_disclaimer_title">Gesundheitshinweis</string>
+    <string name="health_disclaimer_body">OpenVitals dient nur allgemeinen Wellness- und Informationszwecken. Es ist kein Medizinprodukt und bietet keine medizinische Beratung. Es diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Wende dich bei medizinischen Fragen, Diagnosen oder Behandlungen immer an qualifiziertes medizinisches Fachpersonal.</string>
     <string name="onboarding_health_connect_title">Unterstützt von Health Connect</string>
     <string name="onboarding_health_connect_body">Liest aus dem sicheren Android-Gesundheitsspeicher auf dem Gerät. Funktioniert mit allen Daten, die in Health Connect importiert wurden.</string>
     <string name="onboarding_permissions_header">BERECHTIGUNGEN</string>
@@ -877,4 +879,5 @@
     <string name="privacy_policy_title">Datenschutzerklärung</string>
     <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KMZ-Aktivitätsrouten, werden in Health Connect geschrieben.</string>
     <string name="privacy_policy_body_2">Diese App lädt deine Gesundheitsdaten nicht in einen Cloud-Dienst hoch, enthält keine Werbung und teilt keine Daten mit Dritten.</string>
+    <string name="privacy_policy_body_3">OpenVitals ist kein Medizinprodukt und diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Es ersetzt keine medizinische Beratung, Diagnose oder Behandlung durch qualifiziertes medizinisches Fachpersonal.</string>
 </resources>

@@ -1,0 +1,1 @@
+Added a clear health disclaimer in onboarding, Settings, the permission rationale, and the Play Store listing: OpenVitals is not a medical device, does not provide medical advice, and does not diagnose, treat, cure, or prevent medical conditions.

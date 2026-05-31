@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.Button
@@ -166,6 +167,14 @@ fun OnboardingScreen(
             icon = Icons.Outlined.Lock,
             title = stringResource(R.string.onboarding_privacy_title),
             body = stringResource(R.string.onboarding_privacy_body),
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        FeatureCard(
+            icon = Icons.Outlined.Info,
+            title = stringResource(R.string.health_disclaimer_title),
+            body = stringResource(R.string.health_disclaimer_body),
         )
 
         Spacer(Modifier.height(12.dp))

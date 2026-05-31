@@ -702,6 +702,17 @@ private fun PrivacyInfoCard(modifier: Modifier = Modifier) {
                 }
                 Spacer(Modifier.height(4.dp))
             }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.health_disclaimer_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.health_disclaimer_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }
