@@ -1141,6 +1141,8 @@ private fun LazyListScope.heartAggregateDataConfidence(
     sampleCount: Int,
     accentColor: Color,
 ) {
+    if (period.start == period.end) return
+
     item {
         DataConfidenceCard(
             confidence = dataConfidence(
@@ -1162,6 +1164,8 @@ private fun <T> LazyListScope.heartRawDataConfidence(
     time: (T) -> java.time.Instant,
     accentColor: Color,
 ) {
+    if (period.start == period.end) return
+
     item {
         val zone = ZoneId.systemDefault()
         DataConfidenceCard(

@@ -295,6 +295,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun readLatestHeight(): Double? =
         bodyReader.readLatestHeight()
 
+    suspend fun readLatestHeightEntry(): HeightEntry? =
+        bodyReader.readLatestHeightEntry()
+
     suspend fun readHeightEntries(start: Instant, end: Instant): List<HeightEntry> =
         bodyReader.readHeightEntries(start, end)
 

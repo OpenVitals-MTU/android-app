@@ -5,8 +5,10 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -28,7 +30,9 @@ import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.HeightEntry
 import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class HealthRepositoryDashboardTest {
@@ -38,6 +42,8 @@ class HealthRepositoryDashboardTest {
     private val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
     private val exercisePermission = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     private val menstruationPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
+    private val weightPermission = HealthPermission.getReadPermission(WeightRecord::class)
+    private val heightPermission = HealthPermission.getReadPermission(HeightRecord::class)
 
     @Before
     fun setUp() {
@@ -179,6 +185,55 @@ class HealthRepositoryDashboardTest {
         assertEquals(listOf(latestWorkout, earlierWorkout), data.workouts)
         assertEquals(latestWorkout, data.workout)
         assertEquals(setOf(DashboardMetric.WORKOUT), data.loadedMetrics)
+    }
+
+    @Test fun `loadDashboard shows latest weight even when no selected-day weight exists`() = runTest {
+        val date = LocalDate.of(2026, 5, 16)
+        val weightTime = Instant.parse("2026-04-02T08:30:00Z")
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(weightPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(weightPermission)
+        coEvery { hc.readLatestWeight() } returns WeightEntry(
+            time = weightTime,
+            weightKg = 82.4,
+            source = "test",
+        )
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.WEIGHT),
+            )
+        )
+
+        assertEquals(82.4, data.weightKg!!, 0.01)
+        assertEquals(weightTime, data.weightTime)
+        coVerify(exactly = 0) { hc.readLatestWeight(date) }
+    }
+
+    @Test fun `loadDashboard shows latest height with measurement time`() = runTest {
+        val date = LocalDate.of(2026, 5, 16)
+        val heightTime = Instant.parse("2025-12-10T07:45:00Z")
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(heightPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(heightPermission)
+        coEvery { hc.readLatestHeightEntry() } returns HeightEntry(
+            time = heightTime,
+            heightCm = 178.0,
+            source = "test",
+        )
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.HEIGHT),
+            )
+        )
+
+        assertEquals(178.0, data.heightCm!!, 0.01)
+        assertEquals(heightTime, data.heightTime)
     }
 
     @Test fun `loadDashboard skips cycle reads when cycle tracking is disabled`() = runTest {

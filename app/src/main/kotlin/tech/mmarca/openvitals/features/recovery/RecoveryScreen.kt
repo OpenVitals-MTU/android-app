@@ -221,11 +221,11 @@ private fun RecoveryTopCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Column(
+        Row(
             modifier = Modifier
-            .fillMaxSize()
+                .fillMaxSize()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
@@ -240,7 +240,11 @@ private fun RecoveryTopCard(
                     modifier = Modifier.size(22.dp),
                 )
             }
-            Column {
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,

@@ -28,9 +28,9 @@ import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,8 +49,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
@@ -60,24 +62,31 @@ import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
 
 private val ActivityOverviewCardHeight = 132.dp
 private val ActivityOverviewChartWidth = 152.dp
 private val ActivityOverviewChartHeight = 58.dp
 private val ActivityOverviewBarWidth = 10.dp
 private val ActivityOverviewBarRadius = 8.dp
+private val WeeklyExerciseMarkerSize = 42.dp
 
 @Composable
 fun ActivityOverviewScreen(
     viewModel: ActivityOverviewViewModel,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenCardioLoad: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenDistance: () -> Unit,
     onOpenEnergyBurned: () -> Unit,
     onOpenHrv: () -> Unit,
+    onOpenActivity: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -92,12 +101,13 @@ fun ActivityOverviewScreen(
             else -> ActivityOverviewContent(
                 state = state,
                 unitFormatter = unitFormatter,
-                onLoadMore = viewModel::loadMoreRecentActivities,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenCardioLoad = onOpenCardioLoad,
                 onOpenSteps = onOpenSteps,
                 onOpenDistance = onOpenDistance,
                 onOpenEnergyBurned = onOpenEnergyBurned,
                 onOpenHrv = onOpenHrv,
+                onOpenActivity = onOpenActivity,
             )
         }
     }
@@ -107,15 +117,17 @@ fun ActivityOverviewScreen(
 private fun ActivityOverviewContent(
     state: ActivityOverviewUiState,
     unitFormatter: UnitFormatter,
-    onLoadMore: () -> Unit,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenCardioLoad: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenDistance: () -> Unit,
     onOpenEnergyBurned: () -> Unit,
     onOpenHrv: () -> Unit,
+    onOpenActivity: (String) -> Unit,
 ) {
     val today = state.today
     val metricDays = state.metricDays
+    val weeklyOverviewDays = state.days.weekContaining(state.selectedDate)
     val cardioMetricDays = metricDays.filter { it.cardioLoadConfidence != CardioLoadConfidence.NO_DATA }
 
     Box(
@@ -129,11 +141,11 @@ private fun ActivityOverviewContent(
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
             item {
-                RecentActivitiesSection(
-                    activities = state.visibleRecentActivities,
-                    canLoadMore = state.canLoadMoreRecentActivities,
+                WeeklyActivityOverviewSection(
+                    days = weeklyOverviewDays,
                     unitFormatter = unitFormatter,
-                    onLoadMore = onLoadMore,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenActivity = onOpenActivity,
                 )
             }
 
@@ -222,38 +234,64 @@ private fun ActivityOverviewContent(
 }
 
 @Composable
-private fun RecentActivitiesSection(
-    activities: List<ActivityOverviewDay>,
-    canLoadMore: Boolean,
+private fun WeeklyActivityOverviewSection(
+    days: List<ActivityOverviewDay>,
     unitFormatter: UnitFormatter,
-    onLoadMore: () -> Unit,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenActivity: (String) -> Unit,
 ) {
+    val weekDays = days.sortedBy { it.date }
+    val weekWorkouts = weekDays
+        .flatMap { it.workouts }
+        .distinctBy { it.id }
+        .sortedByDescending { it.startTime }
+
     Column(modifier = Modifier.fillMaxWidth()) {
-        SectionHeader(stringResource(R.string.activities_recent_title))
-        if (activities.isEmpty()) {
-            Text(
-                text = stringResource(R.string.message_no_recent_activity),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-        } else {
-            activities.forEach { day ->
-                RecentActivityRow(
-                    day = day,
-                    unitFormatter = unitFormatter,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-            if (canLoadMore) {
-                OutlinedButton(
-                    onClick = onLoadMore,
+        SectionHeader(stringResource(R.string.activities_weekly_overview_title))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column {
+                WeeklyExerciseStrip(
+                    days = weekDays,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(28.dp),
-                ) {
-                    Text(stringResource(R.string.action_load_more))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f))
+                        .padding(horizontal = 14.dp, vertical = 14.dp),
+                )
+                if (weekWorkouts.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.message_no_workouts_week),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.activities_this_week_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp),
+                    )
+                    weekWorkouts.forEachIndexed { index, workout ->
+                        WeeklyWorkoutRow(
+                            workout = workout,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            onClick = { onOpenActivity(workout.id) },
+                        )
+                        if (index < weekWorkouts.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -261,76 +299,119 @@ private fun RecentActivitiesSection(
 }
 
 @Composable
-private fun RecentActivityRow(
-    day: ActivityOverviewDay,
-    unitFormatter: UnitFormatter,
+private fun WeeklyExerciseStrip(
+    days: List<ActivityOverviewDay>,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(24.dp),
+    val locale = LocalConfiguration.current.locales[0]
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .background(StepsColor.copy(alpha = 0.22f), CircleShape),
-                contentAlignment = Alignment.Center,
+        days.forEach { day ->
+            val workout = day.workouts.firstOrNull()
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.DirectionsWalk,
-                    contentDescription = null,
-                    tint = StepsColor,
-                    modifier = Modifier.size(26.dp),
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier.size(WeeklyExerciseMarkerSize),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (workout != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(WeeklyExerciseMarkerSize)
+                                .background(WorkoutColor, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = exerciseTypeIcon(workout.exerciseType),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(23.dp),
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(9.dp)
+                                .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                        )
+                    }
+                }
                 Text(
-                    text = localizedDayTitle(day.date),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringResource(R.string.activity_overview_daily_activity),
-                    style = MaterialTheme.typography.titleMedium,
+                    text = day.date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).take(1),
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = recentActivitySummary(day, unitFormatter),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                val cardioLoad = cardioLoadDisplayValue(day, unitFormatter)
-                Text(
-                    text = cardioLoad.value,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = stringResource(R.string.metric_cardio_load),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = cardioLoadConfidenceLabel(day.cardioLoadConfidence),
-                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyWorkoutRow(
+    workout: ExerciseData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onClick: () -> Unit,
+) {
+    val zone = ZoneId.systemDefault()
+    val start = workout.startTime.atZone(zone)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(WorkoutColor.copy(alpha = 0.16f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = exerciseTypeIcon(workout.exerciseType),
+                contentDescription = null,
+                tint = WorkoutColor,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = workout.title ?: exerciseTypeLabel(workout.exerciseType),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${localizedDayTitle(start.toLocalDate())} / ${dateTimeFormatterProvider.shortTime().format(start)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = unitFormatter.duration(workout.durationMs),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.detail_duration),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -528,6 +609,15 @@ private enum class ActivityMetricChartStyle {
 private fun metricCardModifier(): Modifier =
     Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
 
+private fun List<ActivityOverviewDay>.weekContaining(date: LocalDate): List<ActivityOverviewDay> {
+    val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val daysByDate = associateBy { it.date }
+    return (0..6).map { offset ->
+        val day = weekStart.plusDays(offset.toLong())
+        daysByDate[day] ?: ActivityOverviewDay(date = day)
+    }
+}
+
 @Composable
 private fun cardioLoadDisplayValue(day: ActivityOverviewDay, unitFormatter: UnitFormatter): DisplayValue =
     if (day.cardioLoadConfidence == CardioLoadConfidence.NO_DATA) {
@@ -546,11 +636,3 @@ private fun cardioLoadConfidenceLabel(confidence: CardioLoadConfidence): String 
             CardioLoadConfidence.NO_DATA -> R.string.cardio_load_confidence_no_data
         }
     )
-
-@Composable
-private fun recentActivitySummary(day: ActivityOverviewDay, unitFormatter: UnitFormatter): String =
-    listOf(
-        "${unitFormatter.count(day.steps)} ${stringResource(R.string.unit_steps)}",
-        unitFormatter.distance(day.distanceMeters).text,
-        unitFormatter.energy(day.energyBurnedKcal).text,
-    ).joinToString(" / ")

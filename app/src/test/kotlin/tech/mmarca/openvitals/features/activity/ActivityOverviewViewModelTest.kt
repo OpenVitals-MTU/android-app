@@ -92,6 +92,20 @@ class ActivityOverviewViewModelTest {
     }
 
     @Test
+    fun `load maps workouts into overview days`() = runTest {
+        val start = Instant.parse("${today}T10:00:00Z")
+        val workout = workout(start, start.plusSeconds(45 * 60L))
+        val vm = ActivityOverviewViewModel(
+            activityRepository = activityRepo(workouts = listOf(workout)),
+            heartRepository = heartRepo(),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
+        )
+
+        assertEquals(listOf(workout.id), vm.uiState.value.today.workouts.map { it.id })
+        assertTrue(vm.uiState.value.today.hasActivity)
+    }
+
+    @Test
     fun `cardio load uses trimp with high confidence when heart rate coverage and calibration are available`() = runTest {
         val start = Instant.parse("${today}T10:00:00Z")
         val heartRateSamples = (0..30).map { minute ->

@@ -4,8 +4,8 @@
 
     <string name="cd_back">Back</string>
     <string name="cd_settings">Settings</string>
-    <string name="cd_edit_dashboard">Edit dashboard</string>
-    <string name="cd_finish_dashboard_editing">Finish editing dashboard</string>
+    <string name="cd_edit_dashboard">Edit summary</string>
+    <string name="cd_finish_dashboard_editing">Finish editing summary</string>
     <string name="cd_edit_manual_entry_widgets">Edit add entry widgets</string>
     <string name="cd_finish_manual_entry_editing">Finish editing add entry widgets</string>
     <string name="cd_move_widget_up">Move widget up</string>
@@ -44,7 +44,7 @@
     <string name="no_data">No data</string>
     <string name="loading">Loading...</string>
 
-    <string name="screen_dashboard">Dashboard</string>
+    <string name="screen_dashboard">Summary</string>
     <string name="screen_steps">Steps</string>
     <string name="screen_activities">Activities</string>
     <string name="screen_activity_detail">Activity detail</string>
@@ -64,9 +64,9 @@
     <string name="screen_body_measurement_entry">Body measurement entry</string>
     <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
-    <string name="bottom_nav_dashboard">Dashboard</string>
+    <string name="bottom_nav_dashboard">Summary</string>
     <string name="bottom_nav_activities">Activities</string>
-    <string name="bottom_nav_recovery">Recovery</string>
+    <string name="bottom_nav_recovery">Sleep</string>
     <string name="bottom_nav_add_entry">Add entry</string>
     <string name="manual_entry_hydration_title">Hydration</string>
     <string name="manual_entry_activity_title">Activity</string>
@@ -88,9 +88,9 @@
     <string name="manual_entry_body_write_permission_title">%1$s write permission</string>
     <string name="manual_entry_vitals_write_permission_title">%1$s write permission</string>
     <string name="mindfulness_entry_subtitle">Mindfulness sessions are saved directly to Health Connect.</string>
-    <string name="mindfulness_entry_permission_needed">For the dashboard, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.</string>
+    <string name="mindfulness_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.</string>
     <string name="activity_entry_subtitle">Create a Health Connect activity session. Route files are written only when you import one.</string>
-    <string name="activity_entry_permission_needed">For the dashboard, OpenVitals only asks for view permissions. To add activities without later interruptions, we need Health Connect write permissions for sessions, routes, distance, elevation, active calories, and total calories. OpenVitals will not store these entries; they are saved in Health Connect.</string>
+    <string name="activity_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add activities without later interruptions, we need Health Connect write permissions for sessions, routes, distance, elevation, active calories, and total calories. OpenVitals will not store these entries; they are saved in Health Connect.</string>
     <string name="activity_entry_source_body">Create an empty activity, record a GPS route, or import GPX/KMZ first and review the detected route, time, title, notes, and type before saving.</string>
     <string name="activity_entry_create_manual">Create manually</string>
     <string name="activity_entry_record_gps">Record activity</string>
@@ -294,15 +294,18 @@
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
 
-    <string name="section_activity_recovery">Activity &amp; recovery</string>
+    <string name="section_activity_recovery">Activity &amp; sleep</string>
     <string name="section_body_intake">Body &amp; intake</string>
     <string name="section_heart">Heart</string>
     <string name="section_mind">Mind</string>
     <string name="section_records">Records</string>
     <string name="section_activities">Activities</string>
     <string name="activities_recent_title">Recent activities</string>
+    <string name="activities_weekly_overview_title">Weekly overview</string>
     <string name="activities_key_metrics">Key metrics</string>
+    <string name="activities_this_week_title">Activities this week</string>
     <string name="activity_overview_daily_activity">Daily activity</string>
+    <string name="activity_overview_workout_count">%1$d activities</string>
     <string name="recovery_sleep_score">Sleep score</string>
     <string name="recovery_sleep_duration">Sleep duration</string>
     <string name="recovery_sleep_schedule">Sleep schedule</string>
@@ -557,7 +560,7 @@
     <string name="hydration_goal_progress">%1$d of %2$d tracked days met</string>
     <string name="hydration_tracker_title">Log hydration</string>
     <string name="hydration_tracker_subtitle">Saved directly to Health Connect</string>
-    <string name="hydration_tracker_permission_needed">For the dashboard, OpenVitals only asks for view permissions. To add this manual entry, we need write permission. OpenVitals will not store this data; entries are saved in Health Connect.</string>
+    <string name="hydration_tracker_permission_needed">For the summary, OpenVitals only asks for view permissions. To add this manual entry, we need write permission. OpenVitals will not store this data; entries are saved in Health Connect.</string>
     <string name="hydration_drink_type">Drink type</string>
     <string name="hydration_container_size">Size</string>
     <string name="hydration_add_selected">Add %1$s</string>
@@ -585,18 +588,19 @@
     <string name="cd_increase_hydration_goal">Increase hydration goal</string>
     <string name="unit_percent_symbol">%</string>
 
-    <string name="message_no_dashboard_data">No dashboard data available.</string>
+    <string name="message_no_dashboard_data">No summary data available.</string>
     <string name="message_missing_permissions_title">Some permissions are missing</string>
-    <string name="message_missing_permissions_body">Grant the missing permissions to see a complete dashboard.</string>
+    <string name="message_missing_permissions_body">Grant the missing permissions to see a complete summary.</string>
     <string name="message_health_connect_rate_limited">Health Connect rate limit reached. Please wait about %1$d min and try again.</string>
     <string name="message_no_workouts_day">No workouts recorded on this day.</string>
+    <string name="message_no_workouts_week">No workouts recorded this week.</string>
     <string name="message_no_sleep_day">No sleep session ended on this day.</string>
     <string name="message_no_blood_pressure">No blood pressure reading.</string>
     <string name="message_no_oxygen">No oxygen reading.</string>
     <string name="message_no_vo2_max">No VO2 max reading.</string>
     <string name="message_cycle_browse">View cycle calendar and readings.</string>
     <string name="dashboard_add_widgets">Add widgets</string>
-    <string name="dashboard_all_widgets_added">All widgets are already on the dashboard.</string>
+    <string name="dashboard_all_widgets_added">All widgets are already on the summary.</string>
     <string name="dashboard_action_log">Log</string>
     <string name="dashboard_activities_today">Activities today</string>
     <string name="dashboard_goal_of">of %1$s</string>
@@ -642,8 +646,8 @@
     <string name="onboarding_health_connect_body">Reads from the secure on-device Android health store. Works with all data imported into Health Connect.</string>
     <string name="onboarding_permissions_header">PERMISSIONS</string>
     <string name="onboarding_grant_core">Grant only core permissions</string>
-    <string name="onboarding_grant_all">Grant all dashboard permissions</string>
-    <string name="onboarding_core_required">Core permissions are required to show your dashboard.</string>
+    <string name="onboarding_grant_all">Grant all summary permissions</string>
+    <string name="onboarding_core_required">Core permissions are required to show your summary.</string>
     <string name="onboarding_unable_open_permissions">Unable to open Health Connect permissions.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect is not supported on this device.</string>
     <string name="onboarding_health_connect_needs_play_store">This device is running Android 13 with the standalone Health Connect app installed. Sadly, this version depends on Google Play Store services, which are missing on this device, so Health Connect rejects requests before OpenVitals can read your data. OpenVitals cannot fix or bypass this device-side Health Connect issue. The only way to solve it is to install Google Play services or upgrade to Android 14 or higher, where Health Connect is part of the operating system and does not need Google services.</string>
@@ -658,10 +662,10 @@
     <string name="onboarding_status_required">Required</string>
     <string name="onboarding_status_optional">Optional</string>
     <string name="onboarding_category_activity_sleep">Activity &amp; sleep</string>
-    <string name="onboarding_category_activity_sleep_desc">Steps, distance, workouts, and sleep sessions for the dashboard.</string>
+    <string name="onboarding_category_activity_sleep_desc">Steps, distance, workouts, and sleep sessions for the summary.</string>
     <string name="onboarding_category_workout_routes">Workout routes</string>
     <string name="onboarding_category_workout_routes_desc">Route previews require manual approval in Health Connect settings.</string>
-    <string name="onboarding_category_heart_recovery">Heart &amp; recovery</string>
+    <string name="onboarding_category_heart_recovery">Heart &amp; vitals</string>
     <string name="onboarding_category_heart_recovery_desc">Heart rate, resting heart rate, and HRV trends.</string>
     <string name="onboarding_category_body">Body</string>
     <string name="onboarding_category_body_desc">Weight, height, body fat, lean mass, bone mass, and BMR.</string>

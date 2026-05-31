@@ -181,6 +181,8 @@ private fun HydrationDataConfidence(
     period: DatePeriod,
     modifier: Modifier = Modifier,
 ) {
+    if (period.start == period.end) return
+
     val tracked = data.filter { it.liters > 0.0 }
     DataConfidenceCard(
         confidence = dataConfidence(

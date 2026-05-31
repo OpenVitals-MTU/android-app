@@ -421,6 +421,8 @@ private fun <T> LazyListScope.bodyEntryDataConfidence(
     accentColor: Color,
     valueKind: DataValueKind = DataValueKind.MEASURED,
 ) {
+    if (period.start == period.end) return
+
     item {
         val zone = ZoneId.systemDefault()
         DataConfidenceCard(

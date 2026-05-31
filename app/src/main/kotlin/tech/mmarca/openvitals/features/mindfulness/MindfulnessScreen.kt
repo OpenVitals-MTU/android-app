@@ -196,6 +196,8 @@ private fun LazyListScope.mindfulnessDataConfidence(
     sessions: List<MindfulnessSession>,
     period: DatePeriod,
 ) {
+    if (period.start == period.end) return
+
     val zone = ZoneId.systemDefault()
     item {
         DataConfidenceCard(

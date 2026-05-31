@@ -898,6 +898,8 @@ private fun LazyListScope.activityDataConfidence(
     sampleCount: Int,
     accentColor: Color,
 ) {
+    if (period.start == period.end) return
+
     item {
         DataConfidenceCard(
             confidence = dataConfidence(

@@ -135,6 +135,7 @@ import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
@@ -256,6 +257,7 @@ private fun DashboardContent(
     val specs = dashboardWidgetSpecs(
         data = data,
         unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
         trackCycle = trackCycle,
         dailyGoals = dailyGoals,
         widgetIds = specWidgetIds,
@@ -1040,6 +1042,7 @@ private fun Rect.containsPoint(point: Offset): Boolean =
 private fun dashboardWidgetSpecs(
     data: DashboardData,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
     trackCycle: Boolean,
     dailyGoals: DashboardDailyGoals,
     widgetIds: Collection<DashboardWidgetId>,
@@ -1295,10 +1298,11 @@ private fun dashboardWidgetSpecs(
         )
     }
     if (shouldBuild(DashboardWidgetId.WEIGHT)) {
-        addMetric(
+        addOptionalMetric(
             id = DashboardWidgetId.WEIGHT,
             title = stringResource(R.string.metric_latest_weight),
-            value = unitFormatter.weight(data.weightKg),
+            value = data.weightKg?.let(unitFormatter::weight),
+            subtitle = data.weightTime?.let { dashboardMeasurementDate(it, dateTimeFormatterProvider) },
             icon = Icons.Outlined.MonitorWeight,
             accentColor = WeightColor,
             loadingMessage = loadingMessageFor(DashboardWidgetId.WEIGHT),
@@ -1310,6 +1314,7 @@ private fun dashboardWidgetSpecs(
             id = DashboardWidgetId.HEIGHT,
             title = stringResource(R.string.metric_height),
             value = data.heightCm?.let(unitFormatter::height),
+            subtitle = data.heightTime?.let { dashboardMeasurementDate(it, dateTimeFormatterProvider) },
             icon = Icons.Outlined.Straighten,
             accentColor = WeightColor,
             loadingMessage = loadingMessageFor(DashboardWidgetId.HEIGHT),
@@ -1556,6 +1561,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
     icon: ImageVector,
     accentColor: Color,
     noDataMessage: String? = null,
+    subtitle: String? = null,
     progress: DashboardWidgetProgress? = null,
     loadingMessage: String? = null,
     onClick: (() -> Unit)?,
@@ -1579,6 +1585,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
                     icon = icon,
                     accentColor = accentColor,
                     progress = progress,
+                    subtitle = subtitle,
                     modifier = modifier,
                     onClick = onClick,
                 )
@@ -1596,6 +1603,12 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
         }
     )
 }
+
+private fun dashboardMeasurementDate(
+    time: Instant,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+): String =
+    dateTimeFormatterProvider.mediumDate().format(time.atZone(ZoneId.systemDefault()).toLocalDate())
 
 @Composable
 private fun cycleDisplayValue(data: DashboardData, unitFormatter: UnitFormatter): DisplayValue? =

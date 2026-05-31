@@ -266,14 +266,14 @@ class HealthRepository @Inject constructor(
             readWeightPermission,
             "weight",
         ) {
-            hc.readLatestWeight(date)
+            hc.readLatestWeight()
         }
         val height = readIfNeeded(
             wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI),
             readHeightPermission,
             "height",
         ) {
-            hc.readLatestHeight()
+            hc.readLatestHeightEntry()
         }
         val bodyFat = readIfNeeded(wants(DashboardMetric.BODY_FAT), readBodyFatPermission, "body fat") {
             hc.readLatestBodyFat()
@@ -376,7 +376,7 @@ class HealthRepository @Inject constructor(
 
         val missingPerms = dashboardPermissionsFor(metrics).filterNot { it in granted }.toSet()
         val latestBloodPressure = bloodPressure?.await()
-        val latestWeight = weight?.await()?.weightKg
+        val latestWeight = weight?.await()
         val latestHeight = height?.await()
         val dailyMacros = macros?.await()
         val dayWorkouts = workouts?.await().orEmpty()
@@ -395,10 +395,12 @@ class HealthRepository @Inject constructor(
             workout = dayWorkouts.firstOrNull(),
             workouts = dayWorkouts,
             sleep = sleep?.await(),
-            weightKg = latestWeight ?: 0.0,
-            heightCm = latestHeight,
-            bmi = latestWeight?.let { weightKg ->
-                latestHeight
+            weightKg = latestWeight?.weightKg,
+            weightTime = latestWeight?.time,
+            heightCm = latestHeight?.heightCm,
+            heightTime = latestHeight?.time,
+            bmi = latestWeight?.weightKg?.let { weightKg ->
+                latestHeight?.heightCm
                     ?.takeIf { it > 0.0 }
                     ?.let { heightCm -> weightKg / ((heightCm / 100.0) * (heightCm / 100.0)) }
             },

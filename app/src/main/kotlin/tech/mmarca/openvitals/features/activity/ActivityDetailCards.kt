@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material3.Card
@@ -65,7 +64,7 @@ internal fun WorkoutSummaryCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
+                            imageVector = exerciseTypeIcon(workout.exerciseType),
                             contentDescription = null,
                             tint = WorkoutColor,
                         )

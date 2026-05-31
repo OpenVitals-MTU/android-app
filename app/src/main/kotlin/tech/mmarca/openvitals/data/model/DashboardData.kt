@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.data.model
 
+import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
@@ -14,8 +15,10 @@ data class DashboardData(
     val workout: ExerciseData? = null,
     val workouts: List<ExerciseData> = emptyList(),
     val sleep: SleepData? = null,
-    val weightKg: Double = 0.0,
+    val weightKg: Double? = null,
+    val weightTime: Instant? = null,
     val heightCm: Double? = null,
+    val heightTime: Instant? = null,
     val bmi: Double? = null,
     val avgHeartRateBpm: Long = 0,
     val restingHeartRateBpm: Long = 0,
@@ -60,10 +63,20 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         } else {
             weightKg
         },
+        weightTime = if (DashboardMetric.WEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
+            other.weightTime
+        } else {
+            weightTime
+        },
         heightCm = if (DashboardMetric.HEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
             other.heightCm
         } else {
             heightCm
+        },
+        heightTime = if (DashboardMetric.HEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
+            other.heightTime
+        } else {
+            heightTime
         },
         bmi = if (DashboardMetric.BMI in other.loadedMetrics) other.bmi else bmi,
         avgHeartRateBpm = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) other.avgHeartRateBpm else avgHeartRateBpm,

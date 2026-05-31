@@ -150,6 +150,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.cycleDataConfidence(
     data: CycleData,
     period: DatePeriod,
 ) {
+    if (period.start == period.end) return
+
     item {
         val zone = ZoneId.systemDefault()
         DataConfidenceCard(

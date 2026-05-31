@@ -369,6 +369,7 @@ fun AppNavigation(
                 ActivityOverviewScreen(
                     viewModel = activityOverviewViewModel,
                     unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onOpenCardioLoad = {
                         navController.navigate(CardioLoadDetailRoute)
                     },
@@ -383,6 +384,9 @@ fun AppNavigation(
                     },
                     onOpenHrv = {
                         navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
+                    },
+                    onOpenActivity = { activityId ->
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
                     },
                 )
             }

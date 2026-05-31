@@ -156,6 +156,27 @@ class HealthDataTest {
 
     // ─── DashboardData floorsClimbed + elevationGainedMeters ────────────────────
 
+    @Test fun `DashboardData defaults weight to null`() {
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1))
+        assertNull(data.weightKg)
+        assertNull(data.weightTime)
+        assertNull(data.heightTime)
+    }
+
+    @Test fun `DashboardData stores latest weight with time when provided`() {
+        val time = Instant.parse("2026-01-01T08:00:00Z")
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1), weightKg = 74.2, weightTime = time)
+        assertEquals(74.2, data.weightKg!!, 0.01)
+        assertEquals(time, data.weightTime)
+    }
+
+    @Test fun `DashboardData stores latest height with time when provided`() {
+        val time = Instant.parse("2026-01-02T08:00:00Z")
+        val data = DashboardData(date = LocalDate.of(2026, 1, 1), heightCm = 178.0, heightTime = time)
+        assertEquals(178.0, data.heightCm!!, 0.01)
+        assertEquals(time, data.heightTime)
+    }
+
     @Test fun `DashboardData defaults floorsClimbed to null`() {
         val data = DashboardData(date = LocalDate.of(2026, 1, 1))
         assertNull(data.floorsClimbed)

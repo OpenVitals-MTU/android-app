@@ -4,8 +4,8 @@
 
     <string name="cd_back">Atrás</string>
     <string name="cd_settings">Ajustes</string>
-    <string name="cd_edit_dashboard">Editar panel</string>
-    <string name="cd_finish_dashboard_editing">Terminar edición del panel</string>
+    <string name="cd_edit_dashboard">Editar resumen</string>
+    <string name="cd_finish_dashboard_editing">Terminar edición del resumen</string>
     <string name="cd_edit_manual_entry_widgets">Editar widgets de añadir entrada</string>
     <string name="cd_finish_manual_entry_editing">Terminar edición de widgets de añadir entrada</string>
     <string name="cd_move_widget_up">Mover widget arriba</string>
@@ -44,7 +44,7 @@
     <string name="no_data">Sin datos</string>
     <string name="loading">Cargando...</string>
 
-    <string name="screen_dashboard">Panel</string>
+    <string name="screen_dashboard">Resumen</string>
     <string name="screen_steps">Pasos</string>
     <string name="screen_activities">Actividades</string>
     <string name="screen_activity_detail">Detalle de actividad</string>
@@ -64,9 +64,9 @@
     <string name="screen_body_measurement_entry">Entrada de medida corporal</string>
     <string name="screen_vitals_measurement_entry">Entrada de constantes</string>
 
-    <string name="bottom_nav_dashboard">Panel</string>
+    <string name="bottom_nav_dashboard">Resumen</string>
     <string name="bottom_nav_activities">Actividades</string>
-    <string name="bottom_nav_recovery">Recuperación</string>
+    <string name="bottom_nav_recovery">Sueño</string>
     <string name="bottom_nav_add_entry">Añadir</string>
     <string name="manual_entry_hydration_title">Hidratación</string>
     <string name="manual_entry_activity_title">Actividad</string>
@@ -88,9 +88,9 @@
     <string name="manual_entry_body_write_permission_title">Permiso de escritura de %1$s</string>
     <string name="manual_entry_vitals_write_permission_title">Permiso de escritura de %1$s</string>
     <string name="mindfulness_entry_subtitle">Las sesiones de mindfulness se guardan directamente en Health Connect.</string>
-    <string name="mindfulness_entry_permission_needed">Para el panel, OpenVitals solo pide permisos de lectura. Para añadir entradas de mindfulness, necesitamos permiso de escritura. OpenVitals no almacenará estas sesiones; las entradas se guardan en Health Connect.</string>
+    <string name="mindfulness_entry_permission_needed">Para el resumen, OpenVitals solo pide permisos de lectura. Para añadir entradas de mindfulness, necesitamos permiso de escritura. OpenVitals no almacenará estas sesiones; las entradas se guardan en Health Connect.</string>
     <string name="activity_entry_subtitle">Crea una sesión de actividad en Health Connect. Los archivos de ruta solo se escriben cuando importas uno.</string>
-    <string name="activity_entry_permission_needed">Para el panel, OpenVitals solo pide permisos de lectura. Para añadir actividades sin interrupciones posteriores, necesitamos permisos de escritura en Health Connect para sesiones, rutas, distancia, elevación, calorías activas y calorías totales. OpenVitals no almacenará estas entradas; se guardan en Health Connect.</string>
+    <string name="activity_entry_permission_needed">Para el resumen, OpenVitals solo pide permisos de lectura. Para añadir actividades sin interrupciones posteriores, necesitamos permisos de escritura en Health Connect para sesiones, rutas, distancia, elevación, calorías activas y calorías totales. OpenVitals no almacenará estas entradas; se guardan en Health Connect.</string>
     <string name="activity_entry_source_body">Crea una actividad vacía, graba una ruta GPS, o importa primero un GPX/KMZ y revisa la ruta, hora, título, notas y tipo detectados antes de guardar.</string>
     <string name="activity_entry_create_manual">Crear manualmente</string>
     <string name="activity_entry_record_gps">Grabar actividad</string>
@@ -294,15 +294,18 @@
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
 
-    <string name="section_activity_recovery">Actividad y recuperación</string>
+    <string name="section_activity_recovery">Actividad y sueño</string>
     <string name="section_body_intake">Cuerpo e ingesta</string>
     <string name="section_heart">Corazón</string>
     <string name="section_mind">Mente</string>
     <string name="section_records">Registros</string>
     <string name="section_activities">Actividades</string>
     <string name="activities_recent_title">Actividades recientes</string>
+    <string name="activities_weekly_overview_title">Resumen semanal</string>
     <string name="activities_key_metrics">Métricas clave</string>
+    <string name="activities_this_week_title">Actividades de esta semana</string>
     <string name="activity_overview_daily_activity">Actividad diaria</string>
+    <string name="activity_overview_workout_count">%1$d actividades</string>
     <string name="recovery_sleep_score">Puntuación de sueño</string>
     <string name="recovery_sleep_duration">Duración del sueño</string>
     <string name="recovery_sleep_schedule">Horario de sueño</string>
@@ -557,7 +560,7 @@
     <string name="hydration_goal_progress">%1$d de %2$d días registrados cumplidos</string>
     <string name="hydration_tracker_title">Registrar hidratación</string>
     <string name="hydration_tracker_subtitle">Guardado directamente en Health Connect</string>
-    <string name="hydration_tracker_permission_needed">Para el panel, OpenVitals solo pide permisos de visualización. Para añadir esta entrada manual, necesitamos permiso de escritura. OpenVitals no almacenará estos datos; las entradas se guardan en Health Connect.</string>
+    <string name="hydration_tracker_permission_needed">Para el resumen, OpenVitals solo pide permisos de visualización. Para añadir esta entrada manual, necesitamos permiso de escritura. OpenVitals no almacenará estos datos; las entradas se guardan en Health Connect.</string>
     <string name="hydration_drink_type">Tipo de bebida</string>
     <string name="hydration_container_size">Tamaño</string>
     <string name="hydration_add_selected">Añadir %1$s</string>
@@ -585,18 +588,19 @@
     <string name="cd_increase_hydration_goal">Aumentar objetivo de hidratación</string>
     <string name="unit_percent_symbol">%</string>
 
-    <string name="message_no_dashboard_data">No hay datos del panel disponibles.</string>
+    <string name="message_no_dashboard_data">No hay datos del resumen disponibles.</string>
     <string name="message_missing_permissions_title">Faltan algunos permisos</string>
-    <string name="message_missing_permissions_body">Concede los permisos que faltan para ver un panel completo.</string>
+    <string name="message_missing_permissions_body">Concede los permisos que faltan para ver un resumen completo.</string>
     <string name="message_health_connect_rate_limited">Se alcanzó el límite de Health Connect. Espera aproximadamente %1$d min e inténtalo de nuevo.</string>
     <string name="message_no_workouts_day">No hay entrenamientos registrados en este día.</string>
+    <string name="message_no_workouts_week">No hay entrenamientos registrados esta semana.</string>
     <string name="message_no_sleep_day">No hay ninguna sesión de sueño terminada en este día.</string>
     <string name="message_no_blood_pressure">No hay lectura de presión arterial.</string>
     <string name="message_no_oxygen">No hay lectura de oxígeno.</string>
     <string name="message_no_vo2_max">No hay lectura de VO2 máx.</string>
     <string name="message_cycle_browse">Ver calendario y lecturas del ciclo.</string>
     <string name="dashboard_add_widgets">Añadir widgets</string>
-    <string name="dashboard_all_widgets_added">Todos los widgets ya están en el panel.</string>
+    <string name="dashboard_all_widgets_added">Todos los widgets ya están en el resumen.</string>
     <string name="dashboard_action_log">Registrar</string>
     <string name="dashboard_activities_today">Actividades de hoy</string>
     <string name="dashboard_goal_of">de %1$s</string>
@@ -642,8 +646,8 @@
     <string name="onboarding_health_connect_body">Lee desde el almacén de salud seguro del dispositivo de Android. Funciona con todos los datos importados en Health Connect.</string>
     <string name="onboarding_permissions_header">PERMISOS</string>
     <string name="onboarding_grant_core">Conceder solo permisos básicos</string>
-    <string name="onboarding_grant_all">Conceder todos los permisos del panel</string>
-    <string name="onboarding_core_required">Los permisos básicos son necesarios para mostrar tu panel.</string>
+    <string name="onboarding_grant_all">Conceder todos los permisos del resumen</string>
+    <string name="onboarding_core_required">Los permisos básicos son necesarios para mostrar tu resumen.</string>
     <string name="onboarding_unable_open_permissions">No se pueden abrir los permisos de Health Connect.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect no es compatible con este dispositivo.</string>
     <string name="onboarding_health_connect_needs_play_store">Este dispositivo usa Android 13 y tiene instalada la app independiente de Health Connect. Por desgracia, esta versión depende de los servicios de Google Play Store, que no están instalados en este dispositivo, así que Health Connect rechaza las solicitudes antes de que OpenVitals pueda leer tus datos. OpenVitals no puede arreglar ni evitar este problema del dispositivo. La única forma de resolverlo es instalar los servicios de Google Play o actualizar a Android 14 o superior, donde Health Connect forma parte del sistema operativo y no necesita los servicios de Google.</string>
@@ -658,10 +662,10 @@
     <string name="onboarding_status_required">Obligatorio</string>
     <string name="onboarding_status_optional">Opcional</string>
     <string name="onboarding_category_activity_sleep">Actividad y sueño</string>
-    <string name="onboarding_category_activity_sleep_desc">Pasos, distancia, entrenamientos y sesiones de sueño para el panel.</string>
+    <string name="onboarding_category_activity_sleep_desc">Pasos, distancia, entrenamientos y sesiones de sueño para el resumen.</string>
     <string name="onboarding_category_workout_routes">Rutas de entrenamiento</string>
     <string name="onboarding_category_workout_routes_desc">Las vistas previas de ruta requieren aprobación manual en los ajustes de Health Connect.</string>
-    <string name="onboarding_category_heart_recovery">Corazón y recuperación</string>
+    <string name="onboarding_category_heart_recovery">Corazón y constantes</string>
     <string name="onboarding_category_heart_recovery_desc">Frecuencia cardiaca, frecuencia en reposo y tendencias de HRV.</string>
     <string name="onboarding_category_body">Cuerpo</string>
     <string name="onboarding_category_body_desc">Peso, altura, grasa corporal, masa magra, masa ósea y TMB.</string>

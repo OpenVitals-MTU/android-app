@@ -4,8 +4,8 @@
 
     <string name="cd_back">Zurück</string>
     <string name="cd_settings">Einstellungen</string>
-    <string name="cd_edit_dashboard">Dashboard bearbeiten</string>
-    <string name="cd_finish_dashboard_editing">Dashboard-Bearbeitung beenden</string>
+    <string name="cd_edit_dashboard">Übersicht bearbeiten</string>
+    <string name="cd_finish_dashboard_editing">Übersichtsbearbeitung beenden</string>
     <string name="cd_edit_manual_entry_widgets">Widgets zum Hinzufügen von Einträgen bearbeiten</string>
     <string name="cd_finish_manual_entry_editing">Bearbeitung der Widgets zum Hinzufügen von Einträgen beenden</string>
     <string name="cd_move_widget_up">Widget nach oben verschieben</string>
@@ -44,7 +44,7 @@
     <string name="no_data">Keine Daten</string>
     <string name="loading">Wird geladen...</string>
 
-    <string name="screen_dashboard">Dashboard</string>
+    <string name="screen_dashboard">Übersicht</string>
     <string name="screen_steps">Schritte</string>
     <string name="screen_activities">Aktivitäten</string>
     <string name="screen_activity_detail">Aktivitätsdetails</string>
@@ -64,9 +64,9 @@
     <string name="screen_body_measurement_entry">Körpermessungseintrag</string>
     <string name="screen_vitals_measurement_entry">Vitalwerteeintrag</string>
 
-    <string name="bottom_nav_dashboard">Dashboard</string>
+    <string name="bottom_nav_dashboard">Übersicht</string>
     <string name="bottom_nav_activities">Aktivitäten</string>
-    <string name="bottom_nav_recovery">Erholung</string>
+    <string name="bottom_nav_recovery">Schlaf</string>
     <string name="bottom_nav_add_entry">Eintrag hinzufügen</string>
     <string name="manual_entry_hydration_title">Hydrierung</string>
     <string name="manual_entry_activity_title">Aktivität</string>
@@ -88,9 +88,9 @@
     <string name="manual_entry_body_write_permission_title">Schreibberechtigung für %1$s</string>
     <string name="manual_entry_vitals_write_permission_title">Schreibberechtigung für %1$s</string>
     <string name="mindfulness_entry_subtitle">Achtsamkeitssitzungen werden direkt in Health Connect gespeichert.</string>
-    <string name="mindfulness_entry_permission_needed">Für das Dashboard fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen von Achtsamkeitseinträgen benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Sitzungen nicht; Einträge werden in Health Connect gespeichert.</string>
+    <string name="mindfulness_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen von Achtsamkeitseinträgen benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Sitzungen nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="activity_entry_subtitle">Erstelle eine Aktivitätssitzung in Health Connect. Routendateien werden nur geschrieben, wenn du eine importierst.</string>
-    <string name="activity_entry_permission_needed">Für das Dashboard fragt OpenVitals nur Leseberechtigungen an. Um Aktivitäten ohne spätere Unterbrechungen hinzuzufügen, benötigen wir Health-Connect-Schreibberechtigungen für Sitzungen, Routen, Distanz, Höhenmeter, aktive Kalorien und Gesamtkalorien. OpenVitals speichert diese Einträge nicht; sie werden in Health Connect gespeichert.</string>
+    <string name="activity_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Um Aktivitäten ohne spätere Unterbrechungen hinzuzufügen, benötigen wir Health-Connect-Schreibberechtigungen für Sitzungen, Routen, Distanz, Höhenmeter, aktive Kalorien und Gesamtkalorien. OpenVitals speichert diese Einträge nicht; sie werden in Health Connect gespeichert.</string>
     <string name="activity_entry_source_body">Erstelle eine leere Aktivität, zeichne eine GPS-Route auf oder importiere zuerst GPX/KMZ und prüfe die erkannte Route, Zeit, den Titel, die Notizen und den Typ vor dem Speichern.</string>
     <string name="activity_entry_create_manual">Manuell erstellen</string>
     <string name="activity_entry_record_gps">Aktivität aufzeichnen</string>
@@ -294,15 +294,18 @@
     <string name="unit_total">gesamt</string>
     <string name="unit_grams">g</string>
 
-    <string name="section_activity_recovery">Aktivität &amp; Erholung</string>
+    <string name="section_activity_recovery">Aktivität &amp; Schlaf</string>
     <string name="section_body_intake">Körper &amp; Aufnahme</string>
     <string name="section_heart">Herz</string>
     <string name="section_mind">Geist</string>
     <string name="section_records">Datensätze</string>
     <string name="section_activities">Aktivitäten</string>
     <string name="activities_recent_title">Letzte Aktivitäten</string>
+    <string name="activities_weekly_overview_title">Wochenübersicht</string>
     <string name="activities_key_metrics">Wichtige Messwerte</string>
+    <string name="activities_this_week_title">Aktivitäten dieser Woche</string>
     <string name="activity_overview_daily_activity">Tagesaktivität</string>
+    <string name="activity_overview_workout_count">%1$d Aktivitäten</string>
     <string name="recovery_sleep_score">Schlafwert</string>
     <string name="recovery_sleep_duration">Schlafdauer</string>
     <string name="recovery_sleep_schedule">Schlafplan</string>
@@ -557,7 +560,7 @@
     <string name="hydration_goal_progress">%1$d von %2$d verfolgten Tagen erreicht</string>
     <string name="hydration_tracker_title">Hydrierung protokollieren</string>
     <string name="hydration_tracker_subtitle">Direkt in Health Connect gespeichert</string>
-    <string name="hydration_tracker_permission_needed">Für das Dashboard fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen dieses manuellen Eintrags benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
+    <string name="hydration_tracker_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen dieses manuellen Eintrags benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="hydration_drink_type">Getränketyp</string>
     <string name="hydration_container_size">Größe</string>
     <string name="hydration_add_selected">%1$s hinzufügen</string>
@@ -585,18 +588,19 @@
     <string name="cd_increase_hydration_goal">Hydrierungsziel erhöhen</string>
     <string name="unit_percent_symbol">%</string>
 
-    <string name="message_no_dashboard_data">Keine Dashboard-Daten verfügbar.</string>
+    <string name="message_no_dashboard_data">Keine Übersichtsdaten verfügbar.</string>
     <string name="message_missing_permissions_title">Einige Berechtigungen fehlen</string>
-    <string name="message_missing_permissions_body">Erteile die fehlenden Berechtigungen, um ein vollständiges Dashboard zu sehen.</string>
+    <string name="message_missing_permissions_body">Erteile die fehlenden Berechtigungen, um eine vollständige Übersicht zu sehen.</string>
     <string name="message_health_connect_rate_limited">Health-Connect-Ratenlimit erreicht. Bitte warte etwa %1$d min und versuche es erneut.</string>
     <string name="message_no_workouts_day">An diesem Tag wurden keine Trainings aufgezeichnet.</string>
+    <string name="message_no_workouts_week">Diese Woche wurden keine Trainings aufgezeichnet.</string>
     <string name="message_no_sleep_day">An diesem Tag endete keine Schlafsitzung.</string>
     <string name="message_no_blood_pressure">Kein Blutdruckmesswert.</string>
     <string name="message_no_oxygen">Kein Sauerstoffmesswert.</string>
     <string name="message_no_vo2_max">Kein VO2-max-Messwert.</string>
     <string name="message_cycle_browse">Zykluskalender und Messwerte anzeigen.</string>
     <string name="dashboard_add_widgets">Widgets hinzufügen</string>
-    <string name="dashboard_all_widgets_added">Alle Widgets sind bereits auf dem Dashboard.</string>
+    <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
     <string name="dashboard_action_log">Protokollieren</string>
     <string name="dashboard_activities_today">Aktivitäten heute</string>
     <string name="dashboard_goal_of">von %1$s</string>
@@ -642,8 +646,8 @@
     <string name="onboarding_health_connect_body">Liest aus dem sicheren Android-Gesundheitsspeicher auf dem Gerät. Funktioniert mit allen Daten, die in Health Connect importiert wurden.</string>
     <string name="onboarding_permissions_header">BERECHTIGUNGEN</string>
     <string name="onboarding_grant_core">Nur Kernberechtigungen erteilen</string>
-    <string name="onboarding_grant_all">Alle Dashboard-Berechtigungen erteilen</string>
-    <string name="onboarding_core_required">Kernberechtigungen sind erforderlich, um dein Dashboard anzuzeigen.</string>
+    <string name="onboarding_grant_all">Alle Übersichtsberechtigungen erteilen</string>
+    <string name="onboarding_core_required">Kernberechtigungen sind erforderlich, um deine Übersicht anzuzeigen.</string>
     <string name="onboarding_unable_open_permissions">Health-Connect-Berechtigungen können nicht geöffnet werden.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect wird auf diesem Gerät nicht unterstützt.</string>
     <string name="onboarding_health_connect_needs_play_store">Auf diesem Gerät läuft Android 13 mit der eigenständigen Health-Connect-App. Leider hängt diese Version von Google-Play-Store-Diensten ab, die auf diesem Gerät fehlen. Daher lehnt Health Connect Anfragen ab, bevor OpenVitals deine Daten lesen kann. OpenVitals kann dieses geräteseitige Health-Connect-Problem nicht beheben oder umgehen. Die einzige Lösung ist, Google-Play-Dienste zu installieren oder auf Android 14 oder höher zu aktualisieren, wo Health Connect Teil des Betriebssystems ist und keine Google-Dienste benötigt.</string>
@@ -658,10 +662,10 @@
     <string name="onboarding_status_required">Erforderlich</string>
     <string name="onboarding_status_optional">Optional</string>
     <string name="onboarding_category_activity_sleep">Aktivität &amp; Schlaf</string>
-    <string name="onboarding_category_activity_sleep_desc">Schritte, Distanz, Trainings und Schlafsitzungen für das Dashboard.</string>
+    <string name="onboarding_category_activity_sleep_desc">Schritte, Distanz, Trainings und Schlafsitzungen für die Übersicht.</string>
     <string name="onboarding_category_workout_routes">Trainingsrouten</string>
     <string name="onboarding_category_workout_routes_desc">Routenvorschauen erfordern eine manuelle Genehmigung in den Health-Connect-Einstellungen.</string>
-    <string name="onboarding_category_heart_recovery">Herz &amp; Erholung</string>
+    <string name="onboarding_category_heart_recovery">Herz &amp; Vitalwerte</string>
     <string name="onboarding_category_heart_recovery_desc">Herzfrequenz, Ruheherzfrequenz und HRV-Trends.</string>
     <string name="onboarding_category_body">Körper</string>
     <string name="onboarding_category_body_desc">Gewicht, Größe, Körperfett, fettfreie Masse, Knochenmasse und BMR.</string>

@@ -92,6 +92,9 @@ internal class BodyHealthReader(
         }
 
     suspend fun readLatestHeight(): Double? =
+        readLatestHeightEntry()?.heightCm
+
+    suspend fun readLatestHeightEntry(): HeightEntry? =
         support.withNullableLogging("readLatestHeight") {
             support.client().readRecordsPaged(
                 recordType = HeightRecord::class,
@@ -99,7 +102,15 @@ internal class BodyHealthReader(
                 ascendingOrder = false,
                 pageSize = 1,
                 maxRecords = 1,
-            ).firstOrNull()?.height?.inMeters?.times(100.0)
+            ).firstOrNull()?.let { record ->
+                HeightEntry(
+                    time = record.time,
+                    heightCm = record.height.inMeters * 100.0,
+                    source = record.metadata.dataOrigin.packageName,
+                    id = record.metadata.id,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
+                )
+            }
         }
 
     suspend fun readHeightEntries(start: Instant, end: Instant): List<HeightEntry> =

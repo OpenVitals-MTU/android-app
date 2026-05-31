@@ -1,6 +1,31 @@
 package tech.mmarca.openvitals.features.activity
 
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DirectionsBike
+import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
+import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
+import androidx.compose.material.icons.outlined.DownhillSkiing
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.Pool
+import androidx.compose.material.icons.outlined.Rowing
+import androidx.compose.material.icons.outlined.Sailing
+import androidx.compose.material.icons.outlined.SelfImprovement
+import androidx.compose.material.icons.outlined.SportsBaseball
+import androidx.compose.material.icons.outlined.SportsBasketball
+import androidx.compose.material.icons.outlined.SportsCricket
+import androidx.compose.material.icons.outlined.SportsFootball
+import androidx.compose.material.icons.outlined.SportsGolf
+import androidx.compose.material.icons.outlined.SportsGymnastics
+import androidx.compose.material.icons.outlined.SportsHandball
+import androidx.compose.material.icons.outlined.SportsHockey
+import androidx.compose.material.icons.outlined.SportsKabaddi
+import androidx.compose.material.icons.outlined.SportsMartialArts
+import androidx.compose.material.icons.outlined.SportsSoccer
+import androidx.compose.material.icons.outlined.SportsTennis
+import androidx.compose.material.icons.outlined.SportsVolleyball
+import androidx.compose.material.icons.outlined.Surfing
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -70,6 +95,59 @@ internal fun exerciseTypeLabel(type: Int): String = when (type) {
     ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> "Wheelchair"
     ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
     else -> "Exercise"
+}
+
+internal fun exerciseTypeIcon(type: Int): ImageVector = when (type) {
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+    ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> Icons.AutoMirrored.Outlined.DirectionsRun
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+    ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> Icons.AutoMirrored.Outlined.DirectionsBike
+    ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+    ExerciseSessionRecord.EXERCISE_TYPE_HIKING,
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> Icons.AutoMirrored.Outlined.DirectionsWalk
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER,
+    ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL,
+    ExerciseSessionRecord.EXERCISE_TYPE_WATER_POLO -> Icons.Outlined.Pool
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING,
+    ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE,
+    ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> Icons.Outlined.Rowing
+    ExerciseSessionRecord.EXERCISE_TYPE_YOGA,
+    ExerciseSessionRecord.EXERCISE_TYPE_PILATES,
+    ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING,
+    ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING -> Icons.Outlined.SelfImprovement
+    ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+    ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
+    ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+    ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP -> Icons.Outlined.FitnessCenter
+    ExerciseSessionRecord.EXERCISE_TYPE_SKATING,
+    ExerciseSessionRecord.EXERCISE_TYPE_SKIING,
+    ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING,
+    ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING -> Icons.Outlined.DownhillSkiing
+    ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> Icons.Outlined.Surfing
+    ExerciseSessionRecord.EXERCISE_TYPE_SAILING -> Icons.Outlined.Sailing
+    ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> Icons.Outlined.SportsGolf
+    ExerciseSessionRecord.EXERCISE_TYPE_TENNIS,
+    ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS,
+    ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON,
+    ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL,
+    ExerciseSessionRecord.EXERCISE_TYPE_SQUASH -> Icons.Outlined.SportsTennis
+    ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> Icons.Outlined.SportsBasketball
+    ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> Icons.Outlined.SportsSoccer
+    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN,
+    ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AUSTRALIAN -> Icons.Outlined.SportsFootball
+    ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL,
+    ExerciseSessionRecord.EXERCISE_TYPE_SOFTBALL -> Icons.Outlined.SportsBaseball
+    ExerciseSessionRecord.EXERCISE_TYPE_CRICKET -> Icons.Outlined.SportsCricket
+    ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL -> Icons.Outlined.SportsVolleyball
+    ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL -> Icons.Outlined.SportsHandball
+    ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY,
+    ExerciseSessionRecord.EXERCISE_TYPE_ROLLER_HOCKEY -> Icons.Outlined.SportsHockey
+    ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS,
+    ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> Icons.Outlined.SportsMartialArts
+    ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING,
+    ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS -> Icons.Outlined.SportsKabaddi
+    ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS -> Icons.Outlined.SportsGymnastics
+    else -> Icons.AutoMirrored.Outlined.DirectionsRun
 }
 
 internal fun exerciseSegmentLabel(type: Int): String = when (type) {

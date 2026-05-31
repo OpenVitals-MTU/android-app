@@ -283,6 +283,8 @@ private fun LazyListScope.nutritionDataConfidence(
     period: DatePeriod,
     metricData: NutritionMetricData,
 ) {
+    if (period.start == period.end) return
+
     val trackedValues = metricData.values.filter { it.value > 0.0 }
     item {
         DataConfidenceCard(

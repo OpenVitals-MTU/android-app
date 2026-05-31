@@ -38,6 +38,7 @@ data class ActivityOverviewDay(
     val distanceMeters: Double = 0.0,
     val activeCaloriesKcal: Double? = null,
     val energyBurnedKcal: Double = 0.0,
+    val workouts: List<ExerciseData> = emptyList(),
     val hrvRmssdMs: Double? = null,
     val cardioLoadScore: CardioLoadEstimate = CardioLoadEstimate.NoData,
 ) {
@@ -46,6 +47,7 @@ data class ActivityOverviewDay(
             distanceMeters > 0.0 ||
             activeCaloriesKcal.orZero() > 0.0 ||
             energyBurnedKcal > 0.0 ||
+            workouts.isNotEmpty() ||
             cardioLoadConfidence != CardioLoadConfidence.NO_DATA
 
     val cardioLoad: Int
@@ -194,6 +196,7 @@ class ActivityOverviewViewModel @Inject constructor(
                 distanceMeters = daySteps?.distanceMeters ?: 0.0,
                 activeCaloriesKcal = daySteps?.activeCaloriesKcal,
                 energyBurnedKcal = dayNutrition?.caloriesBurnedKcal ?: 0.0,
+                workouts = dayWorkouts,
                 hrvRmssdMs = dayHrv?.rmssdMs,
                 cardioLoadScore = calculateCardioLoad(
                     steps = daySteps,
@@ -201,7 +204,7 @@ class ActivityOverviewViewModel @Inject constructor(
                     restingHeartRate = restingHeartRateByDate[date]?.bpm,
                     baselineRestingHeartRate = baselineRestingHeartRate,
                     observedMaxHeartRate = observedMaxHeartRate,
-                    activityWindows = dayWorkouts,
+                    activityWindows = dayWorkouts.toCardioLoadTimeWindows(date, zone),
                 ),
             )
         }.toList()
@@ -214,11 +217,18 @@ private fun List<Long>.medianOrNull(): Long? {
     return sorted[sorted.lastIndex / 2]
 }
 
-private fun List<ExerciseData>.overlapping(date: LocalDate, zone: ZoneId): List<CardioLoadTimeWindow> {
+private fun List<ExerciseData>.overlapping(date: LocalDate, zone: ZoneId): List<ExerciseData> {
+    val dayStart = date.atStartOfDay(zone).toInstant()
+    val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
+    return filter { workout ->
+        workout.endTime.isAfter(dayStart) && workout.startTime.isBefore(dayEnd)
+    }.sortedByDescending { it.startTime }
+}
+
+private fun List<ExerciseData>.toCardioLoadTimeWindows(date: LocalDate, zone: ZoneId): List<CardioLoadTimeWindow> {
     val dayStart = date.atStartOfDay(zone).toInstant()
     val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
     return mapNotNull { workout ->
-        if (!workout.endTime.isAfter(dayStart) || !workout.startTime.isBefore(dayEnd)) return@mapNotNull null
         CardioLoadTimeWindow(
             start = maxOf(workout.startTime, dayStart),
             end = minOf(workout.endTime, dayEnd),

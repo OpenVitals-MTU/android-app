@@ -309,6 +309,8 @@ private fun LazyListScope.sleepDataConfidence(
     durationPoints: List<SleepDurationPoint>,
     period: DatePeriod,
 ) {
+    if (period.start == period.end) return
+
     item {
         DataConfidenceCard(
             confidence = dataConfidence(

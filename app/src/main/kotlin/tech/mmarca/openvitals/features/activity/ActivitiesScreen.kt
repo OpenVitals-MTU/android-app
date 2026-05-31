@@ -189,6 +189,8 @@ private fun LazyListScope.workoutDataConfidence(
     workouts: List<ExerciseData>,
     period: DatePeriod,
 ) {
+    if (period.start == period.end) return
+
     val zone = ZoneId.systemDefault()
     item {
         DataConfidenceCard(
@@ -460,7 +462,7 @@ private fun WorkoutListItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             androidx.compose.material3.Icon(
-                imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
+                imageVector = exerciseTypeIcon(workout.exerciseType),
                 contentDescription = null,
                 tint = WorkoutColor,
             )
