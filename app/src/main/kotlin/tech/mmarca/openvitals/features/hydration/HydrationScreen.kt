@@ -1,5 +1,10 @@
 package tech.mmarca.openvitals.features.hydration
 
+import android.Manifest
+import android.os.Build
+import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +21,9 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,14 +31,26 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
@@ -44,9 +63,11 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.HydrationReminderConfig
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
@@ -66,6 +87,7 @@ import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.abs
 
@@ -79,6 +101,34 @@ fun HydrationScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
+    val context = LocalContext.current
+    var hasNotificationPermission by remember {
+        mutableStateOf(HydrationReminderController.hasNotificationPermission(context))
+    }
+    var enableRemindersAfterPermission by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasNotificationPermission = granted || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+        if (hasNotificationPermission && enableRemindersAfterPermission) {
+            viewModel.setHydrationRemindersEnabled(true)
+        }
+        enableRemindersAfterPermission = false
+    }
+    val requestNotificationPermission = {
+        enableRemindersAfterPermission = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            hasNotificationPermission = true
+            viewModel.setHydrationRemindersEnabled(true)
+            enableRemindersAfterPermission = false
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        hasNotificationPermission = HydrationReminderController.hasNotificationPermission(context)
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -101,6 +151,20 @@ fun HydrationScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            hydrationGoalAndReminderItems(
+                state = state,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                hasNotificationPermission = hasNotificationPermission,
+                onDecreaseGoal = viewModel::decreaseDailyGoal,
+                onIncreaseGoal = viewModel::increaseDailyGoal,
+                onToggleReminders = viewModel::setHydrationRemindersEnabled,
+                onRequestNotificationPermission = requestNotificationPermission,
+                onDecreaseInterval = viewModel::decreaseHydrationReminderInterval,
+                onIncreaseInterval = viewModel::increaseHydrationReminderInterval,
+                onSelectActiveStartTime = viewModel::setHydrationReminderActiveStartTime,
+                onSelectActiveEndTime = viewModel::setHydrationReminderActiveEndTime,
+            )
         } else {
             item {
                 HydrationSummary(
@@ -142,15 +206,20 @@ fun HydrationScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            item {
-                HydrationGoalCard(
-                    state = state,
-                    unitFormatter = unitFormatter,
-                    onDecreaseGoal = viewModel::decreaseDailyGoal,
-                    onIncreaseGoal = viewModel::increaseDailyGoal,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
+            hydrationGoalAndReminderItems(
+                state = state,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                hasNotificationPermission = hasNotificationPermission,
+                onDecreaseGoal = viewModel::decreaseDailyGoal,
+                onIncreaseGoal = viewModel::increaseDailyGoal,
+                onToggleReminders = viewModel::setHydrationRemindersEnabled,
+                onRequestNotificationPermission = requestNotificationPermission,
+                onDecreaseInterval = viewModel::decreaseHydrationReminderInterval,
+                onIncreaseInterval = viewModel::increaseHydrationReminderInterval,
+                onSelectActiveStartTime = viewModel::setHydrationReminderActiveStartTime,
+                onSelectActiveEndTime = viewModel::setHydrationReminderActiveEndTime,
+            )
             item { SectionHeader(stringResource(R.string.section_statistics)) }
             item {
                 HydrationStatistics(
@@ -172,6 +241,45 @@ fun HydrationScreen(
                 onEditHydrationEntry = onEditHydrationEntry,
             )
         }
+    }
+}
+
+private fun LazyListScope.hydrationGoalAndReminderItems(
+    state: HydrationUiState,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    hasNotificationPermission: Boolean,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+    onToggleReminders: (Boolean) -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onDecreaseInterval: () -> Unit,
+    onIncreaseInterval: () -> Unit,
+    onSelectActiveStartTime: (LocalTime) -> Unit,
+    onSelectActiveEndTime: (LocalTime) -> Unit,
+) {
+    item {
+        HydrationGoalCard(
+            state = state,
+            unitFormatter = unitFormatter,
+            onDecreaseGoal = onDecreaseGoal,
+            onIncreaseGoal = onIncreaseGoal,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+    item {
+        HydrationReminderCard(
+            config = state.reminderConfig,
+            hasNotificationPermission = hasNotificationPermission,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onToggleReminders = onToggleReminders,
+            onRequestNotificationPermission = onRequestNotificationPermission,
+            onDecreaseInterval = onDecreaseInterval,
+            onIncreaseInterval = onIncreaseInterval,
+            onSelectActiveStartTime = onSelectActiveStartTime,
+            onSelectActiveEndTime = onSelectActiveEndTime,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 
@@ -398,6 +506,270 @@ private fun HydrationGoalCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HydrationReminderCard(
+    config: HydrationReminderConfig,
+    hasNotificationPermission: Boolean,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onToggleReminders: (Boolean) -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onDecreaseInterval: () -> Unit,
+    onIncreaseInterval: () -> Unit,
+    onSelectActiveStartTime: (LocalTime) -> Unit,
+    onSelectActiveEndTime: (LocalTime) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val normalized = config.normalized()
+    var editingTime by remember { mutableStateOf<HydrationReminderTimeField?>(null) }
+    val startTime = dateTimeFormatterProvider.shortTime().format(normalized.activeStartTime)
+    val endTime = dateTimeFormatterProvider.shortTime().format(normalized.activeEndTime)
+    val body = when {
+        normalized.enabled && !hasNotificationPermission -> {
+            stringResource(R.string.hydration_reminders_permission_needed)
+        }
+        normalized.enabled -> {
+            stringResource(R.string.hydration_reminders_summary_on, normalized.intervalMinutes, startTime, endTime)
+        }
+        else -> stringResource(R.string.hydration_reminders_summary_off)
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = null,
+                    tint = HydrationColor,
+                    modifier = Modifier.size(22.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.hydration_reminders_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = normalized.enabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasNotificationPermission) {
+                            onRequestNotificationPermission()
+                        } else {
+                            onToggleReminders(enabled)
+                        }
+                    },
+                )
+            }
+
+            if (normalized.enabled && !hasNotificationPermission) {
+                OutlinedButton(onClick = onRequestNotificationPermission) {
+                    Text(stringResource(R.string.action_grant_permission))
+                }
+            }
+
+            if (normalized.enabled) {
+                HydrationReminderIntervalRow(
+                    intervalMinutes = normalized.intervalMinutes,
+                    onDecreaseInterval = onDecreaseInterval,
+                    onIncreaseInterval = onIncreaseInterval,
+                )
+                HydrationReminderTimeRow(
+                    label = stringResource(R.string.hydration_reminders_active_start),
+                    value = startTime,
+                    onClick = { editingTime = HydrationReminderTimeField.START },
+                )
+                HydrationReminderTimeRow(
+                    label = stringResource(R.string.hydration_reminders_active_end),
+                    value = endTime,
+                    onClick = { editingTime = HydrationReminderTimeField.END },
+                )
+                Text(
+                    text = stringResource(R.string.hydration_reminders_goal_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    editingTime?.let { field ->
+        HydrationReminderTimePickerDialog(
+            title = stringResource(
+                when (field) {
+                    HydrationReminderTimeField.START -> R.string.hydration_reminders_active_start
+                    HydrationReminderTimeField.END -> R.string.hydration_reminders_active_end
+                }
+            ),
+            selectedTime = when (field) {
+                HydrationReminderTimeField.START -> normalized.activeStartTime
+                HydrationReminderTimeField.END -> normalized.activeEndTime
+            },
+            onDismiss = { editingTime = null },
+            onConfirm = { time ->
+                editingTime = null
+                when (field) {
+                    HydrationReminderTimeField.START -> onSelectActiveStartTime(time)
+                    HydrationReminderTimeField.END -> onSelectActiveEndTime(time)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun HydrationReminderIntervalRow(
+    intervalMinutes: Int,
+    onDecreaseInterval: () -> Unit,
+    onIncreaseInterval: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .weight(1f),
+        ) {
+            Text(
+                text = stringResource(R.string.hydration_reminders_interval),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.hydration_reminders_interval_value, intervalMinutes),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        IconButton(
+            onClick = onDecreaseInterval,
+            enabled = intervalMinutes > HydrationReminderConfig.MinIntervalMinutes,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Remove,
+                contentDescription = stringResource(R.string.cd_decrease_hydration_reminder_interval),
+            )
+        }
+        IconButton(
+            onClick = onIncreaseInterval,
+            enabled = intervalMinutes < HydrationReminderConfig.MaxIntervalMinutes,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = stringResource(R.string.cd_increase_hydration_reminder_interval),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HydrationReminderTimeRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .weight(1f),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        TextButton(onClick = onClick) {
+            Text(stringResource(R.string.action_select))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HydrationReminderTimePickerDialog(
+    title: String,
+    selectedTime: LocalTime,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalTime) -> Unit,
+) {
+    val context = LocalContext.current
+    val timePickerState = rememberTimePickerState(
+        initialHour = selectedTime.hour,
+        initialMinute = selectedTime.minute,
+        is24Hour = DateFormat.is24HourFormat(context),
+    )
+
+    TimePickerDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute))
+                },
+            ) {
+                Text(stringResource(R.string.action_select))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    ) {
+        TimePicker(
+            state = timePickerState,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+    }
+}
+
+private enum class HydrationReminderTimeField {
+    START,
+    END,
 }
 
 @Composable

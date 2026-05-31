@@ -8,9 +8,11 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.data.model.HydrationReminderConfig
 import tech.mmarca.openvitals.data.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.data.model.MindfulnessBellSound
 import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
+import java.time.LocalTime
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -123,6 +125,29 @@ class PreferencesRepository @Inject constructor(
             .apply()
     }
 
+    fun hydrationReminderConfig(): HydrationReminderConfig =
+        HydrationReminderConfig(
+            enabled = prefs.getBoolean(KEY_HYDRATION_REMINDERS_ENABLED, false),
+            intervalMinutes = prefs.getInt(
+                KEY_HYDRATION_REMINDER_INTERVAL_MINUTES,
+                HydrationReminderConfig.DefaultIntervalMinutes,
+            ),
+            activeStartTime = prefs.getString(KEY_HYDRATION_REMINDER_ACTIVE_START_TIME, null)
+                .toHydrationReminderTimeOrDefault(HydrationReminderConfig.DefaultActiveStartTime),
+            activeEndTime = prefs.getString(KEY_HYDRATION_REMINDER_ACTIVE_END_TIME, null)
+                .toHydrationReminderTimeOrDefault(HydrationReminderConfig.DefaultActiveEndTime),
+        ).normalized()
+
+    fun setHydrationReminderConfig(config: HydrationReminderConfig) {
+        val normalized = config.normalized()
+        prefs.edit()
+            .putBoolean(KEY_HYDRATION_REMINDERS_ENABLED, normalized.enabled)
+            .putInt(KEY_HYDRATION_REMINDER_INTERVAL_MINUTES, normalized.intervalMinutes)
+            .putString(KEY_HYDRATION_REMINDER_ACTIVE_START_TIME, normalized.activeStartTime.toString())
+            .putString(KEY_HYDRATION_REMINDER_ACTIVE_END_TIME, normalized.activeEndTime.toString())
+            .apply()
+    }
+
     fun dashboardWidgetOrder(): List<String>? =
         prefs.getString(KEY_DASHBOARD_WIDGET_ORDER, null)
             ?.split(KEY_VALUE_SEPARATOR)
@@ -219,6 +244,9 @@ class PreferencesRepository @Inject constructor(
     private fun String.toMindfulnessBackgroundSound(): MindfulnessBackgroundSound? =
         runCatching { MindfulnessBackgroundSound.valueOf(this) }.getOrNull()
 
+    private fun String?.toHydrationReminderTimeOrDefault(default: LocalTime): LocalTime =
+        this?.let { value -> runCatching { LocalTime.parse(value) }.getOrNull() } ?: default
+
     companion object {
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
@@ -230,6 +258,10 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
+        private const val KEY_HYDRATION_REMINDERS_ENABLED = "hydration_reminders_enabled"
+        private const val KEY_HYDRATION_REMINDER_INTERVAL_MINUTES = "hydration_reminder_interval_minutes"
+        private const val KEY_HYDRATION_REMINDER_ACTIVE_START_TIME = "hydration_reminder_active_start_time"
+        private const val KEY_HYDRATION_REMINDER_ACTIVE_END_TIME = "hydration_reminder_active_end_time"
         private const val KEY_HIGH_HEART_RATE_THRESHOLD_BPM = "high_heart_rate_threshold_bpm"
         private const val KEY_LOW_HEART_RATE_THRESHOLD_BPM = "low_heart_rate_threshold_bpm"
         private const val KEY_MINDFULNESS_TIMER_DURATION_MINUTES = "mindfulness_timer_duration_minutes"

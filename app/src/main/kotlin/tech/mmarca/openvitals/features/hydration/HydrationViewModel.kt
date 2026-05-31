@@ -11,11 +11,14 @@ import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.HydrationReminderConfig
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +34,7 @@ data class HydrationUiState(
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
     val dailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
+    val reminderConfig: HydrationReminderConfig = HydrationReminderConfig(),
     val dailyHydration: List<DailyHydration> = emptyList(),
     val previousDailyHydration: List<DailyHydration> = emptyList(),
     val baselineDailyHydration: List<DailyHydration> = emptyList(),
@@ -54,8 +58,10 @@ class HydrationViewModel(
     private val bodyRepository: BodyRepository? = null,
     initialRange: TimeRange = TimeRange.WEEK,
     initialDailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
+    initialReminderConfig: HydrationReminderConfig = HydrationReminderConfig(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
+    private val onReminderConfigChanged: (HydrationReminderConfig) -> Unit = {},
 ) : ViewModel() {
 
     @Inject
@@ -63,16 +69,22 @@ class HydrationViewModel(
         repository: HydrationRepository,
         bodyRepository: BodyRepository,
         preferencesRepository: PreferencesRepository,
+        reminderController: HydrationReminderController,
     ) : this(
         repository = repository,
         bodyRepository = bodyRepository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
         initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
+        initialReminderConfig = reminderController.config(),
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.HYDRATION, range)
         },
         onDailyGoalChanged = { goal ->
             preferencesRepository.hydrationDailyGoalLiters = goal
+            reminderController.applyConfig()
+        },
+        onReminderConfigChanged = { config ->
+            reminderController.updateConfig(config)
         },
     )
 
@@ -81,6 +93,7 @@ class HydrationViewModel(
         HydrationUiState(
             selectedRange = initialRange,
             dailyGoalLiters = normalizeHydrationGoalLiters(initialDailyGoalLiters),
+            reminderConfig = initialReminderConfig.normalized(),
         )
     )
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
@@ -127,6 +140,30 @@ class HydrationViewModel(
             dailyGoalLiters = goal,
             dailyHydration = _uiState.value.dailyHydration,
         )
+    }
+
+    fun setHydrationRemindersEnabled(enabled: Boolean) {
+        updateReminderConfig { config -> config.copy(enabled = enabled) }
+    }
+
+    fun increaseHydrationReminderInterval() {
+        updateReminderConfig { config ->
+            config.copy(intervalMinutes = config.intervalMinutes + HydrationReminderConfig.IntervalStepMinutes)
+        }
+    }
+
+    fun decreaseHydrationReminderInterval() {
+        updateReminderConfig { config ->
+            config.copy(intervalMinutes = config.intervalMinutes - HydrationReminderConfig.IntervalStepMinutes)
+        }
+    }
+
+    fun setHydrationReminderActiveStartTime(time: LocalTime) {
+        updateReminderConfig { config -> config.copy(activeStartTime = time.withSecond(0).withNano(0)) }
+    }
+
+    fun setHydrationReminderActiveEndTime(time: LocalTime) {
+        updateReminderConfig { config -> config.copy(activeEndTime = time.withSecond(0).withNano(0)) }
     }
 
     fun load() {
@@ -184,6 +221,12 @@ class HydrationViewModel(
             selectedRange = selection.selectedRange,
             selectedDate = selection.selectedDate,
         )
+    }
+
+    private fun updateReminderConfig(update: (HydrationReminderConfig) -> HydrationReminderConfig) {
+        val config = update(_uiState.value.reminderConfig).normalized()
+        onReminderConfigChanged(config)
+        _uiState.value = _uiState.value.copy(reminderConfig = config)
     }
 
     private fun normalizeHydrationGoalLiters(liters: Double): Double =

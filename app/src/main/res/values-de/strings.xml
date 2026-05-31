@@ -558,6 +558,20 @@
     <string name="cd_increase_daily_goal">Tagesziel erhöhen</string>
     <string name="hydration_daily_goal">Tagesziel</string>
     <string name="hydration_goal_progress">%1$d von %2$d verfolgten Tagen erreicht</string>
+    <string name="hydration_reminders_title">Hydrierungserinnerungen</string>
+    <string name="hydration_reminders_summary_off">Standardmäßig aus. Aktiviere Erinnerungen während aktiver Stunden, bis das heutige Hydrierungsziel erreicht ist.</string>
+    <string name="hydration_reminders_summary_on">Alle %1$d Min. • %2$s-%3$s</string>
+    <string name="hydration_reminders_permission_needed">Erteile die Benachrichtigungsberechtigung, um Hydrierungserinnerungen zu aktivieren.</string>
+    <string name="hydration_reminders_interval">Erinnerungsintervall</string>
+    <string name="hydration_reminders_interval_value">Alle %1$d Min.</string>
+    <string name="hydration_reminders_active_start">Aktiv ab</string>
+    <string name="hydration_reminders_active_end">Aktiv bis</string>
+    <string name="hydration_reminders_goal_note">Erinnerungen pausieren, sobald das heutige Ziel erreicht ist, und werden morgen fortgesetzt.</string>
+    <string name="hydration_reminder_notification_channel">Hydrierungserinnerungen</string>
+    <string name="hydration_reminder_notification_channel_desc">Optionale Erinnerungen, Hydrierung während aktiver Stunden zu protokollieren.</string>
+    <string name="hydration_reminder_notification_title">Hydrierungserinnerung</string>
+    <string name="hydration_reminder_notification_body">Du bist heute bei %1$s von %2$s. Füge ein Getränk hinzu, wenn du kannst.</string>
+    <string name="hydration_reminder_notification_progress">%1$s / %2$s</string>
     <string name="hydration_tracker_title">Hydrierung protokollieren</string>
     <string name="hydration_tracker_subtitle">Direkt in Health Connect gespeichert</string>
     <string name="hydration_tracker_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen dieses manuellen Eintrags benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
@@ -586,6 +600,8 @@
     <string name="hydration_container_custom">Benutzerdefiniert</string>
     <string name="cd_decrease_hydration_goal">Hydrierungsziel verringern</string>
     <string name="cd_increase_hydration_goal">Hydrierungsziel erhöhen</string>
+    <string name="cd_decrease_hydration_reminder_interval">Hydrierungserinnerungsintervall verringern</string>
+    <string name="cd_increase_hydration_reminder_interval">Hydrierungserinnerungsintervall erhöhen</string>
     <string name="unit_percent_symbol">%</string>
 
     <string name="message_no_dashboard_data">Keine Übersichtsdaten verfügbar.</string>

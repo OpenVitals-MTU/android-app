@@ -558,6 +558,20 @@
     <string name="cd_increase_daily_goal">Increase daily goal</string>
     <string name="hydration_daily_goal">Daily goal</string>
     <string name="hydration_goal_progress">%1$d of %2$d tracked days met</string>
+    <string name="hydration_reminders_title">Hydration reminders</string>
+    <string name="hydration_reminders_summary_off">Off by default. Enable reminders during active hours until today\'s hydration goal is met.</string>
+    <string name="hydration_reminders_summary_on">Every %1$d min • %2$s-%3$s</string>
+    <string name="hydration_reminders_permission_needed">Grant notification permission to enable hydration reminders.</string>
+    <string name="hydration_reminders_interval">Reminder interval</string>
+    <string name="hydration_reminders_interval_value">Every %1$d min</string>
+    <string name="hydration_reminders_active_start">Active from</string>
+    <string name="hydration_reminders_active_end">Active until</string>
+    <string name="hydration_reminders_goal_note">Reminders pause after today\'s goal is met and resume tomorrow.</string>
+    <string name="hydration_reminder_notification_channel">Hydration reminders</string>
+    <string name="hydration_reminder_notification_channel_desc">Optional reminders to log hydration during active hours.</string>
+    <string name="hydration_reminder_notification_title">Hydration reminder</string>
+    <string name="hydration_reminder_notification_body">You\'re at %1$s of %2$s today. Add a drink when you can.</string>
+    <string name="hydration_reminder_notification_progress">%1$s / %2$s</string>
     <string name="hydration_tracker_title">Log hydration</string>
     <string name="hydration_tracker_subtitle">Saved directly to Health Connect</string>
     <string name="hydration_tracker_permission_needed">For the summary, OpenVitals only asks for view permissions. To add this manual entry, we need write permission. OpenVitals will not store this data; entries are saved in Health Connect.</string>
@@ -586,6 +600,8 @@
     <string name="hydration_container_custom">Custom</string>
     <string name="cd_decrease_hydration_goal">Decrease hydration goal</string>
     <string name="cd_increase_hydration_goal">Increase hydration goal</string>
+    <string name="cd_decrease_hydration_reminder_interval">Decrease hydration reminder interval</string>
+    <string name="cd_increase_hydration_reminder_interval">Increase hydration reminder interval</string>
     <string name="unit_percent_symbol">%</string>
 
     <string name="message_no_dashboard_data">No summary data available.</string>

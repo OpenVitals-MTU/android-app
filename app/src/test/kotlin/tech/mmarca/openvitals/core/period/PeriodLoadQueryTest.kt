@@ -44,7 +44,7 @@ class PeriodLoadQueryTest {
 
         val currentDriver = PeriodSelectionDriver(
             initialRange = TimeRange.WEEK,
-            initialDate = today,
+            initialDate = LocalDate.now(),
         )
 
         assertEquals(null, currentDriver.nextPeriod())

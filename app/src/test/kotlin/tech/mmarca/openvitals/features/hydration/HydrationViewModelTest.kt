@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.hydration
 
 import tech.mmarca.openvitals.data.model.DailyHydration
 import tech.mmarca.openvitals.data.model.HydrationEntry
+import tech.mmarca.openvitals.data.model.HydrationReminderConfig
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationPeriodData
@@ -11,6 +12,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -57,6 +59,19 @@ class HydrationViewModelTest {
     @Test fun `daily goal can be restored`() = runTest {
         val vm = HydrationViewModel(emptyRepo(), initialDailyGoalLiters = 2.5)
         assertEquals(2.5, vm.uiState.value.dailyGoalLiters, 0.01)
+    }
+
+    @Test fun `reminder config can be restored`() = runTest {
+        val config = HydrationReminderConfig(
+            enabled = true,
+            intervalMinutes = 90,
+            activeStartTime = LocalTime.of(8, 0),
+            activeEndTime = LocalTime.of(22, 0),
+        )
+
+        val vm = HydrationViewModel(emptyRepo(), initialReminderConfig = config)
+
+        assertEquals(config, vm.uiState.value.reminderConfig)
     }
 
     @Test fun `initial load clears loading and sets empty list`() = runTest {
@@ -180,6 +195,23 @@ class HydrationViewModelTest {
         assertEquals(2.25, savedGoal ?: 0.0, 0.01)
         assertEquals(2.25, vm.uiState.value.dailyGoalLiters, 0.01)
         assertEquals(1, vm.uiState.value.goalMetDays)
+    }
+
+    @Test fun `updating reminder config saves normalized config`() = runTest {
+        var savedConfig: HydrationReminderConfig? = null
+        val vm = HydrationViewModel(
+            repository = emptyRepo(),
+            initialReminderConfig = HydrationReminderConfig(intervalMinutes = 120),
+            onReminderConfigChanged = { config -> savedConfig = config },
+        )
+
+        vm.setHydrationRemindersEnabled(true)
+        vm.increaseHydrationReminderInterval()
+        vm.setHydrationReminderActiveStartTime(LocalTime.of(6, 30, 12))
+
+        assertEquals(true, savedConfig?.enabled)
+        assertEquals(150, vm.uiState.value.reminderConfig.intervalMinutes)
+        assertEquals(LocalTime.of(6, 30), vm.uiState.value.reminderConfig.activeStartTime)
     }
 
     @Test fun `load failure sets error and clears loading`() = runTest {

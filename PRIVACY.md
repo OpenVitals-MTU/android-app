@@ -1,6 +1,6 @@
 # OpenVitals Privacy Policy
 
-Last updated: May 25, 2026
+Last updated: June 1, 2026
 
 OpenVitals is a local-first Android app for viewing health and fitness data from Health Connect.
 
@@ -39,6 +39,8 @@ OpenVitals only accesses the categories you choose to grant in Health Connect.
 
 OpenVitals uses granted Health Connect data to show dashboards, charts, summaries, lists, and details inside the app. The dashboard uses read permissions only. When you log an entry in OpenVitals, the app asks for the relevant write permission if needed and writes that entry to Health Connect so Health Connect remains the source of truth.
 
+If you explicitly enable hydration reminders, OpenVitals uses locally stored reminder preferences and granted Health Connect hydration data to decide when to show an on-device reminder. Reminders pause after the daily hydration goal is reached and resume the next day. Reminder notifications are generated locally on your device and are not sent to a server.
+
 The app does not use health data for advertising, profiling, credit decisions, insurance decisions, employment decisions, or any purpose unrelated to showing your health data back to you in the app.
 
 ## Data Sharing
@@ -49,7 +51,9 @@ OpenVitals does not include advertising SDKs or analytics SDKs.
 
 ## Local Storage
 
-OpenVitals stores app preferences locally on your device, such as display unit settings, widget order, mindfulness timer settings, acknowledged permission prompts, and whether optional cycle tracking is enabled.
+OpenVitals stores app preferences locally on your device, such as display unit settings, widget order, mindfulness timer settings, hydration reminder settings, acknowledged permission prompts, and whether optional cycle tracking is enabled.
+
+If hydration reminders are enabled, Android may restore the local reminder schedule after a device restart. OpenVitals uses the notification permission only for reminders and active recording notifications.
 
 Health Connect remains the source of truth for health data. OpenVitals reads from Health Connect, displays the data in the app, and writes only entries you explicitly log. The current app does not request the Android `INTERNET` permission.
 

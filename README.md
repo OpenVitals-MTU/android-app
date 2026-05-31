@@ -31,6 +31,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 - Period detail screens with `Day / Week / Month / Year` navigation
 - Health Connect permission onboarding with clear data categories
 - Manual logging for hydration, body measurements, vitals, mindfulness, and activities
+- Opt-in hydration reminders with active hours and daily-goal pause logic
 - GPX/KML/KMZ route import and GPS activity recording with review before saving
 - Metric and imperial unit support
 
@@ -75,7 +76,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
 - Manual entry: hydration, activity sessions with optional GPX/KML/KMZ route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
-- Hydration: daily and period hydration totals, plus Health Connect-backed drink logging with drink and serving choices
+- Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink and serving choices, and optional reminders
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds
 - Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when explicitly enabled during onboarding or in Settings
@@ -169,7 +170,7 @@ OpenVitals is intentionally simple today:
 - Hilt constructor injection for repositories, services, and ViewModels
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
-- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, timer/background-sound settings, and cycle-tracking opt-in
+- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, timer/background-sound settings, hydration reminders, and cycle-tracking opt-in
 - shared presentation formatters for units and date/time labels
 
 The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).
