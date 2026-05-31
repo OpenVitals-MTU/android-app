@@ -1,0 +1,5 @@
+- Revamped dashboard with editable widget order and clearer summary cards.
+- Added Recovery tab with sleep score and sleep efficiency details.
+- Added Activities overview, cardio load, and high/low heart-rate checks.
+- Import GPX/KML/KMZ routes, open routes in map apps, and export activity routes as GPX/KMZ.
+- Improved Health Connect query performance and tests.

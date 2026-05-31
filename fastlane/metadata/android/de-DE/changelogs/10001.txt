@@ -1,0 +1,5 @@
+- Überarbeitetes Dashboard mit bearbeitbarer Widget-Reihenfolge und klareren Karten.
+- Neuer Erholungs-Tab mit Schlafscore und Schlafeffizienz.
+- Neue Aktivitätenübersicht, Cardio Load und Prüfungen für hohe/niedrige Herzfrequenz.
+- Importiert GPX/KML/KMZ-Routen, öffnet Routen in Karten-Apps und exportiert Routen als GPX/KMZ.
+- Schnellere Health-Connect-Abfragen und mehr Tests.

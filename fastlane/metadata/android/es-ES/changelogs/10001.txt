@@ -1,0 +1,5 @@
+- Panel renovado con orden editable de widgets y tarjetas más claras.
+- Nueva pestaña Recuperación con puntuación y eficiencia del sueño.
+- Nueva vista Actividades, carga cardiovascular y controles de frecuencia alta/baja.
+- Importa rutas GPX/KML/KMZ, abre rutas en mapas y exporta rutas como GPX/KMZ.
+- Mejor rendimiento de consultas de Health Connect y más tests.
