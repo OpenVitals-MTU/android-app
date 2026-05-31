@@ -4,6 +4,7 @@
 
     <string name="cd_back">Zurück</string>
     <string name="cd_settings">Einstellungen</string>
+    <string name="cd_achievements">Auszeichnungen</string>
     <string name="cd_edit_dashboard">Übersicht bearbeiten</string>
     <string name="cd_finish_dashboard_editing">Übersichtsbearbeitung beenden</string>
     <string name="cd_edit_manual_entry_widgets">Widgets zum Hinzufügen von Einträgen bearbeiten</string>
@@ -34,6 +35,7 @@
     <string name="action_pause">Pausieren</string>
     <string name="action_review">Prüfen</string>
     <string name="action_resume">Fortsetzen</string>
+    <string name="action_refresh">Aktualisieren</string>
     <string name="action_select">Auswählen</string>
     <string name="action_start">Starten</string>
     <string name="action_finish">Beenden</string>
@@ -57,6 +59,7 @@
     <string name="screen_mindfulness">Achtsamkeit</string>
     <string name="screen_cycle">Zyklus</string>
     <string name="screen_settings">Einstellungen</string>
+    <string name="screen_achievements">Auszeichnungen</string>
     <string name="screen_manual_entry">Eintrag hinzufügen</string>
     <string name="screen_hydration_entry">Hydrierungseintrag</string>
     <string name="screen_activity_entry">Aktivitätseintrag</string>
@@ -870,6 +873,34 @@
     <string name="macro_fat_short">F %1$sg</string>
     <string name="macro_fiber">Ballaststoffe %1$sg</string>
     <string name="macro_sugar">Zucker %1$sg</string>
+
+    <string name="achievements_legacy_title">Legacy-Aktivitätsabzeichen</string>
+    <string name="achievements_progress_summary">%1$d von %2$d freigeschaltet</string>
+    <string name="achievements_data_window">%1$s bis %2$s · %3$s verfolgte Tage</string>
+    <string name="achievements_tracked_days">Verfolgte Tage</string>
+    <string name="achievements_best_steps">Beste Schritte</string>
+    <string name="achievements_total_distance">Gesamtdistanz</string>
+    <string name="achievements_best_floors">Beste Etagen</string>
+    <string name="achievements_total_floors">Etagen gesamt</string>
+    <string name="achievements_filter_all">Alle</string>
+    <string name="achievements_category_daily_steps">Tagesschritte</string>
+    <string name="achievements_category_lifetime_distance">Lebenszeit-Distanz</string>
+    <string name="achievements_category_daily_floors">Tagesetagen</string>
+    <string name="achievements_category_lifetime_floors">Lebenszeit-Etagen</string>
+    <string name="achievements_daily_steps_requirement">%1$s Schritte an einem Tag</string>
+    <string name="achievements_lifetime_distance_requirement">%1$s Gesamtdistanz</string>
+    <string name="achievements_daily_floors_requirement">%1$s Etagen an einem Tag</string>
+    <string name="achievements_lifetime_floors_requirement">%1$s Etagen gesamt</string>
+    <string name="achievements_progress_value">%1$s von %2$s</string>
+    <string name="achievements_achieved_on">Freigeschaltet %1$s</string>
+    <string name="achievements_earned_once">Erreicht</string>
+    <string name="achievements_earned_times">%1$d-mal</string>
+    <string name="achievements_locked">Gesperrt</string>
+    <string name="achievements_no_data_title">Keine Aktivitätshistorie</string>
+    <string name="achievements_no_data_body">Erteile in den Einstellungen Zugriff auf Schritte und Distanz, um den Abzeichenkatalog zu füllen.</string>
+    <string name="achievements_no_floor_data_title">Keine Etagen-Daten</string>
+    <string name="achievements_no_floor_data_body">Etagenabzeichen werden freigeschaltet, wenn Health Connect Daten zu gestiegenen Etagen hat.</string>
+    <string name="achievements_error_title">Auszeichnungen nicht verfügbar</string>
 
     <string name="data_confidence_title">Datenvertrauen</string>
     <string name="data_confidence_high">Hohes Vertrauen</string>

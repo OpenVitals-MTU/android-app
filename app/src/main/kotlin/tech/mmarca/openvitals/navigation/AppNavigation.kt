@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -31,6 +32,8 @@ import androidx.navigation.navArgument
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.features.achievements.AchievementsScreen
+import tech.mmarca.openvitals.features.achievements.AchievementsViewModel
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
 import tech.mmarca.openvitals.features.activity.ActivityOverviewScreen
@@ -257,6 +260,7 @@ fun AppNavigation(
         Screen.Mindfulness.route -> stringResource(R.string.screen_mindfulness)
         Screen.Cycle.route -> stringResource(R.string.screen_cycle)
         Screen.Settings.route -> stringResource(R.string.screen_settings)
+        Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
     }
 
@@ -303,6 +307,20 @@ fun AppNavigation(
                         } else {
                             androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                         },
+                    )
+                }
+            }
+            if (showTopBar && !isTaskRoute && currentRoute != Screen.Achievements.route) {
+                IconButton(
+                    onClick = {
+                        navController.navigate(Screen.Achievements.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.WorkspacePremium,
+                        contentDescription = stringResource(R.string.cd_achievements),
                     )
                 }
             }
@@ -744,6 +762,15 @@ fun AppNavigation(
                 val cycleViewModel = hiltViewModel<CycleViewModel>()
                 CycleScreen(
                     viewModel = cycleViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
+
+            composable(Screen.Achievements.route) {
+                val achievementsViewModel = hiltViewModel<AchievementsViewModel>()
+                AchievementsScreen(
+                    viewModel = achievementsViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                 )

@@ -64,4 +64,5 @@ sealed class Screen(val route: String) {
     data object Mindfulness : Screen("mindfulness")
     data object Cycle : Screen("cycle")
     data object Settings : Screen("settings")
+    data object Achievements : Screen("achievements")
 }

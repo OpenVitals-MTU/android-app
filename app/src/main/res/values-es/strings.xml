@@ -4,6 +4,7 @@
 
     <string name="cd_back">Atrás</string>
     <string name="cd_settings">Ajustes</string>
+    <string name="cd_achievements">Logros</string>
     <string name="cd_edit_dashboard">Editar resumen</string>
     <string name="cd_finish_dashboard_editing">Terminar edición del resumen</string>
     <string name="cd_edit_manual_entry_widgets">Editar widgets de añadir entrada</string>
@@ -34,6 +35,7 @@
     <string name="action_pause">Pausar</string>
     <string name="action_review">Revisar</string>
     <string name="action_resume">Reanudar</string>
+    <string name="action_refresh">Actualizar</string>
     <string name="action_select">Seleccionar</string>
     <string name="action_start">Empezar</string>
     <string name="action_finish">Terminar</string>
@@ -57,6 +59,7 @@
     <string name="screen_mindfulness">Mindfulness</string>
     <string name="screen_cycle">Ciclo</string>
     <string name="screen_settings">Ajustes</string>
+    <string name="screen_achievements">Logros</string>
     <string name="screen_manual_entry">Añadir entrada</string>
     <string name="screen_hydration_entry">Entrada de hidratación</string>
     <string name="screen_activity_entry">Entrada de actividad</string>
@@ -870,6 +873,34 @@
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">azúcar %1$sg</string>
+
+    <string name="achievements_legacy_title">Insignias de actividad heredadas</string>
+    <string name="achievements_progress_summary">%1$d de %2$d desbloqueadas</string>
+    <string name="achievements_data_window">%1$s a %2$s · %3$s días registrados</string>
+    <string name="achievements_tracked_days">Días registrados</string>
+    <string name="achievements_best_steps">Mejores pasos</string>
+    <string name="achievements_total_distance">Distancia total</string>
+    <string name="achievements_best_floors">Mejores pisos</string>
+    <string name="achievements_total_floors">Pisos totales</string>
+    <string name="achievements_filter_all">Todo</string>
+    <string name="achievements_category_daily_steps">Pasos diarios</string>
+    <string name="achievements_category_lifetime_distance">Distancia total</string>
+    <string name="achievements_category_daily_floors">Pisos diarios</string>
+    <string name="achievements_category_lifetime_floors">Pisos totales</string>
+    <string name="achievements_daily_steps_requirement">%1$s pasos en un día</string>
+    <string name="achievements_lifetime_distance_requirement">%1$s de distancia total</string>
+    <string name="achievements_daily_floors_requirement">%1$s pisos en un día</string>
+    <string name="achievements_lifetime_floors_requirement">%1$s pisos totales</string>
+    <string name="achievements_progress_value">%1$s de %2$s</string>
+    <string name="achievements_achieved_on">Desbloqueada %1$s</string>
+    <string name="achievements_earned_once">Conseguida</string>
+    <string name="achievements_earned_times">%1$d veces</string>
+    <string name="achievements_locked">Bloqueada</string>
+    <string name="achievements_no_data_title">Sin historial de actividad</string>
+    <string name="achievements_no_data_body">Concede acceso a pasos y distancia en Ajustes para completar el catálogo de insignias.</string>
+    <string name="achievements_no_floor_data_title">Sin datos de pisos</string>
+    <string name="achievements_no_floor_data_body">Las insignias de pisos se desbloquean cuando Health Connect tiene datos de pisos subidos.</string>
+    <string name="achievements_error_title">Logros no disponibles</string>
 
     <string name="data_confidence_title">Confianza de los datos</string>
     <string name="data_confidence_high">Confianza alta</string>

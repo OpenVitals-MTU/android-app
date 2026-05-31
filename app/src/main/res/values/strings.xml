@@ -4,6 +4,7 @@
 
     <string name="cd_back">Back</string>
     <string name="cd_settings">Settings</string>
+    <string name="cd_achievements">Achievements</string>
     <string name="cd_edit_dashboard">Edit summary</string>
     <string name="cd_finish_dashboard_editing">Finish editing summary</string>
     <string name="cd_edit_manual_entry_widgets">Edit add entry widgets</string>
@@ -34,6 +35,7 @@
     <string name="action_pause">Pause</string>
     <string name="action_review">Review</string>
     <string name="action_resume">Resume</string>
+    <string name="action_refresh">Refresh</string>
     <string name="action_select">Select</string>
     <string name="action_start">Start</string>
     <string name="action_finish">Finish</string>
@@ -57,6 +59,7 @@
     <string name="screen_mindfulness">Mindfulness</string>
     <string name="screen_cycle">Cycle</string>
     <string name="screen_settings">Settings</string>
+    <string name="screen_achievements">Achievements</string>
     <string name="screen_manual_entry">Add entry</string>
     <string name="screen_hydration_entry">Hydration entry</string>
     <string name="screen_activity_entry">Activity entry</string>
@@ -870,6 +873,34 @@
     <string name="macro_fat_short">F %1$sg</string>
     <string name="macro_fiber">fiber %1$sg</string>
     <string name="macro_sugar">sugar %1$sg</string>
+
+    <string name="achievements_legacy_title">Legacy activity badges</string>
+    <string name="achievements_progress_summary">%1$d of %2$d unlocked</string>
+    <string name="achievements_data_window">%1$s to %2$s · %3$s tracked days</string>
+    <string name="achievements_tracked_days">Tracked days</string>
+    <string name="achievements_best_steps">Best steps</string>
+    <string name="achievements_total_distance">Total distance</string>
+    <string name="achievements_best_floors">Best floors</string>
+    <string name="achievements_total_floors">Total floors</string>
+    <string name="achievements_filter_all">All</string>
+    <string name="achievements_category_daily_steps">Daily steps</string>
+    <string name="achievements_category_lifetime_distance">Lifetime distance</string>
+    <string name="achievements_category_daily_floors">Daily floors</string>
+    <string name="achievements_category_lifetime_floors">Lifetime floors</string>
+    <string name="achievements_daily_steps_requirement">%1$s steps in one day</string>
+    <string name="achievements_lifetime_distance_requirement">%1$s total distance</string>
+    <string name="achievements_daily_floors_requirement">%1$s floors in one day</string>
+    <string name="achievements_lifetime_floors_requirement">%1$s total floors</string>
+    <string name="achievements_progress_value">%1$s of %2$s</string>
+    <string name="achievements_achieved_on">Unlocked %1$s</string>
+    <string name="achievements_earned_once">Earned</string>
+    <string name="achievements_earned_times">%1$d times</string>
+    <string name="achievements_locked">Locked</string>
+    <string name="achievements_no_data_title">No activity history</string>
+    <string name="achievements_no_data_body">Grant steps and distance access in Settings to fill the badge catalog.</string>
+    <string name="achievements_no_floor_data_title">No floor data</string>
+    <string name="achievements_no_floor_data_body">Floor badges unlock when Health Connect has floors climbed data.</string>
+    <string name="achievements_error_title">Achievements unavailable</string>
 
     <string name="data_confidence_title">Data confidence</string>
     <string name="data_confidence_high">High confidence</string>
