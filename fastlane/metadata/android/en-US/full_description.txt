@@ -10,9 +10,12 @@ What you can do
 * Review sleep sessions, duration, and sleep stages
 * Review heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, VO2 max, body metrics, hydration, nutrition, and mindfulness data when available
 * Add and edit OpenVitals-created hydration, body measurement, vitals, mindfulness, and activity entries directly in Health Connect
+* Track achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 * Import GPX, KML, and KMZ activity routes, preview them, and save route-backed workouts
 * Record GPS activities with pause, resume, finish, discard, route preview, distance, elevation, moving time, and a persistent recording notification
 * Estimate active and total calories for imported and recorded activities before saving
+* Enable opt-in hydration reminders with active hours and daily-goal pause logic
+* Choose a fixed Mon-Sun activity week or a rolling last 7 days
 * Choose metric or imperial units
 * Enable sensitive cycle tracking only when you want it
 
@@ -21,7 +24,7 @@ Why OpenVitals
 * Private by design: no account, no cloud sync, no ads, no analytics
 * Dashboard focused: the home screen is read-only unless you choose to add an entry
 * Health Connect as source of truth: OpenVitals does not keep a separate health record database
-* Permission-aware: data categories are requested clearly and can be changed later
+* Permission-aware: use one-tap setup or grant clear data categories individually, then change permissions later
 * Open source: code, release notes, and builds are available for review
 
 Requirements

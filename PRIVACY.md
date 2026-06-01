@@ -18,7 +18,7 @@ OpenVitals is designed to keep health data on your device.
 - No analytics SDKs are included.
 - No health data is sold or shared with third parties.
 - OpenVitals reads Health Connect data only after you grant the relevant Android permissions.
-- OpenVitals writes entries only when you explicitly log them.
+- OpenVitals writes entries only when you explicitly log or save them, even if write permissions were granted during onboarding.
 
 ## Data OpenVitals Accesses
 
@@ -37,7 +37,7 @@ OpenVitals only accesses the categories you choose to grant in Health Connect.
 
 ## How Data Is Used
 
-OpenVitals uses granted Health Connect data to show dashboards, charts, summaries, lists, and details inside the app. The dashboard uses read permissions only. When you log an entry in OpenVitals, the app asks for the relevant write permission if needed and writes that entry to Health Connect so Health Connect remains the source of truth.
+OpenVitals uses granted Health Connect data to show dashboards, charts, summaries, lists, and details inside the app. Dashboard views use read permissions only. The one-tap onboarding option can request write permissions up front, but write permissions are used only when you explicitly save an entry in OpenVitals. If a needed write permission has not been granted yet, the app asks for it before saving that entry to Health Connect so Health Connect remains the source of truth.
 
 If you explicitly enable hydration reminders, OpenVitals uses locally stored reminder preferences and granted Health Connect hydration data to decide when to show an on-device reminder. Reminders pause after the daily hydration goal is reached and resume the next day. Reminder notifications are generated locally on your device and are not sent to a server.
 

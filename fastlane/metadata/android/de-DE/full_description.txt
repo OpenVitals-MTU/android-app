@@ -10,9 +10,12 @@ Was du tun kannst
 * Schlafsitzungen, Dauer und Schlafphasen prüfen
 * Herzfrequenz, Ruhepuls, HRV, Blutdruck, SpO2, Atemfrequenz, Körpertemperatur, VO2 max, Körperwerte, Flüssigkeit, Ernährung und Achtsamkeit prüfen, wenn Daten verfügbar sind
 * Von OpenVitals erstellte Einträge für Flüssigkeit, Körpermessungen, Vitalwerte, Achtsamkeit und Aktivitäten direkt in Health Connect hinzufügen und bearbeiten
+* Erfolgsabzeichen für Aktivität, Distanz, Etagen, Trainings, Flüssigkeit, Schlaf und Achtsamkeit verfolgen
 * GPX-, KML- und KMZ-Routen importieren, vorab ansehen und routenbasierte Trainings speichern
 * GPS-Aktivitäten mit Pause, Fortsetzen, Abschließen, Verwerfen, Routenvorschau, Distanz, Höhenmetern, Bewegungszeit und permanenter Benachrichtigung aufzeichnen
 * Aktive und gesamte Kalorien für importierte oder aufgezeichnete Aktivitäten vor dem Speichern schätzen
+* Optionale Flüssigkeitserinnerungen mit aktiven Zeiten und Pause nach Erreichen des Tagesziels aktivieren
+* Für Aktivitäten eine feste Mo-So-Woche oder die letzten 7 Tage wählen
 * Metrische oder imperiale Einheiten wählen
 * Sensible Zyklusdaten nur aktivieren, wenn du sie verwenden möchtest
 
@@ -21,7 +24,7 @@ Warum OpenVitals
 * Privat by design: kein Konto, keine Cloud, keine Werbung und keine Analysen
 * Fokus auf das Dashboard: der Startbildschirm ist schreibgeschützt, bis du selbst einen Eintrag hinzufügst
 * Health Connect als Quelle der Wahrheit: OpenVitals führt keine separate Gesundheitsdatenbank
-* Berechtigungen mit klarer Kontrolle: Datenkategorien werden transparent angefragt und können später geändert werden
+* Berechtigungen mit klarer Kontrolle: Einrichtung in einem Schritt oder einzelne Kategorien, später jederzeit änderbar
 * Open Source: Code, Versionshinweise und Builds sind zur Prüfung verfügbar
 
 Voraussetzungen

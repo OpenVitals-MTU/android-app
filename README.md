@@ -29,9 +29,10 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 
 - Daily dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, and optional cycle data
 - Period detail screens with `Day / Week / Month / Year` navigation
-- Health Connect permission onboarding with clear data categories
+- Health Connect permission onboarding with clear data categories and a one-tap full setup option
 - Manual logging for hydration, body measurements, vitals, mindfulness, and activities
 - Opt-in hydration reminders with active hours and daily-goal pause logic
+- Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import and GPS activity recording with review before saving
 - Metric and imperial unit support
 
@@ -59,8 +60,9 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Material 3 app shell with Settings as a top-bar icon and Add entry exposed as a contextual create action
 - Period-based detail screens with `Day / Week / Month / Year` navigation
 - Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
-- Categorized Health Connect onboarding permissions, with Activity & sleep required, dashboard categories optional, and cycle tracking behind a separate explicit opt-in
-- Lazy write-permission requests from Add entry and metric entry screens, keeping dashboard permissions read-only
+- Categorized Health Connect onboarding permissions, with one-tap full setup, category-by-category review, and cycle tracking behind a separate explicit opt-in
+- Write-permission requests available during one-tap setup or from Add entry and metric entry screens, while dashboard views stay read-only
+- Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
@@ -77,6 +79,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
 - Manual entry: hydration, activity sessions with optional GPX/KML/KMZ route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
 - Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink and serving choices, and optional reminders
+- Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds
 - Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when explicitly enabled during onboarding or in Settings
@@ -93,7 +96,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
   - Activity & sleep: required for the dashboard
   - Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals: optional
   - Cycle tracking: sensitive optional access, requested only after explicitly enabling it during onboarding or in Settings
-  - Manual entry write access: requested only when you use Add entry or a metric entry screen that needs it
+  - Manual entry write access: available from one-tap onboarding or when you use Add entry or a metric entry screen that needs it
 - Permissions can be managed later in Settings
 - Health Connect remains the source of truth; OpenVitals does not store health records locally
 
@@ -155,7 +158,7 @@ More local development notes are in [`docs/development.md`](docs/development.md)
 After launching the app:
 
 1. Complete onboarding
-2. Grant Activity & sleep, then optionally grant the dashboard categories you want to expose
+2. Use one-tap setup to grant all requestable Health Connect permissions, or grant Activity & sleep first and then choose individual categories
 3. Enable Cycle tracking only if you want period, ovulation, cervical mucus, and basal temperature data shown
 4. Use Dashboard for read-only summaries and Add entry for explicit Health Connect logging
 

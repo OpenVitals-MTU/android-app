@@ -1,0 +1,1 @@
+Fügt Fitbit-inspirierte Erfolgsabzeichen über eine neue Ribbon-Schaltfläche, optionale Flüssigkeitserinnerungen und eine Aktivitäten-Einstellung für Mo-So oder letzte 7 Tage hinzu. Onboarding kann jetzt alle anforderbaren Lese-, Schreib- und Zusatzberechtigungen in einem Schritt anfragen; Zyklus bleibt Opt-in und Routen bleiben manuell.

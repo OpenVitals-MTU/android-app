@@ -1,0 +1,1 @@
+Añade insignias de logros inspiradas en Fitbit desde un nuevo botón de cinta, recordatorios de hidratación opcionales y un ajuste de Actividades para semana Lun-Dom o últimos 7 días. El onboarding ahora puede pedir en un toque permisos de lectura, escritura y acceso adicional de Health Connect; ciclo sigue siendo opt-in y rutas siguen siendo manuales.

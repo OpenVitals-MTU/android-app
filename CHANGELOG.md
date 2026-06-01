@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.1.0 - 2026-06-01
+
+### English
+
+- Add Fitbit-inspired achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness, opened from the new top-bar ribbon button.
+- Add opt-in hydration reminders with active hours, interval scheduling, notification permission handling, boot rescheduling, and automatic pause after the daily goal is reached.
+- Add an Activities setting for either a fixed Monday-Sunday week or a rolling last 7 days, and keep every key-metric chart on a consistent seven-day range.
+- Add one-tap onboarding for all requestable read, write, and additional Health Connect permissions while keeping cycle tracking explicitly opt-in and workout route access manual.
+- Refactor hydration reminder scheduling around a controller and stricter alarm wrapper for more predictable reminder behavior.
+
+### Español
+
+- Añade insignias de logros inspiradas en Fitbit para actividad, distancia, pisos, entrenamientos, hidratación, sueño y mindfulness, abiertas desde el nuevo botón de cinta.
+- Añade recordatorios de hidratación opcionales con horas activas, programación por intervalo, permiso de notificaciones, reprogramación tras reinicio y pausa automática al alcanzar el objetivo diario.
+- Añade un ajuste de Actividades para usar una semana fija de lunes a domingo o los últimos 7 días, y mantiene todos los gráficos de métricas clave en un rango consistente de siete días.
+- Añade onboarding de un toque para todos los permisos solicitables de lectura, escritura y acceso adicional de Health Connect, manteniendo ciclo como opt-in y rutas de entrenamiento como acceso manual.
+- Refactoriza la programación de recordatorios de hidratación con un controlador y un wrapper de alarmas más estricto para un comportamiento más predecible.
+
+### Deutsch
+
+- Fügt Fitbit-inspirierte Erfolgsabzeichen für Aktivität, Distanz, Etagen, Trainings, Flüssigkeit, Schlaf und Achtsamkeit hinzu, erreichbar über die neue Ribbon-Schaltfläche.
+- Fügt optionale Flüssigkeitserinnerungen mit aktiven Zeiten, Intervallplanung, Benachrichtigungsberechtigung, Neuplanung nach Neustart und automatischer Pause nach Erreichen des Tagesziels hinzu.
+- Fügt eine Aktivitäten-Einstellung für eine feste Montag-Sonntag-Woche oder die rollierenden letzten 7 Tage hinzu und hält alle wichtigen Metrikdiagramme auf einem konsistenten Sieben-Tage-Bereich.
+- Fügt Onboarding mit einem Schritt für alle anforderbaren Lese-, Schreib- und Zusatzberechtigungen von Health Connect hinzu, während Zyklusdaten explizit opt-in und Trainingsrouten manuell bleiben.
+- Refaktoriert die Planung von Flüssigkeitserinnerungen mit einem Controller und strengerem Alarm-Wrapper für vorhersehbareres Verhalten.
+
 ## 1.0.0 - 2026-05-31
 
 ### English

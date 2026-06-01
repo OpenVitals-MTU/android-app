@@ -1,0 +1,1 @@
+Adds Fitbit-inspired achievement badges from a new ribbon button, opt-in hydration reminders, and an Activities setting for Mon-Sun vs rolling last 7 days. Onboarding can now request all requestable read, write, and additional Health Connect permissions in one tap, while cycle tracking remains opt-in and route access remains manual.

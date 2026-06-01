@@ -26,7 +26,7 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
 3. No cloud sync in v1
 4. Read-only dashboard by default; explicit manual entries write only to Health Connect
 5. Per-metric permissions only
-6. Explain exactly why each permission is needed
+6. Explain exactly why each permission is needed, including the optional one-tap setup path
 7. Degrade gracefully when some permissions are denied
 
 ## V1 scope
@@ -68,7 +68,9 @@ Build an Android app that acts like a lightweight, privacy-first Google Fit dash
   * Health Connect available
   * needs install on Android 13 and lower
   * unsupported state if unavailable
-* request permissions in groups
+* offer one-tap setup for all requestable read, write, and additional Health Connect permissions
+* keep category-by-category permission rows for granular setup
+* keep cycle tracking explicitly opt-in and workout route access manual
 
 ### 2. Home dashboard
 
@@ -155,7 +157,7 @@ Avoid copying raw health history unless there is a strong UX reason.
 
 ### Permissions strategy
 
-Request in phases, not all at once.
+Request in clear groups, with an optional one-tap setup for users who want full access immediately.
 
 Phase 1:
 
@@ -383,7 +385,7 @@ Load detailed history lazily when entering a tab.
 ## Risk areas
 
 1. Permission fatigue
-   The app must avoid asking for every health permission on first launch.
+   The app must avoid forcing every health permission on first launch. One-tap setup is available, but category-by-category granting remains visible.
 
 2. Sparse data
    Some users will have only steps and workouts. The UI must still feel complete.
