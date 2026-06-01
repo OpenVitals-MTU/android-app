@@ -220,6 +220,37 @@ class ActivityOverviewViewModelTest {
     }
 
     @Test
+    fun `metric days use the selected Monday to Sunday week`() {
+        val selectedMonday = LocalDate.of(2026, 6, 1)
+        val loadedDays = (-6..6).map { offset ->
+            ActivityOverviewDay(date = selectedMonday.plusDays(offset.toLong()))
+        }
+        val state = ActivityOverviewUiState(
+            selectedDate = selectedMonday,
+            days = loadedDays,
+        )
+
+        assertEquals(
+            (0..6).map { selectedMonday.plusDays(it.toLong()) },
+            state.metricDays.map { it.date },
+        )
+    }
+
+    @Test
+    fun `metric days fill missing days in the selected week`() {
+        val selectedMonday = LocalDate.of(2026, 6, 1)
+        val state = ActivityOverviewUiState(
+            selectedDate = selectedMonday,
+            days = listOf(ActivityOverviewDay(date = selectedMonday, steps = 1_000L)),
+        )
+
+        assertEquals(7, state.metricDays.size)
+        assertEquals((0..6).map { selectedMonday.plusDays(it.toLong()) }, state.metricDays.map { it.date })
+        assertEquals(1_000L, state.metricDays.first().steps)
+        assertTrue(state.metricDays.drop(1).all { it.steps == 0L })
+    }
+
+    @Test
     fun `load requests the last thirty days ending today`() = runTest {
         val activityRepo = activityRepo()
         val heartRepo = heartRepo()

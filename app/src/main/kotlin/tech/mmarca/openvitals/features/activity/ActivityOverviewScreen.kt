@@ -63,11 +63,9 @@ import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
-import java.time.temporal.TemporalAdjusters
 
 private val ActivityOverviewCardHeight = 132.dp
 private val ActivityOverviewChartWidth = 152.dp
@@ -127,8 +125,7 @@ private fun ActivityOverviewContent(
 ) {
     val today = state.today
     val metricDays = state.metricDays
-    val weeklyOverviewDays = state.days.weekContaining(state.selectedDate)
-    val cardioMetricDays = metricDays.filter { it.cardioLoadConfidence != CardioLoadConfidence.NO_DATA }
+    val weeklyOverviewDays = metricDays
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -162,9 +159,11 @@ private fun ActivityOverviewContent(
                     subtitle = "${stringResource(R.string.period_today)} / ${cardioLoadConfidenceLabel(today.cardioLoadConfidence)}",
                     icon = Icons.Outlined.Favorite,
                     accentColor = HeartColor,
-                    chartValues = cardioMetricDays.map { it.cardioLoad.toDouble() },
+                    chartValues = metricDays.map {
+                        if (it.cardioLoadConfidence == CardioLoadConfidence.NO_DATA) 0.0 else it.cardioLoad.toDouble()
+                    },
                     chartStyle = ActivityMetricChartStyle.LINE,
-                    chartDays = cardioMetricDays.map { it.date },
+                    chartDays = metricDays.map { it.date },
                     modifier = metricCardModifier(),
                     onClick = onOpenCardioLoad,
                 )
@@ -212,7 +211,6 @@ private fun ActivityOverviewContent(
                 )
             }
             item {
-                val hrvMetricDays = metricDays.filter { it.hrvRmssdMs != null }
                 ActivityMetricCard(
                     title = stringResource(R.string.metric_hrv),
                     value = today.hrvRmssdMs
@@ -221,9 +219,9 @@ private fun ActivityOverviewContent(
                     subtitle = stringResource(R.string.period_today),
                     icon = Icons.Outlined.FavoriteBorder,
                     accentColor = HeartColor,
-                    chartValues = hrvMetricDays.map { it.hrvRmssdMs ?: 0.0 },
+                    chartValues = metricDays.map { it.hrvRmssdMs ?: 0.0 },
                     chartStyle = ActivityMetricChartStyle.LINE,
-                    chartDays = hrvMetricDays.map { it.date },
+                    chartDays = metricDays.map { it.date },
                     modifier = metricCardModifier(),
                     onClick = onOpenHrv,
                 )
@@ -608,15 +606,6 @@ private enum class ActivityMetricChartStyle {
 
 private fun metricCardModifier(): Modifier =
     Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-
-private fun List<ActivityOverviewDay>.weekContaining(date: LocalDate): List<ActivityOverviewDay> {
-    val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    val daysByDate = associateBy { it.date }
-    return (0..6).map { offset ->
-        val day = weekStart.plusDays(offset.toLong())
-        daysByDate[day] ?: ActivityOverviewDay(date = day)
-    }
-}
 
 @Composable
 private fun cardioLoadDisplayValue(day: ActivityOverviewDay, unitFormatter: UnitFormatter): DisplayValue =

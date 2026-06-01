@@ -18,8 +18,10 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,7 +79,7 @@ data class ActivityOverviewUiState(
         get() = visibleRecentActivities.size < recentActivities.size
 
     val metricDays: List<ActivityOverviewDay>
-        get() = days.takeLast(7)
+        get() = days.weekContaining(selectedDate)
 }
 
 @HiltViewModel
@@ -237,3 +239,12 @@ private fun List<ExerciseData>.toCardioLoadTimeWindows(date: LocalDate, zone: Zo
 }
 
 private fun Double?.orZero(): Double = this ?: 0.0
+
+private fun List<ActivityOverviewDay>.weekContaining(date: LocalDate): List<ActivityOverviewDay> {
+    val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val daysByDate = associateBy { it.date }
+    return (0..6).map { offset ->
+        val day = weekStart.plusDays(offset.toLong())
+        daysByDate[day] ?: ActivityOverviewDay(date = day)
+    }
+}
