@@ -1,0 +1,1 @@
+Behebt das Laden des Erfolgsverlaufs mit Health-Connect-Berechtigungen, ergänzt Schlafscore und Bewertung im Dashboard und hält Tempo/Geschwindigkeit nach GPS-Aufzeichnungen sichtbar.

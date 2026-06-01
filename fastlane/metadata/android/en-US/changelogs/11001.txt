@@ -1,0 +1,1 @@
+Fixes achievements history loading with Health Connect permissions, adds sleep score and rating to the dashboard sleep widget, and keeps average pace/speed visible after GPS recordings in the review form and saved activity details.

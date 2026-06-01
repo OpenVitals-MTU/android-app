@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.1.1 - 2026-06-01
+
+### English
+
+- Show sleep score and its rating directly in the dashboard sleep widget using the shared sleep score calculation.
+- Fix achievements history loading when Health Connect permissions are granted by allowing step-only history and chunking long activity-history reads.
+- Keep average pace and average speed visible after GPS recording ends, both in the review form and in saved activity details.
+- Use moving time for activity pace and speed when pause segments are available.
+
+### Español
+
+- Muestra la puntuación de sueño y su valoración directamente en el widget de sueño del panel usando el cálculo compartido.
+- Corrige la carga del historial de logros cuando los permisos de Health Connect están concedidos, permitiendo historial solo de pasos y dividiendo lecturas largas de actividad.
+- Mantiene el ritmo medio y la velocidad media visibles tras terminar una grabación GPS, tanto en el formulario de revisión como en el detalle guardado.
+- Usa el tiempo en movimiento para el ritmo y la velocidad de actividad cuando hay segmentos de pausa disponibles.
+
+### Deutsch
+
+- Zeigt Schlafscore und Bewertung direkt im Schlaf-Widget des Dashboards mit der gemeinsamen Schlafscore-Berechnung.
+- Behebt das Laden des Erfolgsverlaufs bei erteilten Health-Connect-Berechtigungen, indem reine Schrittverläufe erlaubt und lange Aktivitätsabfragen aufgeteilt werden.
+- Hält durchschnittliches Tempo und Durchschnittsgeschwindigkeit nach dem Ende einer GPS-Aufzeichnung sichtbar, sowohl im Prüfungsformular als auch in gespeicherten Aktivitätsdetails.
+- Verwendet Bewegungszeit für Tempo und Geschwindigkeit, wenn Pausensegmente verfügbar sind.
+
 ## 1.1.0 - 2026-06-01
 
 ### English

@@ -1,0 +1,1 @@
+Corrige la carga del historial de logros con permisos de Health Connect, añade puntuación y valoración de sueño al widget del panel y mantiene ritmo/velocidad medios tras grabaciones GPS.
