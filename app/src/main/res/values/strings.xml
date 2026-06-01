@@ -129,6 +129,7 @@
     <string name="activity_entry_recording_summary">%1$s • %2$s • %3$s gain • %4$d points</string>
     <string name="activity_entry_recording_accuracy">Last accuracy %1$s</string>
     <string name="activity_entry_route_summary">%1$s • %2$s • %3$s gain • %4$d points</string>
+    <string name="activity_entry_route_average_metrics">Avg pace %1$s • avg speed %2$s</string>
     <string name="activity_entry_add">Add activity</string>
     <string name="activity_entry_invalid_value">Fix the highlighted fields before adding the activity.</string>
     <string name="activity_entry_error_activity_type_route">Choose an activity type that supports GPS routes.</string>
@@ -240,6 +241,8 @@
 
     <string name="metric_steps">Steps</string>
     <string name="metric_distance">Distance</string>
+    <string name="metric_average_pace">Average pace</string>
+    <string name="metric_average_speed">Average speed</string>
     <string name="metric_calories_burned">Calories burned</string>
     <string name="metric_calories_out">Calories out</string>
     <string name="metric_calories_in">Calories in</string>
@@ -756,6 +759,7 @@
     <string name="detail_metrics">Metrics</string>
     <string name="detail_session_details">Session details</string>
     <string name="detail_duration">Duration</string>
+    <string name="detail_moving_time">Moving time</string>
     <string name="detail_type">Type</string>
     <string name="detail_started">Started</string>
     <string name="detail_ended">Ended</string>

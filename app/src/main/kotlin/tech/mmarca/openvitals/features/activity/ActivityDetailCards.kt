@@ -106,10 +106,16 @@ internal fun MetricsCard(
     modifier: Modifier = Modifier,
 ) {
     val notAvailable = stringResource(R.string.not_available)
+    val movingDurationMs = workout.movingDurationMs()
     DetailSectionCard(title = stringResource(R.string.detail_metrics), modifier = modifier) {
         DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(workout.durationMs))
+        if (workout.pausedDurationMs() > 0L) {
+            DetailRow(stringResource(R.string.detail_moving_time), unitFormatter.duration(movingDurationMs))
+        }
         DetailRow(stringResource(R.string.metric_steps), workout.steps?.let { unitFormatter.count(it) } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_distance), workout.totalDistanceMeters?.let { unitFormatter.distance(it).text } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_average_pace), workout.averagePace(unitFormatter)?.text ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_average_speed), workout.averageSpeed(unitFormatter)?.text ?: notAvailable)
         DetailRow(stringResource(R.string.metric_calories_burned), workout.totalCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_active_calories), workout.activeCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_floors_climbed), workout.floorsClimbed?.let { unitFormatter.count(it) } ?: notAvailable)

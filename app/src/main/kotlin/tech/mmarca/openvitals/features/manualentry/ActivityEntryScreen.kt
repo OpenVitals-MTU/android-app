@@ -88,6 +88,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.features.activity.RoutePreview
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
@@ -1095,12 +1096,7 @@ private fun ActivityRecordingScreen(
     val movingTime = state.movingDuration(now)
     val distance = unitFormatter.distance(state.distanceMeters)
     val elevation = unitFormatter.elevation(state.elevationGainedMeters)
-    val speed = recordingSpeed(
-        distanceMeters = state.distanceMeters,
-        duration = movingTime,
-        unitSystem = unitFormatter.unitSystem(),
-        unitFormatter = unitFormatter,
-    )
+    val speed = unitFormatter.averageSpeed(state.distanceMeters, movingTime.toMillis())
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -1362,6 +1358,11 @@ private fun ImportedActivityRouteSection(
     onClearRoute: () -> Unit,
 ) {
     val route = state.importedRoute ?: return
+    val averageMetrics = routeAverageMetrics(
+        route = route,
+        pauseIntervals = state.recordedPauseIntervals,
+        unitFormatter = unitFormatter,
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -1415,6 +1416,17 @@ private fun ImportedActivityRouteSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                averageMetrics?.let { metrics ->
+                    Text(
+                        text = stringResource(
+                            R.string.activity_entry_route_average_metrics,
+                            metrics.averagePace,
+                            metrics.averageSpeed,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
@@ -1537,18 +1549,34 @@ private fun formatRecordingElapsed(duration: Duration): String {
     }
 }
 
-private fun recordingSpeed(
-    distanceMeters: Double,
-    duration: Duration,
-    unitSystem: UnitSystem,
+private data class RouteAverageMetrics(
+    val averagePace: String,
+    val averageSpeed: String,
+)
+
+private fun routeAverageMetrics(
+    route: RouteFileImport,
+    pauseIntervals: List<ActivityPauseInterval>,
     unitFormatter: UnitFormatter,
-): DisplayValue {
-    val hours = duration.seconds.toDouble() / 3600.0
-    val metersPerHour = if (hours > 0.0) distanceMeters / hours else 0.0
-    return when (unitSystem) {
-        UnitSystem.METRIC -> DisplayValue(unitFormatter.decimal(metersPerHour / 1000.0, 1), "km/h")
-        UnitSystem.IMPERIAL -> DisplayValue(unitFormatter.decimal(metersPerHour / 1609.344, 1), "mph")
-    }
+): RouteAverageMetrics? {
+    val movingDurationMs = routeMovingDurationMs(route, pauseIntervals).takeIf { it > 0L } ?: return null
+    val averagePace = unitFormatter.averagePace(route.distanceMeters, movingDurationMs)?.text ?: return null
+    val averageSpeed = unitFormatter.averageSpeed(route.distanceMeters, movingDurationMs).text
+    return RouteAverageMetrics(
+        averagePace = averagePace,
+        averageSpeed = averageSpeed,
+    )
+}
+
+private fun routeMovingDurationMs(
+    route: RouteFileImport,
+    pauseIntervals: List<ActivityPauseInterval>,
+): Long {
+    val durationMs = Duration.between(route.startTime, route.endTime).toMillis().coerceAtLeast(0L)
+    val pausedMs = pauseIntervals
+        .sumOf { interval -> Duration.between(interval.startTime, interval.endTime).toMillis().coerceAtLeast(0L) }
+        .coerceAtMost(durationMs)
+    return (durationMs - pausedMs).coerceAtLeast(0L)
 }
 
 private val RouteImportMimeTypes = arrayOf(

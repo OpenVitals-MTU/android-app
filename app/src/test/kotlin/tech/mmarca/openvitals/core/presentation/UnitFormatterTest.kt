@@ -63,6 +63,27 @@ class UnitFormatterTest {
         assertEquals("1h 05m", formatter(UnitSystem.METRIC).duration(3_900_000L))
     }
 
+    @Test fun `metric average speed uses kilometers per hour`() {
+        assertEquals("10.0 km/h", formatter(UnitSystem.METRIC).averageSpeed(5_000.0, 1_800_000L).text)
+    }
+
+    @Test fun `imperial average speed uses miles per hour`() {
+        assertEquals("6.0 mph", formatter(UnitSystem.IMPERIAL).averageSpeed(1_609.344, 600_000L).text)
+    }
+
+    @Test fun `metric average pace uses minutes per kilometer`() {
+        assertEquals("6:00 min/km", formatter(UnitSystem.METRIC).averagePace(5_000.0, 1_800_000L)?.text)
+    }
+
+    @Test fun `imperial average pace uses minutes per mile`() {
+        assertEquals("10:00 min/mi", formatter(UnitSystem.IMPERIAL).averagePace(1_609.344, 600_000L)?.text)
+    }
+
+    @Test fun `average pace needs distance and duration`() {
+        assertEquals(null, formatter(UnitSystem.METRIC).averagePace(0.0, 1_800_000L))
+        assertEquals(null, formatter(UnitSystem.METRIC).averagePace(5_000.0, 0L))
+    }
+
     private fun formatter(unitSystem: UnitSystem): UnitFormatter =
         UnitFormatter(
             unitSystemProvider = { unitSystem },

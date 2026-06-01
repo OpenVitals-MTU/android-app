@@ -89,6 +89,40 @@ class UnitFormatter(
         return "${hours}h ${minutes.toString().padStart(2, '0')}m"
     }
 
+    fun averageSpeed(distanceMeters: Double, durationMs: Long): DisplayValue {
+        val hours = durationMs.coerceAtLeast(0L).toDouble() / 3_600_000.0
+        val metersPerHour = if (distanceMeters > 0.0 && hours > 0.0) {
+            distanceMeters / hours
+        } else {
+            0.0
+        }
+        return when (unitSystem()) {
+            UnitSystem.METRIC -> DisplayValue(decimal(metersPerHour / 1000.0, 1), "km/h")
+            UnitSystem.IMPERIAL -> DisplayValue(decimal(metersPerHour / 1609.344, 1), "mph")
+        }
+    }
+
+    fun averagePace(distanceMeters: Double, durationMs: Long): DisplayValue? {
+        if (distanceMeters <= 0.0 || durationMs <= 0L) return null
+        val distanceUnitMeters = when (unitSystem()) {
+            UnitSystem.METRIC -> 1000.0
+            UnitSystem.IMPERIAL -> 1609.344
+        }
+        val distanceUnits = distanceMeters / distanceUnitMeters
+        if (distanceUnits <= 0.0 || !distanceUnits.isFinite()) return null
+
+        val secondsPerUnit = ((durationMs / 1_000.0) / distanceUnits)
+            .roundToInt()
+            .coerceAtLeast(0)
+        val minutes = secondsPerUnit / 60
+        val seconds = secondsPerUnit % 60
+        val unit = when (unitSystem()) {
+            UnitSystem.METRIC -> "min/km"
+            UnitSystem.IMPERIAL -> "min/mi"
+        }
+        return DisplayValue(String.format(Locale.US, "%d:%02d", minutes, seconds), unit)
+    }
+
     fun minutes(minutes: Long): DisplayValue = DisplayValue(count(minutes), "min")
 
     fun decimal(value: Double, decimals: Int): String =
