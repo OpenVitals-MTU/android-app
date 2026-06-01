@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.core.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.repository.SleepRepository

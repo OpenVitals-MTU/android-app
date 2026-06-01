@@ -36,7 +36,9 @@ import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.core.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.core.insights.CardioLoadTimeWindow
+import tech.mmarca.openvitals.core.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.core.insights.calculateCardioLoad
+import tech.mmarca.openvitals.core.insights.calculateSleepScore
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
@@ -45,6 +47,7 @@ import tech.mmarca.openvitals.data.model.DashboardWeeklyCardioLoadTargetSource
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
@@ -76,6 +79,7 @@ class HealthRepository @Inject constructor(
 
     companion object {
         private const val TAG = "HealthRepository"
+        private const val DashboardSleepScoreLookbackDays = 7L
     }
 
     private val readStepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
@@ -231,7 +235,10 @@ class HealthRepository @Inject constructor(
             hc.readExerciseSessions(dayStart, dayEnd)
         }
         val sleep = readIfNeeded(wants(DashboardMetric.SLEEP), readSleepPermission, "sleep") {
-            readDashboardSleep(date, sleepRangeMode)
+            readDashboardSleep(
+                date = date,
+                sleepRangeMode = sleepRangeMode,
+            )
         }
         val calories = readIfNeeded(wants(DashboardMetric.CALORIES_OUT), readCaloriesPermission, "calories") {
             hc.readCaloriesKcal(date)
@@ -384,6 +391,7 @@ class HealthRepository @Inject constructor(
         val latestHeight = height?.await()
         val dailyMacros = macros?.await()
         val dayWorkouts = workouts?.await().orEmpty()
+        val dashboardSleep = sleep?.await()
 
         DashboardData(
             date = date,
@@ -398,7 +406,8 @@ class HealthRepository @Inject constructor(
             hydrationLiters = hydration?.await() ?: 0.0,
             workout = dayWorkouts.firstOrNull(),
             workouts = dayWorkouts,
-            sleep = sleep?.await(),
+            sleep = dashboardSleep?.sleep,
+            sleepScore = dashboardSleep?.sleepScore ?: SleepScoreEstimate.NoData,
             weightKg = latestWeight?.weightKg,
             weightTime = latestWeight?.time,
             heightCm = latestHeight?.heightCm,
@@ -442,11 +451,54 @@ class HealthRepository @Inject constructor(
     private suspend fun readDashboardSleep(
         date: LocalDate,
         sleepRangeMode: SleepRangeMode,
-    ) = with(sleepRangeWindowFor(date, sleepRangeMode, ZoneId.systemDefault())) {
-        dailySleepSummary(
-            sessions = hc.readSleepSessions(start.minus(Duration.ofDays(1)), end),
+    ): DashboardSleepData {
+        val zone = ZoneId.systemDefault()
+        val selectedWindow = sleepRangeWindowFor(date, sleepRangeMode, zone)
+        val queryStart = sleepRangeWindowFor(date.minusDays(DashboardSleepScoreLookbackDays - 1), sleepRangeMode, zone)
+            .start
+            .minus(Duration.ofDays(1))
+        val sessions = hc.readSleepSessions(queryStart, selectedWindow.end)
+        val sleep = dailySleepSummary(
+            sessions = sessions,
             selectedDate = date,
             sleepRangeMode = sleepRangeMode,
+            zone = zone,
+        )
+        return DashboardSleepData(
+            sleep = sleep,
+            sleepScore = dashboardSleepScore(
+                selectedDate = date,
+                selectedSleep = sleep,
+                sessions = sessions,
+                sleepRangeMode = sleepRangeMode,
+                zone = zone,
+            ),
+        )
+    }
+
+    private fun dashboardSleepScore(
+        selectedDate: LocalDate,
+        selectedSleep: SleepData?,
+        sessions: List<SleepData>,
+        sleepRangeMode: SleepRangeMode,
+        zone: ZoneId,
+    ): SleepScoreEstimate {
+        val startDate = selectedDate.minusDays(DashboardSleepScoreLookbackDays - 1)
+        val previousSessions = generateSequence(startDate) { date ->
+            date.plusDays(1).takeIf { it.isBefore(selectedDate) }
+        }.mapNotNull { date ->
+            dailySleepSummary(
+                sessions = sessions,
+                selectedDate = date,
+                sleepRangeMode = sleepRangeMode,
+                zone = zone,
+            )
+        }.toList()
+
+        return calculateSleepScore(
+            session = selectedSleep,
+            previousSessions = previousSessions,
+            zone = zone,
         )
     }
 
@@ -610,6 +662,11 @@ class HealthRepository @Inject constructor(
             }
         }
 }
+
+private data class DashboardSleepData(
+    val sleep: SleepData?,
+    val sleepScore: SleepScoreEstimate,
+)
 
 private data class DashboardWeeklyCardioTarget(
     val score: Int,

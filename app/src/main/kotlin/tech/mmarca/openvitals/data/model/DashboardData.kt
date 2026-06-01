@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
+import tech.mmarca.openvitals.core.insights.SleepScoreEstimate
 
 data class DashboardData(
     val date: LocalDate,
@@ -15,6 +16,7 @@ data class DashboardData(
     val workout: ExerciseData? = null,
     val workouts: List<ExerciseData> = emptyList(),
     val sleep: SleepData? = null,
+    val sleepScore: SleepScoreEstimate = SleepScoreEstimate.NoData,
     val weightKg: Double? = null,
     val weightTime: Instant? = null,
     val heightCm: Double? = null,
@@ -58,6 +60,7 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         workout = if (DashboardMetric.WORKOUT in other.loadedMetrics) other.workout else workout,
         workouts = if (DashboardMetric.WORKOUT in other.loadedMetrics) other.workouts else workouts,
         sleep = if (DashboardMetric.SLEEP in other.loadedMetrics) other.sleep else sleep,
+        sleepScore = if (DashboardMetric.SLEEP in other.loadedMetrics) other.sleepScore else sleepScore,
         weightKg = if (DashboardMetric.WEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
             other.weightKg
         } else {

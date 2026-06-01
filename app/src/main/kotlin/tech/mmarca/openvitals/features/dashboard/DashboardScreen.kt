@@ -104,6 +104,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.delay
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -1191,6 +1192,15 @@ private fun dashboardWidgetSpecs(
         )
     }
     if (shouldBuild(DashboardWidgetId.SLEEP)) {
+        val sleepScoreSubtitle = data.sleepScore
+            .takeIf { it.confidence != SleepScoreConfidence.NO_DATA }
+            ?.let { score ->
+                stringResource(
+                    R.string.dashboard_sleep_score_subtitle,
+                    unitFormatter.count(score.score),
+                    sleepScoreRatingLabel(score.score),
+                )
+            }
         addOptionalMetric(
             id = DashboardWidgetId.SLEEP,
             title = stringResource(R.string.metric_sleep),
@@ -1198,6 +1208,7 @@ private fun dashboardWidgetSpecs(
             icon = Icons.Outlined.Bed,
             accentColor = SleepColor,
             noDataMessage = stringResource(R.string.message_no_sleep_day),
+            subtitle = sleepScoreSubtitle,
             progress = data.sleep?.let {
                 dashboardGoalProgress(
                     current = it.durationMs.toDouble(),
@@ -1933,6 +1944,17 @@ private fun dashboardDisplayValue(value: DisplayValue): String =
     } else {
         "${value.value} ${value.unit}"
     }
+
+@Composable
+private fun sleepScoreRatingLabel(score: Int): String =
+    stringResource(
+        when {
+            score >= 90 -> R.string.sleep_score_rating_excellent
+            score >= 80 -> R.string.sleep_score_rating_good
+            score >= 60 -> R.string.sleep_score_rating_fair
+            else -> R.string.sleep_score_rating_poor
+        }
+    )
 
 @Composable
 private fun dashboardGramDisplayValue(value: Double, unitFormatter: UnitFormatter): DisplayValue =

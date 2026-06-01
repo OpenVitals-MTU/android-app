@@ -320,6 +320,11 @@
     <string name="sleep_score_confidence_medium">Confianza media</string>
     <string name="sleep_score_confidence_low">Baja confianza</string>
     <string name="sleep_score_confidence_no_data">Sin datos</string>
+    <string name="sleep_score_rating_excellent">Excelente</string>
+    <string name="sleep_score_rating_good">Bueno</string>
+    <string name="sleep_score_rating_fair">Aceptable</string>
+    <string name="sleep_score_rating_poor">Bajo</string>
+    <string name="dashboard_sleep_score_subtitle">Puntuación %1$s - %2$s</string>
     <string name="sleep_score_calculation_title">Cómo se calcula</string>
     <string name="sleep_score_day_numbers_title">Números de hoy</string>
     <string name="sleep_score_references_title">Enlaces de respaldo</string>

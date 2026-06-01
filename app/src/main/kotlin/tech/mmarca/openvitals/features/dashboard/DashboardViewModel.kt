@@ -59,6 +59,8 @@ class DashboardViewModel @Inject constructor(
         DashboardUiState(
             dashboardWidgets = dashboardWidgetIdsFromStored(prefs.dashboardWidgetOrder()),
             dailyGoals = prefs.dashboardDailyGoals(),
+            trackCycle = prefs.trackCycle,
+            sleepRangeMode = prefs.sleepRangeMode,
         )
     )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
