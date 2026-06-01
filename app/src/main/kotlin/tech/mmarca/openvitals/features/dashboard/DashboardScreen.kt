@@ -1209,6 +1209,7 @@ private fun dashboardWidgetSpecs(
             accentColor = SleepColor,
             noDataMessage = stringResource(R.string.message_no_sleep_day),
             subtitle = sleepScoreSubtitle,
+            subtitleColor = MaterialTheme.colorScheme.onSurface,
             progress = data.sleep?.let {
                 dashboardGoalProgress(
                     current = it.durationMs.toDouble(),
@@ -1573,6 +1574,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
     accentColor: Color,
     noDataMessage: String? = null,
     subtitle: String? = null,
+    subtitleColor: Color = accentColor,
     progress: DashboardWidgetProgress? = null,
     loadingMessage: String? = null,
     onClick: (() -> Unit)?,
@@ -1597,6 +1599,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
                     accentColor = accentColor,
                     progress = progress,
                     subtitle = subtitle,
+                    subtitleColor = subtitleColor,
                     modifier = modifier,
                     onClick = onClick,
                 )
@@ -1751,6 +1754,7 @@ private fun DashboardPillWidget(
     progress: DashboardWidgetProgress? = null,
     message: String? = null,
     subtitle: String? = null,
+    subtitleColor: Color = accentColor,
     onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(28.dp)
@@ -1836,7 +1840,7 @@ private fun DashboardPillWidget(
                             text = subtitle,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = accentColor,
+                            color = subtitleColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )

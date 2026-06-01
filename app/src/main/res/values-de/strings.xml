@@ -327,7 +327,7 @@
     <string name="sleep_score_rating_good">Gut</string>
     <string name="sleep_score_rating_fair">Okay</string>
     <string name="sleep_score_rating_poor">Schwach</string>
-    <string name="dashboard_sleep_score_subtitle">Schlafwert %1$s - %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s - %2$s</string>
     <string name="sleep_score_calculation_title">So wird es berechnet</string>
     <string name="sleep_score_day_numbers_title">Heutige Werte</string>
     <string name="sleep_score_references_title">Belegte Links</string>
