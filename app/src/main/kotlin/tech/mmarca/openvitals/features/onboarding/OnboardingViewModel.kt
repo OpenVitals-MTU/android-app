@@ -94,6 +94,12 @@ class OnboardingViewModel @Inject constructor(
                 permissions = repository.nutritionHydrationPermissions,
             ),
             OnboardingPermissionCategory(
+                id = "manual_entry_write",
+                titleRes = R.string.onboarding_category_manual_entry_write,
+                descriptionRes = R.string.onboarding_category_manual_entry_write_desc,
+                permissions = repository.requestableWritePermissions,
+            ),
+            OnboardingPermissionCategory(
                 id = "mindfulness",
                 titleRes = R.string.onboarding_category_mindfulness,
                 descriptionRes = R.string.onboarding_category_mindfulness_desc,

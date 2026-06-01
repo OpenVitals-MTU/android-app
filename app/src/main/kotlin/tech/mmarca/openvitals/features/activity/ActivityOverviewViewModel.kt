@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.core.insights.calculateCardioLoad
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
@@ -18,6 +19,7 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val ActivityOverviewLookbackDays = 30L
@@ -64,6 +67,7 @@ data class ActivityOverviewUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val days: List<ActivityOverviewDay> = emptyList(),
     val recentVisibleCount: Int = RecentActivityInitialCount,
+    val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val error: String? = null,
 ) {
     val today: ActivityOverviewDay
@@ -79,7 +83,10 @@ data class ActivityOverviewUiState(
         get() = visibleRecentActivities.size < recentActivities.size
 
     val metricDays: List<ActivityOverviewDay>
-        get() = days.weekContaining(selectedDate)
+        get() = when (activityWeekMode) {
+            ActivityWeekMode.MONDAY_TO_SUNDAY -> days.weekContaining(selectedDate)
+            ActivityWeekMode.LAST_7_DAYS -> days.lastSevenDaysEnding(selectedDate)
+        }
 }
 
 @HiltViewModel
@@ -87,14 +94,29 @@ class ActivityOverviewViewModel @Inject constructor(
     private val activityRepository: ActivityRepository,
     private val heartRepository: HeartRepository,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    private val preferencesRepository: PreferencesRepository? = null,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ActivityOverviewUiState())
+    private val _uiState = MutableStateFlow(
+        ActivityOverviewUiState(
+            activityWeekMode = preferencesRepository?.activityWeekMode ?: ActivityWeekMode.MONDAY_TO_SUNDAY,
+        )
+    )
     val uiState: StateFlow<ActivityOverviewUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
 
     init {
+        observeActivityWeekMode()
         load()
+    }
+
+    private fun observeActivityWeekMode() {
+        val preferences = preferencesRepository ?: return
+        viewModelScope.launch {
+            preferences.activityWeekModeFlow.collect { mode ->
+                _uiState.value = _uiState.value.copy(activityWeekMode = mode)
+            }
+        }
     }
 
     fun load(today: LocalDate = LocalDate.now()) {
@@ -242,9 +264,16 @@ private fun Double?.orZero(): Double = this ?: 0.0
 
 private fun List<ActivityOverviewDay>.weekContaining(date: LocalDate): List<ActivityOverviewDay> {
     val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    return sevenDaysStarting(weekStart)
+}
+
+private fun List<ActivityOverviewDay>.lastSevenDaysEnding(date: LocalDate): List<ActivityOverviewDay> =
+    sevenDaysStarting(date.minusDays(6))
+
+private fun List<ActivityOverviewDay>.sevenDaysStarting(startDate: LocalDate): List<ActivityOverviewDay> {
     val daysByDate = associateBy { it.date }
     return (0..6).map { offset ->
-        val day = weekStart.plusDays(offset.toLong())
+        val day = startDate.plusDays(offset.toLong())
         daysByDate[day] ?: ActivityOverviewDay(date = day)
     }
 }

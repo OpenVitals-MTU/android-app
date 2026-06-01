@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
@@ -48,7 +49,7 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(trackCycle = false),
         )
 
-        assertEquals(setOf("steps", "route"), vm.uiState.value.visiblePermissions)
+        assertEquals(setOf("steps", "write", "route"), vm.uiState.value.visiblePermissions)
         assertFalse(vm.uiState.value.trackCycle)
     }
 
@@ -58,7 +59,7 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(trackCycle = true),
         )
 
-        assertEquals(setOf("steps", "route", "cycle"), vm.uiState.value.visiblePermissions)
+        assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
         assertTrue(vm.uiState.value.trackCycle)
     }
 
@@ -68,14 +69,14 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(trackCycle = true),
         )
 
-        assertEquals(setOf("route", "cycle"), vm.uiState.value.missingVisiblePermissions)
-        assertEquals(setOf("cycle"), vm.uiState.value.missingRequestableVisiblePermissions)
+        assertEquals(setOf("write", "route", "cycle"), vm.uiState.value.missingVisiblePermissions)
+        assertEquals(setOf("write", "cycle"), vm.uiState.value.missingRequestableVisiblePermissions)
         assertEquals(setOf("route"), vm.uiState.value.missingManualVisiblePermissions)
     }
 
     @Test fun `missingVisiblePermissions is empty when all visible permissions are granted`() = runTest {
         val vm = SettingsViewModel(
-            repository = repo(grantedPermissions = setOf("steps", "route", "cycle")),
+            repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(trackCycle = true),
         )
 
@@ -95,7 +96,7 @@ class SettingsViewModelTest {
 
         verify { prefs.trackCycle = true }
         assertTrue(vm.uiState.value.trackCycle)
-        assertEquals(setOf("steps", "route", "cycle"), vm.uiState.value.visiblePermissions)
+        assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
     }
 
     @Test fun `selectAppLanguage persists preference and updates ui state`() = runTest {
@@ -124,6 +125,19 @@ class SettingsViewModelTest {
         assertEquals(SleepRangeMode.NOON, vm.uiState.value.sleepRangeMode)
     }
 
+    @Test fun `selectActivityWeekMode persists preference and updates ui state`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.selectActivityWeekMode(ActivityWeekMode.LAST_7_DAYS)
+
+        verify { prefs.activityWeekMode = ActivityWeekMode.LAST_7_DAYS }
+        assertEquals(ActivityWeekMode.LAST_7_DAYS, vm.uiState.value.activityWeekMode)
+    }
+
     @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
         val repository = repo(availability = HealthConnectAvailability.NOT_SUPPORTED)
 
@@ -149,11 +163,12 @@ class SettingsViewModelTest {
             every { repo.bodyPermissions } returns emptySet()
             every { repo.activityExtrasPermissions } returns emptySet()
             every { repo.nutritionHydrationPermissions } returns emptySet()
+            every { repo.requestableWritePermissions } returns setOf("write")
             every { repo.mindfulnessPermissions } returns emptySet()
             every { repo.additionalDataAccessPermissions } returns emptySet()
             every { repo.vitalsPermissions } returns emptySet()
             every { repo.isMindfulnessAvailable() } returns false
-            every { repo.allPermissions } returns setOf("steps", "route")
+            every { repo.allPermissions } returns setOf("steps", "write", "route")
             every { repo.cyclePermissions } returns setOf("cycle")
             every { repo.manualOnlyPermissions } returns setOf("route")
             coEvery { repo.grantedPermissions() } returns grantedPermissions
@@ -164,9 +179,11 @@ class SettingsViewModelTest {
             every { prefs.unitSystem } returns UnitSystem.METRIC
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
             every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
+            every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
             every { prefs.trackCycle } returns trackCycle
             every { prefs.appLanguage = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
+            every { prefs.activityWeekMode = any() } just runs
             every { prefs.trackCycle = any() } just runs
         }
 }

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
@@ -30,6 +31,7 @@ data class SettingsUiState(
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet() +
@@ -91,6 +93,7 @@ class SettingsViewModel @Inject constructor(
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
                 sleepRangeMode = preferencesRepository.sleepRangeMode,
+                activityWeekMode = preferencesRepository.activityWeekMode,
             )
         }
     }
@@ -113,6 +116,11 @@ class SettingsViewModel @Inject constructor(
     fun selectSleepRangeMode(sleepRangeMode: SleepRangeMode) {
         preferencesRepository.sleepRangeMode = sleepRangeMode
         _uiState.value = _uiState.value.copy(sleepRangeMode = sleepRangeMode)
+    }
+
+    fun selectActivityWeekMode(activityWeekMode: ActivityWeekMode) {
+        preferencesRepository.activityWeekMode = activityWeekMode
+        _uiState.value = _uiState.value.copy(activityWeekMode = activityWeekMode)
     }
 
     fun onPermissionsResult(granted: Set<String>) {
@@ -153,6 +161,12 @@ class SettingsViewModel @Inject constructor(
                 titleRes = R.string.onboarding_category_nutrition_hydration,
                 descriptionRes = R.string.onboarding_category_nutrition_hydration_desc,
                 permissions = repository.nutritionHydrationPermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "manual_entry_write",
+                titleRes = R.string.onboarding_category_manual_entry_write,
+                descriptionRes = R.string.onboarding_category_manual_entry_write_desc,
+                permissions = repository.requestableWritePermissions,
             ),
             SettingsPermissionCategory(
                 id = "mindfulness",

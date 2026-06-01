@@ -664,10 +664,11 @@
     <string name="health_disclaimer_title">Health disclaimer</string>
     <string name="health_disclaimer_body">OpenVitals is for general wellness and informational use only. It is not a medical device and does not provide medical advice. It does not diagnose, treat, cure, or prevent any disease or medical condition. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.</string>
     <string name="onboarding_health_connect_title">Powered by Health Connect</string>
-    <string name="onboarding_health_connect_body">Reads from the secure on-device Android health store. Works with all data imported into Health Connect.</string>
+    <string name="onboarding_health_connect_body">Reads from the secure on-device Android health store and saves entries you create back to Health Connect. Works with all data imported into Health Connect.</string>
     <string name="onboarding_permissions_header">PERMISSIONS</string>
     <string name="onboarding_grant_core">Grant only core permissions</string>
-    <string name="onboarding_grant_all">Grant all summary permissions</string>
+    <string name="onboarding_grant_all">Grant all read &amp; write permissions</string>
+    <string name="onboarding_grant_remaining">Grant remaining permissions</string>
     <string name="onboarding_core_required">Core permissions are required to show your summary.</string>
     <string name="onboarding_unable_open_permissions">Unable to open Health Connect permissions.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect is not supported on this device.</string>
@@ -694,6 +695,8 @@
     <string name="onboarding_category_activity_extras_desc">Calories burned, floors climbed, active calories, and elevation.</string>
     <string name="onboarding_category_nutrition_hydration">Nutrition &amp; hydration</string>
     <string name="onboarding_category_nutrition_hydration_desc">Water intake, calories in, meals, and macros.</string>
+    <string name="onboarding_category_manual_entry_write">Manual entry write access</string>
+    <string name="onboarding_category_manual_entry_write_desc">Allows OpenVitals to save hydration, activity, body, vitals, and mindfulness entries you create into Health Connect.</string>
     <string name="onboarding_category_mindfulness">Mindfulness</string>
     <string name="onboarding_category_mindfulness_desc">Mindfulness session duration and history.</string>
     <string name="onboarding_category_mindfulness_unavailable">Mindfulness sessions require a newer Health Connect version.</string>
@@ -723,6 +726,10 @@
     <string name="settings_units_body">Choose how distances, weights, hydration, and temperature are displayed.</string>
     <string name="settings_unit_metric">Metric</string>
     <string name="settings_unit_imperial">Imperial</string>
+    <string name="settings_activity_week_title">Activity week</string>
+    <string name="settings_activity_week_body">Choose whether Activities uses a fixed Mon-Sun week or the latest rolling 7 days.</string>
+    <string name="settings_activity_week_monday_to_sunday">Mon-Sun</string>
+    <string name="settings_activity_week_last_7_days">Last 7 days</string>
     <string name="settings_sleep_range_title">Sleep range</string>
     <string name="settings_sleep_range_body">Choose which day sleep sessions are assigned to.</string>
     <string name="settings_sleep_range_rolling_24h">Rolling 24h</string>

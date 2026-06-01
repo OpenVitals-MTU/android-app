@@ -111,6 +111,8 @@ class HealthConnectManager @Inject constructor(
     val phase4Permissions: Set<String> get() = permissionService.phase4Permissions
     val manualOnlyPermissions: Set<String> get() = permissionService.manualOnlyPermissions
     val requestableAllPermissions: Set<String> get() = permissionService.requestableAllPermissions
+    val requestableWritePermissions: Set<String> get() = permissionService.requestableWritePermissions
+    val onboardingRequestablePermissions: Set<String> get() = permissionService.onboardingRequestablePermissions
     val requestableManagedPermissions: Set<String> get() = permissionService.requestableManagedPermissions
     val allPermissions: Set<String> get() = permissionService.allPermissions
     val managedPermissions: Set<String> get() = permissionService.managedPermissions

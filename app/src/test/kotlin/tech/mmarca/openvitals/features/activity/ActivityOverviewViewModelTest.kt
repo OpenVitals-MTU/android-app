@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.activity
 
 import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.core.insights.CardioLoadMethod
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
@@ -248,6 +249,24 @@ class ActivityOverviewViewModelTest {
         assertEquals((0..6).map { selectedMonday.plusDays(it.toLong()) }, state.metricDays.map { it.date })
         assertEquals(1_000L, state.metricDays.first().steps)
         assertTrue(state.metricDays.drop(1).all { it.steps == 0L })
+    }
+
+    @Test
+    fun `metric days can use rolling last seven days`() {
+        val selectedMonday = LocalDate.of(2026, 6, 1)
+        val loadedDays = (-6..6).map { offset ->
+            ActivityOverviewDay(date = selectedMonday.plusDays(offset.toLong()))
+        }
+        val state = ActivityOverviewUiState(
+            selectedDate = selectedMonday,
+            days = loadedDays,
+            activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+        )
+
+        assertEquals(
+            (-6..0).map { selectedMonday.plusDays(it.toLong()) },
+            state.metricDays.map { it.date },
+        )
     }
 
     @Test

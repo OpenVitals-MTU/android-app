@@ -5,6 +5,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
@@ -29,9 +30,11 @@ class PreferencesRepository @Inject constructor(
     private val _unitSystem = MutableStateFlow(readUnitSystem())
     private val _appLanguage = MutableStateFlow(readAppLanguage())
     private val _sleepRangeMode = MutableStateFlow(readSleepRangeMode())
+    private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val sleepRangeModeFlow: StateFlow<SleepRangeMode> = _sleepRangeMode.asStateFlow()
+    val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -62,6 +65,13 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit().putString(KEY_SLEEP_RANGE_MODE, value.name).apply()
             _sleepRangeMode.value = value
+        }
+
+    var activityWeekMode: ActivityWeekMode
+        get() = _activityWeekMode.value
+        set(value) {
+            prefs.edit().putString(KEY_ACTIVITY_WEEK_MODE, value.name).apply()
+            _activityWeekMode.value = value
         }
 
     var hydrationDailyGoalLiters: Double
@@ -229,6 +239,11 @@ class PreferencesRepository @Inject constructor(
             ?.let { value -> runCatching { SleepRangeMode.valueOf(value) }.getOrNull() }
             ?: SleepRangeMode.EVENING_18H
 
+    private fun readActivityWeekMode(): ActivityWeekMode =
+        prefs.getString(KEY_ACTIVITY_WEEK_MODE, null)
+            ?.let { value -> runCatching { ActivityWeekMode.valueOf(value) }.getOrNull() }
+            ?: ActivityWeekMode.MONDAY_TO_SUNDAY
+
     private fun defaultUnitSystem(): UnitSystem {
         val country = Locale.getDefault().country.uppercase(Locale.US)
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
@@ -255,6 +270,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_TRACK_CYCLE = "track_cycle"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
+        private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"

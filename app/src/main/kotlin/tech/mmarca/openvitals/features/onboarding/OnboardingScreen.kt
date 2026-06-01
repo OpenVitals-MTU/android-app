@@ -64,6 +64,8 @@ fun OnboardingScreen(
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val permissionCategories = viewModel.permissionCategories
     val requiredCategory = permissionCategories.firstOrNull { it.required }
+    val missingCorePermissions = requiredCategory?.permissions.orEmpty() - state.grantedPermissions
+    val missingOnboardingPermissions = viewModel.onboardingPermissions - state.grantedPermissions
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -79,10 +81,8 @@ fun OnboardingScreen(
     }
 
     val requestPermissions = rememberLauncherForActivityResult(
-        contract = viewModel.onboardingPermissions.let {
-            androidx.health.connect.client.PermissionController
-                .createRequestPermissionResultContract()
-        }
+        contract = androidx.health.connect.client.PermissionController
+            .createRequestPermissionResultContract()
     ) { granted ->
         viewModel.onPermissionsResult(granted)
     }
@@ -200,29 +200,45 @@ fun OnboardingScreen(
 
         Button(
             onClick = {
-                if (state.phase1Granted) onOnboardingComplete()
-                else requiredCategory?.let { requestPermissions.launch(it.permissions) }
+                if (state.phase1Granted) {
+                    onOnboardingComplete()
+                } else if (missingOnboardingPermissions.isNotEmpty()) {
+                    requestPermissions.launch(missingOnboardingPermissions)
+                } else if (missingCorePermissions.isNotEmpty()) {
+                    requestPermissions.launch(missingCorePermissions)
+                }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = state.phase1Granted || requiredCategory != null,
+            enabled = state.phase1Granted ||
+                missingOnboardingPermissions.isNotEmpty() ||
+                missingCorePermissions.isNotEmpty(),
         ) {
             Text(
                 if (state.phase1Granted) {
                     stringResource(R.string.action_get_started)
                 } else {
-                    stringResource(R.string.onboarding_grant_core)
+                    stringResource(R.string.onboarding_grant_all)
                 }
             )
         }
 
-        if (!state.phase2Granted) {
+        if (!state.phase1Granted && missingCorePermissions.isNotEmpty()) {
             FilledTonalButton(
-                onClick = { requestPermissions.launch(viewModel.onboardingPermissions) },
+                onClick = { requestPermissions.launch(missingCorePermissions) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             ) {
-                Text(stringResource(R.string.onboarding_grant_all))
+                Text(stringResource(R.string.onboarding_grant_core))
+            }
+        } else if (state.phase1Granted && missingOnboardingPermissions.isNotEmpty()) {
+            FilledTonalButton(
+                onClick = { requestPermissions.launch(missingOnboardingPermissions) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.onboarding_grant_remaining))
             }
         }
 

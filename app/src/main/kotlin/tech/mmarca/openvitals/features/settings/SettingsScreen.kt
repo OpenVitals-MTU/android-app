@@ -47,6 +47,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
@@ -144,6 +145,18 @@ fun SettingsScreen(
             UnitSystemCard(
                 selected = state.unitSystem,
                 onSelect = viewModel::selectUnitSystem,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+
+        item {
+            ActivityWeekModeCard(
+                selected = state.activityWeekMode,
+                onSelect = viewModel::selectActivityWeekMode,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -345,6 +358,58 @@ private fun LanguageCard(
                 onSelect = onSelect,
                 modifier = Modifier.padding(top = 12.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun ActivityWeekModeCard(
+    selected: ActivityWeekMode,
+    onSelect: (ActivityWeekMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = stringResource(R.string.settings_activity_week_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.settings_activity_week_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                ActivityWeekMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = selected == mode,
+                        onClick = { onSelect(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = ActivityWeekMode.entries.size,
+                        ),
+                        label = {
+                            Text(
+                                when (mode) {
+                                    ActivityWeekMode.MONDAY_TO_SUNDAY -> {
+                                        stringResource(R.string.settings_activity_week_monday_to_sunday)
+                                    }
+                                    ActivityWeekMode.LAST_7_DAYS -> {
+                                        stringResource(R.string.settings_activity_week_last_7_days)
+                                    }
+                                }
+                            )
+                        },
+                    )
+                }
+            }
         }
     }
 }

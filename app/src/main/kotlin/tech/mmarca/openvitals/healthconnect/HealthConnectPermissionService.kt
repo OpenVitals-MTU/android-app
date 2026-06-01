@@ -173,8 +173,21 @@ internal class HealthConnectPermissionService(
     val requestableAllPermissions: Set<String>
         get() = phase1Permissions + phase2Permissions
 
+    val requestableWritePermissions: Set<String>
+        get() = activityWritePermissions +
+            hydrationWritePermissions +
+            bodyWritePermissions +
+            vitalsWritePermissions +
+            (if (isMindfulnessSessionAvailable()) mindfulnessWritePermissions else emptySet())
+
+    val onboardingRequestablePermissions: Set<String>
+        get() = requestableAllPermissions +
+            phase3Permissions +
+            additionalDataAccessPermissions +
+            requestableWritePermissions
+
     val requestableManagedPermissions: Set<String>
-        get() = requestableAllPermissions + phase3Permissions + additionalDataAccessPermissions + phase4Permissions
+        get() = onboardingRequestablePermissions + phase4Permissions
 
     val allPermissions: Set<String> get() =
         requestableAllPermissions +

@@ -664,10 +664,11 @@
     <string name="health_disclaimer_title">Gesundheitshinweis</string>
     <string name="health_disclaimer_body">OpenVitals dient nur allgemeinen Wellness- und Informationszwecken. Es ist kein Medizinprodukt und bietet keine medizinische Beratung. Es diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Wende dich bei medizinischen Fragen, Diagnosen oder Behandlungen immer an qualifiziertes medizinisches Fachpersonal.</string>
     <string name="onboarding_health_connect_title">Unterstützt von Health Connect</string>
-    <string name="onboarding_health_connect_body">Liest aus dem sicheren Android-Gesundheitsspeicher auf dem Gerät. Funktioniert mit allen Daten, die in Health Connect importiert wurden.</string>
+    <string name="onboarding_health_connect_body">Liest aus dem sicheren Android-Gesundheitsspeicher auf dem Gerät und speichert Einträge, die du erstellst, wieder in Health Connect. Funktioniert mit allen Daten, die in Health Connect importiert wurden.</string>
     <string name="onboarding_permissions_header">BERECHTIGUNGEN</string>
     <string name="onboarding_grant_core">Nur Kernberechtigungen erteilen</string>
-    <string name="onboarding_grant_all">Alle Übersichtsberechtigungen erteilen</string>
+    <string name="onboarding_grant_all">Alle Lese- und Schreibberechtigungen erteilen</string>
+    <string name="onboarding_grant_remaining">Verbleibende Berechtigungen erteilen</string>
     <string name="onboarding_core_required">Kernberechtigungen sind erforderlich, um deine Übersicht anzuzeigen.</string>
     <string name="onboarding_unable_open_permissions">Health-Connect-Berechtigungen können nicht geöffnet werden.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect wird auf diesem Gerät nicht unterstützt.</string>
@@ -694,6 +695,8 @@
     <string name="onboarding_category_activity_extras_desc">Verbrannte Kalorien, gestiegene Etagen, aktive Kalorien und Höhe.</string>
     <string name="onboarding_category_nutrition_hydration">Ernährung &amp; Hydrierung</string>
     <string name="onboarding_category_nutrition_hydration_desc">Wasseraufnahme, Kalorienaufnahme, Mahlzeiten und Makros.</string>
+    <string name="onboarding_category_manual_entry_write">Schreibzugriff für manuelle Einträge</string>
+    <string name="onboarding_category_manual_entry_write_desc">Ermöglicht OpenVitals, Hydrierungs-, Aktivitäts-, Körper-, Vitalwert- und Achtsamkeitseinträge, die du erstellst, in Health Connect zu speichern.</string>
     <string name="onboarding_category_mindfulness">Achtsamkeit</string>
     <string name="onboarding_category_mindfulness_desc">Dauer und Verlauf von Achtsamkeitssitzungen.</string>
     <string name="onboarding_category_mindfulness_unavailable">Achtsamkeitssitzungen erfordern eine neuere Health-Connect-Version.</string>
@@ -723,6 +726,10 @@
     <string name="settings_units_body">Wähle, wie Distanzen, Gewichte, Hydrierung und Temperatur angezeigt werden.</string>
     <string name="settings_unit_metric">Metrisch</string>
     <string name="settings_unit_imperial">Imperial</string>
+    <string name="settings_activity_week_title">Aktivitätswoche</string>
+    <string name="settings_activity_week_body">Wähle, ob Aktivitäten eine feste Mo-So-Woche oder die letzten gleitenden 7 Tage verwendet.</string>
+    <string name="settings_activity_week_monday_to_sunday">Mo-So</string>
+    <string name="settings_activity_week_last_7_days">Letzte 7 Tage</string>
     <string name="settings_sleep_range_title">Schlafzeitraum</string>
     <string name="settings_sleep_range_body">Wähle, welchem Tag Schlafsitzungen zugeordnet werden.</string>
     <string name="settings_sleep_range_rolling_24h">Gleitende 24 h</string>

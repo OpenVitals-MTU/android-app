@@ -160,7 +160,7 @@ class OnboardingViewModelTest {
         assertTrue(vm.uiState.value.phase1Granted)
     }
 
-    @Test fun `onboardingPermissions exposes dashboard request set only`() = runTest {
+    @Test fun `onboardingPermissions exposes one tap onboarding request set`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
@@ -175,6 +175,10 @@ class OnboardingViewModelTest {
                 "activity",
                 "nutrition",
                 "mindfulness",
+                "history",
+                "background",
+                "vitals",
+                "write",
             ),
             vm.onboardingPermissions,
         )
@@ -195,6 +199,7 @@ class OnboardingViewModelTest {
                 R.string.onboarding_category_body,
                 R.string.onboarding_category_activity_extras,
                 R.string.onboarding_category_nutrition_hydration,
+                R.string.onboarding_category_manual_entry_write,
                 R.string.onboarding_category_mindfulness,
                 R.string.onboarding_category_additional_data_access,
                 R.string.onboarding_category_vitals,
@@ -209,6 +214,7 @@ class OnboardingViewModelTest {
             setOf("history", "background", "route"),
             categories.single { it.id == "additional_data_access" }.permissions,
         )
+        assertEquals(setOf("write"), categories.single { it.id == "manual_entry_write" }.permissions)
         assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
         assertFalse(categories.drop(1).any { it.required })
         assertTrue(categories.last().optIn)
@@ -233,6 +239,7 @@ class OnboardingViewModelTest {
                 "heart_recovery",
                 "activity_extras",
                 "nutrition_hydration",
+                "manual_entry_write",
                 "additional_data_access",
                 "vitals",
                 "cycle_tracking",
@@ -380,6 +387,7 @@ class OnboardingViewModelTest {
         manualOnlyPermissions: Set<String> = routePermissions,
         mindfulnessPermissions: Set<String> = setOf("mindfulness"),
         additionalDataAccessPermissions: Set<String> = setOf("history", "background"),
+        requestableWritePermissions: Set<String> = setOf("write"),
         cyclePermissions: Set<String> = setOf("cycle"),
         onboardingPermissions: Set<String> = standardPermissions,
     ): HealthRepository =
@@ -403,6 +411,7 @@ class OnboardingViewModelTest {
             every { repo.bodyPermissions } returns bodyPermissions
             every { repo.activityExtrasPermissions } returns setOf("activity")
             every { repo.nutritionHydrationPermissions } returns setOf("nutrition")
+            every { repo.requestableWritePermissions } returns requestableWritePermissions
             every { repo.mindfulnessPermissions } returns mindfulnessPermissions
             every { repo.additionalDataAccessPermissions } returns additionalDataAccessPermissions
             every { repo.vitalsPermissions } returns setOf("vitals")
@@ -431,7 +440,11 @@ class OnboardingViewModelTest {
             "activity",
             "nutrition",
             "mindfulness",
+            "history",
+            "background",
+            "vitals",
+            "write",
         )
-        private val allPermissions = standardPermissions + setOf("history", "background", "vitals", "cycle")
+        private val allPermissions = standardPermissions + setOf("cycle")
     }
 }
