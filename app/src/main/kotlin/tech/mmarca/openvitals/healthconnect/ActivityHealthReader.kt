@@ -34,6 +34,8 @@ import java.time.ZoneId
 import java.util.UUID
 import kotlin.reflect.KClass
 
+private const val DailyStepsMaxQueryDays = 366L
+
 internal class ActivityHealthReader(
     private val support: HealthConnectReaderSupport,
     private val appPackageName: String,
@@ -55,9 +57,29 @@ internal class ActivityHealthReader(
     suspend fun readDailySteps(
         startDate: LocalDate,
         endDate: LocalDate,
+        includeDistance: Boolean = true,
         includeFloors: Boolean = false,
         includeActiveCalories: Boolean = false,
         includeElevation: Boolean = false,
+    ): List<DailySteps> =
+        dailyStepDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
+            readDailyStepsChunk(
+                startDate = chunkStart,
+                endDate = chunkEnd,
+                includeDistance = includeDistance,
+                includeFloors = includeFloors,
+                includeActiveCalories = includeActiveCalories,
+                includeElevation = includeElevation,
+            )
+        }
+
+    private suspend fun readDailyStepsChunk(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        includeDistance: Boolean,
+        includeFloors: Boolean,
+        includeActiveCalories: Boolean,
+        includeElevation: Boolean,
     ): List<DailySteps> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
@@ -65,7 +87,7 @@ internal class ActivityHealthReader(
         return support.withLogging("readDailySteps[$start..$end]", emptyList()) {
             val metrics = buildSet {
                 add(StepsRecord.COUNT_TOTAL)
-                add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
                 if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
                 if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                 if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
@@ -80,7 +102,11 @@ internal class ActivityHealthReader(
                 DailySteps(
                     date = bucket.startTime.atZone(zone).toLocalDate(),
                     steps = bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L,
-                    distanceMeters = bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0,
+                    distanceMeters = if (includeDistance) {
+                        bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+                    } else {
+                        0.0
+                    },
                     floorsClimbed = if (includeFloors) {
                         bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
                     } else {
@@ -550,6 +576,23 @@ internal class ActivityHealthReader(
         private const val MaxActivityElevationMeters = 1_000_000.0
         private const val MaxActivityCaloriesKcal = 1_000_000.0
     }
+}
+
+internal fun dailyStepDateChunks(
+    startDate: LocalDate,
+    endDate: LocalDate,
+    maxDays: Long = DailyStepsMaxQueryDays,
+): List<Pair<LocalDate, LocalDate>> {
+    if (endDate.isBefore(startDate) || maxDays <= 0L) return emptyList()
+
+    val chunks = mutableListOf<Pair<LocalDate, LocalDate>>()
+    var chunkStart = startDate
+    while (!chunkStart.isAfter(endDate)) {
+        val chunkEnd = minOf(chunkStart.plusDays(maxDays - 1), endDate)
+        chunks += chunkStart to chunkEnd
+        chunkStart = chunkEnd.plusDays(1)
+    }
+    return chunks
 }
 
 internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {

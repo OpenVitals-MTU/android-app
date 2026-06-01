@@ -909,7 +909,7 @@
     <string name="achievements_earned_times">%1$d-mal</string>
     <string name="achievements_locked">Gesperrt</string>
     <string name="achievements_no_data_title">Keine Aktivitätshistorie</string>
-    <string name="achievements_no_data_body">Erteile in den Einstellungen Zugriff auf Schritte und Distanz, um den Abzeichenkatalog zu füllen.</string>
+    <string name="achievements_no_data_body">Health Connect hat keine Schritt- oder Distanzdaten zurückgegeben. Prüfe, ob Aktivitätsdaten vorhanden sind und ob für ältere Einträge Verlaufszugriff gewährt ist.</string>
     <string name="achievements_no_floor_data_title">Keine Etagen-Daten</string>
     <string name="achievements_no_floor_data_body">Etagenabzeichen werden freigeschaltet, wenn Health Connect Daten zu gestiegenen Etagen hat.</string>
     <string name="achievements_error_title">Auszeichnungen nicht verfügbar</string>

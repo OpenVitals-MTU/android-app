@@ -144,11 +144,19 @@ class HealthConnectManager @Inject constructor(
     suspend fun readDailySteps(
         startDate: LocalDate,
         endDate: LocalDate,
+        includeDistance: Boolean = true,
         includeFloors: Boolean = false,
         includeActiveCalories: Boolean = false,
         includeElevation: Boolean = false,
     ): List<DailySteps> =
-        activityReader.readDailySteps(startDate, endDate, includeFloors, includeActiveCalories, includeElevation)
+        activityReader.readDailySteps(
+            startDate = startDate,
+            endDate = endDate,
+            includeDistance = includeDistance,
+            includeFloors = includeFloors,
+            includeActiveCalories = includeActiveCalories,
+            includeElevation = includeElevation,
+        )
 
     suspend fun readFloorsClimbed(date: LocalDate): Int =
         activityReader.readFloorsClimbed(date)

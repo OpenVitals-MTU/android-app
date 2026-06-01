@@ -38,6 +38,7 @@ class ActivityRepository @Inject constructor(
 
     private val readStepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val readDistancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
+    private val readHealthDataHistoryPermission = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
     private val readExercisePermission = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
@@ -111,18 +112,32 @@ class ActivityRepository @Inject constructor(
         end: LocalDate,
         granted: Set<String>,
     ): List<DailySteps> {
-        val missing = listOf(readStepsPermission, readDistancePermission).filterNot { it in granted }
-        if (missing.isNotEmpty()) {
-            Log.w(TAG, "Skipping loadDailySteps missingCount=${missing.size}")
+        if (readStepsPermission !in granted) {
+            Log.w(TAG, "Skipping loadDailySteps missingCount=1")
             return emptyList()
         }
+        val effectiveStart = activityHistoryStart(start, end, granted)
         return hc.readDailySteps(
-            startDate = start,
+            startDate = effectiveStart,
             endDate = end,
+            includeDistance = readDistancePermission in granted,
             includeFloors = readFloorsPermission in granted,
             includeActiveCalories = readActiveCaloriesPermission in granted,
             includeElevation = readElevationPermission in granted,
         )
+    }
+
+    private fun activityHistoryStart(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): LocalDate {
+        val historyPermissionRequired = readHealthDataHistoryPermission in hc.additionalDataAccessPermissions
+        return if (historyPermissionRequired && readHealthDataHistoryPermission !in granted) {
+            maxOf(start, end.minusDays(29))
+        } else {
+            start
+        }
     }
 
     suspend fun loadActivityProgress(date: LocalDate = LocalDate.now()): List<ActivityProgressPoint> {

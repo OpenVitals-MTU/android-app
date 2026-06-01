@@ -909,7 +909,7 @@
     <string name="achievements_earned_times">%1$d times</string>
     <string name="achievements_locked">Locked</string>
     <string name="achievements_no_data_title">No activity history</string>
-    <string name="achievements_no_data_body">Grant steps and distance access in Settings to fill the badge catalog.</string>
+    <string name="achievements_no_data_body">No step or distance records were returned from Health Connect. Check that activity data exists and that history access is granted for older records.</string>
     <string name="achievements_no_floor_data_title">No floor data</string>
     <string name="achievements_no_floor_data_body">Floor badges unlock when Health Connect has floors climbed data.</string>
     <string name="achievements_error_title">Achievements unavailable</string>

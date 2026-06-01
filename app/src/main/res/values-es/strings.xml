@@ -909,7 +909,7 @@
     <string name="achievements_earned_times">%1$d veces</string>
     <string name="achievements_locked">Bloqueada</string>
     <string name="achievements_no_data_title">Sin historial de actividad</string>
-    <string name="achievements_no_data_body">Concede acceso a pasos y distancia en Ajustes para completar el catálogo de insignias.</string>
+    <string name="achievements_no_data_body">Health Connect no devolvió registros de pasos o distancia. Comprueba que existan datos de actividad y que el acceso al historial esté concedido para registros antiguos.</string>
     <string name="achievements_no_floor_data_title">Sin datos de pisos</string>
     <string name="achievements_no_floor_data_body">Las insignias de pisos se desbloquean cuando Health Connect tiene datos de pisos subidos.</string>
     <string name="achievements_error_title">Logros no disponibles</string>

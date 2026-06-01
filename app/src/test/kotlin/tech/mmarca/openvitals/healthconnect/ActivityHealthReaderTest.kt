@@ -3,7 +3,9 @@ package tech.mmarca.openvitals.healthconnect
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.time.Instant
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
@@ -61,5 +63,32 @@ class ActivityHealthReaderTest {
         assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_WALKING, segments.first().segmentType)
         assertEquals(start, segments.first().startTime)
         assertEquals(end, segments.first().endTime)
+    }
+
+    @Test
+    fun `dailyStepDateChunks splits long ranges into inclusive chunks`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 1, 10)
+
+        val chunks = dailyStepDateChunks(start, end, maxDays = 4)
+
+        assertEquals(
+            listOf(
+                LocalDate.of(2026, 1, 1) to LocalDate.of(2026, 1, 4),
+                LocalDate.of(2026, 1, 5) to LocalDate.of(2026, 1, 8),
+                LocalDate.of(2026, 1, 9) to LocalDate.of(2026, 1, 10),
+            ),
+            chunks,
+        )
+    }
+
+    @Test
+    fun `dailyStepDateChunks returns empty list for invalid ranges`() {
+        assertTrue(
+            dailyStepDateChunks(
+                startDate = LocalDate.of(2026, 1, 10),
+                endDate = LocalDate.of(2026, 1, 1),
+            ).isEmpty()
+        )
     }
 }
