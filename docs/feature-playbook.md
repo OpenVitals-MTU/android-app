@@ -10,7 +10,7 @@ Follow this checklist when adding or extending a metric screen.
 
 ## 2. Use Shared Period State
 
-- Use `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, and `PeriodSelectionDriver` from `core/period`.
+- Use `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, and `PeriodSelectionDriver` from `:openvitals-core-period`.
 - Support `Day / Week / Month / Year`.
 - Clamp future navigation to the current period.
 - Add a `PeriodRangePreferenceKey` when the screen needs a remembered range.

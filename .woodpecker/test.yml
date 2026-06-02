@@ -14,5 +14,5 @@ steps:
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - test -f gradle/wrapper/gradle-wrapper.jar
       - chmod +x gradlew
-      - ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - ./gradlew --no-daemon verifyLocalApp
       - git diff --check

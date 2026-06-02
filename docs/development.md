@@ -13,20 +13,20 @@ The wrapper jar is intentionally tracked. `.gitignore` allows this file even tho
 Run the main checks before pushing architecture or feature changes:
 
 ```bash
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew verifyLocalApp
 git diff --check
 ```
 
 On Windows, use `gradlew.bat`:
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+.\gradlew.bat verifyLocalApp
 git diff --check
 ```
 
 ## Hilt And KSP
 
-The app uses Hilt in the existing single `:app` module:
+The local app uses Hilt in the `:app` module:
 
 - `@HiltAndroidApp` on `OpenVitalsApp`
 - `@AndroidEntryPoint` on `MainActivity`
@@ -41,11 +41,21 @@ AGP 9 built-in Kotlin currently requires `android.disallowKotlinSourceSets=false
 Woodpecker uses the Gradle wrapper directly. The test pipeline runs:
 
 ```bash
-./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew --no-daemon verifyLocalApp
 git diff --check
 ```
 
-Release CI also uses the wrapper for test/lint and release artifact builds.
+Release CI also uses the wrapper for local app test/lint and release artifact builds. Shared Maven artifacts are built as dependencies and tested, but publishing them is a separate explicit Gradle action.
+
+## Shared Artifacts
+
+Publish reusable OpenVitals modules to Maven local with:
+
+```bash
+./gradlew publishOpenVitalsArtifactsToMavenLocal -PopenVitalsArtifactVersion=1.1.1-SNAPSHOT
+```
+
+See [`shared-artifacts.md`](shared-artifacts.md) for remote publishing and connected-repo consumption.
 
 Release CI is beta-first. A `v*` tag publishes signed APK and Android App Bundle
 assets to Codeberg as a prerelease, and publishes the signed App Bundle to the
@@ -103,7 +113,7 @@ For a stable release:
 5. Run:
 
 ```bash
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew verifyLocalApp
 git diff --check
 ```
 

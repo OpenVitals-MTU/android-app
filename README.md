@@ -127,20 +127,20 @@ Health Connect platform notes:
 In a complete checkout:
 
 ```bash
-./gradlew assembleDebug
+./gradlew :app:assembleDebug
 ```
 
 To run the same basic checks used by CI:
 
 ```bash
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew verifyLocalApp
 git diff --check
 ```
 
 To install on a connected device or emulator:
 
 ```bash
-./gradlew installDebug
+./gradlew :app:installDebug
 ```
 
 On Windows, Gradle or Android Studio can occasionally keep lint cache jars open under `app/build`. If cleaning fails with a locked `lint-cache` jar, stop Gradle daemons first:
@@ -166,7 +166,8 @@ After launching the app:
 
 OpenVitals is intentionally simple today:
 
-- one Android app module
+- one local Android app module
+- versioned shared Maven artifacts for code reused by separate OpenVitals apps
 - Jetpack Compose UI with Material 3 app shell and theming
 - Navigation Compose
 - `ViewModel` + `StateFlow`
@@ -181,9 +182,10 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 ## Project layout
 
 - [`app/`](app): Android app module
+- [`core/period/`](core/period): publishable period/date-window artifact
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
-- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): shared period, performance, preference, and presentation primitives
+- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local performance, preference, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components
 - [`docs/`](docs): architecture notes, playbooks, and roadmap
 
@@ -193,6 +195,7 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 - [`docs/development.md`](docs/development.md): local build, verification, CI, and Windows cleanup notes
 - [`docs/architecture.md`](docs/architecture.md): current architecture and target direction
 - [`docs/feature-playbook.md`](docs/feature-playbook.md): checklist for adding a new metric feature
+- [`docs/shared-artifacts.md`](docs/shared-artifacts.md): Maven artifact publishing and consumption notes
 - [`docs/metrics-roadmap.md`](docs/metrics-roadmap.md): metric coverage gaps and future feature roadmap
 - [`docs/units-localization-plan.md`](docs/units-localization-plan.md): display-unit and localization architecture notes
 - [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
