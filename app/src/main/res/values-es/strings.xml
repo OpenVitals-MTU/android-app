@@ -131,8 +131,8 @@
     <string name="activity_entry_recording_accuracy">Última precisión %1$s</string>
     <string name="activity_entry_route_summary">%1$s • %2$s • %3$s desnivel • %4$d puntos</string>
     <string name="activity_entry_route_average_metrics">Ritmo medio %1$s • velocidad media %2$s</string>
-    <string name="activity_entry_add">Añadir actividad</string>
-    <string name="activity_entry_invalid_value">Corrige los campos resaltados antes de añadir la actividad.</string>
+    <string name="activity_entry_add">Guardar actividad</string>
+    <string name="activity_entry_invalid_value">Corrige los campos resaltados antes de guardar la actividad.</string>
     <string name="activity_entry_error_activity_type_route">Elige un tipo de actividad compatible con rutas GPS.</string>
     <string name="activity_entry_error_start_date">Elige una fecha de inicio válida.</string>
     <string name="activity_entry_error_start_time">Elige una hora de inicio válida.</string>
