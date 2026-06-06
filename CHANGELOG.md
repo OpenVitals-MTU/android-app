@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.2.0 - 2026-06-06
+
+### English
+
+- Add System, Light, Dark, and AMOLED theme options, with AMOLED keeping Material You accent colors and pure black backgrounds.
+- Add swipe-to-delete for OpenVitals-owned hydration, activity, mindfulness, body measurement, and vitals entries while keeping records from other apps read-only.
+- Let users edit the default hydration container size so quick hydration logging can match their real bottle or glass.
+- Add configurable mindfulness reminders alongside the existing hydration reminder support.
+- Improve GPS activity recording by using the already locked GPS fix, keeping finished recordings recoverable after navigating back, and renaming the final action to Save activity.
+- Compact the dashboard sleep widget and improve its contrast.
+
+### Español
+
+- Añade opciones de tema Sistema, Claro, Oscuro y AMOLED, con AMOLED manteniendo los colores Material You y fondos negro puro.
+- Añade deslizar para borrar entradas de hidratación, actividad, mindfulness, medidas corporales y signos vitales creadas por OpenVitals, manteniendo solo lectura los registros de otras apps.
+- Permite editar el tamaño predeterminado del recipiente de hidratación para que el registro rápido coincida con la botella o vaso real.
+- Añade recordatorios configurables de mindfulness junto al soporte existente de recordatorios de hidratación.
+- Mejora la grabación GPS usando la ubicación ya fijada, conservando grabaciones terminadas al volver atrás y renombrando la acción final a Guardar actividad.
+- Compacta el widget de sueño del panel y mejora su contraste.
+
+### Deutsch
+
+- Fügt die Designoptionen System, Hell, Dunkel und AMOLED hinzu, wobei AMOLED Material-You-Akzentfarben und rein schwarze Hintergründe beibehält.
+- Fügt Wischen zum Löschen von OpenVitals-eigenen Einträgen für Flüssigkeit, Aktivität, Achtsamkeit, Körpermessungen und Vitalwerte hinzu; Einträge anderer Apps bleiben schreibgeschützt.
+- Ermöglicht das Bearbeiten der Standardgröße des Trinkgefäßes, damit schnelles Flüssigkeitstracking zur echten Flasche oder zum Glas passt.
+- Fügt konfigurierbare Achtsamkeitserinnerungen zusätzlich zu den bestehenden Flüssigkeitserinnerungen hinzu.
+- Verbessert die GPS-Aufzeichnung, indem der bereits fixierte GPS-Punkt verwendet wird, abgeschlossene Aufzeichnungen nach Zurück-Navigation wiederherstellbar bleiben und die Abschlussaktion in Aktivität speichern umbenannt wird.
+- Komprimiert das Schlaf-Widget im Dashboard und verbessert dessen Kontrast.
+
 ## 1.1.1 - 2026-06-01
 
 ### English

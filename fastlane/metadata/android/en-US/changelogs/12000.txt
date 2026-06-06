@@ -1,0 +1,1 @@
+Adds app theme choices (System, Light, Dark, AMOLED), swipe-to-delete for OpenVitals-owned entries, configurable hydration container size, mindfulness reminders, and safer GPS recording that keeps finished drafts recoverable and starts from the locked GPS fix. Also tightens the compact sleep widget and activity save wording.

@@ -12,7 +12,7 @@ Code that should be reused by a separate connected app is extracted into Gradle 
 | --- | --- | --- |
 | `:openvitals-core-period` | `tech.mmarca.openvitals:openvitals-core-period:<version>` | Shared period range, date window, and period navigation primitives. |
 
-Artifact versions default to `1.1.1-SNAPSHOT`.
+Artifact versions default to `1.2.0-SNAPSHOT`.
 
 Override the version with either:
 

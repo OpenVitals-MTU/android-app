@@ -1,0 +1,1 @@
+Añade temas de app (Sistema, Claro, Oscuro, AMOLED), deslizar para borrar entradas propias de OpenVitals, tamaño de recipiente de hidratación configurable, recordatorios de mindfulness y grabación GPS más segura con borradores recuperables y uso del GPS ya fijado. También mejora el widget compacto de sueño y el texto de guardar actividad.

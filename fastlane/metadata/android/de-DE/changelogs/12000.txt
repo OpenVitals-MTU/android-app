@@ -1,0 +1,1 @@
+Fügt App-Designs (System, Hell, Dunkel, AMOLED), Wischen zum Löschen eigener OpenVitals-Einträge, konfigurierbare Trinkgefäßgröße, Achtsamkeitserinnerungen und robustere GPS-Aufzeichnung mit wiederherstellbaren Entwürfen und bereits fixiertem GPS-Punkt hinzu. Außerdem wird das kompakte Schlaf-Widget und der Text zum Speichern von Aktivitäten verbessert.
