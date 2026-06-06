@@ -1,13 +1,16 @@
 package tech.mmarca.openvitals
 
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.preferences.AppThemeMode
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -44,7 +48,25 @@ class MainActivity : AppCompatActivity() {
         updateRouteImportRequest(intent)
 
         setContent {
-            OpenVitalsTheme {
+            val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
+            val appDarkTheme = appThemeMode.isDarkTheme(isSystemInDarkTheme())
+
+            LaunchedEffect(appDarkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        lightScrim = Color.TRANSPARENT,
+                        darkScrim = Color.TRANSPARENT,
+                        detectDarkMode = { appDarkTheme },
+                    ),
+                    navigationBarStyle = SystemBarStyle.auto(
+                        lightScrim = Color.TRANSPARENT,
+                        darkScrim = Color.TRANSPARENT,
+                        detectDarkMode = { appDarkTheme },
+                    ),
+                )
+            }
+
+            OpenVitalsTheme(themeMode = appThemeMode) {
                 var startDestination by remember {
                     mutableStateOf(
                         if (
@@ -142,3 +164,11 @@ private val RouteImportMimeTypes = setOf(
 )
 
 private val RouteImportExtensions = setOf("gpx", "kml", "kmz")
+
+private fun AppThemeMode.isDarkTheme(systemInDarkTheme: Boolean): Boolean =
+    when (this) {
+        AppThemeMode.SYSTEM -> systemInDarkTheme
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK,
+        AppThemeMode.AMOLED -> true
+    }

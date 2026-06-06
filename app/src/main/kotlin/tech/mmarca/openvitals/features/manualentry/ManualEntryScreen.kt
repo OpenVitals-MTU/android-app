@@ -77,6 +77,7 @@ import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import tech.mmarca.openvitals.ui.theme.accentSurfaceContainerColor
 
 private const val ManualEntryGridColumns = 3
 private const val ManualEntryDragLongPressMillis = 500L
@@ -738,7 +739,7 @@ private fun ManualEntryMetricTile(
                 }
             ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = accentSurfaceContainerColor(accentColor, amoledAlpha = 0.09f),
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {

@@ -136,6 +136,7 @@ import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import tech.mmarca.openvitals.ui.theme.accentSurfaceContainerColor
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -1764,11 +1765,20 @@ private fun DashboardPillWidget(
     onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(28.dp)
-    val containerColor = if (progress != null) {
-        accentColor.copy(alpha = 0.24f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer
-    }
+    val containerColor = accentSurfaceContainerColor(
+        accentColor = accentColor,
+        amoledAlpha = if (progress != null) 0.12f else 0.09f,
+        fallback = if (progress != null) {
+            accentColor.copy(alpha = 0.24f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+    )
+    val iconContainerColor = accentSurfaceContainerColor(
+        accentColor = accentColor,
+        amoledAlpha = 0.18f,
+        fallback = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+    )
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -1800,7 +1810,7 @@ private fun DashboardPillWidget(
                     modifier = Modifier
                         .size(44.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                            color = iconContainerColor,
                             shape = CircleShape,
                         ),
                     contentAlignment = Alignment.Center,
@@ -1869,13 +1879,12 @@ private fun DashboardCircleWidget(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
+    val containerColor = accentSurfaceContainerColor(accentColor, amoledAlpha = 0.09f)
     Card(
         modifier = modifier
             .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
         shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Box(
@@ -1884,7 +1893,11 @@ private fun DashboardCircleWidget(
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            val trackColor = accentSurfaceContainerColor(
+                accentColor = accentColor,
+                amoledAlpha = 0.24f,
+                fallback = MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val strokeWidth = 16.dp.toPx()
                 val diameter = size.minDimension - strokeWidth
@@ -1997,7 +2010,7 @@ private fun WorkoutCard(
             .fillMaxWidth()
             .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = accentSurfaceContainerColor(WorkoutColor, amoledAlpha = 0.09f),
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {

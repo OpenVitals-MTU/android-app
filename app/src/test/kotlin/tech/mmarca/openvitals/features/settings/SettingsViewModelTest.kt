@@ -20,6 +20,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.core.preferences.AppThemeMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
@@ -112,6 +113,19 @@ class SettingsViewModelTest {
         assertEquals(AppLanguage.SPANISH, vm.uiState.value.appLanguage)
     }
 
+    @Test fun `selectAppThemeMode persists preference and updates ui state`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.selectAppThemeMode(AppThemeMode.AMOLED)
+
+        verify { prefs.appThemeMode = AppThemeMode.AMOLED }
+        assertEquals(AppThemeMode.AMOLED, vm.uiState.value.appThemeMode)
+    }
+
     @Test fun `selectSleepRangeMode persists preference and updates ui state`() = runTest {
         val prefs = prefs(trackCycle = false)
         val vm = SettingsViewModel(
@@ -178,10 +192,12 @@ class SettingsViewModelTest {
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.unitSystem } returns UnitSystem.METRIC
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
+            every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
             every { prefs.trackCycle } returns trackCycle
             every { prefs.appLanguage = any() } just runs
+            every { prefs.appThemeMode = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
             every { prefs.activityWeekMode = any() } just runs
             every { prefs.trackCycle = any() } just runs

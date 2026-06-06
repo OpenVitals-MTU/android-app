@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.core.preferences.AppThemeMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
@@ -30,6 +31,7 @@ data class SettingsUiState(
     val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
+    val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
 ) {
@@ -92,6 +94,7 @@ class SettingsViewModel @Inject constructor(
                 trackCycle = preferencesRepository.trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
+                appThemeMode = preferencesRepository.appThemeMode,
                 sleepRangeMode = preferencesRepository.sleepRangeMode,
                 activityWeekMode = preferencesRepository.activityWeekMode,
             )
@@ -111,6 +114,11 @@ class SettingsViewModel @Inject constructor(
     fun selectAppLanguage(appLanguage: AppLanguage) {
         preferencesRepository.appLanguage = appLanguage
         _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
+    }
+
+    fun selectAppThemeMode(appThemeMode: AppThemeMode) {
+        preferencesRepository.appThemeMode = appThemeMode
+        _uiState.value = _uiState.value.copy(appThemeMode = appThemeMode)
     }
 
     fun selectSleepRangeMode(sleepRangeMode: SleepRangeMode) {

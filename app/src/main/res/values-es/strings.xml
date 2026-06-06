@@ -749,6 +749,12 @@
     <string name="settings_units_body">Elige cómo se muestran distancias, pesos, hidratación y temperatura.</string>
     <string name="settings_unit_metric">Métrico</string>
     <string name="settings_unit_imperial">Imperial</string>
+    <string name="settings_theme_title">Tema</string>
+    <string name="settings_theme_body">Elige el aspecto de la app de forma independiente del modo oscuro de Android.</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_theme_amoled">AMOLED</string>
     <string name="settings_activity_week_title">Semana de actividad</string>
     <string name="settings_activity_week_body">Elige si Actividades usa una semana fija lun-dom o los últimos 7 días móviles.</string>
     <string name="settings_activity_week_monday_to_sunday">Lun-dom</string>

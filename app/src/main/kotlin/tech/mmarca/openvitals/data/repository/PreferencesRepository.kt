@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.core.preferences.AppThemeMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HydrationReminderConfig
@@ -30,10 +31,12 @@ class PreferencesRepository @Inject constructor(
     private val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
     private val _unitSystem = MutableStateFlow(readUnitSystem())
     private val _appLanguage = MutableStateFlow(readAppLanguage())
+    private val _appThemeMode = MutableStateFlow(readAppThemeMode())
     private val _sleepRangeMode = MutableStateFlow(readSleepRangeMode())
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
+    val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
     val sleepRangeModeFlow: StateFlow<SleepRangeMode> = _sleepRangeMode.asStateFlow()
     val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
 
@@ -59,6 +62,13 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
             _appLanguage.value = value
+        }
+
+    var appThemeMode: AppThemeMode
+        get() = _appThemeMode.value
+        set(value) {
+            prefs.edit().putString(KEY_APP_THEME_MODE, value.name).apply()
+            _appThemeMode.value = value
         }
 
     var sleepRangeMode: SleepRangeMode
@@ -268,6 +278,11 @@ class PreferencesRepository @Inject constructor(
             ?.let { value -> runCatching { AppLanguage.valueOf(value) }.getOrNull() }
             ?: AppLanguage.SYSTEM
 
+    private fun readAppThemeMode(): AppThemeMode =
+        prefs.getString(KEY_APP_THEME_MODE, null)
+            ?.let { value -> runCatching { AppThemeMode.valueOf(value) }.getOrNull() }
+            ?: AppThemeMode.SYSTEM
+
     private fun readSleepRangeMode(): SleepRangeMode =
         prefs.getString(KEY_SLEEP_RANGE_MODE, null)
             ?.let { value -> runCatching { SleepRangeMode.valueOf(value) }.getOrNull() }
@@ -303,6 +318,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_UNIT_SYSTEM = "unit_system"
         private const val KEY_TRACK_CYCLE = "track_cycle"
         private const val KEY_APP_LANGUAGE = "app_language"
+        private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"

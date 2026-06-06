@@ -2,17 +2,20 @@ package tech.mmarca.openvitals.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import tech.mmarca.openvitals.core.preferences.AppThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = Blue80,
@@ -88,11 +91,26 @@ private val AppShapes = Shapes(
 
 @Composable
 fun OpenVitalsTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val systemInDarkTheme = isSystemInDarkTheme()
+    val darkTheme = when (themeMode) {
+        AppThemeMode.SYSTEM -> systemInDarkTheme
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK,
+        AppThemeMode.AMOLED -> true
+    }
     val colorScheme = when {
+        themeMode == AppThemeMode.AMOLED -> {
+            val baseColorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                dynamicDarkColorScheme(LocalContext.current)
+            } else {
+                DarkColorScheme
+            }
+            baseColorScheme.toAmoledColorScheme()
+        }
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -107,4 +125,31 @@ fun OpenVitalsTheme(
         shapes = AppShapes,
         content = content,
     )
+}
+
+private fun ColorScheme.toAmoledColorScheme(): ColorScheme =
+    copy(
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceContainerLowest = Color.Black,
+        surfaceContainerLow = Color(0xFF030303),
+        surfaceContainer = Color(0xFF080808),
+        surfaceContainerHigh = Color(0xFF101010),
+        surfaceContainerHighest = Color(0xFF181818),
+        surfaceVariant = Color(0xFF242424),
+        outlineVariant = Color(0xFF3A3A3A),
+    )
+
+@Composable
+fun accentSurfaceContainerColor(
+    accentColor: Color,
+    amoledAlpha: Float = 0.10f,
+    fallback: Color? = null,
+): Color {
+    val colorScheme = MaterialTheme.colorScheme
+    return if (colorScheme.background == Color.Black && colorScheme.surface == Color.Black) {
+        accentColor.copy(alpha = amoledAlpha).compositeOver(Color.Black)
+    } else {
+        fallback ?: colorScheme.surfaceContainer
+    }
 }
