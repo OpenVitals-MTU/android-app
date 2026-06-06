@@ -13,10 +13,13 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,7 @@ data class MindfulnessUiState(
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
     val dailyGoalMinutes: Double = MetricDailyGoalKey.MINDFULNESS_MINUTES.defaultValue,
+    val reminderConfig: MindfulnessReminderConfig = MindfulnessReminderConfig(),
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val sessions: List<MindfulnessSession> = emptyList(),
     val previousSessions: List<MindfulnessSession> = emptyList(),
@@ -45,8 +49,10 @@ class MindfulnessViewModel(
     initialRange: TimeRange = TimeRange.WEEK,
     initialSleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     initialDailyGoalMinutes: Double = MetricDailyGoalKey.MINDFULNESS_MINUTES.defaultValue,
+    initialReminderConfig: MindfulnessReminderConfig = MindfulnessReminderConfig(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
+    private val onReminderConfigChanged: (MindfulnessReminderConfig) -> Unit = {},
 ) : ViewModel() {
 
     @Inject
@@ -54,17 +60,23 @@ class MindfulnessViewModel(
         repository: MindfulnessRepository,
         sleepRepository: SleepRepository,
         preferencesRepository: PreferencesRepository,
+        reminderController: MindfulnessReminderController,
     ) : this(
         repository = repository,
         sleepRepository = sleepRepository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
         initialSleepRangeMode = preferencesRepository.sleepRangeMode,
         initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
+        initialReminderConfig = reminderController.config(),
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.MINDFULNESS, range)
         },
         onDailyGoalChanged = { goal ->
             preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
+            reminderController.applyConfig()
+        },
+        onReminderConfigChanged = { config ->
+            reminderController.updateConfig(config)
         },
     )
 
@@ -75,6 +87,7 @@ class MindfulnessViewModel(
             selectedRange = initialRange,
             sleepRangeMode = initialSleepRangeMode,
             dailyGoalMinutes = goalKey.normalize(initialDailyGoalMinutes),
+            reminderConfig = initialReminderConfig.normalized(),
         )
     )
     val uiState: StateFlow<MindfulnessUiState> = _uiState.asStateFlow()
@@ -118,6 +131,14 @@ class MindfulnessViewModel(
         val goal = goalKey.normalize(minutes)
         onDailyGoalChanged(goal)
         _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
+    }
+
+    fun setMindfulnessRemindersEnabled(enabled: Boolean) {
+        updateReminderConfig { config -> config.copy(enabled = enabled) }
+    }
+
+    fun setMindfulnessReminderTime(time: LocalTime) {
+        updateReminderConfig { config -> config.copy(reminderTime = time) }
     }
 
     fun deleteMindfulnessSessionEntry(entryId: String) {
@@ -198,5 +219,11 @@ class MindfulnessViewModel(
             selectedRange = selection.selectedRange,
             selectedDate = selection.selectedDate,
         )
+    }
+
+    private fun updateReminderConfig(update: (MindfulnessReminderConfig) -> MindfulnessReminderConfig) {
+        val normalized = update(_uiState.value.reminderConfig).normalized()
+        _uiState.value = _uiState.value.copy(reminderConfig = normalized)
+        onReminderConfigChanged(normalized)
     }
 }

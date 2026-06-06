@@ -213,6 +213,17 @@
     <string name="mindfulness_entry_timer_too_short">Meditation must be at least 1 minute to save.</string>
     <string name="mindfulness_entry_write_failed">Could not save mindfulness session: %1$s</string>
     <string name="mindfulness_entry_completed">Timer complete</string>
+    <string name="mindfulness_reminders_title">Mindfulness reminders</string>
+    <string name="mindfulness_reminders_summary_off">Off by default. Enable a once-daily reminder for your mindfulness goal.</string>
+    <string name="mindfulness_reminders_summary_on">Daily at %1$s</string>
+    <string name="mindfulness_reminders_permission_needed">Grant notification permission to enable mindfulness reminders.</string>
+    <string name="mindfulness_reminders_time">Reminder time</string>
+    <string name="mindfulness_reminders_goal_note">Reminders pause after today\'s mindfulness goal is met and resume tomorrow.</string>
+    <string name="mindfulness_reminder_notification_channel">Mindfulness reminders</string>
+    <string name="mindfulness_reminder_notification_channel_desc">Optional reminders to complete your daily mindfulness goal.</string>
+    <string name="mindfulness_reminder_notification_title">Mindfulness reminder</string>
+    <string name="mindfulness_reminder_notification_body">Your goal is %1$s today. Take a mindful pause when you can.</string>
+    <string name="mindfulness_reminder_notification_progress">%1$s / %2$s</string>
     <string name="body_entry_subtitle">%1$s entries are saved directly to Health Connect.</string>
     <string name="body_entry_permission_needed">To add %1$s entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
     <string name="body_entry_value_label">%1$s (%2$s)</string>

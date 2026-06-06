@@ -1,5 +1,10 @@
 package tech.mmarca.openvitals.features.mindfulness
 
+import android.Manifest
+import android.os.Build
+import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,12 +12,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
@@ -21,14 +29,26 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.insights.BaselineValue
 import tech.mmarca.openvitals.core.insights.CrossMetricValue
@@ -46,9 +66,11 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.data.model.MindfulnessSession
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.dailySleepSummary
+import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
@@ -71,6 +93,7 @@ import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.roundToLong
 
@@ -84,6 +107,35 @@ fun MindfulnessScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
+    val context = LocalContext.current
+    var hasNotificationPermission by remember {
+        mutableStateOf(MindfulnessReminderController.hasNotificationPermission(context))
+    }
+    var enableRemindersAfterPermission by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasNotificationPermission = granted || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+        if (hasNotificationPermission && enableRemindersAfterPermission) {
+            viewModel.setMindfulnessRemindersEnabled(true)
+        }
+        enableRemindersAfterPermission = false
+    }
+    val requestNotificationPermission = {
+        enableRemindersAfterPermission = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            hasNotificationPermission = true
+            viewModel.setMindfulnessRemindersEnabled(true)
+            enableRemindersAfterPermission = false
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        hasNotificationPermission = MindfulnessReminderController.hasNotificationPermission(context)
+        viewModel.load()
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -106,6 +158,19 @@ fun MindfulnessScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
+            mindfulnessGoalAndReminderItems(
+                state = state,
+                period = period,
+                values = mindfulnessDailyGoalValues(state.sessions),
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                hasNotificationPermission = hasNotificationPermission,
+                onDecreaseGoal = viewModel::decreaseDailyGoal,
+                onIncreaseGoal = viewModel::increaseDailyGoal,
+                onToggleReminders = viewModel::setMindfulnessRemindersEnabled,
+                onRequestNotificationPermission = requestNotificationPermission,
+                onSelectReminderTime = viewModel::setMindfulnessReminderTime,
+            )
         }
 
         if (state.sessions.isNotEmpty()) {
@@ -153,13 +218,18 @@ fun MindfulnessScreen(
                 sessions = state.sessions,
                 period = period,
             )
-            mindfulnessGoal(
+            mindfulnessGoalAndReminderItems(
                 state = state,
                 period = period,
                 values = mindfulnessDailyGoalValues(state.sessions),
                 unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                hasNotificationPermission = hasNotificationPermission,
                 onDecreaseGoal = viewModel::decreaseDailyGoal,
                 onIncreaseGoal = viewModel::increaseDailyGoal,
+                onToggleReminders = viewModel::setMindfulnessRemindersEnabled,
+                onRequestNotificationPermission = requestNotificationPermission,
+                onSelectReminderTime = viewModel::setMindfulnessReminderTime,
             )
             mindfulnessStatistics(
                 sessions = state.sessions,
@@ -254,13 +324,18 @@ private fun MindfulnessHistoryChart(
     )
 }
 
-private fun LazyListScope.mindfulnessGoal(
+private fun LazyListScope.mindfulnessGoalAndReminderItems(
     state: MindfulnessUiState,
     period: DatePeriod,
     values: List<DailyGoalValue>,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    hasNotificationPermission: Boolean,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
+    onToggleReminders: (Boolean) -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onSelectReminderTime: (LocalTime) -> Unit,
 ) {
     val goalKey = MetricDailyGoalKey.MINDFULNESS_MINUTES
     val progress = dailyGoalProgress(
@@ -280,6 +355,17 @@ private fun LazyListScope.mindfulnessGoal(
             modifier = metricModifier(),
         )
     }
+    item {
+        MindfulnessReminderCard(
+            config = state.reminderConfig,
+            hasNotificationPermission = hasNotificationPermission,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onToggleReminders = onToggleReminders,
+            onRequestNotificationPermission = onRequestNotificationPermission,
+            onSelectReminderTime = onSelectReminderTime,
+            modifier = metricModifier(),
+        )
+    }
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
         DailyGoalStatistics(
@@ -289,6 +375,187 @@ private fun LazyListScope.mindfulnessGoal(
             icon = Icons.Outlined.SelfImprovement,
             accentColor = MindfulnessColor,
             modifier = metricModifier(),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MindfulnessReminderCard(
+    config: MindfulnessReminderConfig,
+    hasNotificationPermission: Boolean,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onToggleReminders: (Boolean) -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onSelectReminderTime: (LocalTime) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val normalized = config.normalized()
+    var editingTime by remember { mutableStateOf(false) }
+    val reminderTime = dateTimeFormatterProvider.shortTime().format(normalized.reminderTime)
+    val body = when {
+        normalized.enabled && !hasNotificationPermission -> {
+            stringResource(R.string.mindfulness_reminders_permission_needed)
+        }
+        normalized.enabled -> {
+            stringResource(R.string.mindfulness_reminders_summary_on, reminderTime)
+        }
+        else -> stringResource(R.string.mindfulness_reminders_summary_off)
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = null,
+                    tint = MindfulnessColor,
+                    modifier = Modifier.size(22.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.mindfulness_reminders_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = normalized.enabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasNotificationPermission) {
+                            onRequestNotificationPermission()
+                        } else {
+                            onToggleReminders(enabled)
+                        }
+                    },
+                )
+            }
+
+            if (normalized.enabled && !hasNotificationPermission) {
+                OutlinedButton(onClick = onRequestNotificationPermission) {
+                    Text(stringResource(R.string.action_grant_permission))
+                }
+            }
+
+            if (normalized.enabled) {
+                MindfulnessReminderTimeRow(
+                    label = stringResource(R.string.mindfulness_reminders_time),
+                    value = reminderTime,
+                    onClick = { editingTime = true },
+                )
+                Text(
+                    text = stringResource(R.string.mindfulness_reminders_goal_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    if (editingTime) {
+        MindfulnessReminderTimePickerDialog(
+            title = stringResource(R.string.mindfulness_reminders_time),
+            selectedTime = normalized.reminderTime,
+            onDismiss = { editingTime = false },
+            onConfirm = { time ->
+                editingTime = false
+                onSelectReminderTime(time)
+            },
+        )
+    }
+}
+
+@Composable
+private fun MindfulnessReminderTimeRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .weight(1f),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        TextButton(onClick = onClick) {
+            Text(stringResource(R.string.action_select))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MindfulnessReminderTimePickerDialog(
+    title: String,
+    selectedTime: LocalTime,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalTime) -> Unit,
+) {
+    val context = LocalContext.current
+    val timePickerState = rememberTimePickerState(
+        initialHour = selectedTime.hour,
+        initialMinute = selectedTime.minute,
+        is24Hour = DateFormat.is24HourFormat(context),
+    )
+
+    TimePickerDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute))
+                },
+            ) {
+                Text(stringResource(R.string.action_select))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    ) {
+        TimePicker(
+            state = timePickerState,
+            modifier = Modifier.padding(horizontal = 24.dp),
         )
     }
 }

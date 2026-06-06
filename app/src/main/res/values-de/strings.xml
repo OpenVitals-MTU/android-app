@@ -213,6 +213,17 @@
     <string name="mindfulness_entry_timer_too_short">Die Meditation muss mindestens 1 Minute dauern, um gespeichert zu werden.</string>
     <string name="mindfulness_entry_write_failed">Achtsamkeitssitzung konnte nicht gespeichert werden: %1$s</string>
     <string name="mindfulness_entry_completed">Timer abgeschlossen</string>
+    <string name="mindfulness_reminders_title">Achtsamkeitserinnerungen</string>
+    <string name="mindfulness_reminders_summary_off">Standardmäßig aus. Aktiviere eine tägliche Erinnerung für dein Achtsamkeitsziel.</string>
+    <string name="mindfulness_reminders_summary_on">Täglich um %1$s</string>
+    <string name="mindfulness_reminders_permission_needed">Erteile die Benachrichtigungsberechtigung, um Achtsamkeitserinnerungen zu aktivieren.</string>
+    <string name="mindfulness_reminders_time">Erinnerungszeit</string>
+    <string name="mindfulness_reminders_goal_note">Erinnerungen pausieren, sobald das heutige Achtsamkeitsziel erreicht ist, und werden morgen fortgesetzt.</string>
+    <string name="mindfulness_reminder_notification_channel">Achtsamkeitserinnerungen</string>
+    <string name="mindfulness_reminder_notification_channel_desc">Optionale Erinnerungen, dein tägliches Achtsamkeitsziel zu erreichen.</string>
+    <string name="mindfulness_reminder_notification_title">Achtsamkeitserinnerung</string>
+    <string name="mindfulness_reminder_notification_body">Dein Ziel heute ist %1$s. Nimm dir eine achtsame Pause, wenn du kannst.</string>
+    <string name="mindfulness_reminder_notification_progress">%1$s / %2$s</string>
     <string name="body_entry_subtitle">%1$s-Einträge werden direkt in Health Connect gespeichert.</string>
     <string name="body_entry_permission_needed">Zum Hinzufügen von %1$s-Einträgen benötigt OpenVitals die Health-Connect-Schreibberechtigung. Die App speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="body_entry_value_label">%1$s (%2$s)</string>

@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.mindfulness
 
 import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.MindfulnessPeriodData
@@ -11,6 +12,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -47,6 +49,37 @@ class MindfulnessViewModelTest {
     @Test fun `initial range is WEEK`() = runTest {
         val vm = MindfulnessViewModel(emptyRepo())
         assertEquals(TimeRange.WEEK, vm.uiState.value.selectedRange)
+    }
+
+    @Test fun `initial reminder config uses default disabled daily reminder`() = runTest {
+        val vm = MindfulnessViewModel(emptyRepo())
+
+        assertFalse(vm.uiState.value.reminderConfig.enabled)
+        assertEquals(LocalTime.of(18, 0), vm.uiState.value.reminderConfig.reminderTime)
+    }
+
+    @Test fun `mindfulness reminder config updates and persists`() = runTest {
+        val changes = mutableListOf<MindfulnessReminderConfig>()
+        val vm = MindfulnessViewModel(
+            repository = emptyRepo(),
+            initialReminderConfig = MindfulnessReminderConfig(reminderTime = LocalTime.of(17, 0)),
+            onReminderConfigChanged = changes::add,
+        )
+
+        vm.setMindfulnessRemindersEnabled(true)
+        vm.setMindfulnessReminderTime(LocalTime.of(18, 30))
+
+        assertEquals(
+            MindfulnessReminderConfig(enabled = true, reminderTime = LocalTime.of(18, 30)),
+            vm.uiState.value.reminderConfig,
+        )
+        assertEquals(
+            listOf(
+                MindfulnessReminderConfig(enabled = true, reminderTime = LocalTime.of(17, 0)),
+                MindfulnessReminderConfig(enabled = true, reminderTime = LocalTime.of(18, 30)),
+            ),
+            changes,
+        )
     }
 
     @Test fun `initial load clears loading and sets empty list`() = runTest {

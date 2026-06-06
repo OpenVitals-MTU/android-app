@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HydrationReminderConfig
 import tech.mmarca.openvitals.data.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.data.model.MindfulnessBellSound
+import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.data.model.MindfulnessTimerConfig
 import java.time.LocalTime
 import java.util.Locale
@@ -161,9 +162,9 @@ class PreferencesRepository @Inject constructor(
                 HydrationReminderConfig.DefaultIntervalMinutes,
             ),
             activeStartTime = prefs.getString(KEY_HYDRATION_REMINDER_ACTIVE_START_TIME, null)
-                .toHydrationReminderTimeOrDefault(HydrationReminderConfig.DefaultActiveStartTime),
+                .toReminderTimeOrDefault(HydrationReminderConfig.DefaultActiveStartTime),
             activeEndTime = prefs.getString(KEY_HYDRATION_REMINDER_ACTIVE_END_TIME, null)
-                .toHydrationReminderTimeOrDefault(HydrationReminderConfig.DefaultActiveEndTime),
+                .toReminderTimeOrDefault(HydrationReminderConfig.DefaultActiveEndTime),
         ).normalized()
 
     fun setHydrationReminderConfig(config: HydrationReminderConfig) {
@@ -173,6 +174,21 @@ class PreferencesRepository @Inject constructor(
             .putInt(KEY_HYDRATION_REMINDER_INTERVAL_MINUTES, normalized.intervalMinutes)
             .putString(KEY_HYDRATION_REMINDER_ACTIVE_START_TIME, normalized.activeStartTime.toString())
             .putString(KEY_HYDRATION_REMINDER_ACTIVE_END_TIME, normalized.activeEndTime.toString())
+            .apply()
+    }
+
+    fun mindfulnessReminderConfig(): MindfulnessReminderConfig =
+        MindfulnessReminderConfig(
+            enabled = prefs.getBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, false),
+            reminderTime = prefs.getString(KEY_MINDFULNESS_REMINDER_TIME, null)
+                .toReminderTimeOrDefault(MindfulnessReminderConfig.DefaultReminderTime),
+        ).normalized()
+
+    fun setMindfulnessReminderConfig(config: MindfulnessReminderConfig) {
+        val normalized = config.normalized()
+        prefs.edit()
+            .putBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, normalized.enabled)
+            .putString(KEY_MINDFULNESS_REMINDER_TIME, normalized.reminderTime.toString())
             .apply()
     }
 
@@ -277,7 +293,7 @@ class PreferencesRepository @Inject constructor(
     private fun String.toMindfulnessBackgroundSound(): MindfulnessBackgroundSound? =
         runCatching { MindfulnessBackgroundSound.valueOf(this) }.getOrNull()
 
-    private fun String?.toHydrationReminderTimeOrDefault(default: LocalTime): LocalTime =
+    private fun String?.toReminderTimeOrDefault(default: LocalTime): LocalTime =
         this?.let { value -> runCatching { LocalTime.parse(value) }.getOrNull() } ?: default
 
     companion object {
@@ -303,6 +319,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES = "mindfulness_timer_interval_minutes"
         private const val KEY_MINDFULNESS_TIMER_BELL_SOUND = "mindfulness_timer_bell_sound"
         private const val KEY_MINDFULNESS_TIMER_BACKGROUND_SOUND = "mindfulness_timer_background_sound"
+        private const val KEY_MINDFULNESS_REMINDERS_ENABLED = "mindfulness_reminders_enabled"
+        private const val KEY_MINDFULNESS_REMINDER_TIME = "mindfulness_reminder_time"
         private const val KEY_VALUE_SEPARATOR = ","
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
