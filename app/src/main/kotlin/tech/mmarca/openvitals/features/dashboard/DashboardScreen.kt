@@ -1210,6 +1210,7 @@ private fun dashboardWidgetSpecs(
             noDataMessage = stringResource(R.string.message_no_sleep_day),
             subtitle = sleepScoreSubtitle,
             subtitleColor = MaterialTheme.colorScheme.onSurface,
+            showTitle = false,
             progress = data.sleep?.let {
                 dashboardGoalProgress(
                     current = it.durationMs.toDouble(),
@@ -1575,6 +1576,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
     noDataMessage: String? = null,
     subtitle: String? = null,
     subtitleColor: Color = accentColor,
+    showTitle: Boolean = true,
     progress: DashboardWidgetProgress? = null,
     loadingMessage: String? = null,
     onClick: (() -> Unit)?,
@@ -1588,6 +1590,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
                     icon = icon,
                     accentColor = accentColor,
                     message = loadingMessage,
+                    showTitle = showTitle,
                     modifier = modifier,
                     onClick = onClick,
                 )
@@ -1600,6 +1603,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
                     progress = progress,
                     subtitle = subtitle,
                     subtitleColor = subtitleColor,
+                    showTitle = showTitle,
                     modifier = modifier,
                     onClick = onClick,
                 )
@@ -1610,6 +1614,7 @@ private fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
                     icon = icon,
                     accentColor = accentColor,
                     message = noDataMessage ?: stringResource(R.string.no_data),
+                    showTitle = showTitle,
                     modifier = modifier,
                     onClick = onClick,
                 )
@@ -1755,6 +1760,7 @@ private fun DashboardPillWidget(
     message: String? = null,
     subtitle: String? = null,
     subtitleColor: Color = accentColor,
+    showTitle: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(28.dp)
@@ -1811,17 +1817,19 @@ private fun DashboardPillWidget(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (showTitle) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Text(
                         text = message ?: dashboardDisplayValue(value),
-                        style = if (subtitle == null) {
+                        style = if (subtitle == null || !showTitle) {
                             MaterialTheme.typography.titleLarge
                         } else {
                             MaterialTheme.typography.titleMedium
