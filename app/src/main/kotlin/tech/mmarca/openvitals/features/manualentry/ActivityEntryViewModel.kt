@@ -607,6 +607,7 @@ class ActivityEntryViewModel(
                 }
                 if (editRecordId == null) {
                     _uiState.value = clearedAfterSaveState(clock, repository, preferredActivityType())
+                        .copy(saveCompleted = true)
                     refreshPermission()
                 } else {
                     _uiState.value = _uiState.value.copy(

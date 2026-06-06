@@ -233,6 +233,7 @@ class ActivityEntryViewModelTest {
             })
         }
         assertFalse(vm.uiState.value.isSavingEntry)
+        assertTrue(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `activity entry defaults to latest recorded activity when no favorite is set`() = runTest {

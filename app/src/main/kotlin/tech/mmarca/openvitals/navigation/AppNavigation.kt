@@ -503,6 +503,13 @@ fun AppNavigation(
                     pendingRouteImportUri = routeImportRequest?.uri,
                     pendingRouteImportRequestId = routeImportRequest?.id,
                     onPendingRouteImportHandled = onRouteImportRequestHandled,
+                    onEntrySaved = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Dashboard.route)
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                 )
             }
 
