@@ -759,6 +759,9 @@
     <string name="settings_activity_week_body">Elige si Actividades usa una semana fija lun-dom o los últimos 7 días móviles.</string>
     <string name="settings_activity_week_monday_to_sunday">Lun-dom</string>
     <string name="settings_activity_week_last_7_days">Últimos 7 días</string>
+    <string name="settings_favorite_activity_title">Actividad favorita</string>
+    <string name="settings_favorite_activity_body">Usa por defecto la última actividad grabada o elige un tipo de actividad para preseleccionarlo siempre.</string>
+    <string name="settings_favorite_activity_latest">Usar última</string>
     <string name="settings_sleep_range_title">Rango de sueño</string>
     <string name="settings_sleep_range_body">Elige a qué día se asignan las sesiones de sueño.</string>
     <string name="settings_sleep_range_rolling_24h">24 h móviles</string>

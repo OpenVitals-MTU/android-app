@@ -759,6 +759,9 @@
     <string name="settings_activity_week_body">Choose whether Activities uses a fixed Mon-Sun week or the latest rolling 7 days.</string>
     <string name="settings_activity_week_monday_to_sunday">Mon-Sun</string>
     <string name="settings_activity_week_last_7_days">Last 7 days</string>
+    <string name="settings_favorite_activity_title">Favorite activity</string>
+    <string name="settings_favorite_activity_body">Use the latest recorded activity by default, or choose one activity type to always preselect.</string>
+    <string name="settings_favorite_activity_latest">Use latest</string>
     <string name="settings_sleep_range_title">Sleep range</string>
     <string name="settings_sleep_range_body">Choose which day sleep sessions are assigned to.</string>
     <string name="settings_sleep_range_rolling_24h">Rolling 24h</string>

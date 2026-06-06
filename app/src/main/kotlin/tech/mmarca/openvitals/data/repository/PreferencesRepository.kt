@@ -85,6 +85,32 @@ class PreferencesRepository @Inject constructor(
             _activityWeekMode.value = value
         }
 
+    var lastActivityExerciseType: Int?
+        get() = prefs.getInt(KEY_LAST_ACTIVITY_EXERCISE_TYPE, MISSING_EXERCISE_TYPE)
+            .takeIf { it != MISSING_EXERCISE_TYPE }
+        set(value) {
+            prefs.edit().apply {
+                if (value == null) {
+                    remove(KEY_LAST_ACTIVITY_EXERCISE_TYPE)
+                } else {
+                    putInt(KEY_LAST_ACTIVITY_EXERCISE_TYPE, value)
+                }
+            }.apply()
+        }
+
+    var favoriteActivityExerciseType: Int?
+        get() = prefs.getInt(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE, MISSING_EXERCISE_TYPE)
+            .takeIf { it != MISSING_EXERCISE_TYPE }
+        set(value) {
+            prefs.edit().apply {
+                if (value == null) {
+                    remove(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE)
+                } else {
+                    putInt(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE, value)
+                }
+            }.apply()
+        }
+
     var hydrationDailyGoalLiters: Double
         get() = prefs.getFloat(
             KEY_HYDRATION_DAILY_GOAL_LITERS,
@@ -321,6 +347,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
+        private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
+        private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
@@ -353,6 +381,7 @@ class PreferencesRepository @Inject constructor(
         private const val DEFAULT_MINDFULNESS_TIMER_DURATION_MINUTES = 10
         private const val MIN_MINDFULNESS_TIMER_MINUTES = 1
         private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60
+        private const val MISSING_EXERCISE_TYPE = Int.MIN_VALUE
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

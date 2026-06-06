@@ -17,13 +17,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -53,6 +57,7 @@ import tech.mmarca.openvitals.core.preferences.AppThemeMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.features.manualentry.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
@@ -170,6 +175,18 @@ fun SettingsScreen(
             ActivityWeekModeCard(
                 selected = state.activityWeekMode,
                 onSelect = viewModel::selectActivityWeekMode,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+
+        item {
+            FavoriteActivityCard(
+                selectedExerciseType = state.favoriteActivityExerciseType,
+                onSelect = viewModel::selectFavoriteActivity,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -472,6 +489,81 @@ private fun ActivityWeekModeCard(
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteActivityCard(
+    selectedExerciseType: Int?,
+    onSelect: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = stringResource(R.string.settings_favorite_activity_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.settings_favorite_activity_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            FavoriteActivityDropdown(
+                selectedExerciseType = selectedExerciseType,
+                onSelect = onSelect,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FavoriteActivityDropdown(
+    selectedExerciseType: Int?,
+    onSelect: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val activityTypes = DefaultActivityEntryTypes.filter { it.supportsGpsRoute }
+    val selectedLabel = activityTypes
+        .firstOrNull { it.exerciseType == selectedExerciseType }
+        ?.let { stringResource(it.labelRes) }
+        ?: stringResource(R.string.settings_favorite_activity_latest)
+
+    Box(modifier = modifier) {
+        OutlinedButton(onClick = { expanded = true }) {
+            Text(selectedLabel)
+            Spacer(Modifier.widthIn(min = 4.dp))
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null,
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.settings_favorite_activity_latest)) },
+                onClick = {
+                    expanded = false
+                    onSelect(null)
+                },
+            )
+            activityTypes.forEach { activityType ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(activityType.labelRes)) },
+                    onClick = {
+                        expanded = false
+                        onSelect(activityType.exerciseType)
+                    },
+                )
             }
         }
     }

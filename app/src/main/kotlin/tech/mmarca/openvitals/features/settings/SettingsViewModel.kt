@@ -34,6 +34,7 @@ data class SettingsUiState(
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
+    val favoriteActivityExerciseType: Int? = null,
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet() +
@@ -97,6 +98,7 @@ class SettingsViewModel @Inject constructor(
                 appThemeMode = preferencesRepository.appThemeMode,
                 sleepRangeMode = preferencesRepository.sleepRangeMode,
                 activityWeekMode = preferencesRepository.activityWeekMode,
+                favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
             )
         }
     }
@@ -129,6 +131,11 @@ class SettingsViewModel @Inject constructor(
     fun selectActivityWeekMode(activityWeekMode: ActivityWeekMode) {
         preferencesRepository.activityWeekMode = activityWeekMode
         _uiState.value = _uiState.value.copy(activityWeekMode = activityWeekMode)
+    }
+
+    fun selectFavoriteActivity(exerciseType: Int?) {
+        preferencesRepository.favoriteActivityExerciseType = exerciseType
+        _uiState.value = _uiState.value.copy(favoriteActivityExerciseType = exerciseType)
     }
 
     fun onPermissionsResult(granted: Set<String>) {

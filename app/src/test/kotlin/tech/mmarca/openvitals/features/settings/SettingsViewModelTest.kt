@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.settings
 
 import android.util.Log
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -152,6 +153,19 @@ class SettingsViewModelTest {
         assertEquals(ActivityWeekMode.LAST_7_DAYS, vm.uiState.value.activityWeekMode)
     }
 
+    @Test fun `selectFavoriteActivity persists preference and updates ui state`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.selectFavoriteActivity(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
+
+        verify { prefs.favoriteActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING }
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_BIKING, vm.uiState.value.favoriteActivityExerciseType)
+    }
+
     @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
         val repository = repo(availability = HealthConnectAvailability.NOT_SUPPORTED)
 
@@ -195,11 +209,13 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
+            every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.trackCycle } returns trackCycle
             every { prefs.appLanguage = any() } just runs
             every { prefs.appThemeMode = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
             every { prefs.activityWeekMode = any() } just runs
+            every { prefs.favoriteActivityExerciseType = any() } just runs
             every { prefs.trackCycle = any() } just runs
         }
 }

@@ -759,6 +759,9 @@
     <string name="settings_activity_week_body">Wähle, ob Aktivitäten eine feste Mo-So-Woche oder die letzten gleitenden 7 Tage verwendet.</string>
     <string name="settings_activity_week_monday_to_sunday">Mo-So</string>
     <string name="settings_activity_week_last_7_days">Letzte 7 Tage</string>
+    <string name="settings_favorite_activity_title">Lieblingsaktivität</string>
+    <string name="settings_favorite_activity_body">Verwende standardmäßig die zuletzt aufgezeichnete Aktivität oder wähle einen Aktivitätstyp, der immer vorausgewählt wird.</string>
+    <string name="settings_favorite_activity_latest">Letzte verwenden</string>
     <string name="settings_sleep_range_title">Schlafzeitraum</string>
     <string name="settings_sleep_range_body">Wähle, welchem Tag Schlafsitzungen zugeordnet werden.</string>
     <string name="settings_sleep_range_rolling_24h">Gleitende 24 h</string>

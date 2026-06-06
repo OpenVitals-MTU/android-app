@@ -5,7 +5,10 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -25,6 +28,7 @@ import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -231,6 +235,35 @@ class ActivityEntryViewModelTest {
         assertFalse(vm.uiState.value.isSavingEntry)
     }
 
+    @Test fun `activity entry defaults to latest recorded activity when no favorite is set`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            preferencesRepository = activityPrefs(
+                lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            ),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_BIKING, vm.uiState.value.selectedActivityType.exerciseType)
+    }
+
+    @Test fun `favorite activity overrides latest recorded activity`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            preferencesRepository = activityPrefs(
+                favoriteActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+                lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            ),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_WALKING, vm.uiState.value.selectedActivityType.exerciseType)
+    }
+
     @Test fun `manual activity entry does not estimate calories`() = runTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
@@ -248,6 +281,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `recorded activity without enough route points estimates calories`() = runTest {
         val repo = activityRepo(canWrite = true)
+        val prefs = activityPrefs()
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
@@ -263,6 +297,7 @@ class ActivityEntryViewModelTest {
         val vm = ActivityEntryViewModel(
             repository = repo,
             activityRecorder = recorder,
+            preferencesRepository = prefs,
             clock = Clock.fixed(start, ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -273,6 +308,7 @@ class ActivityEntryViewModelTest {
         assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
         assertEquals("308", vm.uiState.value.activeCaloriesText)
         assertEquals("343", vm.uiState.value.totalCaloriesText)
+        verify { prefs.lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING }
     }
 
     @Test fun `finished recording draft is restored by a new activity entry view model`() = runTest {
@@ -415,6 +451,16 @@ class ActivityEntryViewModelTest {
             coEvery { repo.hasActivityWritePermission() } returns canWrite
             coEvery { repo.hasActivityWritePermission(any(), any(), any(), any(), any()) } returns canWrite
             coEvery { repo.writeActivityEntry(any()) } returns "activity-id"
+        }
+
+    private fun activityPrefs(
+        favoriteActivityExerciseType: Int? = null,
+        lastActivityExerciseType: Int? = null,
+    ): PreferencesRepository =
+        mockk<PreferencesRepository>().also { prefs ->
+            every { prefs.favoriteActivityExerciseType } returns favoriteActivityExerciseType
+            every { prefs.lastActivityExerciseType } returns lastActivityExerciseType
+            every { prefs.lastActivityExerciseType = any() } just runs
         }
 
     private fun routePoint(

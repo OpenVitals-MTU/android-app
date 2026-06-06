@@ -33,6 +33,7 @@ import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.data.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
 
 private const val MilesToMeters = 1609.344
@@ -129,6 +130,7 @@ class ActivityEntryViewModel(
     private val routeFileImporter: RouteFileImporter? = null,
     private val activityRecorder: ActivityRecordingController? = null,
     private val recordingDraftStore: ActivityRecordingDraftStore? = null,
+    private val preferencesRepository: PreferencesRepository? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val editActivityId: String? = null,
 ) : ViewModel() {
@@ -139,12 +141,14 @@ class ActivityEntryViewModel(
         routeFileImporter: RouteFileImporter,
         activityRecorder: ActivityRecordingController,
         recordingDraftStore: ActivityRecordingDraftStore,
+        preferencesRepository: PreferencesRepository,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
         routeFileImporter = routeFileImporter,
         activityRecorder = activityRecorder,
         recordingDraftStore = recordingDraftStore,
+        preferencesRepository = preferencesRepository,
         clock = Clock.systemDefaultZone(),
         editActivityId = savedStateHandle[ACTIVITY_ENTRY_ID_ARG],
     )
@@ -186,7 +190,7 @@ class ActivityEntryViewModel(
             )
         }
 
-        return initialActivityEntryState(clock, repository).copy(
+        return initialActivityEntryState(clock, repository, preferredActivityType()).copy(
             mode = if (editActivityId == null) ActivityEntryMode.CHOOSE_SOURCE else ActivityEntryMode.MANUAL,
             editRecordId = editActivityId,
         )
@@ -260,7 +264,7 @@ class ActivityEntryViewModel(
     fun chooseSource() {
         if (_uiState.value.isEditMode) return
         recordingDraftStore?.clear()
-        _uiState.value = initialActivityEntryState(clock, repository).copy(
+        _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
             canWrite = _uiState.value.canWrite,
             isCheckingPermission = _uiState.value.isCheckingPermission,
             editRecordId = editActivityId,
@@ -391,19 +395,11 @@ class ActivityEntryViewModel(
 
     fun prepareGpsRecording() {
         val currentState = _uiState.value
-        if (!currentState.selectedActivityType.supportsGpsRoute) {
-            _uiState.value = currentState.copy(
-                entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
-                validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
-            )
-            return
-        }
 
         recordingDraftStore?.clear()
-        val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
+            selectedActivityType = preferredActivityType(requireGpsRoute = true),
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
             isRecordingDraft = false,
@@ -485,6 +481,7 @@ class ActivityEntryViewModel(
             )
             return
         }
+        rememberLastActivityType(snapshot.exerciseType)
 
         if (snapshot.points.size >= MinRecordedRoutePoints) {
             applyRouteImport(
@@ -575,6 +572,7 @@ class ActivityEntryViewModel(
             return
         }
         val editRecordId = _uiState.value.editRecordId
+        val wasRecordingDraft = _uiState.value.isRecordingDraft
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -604,8 +602,11 @@ class ActivityEntryViewModel(
                 }
             }.onSuccess {
                 recordingDraftStore?.clear()
+                if (wasRecordingDraft) {
+                    rememberLastActivityType(request.exerciseType)
+                }
                 if (editRecordId == null) {
-                    _uiState.value = clearedAfterSaveState(clock, repository, _uiState.value.selectedActivityType)
+                    _uiState.value = clearedAfterSaveState(clock, repository, preferredActivityType())
                     refreshPermission()
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -756,6 +757,24 @@ class ActivityEntryViewModel(
 
     private fun currentRequiredPermissions(): Set<String> =
         repository.activityWritePermissions()
+
+    private fun preferredActivityType(requireGpsRoute: Boolean = false): ActivityEntryType {
+        val activityTypes = DefaultActivityEntryTypes
+            .filter { !requireGpsRoute || it.supportsGpsRoute }
+            .ifEmpty { DefaultActivityEntryTypes }
+        val preferredExerciseType = preferencesRepository
+            ?.favoriteActivityExerciseType
+            ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
+            ?: preferencesRepository
+                ?.lastActivityExerciseType
+                ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
+        return activityTypes.firstOrNull { it.exerciseType == preferredExerciseType }
+            ?: activityTypes.first()
+    }
+
+    private fun rememberLastActivityType(exerciseType: Int) {
+        preferencesRepository?.lastActivityExerciseType = exerciseType
+    }
 }
 
 internal fun buildWriteRequest(
@@ -922,9 +941,11 @@ internal fun validateActivityEntry(
 private fun initialActivityEntryState(
     clock: Clock,
     repository: ActivityRepository,
+    selectedActivityType: ActivityEntryType = DefaultActivityEntryTypes.first(),
 ): ActivityEntryUiState {
     val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
     return ActivityEntryUiState(
+        selectedActivityType = selectedActivityType,
         startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(now),
         startTimeText = TimeFormatter.format(now.toLocalTime()),
         writePermissions = repository.activityWritePermissions(),
@@ -936,7 +957,7 @@ private fun clearedAfterSaveState(
     repository: ActivityRepository,
     selectedType: ActivityEntryType,
 ): ActivityEntryUiState =
-    initialActivityEntryState(clock, repository).copy(selectedActivityType = selectedType)
+    initialActivityEntryState(clock, repository, selectedType)
 
 private fun ExerciseData.toEditState(
     unitSystem: UnitSystem,
