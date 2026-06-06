@@ -5,10 +5,13 @@ import android.os.Build
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
@@ -33,16 +37,20 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -128,6 +136,7 @@ fun HydrationScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         hasNotificationPermission = HydrationReminderController.hasNotificationPermission(context)
+        viewModel.load()
     }
 
     MetricDetailScaffold(
@@ -197,6 +206,7 @@ fun HydrationScreen(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     titleDate = selectedDate,
                     onEditHydrationEntry = onEditHydrationEntry,
+                    onDeleteHydrationEntry = viewModel::deleteHydrationEntry,
                 )
             }
             item {
@@ -239,6 +249,7 @@ fun HydrationScreen(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onEditHydrationEntry = onEditHydrationEntry,
+                onDeleteHydrationEntry = viewModel::deleteHydrationEntry,
             )
         }
     }
@@ -832,6 +843,7 @@ private fun LazyListScope.hydrationEntries(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     titleDate: LocalDate? = null,
     onEditHydrationEntry: (String) -> Unit = {},
+    onDeleteHydrationEntry: (String) -> Unit = {},
 ) {
     val sortedEntries = entries.sortedByDescending { it.startTime }
     item {
@@ -848,6 +860,11 @@ private fun LazyListScope.hydrationEntries(
                 } else {
                     null
                 },
+                onDelete = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
+                    { onDeleteHydrationEntry(entry.id) }
+                } else {
+                    null
+                },
                 modifier = rowModifier,
             )
         }
@@ -856,6 +873,78 @@ private fun LazyListScope.hydrationEntries(
 
 @Composable
 private fun HydrationEntryRow(
+    entry: HydrationEntry,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (onDelete != null) {
+        SwipeToDeleteHydrationEntryRow(
+            onDelete = onDelete,
+            modifier = modifier,
+        ) {
+            HydrationEntryRowContent(
+                entry = entry,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = onEdit,
+            )
+        }
+    } else {
+        HydrationEntryRowContent(
+            entry = entry,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEdit = onEdit,
+            modifier = modifier,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDeleteHydrationEntryRow(
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val dismissState = rememberSwipeToDismissBoxState()
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val dismissAction = remember {
+        { value: SwipeToDismissBoxValue ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                currentOnDelete()
+            }
+        }
+    }
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        onDismiss = dismissAction,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.cd_delete_entry),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        },
+        modifier = modifier,
+        content = { content() },
+    )
+}
+
+@Composable
+private fun HydrationEntryRowContent(
     entry: HydrationEntry,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,

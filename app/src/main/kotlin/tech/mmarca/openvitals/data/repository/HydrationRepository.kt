@@ -119,6 +119,16 @@ class HydrationRepository @Inject constructor(
         hc.updateHydrationEntry(id, request)
         queryCache.invalidateOperations("dashboard")
     }
+
+    suspend fun deleteHydrationEntry(id: String) {
+        val granted = grantedPermissionsIfAvailable()
+        if (writeHydrationPermission !in granted) {
+            Log.w(TAG, "Skipping deleteHydrationEntry missingCount=1")
+            throw SecurityException("Missing Health Connect hydration write permission.")
+        }
+        hc.deleteHydrationEntry(id)
+        queryCache.invalidateOperations("dashboard")
+    }
 }
 
 data class HydrationPeriodData(

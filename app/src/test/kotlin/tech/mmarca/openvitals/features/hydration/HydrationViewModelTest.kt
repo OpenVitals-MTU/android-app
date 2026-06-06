@@ -13,7 +13,9 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,6 +36,7 @@ class HydrationViewModelTest {
     private fun emptyRepo() = mockk<HydrationRepository>().also { repo ->
         coEvery { repo.loadDailyHydration(any(), any()) } returns emptyList()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
+        coEvery { repo.deleteHydrationEntry(any()) } returns Unit
         coEvery { repo.loadHydrationPeriod(any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
@@ -122,6 +125,60 @@ class HydrationViewModelTest {
         val vm = HydrationViewModel(repo)
 
         assertEquals(entries, vm.uiState.value.hydrationEntries)
+    }
+
+    @Test fun `deleteHydrationEntry removes entry and reloads period data`() = runTest {
+        val start = today.atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
+        val entry = HydrationEntry(
+            startTime = start,
+            endTime = start.plusSeconds(1),
+            liters = 0.5,
+            source = "tech.mmarca.openvitals.debug",
+            id = "hydration-id",
+            isOpenVitalsEntry = true,
+        )
+        var hydration = listOf(DailyHydration(today, 0.5))
+        var entries = listOf(entry)
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHydration(any(), any()) } answers { hydration }
+        coEvery { repo.loadHydrationEntries(any(), any()) } answers { entries }
+        coEvery { repo.deleteHydrationEntry("hydration-id") } coAnswers {
+            hydration = listOf(DailyHydration(today, 0.0))
+            entries = emptyList()
+        }
+        val vm = HydrationViewModel(repo, initialRange = TimeRange.DAY)
+
+        vm.deleteHydrationEntry("hydration-id")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.hydrationEntries.isEmpty())
+        assertEquals(0.0, vm.uiState.value.totalLiters, 0.01)
+        coVerify { repo.deleteHydrationEntry("hydration-id") }
+        coVerify(atLeast = 2) { repo.loadHydrationPeriod(any()) }
+    }
+
+    @Test fun `deleteHydrationEntry ignores entries not created by OpenVitals`() = runTest {
+        val start = today.atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
+        val entry = HydrationEntry(
+            startTime = start,
+            endTime = start.plusSeconds(1),
+            liters = 0.5,
+            source = "com.example.hydrotracker",
+            id = "external-hydration-id",
+            isOpenVitalsEntry = false,
+        )
+        val entries = listOf(entry)
+        val repo = emptyRepo()
+        coEvery { repo.loadDailyHydration(any(), any()) } returns listOf(DailyHydration(today, 0.5))
+        coEvery { repo.loadHydrationEntries(any(), any()) } returns entries
+        val vm = HydrationViewModel(repo, initialRange = TimeRange.DAY)
+
+        vm.deleteHydrationEntry("external-hydration-id")
+        advanceUntilIdle()
+
+        assertEquals(entries, vm.uiState.value.hydrationEntries)
+        assertEquals(0.5, vm.uiState.value.totalLiters, 0.01)
+        coVerify(exactly = 0) { repo.deleteHydrationEntry("external-hydration-id") }
     }
 
     @Test fun `derived hydration statistics ignore zero intake days`() = runTest {

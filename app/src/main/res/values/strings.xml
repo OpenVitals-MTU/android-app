@@ -12,6 +12,7 @@
     <string name="cd_move_widget_up">Move widget up</string>
     <string name="cd_move_widget_down">Move widget down</string>
     <string name="cd_remove_widget">Remove widget</string>
+    <string name="cd_delete_entry">Delete entry</string>
     <string name="cd_edit_entry">Edit entry</string>
     <string name="cd_previous_day">Previous day</string>
     <string name="cd_next_day">Next day</string>

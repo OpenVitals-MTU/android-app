@@ -220,6 +220,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) =
         hydrationReader.updateHydrationEntry(id, request)
 
+    suspend fun deleteHydrationEntry(id: String) =
+        hydrationReader.deleteHydrationEntry(id)
+
     suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
         activityReader.readLatestWorkout(date)
 

@@ -19,10 +19,12 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 private const val DefaultHydrationDailyGoalLiters = 2.0
 private const val HydrationGoalStepLiters = 0.25
@@ -166,6 +168,23 @@ class HydrationViewModel(
         updateReminderConfig { config -> config.copy(activeEndTime = time.withSecond(0).withNano(0)) }
     }
 
+    fun deleteHydrationEntry(entryId: String) {
+        if (entryId.isBlank()) return
+        val entry = _uiState.value.hydrationEntries.firstOrNull { it.id == entryId } ?: return
+        if (!entry.isOpenVitalsEntry) return
+        viewModelScope.launch {
+            val previous = _uiState.value
+            _uiState.value = previous.withDeletedHydrationEntry(entryId)
+            runCatching {
+                repository.deleteHydrationEntry(entryId)
+            }.onSuccess {
+                load()
+            }.onFailure { error ->
+                _uiState.value = previous.copy(error = error.message)
+            }
+        }
+    }
+
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
@@ -275,6 +294,22 @@ private fun HydrationUiState.withHydrationSummary(
         currentGoalStreakDays = summary.currentGoalStreakDays,
         longestGoalStreakDays = summary.longestGoalStreakDays,
     )
+}
+
+private fun HydrationUiState.withDeletedHydrationEntry(entryId: String): HydrationUiState {
+    val entry = hydrationEntries.firstOrNull { it.id == entryId } ?: return this
+    val entryDate = entry.startTime.atZone(ZoneId.systemDefault()).toLocalDate()
+    val updatedDailyHydration = dailyHydration.map { day ->
+        if (day.date == entryDate) {
+            day.copy(liters = (day.liters - entry.liters).coerceAtLeast(0.0))
+        } else {
+            day
+        }
+    }
+    return withHydrationSummary(
+        dailyHydration = updatedDailyHydration,
+        hydrationEntries = hydrationEntries.filterNot { it.id == entryId },
+    ).copy(error = null)
 }
 
 private fun List<DailyHydration>.summaryForGoal(dailyGoalLiters: Double): HydrationSummary {

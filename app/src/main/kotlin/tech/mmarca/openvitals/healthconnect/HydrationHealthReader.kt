@@ -150,6 +150,18 @@ internal class HydrationHealthReader(
         support.client().updateRecords(listOf(record))
     }
 
+    suspend fun deleteHydrationEntry(id: String) = withContext(Dispatchers.IO) {
+        val existing = support.client().readRecord(HydrationRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+
+        Log.d(TAG, "Deleting hydration record ${support.diagnosticsSummary()}")
+        support.client().deleteRecords(
+            recordType = HydrationRecord::class,
+            recordIdsList = listOf(existing.metadata.id),
+            clientRecordIdsList = emptyList(),
+        )
+    }
+
     private fun HydrationRecord.toHydrationEntry(): HydrationEntry =
         HydrationEntry(
             startTime = startTime,

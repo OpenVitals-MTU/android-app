@@ -12,6 +12,7 @@
     <string name="cd_move_widget_up">Widget nach oben verschieben</string>
     <string name="cd_move_widget_down">Widget nach unten verschieben</string>
     <string name="cd_remove_widget">Widget entfernen</string>
+    <string name="cd_delete_entry">Eintrag löschen</string>
     <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_previous_day">Vorheriger Tag</string>
     <string name="cd_next_day">Nächster Tag</string>
