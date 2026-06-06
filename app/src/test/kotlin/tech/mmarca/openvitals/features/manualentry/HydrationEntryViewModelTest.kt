@@ -49,10 +49,46 @@ class HydrationEntryViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            listOf(100.0, 150.0, 175.0, 200.0, 300.0, 500.0, 1000.0),
+            listOf(350.0, 100.0, 150.0, 175.0, 200.0, 300.0, 500.0, 1000.0),
             vm.uiState.value.containerOptions.map { it.volumeMilliliters },
         )
-        assertEquals("coffee_cup", vm.uiState.value.selectedContainer.id)
+        assertEquals("custom", vm.uiState.value.selectedContainer.id)
+    }
+
+    @Test fun `custom container size updates and selects persisted option`() = runTest {
+        var storedMilliliters = 0.0
+        val vm = HydrationEntryViewModel(
+            repository = entryRepo(),
+            initialCustomContainerMilliliters = 300.0,
+            onCustomContainerSizeChanged = { milliliters ->
+                storedMilliliters = milliliters
+            },
+        )
+        advanceUntilIdle()
+
+        vm.updateCustomContainerSize(350.0)
+
+        assertEquals(350.0, storedMilliliters, 0.0001)
+        assertEquals("custom", vm.uiState.value.selectedContainer.id)
+        assertEquals(350.0, vm.uiState.value.selectedContainer.volumeMilliliters, 0.0001)
+        assertEquals(350.0, vm.uiState.value.containerOptions.first().volumeMilliliters, 0.0001)
+    }
+
+    @Test fun `invalid custom container size is rejected`() = runTest {
+        var storedMilliliters = 0.0
+        val vm = HydrationEntryViewModel(
+            repository = entryRepo(),
+            onCustomContainerSizeChanged = { milliliters ->
+                storedMilliliters = milliliters
+            },
+        )
+        advanceUntilIdle()
+
+        vm.updateCustomContainerSize(0.0)
+
+        assertEquals(0.0, storedMilliliters, 0.0001)
+        assertEquals(HydrationEntryError.INVALID_AMOUNT, vm.uiState.value.entryError)
+        assertEquals(350.0, vm.uiState.value.selectedContainer.volumeMilliliters, 0.0001)
     }
 
     @Test fun `refresh today hydration loads only the current day total`() = runTest {

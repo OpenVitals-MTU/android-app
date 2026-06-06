@@ -88,6 +88,24 @@ class PreferencesRepository @Inject constructor(
                 .apply()
         }
 
+    var hydrationContainerMilliliters: Double
+        get() = prefs.getFloat(
+            KEY_HYDRATION_CONTAINER_MILLILITERS,
+            DEFAULT_HYDRATION_CONTAINER_MILLILITERS.toFloat(),
+        ).toDouble()
+            .coerceIn(MIN_HYDRATION_CONTAINER_MILLILITERS, MAX_HYDRATION_CONTAINER_MILLILITERS)
+        set(value) {
+            prefs.edit()
+                .putFloat(
+                    KEY_HYDRATION_CONTAINER_MILLILITERS,
+                    value.coerceIn(
+                        MIN_HYDRATION_CONTAINER_MILLILITERS,
+                        MAX_HYDRATION_CONTAINER_MILLILITERS,
+                    ).toFloat(),
+                )
+                .apply()
+        }
+
     var highHeartRateThresholdBpm: Int
         get() = prefs.getInt(
             KEY_HIGH_HEART_RATE_THRESHOLD_BPM,
@@ -274,6 +292,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
+        private const val KEY_HYDRATION_CONTAINER_MILLILITERS = "hydration_container_milliliters"
         private const val KEY_HYDRATION_REMINDERS_ENABLED = "hydration_reminders_enabled"
         private const val KEY_HYDRATION_REMINDER_INTERVAL_MINUTES = "hydration_reminder_interval_minutes"
         private const val KEY_HYDRATION_REMINDER_ACTIVE_START_TIME = "hydration_reminder_active_start_time"
@@ -288,6 +307,9 @@ class PreferencesRepository @Inject constructor(
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
         private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0
+        private const val DEFAULT_HYDRATION_CONTAINER_MILLILITERS = 350.0
+        private const val MIN_HYDRATION_CONTAINER_MILLILITERS = 1.0
+        private const val MAX_HYDRATION_CONTAINER_MILLILITERS = 100_000.0
         const val DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM = 120
         const val DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM = 50
         const val MIN_HIGH_HEART_RATE_THRESHOLD_BPM = 80

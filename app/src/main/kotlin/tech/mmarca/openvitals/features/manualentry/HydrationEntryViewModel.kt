@@ -13,10 +13,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
 
-private const val MillilitersPerLiter = 1000.0
+internal const val MillilitersPerLiter = 1000.0
 private const val MaxHealthConnectHydrationLiters = 100.0
+internal const val DefaultHydrationContainerMilliliters = 350.0
+internal const val MinHydrationContainerMilliliters = 1.0
+internal const val MaxHydrationContainerMilliliters =
+    MaxHealthConnectHydrationLiters * MillilitersPerLiter
 
 enum class HydrationBeverage(
     val hydrationMultiplier: Double,
@@ -53,7 +58,12 @@ data class HydrationContainerOption(
     val volumeLiters: Double
         get() = volumeMilliliters / MillilitersPerLiter
 
+    val isCustom: Boolean
+        get() = id == CustomId
+
     companion object {
+        const val CustomId = "custom"
+
         val Defaults = listOf(
             HydrationContainerOption("coffee_cup", 100.0),
             HydrationContainerOption("tea_cup", 150.0),
@@ -63,6 +73,14 @@ data class HydrationContainerOption(
             HydrationContainerOption("water_bottle", 500.0),
             HydrationContainerOption("large_bottle", 1000.0),
         )
+
+        fun custom(volumeMilliliters: Double): HydrationContainerOption =
+            HydrationContainerOption(CustomId, volumeMilliliters)
+
+        fun options(
+            customVolumeMilliliters: Double = DefaultHydrationContainerMilliliters,
+        ): List<HydrationContainerOption> =
+            listOf(custom(normalizeHydrationContainerMilliliters(customVolumeMilliliters))) + Defaults
     }
 }
 
@@ -80,8 +98,10 @@ data class HydrationEntryUiState(
     val isSavingEntry: Boolean = false,
     val beverageOptions: List<HydrationBeverage> = HydrationBeverage.DisplayOrder,
     val selectedBeverage: HydrationBeverage = HydrationBeverage.WATER,
-    val containerOptions: List<HydrationContainerOption> = HydrationContainerOption.Defaults,
-    val selectedContainer: HydrationContainerOption = HydrationContainerOption.Defaults.first(),
+    val containerOptions: List<HydrationContainerOption> = HydrationContainerOption.options(),
+    val selectedContainer: HydrationContainerOption = HydrationContainerOption.custom(
+        DefaultHydrationContainerMilliliters,
+    ),
     val editRecordId: String? = null,
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
@@ -96,15 +116,37 @@ data class HydrationEntryUiState(
 }
 
 @HiltViewModel
-class HydrationEntryViewModel @Inject constructor(
+class HydrationEntryViewModel(
     private val repository: HydrationRepository,
-    savedStateHandle: SavedStateHandle,
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    initialCustomContainerMilliliters: Double = DefaultHydrationContainerMilliliters,
+    private val onCustomContainerSizeChanged: (Double) -> Unit = {},
 ) : ViewModel() {
+    @Inject
+    constructor(
+        repository: HydrationRepository,
+        preferencesRepository: PreferencesRepository,
+        savedStateHandle: SavedStateHandle,
+    ) : this(
+        repository = repository,
+        savedStateHandle = savedStateHandle,
+        initialCustomContainerMilliliters = preferencesRepository.hydrationContainerMilliliters,
+        onCustomContainerSizeChanged = { milliliters ->
+            preferencesRepository.hydrationContainerMilliliters = milliliters
+        },
+    )
+
     constructor(repository: HydrationRepository) : this(repository, SavedStateHandle())
 
     private val editRecordId: String? = savedStateHandle[HYDRATION_ENTRY_ID_ARG]
+    private val initialContainerOptions = HydrationContainerOption.options(initialCustomContainerMilliliters)
 
-    private val _uiState = MutableStateFlow(HydrationEntryUiState())
+    private val _uiState = MutableStateFlow(
+        HydrationEntryUiState(
+            containerOptions = initialContainerOptions,
+            selectedContainer = initialContainerOptions.first { it.isCustom },
+        )
+    )
     val uiState: StateFlow<HydrationEntryUiState> = _uiState.asStateFlow()
 
     init {
@@ -173,6 +215,26 @@ class HydrationEntryViewModel @Inject constructor(
         )
     }
 
+    fun updateCustomContainerSize(milliliters: Double) {
+        if (!isValidHydrationContainerMilliliters(milliliters)) {
+            _uiState.value = _uiState.value.copy(
+                entryError = HydrationEntryError.INVALID_AMOUNT,
+                writeErrorMessage = null,
+            )
+            return
+        }
+
+        val customContainer = HydrationContainerOption.custom(milliliters)
+        _uiState.value = _uiState.value.copy(
+            containerOptions = _uiState.value.containerOptions.withCustomContainer(customContainer),
+            selectedContainer = customContainer,
+            saveCompleted = false,
+            entryError = null,
+            writeErrorMessage = null,
+        )
+        onCustomContainerSizeChanged(milliliters)
+    }
+
     fun addSelectedHydrationEntry() {
         saveHydrationEntry(_uiState.value.selectedContainer.volumeLiters)
     }
@@ -194,10 +256,11 @@ class HydrationEntryViewModel @Inject constructor(
                     )
                     return@onSuccess
                 }
-                val option = HydrationContainerOption.Defaults
+                val existingOptions = _uiState.value.containerOptions
+                val option = existingOptions
                     .firstOrNull { kotlin.math.abs(it.volumeLiters - entry.liters) < 0.0001 }
                     ?: HydrationContainerOption("current_entry", entry.liters * MillilitersPerLiter)
-                val options = (listOf(option) + HydrationContainerOption.Defaults)
+                val options = (listOf(option) + existingOptions)
                     .distinctBy { it.id }
                 _uiState.value = _uiState.value.copy(
                     selectedBeverage = HydrationBeverage.WATER,
@@ -274,3 +337,25 @@ class HydrationEntryViewModel @Inject constructor(
         }
     }
 }
+
+internal fun isValidHydrationContainerMilliliters(milliliters: Double): Boolean =
+    milliliters >= MinHydrationContainerMilliliters &&
+        milliliters <= MaxHydrationContainerMilliliters &&
+        !milliliters.isNaN() &&
+        !milliliters.isInfinite()
+
+private fun normalizeHydrationContainerMilliliters(milliliters: Double): Double =
+    if (isValidHydrationContainerMilliliters(milliliters)) {
+        milliliters
+    } else {
+        DefaultHydrationContainerMilliliters
+    }
+
+private fun List<HydrationContainerOption>.withCustomContainer(
+    customContainer: HydrationContainerOption,
+): List<HydrationContainerOption> =
+    if (any { it.isCustom }) {
+        map { option -> if (option.isCustom) customContainer else option }
+    } else {
+        listOf(customContainer) + this
+    }

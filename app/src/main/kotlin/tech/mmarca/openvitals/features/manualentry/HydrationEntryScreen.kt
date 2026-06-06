@@ -3,7 +3,8 @@ package tech.mmarca.openvitals.features.manualentry
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,17 +17,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
@@ -88,6 +93,7 @@ fun HydrationEntryScreen(
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.hydrationWritePermissions)
                 },
+                onUpdateCustomContainerSize = viewModel::updateCustomContainerSize,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -102,6 +108,7 @@ private fun HydrationTrackerCard(
     onSelectContainer: (HydrationContainerOption) -> Unit,
     onAddSelectedEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
+    onUpdateCustomContainerSize: (Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWriteHydration && !state.isSavingEntry && !state.isCheckingPermission
@@ -169,6 +176,7 @@ private fun HydrationTrackerCard(
                 unitFormatter = unitFormatter,
                 isSavingEntry = state.isSavingEntry,
                 onSelectContainer = onSelectContainer,
+                onUpdateCustomContainerSize = onUpdateCustomContainerSize,
             )
 
             Button(
@@ -291,8 +299,11 @@ private fun HydrationContainerCarousel(
     unitFormatter: UnitFormatter,
     isSavingEntry: Boolean,
     onSelectContainer: (HydrationContainerOption) -> Unit,
+    onUpdateCustomContainerSize: (Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var editingContainer by remember { mutableStateOf<HydrationContainerOption?>(null) }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -314,12 +325,25 @@ private fun HydrationContainerCarousel(
                     unitFormatter = unitFormatter,
                     enabled = !isSavingEntry,
                     onSelect = { onSelectContainer(option) },
+                    onEdit = { editingContainer = option },
                 )
             }
         }
     }
+
+    editingContainer?.let { option ->
+        HydrationContainerSizeDialog(
+            option = option,
+            onDismiss = { editingContainer = null },
+            onSave = { milliliters ->
+                onUpdateCustomContainerSize(milliliters)
+                editingContainer = null
+            },
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HydrationContainerOptionItem(
     option: HydrationContainerOption,
@@ -327,6 +351,7 @@ private fun HydrationContainerOptionItem(
     unitFormatter: UnitFormatter,
     enabled: Boolean,
     onSelect: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val containerColor = if (selected) {
@@ -349,10 +374,11 @@ private fun HydrationContainerOptionItem(
         modifier = modifier
             .width(132.dp)
             .height(112.dp)
-            .clickable(
+            .combinedClickable(
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onSelect,
+                onLongClick = onEdit,
             ),
         shape = MaterialTheme.shapes.medium,
         color = containerColor,
@@ -367,7 +393,7 @@ private fun HydrationContainerOptionItem(
             Icon(
                 imageVector = option.icon(),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(option.iconSize()),
             )
             Text(
                 text = stringResource(option.labelRes()),
@@ -383,6 +409,60 @@ private fun HydrationContainerOptionItem(
             )
         }
     }
+}
+
+@Composable
+private fun HydrationContainerSizeDialog(
+    option: HydrationContainerOption,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit,
+) {
+    var amountText by remember(option) {
+        mutableStateOf(option.volumeMilliliters.roundToInt().toString())
+    }
+    val amount = amountText.replace(',', '.').toDoubleOrNull()
+    val isAmountValid = amount?.let(::isValidHydrationContainerMilliliters) == true
+    val showError = amountText.isNotBlank() && !isAmountValid
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(R.string.hydration_container_edit_title))
+        },
+        text = {
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { amountText = it },
+                label = { Text(stringResource(R.string.hydration_container_amount_ml)) },
+                isError = showError,
+                supportingText = if (showError) {
+                    {
+                        Text(stringResource(R.string.hydration_container_invalid_amount))
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    amount?.takeIf(::isValidHydrationContainerMilliliters)?.let(onSave)
+                },
+                enabled = isAmountValid,
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -459,10 +539,17 @@ private fun HydrationContainerOption.labelRes(): Int = when (id) {
     else -> R.string.hydration_container_custom
 }
 
-private fun HydrationContainerOption.icon(): ImageVector = when (id) {
-    "coffee_cup",
-    "tea_cup" -> Icons.Outlined.LocalCafe
-    else -> Icons.Outlined.LocalDrink
+private fun HydrationContainerOption.icon(): ImageVector =
+    if (id == "coffee_cup" || id == "tea_cup" || volumeMilliliters <= 180.0) {
+        Icons.Outlined.LocalCafe
+    } else {
+        Icons.Outlined.LocalDrink
+    }
+
+private fun HydrationContainerOption.iconSize() = when {
+    volumeMilliliters <= 180.0 -> 22.dp
+    volumeMilliliters < 500.0 -> 26.dp
+    else -> 30.dp
 }
 
 private fun hydrationAmountLabel(liters: Double, unitFormatter: UnitFormatter): String =
