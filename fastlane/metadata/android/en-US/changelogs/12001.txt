@@ -1,0 +1,1 @@
+Remembers the latest recorded activity type, adds a Settings favorite activity override, and returns to the dashboard after saving a new activity.

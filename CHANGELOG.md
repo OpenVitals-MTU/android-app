@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.1 - 2026-06-06
+
+### English
+
+- Remember the latest recorded activity type and preselect it for future activity entries.
+- Add a Settings option to choose a favorite activity type that overrides the latest recorded activity default.
+- Return to the dashboard after saving a new activity so users do not land back on the activity-entry screen.
+
+### Español
+
+- Recuerda el último tipo de actividad grabada y lo preselecciona en futuras entradas de actividad.
+- Añade una opción en Ajustes para elegir un tipo de actividad favorito que sustituye al valor predeterminado de la última actividad grabada.
+- Vuelve al panel después de guardar una actividad nueva para que la app no regrese a la pantalla de entrada de actividad.
+
+### Deutsch
+
+- Merkt sich den zuletzt aufgezeichneten Aktivitätstyp und wählt ihn für zukünftige Aktivitätseinträge vor.
+- Fügt in den Einstellungen eine Lieblingsaktivität hinzu, die den Standardwert der zuletzt aufgezeichneten Aktivität überschreibt.
+- Kehrt nach dem Speichern einer neuen Aktivität zum Dashboard zurück, damit Nutzer nicht wieder auf dem Aktivitätseintrag landen.
+
 ## 1.2.0 - 2026-06-06
 
 ### English
