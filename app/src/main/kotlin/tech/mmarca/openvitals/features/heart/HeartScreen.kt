@@ -276,14 +276,29 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                bloodPressureContent(state, period, unitFormatter, dateTimeFormatterProvider, onEditVitalsMeasurement)
+                bloodPressureContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
             }
             HeartMetric.SPO2 -> vitalsMetricContent(
                 state = state,
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                spO2Content(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection, onEditVitalsMeasurement)
+                spO2Content(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    chartDaySelection,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
             }
             HeartMetric.VO2_MAX -> vitalsMetricContent(
                 state = state,
@@ -297,14 +312,29 @@ private fun HeartMetricScreen(
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                respiratoryRateContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection, onEditVitalsMeasurement)
+                respiratoryRateContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    chartDaySelection,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
             }
             HeartMetric.BODY_TEMPERATURE -> vitalsMetricContent(
                 state = state,
                 phase3Permissions = viewModel.vitalsPermissions,
                 onGrantPermissions = requestVitalsPermissions::launch,
             ) {
-                bodyTemperatureContent(state, period, unitFormatter, dateTimeFormatterProvider, onEditVitalsMeasurement)
+                bodyTemperatureContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
             }
         }
     }
@@ -807,6 +837,7 @@ private fun LazyListScope.bloodPressureContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.bloodPressure.isNotEmpty()) {
         item {
@@ -842,6 +873,7 @@ private fun LazyListScope.bloodPressureContent(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
             onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.BLOOD_PRESSURE, it.id) },
+            onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.BLOOD_PRESSURE, it.id) },
         )
     } else if (!state.isLoading) {
         noHeartMetricData(
@@ -860,6 +892,7 @@ private fun LazyListScope.spO2Content(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.spO2.isNotEmpty()) {
         val sorted = state.spO2.sortedBy { it.time }
@@ -891,6 +924,7 @@ private fun LazyListScope.spO2Content(
                 titleDate = selectedDate,
                 editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                 onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.SPO2, it.id) },
+                onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.SPO2, it.id) },
             )
         }
         heartRawDataConfidence(
@@ -917,6 +951,7 @@ private fun LazyListScope.spO2Content(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
             onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.SPO2, it.id) },
+            onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.SPO2, it.id) },
         )
     } else if (!state.isLoading) {
         noHeartMetricData(
@@ -987,6 +1022,7 @@ private fun LazyListScope.respiratoryRateContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.respiratoryRate.isNotEmpty()) {
         item {
@@ -1001,6 +1037,7 @@ private fun LazyListScope.respiratoryRateContent(
                     modifier = metricModifier(),
                     editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                     onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
+                    onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
                 )
             } else {
                 RespiratoryRateChart(
@@ -1027,6 +1064,7 @@ private fun LazyListScope.respiratoryRateContent(
                 titleDate = selectedDate,
                 editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                 onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
+                onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
             )
         }
         heartRawDataConfidence(
@@ -1068,6 +1106,7 @@ private fun LazyListScope.respiratoryRateContent(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
             onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
+            onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
         )
     } else if (!state.isLoading) {
         noHeartMetricData(
@@ -1085,6 +1124,7 @@ private fun LazyListScope.bodyTemperatureContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.bodyTemperature.isNotEmpty()) {
         item {
@@ -1098,6 +1138,7 @@ private fun LazyListScope.bodyTemperatureContent(
                 modifier = metricModifier(),
                 editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                 onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.BODY_TEMPERATURE, it.id) },
+                onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.BODY_TEMPERATURE, it.id) },
             )
         }
         heartRawDataConfidence(
@@ -1124,6 +1165,7 @@ private fun LazyListScope.bodyTemperatureContent(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
             onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.BODY_TEMPERATURE, it.id) },
+            onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.BODY_TEMPERATURE, it.id) },
         )
     } else if (!state.isLoading) {
         noHeartMetricData(
@@ -1723,6 +1765,7 @@ private fun <T> LazyListScope.heartEntryRows(
     titleDate: LocalDate? = null,
     editable: (T) -> Boolean = { false },
     onEdit: ((T) -> Unit)? = null,
+    onDelete: ((T) -> Unit)? = null,
 ) {
     if (entries.isEmpty()) return
 
@@ -1739,6 +1782,9 @@ private fun <T> LazyListScope.heartEntryRows(
                 onEdit = onEdit
                     ?.takeIf { editable(entry) }
                     ?.let { edit -> { edit(entry) } },
+                onDelete = onDelete
+                    ?.takeIf { editable(entry) }
+                    ?.let { delete -> { delete(entry) } },
                 modifier = rowModifier,
             )
         }

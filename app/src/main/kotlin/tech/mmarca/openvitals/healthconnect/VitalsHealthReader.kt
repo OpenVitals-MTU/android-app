@@ -286,6 +286,47 @@ internal class VitalsHealthReader(
             support.client().updateRecords(listOf(record))
         }
 
+    suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) = withContext(Dispatchers.IO) {
+        when (type) {
+            VitalsMeasurementType.BLOOD_PRESSURE -> {
+                val existing = support.client().readRecord(BloodPressureRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = BloodPressureRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+            VitalsMeasurementType.SPO2 -> {
+                val existing = support.client().readRecord(OxygenSaturationRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = OxygenSaturationRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+            VitalsMeasurementType.RESPIRATORY_RATE -> {
+                val existing = support.client().readRecord(RespiratoryRateRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = RespiratoryRateRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+            VitalsMeasurementType.BODY_TEMPERATURE -> {
+                val existing = support.client().readRecord(BodyTemperatureRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = BodyTemperatureRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+        }
+    }
+
     private fun validateVitalsMeasurement(request: VitalsMeasurementWriteRequest) {
         when (request.type) {
             VitalsMeasurementType.BLOOD_PRESSURE -> {

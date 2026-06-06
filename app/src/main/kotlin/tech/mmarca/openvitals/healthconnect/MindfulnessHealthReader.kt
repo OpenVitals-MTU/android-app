@@ -79,6 +79,16 @@ internal class MindfulnessHealthReader(
             support.client().updateRecords(listOf(record))
         }
 
+    suspend fun deleteMindfulnessSessionEntry(id: String) = withContext(Dispatchers.IO) {
+        val existing = support.client().readRecord(MindfulnessSessionRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+        support.client().deleteRecords(
+            recordType = MindfulnessSessionRecord::class,
+            recordIdsList = listOf(existing.metadata.id),
+            clientRecordIdsList = emptyList(),
+        )
+    }
+
     private fun validateMindfulnessSession(request: MindfulnessSessionWriteRequest) {
         require(request.title.isNotBlank()) { "Mindfulness session title cannot be blank." }
         require(request.startTime.isBefore(request.endTime)) { "Mindfulness session start must be before end." }

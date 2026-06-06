@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.body
 
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -13,9 +14,12 @@ import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,6 +28,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BodyViewModelTest {
 
     @get:Rule
@@ -43,6 +48,7 @@ class BodyViewModelTest {
         coEvery { repo.loadBmrEntries(any(), any()) } returns emptyList()
         coEvery { repo.loadLatestBoneMass() } returns null
         coEvery { repo.loadBoneMassEntries(any(), any()) } returns emptyList()
+        coEvery { repo.deleteBodyMeasurementEntry(any(), any()) } returns Unit
         coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val metric = secondArg<BodyPeriodMetric>()
@@ -149,6 +155,51 @@ class BodyViewModelTest {
         val vm = BodyViewModel(repo)
 
         assertEquals(entries, vm.uiState.value.weightEntries)
+    }
+
+    @Test fun `deleteBodyMeasurementEntry removes OpenVitals weight and reloads`() = runTest {
+        val entry = WeightEntry(
+            time = Instant.ofEpochSecond(1_000),
+            weightKg = 75.0,
+            source = "tech.mmarca.openvitals.debug",
+            id = "weight-id",
+            isOpenVitalsEntry = true,
+        )
+        var entries = listOf(entry)
+        val repo = emptyRepo()
+        coEvery { repo.loadWeightEntries(any(), any()) } answers { entries }
+        coEvery { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") } coAnswers {
+            entries = emptyList()
+        }
+        val vm = BodyViewModel(repo)
+
+        vm.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.weightEntries.isEmpty())
+        coVerify { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") }
+        coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), any()) }
+    }
+
+    @Test fun `deleteBodyMeasurementEntry ignores weight not created by OpenVitals`() = runTest {
+        val entries = listOf(
+            WeightEntry(
+                time = Instant.ofEpochSecond(1_000),
+                weightKg = 75.0,
+                source = "com.example",
+                id = "external-weight-id",
+                isOpenVitalsEntry = false,
+            )
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadWeightEntries(any(), any()) } returns entries
+        val vm = BodyViewModel(repo)
+
+        vm.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "external-weight-id")
+        advanceUntilIdle()
+
+        assertEquals(entries, vm.uiState.value.weightEntries)
+        coVerify(exactly = 0) { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "external-weight-id") }
     }
 
     @Test fun `load success populates height`() = runTest {

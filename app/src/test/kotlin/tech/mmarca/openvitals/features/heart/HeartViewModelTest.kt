@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.VitalsPeriodData
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -20,6 +21,8 @@ import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,6 +31,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HeartViewModelTest {
 
     @get:Rule
@@ -99,6 +103,7 @@ class HeartViewModelTest {
         coEvery { repo.loadRespiratoryRate(any(), any()) } returns emptyList()
         coEvery { repo.loadBodyTemperature(any(), any()) } returns emptyList()
         coEvery { repo.loadVo2Max(any(), any()) } returns emptyList()
+        coEvery { repo.deleteVitalsMeasurementEntry(any(), any()) } returns Unit
         coEvery { repo.loadVitalsPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val metric = secondArg<VitalsPeriodMetric>()
@@ -149,6 +154,65 @@ class HeartViewModelTest {
         val vm = HeartViewModel(emptyRepo(), emptyVitalsRepo())
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.error)
+    }
+
+    @Test fun `deleteVitalsMeasurementEntry removes OpenVitals blood pressure and reloads`() = runTest {
+        val entry = BloodPressureEntry(
+            time = Instant.ofEpochSecond(1_000),
+            systolicMmHg = 120,
+            diastolicMmHg = 80,
+            source = "tech.mmarca.openvitals.debug",
+            id = "bp-id",
+            isOpenVitalsEntry = true,
+        )
+        var entries = listOf(entry)
+        val vitalsRepo = emptyVitalsRepo()
+        coEvery { vitalsRepo.loadBloodPressure(any(), any()) } answers { entries }
+        coEvery {
+            vitalsRepo.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, "bp-id")
+        } coAnswers {
+            entries = emptyList()
+        }
+        val vm = HeartViewModel(
+            repository = emptyRepo(),
+            vitalsRepository = vitalsRepo,
+            selectedMetric = HeartMetric.BLOOD_PRESSURE,
+        )
+
+        vm.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, "bp-id")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.bloodPressure.isEmpty())
+        coVerify { vitalsRepo.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, "bp-id") }
+        coVerify(atLeast = 2) { vitalsRepo.loadVitalsPeriod(any(), any()) }
+    }
+
+    @Test fun `deleteVitalsMeasurementEntry ignores blood pressure not created by OpenVitals`() = runTest {
+        val entries = listOf(
+            BloodPressureEntry(
+                time = Instant.ofEpochSecond(1_000),
+                systolicMmHg = 120,
+                diastolicMmHg = 80,
+                source = "com.example",
+                id = "external-bp-id",
+                isOpenVitalsEntry = false,
+            )
+        )
+        val vitalsRepo = emptyVitalsRepo()
+        coEvery { vitalsRepo.loadBloodPressure(any(), any()) } returns entries
+        val vm = HeartViewModel(
+            repository = emptyRepo(),
+            vitalsRepository = vitalsRepo,
+            selectedMetric = HeartMetric.BLOOD_PRESSURE,
+        )
+
+        vm.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, "external-bp-id")
+        advanceUntilIdle()
+
+        assertEquals(entries, vm.uiState.value.bloodPressure)
+        coVerify(exactly = 0) {
+            vitalsRepo.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, "external-bp-id")
+        }
     }
 
     // ─── WEEK range loads summaries, NOT samples ───────────────────────────────

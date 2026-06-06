@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.model.BodyFatEntry
+import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -26,6 +27,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class BodyUiState(
     val isLoading: Boolean = true,
@@ -129,6 +131,34 @@ class BodyViewModel(
         load()
     }
 
+    fun deleteBodyMeasurementEntry(type: BodyMeasurementType, entryId: String) {
+        if (entryId.isBlank()) return
+        val entryIsOpenVitals = when (type) {
+            BodyMeasurementType.WEIGHT -> _uiState.value.weightEntries
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+            BodyMeasurementType.HEIGHT -> _uiState.value.heightEntries
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+            BodyMeasurementType.BODY_FAT -> _uiState.value.bodyFatEntries
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+        } ?: return
+        if (!entryIsOpenVitals) return
+
+        viewModelScope.launch {
+            val previous = _uiState.value
+            _uiState.value = previous.withDeletedBodyMeasurementEntry(type, entryId)
+            runCatching {
+                repository.deleteBodyMeasurementEntry(type, entryId)
+            }.onSuccess {
+                load()
+            }.onFailure { error ->
+                _uiState.value = previous.copy(error = error.message)
+            }
+        }
+    }
+
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
@@ -213,6 +243,25 @@ class BodyViewModel(
         )
     }
 }
+
+private fun BodyUiState.withDeletedBodyMeasurementEntry(
+    type: BodyMeasurementType,
+    entryId: String,
+): BodyUiState =
+    when (type) {
+        BodyMeasurementType.WEIGHT -> copy(
+            weightEntries = weightEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+        BodyMeasurementType.HEIGHT -> copy(
+            heightEntries = heightEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+        BodyMeasurementType.BODY_FAT -> copy(
+            bodyFatEntries = bodyFatEntries.filterNot { it.id == entryId },
+            error = null,
+        )
+    }
 
 private fun BodyMetric.toPeriodMetric(): BodyPeriodMetric =
     when (this) {

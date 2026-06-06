@@ -326,6 +326,16 @@ class BodyRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 
+    suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) {
+        val missingPermissions = bodyWritePermissions(type) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping deleteBodyMeasurementEntry type=$type missingCount=${missingPermissions.size}")
+            throw SecurityException("Missing Health Connect body write permission.")
+        }
+        hc.deleteBodyMeasurementEntry(type, id)
+        queryCache.invalidateOperations("dashboard")
+    }
+
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()
 }
 

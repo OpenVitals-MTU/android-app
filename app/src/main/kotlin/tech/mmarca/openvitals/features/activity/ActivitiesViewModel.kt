@@ -20,6 +20,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class ActivitiesUiState(
     val isLoading: Boolean = true,
@@ -110,6 +111,26 @@ class ActivitiesViewModel(
         val goal = goalKey.normalize(minutes)
         onDailyGoalChanged(goal)
         _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
+    }
+
+    fun deleteActivityEntry(entryId: String) {
+        if (entryId.isBlank()) return
+        val entry = _uiState.value.workouts.firstOrNull { it.id == entryId } ?: return
+        if (!entry.isOpenVitalsEntry) return
+        viewModelScope.launch {
+            val previous = _uiState.value
+            _uiState.value = previous.copy(
+                workouts = previous.workouts.filterNot { it.id == entryId },
+                error = null,
+            )
+            runCatching {
+                repository.deleteActivityEntry(entryId)
+            }.onSuccess {
+                load()
+            }.onFailure { error ->
+                _uiState.value = previous.copy(error = error.message)
+            }
+        }
     }
 
     fun load() {

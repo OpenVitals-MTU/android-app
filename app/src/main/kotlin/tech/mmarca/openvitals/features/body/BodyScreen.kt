@@ -210,6 +210,7 @@ private fun BodyMetricScreen(
                 dateTimeFormatterProvider,
                 chartDaySelection,
                 onEditBodyMeasurement,
+                viewModel::deleteBodyMeasurementEntry,
             )
             BodyMetric.HEIGHT -> singleBodyMetricContent(
                 state = state,
@@ -246,6 +247,7 @@ private fun BodyMetricScreen(
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                         onEdit = { onEditBodyMeasurement(BodyMeasurementType.HEIGHT, it.id) },
+                        onDelete = { viewModel.deleteBodyMeasurementEntry(BodyMeasurementType.HEIGHT, it.id) },
                     )
                 },
             )
@@ -276,6 +278,7 @@ private fun BodyMetricScreen(
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onEditBodyMeasurement = onEditBodyMeasurement,
+                        onDeleteBodyMeasurement = viewModel::deleteBodyMeasurementEntry,
                     )
                 },
             )
@@ -286,6 +289,7 @@ private fun BodyMetricScreen(
                 dateTimeFormatterProvider,
                 chartDaySelection,
                 onEditBodyMeasurement,
+                viewModel::deleteBodyMeasurementEntry,
             )
             BodyMetric.LEAN_MASS -> singleBodyMetricContent(
                 state = state,
@@ -446,6 +450,7 @@ private fun LazyListScope.weightContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ) {
     if (state.weightEntries.isNotEmpty()) {
         item { SectionHeader(stringResource(R.string.section_weight)) }
@@ -484,6 +489,7 @@ private fun LazyListScope.weightContent(
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onEdit = entry.editAction(BodyMeasurementType.WEIGHT, onEditBodyMeasurement),
+                        onDelete = entry.deleteAction(BodyMeasurementType.WEIGHT, onDeleteBodyMeasurement),
                         modifier = rowModifier,
                     )
                 }
@@ -514,6 +520,7 @@ private fun LazyListScope.weightContent(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onEdit = entry.editAction(BodyMeasurementType.WEIGHT, onEditBodyMeasurement),
+                    onDelete = entry.deleteAction(BodyMeasurementType.WEIGHT, onDeleteBodyMeasurement),
                     modifier = rowModifier,
                 )
             }
@@ -535,6 +542,7 @@ private fun LazyListScope.bodyFatContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ) {
     val latest = state.latestBodyFatPercent
     if (latest != null) {
@@ -575,6 +583,7 @@ private fun LazyListScope.bodyFatContent(
                     titleDate = selectedDate,
                     editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                     onEdit = { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
+                    onDelete = { onDeleteBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
                 )
             }
         }
@@ -602,6 +611,7 @@ private fun LazyListScope.bodyFatContent(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
             onEdit = { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
+            onDelete = { onDeleteBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
         )
     } else if (!state.isLoading) {
         noBodyMetricData(
@@ -919,6 +929,7 @@ private fun <T> LazyListScope.bodyReadingEntries(
     titleDate: LocalDate? = null,
     editable: (T) -> Boolean = { false },
     onEdit: ((T) -> Unit)? = null,
+    onDelete: ((T) -> Unit)? = null,
 ) {
     val sortedEntries = entries.sortedByDescending(time)
     item {
@@ -935,6 +946,9 @@ private fun <T> LazyListScope.bodyReadingEntries(
                 onEdit = onEdit
                     ?.takeIf { editable(entry) }
                     ?.let { edit -> { edit(entry) } },
+                onDelete = onDelete
+                    ?.takeIf { editable(entry) }
+                    ?.let { delete -> { delete(entry) } },
                 modifier = rowModifier,
             )
         }
@@ -947,6 +961,7 @@ private fun LazyListScope.bmiEntries(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     val heightMeters = heightCm?.takeIf { it > 0.0 }?.let { it / 100.0 } ?: return
     bodyReadingEntries(
@@ -960,6 +975,7 @@ private fun LazyListScope.bmiEntries(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
         onEdit = { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },
+        onDelete = { onDeleteBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },
     )
 }
 
@@ -969,6 +985,16 @@ private fun WeightEntry.editAction(
 ): (() -> Unit)? =
     if (isOpenVitalsEntry && id.isNotBlank()) {
         { onEditBodyMeasurement(type, id) }
+    } else {
+        null
+    }
+
+private fun WeightEntry.deleteAction(
+    type: BodyMeasurementType,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+): (() -> Unit)? =
+    if (isOpenVitalsEntry && id.isNotBlank()) {
+        { onDeleteBodyMeasurement(type, id) }
     } else {
         null
     }

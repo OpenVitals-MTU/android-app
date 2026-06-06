@@ -32,6 +32,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -107,6 +108,7 @@ internal fun <T> SimpleVitalsList(
     modifier: Modifier = Modifier,
     editable: (T) -> Boolean = { false },
     onEdit: ((T) -> Unit)? = null,
+    onDelete: ((T) -> Unit)? = null,
 ) {
     val sortedEntries = entries.sortedByDescending(time)
     var visibleCount by remember(sortedEntries) {
@@ -133,6 +135,9 @@ internal fun <T> SimpleVitalsList(
                     onEdit = onEdit
                         ?.takeIf { editable(entry) }
                         ?.let { edit -> { edit(entry) } },
+                    onDelete = onDelete
+                        ?.takeIf { editable(entry) }
+                        ?.let { delete -> { delete(entry) } },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 )
             }
@@ -154,6 +159,41 @@ internal fun <T> SimpleVitalsList(
 
 @Composable
 internal fun VitalsReadingRow(
+    label: String,
+    source: String,
+    time: ZonedDateTime,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (onDelete != null) {
+        SwipeToDeleteEntryRow(
+            onDelete = onDelete,
+            modifier = modifier,
+        ) {
+            VitalsReadingRowContent(
+                label = label,
+                source = source,
+                time = time,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = onEdit,
+            )
+        }
+    } else {
+        VitalsReadingRowContent(
+            label = label,
+            source = source,
+            time = time,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEdit = onEdit,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun VitalsReadingRowContent(
     label: String,
     source: String,
     time: ZonedDateTime,

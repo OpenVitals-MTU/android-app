@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.repository.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
@@ -32,6 +33,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 private const val HeartRateThresholdStepBpm = 5
 private const val HeartRateThresholdMinimumGapBpm = 5
@@ -179,6 +181,37 @@ class HeartViewModel(
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodDriver.selectDate(date))
         load()
+    }
+
+    fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, entryId: String) {
+        if (entryId.isBlank()) return
+        val entryIsOpenVitals = when (type) {
+            VitalsMeasurementType.BLOOD_PRESSURE -> _uiState.value.bloodPressure
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+            VitalsMeasurementType.SPO2 -> _uiState.value.spO2
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+            VitalsMeasurementType.RESPIRATORY_RATE -> _uiState.value.respiratoryRate
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+            VitalsMeasurementType.BODY_TEMPERATURE -> _uiState.value.bodyTemperature
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+        } ?: return
+        if (!entryIsOpenVitals) return
+
+        viewModelScope.launch {
+            val previous = _uiState.value
+            _uiState.value = previous.withDeletedVitalsMeasurementEntry(type, entryId)
+            runCatching {
+                vitalsRepository.deleteVitalsMeasurementEntry(type, entryId)
+            }.onSuccess {
+                load()
+            }.onFailure { error ->
+                _uiState.value = previous.copy(error = error.message)
+            }
+        }
     }
 
     fun onVitalsPermissionsResult(granted: Set<String>) {
@@ -332,6 +365,29 @@ class HeartViewModel(
         )
     }
 }
+
+private fun HeartUiState.withDeletedVitalsMeasurementEntry(
+    type: VitalsMeasurementType,
+    entryId: String,
+): HeartUiState =
+    when (type) {
+        VitalsMeasurementType.BLOOD_PRESSURE -> copy(
+            bloodPressure = bloodPressure.filterNot { it.id == entryId },
+            error = null,
+        )
+        VitalsMeasurementType.SPO2 -> copy(
+            spO2 = spO2.filterNot { it.id == entryId },
+            error = null,
+        )
+        VitalsMeasurementType.RESPIRATORY_RATE -> copy(
+            respiratoryRate = respiratoryRate.filterNot { it.id == entryId },
+            error = null,
+        )
+        VitalsMeasurementType.BODY_TEMPERATURE -> copy(
+            bodyTemperature = bodyTemperature.filterNot { it.id == entryId },
+            error = null,
+        )
+    }
 
 private data class HeartLoadResult(
     val daySamples: List<HeartRateSample> = emptyList(),

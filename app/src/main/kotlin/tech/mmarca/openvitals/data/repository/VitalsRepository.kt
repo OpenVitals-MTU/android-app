@@ -257,6 +257,16 @@ class VitalsRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 
+    suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) {
+        val missingPermissions = vitalsWritePermissions(type) - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping deleteVitalsMeasurementEntry type=$type missingCount=${missingPermissions.size}")
+            throw IllegalStateException("Missing Health Connect write permission for $type")
+        }
+        hc.deleteVitalsMeasurementEntry(type, id)
+        queryCache.invalidateOperations("dashboard")
+    }
+
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()
 }
 

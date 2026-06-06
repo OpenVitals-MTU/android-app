@@ -296,6 +296,16 @@ class ActivityRepository @Inject constructor(
         hc.updateActivityEntry(id, request)
         queryCache.invalidateOperations("dashboard")
     }
+
+    suspend fun deleteActivityEntry(id: String) {
+        val granted = grantedPermissionsIfAvailable()
+        if (writeExercisePermission !in granted) {
+            Log.w(TAG, "Skipping deleteActivityEntry missingCount=1")
+            throw SecurityException("Missing Health Connect activity write permission.")
+        }
+        hc.deleteActivityEntry(id)
+        queryCache.invalidateOperations("dashboard")
+    }
 }
 
 data class ActivityPeriodData(

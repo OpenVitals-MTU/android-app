@@ -21,6 +21,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class MindfulnessUiState(
     val isLoading: Boolean = true,
@@ -117,6 +118,26 @@ class MindfulnessViewModel(
         val goal = goalKey.normalize(minutes)
         onDailyGoalChanged(goal)
         _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
+    }
+
+    fun deleteMindfulnessSessionEntry(entryId: String) {
+        if (entryId.isBlank()) return
+        val entry = _uiState.value.sessions.firstOrNull { it.id == entryId } ?: return
+        if (!entry.isOpenVitalsEntry) return
+        viewModelScope.launch {
+            val previous = _uiState.value
+            _uiState.value = previous.copy(
+                sessions = previous.sessions.filterNot { it.id == entryId },
+                error = null,
+            )
+            runCatching {
+                repository.deleteMindfulnessSessionEntry(entryId)
+            }.onSuccess {
+                load()
+            }.onFailure { error ->
+                _uiState.value = previous.copy(error = error.message)
+            }
+        }
     }
 
     fun load() {

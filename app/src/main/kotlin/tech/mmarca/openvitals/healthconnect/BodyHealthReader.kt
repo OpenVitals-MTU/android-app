@@ -326,6 +326,38 @@ internal class BodyHealthReader(
             support.client().updateRecords(listOf(record))
         }
 
+    suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) = withContext(Dispatchers.IO) {
+        when (type) {
+            BodyMeasurementType.WEIGHT -> {
+                val existing = support.client().readRecord(WeightRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = WeightRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+            BodyMeasurementType.HEIGHT -> {
+                val existing = support.client().readRecord(HeightRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = HeightRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+            BodyMeasurementType.BODY_FAT -> {
+                val existing = support.client().readRecord(BodyFatRecord::class, id).record
+                existing.requireOpenVitalsOrigin(appPackageName)
+                support.client().deleteRecords(
+                    recordType = BodyFatRecord::class,
+                    recordIdsList = listOf(existing.metadata.id),
+                    clientRecordIdsList = emptyList(),
+                )
+            }
+        }
+    }
+
     private fun validateBodyMeasurement(request: BodyMeasurementWriteRequest) {
         when (request.type) {
             BodyMeasurementType.WEIGHT -> require(request.value > 0.0 && request.value <= MaxWeightKg) {

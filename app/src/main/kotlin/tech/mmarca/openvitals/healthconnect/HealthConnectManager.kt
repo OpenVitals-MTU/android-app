@@ -257,6 +257,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) =
         activityReader.updateActivityEntry(id, request)
 
+    suspend fun deleteActivityEntry(id: String) =
+        activityReader.deleteActivityEntry(id)
+
     suspend fun readSleepSession(date: LocalDate): SleepData? =
         sleepReader.readSleepSession(date)
 
@@ -347,6 +350,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) =
         bodyReader.updateBodyMeasurementEntry(id, request)
 
+    suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) =
+        bodyReader.deleteBodyMeasurementEntry(type, id)
+
     suspend fun readDailyNutrition(
         startDate: LocalDate,
         endDate: LocalDate,
@@ -375,6 +381,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun updateMindfulnessSessionEntry(id: String, request: MindfulnessSessionWriteRequest) =
         mindfulnessReader.updateMindfulnessSessionEntry(id, request)
+
+    suspend fun deleteMindfulnessSessionEntry(id: String) =
+        mindfulnessReader.deleteMindfulnessSessionEntry(id)
 
     suspend fun readMenstruationFlowEntries(start: Instant, end: Instant): List<MenstruationFlowEntry> =
         cycleReader.readMenstruationFlowEntries(start, end)
@@ -423,6 +432,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) =
         vitalsReader.updateVitalsMeasurementEntry(id, request)
+
+    suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) =
+        vitalsReader.deleteVitalsMeasurementEntry(type, id)
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)

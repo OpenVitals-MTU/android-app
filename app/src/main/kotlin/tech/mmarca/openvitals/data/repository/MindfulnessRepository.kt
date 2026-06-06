@@ -111,6 +111,20 @@ class MindfulnessRepository @Inject constructor(
         hc.updateMindfulnessSessionEntry(id, request)
         queryCache.invalidateOperations("dashboard")
     }
+
+    suspend fun deleteMindfulnessSessionEntry(id: String) {
+        if (!isMindfulnessAvailable()) {
+            Log.w(TAG, "Skipping deleteMindfulnessSessionEntry because mindfulness sessions are unavailable")
+            throw IllegalStateException("Mindfulness sessions are not available from this Health Connect provider.")
+        }
+        val missingPermissions = mindfulnessWritePermissions - grantedPermissionsIfAvailable()
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping deleteMindfulnessSessionEntry missingCount=${missingPermissions.size}")
+            throw IllegalStateException("Missing Health Connect write permission for mindfulness.")
+        }
+        hc.deleteMindfulnessSessionEntry(id)
+        queryCache.invalidateOperations("dashboard")
+    }
 }
 
 data class MindfulnessPeriodData(

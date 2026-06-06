@@ -63,6 +63,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
@@ -123,6 +124,7 @@ fun ActivitiesScreen(
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             onClick = { onOpenActivity(workout.id) },
                             onEdit = workout.editAction(onEditActivity),
+                            onDelete = workout.deleteAction(viewModel::deleteActivityEntry),
                             modifier = rowModifier,
                         )
                     }
@@ -168,6 +170,7 @@ fun ActivitiesScreen(
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onClick = { onOpenActivity(workout.id) },
                         onEdit = workout.editAction(onEditActivity),
+                        onDelete = workout.deleteAction(viewModel::deleteActivityEntry),
                         modifier = rowModifier,
                     )
                 }
@@ -443,6 +446,42 @@ private fun WorkoutListItem(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onClick: () -> Unit,
     onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (onDelete != null) {
+        SwipeToDeleteEntryRow(
+            onDelete = onDelete,
+            modifier = modifier,
+        ) {
+            WorkoutListItemContent(
+                workout = workout,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onClick = onClick,
+                onEdit = onEdit,
+            )
+        }
+    } else {
+        WorkoutListItemContent(
+            workout = workout,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onClick = onClick,
+            onEdit = onEdit,
+            modifier = modifier,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WorkoutListItemContent(
+    workout: ExerciseData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onClick: () -> Unit,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -516,6 +555,13 @@ private fun WorkoutListItem(
 private fun ExerciseData.editAction(onEditActivity: (String) -> Unit): (() -> Unit)? =
     if (isOpenVitalsEntry && id.isNotBlank()) {
         { onEditActivity(id) }
+    } else {
+        null
+    }
+
+private fun ExerciseData.deleteAction(onDeleteActivity: (String) -> Unit): (() -> Unit)? =
+    if (isOpenVitalsEntry && id.isNotBlank()) {
+        { onDeleteActivity(id) }
     } else {
         null
     }

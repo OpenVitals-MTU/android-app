@@ -11,6 +11,8 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,6 +21,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MindfulnessViewModelTest {
 
     @get:Rule
@@ -29,6 +32,7 @@ class MindfulnessViewModelTest {
 
     private fun emptyRepo() = mockk<MindfulnessRepository>().also { repo ->
         coEvery { repo.loadMindfulnessSessions(any(), any()) } returns emptyList()
+        coEvery { repo.deleteMindfulnessSessionEntry(any()) } returns Unit
         coEvery { repo.loadMindfulnessPeriod(any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
@@ -66,6 +70,58 @@ class MindfulnessViewModelTest {
         assertEquals(sessions, vm.uiState.value.sessions)
         assertEquals(90L, vm.uiState.value.totalMinutes)
         assertNull(vm.uiState.value.error)
+    }
+
+    @Test fun `deleteMindfulnessSessionEntry removes OpenVitals session and reloads`() = runTest {
+        val now = Instant.now()
+        val entry = MindfulnessSession(
+            id = "session-id",
+            title = "Breathing",
+            startTime = now.minusSeconds(1_800),
+            endTime = now,
+            durationMs = 1_800_000,
+            source = "tech.mmarca.openvitals.debug",
+            isOpenVitalsEntry = true,
+        )
+        var sessions = listOf(entry)
+        val repo = emptyRepo()
+        coEvery { repo.loadMindfulnessSessions(any(), any()) } answers { sessions }
+        coEvery { repo.deleteMindfulnessSessionEntry("session-id") } coAnswers {
+            sessions = emptyList()
+        }
+        val vm = MindfulnessViewModel(repo)
+
+        vm.deleteMindfulnessSessionEntry("session-id")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.sessions.isEmpty())
+        assertEquals(0L, vm.uiState.value.totalMinutes)
+        coVerify { repo.deleteMindfulnessSessionEntry("session-id") }
+        coVerify(atLeast = 2) { repo.loadMindfulnessPeriod(any()) }
+    }
+
+    @Test fun `deleteMindfulnessSessionEntry ignores sessions not created by OpenVitals`() = runTest {
+        val now = Instant.now()
+        val sessions = listOf(
+            MindfulnessSession(
+                id = "external-session-id",
+                title = "Breathing",
+                startTime = now.minusSeconds(1_800),
+                endTime = now,
+                durationMs = 1_800_000,
+                source = "com.example",
+                isOpenVitalsEntry = false,
+            )
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadMindfulnessSessions(any(), any()) } returns sessions
+        val vm = MindfulnessViewModel(repo)
+
+        vm.deleteMindfulnessSessionEntry("external-session-id")
+        advanceUntilIdle()
+
+        assertEquals(sessions, vm.uiState.value.sessions)
+        coVerify(exactly = 0) { repo.deleteMindfulnessSessionEntry("external-session-id") }
     }
 
     @Test fun `load failure sets error and clears loading`() = runTest {

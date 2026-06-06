@@ -25,6 +25,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.WeightEntry
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import java.time.Instant
 import java.time.ZoneId
@@ -35,6 +36,7 @@ internal fun WeightEntryRow(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     BodyReadingRow(
@@ -44,12 +46,51 @@ internal fun WeightEntryRow(
         accentColor = WeightColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         onEdit = onEdit,
+        onDelete = onDelete,
         modifier = modifier,
     )
 }
 
 @Composable
 internal fun BodyReadingRow(
+    value: String,
+    source: String,
+    time: Instant,
+    accentColor: Color,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (onDelete != null) {
+        SwipeToDeleteEntryRow(
+            onDelete = onDelete,
+            modifier = modifier,
+        ) {
+            BodyReadingRowContent(
+                value = value,
+                source = source,
+                time = time,
+                accentColor = accentColor,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = onEdit,
+            )
+        }
+    } else {
+        BodyReadingRowContent(
+            value = value,
+            source = source,
+            time = time,
+            accentColor = accentColor,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEdit = onEdit,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun BodyReadingRowContent(
     value: String,
     source: String,
     time: Instant,

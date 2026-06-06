@@ -63,6 +63,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
+import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
@@ -142,6 +143,7 @@ fun MindfulnessScreen(
                             unitFormatter = unitFormatter,
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
                             onEdit = session.editAction(onEditMindfulnessSession),
+                            onDelete = session.deleteAction(viewModel::deleteMindfulnessSessionEntry),
                             modifier = rowModifier,
                         )
                     }
@@ -184,6 +186,7 @@ fun MindfulnessScreen(
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onEdit = session.editAction(onEditMindfulnessSession),
+                        onDelete = session.deleteAction(viewModel::deleteMindfulnessSessionEntry),
                         modifier = rowModifier,
                     )
                 }
@@ -475,6 +478,38 @@ private fun MindfulnessSessionRow(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (onDelete != null) {
+        SwipeToDeleteEntryRow(
+            onDelete = onDelete,
+            modifier = modifier,
+        ) {
+            MindfulnessSessionRowContent(
+                session = session,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = onEdit,
+            )
+        }
+    } else {
+        MindfulnessSessionRowContent(
+            session = session,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEdit = onEdit,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun MindfulnessSessionRowContent(
+    session: MindfulnessSession,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -534,6 +569,13 @@ private fun MindfulnessSessionRow(
 private fun MindfulnessSession.editAction(onEditMindfulnessSession: (String) -> Unit): (() -> Unit)? =
     if (isOpenVitalsEntry && id.isNotBlank()) {
         { onEditMindfulnessSession(id) }
+    } else {
+        null
+    }
+
+private fun MindfulnessSession.deleteAction(onDeleteMindfulnessSession: (String) -> Unit): (() -> Unit)? =
+    if (isOpenVitalsEntry && id.isNotBlank()) {
+        { onDeleteMindfulnessSession(id) }
     } else {
         null
     }

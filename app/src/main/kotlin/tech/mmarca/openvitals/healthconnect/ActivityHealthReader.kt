@@ -418,6 +418,19 @@ internal class ActivityHealthReader(
         }
     }
 
+    suspend fun deleteActivityEntry(id: String) = withContext(Dispatchers.IO) {
+        val existing = support.client().readRecord(ExerciseSessionRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+
+        Log.d(TAG, "Deleting activity entry ${support.diagnosticsSummary()}")
+        deleteManualActivityMetricRecords(existing.startTime, existing.endTime)
+        support.client().deleteRecords(
+            recordType = ExerciseSessionRecord::class,
+            recordIdsList = listOf(existing.metadata.id),
+            clientRecordIdsList = emptyList(),
+        )
+    }
+
     private fun ActivityWriteRequest.toExerciseSessionRecord(
         metadata: Metadata,
         exerciseSegments: List<ExerciseSegment>,
