@@ -113,6 +113,7 @@ data class ActivityEntryUiState(
     val detailMessage: String? = null,
     val validationErrors: Set<ActivityEntryValidationError> = emptySet(),
     val editRecordId: String? = null,
+    val isRecordingDraft: Boolean = false,
     val saveCompleted: Boolean = false,
 ) {
     val routePoints: List<ExerciseRoutePoint>
@@ -127,6 +128,7 @@ class ActivityEntryViewModel(
     private val repository: ActivityRepository,
     private val routeFileImporter: RouteFileImporter? = null,
     private val activityRecorder: ActivityRecordingController? = null,
+    private val recordingDraftStore: ActivityRecordingDraftStore? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val editActivityId: String? = null,
 ) : ViewModel() {
@@ -136,11 +138,13 @@ class ActivityEntryViewModel(
         repository: ActivityRepository,
         routeFileImporter: RouteFileImporter,
         activityRecorder: ActivityRecordingController,
+        recordingDraftStore: ActivityRecordingDraftStore,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
         routeFileImporter = routeFileImporter,
         activityRecorder = activityRecorder,
+        recordingDraftStore = recordingDraftStore,
         clock = Clock.systemDefaultZone(),
         editActivityId = savedStateHandle[ACTIVITY_ENTRY_ID_ARG],
     )
@@ -148,10 +152,7 @@ class ActivityEntryViewModel(
     private var editEntryLoaded = false
 
     private val _uiState = MutableStateFlow(
-        initialActivityEntryState(clock, repository).copy(
-            mode = if (editActivityId == null) ActivityEntryMode.CHOOSE_SOURCE else ActivityEntryMode.MANUAL,
-            editRecordId = editActivityId,
-        )
+        initialState(recordingDraftStore?.restore())
     )
     val uiState: StateFlow<ActivityEntryUiState> = _uiState.asStateFlow()
     private val fallbackRecordingState = MutableStateFlow(ActivityRecordingState())
@@ -167,6 +168,33 @@ class ActivityEntryViewModel(
                 }
             }
             ?.launchIn(viewModelScope)
+    }
+
+    private fun initialState(recordingDraft: ActivityEntryUiState?): ActivityEntryUiState {
+        if (editActivityId == null && recordingDraft?.isRecordingDraft == true) {
+            return recordingDraft.copy(
+                writePermissions = repository.activityWritePermissions(),
+                canWrite = false,
+                isCheckingPermission = true,
+                isSavingEntry = false,
+                isImportingRoute = false,
+                entryError = null,
+                detailMessage = null,
+                validationErrors = emptySet(),
+                editRecordId = null,
+                saveCompleted = false,
+            )
+        }
+
+        return initialActivityEntryState(clock, repository).copy(
+            mode = if (editActivityId == null) ActivityEntryMode.CHOOSE_SOURCE else ActivityEntryMode.MANUAL,
+            editRecordId = editActivityId,
+        )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        recordingDraftStore?.store(_uiState.value)
     }
 
     fun refreshPermission() {
@@ -216,10 +244,12 @@ class ActivityEntryViewModel(
     }
 
     fun startManualEntry() {
+        recordingDraftStore?.clear()
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            isRecordingDraft = false,
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),
@@ -229,6 +259,7 @@ class ActivityEntryViewModel(
 
     fun chooseSource() {
         if (_uiState.value.isEditMode) return
+        recordingDraftStore?.clear()
         _uiState.value = initialActivityEntryState(clock, repository).copy(
             canWrite = _uiState.value.canWrite,
             isCheckingPermission = _uiState.value.isCheckingPermission,
@@ -306,9 +337,11 @@ class ActivityEntryViewModel(
             return
         }
 
+        recordingDraftStore?.clear()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isImportingRoute = true,
+                isRecordingDraft = false,
                 entryError = null,
                 detailMessage = null,
                 validationErrors = emptySet(),
@@ -367,11 +400,13 @@ class ActivityEntryViewModel(
             return
         }
 
+        recordingDraftStore?.clear()
         val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            isRecordingDraft = false,
             distanceText = "",
             elevationText = "",
             entryError = null,
@@ -401,11 +436,13 @@ class ActivityEntryViewModel(
             return
         }
 
+        recordingDraftStore?.clear()
         val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            isRecordingDraft = false,
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(now),
             startTimeText = TimeFormatter.format(now.toLocalTime()),
             durationMinutesText = "1",
@@ -434,6 +471,7 @@ class ActivityEntryViewModel(
 
     fun discardGpsRecording() {
         activityRecorder?.discardRecording()
+        recordingDraftStore?.clear()
         chooseSource()
     }
 
@@ -463,10 +501,14 @@ class ActivityEntryViewModel(
                 ),
                 unitSystem,
             )
-            _uiState.value = _uiState.value.copy(recordedPauseIntervals = snapshot.pauseIntervals)
+            _uiState.value = _uiState.value.copy(
+                recordedPauseIntervals = snapshot.pauseIntervals,
+                isRecordingDraft = true,
+            )
         } else {
             applyRecordingWithoutRoute(snapshot)
         }
+        recordingDraftStore?.store(_uiState.value)
     }
 
     fun loadEditEntry(unitSystem: UnitSystem) {
@@ -561,6 +603,7 @@ class ActivityEntryViewModel(
                     repository.updateActivityEntry(editRecordId, request)
                 }
             }.onSuccess {
+                recordingDraftStore?.clear()
                 if (editRecordId == null) {
                     _uiState.value = clearedAfterSaveState(clock, repository, _uiState.value.selectedActivityType)
                     refreshPermission()
@@ -619,6 +662,7 @@ class ActivityEntryViewModel(
             totalCaloriesText = calorieEstimate?.totalCaloriesText ?: currentState.totalCaloriesText,
             importedRoute = routeImport,
             recordedPauseIntervals = emptyList(),
+            isRecordingDraft = false,
             startDateText = if (routeImport.hasImportedTimeRange) {
                 DateTimeFormatter.ISO_LOCAL_DATE.format(start)
             } else {
@@ -681,6 +725,7 @@ class ActivityEntryViewModel(
             selectedActivityType = selectedActivityType,
             importedRoute = null,
             recordedPauseIntervals = snapshot.pauseIntervals,
+            isRecordingDraft = true,
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
             startTimeText = TimeFormatter.format(start.toLocalTime()),
             durationMinutesText = durationMinutes.toString(),

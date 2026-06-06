@@ -87,11 +87,13 @@ private fun List<ExerciseRoutePoint>.toRoutePreviewGeometry(): RoutePreviewGeome
     val maxLatitude = orderedPoints.maxOf { it.latitude }
     val minLongitude = orderedPoints.minOf { it.longitude }
     val maxLongitude = orderedPoints.maxOf { it.longitude }
+    val longitudeSpan = (maxLongitude - minLongitude).takeIf { it > 0.0 } ?: 0.00001
+    val latitudeSpan = (maxLatitude - minLatitude).takeIf { it > 0.0 } ?: 0.00001
     return RoutePreviewGeometry(
         points = orderedPoints,
-        maxLatitude = maxLatitude,
-        minLongitude = minLongitude,
-        longitudeSpan = (maxLongitude - minLongitude).takeIf { it > 0.0 } ?: 0.00001,
-        latitudeSpan = (maxLatitude - minLatitude).takeIf { it > 0.0 } ?: 0.00001,
+        maxLatitude = if (maxLatitude == minLatitude) maxLatitude + latitudeSpan / 2.0 else maxLatitude,
+        minLongitude = if (maxLongitude == minLongitude) minLongitude - longitudeSpan / 2.0 else minLongitude,
+        longitudeSpan = longitudeSpan,
+        latitudeSpan = latitudeSpan,
     )
 }

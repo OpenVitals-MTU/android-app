@@ -275,6 +275,87 @@ class ActivityEntryViewModelTest {
         assertEquals("343", vm.uiState.value.totalCaloriesText)
     }
 
+    @Test fun `finished recording draft is restored by a new activity entry view model`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val draftStore = ActivityRecordingDraftStore()
+        val recorder = mockk<ActivityRecordingController>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
+            pauseIntervals = emptyList(),
+            distanceMeters = 1200.0,
+            elevationGainedMeters = 12.0,
+        )
+        val firstVm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            recordingDraftStore = draftStore,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+        firstVm.selectActivityType(DefaultActivityEntryTypes.first { it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_BIKING })
+        advanceUntilIdle()
+
+        firstVm.finishGpsRecording(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        val restoredVm = ActivityEntryViewModel(
+            repository = repo,
+            recordingDraftStore = draftStore,
+            clock = Clock.fixed(start.plusSeconds(60), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.ROUTE_IMPORT, restoredVm.uiState.value.mode)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_BIKING, restoredVm.uiState.value.selectedActivityType.exerciseType)
+        assertEquals("1.2", restoredVm.uiState.value.distanceText)
+        assertEquals("12", restoredVm.uiState.value.elevationText)
+        assertTrue(restoredVm.uiState.value.isRecordingDraft)
+    }
+
+    @Test fun `saving a restored recording draft clears it`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val draftStore = ActivityRecordingDraftStore()
+        val recorder = mockk<ActivityRecordingController>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            startTime = start,
+            endTime = start.plusSeconds(30 * 60),
+            points = emptyList(),
+            pauseIntervals = emptyList(),
+            distanceMeters = 0.0,
+            elevationGainedMeters = 0.0,
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            recordingDraftStore = draftStore,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        val restoredVm = ActivityEntryViewModel(
+            repository = repo,
+            recordingDraftStore = draftStore,
+            clock = Clock.fixed(start.plusSeconds(60), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        restoredVm.addEntry(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertNull(draftStore.restore())
+    }
+
     @Test fun `activity entry keeps full write permissions when optional fields change`() = runTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(

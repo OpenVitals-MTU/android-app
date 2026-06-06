@@ -1131,7 +1131,7 @@ private fun ActivityRecordingScreen(
             )
         }
 
-        if (state.points.size >= 2) {
+        if (state.points.isNotEmpty()) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 shape = MaterialTheme.shapes.medium,

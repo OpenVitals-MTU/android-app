@@ -91,7 +91,10 @@ class ActivityRecordingController @Inject constructor(
             )
             return false
         }
-        if (initialFix?.activityGpsFixQuality()?.isPrecise != true) {
+        val now = Instant.now()
+        val lockedFix = initialFix
+        val initialFixQuality = lockedFix?.activityGpsFixQuality(now = now)
+        if (lockedFix == null || initialFixQuality?.isPrecise != true) {
             updateAndPersist(
                 _state.value.copy(
                     errorMessage = context.getString(R.string.activity_recording_error_waiting_for_gps),
@@ -100,7 +103,7 @@ class ActivityRecordingController @Inject constructor(
             return false
         }
 
-        val now = Instant.now()
+        val initialPoint = lockedFix.toRoutePoint(timeOverride = now)
         persistenceScope.coroutineContext.cancelChildren()
         recordingStore.clear()
         updateAndPersist(
@@ -108,7 +111,9 @@ class ActivityRecordingController @Inject constructor(
                 status = ActivityRecordingStatus.RECORDING,
                 exerciseType = exerciseType,
                 startTime = now,
-                lastLocationTime = null,
+                points = listOf(initialPoint),
+                lastAccuracyMeters = initialFixQuality.accuracyMeters,
+                lastLocationTime = initialPoint.time,
             ),
             replaceRoutePoints = true,
         )
@@ -360,9 +365,9 @@ fun ActivityRecordingState.movingDuration(now: Instant = Instant.now()): Duratio
     return Duration.ofMillis((elapsedMillis - pausedMillis).coerceAtLeast(0L))
 }
 
-private fun Location.toRoutePoint(): ExerciseRoutePoint =
+private fun Location.toRoutePoint(timeOverride: Instant? = null): ExerciseRoutePoint =
     ExerciseRoutePoint(
-        time = Instant.ofEpochMilli(time.takeIf { it > 0L } ?: System.currentTimeMillis()),
+        time = timeOverride ?: Instant.ofEpochMilli(time.takeIf { it > 0L } ?: System.currentTimeMillis()),
         latitude = latitude,
         longitude = longitude,
         altitudeMeters = if (hasAltitude()) altitude else null,
