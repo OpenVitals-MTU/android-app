@@ -13,12 +13,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.repository.HydrationRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
 
 internal const val MillilitersPerLiter = 1000.0
 private const val MaxHealthConnectHydrationLiters = 100.0
-internal const val DefaultHydrationContainerMilliliters = 350.0
 internal const val MinHydrationContainerMilliliters = 1.0
 internal const val MaxHydrationContainerMilliliters =
     MaxHealthConnectHydrationLiters * MillilitersPerLiter
@@ -58,12 +56,7 @@ data class HydrationContainerOption(
     val volumeLiters: Double
         get() = volumeMilliliters / MillilitersPerLiter
 
-    val isCustom: Boolean
-        get() = id == CustomId
-
     companion object {
-        const val CustomId = "custom"
-
         val Defaults = listOf(
             HydrationContainerOption("coffee_cup", 100.0),
             HydrationContainerOption("tea_cup", 150.0),
@@ -73,14 +66,6 @@ data class HydrationContainerOption(
             HydrationContainerOption("water_bottle", 500.0),
             HydrationContainerOption("large_bottle", 1000.0),
         )
-
-        fun custom(volumeMilliliters: Double): HydrationContainerOption =
-            HydrationContainerOption(CustomId, volumeMilliliters)
-
-        fun options(
-            customVolumeMilliliters: Double = DefaultHydrationContainerMilliliters,
-        ): List<HydrationContainerOption> =
-            listOf(custom(normalizeHydrationContainerMilliliters(customVolumeMilliliters))) + Defaults
     }
 }
 
@@ -98,10 +83,8 @@ data class HydrationEntryUiState(
     val isSavingEntry: Boolean = false,
     val beverageOptions: List<HydrationBeverage> = HydrationBeverage.DisplayOrder,
     val selectedBeverage: HydrationBeverage = HydrationBeverage.WATER,
-    val containerOptions: List<HydrationContainerOption> = HydrationContainerOption.options(),
-    val selectedContainer: HydrationContainerOption = HydrationContainerOption.custom(
-        DefaultHydrationContainerMilliliters,
-    ),
+    val containerOptions: List<HydrationContainerOption> = HydrationContainerOption.Defaults,
+    val selectedContainer: HydrationContainerOption = HydrationContainerOption.Defaults.first(),
     val editRecordId: String? = null,
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
@@ -116,36 +99,16 @@ data class HydrationEntryUiState(
 }
 
 @HiltViewModel
-class HydrationEntryViewModel(
+class HydrationEntryViewModel @Inject constructor(
     private val repository: HydrationRepository,
-    savedStateHandle: SavedStateHandle = SavedStateHandle(),
-    initialCustomContainerMilliliters: Double = DefaultHydrationContainerMilliliters,
-    private val onCustomContainerSizeChanged: (Double) -> Unit = {},
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    @Inject
-    constructor(
-        repository: HydrationRepository,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: SavedStateHandle,
-    ) : this(
-        repository = repository,
-        savedStateHandle = savedStateHandle,
-        initialCustomContainerMilliliters = preferencesRepository.hydrationContainerMilliliters,
-        onCustomContainerSizeChanged = { milliliters ->
-            preferencesRepository.hydrationContainerMilliliters = milliliters
-        },
-    )
-
     constructor(repository: HydrationRepository) : this(repository, SavedStateHandle())
 
     private val editRecordId: String? = savedStateHandle[HYDRATION_ENTRY_ID_ARG]
-    private val initialContainerOptions = HydrationContainerOption.options(initialCustomContainerMilliliters)
 
     private val _uiState = MutableStateFlow(
-        HydrationEntryUiState(
-            containerOptions = initialContainerOptions,
-            selectedContainer = initialContainerOptions.first { it.isCustom },
-        )
+        HydrationEntryUiState()
     )
     val uiState: StateFlow<HydrationEntryUiState> = _uiState.asStateFlow()
 
@@ -215,7 +178,7 @@ class HydrationEntryViewModel(
         )
     }
 
-    fun updateCustomContainerSize(milliliters: Double) {
+    fun updateContainerSize(container: HydrationContainerOption, milliliters: Double) {
         if (!isValidHydrationContainerMilliliters(milliliters)) {
             _uiState.value = _uiState.value.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
@@ -224,15 +187,16 @@ class HydrationEntryViewModel(
             return
         }
 
-        val customContainer = HydrationContainerOption.custom(milliliters)
+        val updatedContainer = container.copy(volumeMilliliters = milliliters)
         _uiState.value = _uiState.value.copy(
-            containerOptions = _uiState.value.containerOptions.withCustomContainer(customContainer),
-            selectedContainer = customContainer,
+            containerOptions = _uiState.value.containerOptions.map { option ->
+                if (option.id == container.id) updatedContainer else option
+            },
+            selectedContainer = updatedContainer,
             saveCompleted = false,
             entryError = null,
             writeErrorMessage = null,
         )
-        onCustomContainerSizeChanged(milliliters)
     }
 
     fun addSelectedHydrationEntry() {
@@ -343,19 +307,3 @@ internal fun isValidHydrationContainerMilliliters(milliliters: Double): Boolean 
         milliliters <= MaxHydrationContainerMilliliters &&
         !milliliters.isNaN() &&
         !milliliters.isInfinite()
-
-private fun normalizeHydrationContainerMilliliters(milliliters: Double): Double =
-    if (isValidHydrationContainerMilliliters(milliliters)) {
-        milliliters
-    } else {
-        DefaultHydrationContainerMilliliters
-    }
-
-private fun List<HydrationContainerOption>.withCustomContainer(
-    customContainer: HydrationContainerOption,
-): List<HydrationContainerOption> =
-    if (any { it.isCustom }) {
-        map { option -> if (option.isCustom) customContainer else option }
-    } else {
-        listOf(customContainer) + this
-    }

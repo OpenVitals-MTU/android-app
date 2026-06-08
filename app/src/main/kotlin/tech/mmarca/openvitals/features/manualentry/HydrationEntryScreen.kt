@@ -93,7 +93,7 @@ fun HydrationEntryScreen(
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.hydrationWritePermissions)
                 },
-                onUpdateCustomContainerSize = viewModel::updateCustomContainerSize,
+                onUpdateContainerSize = viewModel::updateContainerSize,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -108,7 +108,7 @@ private fun HydrationTrackerCard(
     onSelectContainer: (HydrationContainerOption) -> Unit,
     onAddSelectedEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
-    onUpdateCustomContainerSize: (Double) -> Unit,
+    onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWriteHydration && !state.isSavingEntry && !state.isCheckingPermission
@@ -176,7 +176,7 @@ private fun HydrationTrackerCard(
                 unitFormatter = unitFormatter,
                 isSavingEntry = state.isSavingEntry,
                 onSelectContainer = onSelectContainer,
-                onUpdateCustomContainerSize = onUpdateCustomContainerSize,
+                onUpdateContainerSize = onUpdateContainerSize,
             )
 
             Button(
@@ -299,7 +299,7 @@ private fun HydrationContainerCarousel(
     unitFormatter: UnitFormatter,
     isSavingEntry: Boolean,
     onSelectContainer: (HydrationContainerOption) -> Unit,
-    onUpdateCustomContainerSize: (Double) -> Unit,
+    onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var editingContainer by remember { mutableStateOf<HydrationContainerOption?>(null) }
@@ -336,7 +336,7 @@ private fun HydrationContainerCarousel(
             option = option,
             onDismiss = { editingContainer = null },
             onSave = { milliliters ->
-                onUpdateCustomContainerSize(milliliters)
+                onUpdateContainerSize(option, milliliters)
                 editingContainer = null
             },
         )
