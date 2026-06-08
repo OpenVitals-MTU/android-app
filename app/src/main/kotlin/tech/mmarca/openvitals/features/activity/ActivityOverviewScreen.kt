@@ -170,13 +170,19 @@ private fun ActivityOverviewContent(
                 )
             }
             item {
+                val isEstimatedCalories = today.energyBurnedSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR
                 ActivityMetricCard(
                     title = stringResource(R.string.metric_energy_burned),
                     value = unitFormatter.energy(today.energyBurnedKcal),
-                    subtitle = if (today.energyBurnedSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR) {
+                    subtitle = if (isEstimatedCalories) {
                         stringResource(R.string.calories_estimated_active_bmr)
                     } else {
                         stringResource(R.string.period_today)
+                    },
+                    subtitleColor = if (isEstimatedCalories) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     },
                     icon = Icons.Outlined.LocalFireDepartment,
                     accentColor = CaloriesColor,
@@ -430,6 +436,7 @@ private fun ActivityMetricCard(
     chartStyle: ActivityMetricChartStyle,
     chartDays: List<LocalDate>,
     modifier: Modifier = Modifier,
+    subtitleColor: Color? = null,
     onClick: (() -> Unit)? = null,
 ) {
     Card(
@@ -490,7 +497,7 @@ private fun ActivityMetricCard(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = subtitleColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

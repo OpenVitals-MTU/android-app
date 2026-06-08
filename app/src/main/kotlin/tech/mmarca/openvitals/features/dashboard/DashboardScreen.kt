@@ -1147,6 +1147,7 @@ private fun dashboardWidgetSpecs(
             } else {
                 null
             },
+            subtitleColor = MaterialTheme.colorScheme.onSurface,
             progress = caloriesValue?.let {
                 dashboardGoalProgress(
                     current = data.caloriesKcal,
