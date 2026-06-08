@@ -373,7 +373,7 @@ private fun HydrationContainerOptionItem(
     Surface(
         modifier = modifier
             .width(132.dp)
-            .height(112.dp)
+            .height(132.dp)
             .combinedClickable(
                 enabled = enabled,
                 role = Role.Button,
