@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Favorite
@@ -158,6 +159,7 @@ fun DashboardScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onGrantPermissions: () -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
+    onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
@@ -203,6 +205,7 @@ fun DashboardScreen(
                 onRemoveWidget = viewModel::removeDashboardWidget,
                 onAddWidget = viewModel::addDashboardWidget,
                 onOpenMetric = onOpenMetric,
+                onOpenActivities = onOpenActivities,
                 onOpenActivity = onOpenActivity,
                 onOpenLog = onOpenLog,
                 onStartActivity = onStartActivity,
@@ -246,6 +249,7 @@ private fun DashboardContent(
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     onAddWidget: (DashboardWidgetId) -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
+    onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
@@ -369,6 +373,7 @@ private fun DashboardContent(
                 zone = zone,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onOpenActivities = onOpenActivities,
                 onOpenActivity = onOpenActivity,
             )
 
@@ -449,10 +454,11 @@ private fun LazyListScope.dashboardActivitiesToday(
     zone: ZoneId,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
 ) {
     item {
-        SectionHeader(stringResource(R.string.dashboard_activities_today))
+        DashboardActivitiesSectionHeader(onClick = onOpenActivities)
     }
     if (workouts.isNotEmpty()) {
         items(
@@ -479,8 +485,35 @@ private fun LazyListScope.dashboardActivitiesToday(
                 accentColor = WorkoutColor,
                 message = stringResource(R.string.message_no_workouts_day),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                onClick = onOpenActivities,
             )
         }
+    }
+}
+
+@Composable
+private fun DashboardActivitiesSectionHeader(
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.dashboard_activities_today),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

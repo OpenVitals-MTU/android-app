@@ -69,7 +69,6 @@
     <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
     <string name="bottom_nav_dashboard">Summary</string>
-    <string name="bottom_nav_activities">Activities</string>
     <string name="bottom_nav_recovery">Sleep</string>
     <string name="bottom_nav_add_entry">Add entry</string>
     <string name="manual_entry_hydration_title">Hydration</string>
@@ -319,11 +318,7 @@
     <string name="section_records">Records</string>
     <string name="section_activities">Activities</string>
     <string name="activities_recent_title">Recent activities</string>
-    <string name="activities_weekly_overview_title">Weekly overview</string>
     <string name="activities_key_metrics">Key metrics</string>
-    <string name="activities_this_week_title">Activities this week</string>
-    <string name="activity_overview_daily_activity">Daily activity</string>
-    <string name="activity_overview_workout_count">%1$d activities</string>
     <string name="recovery_sleep_score">Sleep score</string>
     <string name="recovery_sleep_duration">Sleep duration</string>
     <string name="recovery_sleep_schedule">Sleep schedule</string>
@@ -537,6 +532,7 @@
     <string name="interpretation_workout_approaching">Approaching weekly reference</string>
     <string name="interpretation_workout_met">Weekly reference met</string>
     <string name="interpretation_workout_body">Logged %1$s toward the 150 min/week adult reference (%2$s). Intensity is not verified.</string>
+    <string name="interpretation_workout_body_weekly_average">Weekly average %1$s toward the 150 min/week adult reference (%2$s). Intensity is not verified.</string>
     <string name="interpretation_workout_source">Source: HHS adult physical activity guideline reference.</string>
     <string name="interpretation_vital_title">Vital context</string>
     <string name="interpretation_vital_within">Within broad adult reference</string>

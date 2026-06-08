@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.activity
 
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivitiesPeriodData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -9,7 +10,10 @@ import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -26,6 +30,8 @@ class ActivitiesViewModelTest {
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
         coEvery { repo.loadWorkouts(any(), any()) } returns emptyList()
+        coEvery { repo.loadDailySteps(any(), any()) } returns emptyList()
+        coEvery { repo.loadDailyNutrition(any(), any()) } returns emptyList()
         coEvery { repo.deleteActivityEntry(any()) } returns Unit
         coEvery { repo.loadActivitiesPeriod(any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
@@ -57,7 +63,7 @@ class ActivitiesViewModelTest {
 
         assertTrue(vm.uiState.value.workouts.isEmpty())
         coVerify { repo.deleteActivityEntry("activity-id") }
-        coVerify(atLeast = 2) { repo.loadActivitiesPeriod(any()) }
+        coVerify(atLeast = 2) { repo.loadWorkouts(any(), any()) }
     }
 
     @Test fun `deleteActivityEntry ignores workout not created by OpenVitals`() = runTest {
@@ -77,6 +83,42 @@ class ActivitiesViewModelTest {
 
         assertEquals(workouts, vm.uiState.value.workouts)
         coVerify(exactly = 0) { repo.deleteActivityEntry("external-activity-id") }
+    }
+
+    @Test fun `last seven days week mode loads and displays rolling seven day window`() = runTest {
+        val repo = emptyRepo()
+        val today = LocalDate.now()
+        val vm = ActivitiesViewModel(
+            repository = repo,
+            initialActivityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+        )
+
+        advanceUntilIdle()
+
+        val expectedDates = (0..6).map { today.minusDays(6).plusDays(it.toLong()) }
+        assertEquals(expectedDates, vm.uiState.value.overviewDays.map { it.date })
+        coVerify { repo.loadWorkouts(today.minusDays(6), today) }
+        coVerify { repo.loadDailySteps(today.minusDays(6), today) }
+        coVerify { repo.loadDailyNutrition(today.minusDays(6), today) }
+    }
+
+    @Test fun `monday to sunday week mode displays all seven days including empty future days`() = runTest {
+        val repo = emptyRepo()
+        val today = LocalDate.now()
+        val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val weekEnd = weekStart.plusDays(6)
+        val vm = ActivitiesViewModel(
+            repository = repo,
+            initialActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
+        )
+
+        advanceUntilIdle()
+
+        val expectedDates = (0..6).map { weekStart.plusDays(it.toLong()) }
+        assertEquals(expectedDates, vm.uiState.value.overviewDays.map { it.date })
+        coVerify { repo.loadWorkouts(weekStart, weekEnd.coerceAtMost(today)) }
+        coVerify { repo.loadDailySteps(weekStart, weekEnd.coerceAtMost(today)) }
+        coVerify { repo.loadDailyNutrition(weekStart, weekEnd.coerceAtMost(today)) }
     }
 
     private fun workout(

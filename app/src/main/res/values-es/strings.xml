@@ -69,7 +69,6 @@
     <string name="screen_vitals_measurement_entry">Entrada de constantes</string>
 
     <string name="bottom_nav_dashboard">Resumen</string>
-    <string name="bottom_nav_activities">Actividades</string>
     <string name="bottom_nav_recovery">Sueño</string>
     <string name="bottom_nav_add_entry">Añadir</string>
     <string name="manual_entry_hydration_title">Hidratación</string>
@@ -319,11 +318,7 @@
     <string name="section_records">Registros</string>
     <string name="section_activities">Actividades</string>
     <string name="activities_recent_title">Actividades recientes</string>
-    <string name="activities_weekly_overview_title">Resumen semanal</string>
     <string name="activities_key_metrics">Métricas clave</string>
-    <string name="activities_this_week_title">Actividades de esta semana</string>
-    <string name="activity_overview_daily_activity">Actividad diaria</string>
-    <string name="activity_overview_workout_count">%1$d actividades</string>
     <string name="recovery_sleep_score">Puntuación de sueño</string>
     <string name="recovery_sleep_duration">Duración del sueño</string>
     <string name="recovery_sleep_schedule">Horario de sueño</string>
@@ -537,6 +532,7 @@
     <string name="interpretation_workout_approaching">Cerca de la referencia semanal</string>
     <string name="interpretation_workout_met">Referencia semanal cumplida</string>
     <string name="interpretation_workout_body">Registrado %1$s hacia la referencia adulta de 150 min/semana (%2$s). La intensidad no se verifica.</string>
+    <string name="interpretation_workout_body_weekly_average">Media semanal %1$s hacia la referencia adulta de 150 min/semana (%2$s). La intensidad no se verifica.</string>
     <string name="interpretation_workout_source">Fuente: referencia de guía de actividad física para adultos del HHS.</string>
     <string name="interpretation_vital_title">Contexto de constante</string>
     <string name="interpretation_vital_within">Dentro de la referencia adulta amplia</string>

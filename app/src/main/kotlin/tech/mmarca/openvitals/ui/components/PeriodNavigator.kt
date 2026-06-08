@@ -29,6 +29,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 fun PeriodNavigator(
     selectedRange: TimeRange,
     period: DatePeriod,
+    title: String? = null,
+    subtitle: String? = null,
     canGoForward: Boolean,
     onPreviousPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
@@ -57,7 +59,7 @@ fun PeriodNavigator(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = localizedPeriodTitle(selectedRange, period),
+                        text = title ?: localizedPeriodTitle(selectedRange, period),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                     )
@@ -70,7 +72,7 @@ fun PeriodNavigator(
                             contentDescription = null,
                         )
                         Text(
-                            text = localizedPeriodSubtitle(selectedRange, period),
+                            text = subtitle ?: localizedPeriodSubtitle(selectedRange, period),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

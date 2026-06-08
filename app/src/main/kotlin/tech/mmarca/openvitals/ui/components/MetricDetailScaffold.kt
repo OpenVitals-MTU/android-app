@@ -37,10 +37,13 @@ fun MetricDetailScaffold(
     onNextPeriod: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     primaryAction: MetricAction? = null,
+    periodOverride: (DatePeriod) -> DatePeriod = { it },
+    periodTitle: @Composable ((DatePeriod) -> String)? = null,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
 ) {
-    val period = periodFor(selectedRange, selectedDate)
+    val period = periodOverride(periodFor(selectedRange, selectedDate))
+    val today = LocalDate.now()
     var showDatePicker by remember { mutableStateOf(false) }
 
     PullToRefreshBox(
@@ -70,7 +73,8 @@ fun MetricDetailScaffold(
                     PeriodNavigator(
                         selectedRange = selectedRange,
                         period = period,
-                        canGoForward = !period.end.isEqual(LocalDate.now()),
+                        title = periodTitle?.invoke(period),
+                        canGoForward = period.end.isBefore(today),
                         onPreviousPeriod = onPreviousPeriod,
                         onNextPeriod = onNextPeriod,
                         onOpenCalendar = { showDatePicker = true },

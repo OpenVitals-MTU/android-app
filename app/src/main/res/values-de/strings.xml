@@ -69,7 +69,6 @@
     <string name="screen_vitals_measurement_entry">Vitalwerteeintrag</string>
 
     <string name="bottom_nav_dashboard">Übersicht</string>
-    <string name="bottom_nav_activities">Aktivitäten</string>
     <string name="bottom_nav_recovery">Schlaf</string>
     <string name="bottom_nav_add_entry">Eintrag hinzufügen</string>
     <string name="manual_entry_hydration_title">Hydrierung</string>
@@ -319,11 +318,7 @@
     <string name="section_records">Datensätze</string>
     <string name="section_activities">Aktivitäten</string>
     <string name="activities_recent_title">Letzte Aktivitäten</string>
-    <string name="activities_weekly_overview_title">Wochenübersicht</string>
     <string name="activities_key_metrics">Wichtige Messwerte</string>
-    <string name="activities_this_week_title">Aktivitäten dieser Woche</string>
-    <string name="activity_overview_daily_activity">Tagesaktivität</string>
-    <string name="activity_overview_workout_count">%1$d Aktivitäten</string>
     <string name="recovery_sleep_score">Schlafwert</string>
     <string name="recovery_sleep_duration">Schlafdauer</string>
     <string name="recovery_sleep_schedule">Schlafplan</string>
@@ -537,6 +532,7 @@
     <string name="interpretation_workout_approaching">Nähert sich wöchentlicher Referenz</string>
     <string name="interpretation_workout_met">Wöchentliche Referenz erreicht</string>
     <string name="interpretation_workout_body">%1$s im Verhältnis zur Erwachsenenreferenz von 150 min/Woche protokolliert (%2$s). Die Intensität wird nicht geprüft.</string>
+    <string name="interpretation_workout_body_weekly_average">Wöchentlicher Durchschnitt %1$s im Verhältnis zur Erwachsenenreferenz von 150 min/Woche (%2$s). Die Intensität wird nicht geprüft.</string>
     <string name="interpretation_workout_source">Quelle: Referenz der HHS-Richtlinie für körperliche Aktivität bei Erwachsenen.</string>
     <string name="interpretation_vital_title">Vitalwertkontext</string>
     <string name="interpretation_vital_within">Innerhalb der breiten Erwachsenenreferenz</string>

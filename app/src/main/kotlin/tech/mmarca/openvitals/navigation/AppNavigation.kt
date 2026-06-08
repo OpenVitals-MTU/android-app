@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Dashboard
@@ -36,7 +35,6 @@ import tech.mmarca.openvitals.features.achievements.AchievementsScreen
 import tech.mmarca.openvitals.features.achievements.AchievementsViewModel
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
-import tech.mmarca.openvitals.features.activity.ActivityOverviewScreen
 import tech.mmarca.openvitals.features.activity.ActivityOverviewViewModel
 import tech.mmarca.openvitals.features.activity.ActiveCaloriesScreen
 import tech.mmarca.openvitals.features.activity.ActivityMetric
@@ -114,7 +112,6 @@ import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 
-private const val ActivitiesTabRoute = "tab_activities"
 private const val CardioLoadDetailRoute = "activity/cardio_load"
 private const val RecoveryTabRoute = "tab_recovery"
 private const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
@@ -164,11 +161,6 @@ fun AppNavigation(
                 icon = Icons.Outlined.Dashboard,
             ),
             OpenVitalsNavigationDestination(
-                route = ActivitiesTabRoute,
-                labelRes = R.string.bottom_nav_activities,
-                icon = Icons.AutoMirrored.Outlined.DirectionsRun,
-            ),
-            OpenVitalsNavigationDestination(
                 route = RecoveryTabRoute,
                 labelRes = R.string.bottom_nav_recovery,
                 icon = Icons.Outlined.Bed,
@@ -178,7 +170,6 @@ fun AppNavigation(
     val topLevelRoutes = remember {
         setOf(
             Screen.Dashboard.route,
-            ActivitiesTabRoute,
             RecoveryTabRoute,
         )
     }
@@ -227,7 +218,6 @@ fun AppNavigation(
 
     val topBarTitle = when (currentRoute) {
         Screen.Dashboard.route -> stringResource(R.string.app_name)
-        ActivitiesTabRoute -> stringResource(R.string.bottom_nav_activities)
         RecoveryTabRoute -> stringResource(R.string.bottom_nav_recovery)
         CardioLoadDetailRoute -> stringResource(R.string.metric_cardio_load)
         SleepEfficiencyDetailRoute -> stringResource(R.string.recovery_sleep_efficiency)
@@ -367,10 +357,14 @@ fun AppNavigation(
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                     onOpenMetric = { metricId ->
                         when (metricId) {
+                            DashboardWidgetId.WORKOUT -> navController.navigate(Screen.Activity.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
                             else -> navController.navigate(Screen.Metric.createRoute(metricId.name))
                         }
+                    },
+                    onOpenActivities = {
+                        navController.navigate(Screen.Activity.route)
                     },
                     onOpenActivity = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
@@ -378,33 +372,6 @@ fun AppNavigation(
                     onOpenLog = { navController.navigate(Screen.ManualEntry.route) },
                     onStartActivity = {
                         navController.navigate(Screen.ActivityEntry.route)
-                    },
-                )
-            }
-
-            composable(ActivitiesTabRoute) {
-                val activityOverviewViewModel = hiltViewModel<ActivityOverviewViewModel>()
-                ActivityOverviewScreen(
-                    viewModel = activityOverviewViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onOpenCardioLoad = {
-                        navController.navigate(CardioLoadDetailRoute)
-                    },
-                    onOpenSteps = {
-                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.STEPS.name))
-                    },
-                    onOpenDistance = {
-                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.DISTANCE.name))
-                    },
-                    onOpenEnergyBurned = {
-                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.CALORIES_OUT.name))
-                    },
-                    onOpenHrv = {
-                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
-                    },
-                    onOpenActivity = { activityId ->
-                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
                     },
                 )
             }
@@ -624,6 +591,16 @@ fun AppNavigation(
                     metricId = metricId,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenMetric = { targetMetricId ->
+                        when (targetMetricId) {
+                            DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+                            DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
+                            else -> navController.navigate(Screen.Metric.createRoute(targetMetricId.name))
+                        }
+                    },
+                    onOpenCardioLoad = {
+                        navController.navigate(CardioLoadDetailRoute)
+                    },
                     onOpenActivity = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
                     },
@@ -668,6 +645,21 @@ fun AppNavigation(
                     },
                     onEditActivity = { activityId ->
                         navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
+                    onOpenCardioLoad = {
+                        navController.navigate(CardioLoadDetailRoute)
+                    },
+                    onOpenSteps = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.STEPS.name))
+                    },
+                    onOpenDistance = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.DISTANCE.name))
+                    },
+                    onOpenEnergyBurned = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.CALORIES_OUT.name))
+                    },
+                    onOpenHrv = {
+                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
                     },
                 )
             }
@@ -838,6 +830,8 @@ private fun MetricRouteContent(
     metricId: DashboardWidgetId?,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenMetric: (DashboardWidgetId) -> Unit,
+    onOpenCardioLoad: () -> Unit,
     onOpenActivity: (String) -> Unit,
     onEditActivity: (String) -> Unit,
     onOpenSleepSession: (String) -> Unit,
@@ -901,6 +895,11 @@ private fun MetricRouteContent(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenActivity = onOpenActivity,
                 onEditActivity = onEditActivity,
+                onOpenCardioLoad = onOpenCardioLoad,
+                onOpenSteps = { onOpenMetric(DashboardWidgetId.STEPS) },
+                onOpenDistance = { onOpenMetric(DashboardWidgetId.DISTANCE) },
+                onOpenEnergyBurned = { onOpenMetric(DashboardWidgetId.CALORIES_OUT) },
+                onOpenHrv = { onOpenMetric(DashboardWidgetId.HRV) },
             )
         }
         DashboardWidgetId.SLEEP -> {
