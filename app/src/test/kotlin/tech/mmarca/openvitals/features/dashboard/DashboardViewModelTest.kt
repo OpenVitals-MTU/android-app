@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.dashboard
 
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.RefreshMode
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardMetric
@@ -35,12 +36,14 @@ class DashboardViewModelTest {
     private fun prefs(
         trackCycle: Boolean = false,
         sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+        activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
         showOpenVitalsCalculatedCalories: Boolean = false,
     ) = mockk<PreferencesRepository>().also {
         every { it.acknowledgedPermissions() } returns emptySet()
         every { it.acknowledgePermissions(any()) } returns Unit
         every { it.trackCycle } returns trackCycle
         every { it.sleepRangeMode } returns sleepRangeMode
+        every { it.activityWeekMode } returns activityWeekMode
         every { it.showOpenVitalsCalculatedCalories } returns showOpenVitalsCalculatedCalories
         every { it.dailyGoalFor(any()) } answers { firstArg<MetricDailyGoalKey>().defaultValue }
         every { it.hydrationDailyGoalLiters } returns 2.0
@@ -260,6 +263,21 @@ class DashboardViewModelTest {
         coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
     }
 
+    @Test fun `load passes activity week mode from preferences`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+
+        DashboardViewModel(repo, prefs(activityWeekMode = ActivityWeekMode.LAST_7_DAYS))
+
+        coVerify {
+            repo.loadDashboard(
+                match<DashboardQuery> {
+                    it.date == today && it.activityWeekMode == ActivityWeekMode.LAST_7_DAYS
+                }
+            )
+        }
+    }
+
     @Test fun `load scopes dashboard query to dashboard focus widgets`() = runTest {
         val repo = mockk<HealthRepository>()
         val queries = mutableListOf<DashboardQuery>()
@@ -450,6 +468,27 @@ class DashboardViewModelTest {
 
         assertEquals(SleepRangeMode.NOON, vm.uiState.value.sleepRangeMode)
         coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
+    }
+
+    @Test fun `refreshPreferences reloads dashboard when activity week mode changes`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+        val prefs = prefs(activityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY)
+        var activityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY
+        every { prefs.activityWeekMode } answers { activityWeekMode }
+        val vm = DashboardViewModel(repo, prefs)
+
+        activityWeekMode = ActivityWeekMode.LAST_7_DAYS
+        vm.refreshPreferences()
+
+        assertEquals(ActivityWeekMode.LAST_7_DAYS, vm.uiState.value.activityWeekMode)
+        coVerify {
+            repo.loadDashboard(
+                match<DashboardQuery> {
+                    it.date == today && it.activityWeekMode == ActivityWeekMode.LAST_7_DAYS
+                }
+            )
+        }
     }
 
     @Test fun `refreshPreferences reloads dashboard when calorie calculation mode changes`() = runTest {

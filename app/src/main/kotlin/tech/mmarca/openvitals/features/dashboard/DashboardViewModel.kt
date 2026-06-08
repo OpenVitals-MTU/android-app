@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.performance.RefreshMode
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardMetric
@@ -27,6 +28,7 @@ data class DashboardUiState(
     val showPermissionsCallout: Boolean = false,
     val trackCycle: Boolean = false,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val showOpenVitalsCalculatedCalories: Boolean = false,
     val dashboardWidgets: List<DashboardWidgetId> = DefaultDashboardWidgetIds,
     val dailyGoals: DashboardDailyGoals = DashboardDailyGoals(),
@@ -62,6 +64,7 @@ class DashboardViewModel @Inject constructor(
             dailyGoals = prefs.dashboardDailyGoals(),
             trackCycle = prefs.trackCycle,
             sleepRangeMode = prefs.sleepRangeMode,
+            activityWeekMode = prefs.activityWeekMode,
             showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
         )
     )
@@ -79,20 +82,29 @@ class DashboardViewModel @Inject constructor(
     fun refreshPreferences() {
         val trackCycle = prefs.trackCycle
         val sleepRangeMode = prefs.sleepRangeMode
+        val activityWeekMode = prefs.activityWeekMode
         val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
         val dailyGoals = prefs.dashboardDailyGoals()
         val current = _uiState.value
         val sleepRangeChanged = current.sleepRangeMode != sleepRangeMode
+        val activityWeekModeChanged = current.activityWeekMode != activityWeekMode
         val calorieModeChanged = current.showOpenVitalsCalculatedCalories != showOpenVitalsCalculatedCalories
-        if (current.trackCycle != trackCycle || sleepRangeChanged || calorieModeChanged || current.dailyGoals != dailyGoals) {
+        if (
+            current.trackCycle != trackCycle ||
+            sleepRangeChanged ||
+            activityWeekModeChanged ||
+            calorieModeChanged ||
+            current.dailyGoals != dailyGoals
+        ) {
             _uiState.value = current.copy(
                 trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
+                activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
             )
         }
-        if (sleepRangeChanged || calorieModeChanged) {
+        if (sleepRangeChanged || activityWeekModeChanged || calorieModeChanged) {
             load(current.selectedDate)
         }
     }
@@ -102,6 +114,7 @@ class DashboardViewModel @Inject constructor(
         loadCoordinator.launch(viewModelScope) load@{
             val trackCycle = prefs.trackCycle
             val sleepRangeMode = prefs.sleepRangeMode
+            val activityWeekMode = prefs.activityWeekMode
             val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
             val dailyGoals = prefs.dashboardDailyGoals()
             val dashboardWidgets = _uiState.value.dashboardWidgets
@@ -119,6 +132,7 @@ class DashboardViewModel @Inject constructor(
                 errorMessage = null,
                 trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
+                activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
                 pendingWidgets = deferredWidgets,
@@ -128,6 +142,7 @@ class DashboardViewModel @Inject constructor(
                     DashboardQuery(
                         date = clampedDate,
                         sleepRangeMode = sleepRangeMode,
+                        activityWeekMode = activityWeekMode,
                         visibleMetrics = primaryMetrics,
                         trackCycle = trackCycle,
                         refreshMode = refreshMode,
@@ -143,12 +158,14 @@ class DashboardViewModel @Inject constructor(
                         showPermissionsCallout = unacknowledged.isNotEmpty(),
                         trackCycle = prefs.trackCycle,
                         sleepRangeMode = sleepRangeMode,
+                        activityWeekMode = activityWeekMode,
                         showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
                         dailyGoals = prefs.dashboardDailyGoals(),
                     )
                     loadDeferredDashboardMetrics(
                         date = clampedDate,
                         sleepRangeMode = sleepRangeMode,
+                        activityWeekMode = activityWeekMode,
                         widgets = deferredWidgets.toList(),
                         trackCycle = trackCycle,
                         refreshMode = refreshMode,
@@ -252,6 +269,7 @@ class DashboardViewModel @Inject constructor(
     private suspend fun loadDeferredDashboardMetrics(
         date: LocalDate,
         sleepRangeMode: SleepRangeMode,
+        activityWeekMode: ActivityWeekMode,
         widgets: List<DashboardWidgetId>,
         trackCycle: Boolean,
         refreshMode: RefreshMode,
@@ -277,6 +295,7 @@ class DashboardViewModel @Inject constructor(
                     DashboardQuery(
                         date = date,
                         sleepRangeMode = sleepRangeMode,
+                        activityWeekMode = activityWeekMode,
                         visibleMetrics = setOf(metric),
                         trackCycle = trackCycle,
                         refreshMode = refreshMode,

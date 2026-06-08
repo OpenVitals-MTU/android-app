@@ -39,6 +39,11 @@ import tech.mmarca.openvitals.core.insights.CardioLoadTimeWindow
 import tech.mmarca.openvitals.core.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.core.insights.calculateCardioLoad
 import tech.mmarca.openvitals.core.insights.calculateSleepScore
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
@@ -49,9 +54,6 @@ import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
-import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepRangeWindowFor
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -82,6 +84,7 @@ class HealthRepository @Inject constructor(
     companion object {
         private const val TAG = "HealthRepository"
         private const val DashboardSleepScoreLookbackDays = 7L
+        private const val DashboardCardioLoadHistoryPeriods = 4L
     }
 
     private val readStepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
@@ -177,6 +180,7 @@ class HealthRepository @Inject constructor(
                 parts = listOf(
                     query.date.toString(),
                     query.sleepRangeMode.name,
+                    query.activityWeekMode.name,
                     query.trackCycle.toString(),
                     showOpenVitalsCalculatedCalories.toString(),
                     loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
@@ -207,6 +211,7 @@ class HealthRepository @Inject constructor(
     ): DashboardData = coroutineScope {
         val date = query.date
         val sleepRangeMode = query.sleepRangeMode
+        val activityWeekMode = query.activityWeekMode
         Log.d(
             TAG,
             "loadDashboard date=$date metrics=${metrics.sortedBy { it.name }} grantedCount=${granted.size}",
@@ -354,7 +359,11 @@ class HealthRepository @Inject constructor(
         val weeklyCardioLoad = if (wants(DashboardMetric.WEEKLY_CARDIO_LOAD)) {
             async {
                 dashboardMetric("weekly cardio load") {
-                    readDashboardWeeklyCardioLoad(date, granted)
+                    readDashboardWeeklyCardioLoad(
+                        date = date,
+                        activityWeekMode = activityWeekMode,
+                        granted = granted,
+                    )
                 }
             }
         } else {
@@ -517,11 +526,12 @@ class HealthRepository @Inject constructor(
 
     private suspend fun readDashboardWeeklyCardioLoad(
         date: LocalDate,
+        activityWeekMode: ActivityWeekMode,
         granted: Set<String>,
     ): DashboardWeeklyCardioLoad? {
-        val currentWeek = periodFor(TimeRange.WEEK, date, today = date)
-        val rangeStart = currentWeek.start.minusWeeks(4)
-        val rangeEnd = currentWeek.end
+        val currentPeriod = dashboardCardioLoadPeriod(date, activityWeekMode)
+        val rangeStart = currentPeriod.start.minusDays(DashboardCardioLoadHistoryPeriods * 7)
+        val rangeEnd = currentPeriod.end
         val zone = ZoneId.systemDefault()
         val rangeStartInstant = rangeStart.atStartOfDay(zone).toInstant()
         val rangeEndInstant = rangeEnd.plusDays(1).atStartOfDay(zone).toInstant()
@@ -562,28 +572,28 @@ class HealthRepository @Inject constructor(
                     activityWindows = workouts.cardioLoadWindows(day, zone),
                 )
             }
-            val currentWeekEstimates = datesInRange(currentWeek.start, currentWeek.end)
+            val currentPeriodEstimates = datesInRange(currentPeriod.start, currentPeriod.end)
                 .map { day -> estimatesByDate[day] ?: CardioLoadEstimate.NoData }
                 .toList()
-            val currentScore = currentWeekEstimates.sumOf { it.score }
+            val currentScore = currentPeriodEstimates.sumOf { it.score }
             val todayScore = estimatesByDate[date]?.score ?: 0
-            val previousWeekScores = (1L..4L).map { weeksAgo ->
-                val weekStart = currentWeek.start.minusWeeks(weeksAgo)
-                val weekEnd = weekStart.plusDays(6)
-                datesInRange(weekStart, weekEnd).sumOf { day -> estimatesByDate[day]?.score ?: 0 }
+            val previousPeriodScores = (1L..DashboardCardioLoadHistoryPeriods).map { periodsAgo ->
+                val periodStart = currentPeriod.start.minusDays(periodsAgo * 7)
+                val periodEnd = periodStart.plusDays(6)
+                datesInRange(periodStart, periodEnd).sumOf { day -> estimatesByDate[day]?.score ?: 0 }
             }
-            val daysElapsed = ChronoUnit.DAYS.between(currentWeek.start, currentWeek.end).toInt() + 1
+            val daysElapsed = ChronoUnit.DAYS.between(currentPeriod.start, currentPeriod.end).toInt() + 1
             val target = dashboardWeeklyCardioTarget(
                 currentScore = currentScore,
                 daysElapsed = daysElapsed,
-                previousWeekScores = previousWeekScores,
+                previousWeekScores = previousPeriodScores,
             ) ?: return@withContext null
 
             DashboardWeeklyCardioLoad(
                 currentScore = currentScore,
                 targetScore = target.score,
                 todayScore = todayScore,
-                confidence = currentWeekEstimates.weeklyCardioConfidence(),
+                confidence = currentPeriodEstimates.weeklyCardioConfidence(),
                 targetSource = target.source,
             )
         }
@@ -698,6 +708,18 @@ private data class DashboardWeeklyCardioTarget(
     val score: Int,
     val source: DashboardWeeklyCardioLoadTargetSource,
 )
+
+private fun dashboardCardioLoadPeriod(
+    date: LocalDate,
+    activityWeekMode: ActivityWeekMode,
+): DatePeriod =
+    when (activityWeekMode) {
+        ActivityWeekMode.MONDAY_TO_SUNDAY -> periodFor(TimeRange.WEEK, date, today = date)
+        ActivityWeekMode.LAST_7_DAYS -> DatePeriod(
+            start = date.minusDays(6),
+            end = date,
+        )
+    }
 
 private fun dashboardWeeklyCardioTarget(
     currentScore: Int,

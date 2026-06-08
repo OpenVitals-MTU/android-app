@@ -2,11 +2,13 @@ package tech.mmarca.openvitals.data.model
 
 import java.time.LocalDate
 import tech.mmarca.openvitals.core.performance.RefreshMode
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 
 data class DashboardQuery(
     val date: LocalDate = LocalDate.now(),
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val visibleMetrics: Set<DashboardMetric> = DashboardMetric.entries.toSet(),
     val trackCycle: Boolean = false,
     val refreshMode: RefreshMode = RefreshMode.NORMAL,

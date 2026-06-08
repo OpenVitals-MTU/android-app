@@ -28,9 +28,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.CaloriesBurnedValue
+import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.model.ExerciseData
@@ -356,6 +358,51 @@ class HealthRepositoryDashboardTest {
 
         assertEquals(emptySet<DashboardMetric>(), data.loadedMetrics)
         coVerify(exactly = 0) { hc.readMenstruationPeriods(any(), any()) }
+    }
+
+    @Test fun `weekly cardio load uses rolling last seven days when selected`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns (0..6).map { offset ->
+            DailySteps(
+                date = date.minusDays(offset.toLong()),
+                steps = 3_000L,
+                distanceMeters = 0.0,
+            )
+        }
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+            )
+        )
+
+        assertEquals(7, data.weeklyCardioLoad?.currentScore)
+        assertEquals(1, data.weeklyCardioLoad?.todayScore)
+        coVerify {
+            hc.readDailySteps(
+                startDate = date.minusDays(34),
+                endDate = date,
+                includeDistance = true,
+                includeFloors = false,
+                includeActiveCalories = false,
+                includeElevation = false,
+            )
+        }
     }
 
     private fun sleep(
