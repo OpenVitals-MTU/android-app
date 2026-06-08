@@ -12,6 +12,8 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepDurationMsFromStages
 
 private const val DurationWeight = 35.0
@@ -21,6 +23,7 @@ private const val RegularityWeight = 15.0
 private const val MinimumScoredSleepMinutes = 60.0
 private const val NeutralRegularityRatio = 0.7
 private const val MinutesPerDay = 24 * 60
+internal const val SleepScoreLookbackDays = 7L
 
 enum class SleepScoreConfidence {
     HIGH,
@@ -75,6 +78,37 @@ fun calculateSleepScoresByDate(
             zone = zone,
         )
     }.toMap()
+}
+
+fun calculateSleepScoreForDate(
+    selectedDate: LocalDate,
+    sessions: List<SleepData>,
+    sleepRangeMode: SleepRangeMode,
+    zone: ZoneId = ZoneId.systemDefault(),
+): SleepScoreEstimate {
+    val selectedSleep = dailySleepSummary(
+        sessions = sessions,
+        selectedDate = selectedDate,
+        sleepRangeMode = sleepRangeMode,
+        zone = zone,
+    )
+    val startDate = selectedDate.minusDays(SleepScoreLookbackDays - 1)
+    val previousSessions = generateSequence(startDate) { date ->
+        date.plusDays(1).takeIf { it.isBefore(selectedDate) }
+    }.mapNotNull { date ->
+        dailySleepSummary(
+            sessions = sessions,
+            selectedDate = date,
+            sleepRangeMode = sleepRangeMode,
+            zone = zone,
+        )
+    }.toList()
+
+    return calculateSleepScore(
+        session = selectedSleep,
+        previousSessions = previousSessions,
+        zone = zone,
+    )
 }
 
 fun calculateSleepScore(

@@ -69,7 +69,6 @@
     <string name="screen_vitals_measurement_entry">Entrada de constantes</string>
 
     <string name="bottom_nav_dashboard">Resumen</string>
-    <string name="bottom_nav_recovery">Sueño</string>
     <string name="bottom_nav_add_entry">Añadir</string>
     <string name="manual_entry_hydration_title">Hidratación</string>
     <string name="manual_entry_activity_title">Actividad</string>

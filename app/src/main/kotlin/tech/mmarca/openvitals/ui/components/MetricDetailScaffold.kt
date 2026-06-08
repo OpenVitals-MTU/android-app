@@ -21,7 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.core.period.displayPeriodFor
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,12 +38,13 @@ fun MetricDetailScaffold(
     onNextPeriod: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     primaryAction: MetricAction? = null,
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     periodOverride: (DatePeriod) -> DatePeriod = { it },
     periodTitle: @Composable ((DatePeriod) -> String)? = null,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
 ) {
-    val period = periodOverride(periodFor(selectedRange, selectedDate))
+    val period = periodOverride(displayPeriodFor(selectedRange, selectedDate, weekPeriodMode = weekPeriodMode))
     val today = LocalDate.now()
     var showDatePicker by remember { mutableStateOf(false) }
 

@@ -181,6 +181,7 @@ private fun ActivityMetricScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         when (metric) {
             ActivityMetric.STEPS -> stepsContent(

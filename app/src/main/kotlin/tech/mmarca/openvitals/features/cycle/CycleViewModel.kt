@@ -12,16 +12,22 @@ import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.data.model.CycleData
 import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 
 data class CycleUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.MONTH,
     val selectedDate: LocalDate = LocalDate.now(),
+    val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     val data: CycleData = CycleData(),
     val missingPermissions: Set<String> = emptySet(),
     val error: String? = null,
@@ -31,6 +37,8 @@ data class CycleUiState(
 class CycleViewModel(
     private val repository: CycleRepository,
     initialRange: TimeRange = TimeRange.MONTH,
+    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
@@ -41,20 +49,44 @@ class CycleViewModel(
     ) : this(
         repository = repository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
+        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
+        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.CYCLE, range)
         },
     )
 
-    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
-    private val _uiState = MutableStateFlow(CycleUiState(selectedRange = initialRange))
+    private val periodDriver = PeriodSelectionDriver(
+        initialRange = initialRange,
+        initialWeekPeriodMode = initialWeekPeriodMode,
+        onRangeSelected = onRangeSelected,
+    )
+    private val _uiState = MutableStateFlow(
+        CycleUiState(
+            selectedRange = initialRange,
+            weekPeriodMode = initialWeekPeriodMode,
+        )
+    )
     val uiState: StateFlow<CycleUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
 
     val cyclePermissions: Set<String> get() = repository.phase4Permissions
 
     init {
+        observeWeekPeriodMode()
         load()
+    }
+
+    private fun observeWeekPeriodMode() {
+        viewModelScope.launch {
+            weekPeriodModeChanges.drop(1).collect { mode ->
+                periodDriver.weekPeriodMode = mode
+                _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
+                if (_uiState.value.selectedRange == TimeRange.WEEK) {
+                    load()
+                }
+            }
+        }
     }
 
     fun selectRange(range: TimeRange) {
@@ -88,6 +120,7 @@ class CycleViewModel(
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
                 anchorDate = periodDriver.selection.selectedDate,
+                weekPeriodMode = _uiState.value.weekPeriodMode,
             )
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)

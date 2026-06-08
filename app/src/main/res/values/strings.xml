@@ -69,7 +69,6 @@
     <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
     <string name="bottom_nav_dashboard">Summary</string>
-    <string name="bottom_nav_recovery">Sleep</string>
     <string name="bottom_nav_add_entry">Add entry</string>
     <string name="manual_entry_hydration_title">Hydration</string>
     <string name="manual_entry_activity_title">Activity</string>

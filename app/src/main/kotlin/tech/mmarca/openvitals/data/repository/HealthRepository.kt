@@ -37,13 +37,15 @@ import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.core.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.core.insights.CardioLoadTimeWindow
 import tech.mmarca.openvitals.core.insights.SleepScoreEstimate
+import tech.mmarca.openvitals.core.insights.SleepScoreLookbackDays
 import tech.mmarca.openvitals.core.insights.calculateCardioLoad
-import tech.mmarca.openvitals.core.insights.calculateSleepScore
+import tech.mmarca.openvitals.core.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.core.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
@@ -83,7 +85,6 @@ class HealthRepository @Inject constructor(
 
     companion object {
         private const val TAG = "HealthRepository"
-        private const val DashboardSleepScoreLookbackDays = 7L
         private const val DashboardCardioLoadHistoryPeriods = 4L
     }
 
@@ -476,7 +477,7 @@ class HealthRepository @Inject constructor(
     ): DashboardSleepData {
         val zone = ZoneId.systemDefault()
         val selectedWindow = sleepRangeWindowFor(date, sleepRangeMode, zone)
-        val queryStart = sleepRangeWindowFor(date.minusDays(DashboardSleepScoreLookbackDays - 1), sleepRangeMode, zone)
+        val queryStart = sleepRangeWindowFor(date.minusDays(SleepScoreLookbackDays - 1), sleepRangeMode, zone)
             .start
             .minus(Duration.ofDays(1))
         val sessions = hc.readSleepSessions(queryStart, selectedWindow.end)
@@ -488,39 +489,12 @@ class HealthRepository @Inject constructor(
         )
         return DashboardSleepData(
             sleep = sleep,
-            sleepScore = dashboardSleepScore(
+            sleepScore = calculateSleepScoreForDate(
                 selectedDate = date,
-                selectedSleep = sleep,
                 sessions = sessions,
                 sleepRangeMode = sleepRangeMode,
                 zone = zone,
             ),
-        )
-    }
-
-    private fun dashboardSleepScore(
-        selectedDate: LocalDate,
-        selectedSleep: SleepData?,
-        sessions: List<SleepData>,
-        sleepRangeMode: SleepRangeMode,
-        zone: ZoneId,
-    ): SleepScoreEstimate {
-        val startDate = selectedDate.minusDays(DashboardSleepScoreLookbackDays - 1)
-        val previousSessions = generateSequence(startDate) { date ->
-            date.plusDays(1).takeIf { it.isBefore(selectedDate) }
-        }.mapNotNull { date ->
-            dailySleepSummary(
-                sessions = sessions,
-                selectedDate = date,
-                sleepRangeMode = sleepRangeMode,
-                zone = zone,
-            )
-        }.toList()
-
-        return calculateSleepScore(
-            session = selectedSleep,
-            previousSessions = previousSessions,
-            zone = zone,
         )
     }
 
@@ -713,13 +687,12 @@ private fun dashboardCardioLoadPeriod(
     date: LocalDate,
     activityWeekMode: ActivityWeekMode,
 ): DatePeriod =
-    when (activityWeekMode) {
-        ActivityWeekMode.MONDAY_TO_SUNDAY -> periodFor(TimeRange.WEEK, date, today = date)
-        ActivityWeekMode.LAST_7_DAYS -> DatePeriod(
-            start = date.minusDays(6),
-            end = date,
-        )
-    }
+    periodFor(
+        range = TimeRange.WEEK,
+        anchorDate = date,
+        today = date,
+        weekPeriodMode = activityWeekMode.toWeekPeriodMode(),
+    )
 
 private fun dashboardWeeklyCardioTarget(
     currentScore: Int,

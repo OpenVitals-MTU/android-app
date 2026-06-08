@@ -13,8 +13,9 @@ import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.core.period.displayPeriodFor
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.core.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyNutrition
@@ -25,10 +26,8 @@ import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -87,7 +86,11 @@ class ActivitiesViewModel(
     )
 
     private val goalKey = MetricDailyGoalKey.WORKOUT_MINUTES
-    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
+    private val periodDriver = PeriodSelectionDriver(
+        initialRange = initialRange,
+        initialWeekPeriodMode = initialActivityWeekMode.toWeekPeriodMode(),
+        onRangeSelected = onRangeSelected,
+    )
     private val _uiState = MutableStateFlow(
         ActivitiesUiState(
             selectedRange = initialRange,
@@ -106,6 +109,7 @@ class ActivitiesViewModel(
     private fun observeActivityWeekMode() {
         viewModelScope.launch {
             activityWeekModeChanges.drop(1).collect { mode ->
+                periodDriver.weekPeriodMode = mode.toWeekPeriodMode()
                 _uiState.value = _uiState.value.copy(activityWeekMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
                     load()
@@ -175,6 +179,7 @@ class ActivitiesViewModel(
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
                 anchorDate = periodDriver.selection.selectedDate,
+                weekPeriodMode = _uiState.value.activityWeekMode.toWeekPeriodMode(),
             )
             val windows = activityLoadWindows(
                 query = query,
@@ -323,7 +328,6 @@ private fun activityLoadWindows(
     query: PeriodLoadQuery,
     activityWeekMode: ActivityWeekMode,
 ): ActivityLoadWindows {
-    val genericWindows = query.windows
     val current = activityDisplayPeriod(
         selectedRange = query.range,
         selectedDate = query.selectedDate,
@@ -334,23 +338,16 @@ private fun activityLoadWindows(
         return ActivityLoadWindows(
             current = current,
             currentDataEnd = current.end,
-            previous = genericWindows.previous,
-            baseline = genericWindows.baseline,
+            previous = query.windows.previous,
+            baseline = query.windows.baseline,
         )
     }
 
-    val previous = DatePeriod(
-        start = current.start.minusDays(7),
-        end = current.end.minusDays(7),
-    )
     return ActivityLoadWindows(
         current = current,
         currentDataEnd = current.end.coerceAtMost(query.today),
-        previous = previous,
-        baseline = DatePeriod(
-            start = current.start.minusDays(query.baselineDays),
-            end = current.start.minusDays(1),
-        ),
+        previous = query.windows.previous,
+        baseline = query.windows.baseline,
     )
 }
 
@@ -361,27 +358,13 @@ internal fun activityDisplayPeriod(
     today: LocalDate = LocalDate.now(),
 ): DatePeriod {
     val date = selectedDate.coerceAtMost(today)
-    return if (selectedRange != TimeRange.WEEK) {
-        periodFor(selectedRange, date, today)
-    } else {
-        activityWeekPeriod(date, activityWeekMode)
-    }
+    return displayPeriodFor(
+        range = selectedRange,
+        anchorDate = date,
+        today = today,
+        weekPeriodMode = activityWeekMode.toWeekPeriodMode(),
+    )
 }
-
-private fun activityWeekPeriod(
-    date: LocalDate,
-    activityWeekMode: ActivityWeekMode,
-): DatePeriod =
-    when (activityWeekMode) {
-        ActivityWeekMode.MONDAY_TO_SUNDAY -> {
-            val start = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            DatePeriod(start = start, end = start.plusDays(6))
-        }
-        ActivityWeekMode.LAST_7_DAYS -> DatePeriod(
-            start = date.minusDays(6),
-            end = date,
-        )
-    }
 
 private fun List<Long>.medianOrNull(): Long? {
     if (isEmpty()) return null

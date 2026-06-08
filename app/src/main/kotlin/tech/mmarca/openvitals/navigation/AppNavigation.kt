@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
@@ -98,7 +97,6 @@ import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.nutrition.ProteinScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
-import tech.mmarca.openvitals.features.recovery.RecoveryScreen
 import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
 import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
@@ -113,7 +111,6 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 
 private const val CardioLoadDetailRoute = "activity/cardio_load"
-private const val RecoveryTabRoute = "tab_recovery"
 private const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
 private const val SleepScoreDetailRoute = "recovery/sleep_score"
 
@@ -160,17 +157,11 @@ fun AppNavigation(
                 labelRes = R.string.bottom_nav_dashboard,
                 icon = Icons.Outlined.Dashboard,
             ),
-            OpenVitalsNavigationDestination(
-                route = RecoveryTabRoute,
-                labelRes = R.string.bottom_nav_recovery,
-                icon = Icons.Outlined.Bed,
-            ),
         )
     }
     val topLevelRoutes = remember {
         setOf(
             Screen.Dashboard.route,
-            RecoveryTabRoute,
         )
     }
     val taskRoutes = remember {
@@ -191,7 +182,8 @@ fun AppNavigation(
 
     val showTopBar = currentRoute != null && currentRoute != Screen.Onboarding.route
     val isTaskRoute = currentRoute?.let { it in taskRoutes } == true
-    val showNavigation = currentRoute?.let { it in topLevelRoutes } == true
+    val showNavigation =
+        topLevelDestinations.size > 1 && currentRoute?.let { it in topLevelRoutes } == true
     val canNavigateBack =
         currentRoute != null &&
             currentRoute != Screen.Onboarding.route &&
@@ -218,7 +210,6 @@ fun AppNavigation(
 
     val topBarTitle = when (currentRoute) {
         Screen.Dashboard.route -> stringResource(R.string.app_name)
-        RecoveryTabRoute -> stringResource(R.string.bottom_nav_recovery)
         CardioLoadDetailRoute -> stringResource(R.string.metric_cardio_load)
         SleepEfficiencyDetailRoute -> stringResource(R.string.recovery_sleep_efficiency)
         SleepScoreDetailRoute -> stringResource(R.string.recovery_sleep_score)
@@ -358,6 +349,7 @@ fun AppNavigation(
                     onOpenMetric = { metricId ->
                         when (metricId) {
                             DashboardWidgetId.WORKOUT -> navController.navigate(Screen.Activity.route)
+                            DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
                             else -> navController.navigate(Screen.Metric.createRoute(metricId.name))
@@ -381,21 +373,6 @@ fun AppNavigation(
                 CardioLoadDetailScreen(
                     viewModel = activityOverviewViewModel,
                     unitFormatter = unitFormatter,
-                )
-            }
-
-            composable(RecoveryTabRoute) {
-                val recoveryViewModel = hiltViewModel<RecoveryViewModel>()
-                RecoveryScreen(
-                    viewModel = recoveryViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onOpenSleepScore = {
-                        navController.navigate(SleepScoreDetailRoute)
-                    },
-                    onOpenSleepEfficiency = {
-                        navController.navigate(SleepEfficiencyDetailRoute)
-                    },
                 )
             }
 
@@ -593,6 +570,7 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onOpenMetric = { targetMetricId ->
                         when (targetMetricId) {
+                            DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
                             else -> navController.navigate(Screen.Metric.createRoute(targetMetricId.name))
@@ -609,6 +587,12 @@ fun AppNavigation(
                     },
                     onOpenSleepSession = { sleepId ->
                         navController.navigate(Screen.SleepDetail.createRoute(sleepId))
+                    },
+                    onOpenSleepScore = {
+                        navController.navigate(SleepScoreDetailRoute)
+                    },
+                    onOpenSleepEfficiency = {
+                        navController.navigate(SleepEfficiencyDetailRoute)
                     },
                     onEditHydrationEntry = { entryId ->
                         navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
@@ -687,6 +671,12 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onOpenSleepSession = { sleepId ->
                         navController.navigate(Screen.SleepDetail.createRoute(sleepId))
+                    },
+                    onOpenSleepScore = {
+                        navController.navigate(SleepScoreDetailRoute)
+                    },
+                    onOpenSleepEfficiency = {
+                        navController.navigate(SleepEfficiencyDetailRoute)
                     },
                 )
             }
@@ -835,6 +825,8 @@ private fun MetricRouteContent(
     onOpenActivity: (String) -> Unit,
     onEditActivity: (String) -> Unit,
     onOpenSleepSession: (String) -> Unit,
+    onOpenSleepScore: () -> Unit,
+    onOpenSleepEfficiency: () -> Unit,
     onEditHydrationEntry: (String) -> Unit,
     onEditMindfulnessSession: (String) -> Unit,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
@@ -909,6 +901,8 @@ private fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenSleepSession = onOpenSleepSession,
+                onOpenSleepScore = onOpenSleepScore,
+                onOpenSleepEfficiency = onOpenSleepEfficiency,
             )
         }
         DashboardWidgetId.HYDRATION -> {

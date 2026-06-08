@@ -250,6 +250,7 @@ private fun HeartMetricScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         when (metric) {
             HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(

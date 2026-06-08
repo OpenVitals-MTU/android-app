@@ -142,6 +142,7 @@ fun HydrationScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         if (state.dailyHydration.none { it.liters > 0.0 }) {
             item {

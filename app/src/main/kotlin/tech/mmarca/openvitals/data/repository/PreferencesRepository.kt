@@ -5,11 +5,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.core.preferences.AppLanguage
 import tech.mmarca.openvitals.core.preferences.AppThemeMode
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
 import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.core.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.data.model.HydrationReminderConfig
 import tech.mmarca.openvitals.data.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.data.model.MindfulnessBellSound
@@ -22,6 +24,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class PreferencesRepository @Inject constructor(
@@ -40,6 +43,7 @@ class PreferencesRepository @Inject constructor(
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
     val sleepRangeModeFlow: StateFlow<SleepRangeMode> = _sleepRangeMode.asStateFlow()
     val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
+    val weekPeriodModeFlow = activityWeekModeFlow.map { it.toWeekPeriodMode() }
     val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
 
     var onboardingDone: Boolean
@@ -86,6 +90,9 @@ class PreferencesRepository @Inject constructor(
             prefs.edit().putString(KEY_ACTIVITY_WEEK_MODE, value.name).apply()
             _activityWeekMode.value = value
         }
+
+    val weekPeriodMode: WeekPeriodMode
+        get() = activityWeekMode.toWeekPeriodMode()
 
     var showOpenVitalsCalculatedCalories: Boolean
         get() = _showOpenVitalsCalculatedCalories.value

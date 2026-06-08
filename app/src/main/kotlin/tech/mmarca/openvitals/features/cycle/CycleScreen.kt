@@ -61,6 +61,7 @@ fun CycleScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         if (state.missingPermissions.isNotEmpty()) {
             item {

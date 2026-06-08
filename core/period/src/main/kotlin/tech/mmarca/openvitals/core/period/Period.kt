@@ -16,6 +16,11 @@ enum class TimeRange(val label: String, val days: Int) {
     YEAR("Year", 365),
 }
 
+enum class WeekPeriodMode {
+    MONDAY_TO_SUNDAY,
+    LAST_7_DAYS,
+}
+
 data class DatePeriod(
     val start: LocalDate,
     val end: LocalDate,
@@ -31,9 +36,12 @@ data class PeriodSelection(
     fun previousPeriod(): PeriodSelection =
         copy(selectedDate = selectedRange.shift(selectedDate, steps = -1))
 
-    fun nextPeriod(today: LocalDate = LocalDate.now()): PeriodSelection {
+    fun nextPeriod(
+        today: LocalDate = LocalDate.now(),
+        weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+    ): PeriodSelection {
         val nextDate = selectedRange.shift(selectedDate, steps = 1)
-        val nextPeriod = periodFor(selectedRange, nextDate, today)
+        val nextPeriod = periodFor(selectedRange, nextDate, today, weekPeriodMode)
         return if (nextPeriod.start.isAfter(today) || nextPeriod.end.isAfter(today)) {
             this
         } else {
@@ -44,25 +52,31 @@ data class PeriodSelection(
     fun selectDate(date: LocalDate, today: LocalDate = LocalDate.now()): PeriodSelection =
         copy(selectedDate = date.coerceAtMost(today))
 
-    fun period(today: LocalDate = LocalDate.now()): DatePeriod =
-        periodFor(selectedRange, selectedDate, today)
+    fun period(
+        today: LocalDate = LocalDate.now(),
+        weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+    ): DatePeriod =
+        periodFor(selectedRange, selectedDate, today, weekPeriodMode)
 }
 
 fun periodFor(
     range: TimeRange,
     anchorDate: LocalDate,
     today: LocalDate = LocalDate.now(),
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+    clipCurrentWeekToToday: Boolean = true,
 ): DatePeriod = when (range) {
     TimeRange.DAY -> DatePeriod(
         start = anchorDate,
         end = anchorDate,
     )
 
-    TimeRange.WEEK -> {
-        val start = anchorDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val end = start.plusDays(6).coerceAtMost(today)
-        DatePeriod(start = start, end = end)
-    }
+    TimeRange.WEEK -> weekPeriodFor(
+        anchorDate = anchorDate,
+        today = today,
+        weekPeriodMode = weekPeriodMode,
+        clipCurrentWeekToToday = clipCurrentWeekToToday,
+    )
 
     TimeRange.MONTH -> {
         val start = anchorDate.withDayOfMonth(1)
@@ -77,15 +91,30 @@ fun periodFor(
     }
 }
 
+fun displayPeriodFor(
+    range: TimeRange,
+    anchorDate: LocalDate,
+    today: LocalDate = LocalDate.now(),
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+): DatePeriod =
+    periodFor(
+        range = range,
+        anchorDate = anchorDate,
+        today = today,
+        weekPeriodMode = weekPeriodMode,
+        clipCurrentWeekToToday = false,
+    )
+
 fun previousPeriodFor(
     range: TimeRange,
     anchorDate: LocalDate,
     today: LocalDate = LocalDate.now(),
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
 ): DatePeriod =
     PeriodSelection(
         selectedRange = range,
         selectedDate = anchorDate.coerceAtMost(today),
-    ).previousPeriod().period(today)
+    ).previousPeriod().period(today, weekPeriodMode)
 
 fun baselinePeriodBefore(
     period: DatePeriod,
@@ -107,7 +136,11 @@ fun periodTitle(
         else -> dateFormatter.format(period.start)
     }
 
-    TimeRange.WEEK -> if (period.end == today) "This week" else "Week of ${dateFormatter.format(period.start)}"
+    TimeRange.WEEK -> if (today in period.start..period.end) {
+        "This week"
+    } else {
+        "Week of ${dateFormatter.format(period.start)}"
+    }
     TimeRange.MONTH -> if (period.end == today) "This month" else monthFormatter.format(period.start)
     TimeRange.YEAR -> if (period.end == today) "This year" else yearFormatter.format(period.start)
 }
@@ -125,3 +158,27 @@ private fun TimeRange.shift(anchorDate: LocalDate, steps: Long): LocalDate = whe
     TimeRange.MONTH -> anchorDate.plusMonths(steps)
     TimeRange.YEAR -> anchorDate.plusYears(steps)
 }
+
+private fun weekPeriodFor(
+    anchorDate: LocalDate,
+    today: LocalDate,
+    weekPeriodMode: WeekPeriodMode,
+    clipCurrentWeekToToday: Boolean,
+): DatePeriod =
+    when (weekPeriodMode) {
+        WeekPeriodMode.MONDAY_TO_SUNDAY -> {
+            val start = anchorDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            DatePeriod(
+                start = start,
+                end = if (clipCurrentWeekToToday) {
+                    start.plusDays(6).coerceAtMost(today)
+                } else {
+                    start.plusDays(6)
+                },
+            )
+        }
+        WeekPeriodMode.LAST_7_DAYS -> DatePeriod(
+            start = anchorDate.minusDays(6),
+            end = anchorDate,
+        )
+    }

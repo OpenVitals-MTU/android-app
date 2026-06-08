@@ -33,6 +33,32 @@ class PeriodLoadQueryTest {
         assertEquals(DatePeriod(LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 31)), query.windows.baseline)
     }
 
+    @Test fun `query uses rolling last seven days when week period mode requests it`() {
+        val query = PeriodLoadQuery(
+            range = TimeRange.WEEK,
+            anchorDate = today,
+            today = today,
+            baselineDays = 30,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(DatePeriod(today.minusDays(6), today), query.windows.current)
+        assertEquals(DatePeriod(today.minusDays(13), today.minusDays(7)), query.windows.previous)
+        assertEquals(DatePeriod(today.minusDays(36), today.minusDays(7)), query.windows.baseline)
+    }
+
+    @Test fun `query clips current Monday to Sunday load window to today`() {
+        val wednesday = LocalDate.of(2026, 5, 27)
+        val query = PeriodLoadQuery(
+            range = TimeRange.WEEK,
+            anchorDate = wednesday,
+            today = wednesday,
+            weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+        )
+
+        assertEquals(DatePeriod(LocalDate.of(2026, 5, 25), wednesday), query.windows.current)
+    }
+
     @Test fun `selection driver persists range and clamps next period`() {
         val driver = PeriodSelectionDriver(
             initialRange = TimeRange.MONTH,

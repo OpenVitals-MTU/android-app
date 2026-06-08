@@ -72,6 +72,7 @@ import tech.mmarca.openvitals.core.insights.workoutGuidelineProgress
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.core.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -113,8 +114,6 @@ import kotlin.math.roundToLong
 private val ActivityOverviewCardHeight = 132.dp
 private val ActivityOverviewChartWidth = 152.dp
 private val ActivityOverviewChartHeight = 58.dp
-private val ActivityOverviewBarWidth = 10.dp
-private val ActivityOverviewBarRadius = 8.dp
 private val ActivityOverviewMarkerSize = 38.dp
 private const val ActivityWorkoutListPageSize = 10
 
@@ -144,6 +143,7 @@ fun ActivitiesScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.activityWeekMode.toWeekPeriodMode(),
         periodOverride = {
             activityDisplayPeriod(
                 selectedRange = state.selectedRange,
@@ -288,20 +288,6 @@ private fun LazyListScope.activityPeriodOverview(
     if (overviewDays.isEmpty()) return
 
     val sortedDays = overviewDays.sortedBy { it.date }
-    if (selectedRange != TimeRange.WEEK) {
-        item { SectionHeader(stringResource(R.string.activities_key_metrics)) }
-        item {
-            InsightStatGrid(
-                stats = activityOverviewStats(
-                    overviewDays = sortedDays,
-                    unitFormatter = unitFormatter,
-                ),
-                modifier = metricModifier(),
-            )
-        }
-        return
-    }
-
     val totals = activityOverviewTotals(sortedDays)
 
     item {
@@ -334,7 +320,6 @@ private fun LazyListScope.activityPeriodOverview(
             icon = Icons.Outlined.Favorite,
             accentColor = HeartColor,
             chartValues = series.values,
-            chartStyle = ActivityMetricChartStyle.LINE,
             chartDays = series.dates,
             selectedRange = selectedRange,
             modifier = metricCardModifier(),
@@ -373,7 +358,6 @@ private fun LazyListScope.activityPeriodOverview(
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = CaloriesColor,
             chartValues = series.values,
-            chartStyle = ActivityMetricChartStyle.BAR,
             chartDays = series.dates,
             selectedRange = selectedRange,
             modifier = metricCardModifier(),
@@ -394,7 +378,6 @@ private fun LazyListScope.activityPeriodOverview(
             icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
             accentColor = StepsColor,
             chartValues = series.values,
-            chartStyle = ActivityMetricChartStyle.BAR,
             chartDays = series.dates,
             selectedRange = selectedRange,
             modifier = metricCardModifier(),
@@ -415,7 +398,6 @@ private fun LazyListScope.activityPeriodOverview(
             icon = Icons.Outlined.Straighten,
             accentColor = DistanceColor,
             chartValues = series.values,
-            chartStyle = ActivityMetricChartStyle.BAR,
             chartDays = series.dates,
             selectedRange = selectedRange,
             modifier = metricCardModifier(),
@@ -438,7 +420,6 @@ private fun LazyListScope.activityPeriodOverview(
             icon = Icons.Outlined.FavoriteBorder,
             accentColor = HeartColor,
             chartValues = series.values,
-            chartStyle = ActivityMetricChartStyle.LINE,
             chartDays = series.dates,
             selectedRange = selectedRange,
             modifier = metricCardModifier(),
@@ -446,82 +427,6 @@ private fun LazyListScope.activityPeriodOverview(
         )
     }
 }
-
-@Composable
-private fun activityOverviewStats(
-    overviewDays: List<ActivityOverviewDay>,
-    unitFormatter: UnitFormatter,
-): List<InsightStat> {
-    val steps = overviewDays.sumOf { it.steps }
-    val distance = overviewDays.sumOf { it.distanceMeters }
-    val energyBurned = overviewDays.sumOf { it.energyBurnedKcal }
-    val hasEnergyBurnedData = overviewDays.any { it.energyBurnedSource != CaloriesBurnedSource.NO_DATA }
-    val cardioLoads = overviewDays
-        .filter { it.cardioLoadConfidence != CardioLoadConfidence.NO_DATA }
-        .map { it.cardioLoad }
-    val hrvAverage = overviewDays
-        .mapNotNull { it.hrvRmssdMs }
-        .takeIf { it.isNotEmpty() }
-        ?.average()
-    val energyDisplay = if (hasEnergyBurnedData) {
-        unitFormatter.energy(energyBurned)
-    } else {
-        DisplayValue(stringResource(R.string.no_data), "")
-    }
-    val hrvDisplay = hrvAverage
-        ?.let(unitFormatter::hrv)
-        ?: DisplayValue(stringResource(R.string.no_data), "")
-
-    return listOf(
-        InsightStat(
-            title = stringResource(R.string.metric_steps),
-            value = unitFormatter.count(steps),
-            unit = stringResource(R.string.unit_steps),
-            icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
-            accentColor = StepsColor,
-        ),
-        unitFormatter.distance(distance).toInsightStat(
-            title = stringResource(R.string.metric_distance),
-            icon = Icons.Outlined.Straighten,
-            accentColor = DistanceColor,
-        ),
-        energyDisplay.toInsightStat(
-            title = stringResource(R.string.metric_energy_burned),
-            icon = Icons.Outlined.LocalFireDepartment,
-            accentColor = CaloriesColor,
-        ),
-        DisplayValue(
-            value = if (cardioLoads.isNotEmpty()) {
-                unitFormatter.count(cardioLoads.sum())
-            } else {
-                stringResource(R.string.no_data)
-            },
-            unit = "",
-        ).toInsightStat(
-            title = stringResource(R.string.metric_cardio_load),
-            icon = Icons.Outlined.Favorite,
-            accentColor = HeartColor,
-        ),
-        hrvDisplay.toInsightStat(
-            title = stringResource(R.string.metric_hrv),
-            icon = Icons.Outlined.FavoriteBorder,
-            accentColor = HeartColor,
-        ),
-    )
-}
-
-private fun DisplayValue.toInsightStat(
-    title: String,
-    icon: ImageVector,
-    accentColor: Color,
-): InsightStat =
-    InsightStat(
-        title = title,
-        value = value,
-        unit = unit,
-        icon = icon,
-        accentColor = accentColor,
-    )
 
 @Composable
 private fun activityPeriodTitle(
@@ -838,7 +743,6 @@ private fun ActivityMetricCard(
     icon: ImageVector,
     accentColor: Color,
     chartValues: List<Double>,
-    chartStyle: ActivityMetricChartStyle,
     chartDays: List<LocalDate>,
     selectedRange: TimeRange,
     modifier: Modifier = Modifier,
@@ -916,7 +820,6 @@ private fun ActivityMetricCard(
                 values = chartValues,
                 dates = chartDays,
                 selectedRange = selectedRange,
-                style = chartStyle,
                 accentColor = accentColor,
             )
         }
@@ -928,15 +831,11 @@ private fun ActivityMetricSparkline(
     values: List<Double>,
     dates: List<LocalDate>,
     selectedRange: TimeRange,
-    style: ActivityMetricChartStyle,
     accentColor: Color,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        when (style) {
-            ActivityMetricChartStyle.BAR -> ActivityMiniBarChart(values, accentColor)
-            ActivityMetricChartStyle.LINE -> ActivityMiniLineChart(values, accentColor)
-        }
+        ActivityMiniLineChart(values, accentColor)
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.width(ActivityOverviewChartWidth),
@@ -951,28 +850,6 @@ private fun ActivityMetricSparkline(
                     overflow = TextOverflow.Clip,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ActivityMiniBarChart(values: List<Double>, accentColor: Color) {
-    val maxValue = values.maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
-    Row(
-        modifier = Modifier
-            .width(ActivityOverviewChartWidth)
-            .height(ActivityOverviewChartHeight),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        values.forEach { value ->
-            val fraction = (value / maxValue).toFloat().coerceIn(0.12f, 1f)
-            Box(
-                modifier = Modifier
-                    .width(ActivityOverviewBarWidth)
-                    .height(ActivityOverviewChartHeight * fraction)
-                    .background(accentColor.copy(alpha = 0.82f), RoundedCornerShape(ActivityOverviewBarRadius)),
-            )
         }
     }
 }
@@ -1006,6 +883,16 @@ private fun ActivityMiniLineChart(values: List<Double>, accentColor: Color) {
                 color = accentColor,
                 start = start,
                 end = end,
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round,
+            )
+        }
+        points.singleOrNull()?.let { point ->
+            val halfLineWidth = (size.width * 0.18f).coerceAtLeast(18.dp.toPx())
+            drawLine(
+                color = accentColor,
+                start = Offset((point.x - halfLineWidth).coerceAtLeast(0f), point.y),
+                end = Offset((point.x + halfLineWidth).coerceAtMost(size.width), point.y),
                 strokeWidth = 4.dp.toPx(),
                 cap = StrokeCap.Round,
             )
@@ -1139,11 +1026,6 @@ private fun cardioLoadConfidenceLabel(confidence: CardioLoadConfidence): String 
             CardioLoadConfidence.NO_DATA -> R.string.cardio_load_confidence_no_data
         }
     )
-
-private enum class ActivityMetricChartStyle {
-    BAR,
-    LINE,
-}
 
 private enum class ActivityOverviewMetricAggregation {
     SUM,

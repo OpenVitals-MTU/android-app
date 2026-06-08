@@ -142,6 +142,7 @@ private fun NutritionMetricScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         nutritionMetricContent(
             metric = metric,

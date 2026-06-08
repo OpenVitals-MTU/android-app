@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
@@ -21,12 +22,14 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 data class ActivityUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
+    val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     val dailyGoal: Double = ActivityMetric.STEPS.dailyGoalKey.defaultValue,
     val dailySteps: List<DailySteps> = emptyList(),
     val previousDailySteps: List<DailySteps> = emptyList(),
@@ -42,8 +45,10 @@ data class ActivityUiState(
 class ActivityViewModel(
     private val repository: ActivityRepository,
     initialRange: TimeRange = TimeRange.WEEK,
+    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val selectedMetric: ActivityMetric = ActivityMetric.STEPS,
     initialDailyGoal: Double = selectedMetric.dailyGoalKey.defaultValue,
+    private val weekPeriodModeChanges: kotlinx.coroutines.flow.Flow<WeekPeriodMode> = kotlinx.coroutines.flow.emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
     private val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean>? = null,
@@ -57,6 +62,7 @@ class ActivityViewModel(
     ) : this(
         repository = repository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
+        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         selectedMetric = activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
         initialDailyGoal = preferencesRepository.dailyGoalFor(
             activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey
@@ -71,13 +77,19 @@ class ActivityViewModel(
             )
         },
         showOpenVitalsCalculatedCaloriesFlow = preferencesRepository.showOpenVitalsCalculatedCaloriesFlow,
+        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
     )
 
     private val goalKey = selectedMetric.dailyGoalKey
-    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
+    private val periodDriver = PeriodSelectionDriver(
+        initialRange = initialRange,
+        initialWeekPeriodMode = initialWeekPeriodMode,
+        onRangeSelected = onRangeSelected,
+    )
     private val _uiState = MutableStateFlow(
         ActivityUiState(
             selectedRange = initialRange,
+            weekPeriodMode = initialWeekPeriodMode,
             dailyGoal = goalKey.normalize(initialDailyGoal),
         )
     )
@@ -85,8 +97,21 @@ class ActivityViewModel(
     private val loadCoordinator = LoadCoordinator()
 
     init {
+        observeWeekPeriodMode()
         observeCalorieDataMode()
         load()
+    }
+
+    private fun observeWeekPeriodMode() {
+        viewModelScope.launch {
+            weekPeriodModeChanges.drop(1).collect { mode ->
+                periodDriver.weekPeriodMode = mode
+                _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
+                if (_uiState.value.selectedRange == TimeRange.WEEK) {
+                    load()
+                }
+            }
+        }
     }
 
     private fun observeCalorieDataMode() {
@@ -145,6 +170,7 @@ class ActivityViewModel(
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
                 anchorDate = periodDriver.selection.selectedDate,
+                weekPeriodMode = _uiState.value.weekPeriodMode,
             )
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)

@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.repository.HeartPeriodData
@@ -33,6 +34,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 private const val HeartRateThresholdStepBpm = 5
@@ -54,6 +58,7 @@ data class HeartUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
     val selectedDate: LocalDate = LocalDate.now(),
+    val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     val daySamples: List<HeartRateSample> = emptyList(),
     val previousDaySamples: List<HeartRateSample> = emptyList(),
     val dailySummaries: List<HeartRateSummary> = emptyList(),
@@ -107,7 +112,9 @@ class HeartViewModel(
     private val repository: HeartRepository,
     private val vitalsRepository: VitalsRepository,
     initialRange: TimeRange = TimeRange.WEEK,
+    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val selectedMetric: HeartMetric = HeartMetric.AVERAGE_HEART_RATE,
+    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     initialHighHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
     initialLowHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
@@ -125,7 +132,9 @@ class HeartViewModel(
         repository = repository,
         vitalsRepository = vitalsRepository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
+        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         selectedMetric = heartMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
+        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.HEART, range)
         },
@@ -139,10 +148,15 @@ class HeartViewModel(
         },
     )
 
-    private val periodDriver = PeriodSelectionDriver(initialRange, onRangeSelected = onRangeSelected)
+    private val periodDriver = PeriodSelectionDriver(
+        initialRange = initialRange,
+        initialWeekPeriodMode = initialWeekPeriodMode,
+        onRangeSelected = onRangeSelected,
+    )
     private val _uiState = MutableStateFlow(
         HeartUiState(
             selectedRange = initialRange,
+            weekPeriodMode = initialWeekPeriodMode,
             highHeartRateCheck = HeartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.HIGH,
                 thresholdBpm = initialHighHeartRateThresholdBpm,
@@ -158,7 +172,20 @@ class HeartViewModel(
     private val loadCoordinator = LoadCoordinator()
 
     init {
+        observeWeekPeriodMode()
         load()
+    }
+
+    private fun observeWeekPeriodMode() {
+        viewModelScope.launch {
+            weekPeriodModeChanges.drop(1).collect { mode ->
+                periodDriver.weekPeriodMode = mode
+                _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
+                if (_uiState.value.selectedRange == TimeRange.WEEK) {
+                    load()
+                }
+            }
+        }
     }
 
     fun selectRange(range: TimeRange) {
@@ -223,6 +250,7 @@ class HeartViewModel(
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
                 anchorDate = periodDriver.selection.selectedDate,
+                weekPeriodMode = _uiState.value.weekPeriodMode,
             )
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)

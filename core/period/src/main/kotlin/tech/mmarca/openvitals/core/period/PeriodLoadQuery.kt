@@ -13,6 +13,7 @@ data class PeriodLoadQuery(
     val anchorDate: LocalDate,
     val today: LocalDate = LocalDate.now(),
     val baselineDays: Long = DefaultBaselineDays,
+    val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
 ) {
     val selectedDate: LocalDate = anchorDate.coerceAtMost(today)
     val windows: PeriodWindows = periodWindowsFor(
@@ -20,14 +21,17 @@ data class PeriodLoadQuery(
         anchorDate = selectedDate,
         today = today,
         baselineDays = baselineDays,
+        weekPeriodMode = weekPeriodMode,
     )
 }
 
 class PeriodSelectionDriver(
     initialRange: TimeRange,
     initialDate: LocalDate = LocalDate.now(),
+    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) {
+    var weekPeriodMode: WeekPeriodMode = initialWeekPeriodMode
     var selection: PeriodSelection = PeriodSelection(
         selectedRange = initialRange,
         selectedDate = initialDate.coerceAtMost(LocalDate.now()),
@@ -43,7 +47,7 @@ class PeriodSelectionDriver(
         update(selection.previousPeriod())
 
     fun nextPeriod(): PeriodSelection? {
-        val next = selection.nextPeriod()
+        val next = selection.nextPeriod(weekPeriodMode = weekPeriodMode)
         return if (next == selection) null else update(next)
     }
 
@@ -61,9 +65,10 @@ fun periodWindowsFor(
     anchorDate: LocalDate,
     today: LocalDate = LocalDate.now(),
     baselineDays: Long = DefaultBaselineDays,
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
 ): PeriodWindows {
-    val current = periodFor(range, anchorDate.coerceAtMost(today), today)
-    val previous = previousPeriodFor(range, anchorDate, today)
+    val current = periodFor(range, anchorDate.coerceAtMost(today), today, weekPeriodMode)
+    val previous = previousPeriodFor(range, anchorDate, today, weekPeriodMode)
     val baseline = baselinePeriodBefore(current, baselineDays)
     return PeriodWindows(
         current = current,

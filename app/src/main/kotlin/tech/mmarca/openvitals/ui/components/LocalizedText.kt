@@ -48,7 +48,7 @@ fun localizedPeriodTitle(
             else -> dateFormatter.format(period.start)
         }
 
-        TimeRange.WEEK -> if (period.end == today) {
+        TimeRange.WEEK -> if (today in period.start..period.end) {
             stringResource(R.string.period_this_week)
         } else {
             stringResource(R.string.period_week_of, dateFormatter.format(period.start))

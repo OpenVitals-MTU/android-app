@@ -147,6 +147,7 @@ fun MindfulnessScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         if (state.sessions.isEmpty() && !state.isLoading) {
             item {

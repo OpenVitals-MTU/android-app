@@ -61,4 +61,29 @@ class PeriodSelectionTest {
         assertEquals(LocalDate.of(2026, 3, 1), period.start)
         assertEquals(LocalDate.of(2026, 3, 31), period.end)
     }
+
+    @Test fun `displayPeriodFor keeps full Monday to Sunday week even when today is mid week`() {
+        val wednesday = LocalDate.of(2026, 5, 27)
+        val period = displayPeriodFor(
+            range = TimeRange.WEEK,
+            anchorDate = wednesday,
+            today = wednesday,
+            weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+        )
+
+        assertEquals(LocalDate.of(2026, 5, 25), period.start)
+        assertEquals(LocalDate.of(2026, 5, 31), period.end)
+    }
+
+    @Test fun `displayPeriodFor supports rolling last seven days`() {
+        val period = displayPeriodFor(
+            range = TimeRange.WEEK,
+            anchorDate = today,
+            today = today,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(today.minusDays(6), period.start)
+        assertEquals(today, period.end)
+    }
 }

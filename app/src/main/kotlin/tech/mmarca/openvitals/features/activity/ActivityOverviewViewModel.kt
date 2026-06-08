@@ -10,7 +10,10 @@ import tech.mmarca.openvitals.core.insights.calculateCardioLoad
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.displayPeriodFor
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.core.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyNutrition
@@ -21,10 +24,8 @@ import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,10 +86,13 @@ data class ActivityOverviewUiState(
         get() = visibleRecentActivities.size < recentActivities.size
 
     val metricDays: List<ActivityOverviewDay>
-        get() = when (activityWeekMode) {
-            ActivityWeekMode.MONDAY_TO_SUNDAY -> days.weekContaining(selectedDate)
-            ActivityWeekMode.LAST_7_DAYS -> days.lastSevenDaysEnding(selectedDate)
-        }
+        get() = days.daysIn(
+            displayPeriodFor(
+                range = TimeRange.WEEK,
+                anchorDate = selectedDate,
+                weekPeriodMode = activityWeekMode.toWeekPeriodMode(),
+            )
+        )
 }
 
 @HiltViewModel
@@ -275,18 +279,11 @@ private fun List<ExerciseData>.toCardioLoadTimeWindows(date: LocalDate, zone: Zo
 
 private fun Double?.orZero(): Double = this ?: 0.0
 
-private fun List<ActivityOverviewDay>.weekContaining(date: LocalDate): List<ActivityOverviewDay> {
-    val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    return sevenDaysStarting(weekStart)
-}
-
-private fun List<ActivityOverviewDay>.lastSevenDaysEnding(date: LocalDate): List<ActivityOverviewDay> =
-    sevenDaysStarting(date.minusDays(6))
-
-private fun List<ActivityOverviewDay>.sevenDaysStarting(startDate: LocalDate): List<ActivityOverviewDay> {
+private fun List<ActivityOverviewDay>.daysIn(period: tech.mmarca.openvitals.core.period.DatePeriod): List<ActivityOverviewDay> {
     val daysByDate = associateBy { it.date }
-    return (0..6).map { offset ->
-        val day = startDate.plusDays(offset.toLong())
+    return generateSequence(period.start) { date ->
+        date.plusDays(1).takeUnless { it.isAfter(period.end) }
+    }.map { day ->
         daysByDate[day] ?: ActivityOverviewDay(date = day)
-    }
+    }.toList()
 }

@@ -201,6 +201,7 @@ private fun BodyMetricScreen(
         onPreviousPeriod = viewModel::previousPeriod,
         onNextPeriod = viewModel::nextPeriod,
         onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
     ) { period ->
         when (metric) {
             BodyMetric.WEIGHT -> weightContent(
