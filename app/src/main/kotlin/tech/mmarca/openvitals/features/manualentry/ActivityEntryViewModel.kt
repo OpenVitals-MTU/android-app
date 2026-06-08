@@ -471,6 +471,12 @@ class ActivityEntryViewModel(
         chooseSource()
     }
 
+    fun discardRecordingDraft() {
+        if (!_uiState.value.isRecordingDraft || _uiState.value.isEditMode) return
+        recordingDraftStore?.clear()
+        chooseSource()
+    }
+
     fun finishGpsRecording(unitSystem: UnitSystem) {
         val snapshot = activityRecorder?.finishRecording()
         if (snapshot == null) {

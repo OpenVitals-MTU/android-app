@@ -252,6 +252,7 @@ fun ActivityEntryScreen(
                     onAddEntry = {
                         viewModel.addEntry(unitFormatter.unitSystem())
                     },
+                    onDiscardRecordingDraft = viewModel::discardRecordingDraft,
                     isEditMode = state.isEditMode,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -599,6 +600,7 @@ private fun ActivityEntryCard(
     onChooseSource: () -> Unit,
     onRequestWritePermission: () -> Unit,
     onAddEntry: () -> Unit,
+    onDiscardRecordingDraft: () -> Unit,
     isEditMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -708,6 +710,24 @@ private fun ActivityEntryCard(
                     text = stringResource(if (isEditMode) R.string.action_save else R.string.activity_entry_add),
                     modifier = Modifier.padding(start = 6.dp),
                 )
+            }
+
+            if (state.isRecordingDraft && !isEditMode) {
+                OutlinedButton(
+                    onClick = onDiscardRecordingDraft,
+                    enabled = !state.isSavingEntry && !state.isImportingRoute,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_discard),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
             }
 
             state.entryError?.let { error ->

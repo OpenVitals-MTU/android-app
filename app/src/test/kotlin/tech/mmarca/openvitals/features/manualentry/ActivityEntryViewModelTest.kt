@@ -393,6 +393,41 @@ class ActivityEntryViewModelTest {
         assertNull(draftStore.restore())
     }
 
+    @Test fun `discarding a finished recording draft clears it and returns to source choice`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val draftStore = ActivityRecordingDraftStore()
+        val recorder = mockk<ActivityRecordingController>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
+            pauseIntervals = emptyList(),
+            distanceMeters = 1200.0,
+            elevationGainedMeters = 12.0,
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            recordingDraftStore = draftStore,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        vm.discardRecordingDraft()
+        advanceUntilIdle()
+
+        assertNull(draftStore.restore())
+        assertEquals(ActivityEntryMode.CHOOSE_SOURCE, vm.uiState.value.mode)
+        assertFalse(vm.uiState.value.isRecordingDraft)
+        assertNull(vm.uiState.value.importedRoute)
+    }
+
     @Test fun `activity entry keeps full write permissions when optional fields change`() = runTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
