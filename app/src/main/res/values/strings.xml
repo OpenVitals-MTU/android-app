@@ -255,8 +255,8 @@
     <string name="metric_distance">Distance</string>
     <string name="metric_average_pace">Average pace</string>
     <string name="metric_average_speed">Average speed</string>
-    <string name="metric_calories_burned">Calories burned</string>
-    <string name="metric_calories_out">Calories out</string>
+    <string name="metric_calories_burned">Total calories burned</string>
+    <string name="metric_calories_out">Total calories</string>
     <string name="metric_calories_in">Calories in</string>
     <string name="metric_floors_climbed">Floors climbed</string>
     <string name="metric_active_calories">Active calories</string>
@@ -276,7 +276,7 @@
     <string name="metric_hrv">Heart rate variability (HRV)</string>
     <string name="metric_cardio_load">Cardio load</string>
     <string name="metric_weekly_cardio_load">Weekly cardio</string>
-    <string name="metric_energy_burned">Energy burned</string>
+    <string name="metric_energy_burned">Total calories</string>
     <string name="metric_blood_pressure">Blood pressure</string>
     <string name="metric_spo2">SpO2</string>
     <string name="metric_oxygen_saturation">Oxygen saturation</string>
@@ -646,6 +646,10 @@
     <string name="dashboard_action_log">Log</string>
     <string name="dashboard_activities_today">Activities today</string>
     <string name="dashboard_goal_of">of %1$s</string>
+    <string name="calories_estimated_active_bmr">No total record, est. active + BMR</string>
+    <string name="calories_estimated_value">Est. %1$s</string>
+    <string name="message_no_health_connect_total_calories">No Health Connect total calories</string>
+    <string name="message_no_total_calories_estimate">Needs total or active + BMR</string>
     <string name="dashboard_weekly_cardio_load_progress">%1$d of %2$d</string>
     <string name="dashboard_cardio_load_percent_only">%1$d%%</string>
     <string name="dashboard_cardio_load_percent">%1$d%% load</string>
@@ -654,7 +658,7 @@
     <string name="message_no_recent_activity">No recent activity yet.</string>
     <string name="message_no_step_updates">No step updates were recorded</string>
     <string name="message_no_distance_updates">No distance updates were recorded</string>
-    <string name="message_no_calories_burned">No calories burned data was recorded</string>
+    <string name="message_no_calories_burned">No total calorie data was recorded</string>
     <string name="message_no_floors_climbed">No floors climbed data was recorded</string>
     <string name="message_no_active_calories">No active calories data was recorded</string>
     <string name="message_no_elevation">No elevation data was recorded</string>
@@ -715,7 +719,7 @@
     <string name="onboarding_category_body">Body</string>
     <string name="onboarding_category_body_desc">Weight, height, body fat, lean mass, bone mass, and BMR.</string>
     <string name="onboarding_category_activity_extras">Activity extras</string>
-    <string name="onboarding_category_activity_extras_desc">Calories burned, floors climbed, active calories, and elevation.</string>
+    <string name="onboarding_category_activity_extras_desc">Total calories, floors climbed, active calories, and elevation.</string>
     <string name="onboarding_category_nutrition_hydration">Nutrition &amp; hydration</string>
     <string name="onboarding_category_nutrition_hydration_desc">Water intake, calories in, meals, and macros.</string>
     <string name="onboarding_category_manual_entry_write">Manual entry write access</string>
@@ -762,6 +766,8 @@
     <string name="settings_favorite_activity_title">Favorite activity</string>
     <string name="settings_favorite_activity_body">Use the latest recorded activity by default, or choose one activity type to always preselect.</string>
     <string name="settings_favorite_activity_latest">Use latest</string>
+    <string name="settings_calorie_data_title">Total calories data</string>
+    <string name="settings_calorie_data_body">Show plain Health Connect total calories by default. Turn on OpenVitals calculations to fill missing totals from active calories and BMR.</string>
     <string name="settings_sleep_range_title">Sleep range</string>
     <string name="settings_sleep_range_body">Choose which day sleep sessions are assigned to.</string>
     <string name="settings_sleep_range_rolling_24h">Rolling 24h</string>

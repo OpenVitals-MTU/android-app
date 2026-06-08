@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.ExerciseDeviceData
 import tech.mmarca.openvitals.data.model.ExerciseLapData
@@ -22,6 +23,11 @@ internal fun ExerciseSessionRecord.toExerciseData(
     steps: Long? = null,
     totalDistanceMeters: Double? = null,
     totalCaloriesKcal: Double? = null,
+    totalCaloriesSource: CaloriesBurnedSource = if (totalCaloriesKcal != null) {
+        CaloriesBurnedSource.RECORDED_TOTAL
+    } else {
+        CaloriesBurnedSource.NO_DATA
+    },
     activeCaloriesKcal: Double? = null,
     floorsClimbed: Int? = null,
     elevationGainedMeters: Double? = null,
@@ -36,6 +42,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     source = metadata.dataOrigin.packageName,
     totalDistanceMeters = totalDistanceMeters,
     totalCaloriesKcal = totalCaloriesKcal,
+    totalCaloriesSource = totalCaloriesSource,
     activeCaloriesKcal = activeCaloriesKcal,
     steps = steps,
     floorsClimbed = floorsClimbed,

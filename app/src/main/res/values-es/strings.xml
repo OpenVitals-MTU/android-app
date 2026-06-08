@@ -255,8 +255,8 @@
     <string name="metric_distance">Distancia</string>
     <string name="metric_average_pace">Ritmo medio</string>
     <string name="metric_average_speed">Velocidad media</string>
-    <string name="metric_calories_burned">Calorías quemadas</string>
-    <string name="metric_calories_out">Calorías gastadas</string>
+    <string name="metric_calories_burned">Calorías totales quemadas</string>
+    <string name="metric_calories_out">Calorías totales</string>
     <string name="metric_calories_in">Calorías ingeridas</string>
     <string name="metric_floors_climbed">Pisos subidos</string>
     <string name="metric_active_calories">Calorías activas</string>
@@ -276,7 +276,7 @@
     <string name="metric_hrv">Variabilidad de la frecuencia cardiaca (HRV)</string>
     <string name="metric_cardio_load">Carga cardiovascular</string>
     <string name="metric_weekly_cardio_load">Cardio semanal</string>
-    <string name="metric_energy_burned">Energía quemada</string>
+    <string name="metric_energy_burned">Calorías totales</string>
     <string name="metric_blood_pressure">Presión arterial</string>
     <string name="metric_spo2">SpO2</string>
     <string name="metric_oxygen_saturation">Saturación de oxígeno</string>
@@ -646,6 +646,10 @@
     <string name="dashboard_action_log">Registrar</string>
     <string name="dashboard_activities_today">Actividades de hoy</string>
     <string name="dashboard_goal_of">de %1$s</string>
+    <string name="calories_estimated_active_bmr">Sin total, estimado con activas + BMR</string>
+    <string name="calories_estimated_value">Est. %1$s</string>
+    <string name="message_no_health_connect_total_calories">Sin calorías totales en Health Connect</string>
+    <string name="message_no_total_calories_estimate">Necesita total o activas + BMR</string>
     <string name="dashboard_weekly_cardio_load_progress">%1$d de %2$d</string>
     <string name="dashboard_cardio_load_percent_only">%1$d%%</string>
     <string name="dashboard_cardio_load_percent">%1$d%% carga</string>
@@ -654,7 +658,7 @@
     <string name="message_no_recent_activity">Aún no hay actividad reciente.</string>
     <string name="message_no_step_updates">No se registraron actualizaciones de pasos</string>
     <string name="message_no_distance_updates">No se registraron actualizaciones de distancia</string>
-    <string name="message_no_calories_burned">No se registraron datos de calorías quemadas</string>
+    <string name="message_no_calories_burned">No se registraron datos de calorías totales</string>
     <string name="message_no_floors_climbed">No se registraron datos de pisos subidos</string>
     <string name="message_no_active_calories">No se registraron datos de calorías activas</string>
     <string name="message_no_elevation">No se registraron datos de elevación</string>
@@ -715,7 +719,7 @@
     <string name="onboarding_category_body">Cuerpo</string>
     <string name="onboarding_category_body_desc">Peso, altura, grasa corporal, masa magra, masa ósea y TMB.</string>
     <string name="onboarding_category_activity_extras">Extras de actividad</string>
-    <string name="onboarding_category_activity_extras_desc">Calorías quemadas, pisos subidos, calorías activas y elevación.</string>
+    <string name="onboarding_category_activity_extras_desc">Calorías totales, pisos subidos, calorías activas y elevación.</string>
     <string name="onboarding_category_nutrition_hydration">Nutrición e hidratación</string>
     <string name="onboarding_category_nutrition_hydration_desc">Ingesta de agua, calorías ingeridas, comidas y macros.</string>
     <string name="onboarding_category_manual_entry_write">Acceso de escritura para entradas manuales</string>
@@ -762,6 +766,8 @@
     <string name="settings_favorite_activity_title">Actividad favorita</string>
     <string name="settings_favorite_activity_body">Usa por defecto la última actividad grabada o elige un tipo de actividad para preseleccionarlo siempre.</string>
     <string name="settings_favorite_activity_latest">Usar última</string>
+    <string name="settings_calorie_data_title">Datos de calorías totales</string>
+    <string name="settings_calorie_data_body">Muestra por defecto solo las calorías totales de Health Connect. Activa los cálculos de OpenVitals para completar totales faltantes con calorías activas y BMR.</string>
     <string name="settings_sleep_range_title">Rango de sueño</string>
     <string name="settings_sleep_range_body">Elige a qué día se asignan las sesiones de sueño.</string>
     <string name="settings_sleep_range_rolling_24h">24 h móviles</string>

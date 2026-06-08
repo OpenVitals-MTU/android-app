@@ -48,6 +48,11 @@ data class DashboardData(
     val latestBasalBodyTemperatureCelsius: Double? = null,
     val missingPermissions: Set<String> = emptySet(),
     val loadedMetrics: Set<DashboardMetric> = emptySet(),
+    val caloriesKcalSource: CaloriesBurnedSource = if (caloriesKcal > 0.0) {
+        CaloriesBurnedSource.RECORDED_TOTAL
+    } else {
+        CaloriesBurnedSource.NO_DATA
+    },
 )
 
 fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
@@ -55,6 +60,11 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         steps = if (DashboardMetric.STEPS in other.loadedMetrics) other.steps else steps,
         distanceMeters = if (DashboardMetric.DISTANCE in other.loadedMetrics) other.distanceMeters else distanceMeters,
         caloriesKcal = if (DashboardMetric.CALORIES_OUT in other.loadedMetrics) other.caloriesKcal else caloriesKcal,
+        caloriesKcalSource = if (DashboardMetric.CALORIES_OUT in other.loadedMetrics) {
+            other.caloriesKcalSource
+        } else {
+            caloriesKcalSource
+        },
         activeCaloriesKcal = if (DashboardMetric.ACTIVE_CALORIES in other.loadedMetrics) other.activeCaloriesKcal else activeCaloriesKcal,
         hydrationLiters = if (DashboardMetric.HYDRATION in other.loadedMetrics) other.hydrationLiters else hydrationLiters,
         workout = if (DashboardMetric.WORKOUT in other.loadedMetrics) other.workout else workout,

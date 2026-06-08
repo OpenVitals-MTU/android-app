@@ -44,6 +44,7 @@ import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.model.DashboardWeeklyCardioLoad
 import tech.mmarca.openvitals.data.model.DashboardWeeklyCardioLoadTargetSource
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
@@ -75,6 +76,7 @@ class HealthRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+    private val preferencesRepository: PreferencesRepository? = null,
 ) {
 
     companion object {
@@ -169,12 +171,14 @@ class HealthRepository @Inject constructor(
             val startedAt = System.currentTimeMillis()
             val granted = grantedPermissionsIfAvailable()
             val loadMetrics = query.visibleMetrics.metricsAllowedByPreferences(query.trackCycle)
+            val showOpenVitalsCalculatedCalories = preferencesRepository?.showOpenVitalsCalculatedCalories == true
             val cacheKey = HealthConnectQueryKey(
                 operation = "dashboard",
                 parts = listOf(
                     query.date.toString(),
                     query.sleepRangeMode.name,
                     query.trackCycle.toString(),
+                    showOpenVitalsCalculatedCalories.toString(),
                     loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
                 ),
                 permissions = granted.permissionFingerprint(),
@@ -185,7 +189,7 @@ class HealthRepository @Inject constructor(
                 refreshMode = query.refreshMode,
                 ttlMillis = currentDayTtlMillis(query.date),
             ) {
-                loadDashboardUncached(query, loadMetrics, granted)
+                loadDashboardUncached(query, loadMetrics, granted, showOpenVitalsCalculatedCalories)
             }
             Log.d(
                 TAG,
@@ -199,6 +203,7 @@ class HealthRepository @Inject constructor(
         query: DashboardQuery,
         metrics: Set<DashboardMetric>,
         granted: Set<String>,
+        showOpenVitalsCalculatedCalories: Boolean,
     ): DashboardData = coroutineScope {
         val date = query.date
         val sleepRangeMode = query.sleepRangeMode
@@ -241,7 +246,10 @@ class HealthRepository @Inject constructor(
             )
         }
         val calories = readIfNeeded(wants(DashboardMetric.CALORIES_OUT), readCaloriesPermission, "calories") {
-            hc.readCaloriesKcal(date)
+            hc.readCaloriesBurned(
+                date = date,
+                includeEstimatedCalories = canEstimateTotalCalories(granted, showOpenVitalsCalculatedCalories),
+            )
         }
         val activeCalories = if (
             wants(DashboardMetric.ACTIVE_CALORIES) &&
@@ -385,11 +393,15 @@ class HealthRepository @Inject constructor(
                 ?.temperatureCelsius
         }
 
-        val missingPerms = dashboardPermissionsFor(metrics).filterNot { it in granted }.toSet()
+        val missingPerms = dashboardPermissionsFor(
+            metrics = metrics,
+            showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+        ).filterNot { it in granted }.toSet()
         val latestBloodPressure = bloodPressure?.await()
         val latestWeight = weight?.await()
         val latestHeight = height?.await()
         val dailyMacros = macros?.await()
+        val caloriesBurned = calories?.await()
         val dayWorkouts = workouts?.await().orEmpty()
         val dashboardSleep = sleep?.await()
 
@@ -397,7 +409,8 @@ class HealthRepository @Inject constructor(
             date = date,
             steps = steps?.await() ?: 0L,
             distanceMeters = distance?.await() ?: 0.0,
-            caloriesKcal = calories?.await() ?: 0.0,
+            caloriesKcal = caloriesBurned?.kcal ?: 0.0,
+            caloriesKcalSource = caloriesBurned?.source ?: CaloriesBurnedSource.NO_DATA,
             activeCaloriesKcal = activeCalories?.await(),
             caloriesInKcal = caloriesIn?.await(),
             proteinGrams = dailyMacros?.proteinGrams,
@@ -605,6 +618,12 @@ class HealthRepository @Inject constructor(
             else -> emptyList()
         }
 
+    private fun canEstimateTotalCalories(
+        granted: Set<String>,
+        showOpenVitalsCalculatedCalories: Boolean,
+    ): Boolean =
+        showOpenVitalsCalculatedCalories && readActiveCaloriesPermission in granted && readBmrPermission in granted
+
     private suspend fun <T> dashboardMetric(name: String, block: suspend () -> T): T? =
         runCatching { block() }
             .onFailure { Log.w(TAG, "Skipping dashboard metric $name after Health Connect failure", it) }
@@ -617,12 +636,19 @@ class HealthRepository @Inject constructor(
             this - DashboardMetric.CYCLE
         }
 
-    private fun dashboardPermissionsFor(metrics: Set<DashboardMetric>): Set<String> =
+    private fun dashboardPermissionsFor(
+        metrics: Set<DashboardMetric>,
+        showOpenVitalsCalculatedCalories: Boolean,
+    ): Set<String> =
         metrics.flatMapTo(mutableSetOf()) { metric ->
             when (metric) {
                 DashboardMetric.STEPS -> setOf(readStepsPermission)
                 DashboardMetric.DISTANCE -> setOf(readDistancePermission)
-                DashboardMetric.CALORIES_OUT -> setOf(readCaloriesPermission)
+                DashboardMetric.CALORIES_OUT -> if (showOpenVitalsCalculatedCalories) {
+                    setOf(readCaloriesPermission, readActiveCaloriesPermission, readBmrPermission)
+                } else {
+                    setOf(readCaloriesPermission)
+                }
                 DashboardMetric.ACTIVE_CALORIES -> setOf(
                     readActiveCaloriesPermission,
                     readStepsPermission,

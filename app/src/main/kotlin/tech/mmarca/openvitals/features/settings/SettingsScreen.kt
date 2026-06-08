@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -187,6 +188,18 @@ fun SettingsScreen(
             FavoriteActivityCard(
                 selectedExerciseType = state.favoriteActivityExerciseType,
                 onSelect = viewModel::selectFavoriteActivity,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+
+        item {
+            CalorieDataSourceCard(
+                enabled = state.showOpenVitalsCalculatedCalories,
+                onEnabledChange = viewModel::setShowOpenVitalsCalculatedCalories,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -361,6 +374,49 @@ fun SettingsScreen(
         }
     }
 }
+}
+
+@Composable
+private fun CalorieDataSourceCard(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.LocalFireDepartment,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .weight(1f),
+            ) {
+                Text(text = stringResource(R.string.settings_calorie_data_title), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = stringResource(R.string.settings_calorie_data_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+            )
+        }
+    }
 }
 
 @Composable

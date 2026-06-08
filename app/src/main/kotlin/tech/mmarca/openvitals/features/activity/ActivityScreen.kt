@@ -471,7 +471,7 @@ private fun LazyListScope.caloriesContent(
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
-    if (state.selectedRange == TimeRange.DAY || state.nutrition.any { it.caloriesBurnedKcal > 0.0 }) {
+    if (state.selectedRange == TimeRange.DAY || state.nutrition.any { it.hasCaloriesBurnedData }) {
         item {
             if (state.selectedRange == TimeRange.DAY) {
                 val caloriesTotal = state.nutrition.firstOrNull()?.caloriesBurnedKcal ?: 0.0
@@ -503,7 +503,7 @@ private fun LazyListScope.caloriesContent(
         }
         chartDaySelection.selectedDate?.let { selectedDate ->
             activityDailyEntries(
-                entries = state.nutrition.filter { it.caloriesBurnedKcal > 0.0 && it.date == selectedDate },
+                entries = state.nutrition.filter { it.hasCaloriesBurnedData && it.date == selectedDate },
                 date = { it.date },
                 value = { unitFormatter.energy(it.caloriesBurnedKcal) },
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -526,11 +526,11 @@ private fun LazyListScope.caloriesContent(
         )
         activityDataConfidence(
             period = period,
-            trackedDates = state.nutrition.filter { it.caloriesBurnedKcal > 0.0 }.map { it.date },
+            trackedDates = state.nutrition.filter { it.hasCaloriesBurnedData }.map { it.date },
             sampleCount = if (state.selectedRange == TimeRange.DAY) {
                 state.activityProgress.count { it.totalCaloriesBurnedKcal != null }
             } else {
-                values.count { it > 0.0 }
+                state.nutrition.count { it.hasCaloriesBurnedData }
             },
             accentColor = CaloriesColor,
         )
@@ -554,7 +554,7 @@ private fun LazyListScope.caloriesContent(
             includeHeader = false,
         )
         activityDailyEntries(
-            entries = state.nutrition.filter { it.caloriesBurnedKcal > 0.0 },
+            entries = state.nutrition.filter { it.hasCaloriesBurnedData },
             date = { it.date },
             value = { unitFormatter.energy(it.caloriesBurnedKcal) },
             dateTimeFormatterProvider = dateTimeFormatterProvider,

@@ -7,6 +7,23 @@ data class DailyNutrition(
     val date: LocalDate,
     val hydrationLiters: Double,
     val caloriesBurnedKcal: Double,
+    val caloriesBurnedSource: CaloriesBurnedSource = if (caloriesBurnedKcal > 0.0) {
+        CaloriesBurnedSource.RECORDED_TOTAL
+    } else {
+        CaloriesBurnedSource.NO_DATA
+    },
+    val hasCaloriesBurnedData: Boolean = caloriesBurnedSource != CaloriesBurnedSource.NO_DATA,
+)
+
+enum class CaloriesBurnedSource {
+    NO_DATA,
+    RECORDED_TOTAL,
+    ESTIMATED_ACTIVE_AND_BMR,
+}
+
+data class CaloriesBurnedValue(
+    val kcal: Double,
+    val source: CaloriesBurnedSource,
 )
 
 data class DailyHydration(

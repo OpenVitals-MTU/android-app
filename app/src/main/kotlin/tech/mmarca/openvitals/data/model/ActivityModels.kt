@@ -31,6 +31,11 @@ data class ExerciseData(
     val laps: List<ExerciseLapData> = emptyList(),
     val route: ExerciseRouteData = ExerciseRouteData(),
     val isOpenVitalsEntry: Boolean = false,
+    val totalCaloriesSource: CaloriesBurnedSource = if (totalCaloriesKcal != null) {
+        CaloriesBurnedSource.RECORDED_TOTAL
+    } else {
+        CaloriesBurnedSource.NO_DATA
+    },
 ) {
     val durationMinutes: Long get() = durationMs / 60_000
 }

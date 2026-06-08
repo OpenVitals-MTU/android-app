@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailyRestingHR
@@ -43,6 +44,7 @@ data class ActivityOverviewDay(
     val distanceMeters: Double = 0.0,
     val activeCaloriesKcal: Double? = null,
     val energyBurnedKcal: Double = 0.0,
+    val energyBurnedSource: CaloriesBurnedSource = CaloriesBurnedSource.NO_DATA,
     val workouts: List<ExerciseData> = emptyList(),
     val hrvRmssdMs: Double? = null,
     val cardioLoadScore: CardioLoadEstimate = CardioLoadEstimate.NoData,
@@ -106,15 +108,25 @@ class ActivityOverviewViewModel @Inject constructor(
     private val loadCoordinator = LoadCoordinator()
 
     init {
-        observeActivityWeekMode()
+        observePreferences()
         load()
     }
 
-    private fun observeActivityWeekMode() {
+    private fun observePreferences() {
         val preferences = preferencesRepository ?: return
         viewModelScope.launch {
             preferences.activityWeekModeFlow.collect { mode ->
                 _uiState.value = _uiState.value.copy(activityWeekMode = mode)
+            }
+        }
+        viewModelScope.launch {
+            var skipInitial = true
+            preferences.showOpenVitalsCalculatedCaloriesFlow.collect {
+                if (skipInitial) {
+                    skipInitial = false
+                } else {
+                    load(_uiState.value.selectedDate)
+                }
             }
         }
     }
@@ -220,6 +232,7 @@ class ActivityOverviewViewModel @Inject constructor(
                 distanceMeters = daySteps?.distanceMeters ?: 0.0,
                 activeCaloriesKcal = daySteps?.activeCaloriesKcal,
                 energyBurnedKcal = dayNutrition?.caloriesBurnedKcal ?: 0.0,
+                energyBurnedSource = dayNutrition?.caloriesBurnedSource ?: CaloriesBurnedSource.NO_DATA,
                 workouts = dayWorkouts,
                 hrvRmssdMs = dayHrv?.rmssdMs,
                 cardioLoadScore = calculateCardioLoad(

@@ -27,6 +27,7 @@ data class DashboardUiState(
     val showPermissionsCallout: Boolean = false,
     val trackCycle: Boolean = false,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+    val showOpenVitalsCalculatedCalories: Boolean = false,
     val dashboardWidgets: List<DashboardWidgetId> = DefaultDashboardWidgetIds,
     val dailyGoals: DashboardDailyGoals = DashboardDailyGoals(),
     val isEditingDashboard: Boolean = false,
@@ -61,6 +62,7 @@ class DashboardViewModel @Inject constructor(
             dailyGoals = prefs.dashboardDailyGoals(),
             trackCycle = prefs.trackCycle,
             sleepRangeMode = prefs.sleepRangeMode,
+            showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
         )
     )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -77,17 +79,20 @@ class DashboardViewModel @Inject constructor(
     fun refreshPreferences() {
         val trackCycle = prefs.trackCycle
         val sleepRangeMode = prefs.sleepRangeMode
+        val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
         val dailyGoals = prefs.dashboardDailyGoals()
         val current = _uiState.value
         val sleepRangeChanged = current.sleepRangeMode != sleepRangeMode
-        if (current.trackCycle != trackCycle || sleepRangeChanged || current.dailyGoals != dailyGoals) {
+        val calorieModeChanged = current.showOpenVitalsCalculatedCalories != showOpenVitalsCalculatedCalories
+        if (current.trackCycle != trackCycle || sleepRangeChanged || calorieModeChanged || current.dailyGoals != dailyGoals) {
             _uiState.value = current.copy(
                 trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
+                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
             )
         }
-        if (sleepRangeChanged) {
+        if (sleepRangeChanged || calorieModeChanged) {
             load(current.selectedDate)
         }
     }
@@ -97,6 +102,7 @@ class DashboardViewModel @Inject constructor(
         loadCoordinator.launch(viewModelScope) load@{
             val trackCycle = prefs.trackCycle
             val sleepRangeMode = prefs.sleepRangeMode
+            val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
             val dailyGoals = prefs.dashboardDailyGoals()
             val dashboardWidgets = _uiState.value.dashboardWidgets
             val primaryMetrics = DashboardFastMetrics
@@ -113,6 +119,7 @@ class DashboardViewModel @Inject constructor(
                 errorMessage = null,
                 trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
+                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
                 pendingWidgets = deferredWidgets,
             )
@@ -136,6 +143,7 @@ class DashboardViewModel @Inject constructor(
                         showPermissionsCallout = unacknowledged.isNotEmpty(),
                         trackCycle = prefs.trackCycle,
                         sleepRangeMode = sleepRangeMode,
+                        showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
                         dailyGoals = prefs.dashboardDailyGoals(),
                     )
                     loadDeferredDashboardMetrics(

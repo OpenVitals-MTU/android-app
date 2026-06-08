@@ -35,11 +35,13 @@ class DashboardViewModelTest {
     private fun prefs(
         trackCycle: Boolean = false,
         sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+        showOpenVitalsCalculatedCalories: Boolean = false,
     ) = mockk<PreferencesRepository>().also {
         every { it.acknowledgedPermissions() } returns emptySet()
         every { it.acknowledgePermissions(any()) } returns Unit
         every { it.trackCycle } returns trackCycle
         every { it.sleepRangeMode } returns sleepRangeMode
+        every { it.showOpenVitalsCalculatedCalories } returns showOpenVitalsCalculatedCalories
         every { it.dailyGoalFor(any()) } answers { firstArg<MetricDailyGoalKey>().defaultValue }
         every { it.hydrationDailyGoalLiters } returns 2.0
         every { it.dashboardWidgetOrder() } returns null
@@ -448,6 +450,21 @@ class DashboardViewModelTest {
 
         assertEquals(SleepRangeMode.NOON, vm.uiState.value.sleepRangeMode)
         coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
+    }
+
+    @Test fun `refreshPreferences reloads dashboard when calorie calculation mode changes`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+        val prefs = prefs()
+        var showOpenVitalsCalculatedCalories = false
+        every { prefs.showOpenVitalsCalculatedCalories } answers { showOpenVitalsCalculatedCalories }
+        val vm = DashboardViewModel(repo, prefs)
+
+        showOpenVitalsCalculatedCalories = true
+        vm.refreshPreferences()
+
+        assertTrue(vm.uiState.value.showOpenVitalsCalculatedCalories)
+        coVerify(exactly = 2) { repo.loadDashboard(any<DashboardQuery>()) }
     }
 
     @Test fun `dashboard widgets default to full widget set`() = runTest {

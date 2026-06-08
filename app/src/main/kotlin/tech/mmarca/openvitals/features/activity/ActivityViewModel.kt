@@ -21,6 +21,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class ActivityUiState(
     val isLoading: Boolean = true,
@@ -45,6 +46,7 @@ class ActivityViewModel(
     initialDailyGoal: Double = selectedMetric.dailyGoalKey.defaultValue,
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
+    private val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean>? = null,
 ) : ViewModel() {
 
     @Inject
@@ -68,6 +70,7 @@ class ActivityViewModel(
                 goal,
             )
         },
+        showOpenVitalsCalculatedCaloriesFlow = preferencesRepository.showOpenVitalsCalculatedCaloriesFlow,
     )
 
     private val goalKey = selectedMetric.dailyGoalKey
@@ -82,7 +85,23 @@ class ActivityViewModel(
     private val loadCoordinator = LoadCoordinator()
 
     init {
+        observeCalorieDataMode()
         load()
+    }
+
+    private fun observeCalorieDataMode() {
+        val flow = showOpenVitalsCalculatedCaloriesFlow ?: return
+        if (selectedMetric != ActivityMetric.CALORIES_BURNED) return
+        viewModelScope.launch {
+            var skipInitial = true
+            flow.collect {
+                if (skipInitial) {
+                    skipInitial = false
+                } else {
+                    load()
+                }
+            }
+        }
     }
 
     fun selectRange(range: TimeRange) {

@@ -52,6 +52,7 @@ import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
@@ -172,7 +173,11 @@ private fun ActivityOverviewContent(
                 ActivityMetricCard(
                     title = stringResource(R.string.metric_energy_burned),
                     value = unitFormatter.energy(today.energyBurnedKcal),
-                    subtitle = stringResource(R.string.period_today),
+                    subtitle = if (today.energyBurnedSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR) {
+                        stringResource(R.string.calories_estimated_active_bmr)
+                    } else {
+                        stringResource(R.string.period_today)
+                    },
                     icon = Icons.Outlined.LocalFireDepartment,
                     accentColor = CaloriesColor,
                     chartValues = metricDays.map { it.energyBurnedKcal },

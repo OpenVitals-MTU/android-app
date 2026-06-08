@@ -1,8 +1,11 @@
 package tech.mmarca.openvitals.data.repository
 
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -11,6 +14,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -19,6 +23,9 @@ class ActivityRepositoryTest {
 
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
+    private val totalCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
+    private val activeCaloriesPermission = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+    private val bmrPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val historyPermission = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
 
     @Test
@@ -87,6 +94,71 @@ class ActivityRepositoryTest {
                 includeElevation = false,
             )
         }
+    }
+
+    @Test
+    fun `loadDailyNutrition reads plain Health Connect total calories by default`() = runTest {
+        val start = LocalDate.of(2026, 6, 1)
+        val end = LocalDate.of(2026, 6, 7)
+        val nutrition = listOf(DailyNutrition(date = start, hydrationLiters = 0.0, caloriesBurnedKcal = 123.0))
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        coEvery { hc.grantedPermissions() } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery {
+            hc.readDailyNutrition(
+                startDate = start,
+                endDate = end,
+                includeHydration = false,
+                includeEstimatedCalories = false,
+            )
+        } returns nutrition
+
+        val result = ActivityRepository(hc).loadDailyNutrition(start, end)
+
+        assertEquals(nutrition, result)
+        coVerify(exactly = 0) {
+            hc.readDailyNutrition(
+                startDate = start,
+                endDate = end,
+                includeHydration = false,
+                includeEstimatedCalories = true,
+            )
+        }
+    }
+
+    @Test
+    fun `loadDailyNutrition enables OpenVitals calorie calculations when preference is on`() = runTest {
+        val start = LocalDate.of(2026, 6, 1)
+        val end = LocalDate.of(2026, 6, 7)
+        val nutrition = listOf(DailyNutrition(date = start, hydrationLiters = 0.0, caloriesBurnedKcal = 456.0))
+        val hc = mockk<HealthConnectManager>()
+        val prefs = mockk<PreferencesRepository>()
+        every { prefs.showOpenVitalsCalculatedCalories } returns true
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        coEvery { hc.grantedPermissions() } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery {
+            hc.readDailyNutrition(
+                startDate = start,
+                endDate = end,
+                includeHydration = false,
+                includeEstimatedCalories = true,
+            )
+        } returns nutrition
+
+        val result = ActivityRepository(
+            hc = hc,
+            preferencesRepository = prefs,
+        ).loadDailyNutrition(start, end)
+
+        assertEquals(nutrition, result)
     }
 
     private fun hc(

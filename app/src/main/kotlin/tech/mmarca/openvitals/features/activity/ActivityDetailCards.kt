@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.ExerciseLapData
 import tech.mmarca.openvitals.data.model.ExerciseRouteData
@@ -116,7 +117,17 @@ internal fun MetricsCard(
         DetailRow(stringResource(R.string.metric_distance), workout.totalDistanceMeters?.let { unitFormatter.distance(it).text } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_average_pace), workout.averagePace(unitFormatter)?.text ?: notAvailable)
         DetailRow(stringResource(R.string.metric_average_speed), workout.averageSpeed(unitFormatter)?.text ?: notAvailable)
-        DetailRow(stringResource(R.string.metric_calories_burned), workout.totalCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
+        DetailRow(
+            stringResource(R.string.metric_calories_burned),
+            workout.totalCaloriesKcal?.let { calories ->
+                val value = unitFormatter.energy(calories).text
+                if (workout.totalCaloriesSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR) {
+                    stringResource(R.string.calories_estimated_value, value)
+                } else {
+                    value
+                }
+            } ?: notAvailable,
+        )
         DetailRow(stringResource(R.string.metric_active_calories), workout.activeCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_floors_climbed), workout.floorsClimbed?.let { unitFormatter.count(it) } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_elevation_gained), workout.elevationGainedMeters?.let { unitFormatter.elevation(it).text } ?: notAvailable)

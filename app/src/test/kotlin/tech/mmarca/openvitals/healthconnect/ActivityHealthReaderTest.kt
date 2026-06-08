@@ -2,13 +2,19 @@ package tech.mmarca.openvitals.healthconnect
 
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.units.kilocalories
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 
 class ActivityHealthReaderTest {
     @Test fun `exercise segments include active intervals around pauses`() {
@@ -90,5 +96,83 @@ class ActivityHealthReaderTest {
                 endDate = LocalDate.of(2026, 1, 1),
             ).isEmpty()
         )
+    }
+
+    @Test
+    fun `totalCaloriesBurnedRecordDates includes every overlapping local date`() {
+        val zone = ZoneId.of("UTC")
+        val records = listOf(
+            TotalCaloriesBurnedRecord(
+                startTime = Instant.parse("2026-06-01T23:30:00Z"),
+                startZoneOffset = null,
+                endTime = Instant.parse("2026-06-02T00:30:00Z"),
+                endZoneOffset = null,
+                energy = 100.0.kilocalories,
+                metadata = Metadata.manualEntry(),
+            )
+        )
+
+        val dates = records.totalCaloriesBurnedRecordDates(
+            startDate = LocalDate.of(2026, 6, 1),
+            endDate = LocalDate.of(2026, 6, 3),
+            zone = zone,
+        )
+
+        assertEquals(
+            setOf(
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 2),
+            ),
+            dates,
+        )
+    }
+
+    @Test
+    fun `totalCaloriesRecordedOrDailyEstimated adds active calories to full day BMR when total is missing`() {
+        val value = totalCaloriesRecordedOrDailyEstimated(
+            recordedTotalCaloriesKcal = null,
+            activeCaloriesKcal = 228.0,
+            bmrKcalPerDay = 1_715.0,
+        )
+
+        assertEquals(1_943.0, value!!.kcal, 0.01)
+        assertEquals(CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR, value.source)
+    }
+
+    @Test
+    fun `totalCaloriesRecordedOrIntervalEstimated prorates BMR for interval estimates`() {
+        val value = totalCaloriesRecordedOrIntervalEstimated(
+            recordedTotalCaloriesKcal = null,
+            activeCaloriesKcal = 361.0,
+            bmrKcalPerDay = 1_800.0,
+            start = Instant.parse("2026-06-01T00:00:00Z"),
+            end = Instant.parse("2026-06-01T12:00:00Z"),
+        )
+
+        assertEquals(1_261.0, value!!.kcal, 0.01)
+        assertEquals(CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR, value.source)
+    }
+
+    @Test
+    fun `totalCaloriesRecordedOrDailyEstimated keeps recorded total when available`() {
+        val value = totalCaloriesRecordedOrDailyEstimated(
+            recordedTotalCaloriesKcal = 1_800.0,
+            activeCaloriesKcal = 361.0,
+            bmrKcalPerDay = 1_800.0,
+        )
+
+        assertEquals(1_800.0, value!!.kcal, 0.01)
+        assertEquals(CaloriesBurnedSource.RECORDED_TOTAL, value.source)
+    }
+
+    @Test
+    fun `totalCaloriesRecordedOrDailyEstimated does not use active calories without BMR`() {
+        val value = totalCaloriesRecordedOrDailyEstimated(
+            recordedTotalCaloriesKcal = null,
+            activeCaloriesKcal = 361.0,
+            bmrKcalPerDay = null,
+        )
+
+        assertNull(value)
     }
 }

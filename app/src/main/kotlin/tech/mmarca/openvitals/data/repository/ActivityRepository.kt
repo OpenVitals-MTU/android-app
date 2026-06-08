@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.data.repository
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -30,6 +31,7 @@ import kotlinx.coroutines.coroutineScope
 class ActivityRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+    private val preferencesRepository: PreferencesRepository? = null,
 ) {
 
     companion object {
@@ -43,6 +45,7 @@ class ActivityRepository @Inject constructor(
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readActiveCaloriesPermission = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+    private val readBmrPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
     private val writeExercisePermission = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
     private val writeDistancePermission = HealthPermission.getWritePermission(DistanceRecord::class)
@@ -158,6 +161,7 @@ class ActivityRepository @Inject constructor(
             includeDistance = readDistancePermission in granted,
             includeCalories = readCaloriesPermission in granted,
             includeActiveCalories = readActiveCaloriesPermission in granted,
+            includeCaloriesEstimate = canEstimateTotalCalories(granted),
             includeFloors = readFloorsPermission in granted,
             includeElevation = readElevationPermission in granted,
         )
@@ -195,6 +199,7 @@ class ActivityRepository @Inject constructor(
             includeDistance = readDistancePermission in granted,
             includeTotalCalories = readCaloriesPermission in granted,
             includeActiveCalories = readActiveCaloriesPermission in granted,
+            includeTotalCaloriesEstimate = canEstimateTotalCalories(granted),
             includeFloors = readFloorsPermission in granted,
             includeElevation = readElevationPermission in granted,
         )
@@ -214,8 +219,18 @@ class ActivityRepository @Inject constructor(
             Log.w(TAG, "Skipping loadDailyNutrition missingCount=1")
             return emptyList()
         }
-        return hc.readDailyNutrition(start, end, includeHydration = false)
+        return hc.readDailyNutrition(
+            startDate = start,
+            endDate = end,
+            includeHydration = false,
+            includeEstimatedCalories = canEstimateTotalCalories(granted),
+        )
     }
+
+    private fun canEstimateTotalCalories(granted: Set<String>): Boolean =
+        preferencesRepository?.showOpenVitalsCalculatedCalories == true &&
+            readActiveCaloriesPermission in granted &&
+            readBmrPermission in granted
 
     fun activityWritePermissions(): Set<String> =
         activityWritePermissions(

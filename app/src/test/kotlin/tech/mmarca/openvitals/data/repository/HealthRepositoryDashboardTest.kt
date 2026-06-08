@@ -2,12 +2,15 @@ package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WeightRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -26,6 +29,8 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.data.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.data.model.DashboardMetric
 import tech.mmarca.openvitals.data.model.DashboardQuery
 import tech.mmarca.openvitals.data.model.ExerciseData
@@ -41,6 +46,9 @@ class HealthRepositoryDashboardTest {
     private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
     private val sleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
     private val exercisePermission = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+    private val totalCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
+    private val activeCaloriesPermission = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+    private val bmrPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val menstruationPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     private val weightPermission = HealthPermission.getReadPermission(WeightRecord::class)
     private val heightPermission = HealthPermission.getReadPermission(HeightRecord::class)
@@ -185,6 +193,101 @@ class HealthRepositoryDashboardTest {
         assertEquals(listOf(latestWorkout, earlierWorkout), data.workouts)
         assertEquals(latestWorkout, data.workout)
         assertEquals(setOf(DashboardMetric.WORKOUT), data.loadedMetrics)
+    }
+
+    @Test fun `loadDashboard reads plain Health Connect total calories by default`() = runTest {
+        val date = LocalDate.of(2026, 6, 5)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery { hc.grantedPermissions() } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery {
+            hc.readCaloriesBurned(date = date, includeEstimatedCalories = false)
+        } returns CaloriesBurnedValue(123.0, CaloriesBurnedSource.RECORDED_TOTAL)
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.CALORIES_OUT),
+            )
+        )
+
+        assertEquals(123.0, data.caloriesKcal, 0.01)
+        assertEquals(CaloriesBurnedSource.RECORDED_TOTAL, data.caloriesKcalSource)
+        coVerify(exactly = 0) {
+            hc.readCaloriesBurned(date = date, includeEstimatedCalories = true)
+        }
+    }
+
+    @Test fun `loadDashboard enables OpenVitals calorie calculations when preference is on`() = runTest {
+        val date = LocalDate.of(2026, 6, 5)
+        val hc = mockk<HealthConnectManager>()
+        val prefs = mockk<PreferencesRepository>()
+        every { prefs.showOpenVitalsCalculatedCalories } returns true
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery { hc.grantedPermissions() } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery {
+            hc.readCaloriesBurned(date = date, includeEstimatedCalories = true)
+        } returns CaloriesBurnedValue(456.0, CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR)
+
+        val data = HealthRepository(
+            hc = hc,
+            preferencesRepository = prefs,
+        ).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.CALORIES_OUT),
+            )
+        )
+
+        assertEquals(456.0, data.caloriesKcal, 0.01)
+        assertEquals(CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR, data.caloriesKcalSource)
+    }
+
+    @Test fun `loadDashboard reports active calories and BMR permissions when OpenVitals calorie calculations are on`() = runTest {
+        val date = LocalDate.of(2026, 6, 5)
+        val hc = mockk<HealthConnectManager>()
+        val prefs = mockk<PreferencesRepository>()
+        every { prefs.showOpenVitalsCalculatedCalories } returns true
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(
+            totalCaloriesPermission,
+            activeCaloriesPermission,
+            bmrPermission,
+        )
+        coEvery { hc.grantedPermissions() } returns setOf(totalCaloriesPermission)
+        coEvery {
+            hc.readCaloriesBurned(date = date, includeEstimatedCalories = false)
+        } returns null
+
+        val data = HealthRepository(
+            hc = hc,
+            preferencesRepository = prefs,
+        ).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.CALORIES_OUT),
+            )
+        )
+
+        assertEquals(setOf(activeCaloriesPermission, bmrPermission), data.missingPermissions)
     }
 
     @Test fun `loadDashboard shows latest weight even when no selected-day weight exists`() = runTest {

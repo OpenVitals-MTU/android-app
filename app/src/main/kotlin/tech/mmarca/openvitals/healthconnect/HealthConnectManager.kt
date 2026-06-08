@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
+import tech.mmarca.openvitals.data.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.data.model.CervicalMucusEntry
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyHydration
@@ -172,6 +173,7 @@ class HealthConnectManager @Inject constructor(
         includeDistance: Boolean,
         includeCalories: Boolean,
         includeActiveCalories: Boolean,
+        includeCaloriesEstimate: Boolean = false,
         includeFloors: Boolean,
         includeElevation: Boolean,
     ): List<ActivityProgressPoint> =
@@ -180,6 +182,7 @@ class HealthConnectManager @Inject constructor(
             includeDistance = includeDistance,
             includeCalories = includeCalories,
             includeActiveCalories = includeActiveCalories,
+            includeCaloriesEstimate = includeCaloriesEstimate,
             includeFloors = includeFloors,
             includeElevation = includeElevation,
         )
@@ -190,11 +193,20 @@ class HealthConnectManager @Inject constructor(
     suspend fun readTodayDistanceMeters(): Double =
         activityReader.readTodayDistanceMeters()
 
-    suspend fun readCaloriesKcal(date: LocalDate): Double? =
-        activityReader.readCaloriesKcal(date)
+    suspend fun readCaloriesKcal(
+        date: LocalDate,
+        includeEstimatedCalories: Boolean = false,
+    ): Double? =
+        activityReader.readCaloriesKcal(date, includeEstimatedCalories)
 
-    suspend fun readTodayCaloriesKcal(): Double? =
-        activityReader.readTodayCaloriesKcal()
+    suspend fun readCaloriesBurned(
+        date: LocalDate,
+        includeEstimatedCalories: Boolean = false,
+    ): CaloriesBurnedValue? =
+        activityReader.readCaloriesBurned(date, includeEstimatedCalories)
+
+    suspend fun readTodayCaloriesKcal(includeEstimatedCalories: Boolean = false): Double? =
+        activityReader.readTodayCaloriesKcal(includeEstimatedCalories)
 
     suspend fun readCaloriesInKcal(date: LocalDate): Double? =
         nutritionReader.readCaloriesInKcal(date)
@@ -238,6 +250,7 @@ class HealthConnectManager @Inject constructor(
         includeDistance: Boolean,
         includeTotalCalories: Boolean,
         includeActiveCalories: Boolean,
+        includeTotalCaloriesEstimate: Boolean = false,
         includeFloors: Boolean,
         includeElevation: Boolean,
     ): ExerciseData? =
@@ -247,6 +260,7 @@ class HealthConnectManager @Inject constructor(
             includeDistance = includeDistance,
             includeTotalCalories = includeTotalCalories,
             includeActiveCalories = includeActiveCalories,
+            includeTotalCaloriesEstimate = includeTotalCaloriesEstimate,
             includeFloors = includeFloors,
             includeElevation = includeElevation,
         )
@@ -358,8 +372,15 @@ class HealthConnectManager @Inject constructor(
         endDate: LocalDate,
         includeHydration: Boolean = true,
         includeCalories: Boolean = true,
+        includeEstimatedCalories: Boolean = false,
     ): List<DailyNutrition> =
-        nutritionReader.readDailyNutrition(startDate, endDate, includeHydration, includeCalories)
+        nutritionReader.readDailyNutrition(
+            startDate = startDate,
+            endDate = endDate,
+            includeHydration = includeHydration,
+            includeCalories = includeCalories,
+            includeEstimatedCalories = includeEstimatedCalories,
+        )
 
     suspend fun readDailyMacros(startDate: LocalDate, endDate: LocalDate): List<DailyMacros> =
         nutritionReader.readDailyMacros(startDate, endDate)

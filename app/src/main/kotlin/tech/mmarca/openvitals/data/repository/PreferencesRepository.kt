@@ -34,11 +34,13 @@ class PreferencesRepository @Inject constructor(
     private val _appThemeMode = MutableStateFlow(readAppThemeMode())
     private val _sleepRangeMode = MutableStateFlow(readSleepRangeMode())
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
+    private val _showOpenVitalsCalculatedCalories = MutableStateFlow(readShowOpenVitalsCalculatedCalories())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
     val sleepRangeModeFlow: StateFlow<SleepRangeMode> = _sleepRangeMode.asStateFlow()
     val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
+    val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -83,6 +85,13 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit().putString(KEY_ACTIVITY_WEEK_MODE, value.name).apply()
             _activityWeekMode.value = value
+        }
+
+    var showOpenVitalsCalculatedCalories: Boolean
+        get() = _showOpenVitalsCalculatedCalories.value
+        set(value) {
+            prefs.edit().putBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, value).apply()
+            _showOpenVitalsCalculatedCalories.value = value
         }
 
     var lastActivityExerciseType: Int?
@@ -319,6 +328,9 @@ class PreferencesRepository @Inject constructor(
             ?.let { value -> runCatching { ActivityWeekMode.valueOf(value) }.getOrNull() }
             ?: ActivityWeekMode.MONDAY_TO_SUNDAY
 
+    private fun readShowOpenVitalsCalculatedCalories(): Boolean =
+        prefs.getBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, false)
+
     private fun defaultUnitSystem(): UnitSystem {
         val country = Locale.getDefault().country.uppercase(Locale.US)
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
@@ -347,6 +359,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
+        private const val KEY_SHOW_OPENVITALS_CALCULATED_CALORIES = "show_openvitals_calculated_calories"
         private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"

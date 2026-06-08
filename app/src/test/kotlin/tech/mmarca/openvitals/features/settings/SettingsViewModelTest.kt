@@ -153,6 +153,19 @@ class SettingsViewModelTest {
         assertEquals(ActivityWeekMode.LAST_7_DAYS, vm.uiState.value.activityWeekMode)
     }
 
+    @Test fun `setShowOpenVitalsCalculatedCalories persists preference and updates ui state`() = runTest {
+        val prefs = prefs(trackCycle = false)
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+        )
+
+        vm.setShowOpenVitalsCalculatedCalories(true)
+
+        verify { prefs.showOpenVitalsCalculatedCalories = true }
+        assertTrue(vm.uiState.value.showOpenVitalsCalculatedCalories)
+    }
+
     @Test fun `selectFavoriteActivity persists preference and updates ui state`() = runTest {
         val prefs = prefs(trackCycle = false)
         val vm = SettingsViewModel(
@@ -209,12 +222,14 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
+            every { prefs.showOpenVitalsCalculatedCalories } returns false
             every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.trackCycle } returns trackCycle
             every { prefs.appLanguage = any() } just runs
             every { prefs.appThemeMode = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
             every { prefs.activityWeekMode = any() } just runs
+            every { prefs.showOpenVitalsCalculatedCalories = any() } just runs
             every { prefs.favoriteActivityExerciseType = any() } just runs
             every { prefs.trackCycle = any() } just runs
         }

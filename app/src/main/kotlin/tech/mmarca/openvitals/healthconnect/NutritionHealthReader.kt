@@ -1,11 +1,13 @@
 package tech.mmarca.openvitals.healthconnect
 
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailyMacros
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.NutritionEntry
@@ -36,34 +38,60 @@ internal class NutritionHealthReader(
         endDate: LocalDate,
         includeHydration: Boolean = true,
         includeCalories: Boolean = true,
+        includeEstimatedCalories: Boolean = false,
     ): List<DailyNutrition> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailyNutrition[$start..$end]", emptyList()) {
+            val client = support.client()
+            val totalCaloriesRecordDates = if (includeCalories) {
+                client.readTotalCaloriesBurnedRecordDates(startDate, endDate, zone)
+            } else {
+                emptySet()
+            }
+            val bmrKcalPerDay = if (includeCalories && includeEstimatedCalories) {
+                client.readLatestBmrKcalPerDayBefore(end)
+            } else {
+                null
+            }
             val metrics = buildSet {
                 if (includeHydration) add(HydrationRecord.VOLUME_TOTAL)
                 if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeCalories && includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
             }
-            val aggregateRows = support.client().aggregateGroupByDuration(
+            val aggregateRows = client.aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
                     metrics = metrics,
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                     timeRangeSlicer = Duration.ofDays(1),
                 )
             ).map { bucket ->
+                val date = bucket.startTime.atZone(zone).toLocalDate()
+                val totalCaloriesKcal = if (includeCalories && date in totalCaloriesRecordDates) {
+                    bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                } else {
+                    null
+                }
+                val activeCaloriesKcal = if (includeCalories && includeEstimatedCalories) {
+                    bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
+                } else {
+                    null
+                }
+                val caloriesBurned = totalCaloriesRecordedOrDailyEstimated(
+                    recordedTotalCaloriesKcal = totalCaloriesKcal,
+                    activeCaloriesKcal = activeCaloriesKcal,
+                    bmrKcalPerDay = bmrKcalPerDay,
+                )
                 DailyNutrition(
-                    date = bucket.startTime.atZone(zone).toLocalDate(),
+                    date = date,
                     hydrationLiters = if (includeHydration) {
                         bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0
                     } else {
                         0.0
                     },
-                    caloriesBurnedKcal = if (includeCalories) {
-                        bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
-                    } else {
-                        0.0
-                    },
+                    caloriesBurnedKcal = caloriesBurned?.kcal ?: 0.0,
+                    caloriesBurnedSource = caloriesBurned?.source ?: CaloriesBurnedSource.NO_DATA,
                 )
             }
             if (!includeHydration || aggregateRows.any { it.hydrationLiters > 0.0 }) {
