@@ -21,6 +21,7 @@ import kotlinx.coroutines.coroutineScope
 class HydrationRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+    private val preferencesRepository: PreferencesRepository? = null,
 ) {
 
     companion object {
@@ -30,6 +31,13 @@ class HydrationRepository @Inject constructor(
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
     private val writeHydrationPermission = HealthPermission.getWritePermission(HydrationRecord::class)
     val hydrationWritePermissions: Set<String> get() = setOf(writeHydrationPermission)
+
+    fun hydrationContainerVolumeMilliliters(): Map<String, Double> =
+        preferencesRepository?.hydrationContainerVolumeMilliliters().orEmpty()
+
+    fun setHydrationContainerVolumeMilliliters(containerId: String, milliliters: Double) {
+        preferencesRepository?.setHydrationContainerVolumeMilliliters(containerId, milliliters)
+    }
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()

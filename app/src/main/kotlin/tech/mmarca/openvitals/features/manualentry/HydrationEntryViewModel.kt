@@ -108,12 +108,11 @@ class HydrationEntryViewModel @Inject constructor(
     private val editRecordId: String? = savedStateHandle[HYDRATION_ENTRY_ID_ARG]
 
     private val _uiState = MutableStateFlow(
-        HydrationEntryUiState()
+        initialHydrationEntryState(repository, editRecordId)
     )
     val uiState: StateFlow<HydrationEntryUiState> = _uiState.asStateFlow()
 
     init {
-        _uiState.value = _uiState.value.copy(editRecordId = editRecordId)
         refresh()
         loadEditEntry()
     }
@@ -188,6 +187,9 @@ class HydrationEntryViewModel @Inject constructor(
         }
 
         val updatedContainer = container.copy(volumeMilliliters = milliliters)
+        if (HydrationContainerOption.Defaults.any { it.id == container.id }) {
+            repository.setHydrationContainerVolumeMilliliters(container.id, milliliters)
+        }
         _uiState.value = _uiState.value.copy(
             containerOptions = _uiState.value.containerOptions.map { option ->
                 if (option.id == container.id) updatedContainer else option
@@ -299,6 +301,28 @@ class HydrationEntryViewModel @Inject constructor(
                 )
             }
         }
+    }
+}
+
+private fun initialHydrationEntryState(
+    repository: HydrationRepository,
+    editRecordId: String?,
+): HydrationEntryUiState {
+    val options = hydrationContainerOptions(repository)
+    return HydrationEntryUiState(
+        containerOptions = options,
+        selectedContainer = options.first(),
+        editRecordId = editRecordId,
+    )
+}
+
+private fun hydrationContainerOptions(repository: HydrationRepository): List<HydrationContainerOption> {
+    val volumeOverrides = repository.hydrationContainerVolumeMilliliters()
+    return HydrationContainerOption.Defaults.map { option ->
+        volumeOverrides[option.id]
+            ?.takeIf(::isValidHydrationContainerMilliliters)
+            ?.let { option.copy(volumeMilliliters = it) }
+            ?: option
     }
 }
 

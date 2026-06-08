@@ -204,6 +204,36 @@ class PreferencesRepository @Inject constructor(
             .apply()
     }
 
+    fun hydrationContainerVolumeMilliliters(): Map<String, Double> =
+        prefs.getStringSet(KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS, emptySet())
+            .orEmpty()
+            .mapNotNull { entry ->
+                val separatorIndex = entry.indexOf(KEY_VALUE_PAIR_SEPARATOR)
+                if (separatorIndex <= 0 || separatorIndex == entry.lastIndex) {
+                    null
+                } else {
+                    val key = entry.substring(0, separatorIndex)
+                    val value = entry.substring(separatorIndex + 1).toDoubleOrNull()
+                    value?.takeIf { it > 0.0 && it.isFinite() }?.let { key to it }
+                }
+            }
+            .toMap()
+
+    fun setHydrationContainerVolumeMilliliters(containerId: String, milliliters: Double) {
+        if (containerId.isBlank() || milliliters <= 0.0 || !milliliters.isFinite()) return
+
+        val values = hydrationContainerVolumeMilliliters().toMutableMap()
+        values[containerId] = milliliters
+        prefs.edit()
+            .putStringSet(
+                KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS,
+                values.mapTo(mutableSetOf()) { (key, value) ->
+                    "$key$KEY_VALUE_PAIR_SEPARATOR$value"
+                },
+            )
+            .apply()
+    }
+
     fun mindfulnessReminderConfig(): MindfulnessReminderConfig =
         MindfulnessReminderConfig(
             enabled = prefs.getBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, false),
@@ -347,6 +377,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
+        private const val KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS = "hydration_container_volume_milliliters"
         private const val KEY_HYDRATION_REMINDERS_ENABLED = "hydration_reminders_enabled"
         private const val KEY_HYDRATION_REMINDER_INTERVAL_MINUTES = "hydration_reminder_interval_minutes"
         private const val KEY_HYDRATION_REMINDER_ACTIVE_START_TIME = "hydration_reminder_active_start_time"
@@ -360,6 +391,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_MINDFULNESS_REMINDERS_ENABLED = "mindfulness_reminders_enabled"
         private const val KEY_MINDFULNESS_REMINDER_TIME = "mindfulness_reminder_time"
         private const val KEY_VALUE_SEPARATOR = ","
+        private const val KEY_VALUE_PAIR_SEPARATOR = "="
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
         private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0

@@ -4,6 +4,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,8 +30,11 @@ class HydrationEntryViewModelTest {
     private fun entryRepo(
         canWrite: Boolean = true,
         dailyHydration: List<DailyHydration> = emptyList(),
+        containerVolumeMilliliters: Map<String, Double> = emptyMap(),
     ) = mockk<HydrationRepository>().also { repo ->
         every { repo.hydrationWritePermissions } returns setOf("write_hydration")
+        every { repo.hydrationContainerVolumeMilliliters() } returns containerVolumeMilliliters
+        every { repo.setHydrationContainerVolumeMilliliters(any(), any()) } returns Unit
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
         coEvery { repo.loadDailyHydration(any(), any()) } returns dailyHydration
@@ -55,8 +59,29 @@ class HydrationEntryViewModelTest {
         assertEquals("coffee_cup", vm.uiState.value.selectedContainer.id)
     }
 
+    @Test fun `container presets apply persisted volume overrides`() = runTest {
+        val vm = HydrationEntryViewModel(
+            entryRepo(
+                containerVolumeMilliliters = mapOf(
+                    "coffee_cup" to 125.0,
+                    "water_bottle" to 650.0,
+                    "unknown" to 900.0,
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(125.0, 150.0, 175.0, 200.0, 300.0, 650.0, 1000.0),
+            vm.uiState.value.containerOptions.map { it.volumeMilliliters },
+        )
+        assertEquals("coffee_cup", vm.uiState.value.selectedContainer.id)
+        assertEquals(125.0, vm.uiState.value.selectedContainer.volumeMilliliters, 0.0001)
+    }
+
     @Test fun `container size update changes and selects preset option`() = runTest {
-        val vm = HydrationEntryViewModel(entryRepo())
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
         advanceUntilIdle()
 
         val bottle = vm.uiState.value.containerOptions.first { it.id == "water_bottle" }
@@ -70,10 +95,12 @@ class HydrationEntryViewModelTest {
             0.0001,
         )
         assertFalse(vm.uiState.value.containerOptions.any { it.id == "custom" })
+        verify { repo.setHydrationContainerVolumeMilliliters("water_bottle", 650.0) }
     }
 
     @Test fun `invalid container size is rejected`() = runTest {
-        val vm = HydrationEntryViewModel(entryRepo())
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
         advanceUntilIdle()
 
         val selectedContainer = vm.uiState.value.selectedContainer
@@ -81,6 +108,7 @@ class HydrationEntryViewModelTest {
 
         assertEquals(HydrationEntryError.INVALID_AMOUNT, vm.uiState.value.entryError)
         assertEquals(selectedContainer, vm.uiState.value.selectedContainer)
+        verify(exactly = 0) { repo.setHydrationContainerVolumeMilliliters(any(), any()) }
     }
 
     @Test fun `refresh today hydration loads only the current day total`() = runTest {
