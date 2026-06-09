@@ -483,6 +483,7 @@ private fun LazyListScope.dashboardActivitiesToday(
                 accentColor = WorkoutColor,
                 message = stringResource(R.string.message_no_workouts_day),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                showHeader = false,
                 onClick = onOpenActivities,
             )
         }

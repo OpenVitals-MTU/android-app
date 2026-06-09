@@ -398,11 +398,8 @@
     <string name="section_respiratory">Atmung</string>
     <string name="section_respiratory_rate_daily_breakdown">Tägliche Aufschlüsselung der Atemfrequenz</string>
     <string name="section_vo2_max_history">VO2-max-Verlauf</string>
-    <string name="section_health_connect">Health Connect</string>
     <string name="section_display">Anzeige</string>
-    <string name="section_permissions">Berechtigungen</string>
     <string name="section_privacy">Datenschutz</string>
-    <string name="section_debug">Debug</string>
     <string name="section_cycle_calendar">Zykluskalender</string>
     <string name="section_basal_body_temperature">Basaltemperatur</string>
     <string name="section_statistics">Statistiken</string>
@@ -700,13 +697,22 @@
     <string name="onboarding_category_cycle_tracking">Zyklusverfolgung</string>
     <string name="onboarding_category_cycle_tracking_desc">Optionale sensible Zyklusdaten: Periodendaten, Blutungsstärke, Ovulation, Zervixschleim und Basaltemperatur.</string>
 
-    <string name="settings_status_available">Verfügbar</string>
-    <string name="settings_status_needs_update">Update erforderlich</string>
-    <string name="settings_status_needs_play_store">Play Store erforderlich</string>
     <string name="settings_all_requestable_granted">Alle anforderbaren Berechtigungen erteilt</string>
     <string name="settings_manual_permissions_title">Manuelle Berechtigungen erforderlich</string>
     <string name="settings_manual_permissions_body">Einige Health-Connect-Berechtigungen können nicht über den normalen Anfragedialog erteilt werden. Öffne Health Connect und aktiviere sie für OpenVitals.</string>
     <string name="settings_open_health_permissions">Health-Connect-Berechtigungen öffnen</string>
+    <string name="settings_display_group_title">Anzeige</string>
+    <string name="settings_display_group_body">Sprache, Einheiten und Erscheinungsbild</string>
+    <string name="settings_activities_group_title">Aktivitäten</string>
+    <string name="settings_activities_group_body">Aktivitätswoche und Lieblingsaktivität</string>
+    <string name="settings_calories_group_title">Kalorien</string>
+    <string name="settings_calories_group_body">Gesamtkaloriendaten</string>
+    <string name="settings_sleep_group_title">Schlaf</string>
+    <string name="settings_sleep_group_body">Schlafzeitraum</string>
+    <string name="settings_cycle_group_title">Menstruationszyklus</string>
+    <string name="settings_cycle_group_body">Menstruationszyklus verfolgen</string>
+    <string name="settings_permissions_group_title">Berechtigungen</string>
+    <string name="settings_permissions_group_body">Zugriff auf Gesundheitsdaten und manuelle Berechtigungsschritte</string>
     <string name="settings_language_title">Sprache</string>
     <string name="settings_language_body">Wähle die App-Sprache oder folge deiner Systemeinstellung.</string>
     <string name="settings_language_system">System</string>
@@ -746,8 +752,6 @@
     <string name="settings_privacy_no_ads">Keine Werbung oder Drittanbieter-Tracking</string>
     <string name="settings_privacy_on_device">Daten bleiben auf deinem Gerät</string>
     <string name="settings_privacy_read_only">Schreibgeschützt, außer bei Einträgen, die du ausdrücklich protokollierst</string>
-    <string name="settings_debug_availability">HC-Verfügbarkeit: %1$s</string>
-    <string name="settings_debug_granted_permissions">Erteilte Berechtigungen: %1$d/%2$d</string>
     <string name="settings_app_version">Version %1$s (%2$d)</string>
 
     <string name="detail_metrics">Metriken</string>

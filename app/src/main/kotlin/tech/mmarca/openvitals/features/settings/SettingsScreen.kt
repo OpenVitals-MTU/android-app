@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.settings
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,11 +16,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -34,7 +39,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -43,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -65,11 +70,42 @@ import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 
+enum class SettingsSection(
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val summaryRes: Int,
+) {
+    DISPLAY(
+        titleRes = R.string.settings_display_group_title,
+        summaryRes = R.string.settings_display_group_body,
+    ),
+    ACTIVITIES(
+        titleRes = R.string.settings_activities_group_title,
+        summaryRes = R.string.settings_activities_group_body,
+    ),
+    CALORIES(
+        titleRes = R.string.settings_calories_group_title,
+        summaryRes = R.string.settings_calories_group_body,
+    ),
+    SLEEP(
+        titleRes = R.string.settings_sleep_group_title,
+        summaryRes = R.string.settings_sleep_group_body,
+    ),
+    CYCLE(
+        titleRes = R.string.settings_cycle_group_title,
+        summaryRes = R.string.settings_cycle_group_body,
+    ),
+    PERMISSIONS(
+        titleRes = R.string.settings_permissions_group_title,
+        summaryRes = R.string.settings_permissions_group_body,
+    ),
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onBack: () -> Unit,
+    section: SettingsSection? = null,
+    onOpenSection: (SettingsSection) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -104,7 +140,6 @@ fun SettingsScreen(
         FullScreenLoading()
         return
     }
-    var debugExpanded by rememberSaveable { mutableStateOf(false) }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -116,265 +151,248 @@ fun SettingsScreen(
                 .widthIn(max = 920.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
-        // ─── Health Connect status ────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.section_health_connect)) }
-
-        item {
-            StatusCard(
-                label = stringResource(R.string.section_health_connect),
-                status = when (state.availability) {
-                    HealthConnectAvailability.AVAILABLE -> stringResource(R.string.settings_status_available)
-                    HealthConnectAvailability.NEEDS_PROVIDER_UPDATE -> stringResource(R.string.settings_status_needs_update)
-                    HealthConnectAvailability.NEEDS_PLAY_STORE -> stringResource(R.string.settings_status_needs_play_store)
-                    HealthConnectAvailability.NOT_SUPPORTED -> stringResource(R.string.onboarding_status_not_supported)
-                },
-                ok = state.availability == HealthConnectAvailability.AVAILABLE,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        // ─── Display preferences ─────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.section_display)) }
-
-        item {
-            LanguageCard(
-                selected = state.appLanguage,
-                onSelect = viewModel::selectAppLanguage,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        item {
-            Spacer(Modifier.height(8.dp))
-        }
-
-        item {
-            UnitSystemCard(
-                selected = state.unitSystem,
-                onSelect = viewModel::selectUnitSystem,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        item {
-            Spacer(Modifier.height(8.dp))
-        }
-
-        item {
-            ThemeModeCard(
-                selected = state.appThemeMode,
-                onSelect = viewModel::selectAppThemeMode,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        item {
-            Spacer(Modifier.height(8.dp))
-        }
-
-        item {
-            ActivityWeekModeCard(
-                selected = state.activityWeekMode,
-                onSelect = viewModel::selectActivityWeekMode,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        item {
-            Spacer(Modifier.height(8.dp))
-        }
-
-        item {
-            FavoriteActivityCard(
-                selectedExerciseType = state.favoriteActivityExerciseType,
-                onSelect = viewModel::selectFavoriteActivity,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        item {
-            Spacer(Modifier.height(8.dp))
-        }
-
-        item {
-            CalorieDataSourceCard(
-                enabled = state.showOpenVitalsCalculatedCalories,
-                onEnabledChange = viewModel::setShowOpenVitalsCalculatedCalories,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        // ─── Sleep preferences ───────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.metric_sleep)) }
-
-        item {
-            SleepRangeModeCard(
-                selected = state.sleepRangeMode,
-                onSelect = viewModel::selectSleepRangeMode,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        // ─── Cycle tracking ──────────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.metric_cycle_tracking)) }
-
-        item {
-            CycleTrackingCard(
-                enabled = state.trackCycle,
-                availability = state.availability,
-                cyclePermissions = state.cyclePermissions,
-                grantedPermissions = state.grantedPermissions,
-                onEnabledChange = { enabled ->
-                    viewModel.setTrackCycle(enabled)
-                    if (enabled && state.availability == HealthConnectAvailability.AVAILABLE) {
-                        requestCyclePermissions.launch(state.cyclePermissions)
+            when (section) {
+                null -> {
+                    SettingsSection.entries.forEach { settingsSection ->
+                        item {
+                            SettingsCategoryCard(
+                                section = settingsSection,
+                                onClick = { onOpenSection(settingsSection) },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            )
+                        }
                     }
-                },
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
 
-        // ─── Permissions ─────────────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.section_permissions)) }
+                    item { SectionHeader(stringResource(R.string.section_privacy)) }
 
-        state.permissionCategories.forEach { category ->
-            item {
-                PermissionCategoryCard(
-                    category = category,
-                    grantedPermissions = state.grantedPermissions,
-                    availability = state.availability,
-                    onGrant = {
-                        val missingPermissions = category.permissions - state.grantedPermissions
-                        val requestablePermissions = missingPermissions - category.manualPermissions
-                        val manualPermissions = missingPermissions.intersect(category.manualPermissions)
-                        when {
-                            requestablePermissions.isNotEmpty() -> requestAllPermissions.launch(requestablePermissions)
-                            manualPermissions.isNotEmpty() -> openManualPermissionSettings()
-                        }
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-        }
+                    item {
+                        PrivacyInfoCard(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
 
-        if (state.permissionCategories.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_all_requestable_granted),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp),
-                    )
+                    item {
+                        SettingsVersionText()
+                    }
                 }
-            }
-        }
+                SettingsSection.DISPLAY -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        LanguageCard(
+                            selected = state.appLanguage,
+                            onSelect = viewModel::selectAppLanguage,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item { SettingsCardSpacer() }
+                    item {
+                        UnitSystemCard(
+                            selected = state.unitSystem,
+                            onSelect = viewModel::selectUnitSystem,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item { SettingsCardSpacer() }
+                    item {
+                        ThemeModeCard(
+                            selected = state.appThemeMode,
+                            onSelect = viewModel::selectAppThemeMode,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.ACTIVITIES -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        ActivityWeekModeCard(
+                            selected = state.activityWeekMode,
+                            onSelect = viewModel::selectActivityWeekMode,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item { SettingsCardSpacer() }
+                    item {
+                        FavoriteActivityCard(
+                            selectedExerciseType = state.favoriteActivityExerciseType,
+                            onSelect = viewModel::selectFavoriteActivity,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.CALORIES -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        CalorieDataSourceCard(
+                            enabled = state.showOpenVitalsCalculatedCalories,
+                            onEnabledChange = viewModel::setShowOpenVitalsCalculatedCalories,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.SLEEP -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        SleepRangeModeCard(
+                            selected = state.sleepRangeMode,
+                            onSelect = viewModel::selectSleepRangeMode,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.CYCLE -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        CycleTrackingCard(
+                            enabled = state.trackCycle,
+                            availability = state.availability,
+                            cyclePermissions = state.cyclePermissions,
+                            grantedPermissions = state.grantedPermissions,
+                            onEnabledChange = { enabled ->
+                                viewModel.setTrackCycle(enabled)
+                                if (enabled && state.availability == HealthConnectAvailability.AVAILABLE) {
+                                    requestCyclePermissions.launch(state.cyclePermissions)
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.PERMISSIONS -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
 
-        if (state.missingManualVisiblePermissions.isNotEmpty()) {
-            item {
-                PermissionCallout(
-                    title = stringResource(R.string.settings_manual_permissions_title),
-                    body = stringResource(R.string.settings_manual_permissions_body),
-                    actionLabel = stringResource(R.string.settings_open_health_permissions),
-                    onGrant = openManualPermissionSettings,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-        }
-
-        // ─── Privacy info ─────────────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.section_privacy)) }
-
-        item {
-            PrivacyInfoCard(modifier = Modifier.padding(horizontal = 16.dp))
-        }
-
-        // ─── Debug ───────────────────────────────────────────────────────
-        item { SectionHeader(stringResource(R.string.section_debug)) }
-
-            item {
-                Card(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.section_debug),
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.weight(1f),
+                    state.permissionCategories.forEach { category ->
+                        item {
+                            PermissionCategoryCard(
+                                category = category,
+                                grantedPermissions = state.grantedPermissions,
+                                availability = state.availability,
+                                onGrant = {
+                                    val missingPermissions = category.permissions - state.grantedPermissions
+                                    val requestablePermissions = missingPermissions - category.manualPermissions
+                                    val manualPermissions = missingPermissions.intersect(category.manualPermissions)
+                                    when {
+                                        requestablePermissions.isNotEmpty() ->
+                                            requestAllPermissions.launch(requestablePermissions)
+                                        manualPermissions.isNotEmpty() -> openManualPermissionSettings()
+                                    }
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
-                            TextButton(onClick = { debugExpanded = !debugExpanded }) {
-                                Text(stringResource(if (debugExpanded) R.string.action_close else R.string.action_details))
-                            }
                         }
-                        if (debugExpanded) {
-                            val visibleGranted = state.visiblePermissions.filter { it in state.grantedPermissions }
-                            Text(
-                                text = stringResource(R.string.settings_debug_availability, state.availability),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = stringResource(
-                                    R.string.settings_debug_granted_permissions,
-                                    visibleGranted.size,
-                                    state.visiblePermissions.size,
+                    }
+
+                    if (state.permissionCategories.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                 ),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            )
-                            visibleGranted.sorted().forEach { perm ->
+                            ) {
                                 Text(
-                                    text = "  ✓ ${perm.substringAfterLast('.')}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    text = stringResource(R.string.settings_all_requestable_granted),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(16.dp),
                                 )
                             }
-                        } else {
-                            Text(
-                                text = stringResource(
-                                    R.string.settings_debug_granted_permissions,
-                                    state.grantedPermissions.size,
-                                    state.visiblePermissions.size,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        }
+                    }
+
+                    if (state.missingManualVisiblePermissions.isNotEmpty()) {
+                        item {
+                            PermissionCallout(
+                                title = stringResource(R.string.settings_manual_permissions_title),
+                                body = stringResource(R.string.settings_manual_permissions_body),
+                                actionLabel = stringResource(R.string.settings_open_health_permissions),
+                                onGrant = openManualPermissionSettings,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             )
                         }
                     }
                 }
             }
+        }
+    }
+}
 
-        item {
-            Text(
-                text = stringResource(
-                    R.string.settings_app_version,
-                    BuildConfig.VERSION_NAME,
-                    BuildConfig.VERSION_CODE,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+@Composable
+private fun SettingsCardSpacer() {
+    Spacer(Modifier.height(8.dp))
+}
+
+@Composable
+private fun SettingsVersionText() {
+    Text(
+        text = stringResource(
+            R.string.settings_app_version,
+            BuildConfig.VERSION_NAME,
+            BuildConfig.VERSION_CODE,
+        ),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsCategoryCard(
+    section: SettingsSection,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = section.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 24.dp),
+                    .padding(horizontal = 12.dp)
+                    .weight(1f),
+            ) {
+                Text(
+                    text = stringResource(section.titleRes),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(section.summaryRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
-}
+
+private val SettingsSection.icon: ImageVector
+    get() = when (this) {
+        SettingsSection.DISPLAY -> Icons.Outlined.Settings
+        SettingsSection.ACTIVITIES -> Icons.AutoMirrored.Outlined.DirectionsRun
+        SettingsSection.CALORIES -> Icons.Outlined.LocalFireDepartment
+        SettingsSection.SLEEP -> Icons.Outlined.Bedtime
+        SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
+        SettingsSection.PERMISSIONS -> Icons.Outlined.Lock
+    }
 
 @Composable
 private fun CalorieDataSourceCard(
@@ -774,45 +792,6 @@ private fun CycleTrackingCard(
                 onCheckedChange = onEnabledChange,
                 enabled = availability == HealthConnectAvailability.AVAILABLE,
             )
-        }
-    }
-}
-
-@Composable
-private fun StatusCard(
-    label: String,
-    status: String,
-    ok: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (ok)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            else
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-        ),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = if (ok) Icons.Outlined.CheckCircle else Icons.Outlined.Lock,
-                contentDescription = null,
-                tint = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp),
-            )
-            Column(modifier = Modifier.padding(start = 12.dp)) {
-                Text(text = label, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (ok) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error,
-                )
-            }
         }
     }
 }

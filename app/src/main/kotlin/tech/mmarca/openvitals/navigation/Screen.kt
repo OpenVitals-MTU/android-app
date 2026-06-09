@@ -58,5 +58,11 @@ sealed class Screen(val route: String) {
         fun createRoute(metricId: String): String = "metric/${Uri.encode(metricId)}"
     }
     data object Settings : Screen("settings")
+    data object SettingsDisplay : Screen("settings/display")
+    data object SettingsActivities : Screen("settings/activities")
+    data object SettingsCalories : Screen("settings/calories")
+    data object SettingsSleep : Screen("settings/sleep")
+    data object SettingsCycle : Screen("settings/cycle")
+    data object SettingsPermissions : Screen("settings/permissions")
     data object Achievements : Screen("achievements")
 }

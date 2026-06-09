@@ -109,6 +109,7 @@ fun MetricCardPlaceholder(
     message: String,
     modifier: Modifier = Modifier,
     contentAtBottom: Boolean = false,
+    showHeader: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
     Card(
@@ -135,24 +136,28 @@ fun MetricCardPlaceholder(
                 Modifier.padding(16.dp)
             }
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor.copy(alpha = 0.5f),
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (showHeader) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             if (contentAtBottom) {
                 Spacer(Modifier.weight(1f))
             }
-            Spacer(Modifier.height(12.dp))
+            if (showHeader) {
+                Spacer(Modifier.height(12.dp))
+            }
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,

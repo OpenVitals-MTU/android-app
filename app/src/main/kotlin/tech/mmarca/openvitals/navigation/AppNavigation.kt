@@ -103,6 +103,7 @@ import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
 import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
+import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
 import tech.mmarca.openvitals.features.sleep.SleepDetailScreen
 import tech.mmarca.openvitals.features.sleep.SleepDetailViewModel
@@ -181,9 +182,21 @@ fun AppNavigation(
             Screen.VitalsMeasurementEntryEdit.route,
         )
     }
+    val settingsRoutes = remember {
+        setOf(
+            Screen.Settings.route,
+            Screen.SettingsDisplay.route,
+            Screen.SettingsActivities.route,
+            Screen.SettingsCalories.route,
+            Screen.SettingsSleep.route,
+            Screen.SettingsCycle.route,
+            Screen.SettingsPermissions.route,
+        )
+    }
 
     val showTopBar = currentRoute != null && currentRoute != Screen.Onboarding.route
     val isTaskRoute = currentRoute?.let { it in taskRoutes } == true
+    val isSettingsRoute = currentRoute?.let { it in settingsRoutes } == true
     val showNavigation =
         topLevelDestinations.size > 1 && currentRoute?.let { it in topLevelRoutes } == true
     val canNavigateBack =
@@ -237,6 +250,12 @@ fun AppNavigation(
         Screen.SleepDetail.route -> stringResource(R.string.screen_sleep_detail)
         Screen.Metric.route -> currentMetricId?.let { stringResource(metricTitleRes(it)) }.orEmpty()
         Screen.Settings.route -> stringResource(R.string.screen_settings)
+        Screen.SettingsDisplay.route -> stringResource(R.string.settings_display_group_title)
+        Screen.SettingsActivities.route -> stringResource(R.string.settings_activities_group_title)
+        Screen.SettingsCalories.route -> stringResource(R.string.settings_calories_group_title)
+        Screen.SettingsSleep.route -> stringResource(R.string.settings_sleep_group_title)
+        Screen.SettingsCycle.route -> stringResource(R.string.settings_cycle_group_title)
+        Screen.SettingsPermissions.route -> stringResource(R.string.settings_permissions_group_title)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
     }
@@ -301,7 +320,7 @@ fun AppNavigation(
                     )
                 }
             }
-            if (showTopBar && !isTaskRoute && currentRoute != Screen.Settings.route) {
+            if (showTopBar && !isTaskRoute && !isSettingsRoute) {
                 IconButton(
                     onClick = {
                         navController.navigate(Screen.Settings.route) {
@@ -708,12 +727,74 @@ fun AppNavigation(
                 val settingsViewModel = hiltViewModel<SettingsViewModel>()
                 SettingsScreen(
                     viewModel = settingsViewModel,
-                    onBack = { navController.popBackStack() },
+                    onOpenSection = { section ->
+                        navController.navigate(settingsSectionRoute(section)) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+
+            composable(Screen.SettingsDisplay.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.DISPLAY,
+                )
+            }
+
+            composable(Screen.SettingsActivities.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.ACTIVITIES,
+                )
+            }
+
+            composable(Screen.SettingsCalories.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.CALORIES,
+                )
+            }
+
+            composable(Screen.SettingsSleep.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.SLEEP,
+                )
+            }
+
+            composable(Screen.SettingsCycle.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.CYCLE,
+                )
+            }
+
+            composable(Screen.SettingsPermissions.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.PERMISSIONS,
                 )
             }
         }
     }
 }
+
+private fun settingsSectionRoute(section: SettingsSection): String =
+    when (section) {
+        SettingsSection.DISPLAY -> Screen.SettingsDisplay.route
+        SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
+        SettingsSection.CALORIES -> Screen.SettingsCalories.route
+        SettingsSection.SLEEP -> Screen.SettingsSleep.route
+        SettingsSection.CYCLE -> Screen.SettingsCycle.route
+        SettingsSection.PERMISSIONS -> Screen.SettingsPermissions.route
+    }
 
 private fun addEntryActionForCurrentRoute(
     currentRoute: String?,
