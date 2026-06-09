@@ -52,7 +52,7 @@ Release CI also uses the wrapper for local app test/lint and release artifact bu
 Publish reusable OpenVitals modules to Maven local with:
 
 ```bash
-./gradlew publishOpenVitalsArtifactsToMavenLocal -PopenVitalsArtifactVersion=1.2.2-SNAPSHOT
+./gradlew publishOpenVitalsArtifactsToMavenLocal -PopenVitalsArtifactVersion=1.2.3-SNAPSHOT
 ```
 
 See [`shared-artifacts.md`](shared-artifacts.md) for remote publishing and connected-repo consumption.

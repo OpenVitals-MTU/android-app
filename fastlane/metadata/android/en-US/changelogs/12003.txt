@@ -1,0 +1,1 @@
+Adds a dedicated Calories detail screen with period stats, total/active calorie trends, BMR context, and day breakdowns. Links dashboard/Activities calorie cards to the new view, clarifies estimated/missing total-calorie messaging, improves hydration cup-size controls, fixes compact text fitting and Activities today handling, and updates Android SDK 37 tooling.

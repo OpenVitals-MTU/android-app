@@ -34,6 +34,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 - Opt-in hydration reminders with active hours and daily-goal pause logic
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import and GPS activity recording with review before saving
+- Dedicated Calories detail screen with total, active, and BMR calorie context
 - Activities and Sleep detail screens with integrated overview cards and direct metric links
 - Metric and imperial unit support
 
@@ -60,7 +61,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Summary dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, and opt-in cycle data
 - Material 3 app shell with Settings and Achievements in the top bar plus dashboard quick actions for logging and starting activities
 - Period-based detail screens with `Day / Week / Month / Year` navigation
-- Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
+- Feature screens for Activity, Activities, Calories, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
 - Categorized Health Connect onboarding permissions, with one-tap full setup, category-by-category review, and cycle tracking behind a separate explicit opt-in
 - Write-permission requests available during one-tap setup or from Add entry and metric entry screens, while dashboard views stay read-only
 - Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
@@ -73,7 +74,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 ## Current coverage
 
-- Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, floors climbed, elevation gain, workout sessions, and cardio load
+- Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, BMR context, floors climbed, elevation gain, workout sessions, and cardio load
 - Sleep: sessions, duration, sleep stages, sleep score, sleep efficiency, and period overview cards
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max

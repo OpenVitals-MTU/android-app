@@ -1,0 +1,1 @@
+Añade una pantalla de Calorías con estadísticas, tendencias de calorías totales/activas, contexto de BMR y desglose diario. Enlaza las tarjetas de calorías del panel/Actividades, aclara mensajes de totales ausentes o estimados, mejora tamaños de vasos en hidratación, ajusta mejor textos compactos y actualiza a Android SDK 37.

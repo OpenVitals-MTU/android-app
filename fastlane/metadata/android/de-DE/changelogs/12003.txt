@@ -1,0 +1,1 @@
+Ergänzt eine Kalorienseite mit Statistiken, Trends für Gesamt-/aktive Kalorien, BMR-Kontext und Tagesaufschlüsselung. Verlinkt Kalorienkarten aus Dashboard/Aktivitäten, verdeutlicht fehlende oder geschätzte Gesamtkalorien, verbessert Trinkgefäßgrößen, passt kompakten Text besser an und aktualisiert auf Android SDK 37.
