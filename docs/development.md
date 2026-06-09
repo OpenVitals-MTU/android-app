@@ -2,7 +2,7 @@
 
 ## Build Requirements
 
-- Android SDK 36
+- Android SDK Platform 37.0 with SDK Build-Tools 37.0.0
 - JDK 17
 - Gradle wrapper files, including `gradle/wrapper/gradle-wrapper.jar`
 

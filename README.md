@@ -107,6 +107,7 @@ The current manifest does not request the `INTERNET` permission.
 
 - Android only
 - `minSdk 26`
+- `compileSdk 37`
 - `targetSdk 36`
 - JDK 17 / Java 17 toolchain
 - Health Connect required
@@ -121,7 +122,7 @@ Health Connect platform notes:
 
 ## Build from source
 
-1. Install a recent Android Studio with Android SDK 36 and JDK 17 support.
+1. Install a recent Android Studio with Android SDK 37.0 and JDK 17 support.
 2. Clone this repository.
 3. Open the project in Android Studio, or build from the command line.
 
