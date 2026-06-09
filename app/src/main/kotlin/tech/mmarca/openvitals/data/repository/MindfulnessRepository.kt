@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
@@ -17,7 +16,6 @@ import javax.inject.Singleton
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
-@OptIn(ExperimentalMindfulnessSessionApi::class)
 @Singleton
 class MindfulnessRepository @Inject constructor(
     private val hc: HealthConnectManager,

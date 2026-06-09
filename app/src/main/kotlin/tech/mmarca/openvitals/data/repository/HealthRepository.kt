@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
@@ -79,7 +78,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMindfulnessSessionApi::class)
 @Singleton
 class HealthRepository @Inject constructor(
     private val hc: HealthConnectManager,

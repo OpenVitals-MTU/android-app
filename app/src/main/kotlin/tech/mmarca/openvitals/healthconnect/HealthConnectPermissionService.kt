@@ -8,7 +8,6 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
@@ -57,7 +56,6 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
 
-@OptIn(ExperimentalMindfulnessSessionApi::class)
 internal class HealthConnectPermissionService(
     private val context: Context,
     private val clientProvider: () -> HealthConnectClient,

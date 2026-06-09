@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.healthconnect
 
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -13,7 +12,6 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMindfulnessSessionApi::class)
 internal class MindfulnessHealthReader(
     private val support: HealthConnectReaderSupport,
     private val appPackageName: String,

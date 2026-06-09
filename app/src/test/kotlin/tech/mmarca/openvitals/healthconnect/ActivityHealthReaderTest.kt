@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.data.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
@@ -69,6 +70,48 @@ class ActivityHealthReaderTest {
         assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_WALKING, segments.first().segmentType)
         assertEquals(start, segments.first().startTime)
         assertEquals(end, segments.first().endTime)
+    }
+
+    @Test fun `exercise segments preserve explicit repetitions and set index`() {
+        val start = Instant.parse("2026-05-26T08:00:00Z")
+        val firstSetEnd = start.plusSeconds(60)
+        val restEnd = firstSetEnd.plusSeconds(30)
+        val end = restEnd.plusSeconds(60)
+        val request = ActivityWriteRequest(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+            startTime = start,
+            endTime = end,
+            exerciseSegments = listOf(
+                ActivityExerciseSegmentWrite(
+                    startTime = start,
+                    endTime = firstSetEnd,
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+                    repetitions = 8,
+                    setIndex = 0,
+                ),
+                ActivityExerciseSegmentWrite(
+                    startTime = firstSetEnd,
+                    endTime = restEnd,
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
+                ),
+                ActivityExerciseSegmentWrite(
+                    startTime = restEnd,
+                    endTime = end,
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+                    repetitions = 6,
+                    setIndex = 1,
+                ),
+            ),
+        )
+
+        val segments = request.toExerciseSegments()
+
+        assertEquals(3, segments.size)
+        assertEquals(8, segments[0].repetitions)
+        assertEquals(0, segments[0].setIndex)
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST, segments[1].segmentType)
+        assertEquals(6, segments[2].repetitions)
+        assertEquals(1, segments[2].setIndex)
     }
 
     @Test

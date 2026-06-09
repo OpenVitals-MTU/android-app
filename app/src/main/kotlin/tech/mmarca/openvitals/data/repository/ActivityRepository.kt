@@ -65,6 +65,7 @@ class ActivityRepository @Inject constructor(
     private val writeElevationPermission = HealthPermission.getWritePermission(ElevationGainedRecord::class)
     private val writeActiveCaloriesPermission = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
     private val writeTotalCaloriesPermission = HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class)
+    private val writeStepsPermission = HealthPermission.getWritePermission(StepsRecord::class)
     private val writeExerciseRoutePermission = HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
@@ -339,6 +340,7 @@ class ActivityRepository @Inject constructor(
             includeElevation = true,
             includeActiveCalories = true,
             includeTotalCalories = true,
+            includeSteps = false,
         )
 
     fun activityWritePermissions(
@@ -347,6 +349,7 @@ class ActivityRepository @Inject constructor(
         includeElevation: Boolean,
         includeActiveCalories: Boolean,
         includeTotalCalories: Boolean,
+        includeSteps: Boolean = false,
     ): Set<String> = buildSet {
         add(writeExercisePermission)
         if (includeRoute) add(writeExerciseRoutePermission)
@@ -354,6 +357,7 @@ class ActivityRepository @Inject constructor(
         if (includeElevation) add(writeElevationPermission)
         if (includeActiveCalories) add(writeActiveCaloriesPermission)
         if (includeTotalCalories) add(writeTotalCaloriesPermission)
+        if (includeSteps) add(writeStepsPermission)
     }
 
     fun activityWritePermissions(request: ActivityWriteRequest): Set<String> =
@@ -363,6 +367,7 @@ class ActivityRepository @Inject constructor(
             includeElevation = request.elevationGainedMeters != null,
             includeActiveCalories = request.activeCaloriesKcal != null,
             includeTotalCalories = request.totalCaloriesKcal != null,
+            includeSteps = request.stepsCount != null,
         )
 
     suspend fun hasActivityWritePermission(): Boolean =
@@ -372,6 +377,7 @@ class ActivityRepository @Inject constructor(
             includeElevation = true,
             includeActiveCalories = true,
             includeTotalCalories = true,
+            includeSteps = false,
         )
 
     suspend fun hasActivityWritePermission(
@@ -380,6 +386,7 @@ class ActivityRepository @Inject constructor(
         includeElevation: Boolean,
         includeActiveCalories: Boolean,
         includeTotalCalories: Boolean,
+        includeSteps: Boolean = false,
     ): Boolean {
         val required = activityWritePermissions(
             includeRoute = includeRoute,
@@ -387,9 +394,13 @@ class ActivityRepository @Inject constructor(
             includeElevation = includeElevation,
             includeActiveCalories = includeActiveCalories,
             includeTotalCalories = includeTotalCalories,
+            includeSteps = includeSteps,
         )
         return required.all { permission -> permission in grantedPermissionsIfAvailable() }
     }
+
+    suspend fun hasActivityWritePermission(request: ActivityWriteRequest): Boolean =
+        activityWritePermissions(request).all { permission -> permission in grantedPermissionsIfAvailable() }
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String {
         val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()

@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.healthconnect
 
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
@@ -78,6 +77,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
             endTime = segment.endTime,
             segmentType = segment.segmentType,
             repetitions = segment.repetitions,
+            setIndex = segment.setIndex,
         )
     },
     laps = laps.map { lap ->
@@ -145,7 +145,6 @@ internal fun SleepSessionRecord.toSleepData(): SleepData {
     )
 }
 
-@OptIn(ExperimentalMindfulnessSessionApi::class)
 internal fun MindfulnessSessionRecord.toMindfulnessSession(appPackageName: String? = null) = MindfulnessSession(
     id = metadata.id,
     title = title,

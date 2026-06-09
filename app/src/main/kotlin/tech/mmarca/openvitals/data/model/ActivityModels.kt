@@ -56,6 +56,7 @@ data class ExerciseSegmentData(
     val endTime: Instant,
     val segmentType: Int,
     val repetitions: Int,
+    val setIndex: Int? = null,
 ) {
     val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
 }
@@ -93,6 +94,14 @@ data class ActivityPauseInterval(
     val endTime: Instant,
 )
 
+data class ActivityExerciseSegmentWrite(
+    val startTime: Instant,
+    val endTime: Instant,
+    val segmentType: Int,
+    val repetitions: Int = 0,
+    val setIndex: Int? = null,
+)
+
 data class ActivityWriteRequest(
     val exerciseType: Int,
     val startTime: Instant,
@@ -101,6 +110,8 @@ data class ActivityWriteRequest(
     val notes: String? = null,
     val routePoints: List<ExerciseRoutePoint> = emptyList(),
     val pauseIntervals: List<ActivityPauseInterval> = emptyList(),
+    val exerciseSegments: List<ActivityExerciseSegmentWrite> = emptyList(),
+    val stepsCount: Long? = null,
     val distanceMeters: Double? = null,
     val elevationGainedMeters: Double? = null,
     val activeCaloriesKcal: Double? = null,

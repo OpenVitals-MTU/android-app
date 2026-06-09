@@ -360,6 +360,9 @@ private fun SegmentBlock(
         style = MaterialTheme.typography.titleSmall,
     )
     DetailRow(stringResource(R.string.detail_time), formatTimeRange(start, end, dateTimeFormatterProvider))
+    segment.setIndex?.let { setIndex ->
+        DetailRow(stringResource(R.string.detail_set), unitFormatter.count(setIndex + 1))
+    }
     DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(segment.durationMs))
     DetailRow(
         stringResource(R.string.detail_repetitions),

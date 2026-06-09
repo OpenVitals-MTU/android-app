@@ -1,16 +1,51 @@
 package tech.mmarca.openvitals.features.manualentry
 
 import androidx.annotation.StringRes
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.R
 
+enum class ActivityRecordingSensor {
+    NONE,
+    GPS,
+    PROXIMITY,
+    ACCELEROMETER,
+    STEP_DETECTOR,
+}
+
+enum class ActivityRepetitionUnit {
+    REPETITIONS,
+    STEPS,
+}
+
 data class ActivityEntryType(
     val exerciseType: Int,
+    val id: String = exerciseType.toString(),
     @param:StringRes val labelRes: Int,
     val supportsGpsRoute: Boolean = true,
     val supportsDistance: Boolean = true,
     val supportsElevation: Boolean = false,
+    val recordingSensor: ActivityRecordingSensor = if (supportsGpsRoute) {
+        ActivityRecordingSensor.GPS
+    } else {
+        ActivityRecordingSensor.NONE
+    },
+    val segmentType: Int? = null,
+    val defaultTitle: String? = null,
+    val repetitionUnit: ActivityRepetitionUnit? = null,
 )
+
+val ActivityEntryType.supportsLiveRecording: Boolean
+    get() = recordingSensor != ActivityRecordingSensor.NONE
+
+val ActivityEntryType.supportsSetRepetitions: Boolean
+    get() = repetitionUnit == ActivityRepetitionUnit.REPETITIONS
+
+val ActivityEntryType.isRepetitionLike: Boolean
+    get() = repetitionUnit != null
+
+fun activityEntryTypeById(id: String?): ActivityEntryType? =
+    id?.let { typeId -> DefaultActivityEntryTypes.firstOrNull { it.id == typeId } }
 
 val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
     ActivityEntryType(
@@ -81,6 +116,58 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_GOLF,
         labelRes = R.string.exercise_type_golf,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL,
+        id = "treadmill",
+        labelRes = R.string.exercise_type_treadmill,
+        supportsGpsRoute = false,
+        supportsDistance = true,
+        recordingSensor = ActivityRecordingSensor.STEP_DETECTOR,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING_TREADMILL,
+        repetitionUnit = ActivityRepetitionUnit.STEPS,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        id = "push_ups",
+        labelRes = R.string.exercise_type_push_ups,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.PROXIMITY,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+        defaultTitle = "Push-ups",
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        id = "pull_ups",
+        labelRes = R.string.exercise_type_pull_ups,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.ACCELEROMETER,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        id = "rope_skipping",
+        labelRes = R.string.exercise_type_rope_skipping,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.ACCELEROMETER,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_JUMP_ROPE,
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS,
+        id = "trampoline_jumping",
+        labelRes = R.string.exercise_type_trampoline_jumping,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.ACCELEROMETER,
+        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+        defaultTitle = "Trampoline jumping",
+        repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
     ),
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,

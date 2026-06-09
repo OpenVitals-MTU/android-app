@@ -9,6 +9,10 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -41,13 +45,44 @@ class ActivityRecordingService : Service() {
     private val locationManager: LocationManager by lazy {
         getSystemService(Context.LOCATION_SERVICE) as LocationManager
     }
+    private val sensorManager: SensorManager by lazy {
+        getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    }
     private var locationUpdatesStarted = false
+    private var sensorUpdatesStarted = false
+    private var pushUpRecognizer: PushUpProximityRecognizer? = null
+    private var stepRecognizer: StepDetectorRepetitionRecognizer? = null
+    private var jumpRecognizer: JumpRepetitionRecognizer? = null
+    private var pullUpRecognizer: PullUpRepetitionRecognizer? = null
     private var foregroundStarted = false
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             controller.acceptLocation(location)
         }
+    }
+
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            val now = System.currentTimeMillis()
+            val recognized = when (event.sensor.type) {
+                Sensor.TYPE_PROXIMITY -> pushUpRecognizer?.onProximity(event.values.firstOrNull() ?: return, now)
+                Sensor.TYPE_STEP_DETECTOR -> stepRecognizer?.onStep(now)
+                Sensor.TYPE_ACCELEROMETER -> {
+                    val x = event.values.getOrNull(0) ?: return
+                    val y = event.values.getOrNull(1) ?: return
+                    val z = event.values.getOrNull(2) ?: return
+                    jumpRecognizer?.onAcceleration(x, y, z, now)
+                        ?: pullUpRecognizer?.onAcceleration(x, y, z, now)
+                }
+                else -> null
+            }
+            if (recognized != null) {
+                controller.acceptRecognizedRepetition()
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     }
 
     override fun onCreate() {
@@ -81,6 +116,7 @@ class ActivityRecordingService : Service() {
 
     override fun onDestroy() {
         stopLocationUpdates()
+        stopSensorUpdates()
         serviceScope.cancel()
         foregroundStarted = false
         super.onDestroy()
@@ -91,6 +127,7 @@ class ActivityRecordingService : Service() {
             .onEach { state ->
                 if (!state.isActive) {
                     stopLocationUpdates()
+                    stopSensorUpdates()
                     if (foregroundStarted) {
                         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
                     }
@@ -99,10 +136,15 @@ class ActivityRecordingService : Service() {
                 }
 
                 ensureForeground(state)
-                if (state.status == ActivityRecordingStatus.RECORDING) {
+                if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
+                    stopSensorUpdates()
                     startLocationUpdates()
+                } else if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.REPETITION) {
+                    stopLocationUpdates()
+                    startSensorUpdates(state)
                 } else {
                     stopLocationUpdates()
+                    stopSensorUpdates()
                 }
                 updateNotification(state)
             }
@@ -116,8 +158,13 @@ class ActivityRecordingService : Service() {
                 this,
                 NotificationId,
                 buildNotification(state),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                } else if (
+                    state.recordingKind == ActivityRecordingKind.REPETITION &&
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+                ) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
                 } else {
                     0
                 },
@@ -127,6 +174,54 @@ class ActivityRecordingService : Service() {
             controller.reportRecordingError(error.message ?: getString(R.string.activity_recording_error_service))
             stopSelf()
         }
+    }
+
+    private fun startSensorUpdates(state: ActivityRecordingState) {
+        if (sensorUpdatesStarted) return
+        val activityType = activityEntryTypeById(state.activityTypeId) ?: return
+        if (
+            activityType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR &&
+            !ActivityRecordingController.hasActivityRecognitionPermission(this)
+        ) {
+            controller.reportRecordingError(getString(R.string.activity_recording_error_activity_recognition_permission))
+            return
+        }
+        val sensorType = activityType.recordingSensor.toAndroidSensorType() ?: return
+        val sensor = sensorManager.getDefaultSensor(sensorType)
+        if (sensor == null) {
+            controller.reportRecordingError(recordingSensorUnavailableMessage(activityType.recordingSensor))
+            return
+        }
+        pushUpRecognizer = if (activityType.recordingSensor == ActivityRecordingSensor.PROXIMITY) {
+            PushUpProximityRecognizer()
+        } else {
+            null
+        }
+        stepRecognizer = if (activityType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR) {
+            StepDetectorRepetitionRecognizer()
+        } else {
+            null
+        }
+        jumpRecognizer = when (activityType.id) {
+            "rope_skipping" -> JumpRepetitionRecognizer(maxJumpDurationMillis = 1_250L)
+            "trampoline_jumping" -> JumpRepetitionRecognizer(maxJumpDurationMillis = 2_500L)
+            else -> null
+        }
+        pullUpRecognizer = if (activityType.id == "pull_ups") PullUpRepetitionRecognizer() else null
+        sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorUpdatesStarted = true
+    }
+
+    private fun stopSensorUpdates() {
+        if (!sensorUpdatesStarted) return
+        runCatching {
+            sensorManager.unregisterListener(sensorListener)
+        }
+        sensorUpdatesStarted = false
+        pushUpRecognizer = null
+        stepRecognizer = null
+        jumpRecognizer = null
+        pullUpRecognizer = null
     }
 
     @SuppressLint("MissingPermission")
@@ -222,6 +317,29 @@ class ActivityRecordingService : Service() {
     private fun notificationText(state: ActivityRecordingState): String {
         val now = Instant.now()
         val totalTime = formatNotificationElapsed(state.elapsedDuration(now))
+        if (state.recordingKind == ActivityRecordingKind.REPETITION) {
+            val activityType = activityEntryTypeById(state.activityTypeId)
+            val unit = if (activityType?.repetitionUnit == ActivityRepetitionUnit.STEPS) {
+                getString(R.string.unit_steps)
+            } else {
+                getString(R.string.unit_reps)
+            }
+            return when (state.status) {
+                ActivityRecordingStatus.RECORDING -> getString(
+                    R.string.activity_recording_notification_repetition_recording,
+                    totalTime,
+                    unitFormatter.count(state.repetitionCount),
+                    unit,
+                )
+                ActivityRecordingStatus.PAUSED -> getString(
+                    R.string.activity_recording_notification_repetition_paused,
+                    totalTime,
+                    unitFormatter.count(state.repetitionCount),
+                    unit,
+                )
+                ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
+            }
+        }
         val movingTime = formatNotificationElapsed(state.movingDuration(now))
         val distance = unitFormatter.distance(state.distanceMeters).text
         return when (state.status) {
@@ -287,6 +405,24 @@ private fun formatNotificationElapsed(duration: Duration): String {
         "%d:%02d".format(minutes, seconds)
     }
 }
+
+private fun ActivityRecordingSensor.toAndroidSensorType(): Int? =
+    when (this) {
+        ActivityRecordingSensor.PROXIMITY -> Sensor.TYPE_PROXIMITY
+        ActivityRecordingSensor.ACCELEROMETER -> Sensor.TYPE_ACCELEROMETER
+        ActivityRecordingSensor.STEP_DETECTOR -> Sensor.TYPE_STEP_DETECTOR
+        ActivityRecordingSensor.GPS,
+        ActivityRecordingSensor.NONE -> null
+    }
+
+private fun Context.recordingSensorUnavailableMessage(sensor: ActivityRecordingSensor): String =
+    when (sensor) {
+        ActivityRecordingSensor.PROXIMITY -> getString(R.string.activity_recording_error_proximity_sensor)
+        ActivityRecordingSensor.ACCELEROMETER -> getString(R.string.activity_recording_error_accelerometer)
+        ActivityRecordingSensor.STEP_DETECTOR -> getString(R.string.activity_recording_error_step_detector)
+        ActivityRecordingSensor.GPS,
+        ActivityRecordingSensor.NONE -> getString(R.string.activity_recording_error_unsupported_type)
+    }
 
 private const val ChannelId = "activity_recording"
 private const val NotificationId = 4027

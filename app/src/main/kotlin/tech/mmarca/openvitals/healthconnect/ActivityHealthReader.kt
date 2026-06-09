@@ -26,6 +26,7 @@ import androidx.health.connect.client.units.kilocalories
 import androidx.health.connect.client.units.meters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.data.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
@@ -697,10 +698,23 @@ internal class ActivityHealthReader(
                     )
                 )
             }
+            stepsCount?.let { steps ->
+                add(
+                    StepsRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        count = steps,
+                        metadata = manualActivityMetricMetadata("steps", startTime),
+                    )
+                )
+            }
         }
     }
 
     private suspend fun deleteManualActivityMetricRecords(start: Instant, end: Instant) {
+        deleteManualActivityMetricRecords(StepsRecord::class, "steps", start, end)
         deleteManualActivityMetricRecords(DistanceRecord::class, "distance", start, end)
         deleteManualActivityMetricRecords(ElevationGainedRecord::class, "elevation", start, end)
         deleteManualActivityMetricRecords(ActiveCaloriesBurnedRecord::class, "active_calories", start, end)
@@ -743,6 +757,7 @@ internal class ActivityHealthReader(
         request.elevationGainedMeters?.let { require(it >= 0.0 && it <= MaxActivityElevationMeters) { "Elevation gain is out of range." } }
         request.activeCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Active calories are out of range." } }
         request.totalCaloriesKcal?.let { require(it > 0.0 && it <= MaxActivityCaloriesKcal) { "Total calories are out of range." } }
+        request.stepsCount?.let { require(it > 0L && it <= MaxActivitySteps) { "Steps are out of range." } }
         val sortedPauses = request.pauseIntervals.sortedBy { it.startTime }
         sortedPauses.forEach { interval ->
             require(interval.startTime.isBefore(interval.endTime)) { "Pause start must be before pause end." }
@@ -760,6 +775,18 @@ internal class ActivityHealthReader(
             require(!point.time.isBefore(request.startTime) && point.time.isBefore(request.endTime)) {
                 "Route points must be inside the activity time range."
             }
+        }
+        val sortedSegments = request.exerciseSegments.sortedBy { it.startTime }
+        sortedSegments.forEach { segment ->
+            require(segment.startTime.isBefore(segment.endTime)) { "Segment start must be before segment end." }
+            require(!segment.startTime.isBefore(request.startTime) && !segment.endTime.isAfter(request.endTime)) {
+                "Exercise segments must be inside the activity time range."
+            }
+            require(segment.repetitions >= 0) { "Segment repetitions must not be negative." }
+            require(segment.setIndex == null || segment.setIndex >= 0) { "Segment set index must not be negative." }
+        }
+        sortedSegments.zipWithNext { previous, next ->
+            require(!previous.endTime.isAfter(next.startTime)) { "Exercise segments must not overlap." }
         }
     }
 
@@ -784,6 +811,7 @@ internal class ActivityHealthReader(
         private const val MaxActivityDistanceMeters = 1_000_000.0
         private const val MaxActivityElevationMeters = 1_000_000.0
         private const val MaxActivityCaloriesKcal = 1_000_000.0
+        private const val MaxActivitySteps = 1_000_000L
     }
 }
 
@@ -805,6 +833,12 @@ internal fun dailyStepDateChunks(
 }
 
 internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {
+    if (exerciseSegments.isNotEmpty()) {
+        return exerciseSegments
+            .sortedBy { it.startTime }
+            .map { it.toExerciseSegment() }
+    }
+
     val activeSegmentType = exerciseType.toActiveExerciseSegmentType()
     val sortedPauses = pauseIntervals.sortedBy { it.startTime }
     return buildList {
@@ -842,6 +876,15 @@ internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {
     }
 }
 
+private fun ActivityExerciseSegmentWrite.toExerciseSegment(): ExerciseSegment =
+    ExerciseSegment(
+        startTime = startTime,
+        endTime = endTime,
+        segmentType = segmentType,
+        repetitions = repetitions,
+        setIndex = setIndex,
+    )
+
 private fun Int.toActiveExerciseSegmentType(): Int =
     when (this) {
         ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_BIKING
@@ -849,6 +892,8 @@ private fun Int.toActiveExerciseSegmentType(): Int =
         ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_ELLIPTICAL
         ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING ->
             ExerciseSegment.EXERCISE_SEGMENT_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING
+        ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
+        ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
         ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
         ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_PILATES
         ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> ExerciseSegment.EXERCISE_SEGMENT_TYPE_ROWING_MACHINE

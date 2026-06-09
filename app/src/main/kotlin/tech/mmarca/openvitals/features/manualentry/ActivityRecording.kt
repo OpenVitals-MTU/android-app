@@ -35,8 +35,15 @@ enum class ActivityRecordingStatus {
     PAUSED,
 }
 
+enum class ActivityRecordingKind {
+    GPS_ROUTE,
+    REPETITION,
+}
+
 data class ActivityRecordingState(
     val status: ActivityRecordingStatus = ActivityRecordingStatus.IDLE,
+    val recordingKind: ActivityRecordingKind = ActivityRecordingKind.GPS_ROUTE,
+    val activityTypeId: String? = null,
     val exerciseType: Int? = null,
     val startTime: Instant? = null,
     val endTime: Instant? = null,
@@ -46,6 +53,7 @@ data class ActivityRecordingState(
     val points: List<ExerciseRoutePoint> = emptyList(),
     val distanceMeters: Double = 0.0,
     val elevationGainedMeters: Double = 0.0,
+    val repetitionCount: Long = 0L,
     val lastAccuracyMeters: Double? = null,
     val lastLocationTime: Instant? = null,
     val droppedPointCount: Int = 0,
@@ -57,12 +65,15 @@ data class ActivityRecordingState(
 
 data class ActivityRecordingSnapshot(
     val exerciseType: Int,
+    val recordingKind: ActivityRecordingKind = ActivityRecordingKind.GPS_ROUTE,
+    val activityTypeId: String? = null,
     val startTime: Instant,
     val endTime: Instant,
     val points: List<ExerciseRoutePoint>,
     val pauseIntervals: List<ActivityPauseInterval>,
     val distanceMeters: Double,
     val elevationGainedMeters: Double,
+    val repetitionCount: Long = 0L,
 )
 
 @Singleton
@@ -74,7 +85,27 @@ class ActivityRecordingController @Inject constructor(
     private val _state = MutableStateFlow(recordingStore.restore())
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
+    fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
+        if (activityType.supportsGpsRoute) {
+            startGpsRecording(activityType, initialFix)
+        } else if (activityType.isRepetitionLike) {
+            startRepetitionRecording(activityType)
+        } else {
+            updateAndPersist(
+                _state.value.copy(
+                    errorMessage = context.getString(R.string.activity_recording_error_unsupported_type),
+                )
+            )
+            false
+        }
+
     fun startRecording(exerciseType: Int, initialFix: Location?): Boolean {
+        val activityType = DefaultActivityEntryTypes.firstOrNull { it.exerciseType == exerciseType && it.supportsGpsRoute }
+            ?: return false
+        return startRecording(activityType, initialFix)
+    }
+
+    private fun startGpsRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean {
         if (!hasPreciseLocationPermission(context)) {
             updateAndPersist(
                 _state.value.copy(
@@ -109,11 +140,43 @@ class ActivityRecordingController @Inject constructor(
         updateAndPersist(
             ActivityRecordingState(
                 status = ActivityRecordingStatus.RECORDING,
-                exerciseType = exerciseType,
+                recordingKind = ActivityRecordingKind.GPS_ROUTE,
+                activityTypeId = activityType.id,
+                exerciseType = activityType.exerciseType,
                 startTime = now,
                 points = listOf(initialPoint),
                 lastAccuracyMeters = initialFixQuality.accuracyMeters,
                 lastLocationTime = initialPoint.time,
+            ),
+            replaceRoutePoints = true,
+        )
+        ContextCompat.startForegroundService(
+            context,
+            ActivityRecordingService.intent(context, ActivityRecordingService.ActionStart),
+        )
+        return true
+    }
+
+    private fun startRepetitionRecording(activityType: ActivityEntryType): Boolean {
+        if (!hasNotificationPermission(context)) {
+            updateAndPersist(
+                _state.value.copy(
+                    errorMessage = context.getString(R.string.activity_recording_error_notification_permission),
+                )
+            )
+            return false
+        }
+
+        val now = Instant.now()
+        persistenceScope.coroutineContext.cancelChildren()
+        recordingStore.clear()
+        updateAndPersist(
+            ActivityRecordingState(
+                status = ActivityRecordingStatus.RECORDING,
+                recordingKind = ActivityRecordingKind.REPETITION,
+                activityTypeId = activityType.id,
+                exerciseType = activityType.exerciseType,
+                startTime = now,
             ),
             replaceRoutePoints = true,
         )
@@ -171,12 +234,15 @@ class ActivityRecordingController @Inject constructor(
             listOfNotNull(current.pausedStartedAt?.toPauseInterval(end))
         val snapshot = ActivityRecordingSnapshot(
             exerciseType = exerciseType,
+            recordingKind = current.recordingKind,
+            activityTypeId = current.activityTypeId,
             startTime = start,
             endTime = end,
             points = current.points,
             pauseIntervals = pauseIntervals,
             distanceMeters = current.distanceMeters,
             elevationGainedMeters = current.elevationGainedMeters,
+            repetitionCount = current.repetitionCount,
         )
         clearRecording()
         stopRecordingService()
@@ -186,6 +252,7 @@ class ActivityRecordingController @Inject constructor(
     fun acceptLocation(location: Location) {
         val current = _state.value
         if (current.status != ActivityRecordingStatus.RECORDING) return
+        if (current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
 
         val fixQuality = location.activityGpsFixQuality(startTime = current.startTime)
         if (!fixQuality.isPrecise) {
@@ -242,6 +309,21 @@ class ActivityRecordingController @Inject constructor(
         )
     }
 
+    fun acceptRecognizedRepetition() {
+        adjustRepetitionCount(1)
+    }
+
+    fun adjustRepetitionCount(delta: Long) {
+        val current = _state.value
+        if (!current.isActive || current.recordingKind != ActivityRecordingKind.REPETITION) return
+        updateAndPersist(
+            current.copy(
+                repetitionCount = (current.repetitionCount + delta).coerceAtLeast(0L),
+                errorMessage = null,
+            )
+        )
+    }
+
     fun reportRecordingError(message: String) {
         updateAndPersist(_state.value.copy(errorMessage = message))
     }
@@ -294,6 +376,13 @@ class ActivityRecordingController @Inject constructor(
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+
+        fun hasActivityRecognitionPermission(context: Context): Boolean =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACTIVITY_RECOGNITION,
                 ) == PackageManager.PERMISSION_GRANTED
     }
 }
@@ -483,6 +572,10 @@ private fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
 
     return ActivityRecordingState(
         status = status,
+        recordingKind = getString(KeyRecordingKind, null)
+            ?.let { runCatching { ActivityRecordingKind.valueOf(it) }.getOrNull() }
+            ?: ActivityRecordingKind.GPS_ROUTE,
+        activityTypeId = getString(KeyActivityTypeId, null),
         exerciseType = getInt(KeyExerciseType, MissingInt).takeIf { it != MissingInt },
         startTime = getLong(KeyStartTime, MissingLong).toInstantOrNull(),
         endTime = getLong(KeyEndTime, MissingLong).toInstantOrNull(),
@@ -492,6 +585,7 @@ private fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         points = getString(KeyPoints, null).orEmpty().decodeRoutePoints(),
         distanceMeters = getFloat(KeyDistanceMeters, 0f).toDouble(),
         elevationGainedMeters = getFloat(KeyElevationMeters, 0f).toDouble(),
+        repetitionCount = getLong(KeyRepetitionCount, 0L),
         lastAccuracyMeters = getFloat(KeyLastAccuracyMeters, MissingFloat)
             .takeIf { it != MissingFloat }
             ?.toDouble(),
@@ -504,6 +598,8 @@ private fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
 private fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingState) {
     edit()
         .putString(KeyStatus, state.status.name)
+        .putString(KeyRecordingKind, state.recordingKind.name)
+        .putString(KeyActivityTypeId, state.activityTypeId)
         .putInt(KeyExerciseType, state.exerciseType ?: MissingInt)
         .putLong(KeyStartTime, state.startTime?.toEpochMilli() ?: MissingLong)
         .putLong(KeyEndTime, state.endTime?.toEpochMilli() ?: MissingLong)
@@ -512,6 +608,7 @@ private fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSta
         .putString(KeyPauseIntervals, state.pauseIntervals.encodePauseIntervals())
         .putFloat(KeyDistanceMeters, state.distanceMeters.toFloat())
         .putFloat(KeyElevationMeters, state.elevationGainedMeters.toFloat())
+        .putLong(KeyRepetitionCount, state.repetitionCount)
         .putFloat(KeyLastAccuracyMeters, state.lastAccuracyMeters?.toFloat() ?: MissingFloat)
         .putLong(KeyLastLocationTime, state.lastLocationTime?.toEpochMilli() ?: MissingLong)
         .putInt(KeyDroppedPointCount, state.droppedPointCount)
@@ -588,6 +685,8 @@ private const val MissingInt = Int.MIN_VALUE
 private const val MissingLong = Long.MIN_VALUE
 private const val MissingFloat = -1f
 private const val KeyStatus = "status"
+private const val KeyRecordingKind = "recording_kind"
+private const val KeyActivityTypeId = "activity_type_id"
 private const val KeyExerciseType = "exercise_type"
 private const val KeyStartTime = "start_time"
 private const val KeyEndTime = "end_time"
@@ -597,6 +696,7 @@ private const val KeyPauseIntervals = "pause_intervals"
 private const val KeyPoints = "points"
 private const val KeyDistanceMeters = "distance_meters"
 private const val KeyElevationMeters = "elevation_meters"
+private const val KeyRepetitionCount = "repetition_count"
 private const val KeyLastAccuracyMeters = "last_accuracy_meters"
 private const val KeyLastLocationTime = "last_location_time"
 private const val KeyDroppedPointCount = "dropped_point_count"

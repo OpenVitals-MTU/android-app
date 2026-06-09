@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry
 
 import android.net.Uri
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -192,6 +193,66 @@ class ActivityEntryViewModelTest {
         assertEquals(1, request.pauseIntervals.size)
         assertEquals(pauseStart, request.pauseIntervals.first().startTime)
         assertEquals(pauseEnd, request.pauseIntervals.first().endTime)
+    }
+
+    @Test fun `buildWriteRequest writes total push-ups as one set segment`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "push_ups" },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "10",
+            repetitionTotalText = "25",
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS, request.exerciseType)
+        assertEquals("Push-ups", request.title)
+        assertEquals(1, request.exerciseSegments.size)
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, request.exerciseSegments.first().segmentType)
+        assertEquals(25, request.exerciseSegments.first().repetitions)
+        assertEquals(0, request.exerciseSegments.first().setIndex)
+    }
+
+    @Test fun `buildWriteRequest writes repetition sets and rest segments`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "pull_ups" },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "5",
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionSets = listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "1"),
+                ActivityRepetitionSetInput(repetitionsText = "6"),
+            ),
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(3, request.exerciseSegments.size)
+        assertEquals(8, request.exerciseSegments[0].repetitions)
+        assertEquals(0, request.exerciseSegments[0].setIndex)
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST, request.exerciseSegments[1].segmentType)
+        assertEquals(6, request.exerciseSegments[2].repetitions)
+        assertEquals(1, request.exerciseSegments[2].setIndex)
+    }
+
+    @Test fun `buildWriteRequest writes treadmill steps as steps count`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "treadmill" },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "20",
+            repetitionTotalText = "2400",
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL, request.exerciseType)
+        assertEquals(2400L, request.stepsCount)
     }
 
     @Test fun `missing activity write permission prevents write`() = runTest {
@@ -486,6 +547,7 @@ class ActivityEntryViewModelTest {
             every { repo.activityWritePermissions(any<ActivityWriteRequest>()) } returns ActivityWritePermissions
             coEvery { repo.hasActivityWritePermission() } returns canWrite
             coEvery { repo.hasActivityWritePermission(any(), any(), any(), any(), any()) } returns canWrite
+            coEvery { repo.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns canWrite
             coEvery { repo.writeActivityEntry(any()) } returns "activity-id"
         }
 

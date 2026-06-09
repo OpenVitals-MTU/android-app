@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.features.onboarding
 
 import android.util.Log
-import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import io.mockk.coEvery
@@ -31,7 +30,7 @@ import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-@OptIn(ExperimentalCoroutinesApi::class, ExperimentalMindfulnessSessionApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
 
     @get:Rule
