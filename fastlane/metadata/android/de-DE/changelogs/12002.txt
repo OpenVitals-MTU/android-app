@@ -1,0 +1,1 @@
+Verfeinert die auf Zusammenfassung ausgerichtete UI mit reicheren Aktivitäten-/Schlafdetails, korrigiert rollierende 7-Tage-Cardio-Load, ergänzt optionale Gesamtkalorien-Schätzungen, speichert Trinkgefäßgrößen und erlaubt das Verwerfen von GPS-Entwürfen.

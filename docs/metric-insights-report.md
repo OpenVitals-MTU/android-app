@@ -139,28 +139,28 @@ Example insight copy:
 - "Your longest walking day was Friday."
 - "Distance increased while steps stayed stable, suggesting longer stride or faster movement."
 
-## Calories Out
+## Total Calories
 
 Recommended insights:
 
-- Total calories out.
-- Daily average calories out.
+- Total calories burned.
+- Daily average total calories.
 - Highest burn day.
 - Active day count.
-- Calories out vs calories in, clearly labeled as an estimate.
+- Total calories vs calories in, clearly labeled as an estimate when OpenVitals fills missing totals.
 - Change vs previous period.
 - Relationship with workouts.
 - Relationship with steps/distance.
 
 Example insight copy:
 
-- "Calories out were 12% higher than last week."
+- "Total calories were 12% higher than last week."
 - "Your highest burn day matched your longest workout."
 - "Energy balance is estimated from logged intake and wearable output."
 
 Product note:
 
-Calorie burn from wearables is estimated. Use "estimated calories out" in explanatory UI.
+Calorie burn from wearables is estimated. Use "estimated total calories" when OpenVitals derives missing totals from active calories plus BMR.
 
 ## Active Calories
 
@@ -171,7 +171,7 @@ Recommended insights:
 - Best active day.
 - Active calorie goal completion.
 - Activity intensity distribution, if available.
-- Change vs total calories out.
+- Change vs total calories burned.
 - Active vs resting calorie proportion, if resting calories exist.
 
 Example insight copy:
@@ -280,7 +280,7 @@ Recommended insights:
 - Meal count.
 - Logged days.
 - Calorie goal completion.
-- Calories in vs calories out, clearly labeled estimate.
+- Calories in vs total calories, clearly labeled estimate.
 - Change vs previous period.
 
 Example insight copy:

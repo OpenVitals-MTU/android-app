@@ -1,0 +1,1 @@
+Refines the Summary-first UI with richer Activities/Sleep detail screens, fixes rolling 7-day cardio load, adds optional total-calorie estimates from active calories plus BMR, persists hydration container sizes, and lets GPS recording drafts be discarded.

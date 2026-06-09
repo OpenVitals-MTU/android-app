@@ -27,13 +27,14 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 
 ## Highlights
 
-- Daily dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, and optional cycle data
+- Summary dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, and optional cycle data
 - Period detail screens with `Day / Week / Month / Year` navigation
 - Health Connect permission onboarding with clear data categories and a one-tap full setup option
 - Manual logging for hydration, body measurements, vitals, mindfulness, and activities
 - Opt-in hydration reminders with active hours and daily-goal pause logic
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import and GPS activity recording with review before saving
+- Activities and Sleep detail screens with integrated overview cards and direct metric links
 - Metric and imperial unit support
 
 ## Help Improve It
@@ -56,8 +57,8 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 ## Features
 
-- Daily dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, and opt-in cycle data
-- Material 3 app shell with Settings as a top-bar icon and Add entry exposed as a contextual create action
+- Summary dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, and opt-in cycle data
+- Material 3 app shell with Settings and Achievements in the top bar plus dashboard quick actions for logging and starting activities
 - Period-based detail screens with `Day / Week / Month / Year` navigation
 - Feature screens for Activity, Activities, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
 - Categorized Health Connect onboarding permissions, with one-tap full setup, category-by-category review, and cycle tracking behind a separate explicit opt-in
@@ -72,13 +73,13 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 ## Current coverage
 
-- Activity: steps, distance, total calories burned, active calories, floors climbed, elevation gain, workout sessions
-- Sleep: sessions, duration, and sleep stages
+- Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, floors climbed, elevation gain, workout sessions, and cardio load
+- Sleep: sessions, duration, sleep stages, sleep score, sleep efficiency, and period overview cards
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
 - Manual entry: hydration, activity sessions with optional GPX/KML/KMZ route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
-- Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink and serving choices, and optional reminders
+- Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds
@@ -174,7 +175,7 @@ OpenVitals is intentionally simple today:
 - Hilt constructor injection for repositories, services, and ViewModels
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
-- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, timer/background-sound settings, hydration reminders, and cycle-tracking opt-in
+- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, timer/background-sound settings, hydration container sizes, reminders, and cycle-tracking opt-in
 - shared presentation formatters for units and date/time labels
 
 The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).

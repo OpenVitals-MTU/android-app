@@ -1,0 +1,1 @@
+Mejora la UI centrada en Resumen con detalles de Actividades/Sueño más completos, corrige la carga cardiovascular móvil de 7 días, añade estimaciones opcionales de calorías totales, guarda tamaños de hidratación y permite descartar borradores GPS.

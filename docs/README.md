@@ -8,7 +8,7 @@ Use these docs as the working index for product and architecture decisions.
 - [Manual activity entry plan](manual-activity-entry-plan.md): implementation status for activity logging, GPX/KML/KMZ import, and live GPS recording.
 - [Metric insights report](metric-insights-report.md): notes on metric interpretation and insight behavior.
 - [Metrics roadmap](metrics-roadmap.md): short list of remaining metric and cleanup work.
-- [Release notes](releases/1.2.1.md): Codeberg-facing release notes for the current release.
+- [Release notes](releases/1.2.2.md): Codeberg-facing release notes for the current release.
 - [Shared Maven artifacts](shared-artifacts.md): versioned artifacts that a separate connected app can consume without copying source.
 - [Units and localization plan](units-localization-plan.md): display unit and language cleanup notes.
 
