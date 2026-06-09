@@ -26,6 +26,7 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
@@ -149,6 +150,7 @@ class HealthRepository @Inject constructor(
     val additionalDataAccessPermissions get() = hc.additionalDataAccessPermissions
     val vitalsPermissions get() = hc.vitalsPermissions
     val vitalsWritePermissions get() = hc.vitalsWritePermissions
+    val dataImportWritePermissions get() = hc.dataImportWritePermissions
     val cyclePermissions get() = hc.cyclePermissions
     val manualOnlyPermissions get() = hc.manualOnlyPermissions
     val requestableWritePermissions get() = hc.requestableWritePermissions
@@ -160,6 +162,11 @@ class HealthRepository @Inject constructor(
     fun isMindfulnessAvailable(): Boolean = hc.isMindfulnessSessionAvailable()
 
     suspend fun grantedPermissions(): Set<String> = hc.grantedPermissions()
+
+    suspend fun insertImportedRecords(records: List<Record>) =
+        withContext(dispatchers.io) {
+            hc.insertImportedRecords(records)
+        }
 
     suspend fun missingPhase1(): Set<String> {
         val granted = hc.grantedPermissions()

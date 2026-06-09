@@ -192,6 +192,7 @@ fun AppNavigation(
             Screen.SettingsCalories.route,
             Screen.SettingsSleep.route,
             Screen.SettingsCycle.route,
+            Screen.SettingsDataImport.route,
             Screen.SettingsPermissions.route,
         )
     }
@@ -260,6 +261,7 @@ fun AppNavigation(
         Screen.SettingsCalories.route -> stringResource(R.string.settings_calories_group_title)
         Screen.SettingsSleep.route -> stringResource(R.string.settings_sleep_group_title)
         Screen.SettingsCycle.route -> stringResource(R.string.settings_cycle_group_title)
+        Screen.SettingsDataImport.route -> stringResource(R.string.settings_data_import_group_title)
         Screen.SettingsPermissions.route -> stringResource(R.string.settings_permissions_group_title)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
@@ -839,6 +841,14 @@ fun AppNavigation(
                 )
             }
 
+            composable(Screen.SettingsDataImport.route) {
+                val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    section = SettingsSection.DATA_IMPORT,
+                )
+            }
+
             composable(Screen.SettingsPermissions.route) {
                 val settingsViewModel = hiltViewModel<SettingsViewModel>()
                 SettingsScreen(
@@ -857,6 +867,7 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.CALORIES -> Screen.SettingsCalories.route
         SettingsSection.SLEEP -> Screen.SettingsSleep.route
         SettingsSection.CYCLE -> Screen.SettingsCycle.route
+        SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
         SettingsSection.PERMISSIONS -> Screen.SettingsPermissions.route
     }
 

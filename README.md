@@ -33,7 +33,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 - Manual logging for hydration, body measurements, vitals, mindfulness, and activities
 - Opt-in hydration reminders with active hours and daily-goal pause logic
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
-- GPX/KML/KMZ route import and GPS activity recording with review before saving
+- GPX/KML/KMZ/FIT route import and GPS activity recording with review before saving
 - Dedicated Calories detail screen with total, active, and BMR calorie context
 - Activities and Sleep detail screens with integrated overview cards and direct metric links
 - Metric and imperial unit support
@@ -70,7 +70,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Explicit manual entry logging for hydration, activities with optional GPX/KML/KMZ route import or GPS recording, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
+- Explicit manual entry logging for hydration, activities with optional GPX/KML/KMZ/FIT route import or GPS recording, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
 
 ## Current coverage
 
@@ -79,7 +79,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
-- Manual entry: hydration, activity sessions with optional GPX/KML/KMZ route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
+- Manual entry: hydration, activity sessions with optional GPX/KML/KMZ/FIT route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
 - Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, and macros

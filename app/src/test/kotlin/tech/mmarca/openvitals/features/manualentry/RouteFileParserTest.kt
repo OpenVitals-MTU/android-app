@@ -76,6 +76,37 @@ class RouteFileParserTest {
         assertTrue(result.distanceMeters > 0.0)
     }
 
+    @Test fun `parseFile extracts timestamped FIT activity records and sport`() {
+        val result = RouteFileParser.parseFile(
+            fitActivityBytes(
+                sport = 2,
+                points = listOf(
+                    FitTestPoint(
+                        time = Instant.parse("2026-05-26T08:30:00Z"),
+                        latitude = 59.0000,
+                        longitude = 24.0000,
+                        altitudeMeters = 10.0,
+                    ),
+                    FitTestPoint(
+                        time = Instant.parse("2026-05-26T08:31:00Z"),
+                        latitude = 59.0010,
+                        longitude = 24.0020,
+                        altitudeMeters = 22.0,
+                    ),
+                ),
+            ),
+            fileName = "morning-ride.fit",
+        )
+
+        assertEquals("morning-ride.fit", result.fileName)
+        assertEquals("cycling", result.type)
+        assertEquals(2, result.points.size)
+        assertEquals(Instant.parse("2026-05-26T08:30:00Z"), result.startTime)
+        assertEquals(Instant.parse("2026-05-26T08:31:00Z"), result.endTime)
+        assertEquals(12.0, result.elevationGainedMeters, 0.001)
+        assertTrue(result.distanceMeters > 0.0)
+    }
+
     @Test fun `parseFile extracts untimestamped KML line string with synthetic timing`() {
         val result = RouteFileParser.parseFile(
             """
@@ -172,6 +203,93 @@ class RouteFileParserTest {
         return output.toByteArray()
     }
 
+    private fun fitActivityBytes(sport: Int, points: List<FitTestPoint>): ByteArray {
+        val data = ByteArrayOutputStream()
+        data.writeFitDefinition(
+            localMessageType = 1,
+            globalMessageNumber = 18,
+            fields = listOf(
+                FitTestFieldDefinition(number = 253, size = 4, baseType = 134),
+                FitTestFieldDefinition(number = 5, size = 1, baseType = 0),
+            ),
+        )
+        data.write(1)
+        data.writeUInt32(points.first().time.fitTimestamp())
+        data.write(sport)
+
+        data.writeFitDefinition(
+            localMessageType = 0,
+            globalMessageNumber = 20,
+            fields = listOf(
+                FitTestFieldDefinition(number = 253, size = 4, baseType = 134),
+                FitTestFieldDefinition(number = 0, size = 4, baseType = 133),
+                FitTestFieldDefinition(number = 1, size = 4, baseType = 133),
+                FitTestFieldDefinition(number = 2, size = 2, baseType = 132),
+            ),
+        )
+        points.forEach { point ->
+            data.write(0)
+            data.writeUInt32(point.time.fitTimestamp())
+            data.writeInt32(point.latitude.semicircles())
+            data.writeInt32(point.longitude.semicircles())
+            data.writeUInt16(point.altitudeRaw())
+        }
+
+        val dataBytes = data.toByteArray()
+        return ByteArrayOutputStream().apply {
+            write(14)
+            write(16)
+            writeUInt16(0)
+            writeUInt32(dataBytes.size.toLong())
+            write(byteArrayOf('.'.code.toByte(), 'F'.code.toByte(), 'I'.code.toByte(), 'T'.code.toByte()))
+            writeUInt16(0)
+            write(dataBytes)
+            writeUInt16(0)
+        }.toByteArray()
+    }
+
+    private fun ByteArrayOutputStream.writeFitDefinition(
+        localMessageType: Int,
+        globalMessageNumber: Int,
+        fields: List<FitTestFieldDefinition>,
+    ) {
+        write(0x40 or localMessageType)
+        write(0)
+        write(0)
+        writeUInt16(globalMessageNumber)
+        write(fields.size)
+        fields.forEach { field ->
+            write(field.number)
+            write(field.size)
+            write(field.baseType)
+        }
+    }
+
+    private fun ByteArrayOutputStream.writeUInt16(value: Int) {
+        write(value and 0xFF)
+        write((value ushr 8) and 0xFF)
+    }
+
+    private fun ByteArrayOutputStream.writeUInt32(value: Long) {
+        write((value and 0xFF).toInt())
+        write(((value ushr 8) and 0xFF).toInt())
+        write(((value ushr 16) and 0xFF).toInt())
+        write(((value ushr 24) and 0xFF).toInt())
+    }
+
+    private fun ByteArrayOutputStream.writeInt32(value: Int) {
+        writeUInt32(value.toLong() and 0xFFFFFFFFL)
+    }
+
+    private fun Instant.fitTimestamp(): Long =
+        epochSecond - 631_065_600L
+
+    private fun Double.semicircles(): Int =
+        Math.round(this * 2_147_483_648.0 / 180.0).toInt()
+
+    private fun FitTestPoint.altitudeRaw(): Int =
+        Math.round((altitudeMeters + 500.0) * 5.0).toInt()
+
     private fun oversizedKmzBytes(): ByteArray {
         val output = ByteArrayOutputStream()
         val chunk = ByteArray(8 * 1024) { 'a'.code.toByte() }
@@ -187,4 +305,17 @@ class RouteFileParserTest {
         }
         return output.toByteArray()
     }
+
+    private data class FitTestPoint(
+        val time: Instant,
+        val latitude: Double,
+        val longitude: Double,
+        val altitudeMeters: Double,
+    )
+
+    private data class FitTestFieldDefinition(
+        val number: Int,
+        val size: Int,
+        val baseType: Int,
+    )
 }

@@ -161,9 +161,13 @@ private val RouteImportMimeTypes = setOf(
     "application/vnd.google-earth.kml+xml",
     "application/vnd.google-earth.kmz",
     "application/vnd.google-earth.kmz+xml",
+    "application/vnd.ant.fit",
+    "application/vnd.garmin.fit",
+    "application/fit",
+    "application/x-fit",
 )
 
-private val RouteImportExtensions = setOf("gpx", "kml", "kmz")
+private val RouteImportExtensions = setOf("gpx", "kml", "kmz", "fit")
 
 private fun AppThemeMode.isDarkTheme(systemInDarkTheme: Boolean): Boolean =
     when (this) {

@@ -9,6 +9,7 @@
 - Clarify dashboard messaging when Health Connect has no total-calorie record or OpenVitals is estimating totals from active calories plus BMR.
 - Improve hydration entry cup-size controls with better alignment and more readable saved container values.
 - Add auto-resizing text to compact dashboard, metric, and chart cards so longer labels and values fit more reliably.
+- Add FIT activity file import alongside GPX/KML/KMZ route import.
 - Fix Activities today handling and update CI/build tooling for Android SDK 37, AGP 9.1.1, and the newer Material 3 library.
 
 ### Español
@@ -18,6 +19,7 @@
 - Aclara los mensajes del panel cuando Health Connect no tiene un registro de calorías totales o cuando OpenVitals estima totales con calorías activas más BMR.
 - Mejora los controles de tamaño de vaso o taza en hidratación, con mejor alineación y valores guardados más legibles.
 - Añade texto autoajustable en tarjetas compactas del panel, métricas y gráficos para que etiquetas y valores largos encajen mejor.
+- Añade importación de archivos de actividad FIT junto con la importación de rutas GPX/KML/KMZ.
 - Corrige el manejo de hoy en Actividades y actualiza CI/compilación a Android SDK 37, AGP 9.1.1 y la biblioteca Material 3 más reciente.
 
 ### Deutsch
@@ -27,6 +29,7 @@
 - Verdeutlicht Dashboard-Meldungen, wenn Health Connect keinen Gesamtkalorienwert liefert oder OpenVitals Werte aus aktiven Kalorien plus BMR schätzt.
 - Verbessert die Bedienelemente für Trinkgefäßgrößen mit besserer Ausrichtung und lesbareren gespeicherten Werten.
 - Ergänzt automatisch verkleinernden Text in kompakten Dashboard-, Metrik- und Diagrammkarten, damit längere Beschriftungen und Werte zuverlässiger passen.
+- Fügt den Import von FIT-Aktivitätsdateien neben dem GPX/KML/KMZ-Routenimport hinzu.
 - Behebt die Heute-Behandlung in Aktivitäten und aktualisiert CI/Build auf Android SDK 37, AGP 9.1.1 und die neuere Material-3-Bibliothek.
 
 ## 1.2.2 - 2026-06-09

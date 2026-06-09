@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
@@ -111,6 +112,7 @@ class HealthConnectManager @Inject constructor(
     val additionalDataAccessPermissions: Set<String> get() = permissionService.additionalDataAccessPermissions
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
     val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
+    val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val phase1Permissions: Set<String> get() = permissionService.phase1Permissions
     val phase2Permissions: Set<String> get() = permissionService.phase2Permissions
@@ -510,6 +512,10 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) =
         vitalsReader.deleteVitalsMeasurementEntry(type, id)
+
+    suspend fun insertImportedRecords(records: List<Record>) {
+        client().insertRecords(records)
+    }
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)

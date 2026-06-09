@@ -3,6 +3,7 @@
 
     <!-- Health Connect permissions - Phase 1 -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
@@ -17,7 +18,9 @@
 
     <!-- Health Connect permissions - Phase 2 -->
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
     <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
@@ -26,10 +29,14 @@
     <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
     <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
     <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS" />
+    <uses-permission android:name="android.permission.health.WRITE_LEAN_BODY_MASS" />
     <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" />
     <uses-permission android:name="android.permission.health.READ_BONE_MASS" />
+    <uses-permission android:name="android.permission.health.WRITE_BONE_MASS" />
     <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_WATER_MASS" />
     <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED" />
+    <uses-permission android:name="android.permission.health.WRITE_FLOORS_CLIMBED" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
     <uses-permission android:name="android.permission.health.READ_WHEELCHAIR_PUSHES" />
@@ -137,6 +144,10 @@
                 <data android:mimeType="application/vnd.google-earth.kml+xml" />
                 <data android:mimeType="application/vnd.google-earth.kmz" />
                 <data android:mimeType="application/vnd.google-earth.kmz+xml" />
+                <data android:mimeType="application/vnd.ant.fit" />
+                <data android:mimeType="application/vnd.garmin.fit" />
+                <data android:mimeType="application/fit" />
+                <data android:mimeType="application/x-fit" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -154,6 +165,8 @@
                 <data android:pathPattern="/.*\\.KML" />
                 <data android:pathPattern="/.*\\.kmz" />
                 <data android:pathPattern="/.*\\.KMZ" />
+                <data android:pathPattern="/.*\\.fit" />
+                <data android:pathPattern="/.*\\.FIT" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -166,6 +179,10 @@
                 <data android:mimeType="application/vnd.google-earth.kml+xml" />
                 <data android:mimeType="application/vnd.google-earth.kmz" />
                 <data android:mimeType="application/vnd.google-earth.kmz+xml" />
+                <data android:mimeType="application/vnd.ant.fit" />
+                <data android:mimeType="application/vnd.garmin.fit" />
+                <data android:mimeType="application/fit" />
+                <data android:mimeType="application/x-fit" />
             </intent-filter>
         </activity>
 

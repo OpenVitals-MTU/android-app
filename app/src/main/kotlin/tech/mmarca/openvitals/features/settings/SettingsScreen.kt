@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.settings
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
@@ -94,6 +96,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_cycle_group_title,
         summaryRes = R.string.settings_cycle_group_body,
     ),
+    DATA_IMPORT(
+        titleRes = R.string.settings_data_import_group_title,
+        summaryRes = R.string.settings_data_import_group_body,
+    ),
     PERMISSIONS(
         titleRes = R.string.settings_permissions_group_title,
         summaryRes = R.string.settings_permissions_group_body,
@@ -134,6 +140,20 @@ fun SettingsScreen(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         viewModel.onPermissionsResult(granted)
+    }
+
+    val requestDataImportPermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        viewModel.onPermissionsResult(granted)
+    }
+
+    val appleHealthExportPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importAppleHealthExport(uri)
+        }
     }
 
     if (state.isLoading) {
@@ -250,6 +270,26 @@ fun SettingsScreen(
                                 if (enabled && state.availability == HealthConnectAvailability.AVAILABLE) {
                                     requestCyclePermissions.launch(state.cyclePermissions)
                                 }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.DATA_IMPORT -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        AppleHealthImportCard(
+                            availability = state.availability,
+                            importPermissions = state.dataImportWritePermissions,
+                            grantedPermissions = state.grantedPermissions,
+                            isImporting = state.isImportingAppleHealth,
+                            result = state.appleHealthImportResult,
+                            error = state.appleHealthImportError,
+                            onGrantPermissions = {
+                                requestDataImportPermissions.launch(state.missingDataImportWritePermissions)
+                            },
+                            onImport = {
+                                appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
                             },
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
@@ -391,8 +431,17 @@ private val SettingsSection.icon: ImageVector
         SettingsSection.CALORIES -> Icons.Outlined.LocalFireDepartment
         SettingsSection.SLEEP -> Icons.Outlined.Bedtime
         SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
+        SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
         SettingsSection.PERMISSIONS -> Icons.Outlined.Lock
     }
+
+private val AppleHealthExportMimeTypes = arrayOf(
+    "application/zip",
+    "application/xml",
+    "text/xml",
+    "application/octet-stream",
+    "*/*",
+)
 
 @Composable
 private fun CalorieDataSourceCard(
@@ -792,6 +841,122 @@ private fun CycleTrackingCard(
                 onCheckedChange = onEnabledChange,
                 enabled = availability == HealthConnectAvailability.AVAILABLE,
             )
+        }
+    }
+}
+
+@Composable
+private fun AppleHealthImportCard(
+    availability: HealthConnectAvailability,
+    importPermissions: Set<String>,
+    grantedPermissions: Set<String>,
+    isImporting: Boolean,
+    result: AppleHealthImportResult?,
+    error: String?,
+    onGrantPermissions: () -> Unit,
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val grantedCount = importPermissions.count { it in grantedPermissions }
+    val missingPermissions = importPermissions - grantedPermissions
+    val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
+    val canImport = healthConnectAvailable && missingPermissions.isEmpty() && !isImporting
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    imageVector = Icons.Outlined.FolderOpen,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(20.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_apple_health_import_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_apple_health_import_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(
+                    R.string.settings_apple_health_import_permissions,
+                    grantedCount,
+                    importPermissions.size,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+
+            result?.let { importResult ->
+                Text(
+                    text = stringResource(
+                        R.string.settings_apple_health_import_result,
+                        importResult.importedRecords,
+                        importResult.unsupportedRecords,
+                        importResult.failedRecords,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (!error.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.settings_apple_health_import_error, error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (missingPermissions.isNotEmpty()) {
+                FilledTonalButton(
+                    onClick = onGrantPermissions,
+                    enabled = healthConnectAvailable && !isImporting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                ) {
+                    Text(stringResource(R.string.settings_apple_health_import_grant))
+                }
+            }
+
+            OutlinedButton(
+                onClick = onImport,
+                enabled = canImport,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                Text(
+                    if (isImporting) {
+                        stringResource(R.string.settings_apple_health_importing)
+                    } else {
+                        stringResource(R.string.settings_apple_health_import_action)
+                    }
+                )
+            }
         }
     }
 }

@@ -49,6 +49,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs(trackCycle = false),
+            appleHealthImportService = importService(),
         )
 
         assertEquals(setOf("steps", "write", "route"), vm.uiState.value.visiblePermissions)
@@ -59,6 +60,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs(trackCycle = true),
+            appleHealthImportService = importService(),
         )
 
         assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
@@ -69,6 +71,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(grantedPermissions = setOf("steps")),
             preferencesRepository = prefs(trackCycle = true),
+            appleHealthImportService = importService(),
         )
 
         assertEquals(setOf("write", "route", "cycle"), vm.uiState.value.missingVisiblePermissions)
@@ -79,6 +82,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(trackCycle = true),
+            appleHealthImportService = importService(),
         )
 
         assertTrue(vm.uiState.value.missingVisiblePermissions.isEmpty())
@@ -90,6 +94,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.setTrackCycle(true)
@@ -104,6 +109,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.selectAppLanguage(AppLanguage.SPANISH)
@@ -117,6 +123,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.selectAppThemeMode(AppThemeMode.AMOLED)
@@ -130,6 +137,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.selectSleepRangeMode(SleepRangeMode.NOON)
@@ -143,6 +151,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.selectActivityWeekMode(ActivityWeekMode.LAST_7_DAYS)
@@ -156,6 +165,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.setShowOpenVitalsCalculatedCalories(true)
@@ -169,6 +179,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
+            appleHealthImportService = importService(),
         )
 
         vm.selectFavoriteActivity(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
@@ -183,6 +194,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repository,
             preferencesRepository = prefs(trackCycle = true),
+            appleHealthImportService = importService(),
         )
 
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, vm.uiState.value.availability)
@@ -206,6 +218,7 @@ class SettingsViewModelTest {
             every { repo.mindfulnessPermissions } returns emptySet()
             every { repo.additionalDataAccessPermissions } returns emptySet()
             every { repo.vitalsPermissions } returns emptySet()
+            every { repo.dataImportWritePermissions } returns emptySet()
             every { repo.isMindfulnessAvailable() } returns false
             every { repo.allPermissions } returns setOf("steps", "write", "route")
             every { repo.cyclePermissions } returns setOf("cycle")
@@ -231,4 +244,7 @@ class SettingsViewModelTest {
             every { prefs.favoriteActivityExerciseType = any() } just runs
             every { prefs.trackCycle = any() } just runs
         }
+
+    private fun importService(): AppleHealthImportService =
+        mockk(relaxed = true)
 }

@@ -169,6 +169,25 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(BodyTemperatureRecord::class),
     )
 
+    val dataImportWritePermissions: Set<String> = setOf(
+        HealthPermission.getWritePermission(StepsRecord::class),
+        HealthPermission.getWritePermission(DistanceRecord::class),
+        HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getWritePermission(FloorsClimbedRecord::class),
+        HealthPermission.getWritePermission(HeartRateRecord::class),
+        HealthPermission.getWritePermission(RestingHeartRateRecord::class),
+        HealthPermission.getWritePermission(WeightRecord::class),
+        HealthPermission.getWritePermission(HeightRecord::class),
+        HealthPermission.getWritePermission(BodyFatRecord::class),
+        HealthPermission.getWritePermission(LeanBodyMassRecord::class),
+        HealthPermission.getWritePermission(BoneMassRecord::class),
+        HealthPermission.getWritePermission(BodyWaterMassRecord::class),
+        HealthPermission.getWritePermission(HydrationRecord::class),
+        HealthPermission.getWritePermission(OxygenSaturationRecord::class),
+        HealthPermission.getWritePermission(RespiratoryRateRecord::class),
+        HealthPermission.getWritePermission(BodyTemperatureRecord::class),
+    )
+
     val cyclePermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(MenstruationFlowRecord::class),
         HealthPermission.getReadPermission(MenstruationPeriodRecord::class),
@@ -226,7 +245,8 @@ internal class HealthConnectPermissionService(
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
-            mindfulnessWritePermissions
+            mindfulnessWritePermissions +
+            dataImportWritePermissions
 
     val managedPermissions: Set<String> get() =
         requestableManagedPermissions +
@@ -235,7 +255,8 @@ internal class HealthConnectPermissionService(
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
-            mindfulnessWritePermissions
+            mindfulnessWritePermissions +
+            dataImportWritePermissions
 
     fun grantModeFor(permission: String): PermissionGrantMode =
         if (permission in manualOnlyPermissions) {

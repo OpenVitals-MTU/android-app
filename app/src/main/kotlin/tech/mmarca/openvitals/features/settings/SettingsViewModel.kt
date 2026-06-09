@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.settings
 
+import android.net.Uri
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
@@ -27,7 +28,11 @@ data class SettingsUiState(
     val permissionCategories: List<SettingsPermissionCategory> = emptyList(),
     val allPermissions: Set<String> = emptySet(),
     val cyclePermissions: Set<String> = emptySet(),
+    val dataImportWritePermissions: Set<String> = emptySet(),
     val manualOnlyPermissions: Set<String> = emptySet(),
+    val isImportingAppleHealth: Boolean = false,
+    val appleHealthImportResult: AppleHealthImportResult? = null,
+    val appleHealthImportError: String? = null,
     val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
@@ -46,6 +51,9 @@ data class SettingsUiState(
 
     val missingManualVisiblePermissions: Set<String>
         get() = missingVisiblePermissions.intersect(manualOnlyPermissions)
+
+    val missingDataImportWritePermissions: Set<String>
+        get() = dataImportWritePermissions - grantedPermissions
 }
 
 data class SettingsPermissionCategory(
@@ -62,6 +70,7 @@ data class SettingsPermissionCategory(
 class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val appleHealthImportService: AppleHealthImportService,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -82,13 +91,14 @@ class SettingsViewModel @Inject constructor(
             } else emptySet()
             Log.d(TAG, "refresh availability=$avail grantedCount=${granted.size}")
 
-            _uiState.value = SettingsUiState(
+            _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 availability = avail,
                 grantedPermissions = granted,
                 permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 cyclePermissions = repository.cyclePermissions,
+                dataImportWritePermissions = repository.dataImportWritePermissions,
                 manualOnlyPermissions = repository.manualOnlyPermissions,
                 trackCycle = preferencesRepository.trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
@@ -99,6 +109,37 @@ class SettingsViewModel @Inject constructor(
                 showOpenVitalsCalculatedCalories = preferencesRepository.showOpenVitalsCalculatedCalories,
                 favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
             )
+        }
+    }
+
+    fun importAppleHealthExport(uri: Uri) {
+        if (_uiState.value.isImportingAppleHealth) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isImportingAppleHealth = true,
+                appleHealthImportResult = null,
+                appleHealthImportError = null,
+            )
+
+            runCatching { appleHealthImportService.importAppleHealthExport(uri) }
+                .onSuccess { result ->
+                    Log.d(TAG, "Apple Health import completed result=$result")
+                    _uiState.value = _uiState.value.copy(
+                        isImportingAppleHealth = false,
+                        appleHealthImportResult = result,
+                        appleHealthImportError = null,
+                    )
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "Apple Health import failed", error)
+                    _uiState.value = _uiState.value.copy(
+                        isImportingAppleHealth = false,
+                        appleHealthImportResult = null,
+                        appleHealthImportError = error.localizedMessage
+                            ?: "Apple Health import failed.",
+                    )
+                }
         }
     }
 

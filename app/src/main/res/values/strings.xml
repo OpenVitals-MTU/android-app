@@ -81,7 +81,7 @@
     <string name="mindfulness_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.</string>
     <string name="activity_entry_subtitle">Create a Health Connect activity session. Route files are written only when you import one.</string>
     <string name="activity_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add activities without later interruptions, we need Health Connect write permissions for sessions, routes, distance, elevation, active calories, and total calories. OpenVitals will not store these entries; they are saved in Health Connect.</string>
-    <string name="activity_entry_source_body">Create an empty activity, record a GPS route, or import GPX/KMZ first and review the detected route, time, title, notes, and type before saving.</string>
+    <string name="activity_entry_source_body">Create an empty activity, record a GPS route, or import GPX/KMZ/FIT first and review the detected route, time, title, notes, and type before saving.</string>
     <string name="activity_entry_create_manual">Create manually</string>
     <string name="activity_entry_record_gps">Record activity</string>
     <string name="activity_entry_choose_another_source">Choose another method</string>
@@ -94,7 +94,7 @@
     <string name="activity_entry_distance_label">Distance %1$s optional</string>
     <string name="activity_entry_elevation_label">Elevation %1$s optional</string>
     <string name="activity_entry_notes_label">Notes optional</string>
-    <string name="activity_entry_import_route_file">Import GPX/KMZ</string>
+    <string name="activity_entry_import_route_file">Import GPX/KMZ/FIT</string>
     <string name="activity_entry_imported_route">Imported route</string>
     <string name="activity_entry_recording_title">Recording activity</string>
     <string name="activity_entry_recording_ready_body">Choose the activity type, then start recording when you are ready. After finishing, you can review and add details before saving.</string>
@@ -772,6 +772,8 @@
     <string name="settings_sleep_group_body">Sleep range</string>
     <string name="settings_cycle_group_title">Menstrual cycle</string>
     <string name="settings_cycle_group_body">Track menstrual cycle</string>
+    <string name="settings_data_import_group_title">Data Import</string>
+    <string name="settings_data_import_group_body">Import supported Apple Health export records</string>
     <string name="settings_permissions_group_title">Permissions</string>
     <string name="settings_permissions_group_body">Health data access and manual permission steps</string>
     <string name="settings_language_title">Language</string>
@@ -807,6 +809,14 @@
     <string name="settings_track_cycle">Track menstrual cycle</string>
     <string name="settings_cycle_permissions_granted">%1$d/%2$d cycle permissions granted.</string>
     <string name="settings_cycle_off_body">Off by default. Enable to request cycle and basal temperature access.</string>
+    <string name="settings_apple_health_import_title">Apple Health export</string>
+    <string name="settings_apple_health_import_body">Import supported records from Apple Health export.xml or export.zip into Health Connect.</string>
+    <string name="settings_apple_health_import_permissions">%1$d/%2$d import permissions granted.</string>
+    <string name="settings_apple_health_import_grant">Grant import permissions</string>
+    <string name="settings_apple_health_import_action">Import Apple Health export</string>
+    <string name="settings_apple_health_importing">Importing...</string>
+    <string name="settings_apple_health_import_result">Imported %1$d records. Skipped %2$d unsupported and %3$d failed.</string>
+    <string name="settings_apple_health_import_error">Import failed: %1$s</string>
     <string name="settings_privacy_no_account">No account required</string>
     <string name="settings_privacy_no_cloud">No cloud sync of health data</string>
     <string name="settings_privacy_no_analytics">No analytics SDK</string>
@@ -1004,7 +1014,7 @@
     <string name="data_confidence_warning_no_sources">This aggregate does not expose source-level details.</string>
 
     <string name="privacy_policy_title">Privacy policy</string>
-    <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log, including imported GPX/KMZ activity routes, are written to Health Connect.</string>
+    <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log, including imported GPX/KMZ/FIT activity routes, are written to Health Connect.</string>
     <string name="privacy_policy_body_2">This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.</string>
     <string name="privacy_policy_body_3">OpenVitals is not a medical device and does not diagnose, treat, cure, or prevent any disease or medical condition. It is not a substitute for medical advice, diagnosis, or treatment from a qualified healthcare professional.</string>
 </resources>
