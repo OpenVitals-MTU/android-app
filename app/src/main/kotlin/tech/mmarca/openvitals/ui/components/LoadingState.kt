@@ -23,18 +23,6 @@ fun FullScreenLoading(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun InlineLoading(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-    }
-}
-
-@Composable
 fun ErrorMessage(
     message: String,
     modifier: Modifier = Modifier,

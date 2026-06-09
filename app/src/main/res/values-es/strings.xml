@@ -28,7 +28,6 @@
     <string name="action_grant">Conceder</string>
     <string name="action_grant_permission">Conceder permiso</string>
     <string name="action_load_more_entries">Cargar 10 más</string>
-    <string name="action_load_more">Cargar más</string>
     <string name="action_show_calculation">Mostrar cálculo</string>
     <string name="action_hide_calculation">Ocultar cálculo</string>
     <string name="action_not_now">Ahora no</string>
@@ -47,7 +46,6 @@
     <string name="no_data">Sin datos</string>
     <string name="loading">Cargando...</string>
 
-    <string name="screen_dashboard">Resumen</string>
     <string name="screen_steps">Pasos</string>
     <string name="screen_activities">Actividades</string>
     <string name="screen_calories">Calorías</string>
@@ -70,19 +68,8 @@
     <string name="screen_vitals_measurement_entry">Entrada de constantes</string>
 
     <string name="bottom_nav_dashboard">Resumen</string>
-    <string name="bottom_nav_add_entry">Añadir</string>
     <string name="manual_entry_hydration_title">Hidratación</string>
     <string name="manual_entry_activity_title">Actividad</string>
-    <string name="manual_entry_hydration_body">Registra una entrada de hidratación en Health Connect.</string>
-    <string name="manual_entry_activity_body">Registra una actividad manualmente, o importa un GPX/KMZ y completa los detalles que falten.</string>
-    <string name="manual_entry_mindfulness_body">Usa un temporizador de meditación o registra minutos de mindfulness en Health Connect.</string>
-    <string name="manual_entry_weight_body">Registra una entrada de peso en Health Connect.</string>
-    <string name="manual_entry_height_body">Registra una entrada de altura en Health Connect.</string>
-    <string name="manual_entry_body_fat_body">Registra una entrada de grasa corporal en Health Connect.</string>
-    <string name="manual_entry_blood_pressure_body">Registra una entrada de presión arterial en Health Connect.</string>
-    <string name="manual_entry_spo2_body">Registra una entrada de SpO2 en Health Connect.</string>
-    <string name="manual_entry_respiratory_rate_body">Registra una entrada de frecuencia respiratoria en Health Connect.</string>
-    <string name="manual_entry_body_temperature_body">Registra una entrada de temperatura corporal en Health Connect.</string>
     <string name="manual_entry_add_widgets">Añadir widgets de entrada</string>
     <string name="manual_entry_all_widgets_added">Todos los widgets de entrada ya están visibles.</string>
     <string name="manual_entry_write_permission_title">Permiso de escritura de hidratación</string>
@@ -111,7 +98,6 @@
     <string name="activity_entry_imported_route">Ruta importada</string>
     <string name="activity_entry_recording_title">Grabando actividad</string>
     <string name="activity_entry_recording_ready_body">Elige el tipo de actividad y empieza a grabar cuando estés listo. Al terminar, podrás revisar y añadir detalles antes de guardar.</string>
-    <string name="activity_entry_recording_route">Grabación en directo</string>
     <string name="activity_entry_recording_active">Grabando</string>
     <string name="activity_entry_recording_paused">Pausada</string>
     <string name="activity_entry_recording_waiting_for_gps">Esperando una señal GPS precisa</string>
@@ -126,7 +112,6 @@
     <string name="activity_entry_recording_elevation_gain">Desnivel</string>
     <string name="activity_entry_recording_points">Puntos</string>
     <string name="activity_entry_recording_finish_hint">Terminar abre el formulario de detalles de actividad para añadir título, notas, calorías o ajustar valores antes de guardar.</string>
-    <string name="activity_entry_recording_summary">%1$s • %2$s • %3$s desnivel • %4$d puntos</string>
     <string name="activity_entry_recording_accuracy">Última precisión %1$s</string>
     <string name="activity_entry_route_summary">%1$s • %2$s • %3$s desnivel • %4$d puntos</string>
     <string name="activity_entry_route_average_metrics">Ritmo medio %1$s • velocidad media %2$s</string>
@@ -161,7 +146,6 @@
     <string name="activity_recording_notification_recording">Grabando • %1$s total • %2$s en movimiento • %3$s • %4$d puntos</string>
     <string name="activity_recording_notification_paused">Pausada • %1$s total • %2$s en movimiento • %3$s • %4$d puntos</string>
     <string name="activity_recording_error_service">No se pudo iniciar el servicio de grabación de actividad.</string>
-    <string name="activity_recording_error_location_permission">Se necesita permiso de ubicación para seguir grabando.</string>
     <string name="activity_recording_error_precise_location_permission">Se necesita ubicación precisa para obtener rutas GPS fiables.</string>
     <string name="activity_recording_error_notification_permission">Se necesita permiso de notificaciones para mostrar la notificación de grabación permanente.</string>
     <string name="activity_recording_error_waiting_for_gps">Espera una señal GPS precisa antes de empezar.</string>
@@ -185,7 +169,6 @@
     <string name="mindfulness_entry_unavailable">Las sesiones de mindfulness no están disponibles en este proveedor de Health Connect.</string>
     <string name="mindfulness_entry_timer_title">Temporizador</string>
     <string name="mindfulness_entry_manual_title">Entrada manual</string>
-    <string name="mindfulness_entry_duration_minutes">Duración (min)</string>
     <string name="mindfulness_entry_interval_bell">Campana de intervalo</string>
     <string name="mindfulness_entry_interval_minutes">Intervalo (min)</string>
     <string name="mindfulness_entry_bell_sound">Sonido de campana</string>
@@ -311,13 +294,7 @@
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
 
-    <string name="section_activity_recovery">Actividad y sueño</string>
-    <string name="section_body_intake">Cuerpo e ingesta</string>
-    <string name="section_heart">Corazón</string>
-    <string name="section_mind">Mente</string>
-    <string name="section_records">Registros</string>
     <string name="section_activities">Actividades</string>
-    <string name="activities_recent_title">Actividades recientes</string>
     <string name="activities_key_metrics">Métricas clave</string>
     <string name="recovery_sleep_score">Puntuación de sueño</string>
     <string name="recovery_sleep_duration">Duración del sueño</string>
@@ -325,7 +302,6 @@
     <string name="recovery_rem_sleep">Sueño REM</string>
     <string name="recovery_deep_sleep">Sueño profundo</string>
     <string name="recovery_sleep_efficiency">Eficiencia del sueño</string>
-    <string name="recovery_placeholder_label">Próximamente</string>
     <string name="sleep_score_confidence_high">Alta confianza</string>
     <string name="sleep_score_confidence_medium">Confianza media</string>
     <string name="sleep_score_confidence_low">Baja confianza</string>
@@ -414,7 +390,6 @@
     <string name="section_sleep_sessions">Sesiones de sueño</string>
     <string name="section_weight">Peso</string>
     <string name="section_entries">Entradas</string>
-    <string name="section_body_composition">Composición corporal</string>
     <string name="section_meals">Comidas</string>
     <string name="section_sessions">Sesiones</string>
     <string name="section_daily_breakdown">Desglose diario</string>
@@ -459,7 +434,6 @@
     <string name="summary_temperature_range">Rango %1$s-%2$s · %3$s lecturas</string>
     <string name="summary_sleep_ending_today">Sueño que termina hoy</string>
     <string name="summary_sleep_ending_on">Sueño que termina el %1$s</string>
-    <string name="stat_current_streak">Racha actual</string>
     <string name="stat_total">Total</string>
     <string name="stat_active_days">Días activos</string>
     <string name="stat_average">Media</string>
@@ -634,7 +608,6 @@
     <string name="message_missing_permissions_body">Concede los permisos que faltan para ver un resumen completo.</string>
     <string name="message_health_connect_rate_limited">Se alcanzó el límite de Health Connect. Espera aproximadamente %1$d min e inténtalo de nuevo.</string>
     <string name="message_no_workouts_day">No hay entrenamientos registrados en este día.</string>
-    <string name="message_no_workouts_week">No hay entrenamientos registrados esta semana.</string>
     <string name="message_no_sleep_day">No hay ninguna sesión de sueño terminada en este día.</string>
     <string name="message_no_blood_pressure">No hay lectura de presión arterial.</string>
     <string name="message_no_oxygen">No hay lectura de oxígeno.</string>
@@ -647,14 +620,11 @@
     <string name="dashboard_goal_of">de %1$s</string>
     <string name="calories_estimated_active_bmr">Sin total, estimado con activas + BMR</string>
     <string name="calories_estimated_value">Est. %1$s</string>
-    <string name="message_no_health_connect_total_calories">Sin calorías totales en Health Connect</string>
-    <string name="message_no_total_calories_estimate">Necesita total o activas + BMR</string>
     <string name="dashboard_weekly_cardio_load_progress">%1$d de %2$d</string>
     <string name="dashboard_cardio_load_percent_only">%1$d%%</string>
     <string name="dashboard_cardio_load_percent">%1$d%% carga</string>
     <string name="dashboard_cardio_load_today_delta">+%1$d%% hoy</string>
     <string name="message_no_activities_period">No hay actividades en el periodo seleccionado.</string>
-    <string name="message_no_recent_activity">Aún no hay actividad reciente.</string>
     <string name="message_no_step_updates">No se registraron actualizaciones de pasos</string>
     <string name="message_no_distance_updates">No se registraron actualizaciones de distancia</string>
     <string name="message_no_calories_burned">No se registraron datos de calorías totales</string>
@@ -674,9 +644,6 @@
     <string name="message_no_vitals_period">No se registraron constantes en este periodo.</string>
     <string name="message_no_readings_period">No hay lecturas en este periodo.</string>
     <string name="message_no_cycle_period">No se registraron datos de ciclo en este periodo.</string>
-    <string name="message_no_workouts_period">No hay entrenamientos en el periodo seleccionado.</string>
-    <string name="message_no_sleep_sessions_period">No hay sesiones de sueño en el periodo seleccionado.</string>
-    <string name="message_no_weight_entries_period">No hay entradas de peso en el periodo seleccionado.</string>
     <string name="message_no_segments">No hay segmentos registrados.</string>
     <string name="message_no_laps">No hay vueltas registradas.</string>
     <string name="message_no_route_points">No hay puntos de ruta registrados.</string>
@@ -712,8 +679,6 @@
     <string name="onboarding_status_optional">Opcional</string>
     <string name="onboarding_category_activity_sleep">Actividad y sueño</string>
     <string name="onboarding_category_activity_sleep_desc">Pasos, distancia, entrenamientos y sesiones de sueño para el resumen.</string>
-    <string name="onboarding_category_workout_routes">Rutas de entrenamiento</string>
-    <string name="onboarding_category_workout_routes_desc">Las vistas previas de ruta requieren aprobación manual en los ajustes de Health Connect.</string>
     <string name="onboarding_category_heart_recovery">Corazón y constantes</string>
     <string name="onboarding_category_heart_recovery_desc">Frecuencia cardiaca, frecuencia en reposo y tendencias de HRV.</string>
     <string name="onboarding_category_body">Cuerpo</string>
@@ -739,7 +704,6 @@
     <string name="settings_status_needs_update">Necesita actualización</string>
     <string name="settings_status_needs_play_store">Necesita Play Store</string>
     <string name="settings_all_requestable_granted">Todos los permisos solicitables concedidos</string>
-    <string name="settings_request_missing_permissions">Solicitar permisos no concedidos</string>
     <string name="settings_manual_permissions_title">Permisos manuales requeridos</string>
     <string name="settings_manual_permissions_body">Algunos permisos de Health Connect no pueden concederse desde el diálogo normal. Abre Health Connect y actívalos para OpenVitals.</string>
     <string name="settings_open_health_permissions">Abrir permisos de Health Connect</string>

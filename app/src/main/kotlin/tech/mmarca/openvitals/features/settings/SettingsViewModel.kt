@@ -44,9 +44,6 @@ data class SettingsUiState(
     val missingVisiblePermissions: Set<String>
         get() = visiblePermissions - grantedPermissions
 
-    val missingRequestableVisiblePermissions: Set<String>
-        get() = missingVisiblePermissions - manualOnlyPermissions
-
     val missingManualVisiblePermissions: Set<String>
         get() = missingVisiblePermissions.intersect(manualOnlyPermissions)
 }

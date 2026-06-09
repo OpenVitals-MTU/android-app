@@ -28,7 +28,6 @@
     <string name="action_grant">Grant</string>
     <string name="action_grant_permission">Grant permission</string>
     <string name="action_load_more_entries">Load 10 more</string>
-    <string name="action_load_more">Load more</string>
     <string name="action_show_calculation">Show calculation</string>
     <string name="action_hide_calculation">Hide calculation</string>
     <string name="action_not_now">Not now</string>
@@ -47,7 +46,6 @@
     <string name="no_data">No data</string>
     <string name="loading">Loading...</string>
 
-    <string name="screen_dashboard">Summary</string>
     <string name="screen_steps">Steps</string>
     <string name="screen_activities">Activities</string>
     <string name="screen_calories">Calories</string>
@@ -70,19 +68,8 @@
     <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
     <string name="bottom_nav_dashboard">Summary</string>
-    <string name="bottom_nav_add_entry">Add entry</string>
     <string name="manual_entry_hydration_title">Hydration</string>
     <string name="manual_entry_activity_title">Activity</string>
-    <string name="manual_entry_hydration_body">Log a Health Connect hydration entry.</string>
-    <string name="manual_entry_activity_body">Log an activity manually, or import a GPX/KMZ file and finish missing details.</string>
-    <string name="manual_entry_mindfulness_body">Run a meditation timer or log mindfulness minutes in Health Connect.</string>
-    <string name="manual_entry_weight_body">Log a Health Connect weight entry.</string>
-    <string name="manual_entry_height_body">Log a Health Connect height entry.</string>
-    <string name="manual_entry_body_fat_body">Log a Health Connect body fat entry.</string>
-    <string name="manual_entry_blood_pressure_body">Log a Health Connect blood pressure entry.</string>
-    <string name="manual_entry_spo2_body">Log a Health Connect SpO2 entry.</string>
-    <string name="manual_entry_respiratory_rate_body">Log a Health Connect respiratory rate entry.</string>
-    <string name="manual_entry_body_temperature_body">Log a Health Connect body temperature entry.</string>
     <string name="manual_entry_add_widgets">Add entry widgets</string>
     <string name="manual_entry_all_widgets_added">All entry widgets are already shown.</string>
     <string name="manual_entry_write_permission_title">Hydration write permission</string>
@@ -111,7 +98,6 @@
     <string name="activity_entry_imported_route">Imported route</string>
     <string name="activity_entry_recording_title">Recording activity</string>
     <string name="activity_entry_recording_ready_body">Choose the activity type, then start recording when you are ready. After finishing, you can review and add details before saving.</string>
-    <string name="activity_entry_recording_route">Live recording</string>
     <string name="activity_entry_recording_active">Recording</string>
     <string name="activity_entry_recording_paused">Paused</string>
     <string name="activity_entry_recording_waiting_for_gps">Waiting for a precise GPS fix</string>
@@ -126,7 +112,6 @@
     <string name="activity_entry_recording_elevation_gain">Gain</string>
     <string name="activity_entry_recording_points">Points</string>
     <string name="activity_entry_recording_finish_hint">Finish opens the activity details form so you can add title, notes, calories, or adjust values before saving.</string>
-    <string name="activity_entry_recording_summary">%1$s • %2$s • %3$s gain • %4$d points</string>
     <string name="activity_entry_recording_accuracy">Last accuracy %1$s</string>
     <string name="activity_entry_route_summary">%1$s • %2$s • %3$s gain • %4$d points</string>
     <string name="activity_entry_route_average_metrics">Avg pace %1$s • avg speed %2$s</string>
@@ -161,7 +146,6 @@
     <string name="activity_recording_notification_recording">Recording • %1$s total • %2$s moving • %3$s • %4$d points</string>
     <string name="activity_recording_notification_paused">Paused • %1$s total • %2$s moving • %3$s • %4$d points</string>
     <string name="activity_recording_error_service">Could not start activity recording service.</string>
-    <string name="activity_recording_error_location_permission">Location permission is required to keep recording.</string>
     <string name="activity_recording_error_precise_location_permission">Precise location permission is required for reliable GPS tracks.</string>
     <string name="activity_recording_error_notification_permission">Notification permission is required to show the ongoing recording notification.</string>
     <string name="activity_recording_error_waiting_for_gps">Wait for a precise GPS fix before starting.</string>
@@ -185,7 +169,6 @@
     <string name="mindfulness_entry_unavailable">Mindfulness sessions are unavailable in this Health Connect provider.</string>
     <string name="mindfulness_entry_timer_title">Timer</string>
     <string name="mindfulness_entry_manual_title">Manual entry</string>
-    <string name="mindfulness_entry_duration_minutes">Duration (min)</string>
     <string name="mindfulness_entry_interval_bell">Interval bell</string>
     <string name="mindfulness_entry_interval_minutes">Interval (min)</string>
     <string name="mindfulness_entry_bell_sound">Bell sound</string>
@@ -311,13 +294,7 @@
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
 
-    <string name="section_activity_recovery">Activity &amp; sleep</string>
-    <string name="section_body_intake">Body &amp; intake</string>
-    <string name="section_heart">Heart</string>
-    <string name="section_mind">Mind</string>
-    <string name="section_records">Records</string>
     <string name="section_activities">Activities</string>
-    <string name="activities_recent_title">Recent activities</string>
     <string name="activities_key_metrics">Key metrics</string>
     <string name="recovery_sleep_score">Sleep score</string>
     <string name="recovery_sleep_duration">Sleep duration</string>
@@ -325,7 +302,6 @@
     <string name="recovery_rem_sleep">REM sleep</string>
     <string name="recovery_deep_sleep">Deep sleep</string>
     <string name="recovery_sleep_efficiency">Sleep efficiency</string>
-    <string name="recovery_placeholder_label">Coming soon</string>
     <string name="sleep_score_confidence_high">High confidence</string>
     <string name="sleep_score_confidence_medium">Medium confidence</string>
     <string name="sleep_score_confidence_low">Low confidence</string>
@@ -414,7 +390,6 @@
     <string name="section_sleep_sessions">Sleep sessions</string>
     <string name="section_weight">Weight</string>
     <string name="section_entries">Entries</string>
-    <string name="section_body_composition">Body composition</string>
     <string name="section_meals">Meals</string>
     <string name="section_sessions">Sessions</string>
     <string name="section_daily_breakdown">Daily breakdown</string>
@@ -459,7 +434,6 @@
     <string name="summary_temperature_range">Range %1$s-%2$s · %3$s readings</string>
     <string name="summary_sleep_ending_today">Sleep ending today</string>
     <string name="summary_sleep_ending_on">Sleep ending on %1$s</string>
-    <string name="stat_current_streak">Current streak</string>
     <string name="stat_total">Total</string>
     <string name="stat_active_days">Active days</string>
     <string name="stat_average">Average</string>
@@ -634,7 +608,6 @@
     <string name="message_missing_permissions_body">Grant the missing permissions to see a complete summary.</string>
     <string name="message_health_connect_rate_limited">Health Connect rate limit reached. Please wait about %1$d min and try again.</string>
     <string name="message_no_workouts_day">No workouts recorded on this day.</string>
-    <string name="message_no_workouts_week">No workouts recorded this week.</string>
     <string name="message_no_sleep_day">No sleep session ended on this day.</string>
     <string name="message_no_blood_pressure">No blood pressure reading.</string>
     <string name="message_no_oxygen">No oxygen reading.</string>
@@ -647,14 +620,11 @@
     <string name="dashboard_goal_of">of %1$s</string>
     <string name="calories_estimated_active_bmr">No total record, est. active + BMR</string>
     <string name="calories_estimated_value">Est. %1$s</string>
-    <string name="message_no_health_connect_total_calories">No Health Connect total calories</string>
-    <string name="message_no_total_calories_estimate">Needs total or active + BMR</string>
     <string name="dashboard_weekly_cardio_load_progress">%1$d of %2$d</string>
     <string name="dashboard_cardio_load_percent_only">%1$d%%</string>
     <string name="dashboard_cardio_load_percent">%1$d%% load</string>
     <string name="dashboard_cardio_load_today_delta">+%1$d%% today</string>
     <string name="message_no_activities_period">No activities in the selected period.</string>
-    <string name="message_no_recent_activity">No recent activity yet.</string>
     <string name="message_no_step_updates">No step updates were recorded</string>
     <string name="message_no_distance_updates">No distance updates were recorded</string>
     <string name="message_no_calories_burned">No total calorie data was recorded</string>
@@ -674,9 +644,6 @@
     <string name="message_no_vitals_period">No vitals were recorded for this period.</string>
     <string name="message_no_readings_period">No readings in this period.</string>
     <string name="message_no_cycle_period">No cycle data was recorded for this period.</string>
-    <string name="message_no_workouts_period">No workouts in the selected period.</string>
-    <string name="message_no_sleep_sessions_period">No sleep sessions in the selected period.</string>
-    <string name="message_no_weight_entries_period">No weight entries in the selected period.</string>
     <string name="message_no_segments">No segments recorded.</string>
     <string name="message_no_laps">No laps recorded.</string>
     <string name="message_no_route_points">No route points recorded.</string>
@@ -712,8 +679,6 @@
     <string name="onboarding_status_optional">Optional</string>
     <string name="onboarding_category_activity_sleep">Activity &amp; sleep</string>
     <string name="onboarding_category_activity_sleep_desc">Steps, distance, workouts, and sleep sessions for the summary.</string>
-    <string name="onboarding_category_workout_routes">Workout routes</string>
-    <string name="onboarding_category_workout_routes_desc">Route previews require manual approval in Health Connect settings.</string>
     <string name="onboarding_category_heart_recovery">Heart &amp; vitals</string>
     <string name="onboarding_category_heart_recovery_desc">Heart rate, resting heart rate, and HRV trends.</string>
     <string name="onboarding_category_body">Body</string>
@@ -739,7 +704,6 @@
     <string name="settings_status_needs_update">Needs update</string>
     <string name="settings_status_needs_play_store">Needs Play Store</string>
     <string name="settings_all_requestable_granted">All requestable permissions granted</string>
-    <string name="settings_request_missing_permissions">Request not granted permissions</string>
     <string name="settings_manual_permissions_title">Manual permissions required</string>
     <string name="settings_manual_permissions_body">Some Health Connect permissions cannot be granted from the normal request dialog. Open Health Connect and enable them for OpenVitals.</string>
     <string name="settings_open_health_permissions">Open Health Connect permissions</string>

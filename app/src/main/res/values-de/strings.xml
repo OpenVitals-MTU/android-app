@@ -28,7 +28,6 @@
     <string name="action_grant">Erteilen</string>
     <string name="action_grant_permission">Berechtigung erteilen</string>
     <string name="action_load_more_entries">10 weitere laden</string>
-    <string name="action_load_more">Mehr laden</string>
     <string name="action_show_calculation">Berechnung anzeigen</string>
     <string name="action_hide_calculation">Berechnung ausblenden</string>
     <string name="action_not_now">Jetzt nicht</string>
@@ -47,7 +46,6 @@
     <string name="no_data">Keine Daten</string>
     <string name="loading">Wird geladen...</string>
 
-    <string name="screen_dashboard">Übersicht</string>
     <string name="screen_steps">Schritte</string>
     <string name="screen_activities">Aktivitäten</string>
     <string name="screen_calories">Kalorien</string>
@@ -70,19 +68,8 @@
     <string name="screen_vitals_measurement_entry">Vitalwerteeintrag</string>
 
     <string name="bottom_nav_dashboard">Übersicht</string>
-    <string name="bottom_nav_add_entry">Eintrag hinzufügen</string>
     <string name="manual_entry_hydration_title">Hydrierung</string>
     <string name="manual_entry_activity_title">Aktivität</string>
-    <string name="manual_entry_hydration_body">Protokolliere einen Hydrierungseintrag in Health Connect.</string>
-    <string name="manual_entry_activity_body">Protokolliere eine Aktivität manuell oder importiere eine GPX/KMZ-Datei und ergänze fehlende Details.</string>
-    <string name="manual_entry_mindfulness_body">Starte einen Meditationstimer oder protokolliere Achtsamkeitsminuten in Health Connect.</string>
-    <string name="manual_entry_weight_body">Protokolliere einen Gewichtseintrag in Health Connect.</string>
-    <string name="manual_entry_height_body">Protokolliere einen Größeneintrag in Health Connect.</string>
-    <string name="manual_entry_body_fat_body">Protokolliere einen Körperfetteintrag in Health Connect.</string>
-    <string name="manual_entry_blood_pressure_body">Protokolliere einen Blutdruckeintrag in Health Connect.</string>
-    <string name="manual_entry_spo2_body">Protokolliere einen SpO2-Eintrag in Health Connect.</string>
-    <string name="manual_entry_respiratory_rate_body">Protokolliere einen Atemfrequenzeintrag in Health Connect.</string>
-    <string name="manual_entry_body_temperature_body">Protokolliere einen Körpertemperatureintrag in Health Connect.</string>
     <string name="manual_entry_add_widgets">Eintrags-Widgets hinzufügen</string>
     <string name="manual_entry_all_widgets_added">Alle Eintrags-Widgets werden bereits angezeigt.</string>
     <string name="manual_entry_write_permission_title">Schreibberechtigung für Hydrierung</string>
@@ -111,7 +98,6 @@
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
     <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und starte die Aufzeichnung, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
-    <string name="activity_entry_recording_route">Live-Aufzeichnung</string>
     <string name="activity_entry_recording_active">Aufzeichnung läuft</string>
     <string name="activity_entry_recording_paused">Pausiert</string>
     <string name="activity_entry_recording_waiting_for_gps">Warten auf eine genaue GPS-Position</string>
@@ -126,7 +112,6 @@
     <string name="activity_entry_recording_elevation_gain">Anstieg</string>
     <string name="activity_entry_recording_points">Punkte</string>
     <string name="activity_entry_recording_finish_hint">Beenden öffnet das Formular mit Aktivitätsdetails, damit du vor dem Speichern Titel, Notizen, Kalorien ergänzen oder Werte anpassen kannst.</string>
-    <string name="activity_entry_recording_summary">%1$s • %2$s • %3$s Anstieg • %4$d Punkte</string>
     <string name="activity_entry_recording_accuracy">Letzte Genauigkeit %1$s</string>
     <string name="activity_entry_route_summary">%1$s • %2$s • %3$s Anstieg • %4$d Punkte</string>
     <string name="activity_entry_route_average_metrics">Durchschn. Tempo %1$s • durchschn. Geschwindigkeit %2$s</string>
@@ -161,7 +146,6 @@
     <string name="activity_recording_notification_recording">Aufzeichnung läuft • %1$s gesamt • %2$s in Bewegung • %3$s • %4$d Punkte</string>
     <string name="activity_recording_notification_paused">Pausiert • %1$s gesamt • %2$s in Bewegung • %3$s • %4$d Punkte</string>
     <string name="activity_recording_error_service">Aktivitätsaufzeichnungsdienst konnte nicht gestartet werden.</string>
-    <string name="activity_recording_error_location_permission">Die Standortberechtigung ist erforderlich, um weiter aufzuzeichnen.</string>
     <string name="activity_recording_error_precise_location_permission">Der genaue Standort ist für zuverlässige GPS-Tracks erforderlich.</string>
     <string name="activity_recording_error_notification_permission">Die Benachrichtigungsberechtigung ist erforderlich, um die laufende Aufzeichnungsbenachrichtigung anzuzeigen.</string>
     <string name="activity_recording_error_waiting_for_gps">Warte auf eine genaue GPS-Position, bevor du startest.</string>
@@ -185,7 +169,6 @@
     <string name="mindfulness_entry_unavailable">Achtsamkeitssitzungen sind bei diesem Health-Connect-Anbieter nicht verfügbar.</string>
     <string name="mindfulness_entry_timer_title">Timer</string>
     <string name="mindfulness_entry_manual_title">Manueller Eintrag</string>
-    <string name="mindfulness_entry_duration_minutes">Dauer (min)</string>
     <string name="mindfulness_entry_interval_bell">Intervallglocke</string>
     <string name="mindfulness_entry_interval_minutes">Intervall (min)</string>
     <string name="mindfulness_entry_bell_sound">Glockenklang</string>
@@ -311,13 +294,7 @@
     <string name="unit_total">gesamt</string>
     <string name="unit_grams">g</string>
 
-    <string name="section_activity_recovery">Aktivität &amp; Schlaf</string>
-    <string name="section_body_intake">Körper &amp; Aufnahme</string>
-    <string name="section_heart">Herz</string>
-    <string name="section_mind">Geist</string>
-    <string name="section_records">Datensätze</string>
     <string name="section_activities">Aktivitäten</string>
-    <string name="activities_recent_title">Letzte Aktivitäten</string>
     <string name="activities_key_metrics">Wichtige Messwerte</string>
     <string name="recovery_sleep_score">Schlafwert</string>
     <string name="recovery_sleep_duration">Schlafdauer</string>
@@ -325,7 +302,6 @@
     <string name="recovery_rem_sleep">REM-Schlaf</string>
     <string name="recovery_deep_sleep">Tiefschlaf</string>
     <string name="recovery_sleep_efficiency">Schlafeffizienz</string>
-    <string name="recovery_placeholder_label">Demnächst</string>
     <string name="sleep_score_confidence_high">Hohe Sicherheit</string>
     <string name="sleep_score_confidence_medium">Mittlere Sicherheit</string>
     <string name="sleep_score_confidence_low">Niedrige Sicherheit</string>
@@ -414,7 +390,6 @@
     <string name="section_sleep_sessions">Schlafsitzungen</string>
     <string name="section_weight">Gewicht</string>
     <string name="section_entries">Einträge</string>
-    <string name="section_body_composition">Körperzusammensetzung</string>
     <string name="section_meals">Mahlzeiten</string>
     <string name="section_sessions">Sitzungen</string>
     <string name="section_daily_breakdown">Tägliche Aufschlüsselung</string>
@@ -459,7 +434,6 @@
     <string name="summary_temperature_range">Bereich %1$s-%2$s · %3$s Messwerte</string>
     <string name="summary_sleep_ending_today">Schlaf endet heute</string>
     <string name="summary_sleep_ending_on">Schlaf endet am %1$s</string>
-    <string name="stat_current_streak">Aktuelle Serie</string>
     <string name="stat_total">Gesamt</string>
     <string name="stat_active_days">Aktive Tage</string>
     <string name="stat_average">Durchschnitt</string>
@@ -634,7 +608,6 @@
     <string name="message_missing_permissions_body">Erteile die fehlenden Berechtigungen, um eine vollständige Übersicht zu sehen.</string>
     <string name="message_health_connect_rate_limited">Health-Connect-Ratenlimit erreicht. Bitte warte etwa %1$d min und versuche es erneut.</string>
     <string name="message_no_workouts_day">An diesem Tag wurden keine Trainings aufgezeichnet.</string>
-    <string name="message_no_workouts_week">Diese Woche wurden keine Trainings aufgezeichnet.</string>
     <string name="message_no_sleep_day">An diesem Tag endete keine Schlafsitzung.</string>
     <string name="message_no_blood_pressure">Kein Blutdruckmesswert.</string>
     <string name="message_no_oxygen">Kein Sauerstoffmesswert.</string>
@@ -647,14 +620,11 @@
     <string name="dashboard_goal_of">von %1$s</string>
     <string name="calories_estimated_active_bmr">Kein Gesamteintrag, geschätzt aus aktiv + BMR</string>
     <string name="calories_estimated_value">Gesch. %1$s</string>
-    <string name="message_no_health_connect_total_calories">Keine Health-Connect-Gesamtkalorien</string>
-    <string name="message_no_total_calories_estimate">Benötigt Gesamt oder aktiv + BMR</string>
     <string name="dashboard_weekly_cardio_load_progress">%1$d von %2$d</string>
     <string name="dashboard_cardio_load_percent_only">%1$d%%</string>
     <string name="dashboard_cardio_load_percent">%1$d%% Belastung</string>
     <string name="dashboard_cardio_load_today_delta">+%1$d%% heute</string>
     <string name="message_no_activities_period">Keine Aktivitäten im ausgewählten Zeitraum.</string>
-    <string name="message_no_recent_activity">Noch keine aktuelle Aktivität.</string>
     <string name="message_no_step_updates">Es wurden keine Schrittaktualisierungen aufgezeichnet</string>
     <string name="message_no_distance_updates">Es wurden keine Distanzaktualisierungen aufgezeichnet</string>
     <string name="message_no_calories_burned">Es wurden keine Daten zu Gesamtkalorien aufgezeichnet</string>
@@ -674,9 +644,6 @@
     <string name="message_no_vitals_period">Für diesen Zeitraum wurden keine Vitalwerte aufgezeichnet.</string>
     <string name="message_no_readings_period">Keine Messwerte in diesem Zeitraum.</string>
     <string name="message_no_cycle_period">Für diesen Zeitraum wurden keine Zyklusdaten aufgezeichnet.</string>
-    <string name="message_no_workouts_period">Keine Trainings im ausgewählten Zeitraum.</string>
-    <string name="message_no_sleep_sessions_period">Keine Schlafsitzungen im ausgewählten Zeitraum.</string>
-    <string name="message_no_weight_entries_period">Keine Gewichtseinträge im ausgewählten Zeitraum.</string>
     <string name="message_no_segments">Keine Segmente aufgezeichnet.</string>
     <string name="message_no_laps">Keine Runden aufgezeichnet.</string>
     <string name="message_no_route_points">Keine Routenpunkte aufgezeichnet.</string>
@@ -712,8 +679,6 @@
     <string name="onboarding_status_optional">Optional</string>
     <string name="onboarding_category_activity_sleep">Aktivität &amp; Schlaf</string>
     <string name="onboarding_category_activity_sleep_desc">Schritte, Distanz, Trainings und Schlafsitzungen für die Übersicht.</string>
-    <string name="onboarding_category_workout_routes">Trainingsrouten</string>
-    <string name="onboarding_category_workout_routes_desc">Routenvorschauen erfordern eine manuelle Genehmigung in den Health-Connect-Einstellungen.</string>
     <string name="onboarding_category_heart_recovery">Herz &amp; Vitalwerte</string>
     <string name="onboarding_category_heart_recovery_desc">Herzfrequenz, Ruheherzfrequenz und HRV-Trends.</string>
     <string name="onboarding_category_body">Körper</string>
@@ -739,7 +704,6 @@
     <string name="settings_status_needs_update">Update erforderlich</string>
     <string name="settings_status_needs_play_store">Play Store erforderlich</string>
     <string name="settings_all_requestable_granted">Alle anforderbaren Berechtigungen erteilt</string>
-    <string name="settings_request_missing_permissions">Nicht erteilte Berechtigungen anfordern</string>
     <string name="settings_manual_permissions_title">Manuelle Berechtigungen erforderlich</string>
     <string name="settings_manual_permissions_body">Einige Health-Connect-Berechtigungen können nicht über den normalen Anfragedialog erteilt werden. Öffne Health Connect und aktiviere sie für OpenVitals.</string>
     <string name="settings_open_health_permissions">Health-Connect-Berechtigungen öffnen</string>

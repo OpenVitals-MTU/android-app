@@ -36,8 +36,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val ActivityOverviewLookbackDays = 30L
-private const val RecentActivityInitialCount = 3
-private const val RecentActivityPageSize = 5
 
 data class ActivityOverviewDay(
     val date: LocalDate,
@@ -69,21 +67,11 @@ data class ActivityOverviewUiState(
     val isLoading: Boolean = true,
     val selectedDate: LocalDate = LocalDate.now(),
     val days: List<ActivityOverviewDay> = emptyList(),
-    val recentVisibleCount: Int = RecentActivityInitialCount,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val error: String? = null,
 ) {
     val today: ActivityOverviewDay
         get() = days.firstOrNull { it.date == selectedDate } ?: ActivityOverviewDay(selectedDate)
-
-    val recentActivities: List<ActivityOverviewDay>
-        get() = days.asReversed().filter { it.hasActivity }
-
-    val visibleRecentActivities: List<ActivityOverviewDay>
-        get() = recentActivities.take(recentVisibleCount)
-
-    val canLoadMoreRecentActivities: Boolean
-        get() = visibleRecentActivities.size < recentActivities.size
 
     val metricDays: List<ActivityOverviewDay>
         get() = days.daysIn(
@@ -156,7 +144,6 @@ class ActivityOverviewViewModel @Inject constructor(
                     isLoading = false,
                     selectedDate = today,
                     days = days,
-                    recentVisibleCount = RecentActivityInitialCount,
                 )
             }.onFailure { error ->
                 if (!isCurrent) return@load
@@ -167,14 +154,6 @@ class ActivityOverviewViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    fun loadMoreRecentActivities() {
-        val current = _uiState.value
-        _uiState.value = current.copy(
-            recentVisibleCount = (current.recentVisibleCount + RecentActivityPageSize)
-                .coerceAtMost(current.recentActivities.size),
-        )
     }
 
     private suspend fun loadActivityOverview(

@@ -2,10 +2,8 @@ package tech.mmarca.openvitals.core.insights
 
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PersonalBaselineTest {
@@ -47,7 +45,6 @@ class PersonalBaselineTest {
         )
 
         assertEquals(BaselineStatus.USUAL, checkNotNull(insight).status)
-        assertFalse(insight.isAnomaly)
     }
 
     @Test
@@ -65,7 +62,6 @@ class PersonalBaselineTest {
         )
 
         assertEquals(BaselineStatus.ABOVE, checkNotNull(insight).status)
-        assertFalse(insight.isAnomaly)
     }
 
     @Test
@@ -83,7 +79,6 @@ class PersonalBaselineTest {
         )
 
         assertEquals(BaselineStatus.UNUSUAL_HIGH, checkNotNull(insight).status)
-        assertTrue(insight.isAnomaly)
     }
 
     @Test

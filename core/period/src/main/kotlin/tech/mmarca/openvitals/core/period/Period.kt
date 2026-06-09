@@ -145,13 +145,6 @@ fun periodTitle(
     TimeRange.YEAR -> if (period.end == today) "This year" else yearFormatter.format(period.start)
 }
 
-fun periodSubtitle(range: TimeRange, period: DatePeriod): String = when (range) {
-    TimeRange.DAY -> dateFormatter.format(period.start)
-    TimeRange.WEEK -> "${dateFormatter.format(period.start)} - ${dateFormatter.format(period.end)}"
-    TimeRange.MONTH,
-    TimeRange.YEAR -> "${dateFormatter.format(period.start)} - ${dateFormatter.format(period.end)}"
-}
-
 private fun TimeRange.shift(anchorDate: LocalDate, steps: Long): LocalDate = when (this) {
     TimeRange.DAY -> anchorDate.plusDays(steps)
     TimeRange.WEEK -> anchorDate.plusWeeks(steps)

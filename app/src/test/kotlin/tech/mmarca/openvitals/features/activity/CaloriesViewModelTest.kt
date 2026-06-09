@@ -19,8 +19,6 @@ import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.repository.ActivityPeriodData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
-import tech.mmarca.openvitals.data.repository.BodyPeriodData
-import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -37,11 +35,11 @@ class CaloriesViewModelTest {
         }
 
     private fun bodyRepo(
-        data: BodyPeriodData = BodyPeriodData(),
+        bmrEntries: List<BmrEntry> = emptyList(),
         latestBmrKcal: Double? = null,
     ) =
         mockk<BodyRepository>().also { repo ->
-            coEvery { repo.loadBodyPeriod(any(), any()) } returns data
+            coEvery { repo.loadBmrEntries(any(), any()) } returns bmrEntries
             coEvery { repo.loadLatestBMR() } returns latestBmrKcal
         }
 
@@ -56,7 +54,7 @@ class CaloriesViewModelTest {
                 nutrition = nutrition,
             )
         )
-        val bodyRepository = bodyRepo(BodyPeriodData(bmrEntries = bmr), latestBmrKcal = 1_715.0)
+        val bodyRepository = bodyRepo(bmrEntries = bmr, latestBmrKcal = 1_715.0)
 
         val vm = CaloriesViewModel(activityRepository, bodyRepository)
 
@@ -75,7 +73,7 @@ class CaloriesViewModelTest {
                 includeNutrition = true,
             )
         }
-        coVerify { bodyRepository.loadBodyPeriod(any(), BodyPeriodMetric.BMR) }
+        coVerify { bodyRepository.loadBmrEntries(any(), any()) }
         coVerify { bodyRepository.loadLatestBMR() }
     }
 
@@ -105,7 +103,7 @@ class CaloriesViewModelTest {
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
         assertEquals(TimeRange.MONTH, savedRange)
         coVerify(atLeast = 2) { activityRepository.loadActivityPeriod(any(), true, true) }
-        coVerify(atLeast = 2) { bodyRepository.loadBodyPeriod(any(), BodyPeriodMetric.BMR) }
+        coVerify(atLeast = 2) { bodyRepository.loadBmrEntries(any(), any()) }
     }
 
     @Test
@@ -122,7 +120,7 @@ class CaloriesViewModelTest {
         calorieDataMode.value = true
 
         coVerify(exactly = 2) { activityRepository.loadActivityPeriod(any(), true, true) }
-        coVerify(exactly = 2) { bodyRepository.loadBodyPeriod(any(), BodyPeriodMetric.BMR) }
+        coVerify(exactly = 2) { bodyRepository.loadBmrEntries(any(), any()) }
     }
 
     @Test

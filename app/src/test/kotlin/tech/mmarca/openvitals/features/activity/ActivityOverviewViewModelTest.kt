@@ -197,30 +197,6 @@ class ActivityOverviewViewModelTest {
     }
 
     @Test
-    fun `load more reveals additional recent daily activities`() = runTest {
-        val recentDays = (0 until 6).map { offset ->
-            DailySteps(
-                date = today.minusDays(offset.toLong()),
-                steps = 1_000L + offset,
-                distanceMeters = 800.0,
-            )
-        }
-        val vm = ActivityOverviewViewModel(
-            activityRepository = activityRepo(steps = recentDays),
-            heartRepository = heartRepo(),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
-        )
-
-        assertEquals(6, vm.uiState.value.recentActivities.size)
-        assertEquals(3, vm.uiState.value.visibleRecentActivities.size)
-
-        vm.loadMoreRecentActivities()
-
-        assertEquals(6, vm.uiState.value.visibleRecentActivities.size)
-        assertFalse(vm.uiState.value.canLoadMoreRecentActivities)
-    }
-
-    @Test
     fun `metric days use the selected Monday to Sunday week`() {
         val selectedMonday = LocalDate.of(2026, 6, 1)
         val loadedDays = (-6..6).map { offset ->

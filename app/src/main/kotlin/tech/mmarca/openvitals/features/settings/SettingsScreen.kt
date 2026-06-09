@@ -919,35 +919,6 @@ private fun PermissionCategoryCard(
 }
 
 @Composable
-private fun PermissionRow(permission: String, granted: Boolean) {
-    val shortName = permission
-        .substringAfterLast('.')
-        .replace("_", " ")
-        .lowercase()
-        .replaceFirstChar { it.uppercase() }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = if (granted) Icons.Outlined.CheckCircle else Icons.Outlined.Lock,
-            contentDescription = null,
-            tint = if (granted) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            modifier = Modifier.size(18.dp),
-        )
-        Text(
-            text = shortName,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(start = 12.dp),
-        )
-    }
-}
-
-@Composable
 private fun PrivacyInfoCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),

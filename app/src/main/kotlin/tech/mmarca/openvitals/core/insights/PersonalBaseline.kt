@@ -44,8 +44,6 @@ data class PersonalBaselineInsight(
     val percentDeviation: Double?
         get() = primarySummary.average.takeIf { abs(it) > BaselineTolerance }
             ?.let { deviation / it * 100.0 }
-    val isAnomaly: Boolean
-        get() = status == BaselineStatus.UNUSUAL_HIGH || status == BaselineStatus.UNUSUAL_LOW
 }
 
 fun personalBaselineInsight(

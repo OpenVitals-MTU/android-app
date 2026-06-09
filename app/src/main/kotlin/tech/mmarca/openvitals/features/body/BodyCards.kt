@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.body
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -13,80 +12,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import kotlin.math.abs
-
-@Composable
-internal fun BodyCompositionCard(
-    bmi: Double?,
-    bodyFatPercent: Double?,
-    leanMassKg: Double?,
-    bmrKcal: Double?,
-    boneMassKg: Double?,
-    unitFormatter: UnitFormatter,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                bmi?.let {
-                    CompositionStat(
-                        label = stringResource(R.string.metric_bmi),
-                        value = unitFormatter.decimal(it, 1),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                bodyFatPercent?.let {
-                    CompositionStat(
-                        label = stringResource(R.string.metric_body_fat),
-                        value = unitFormatter.percent(it).text,
-                        color = BodyFatColor,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                leanMassKg?.let {
-                    CompositionStat(
-                        label = stringResource(R.string.metric_lean_mass),
-                        value = unitFormatter.bodyMass(it).text,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-            if (bmrKcal != null || boneMassKg != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    bmrKcal?.let {
-                        CompositionStat(
-                            label = stringResource(R.string.metric_bmr),
-                            value = unitFormatter.energy(it).text,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    boneMassKg?.let {
-                        CompositionStat(
-                            label = stringResource(R.string.metric_bone_mass),
-                            value = unitFormatter.bodyMass(it, decimals = 2).text,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    if (bmrKcal != null && boneMassKg != null) {
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 internal fun WeightSummaryCard(
@@ -136,26 +67,5 @@ internal fun WeightSummaryCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun CompositionStat(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.onSurface,
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            color = color,
-        )
     }
 }

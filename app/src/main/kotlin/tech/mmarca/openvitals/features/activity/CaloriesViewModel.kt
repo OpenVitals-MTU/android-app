@@ -26,7 +26,6 @@ import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.repository.ActivityRepository
-import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
@@ -42,14 +41,11 @@ data class CaloriesUiState(
     val previousNutrition: List<DailyNutrition> = emptyList(),
     val baselineNutrition: List<DailyNutrition> = emptyList(),
     val bmrEntries: List<BmrEntry> = emptyList(),
-    val previousBmrEntries: List<BmrEntry> = emptyList(),
-    val baselineBmrEntries: List<BmrEntry> = emptyList(),
     val latestBmrKcal: Double? = null,
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
     val error: String? = null,
 ) {
     val latestBmrEntry: BmrEntry? = bmrEntries.maxByOrNull { it.time }
-    val previousLatestBmrEntry: BmrEntry? = previousBmrEntries.maxByOrNull { it.time }
     val displayBmrKcal: Double? = latestBmrEntry?.kcalPerDay ?: latestBmrKcal
 }
 
@@ -162,7 +158,7 @@ class CaloriesViewModel(
                         )
                     }
                     val bmr = async {
-                        bodyRepository.loadBodyPeriod(query, BodyPeriodMetric.BMR)
+                        bodyRepository.loadBmrEntries(query.windows.current.start, query.windows.current.end)
                     }
                     val latestBmr = async {
                         bodyRepository.loadLatestBMR()
@@ -180,9 +176,7 @@ class CaloriesViewModel(
                     nutrition = activity.nutrition,
                     previousNutrition = activity.previousNutrition,
                     baselineNutrition = activity.baselineNutrition,
-                    bmrEntries = bmr.bmrEntries,
-                    previousBmrEntries = bmr.previousBmrEntries,
-                    baselineBmrEntries = bmr.baselineBmrEntries,
+                    bmrEntries = bmr,
                     latestBmrKcal = latestBmr,
                     activityProgress = activity.activityProgress,
                 )

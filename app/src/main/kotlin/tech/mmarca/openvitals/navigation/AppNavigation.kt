@@ -230,19 +230,12 @@ fun AppNavigation(
         Screen.VitalsMeasurementEntryEdit.route -> currentVitalsMeasurementType
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_vitals_measurement_entry)
-        Screen.Steps.route -> stringResource(R.string.screen_steps)
         Screen.Calories.route -> stringResource(R.string.screen_calories)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
         Screen.SleepDetail.route -> stringResource(R.string.screen_sleep_detail)
         Screen.Metric.route -> currentMetricId?.let { stringResource(metricTitleRes(it)) }.orEmpty()
-        Screen.Heart.route -> stringResource(R.string.screen_heart_vitals)
-        Screen.Body.route -> stringResource(R.string.screen_body)
-        Screen.Hydration.route -> stringResource(R.string.screen_hydration)
-        Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
-        Screen.Mindfulness.route -> stringResource(R.string.screen_mindfulness)
-        Screen.Cycle.route -> stringResource(R.string.screen_cycle)
         Screen.Settings.route -> stringResource(R.string.screen_settings)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
@@ -618,15 +611,6 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Steps.route) {
-                val activityViewModel = hiltViewModel<ActivityViewModel>()
-                StepsScreen(
-                    viewModel = activityViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
-
             composable(Screen.Calories.route) {
                 val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
                 CaloriesScreen(
@@ -711,69 +695,6 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Heart.route) {
-                val heartViewModel = hiltViewModel<HeartViewModel>()
-                AverageHeartRateScreen(
-                    viewModel = heartViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
-
-            composable(Screen.Body.route) {
-                val bodyViewModel = hiltViewModel<BodyViewModel>()
-                WeightScreen(
-                    viewModel = bodyViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onEditBodyMeasurement = { type, entryId ->
-                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
-                    },
-                )
-            }
-
-            composable(Screen.Hydration.route) {
-                val hydrationViewModel = hiltViewModel<HydrationViewModel>()
-                HydrationScreen(
-                    viewModel = hydrationViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onEditHydrationEntry = { entryId ->
-                        navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
-                    },
-                )
-            }
-
-            composable(Screen.Nutrition.route) {
-                val nutritionViewModel = hiltViewModel<NutritionViewModel>()
-                CaloriesInScreen(
-                    viewModel = nutritionViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
-
-            composable(Screen.Mindfulness.route) {
-                val mindfulnessViewModel = hiltViewModel<MindfulnessViewModel>()
-                MindfulnessScreen(
-                    viewModel = mindfulnessViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onEditMindfulnessSession = { entryId ->
-                        navController.navigate(Screen.MindfulnessEntryEdit.createRoute(entryId))
-                    },
-                )
-            }
-
-            composable(Screen.Cycle.route) {
-                val cycleViewModel = hiltViewModel<CycleViewModel>()
-                CycleScreen(
-                    viewModel = cycleViewModel,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
-
             composable(Screen.Achievements.route) {
                 val achievementsViewModel = hiltViewModel<AchievementsViewModel>()
                 AchievementsScreen(
@@ -800,10 +721,7 @@ private fun addEntryActionForCurrentRoute(
     onNavigate: (String) -> Unit,
 ): MetricAction? {
     val destinationRoute = when {
-        currentRoute == Screen.Hydration.route -> Screen.HydrationEntry.route
         currentRoute == Screen.Activity.route -> Screen.ActivityEntry.route
-        currentRoute == Screen.Mindfulness.route -> Screen.MindfulnessEntry.route
-        currentRoute == Screen.Body.route -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
         currentRoute == Screen.Metric.route -> currentMetricId?.entryRoute()
         else -> null
     } ?: return null

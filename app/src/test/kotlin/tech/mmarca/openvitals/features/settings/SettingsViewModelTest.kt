@@ -72,7 +72,6 @@ class SettingsViewModelTest {
         )
 
         assertEquals(setOf("write", "route", "cycle"), vm.uiState.value.missingVisiblePermissions)
-        assertEquals(setOf("write", "cycle"), vm.uiState.value.missingRequestableVisiblePermissions)
         assertEquals(setOf("route"), vm.uiState.value.missingManualVisiblePermissions)
     }
 
@@ -83,7 +82,6 @@ class SettingsViewModelTest {
         )
 
         assertTrue(vm.uiState.value.missingVisiblePermissions.isEmpty())
-        assertTrue(vm.uiState.value.missingRequestableVisiblePermissions.isEmpty())
         assertTrue(vm.uiState.value.missingManualVisiblePermissions.isEmpty())
     }
 
