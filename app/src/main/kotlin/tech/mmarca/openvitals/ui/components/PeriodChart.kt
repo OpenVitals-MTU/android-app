@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +21,15 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -111,8 +120,15 @@ fun PeriodBarChart(
         )
     }
     val maxValue = buckets.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
-    val gridColor = accentColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
+    val textMeasurer = rememberTextMeasurer()
+    val barLabelStyle = MaterialTheme.typography.labelSmall.copy(
+        color = if (accentColor.luminance() > 0.25f) {
+            Color.Black.copy(alpha = 0.78f)
+        } else {
+            Color.White
+        },
+        fontWeight = FontWeight.Bold,
+    )
     val chartTapModifier = if (
         selectedRange == TimeRange.WEEK &&
         onDateSelected != null &&
@@ -142,17 +158,13 @@ fun PeriodBarChart(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(12.dp))
-            YAxisChart(
-                labels = chartYAxisLabels(0.0, maxValue, valueFormatter),
-                chartHeight = chartHeight,
-                canvasModifier = chartTapModifier,
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(chartHeight)
+                    .then(chartTapModifier),
             ) {
-                drawYAxisGuides(
-                    gridColor = gridColor,
-                    axisColor = axisColor,
-                    strokeWidth = 1.dp.toPx(),
-                )
-                if (buckets.isEmpty()) return@YAxisChart
+                if (buckets.isEmpty()) return@Canvas
 
                 val slotWidth = size.width / buckets.size
                 val gap = when {
@@ -179,7 +191,18 @@ fun PeriodBarChart(
                     if (value <= 0.0) return@forEachIndexed
 
                     val fraction = (value / maxValue).toFloat().coerceIn(0f, 1f)
-                    val barHeight = (size.height * fraction).coerceAtLeast(minVisibleHeight)
+                    val labelLayout = measureBarValueLabel(
+                        textMeasurer = textMeasurer,
+                        text = valueFormatter(value),
+                        style = barLabelStyle,
+                        width = barWidth,
+                    )
+                    val minLabelHeight = labelLayout
+                        ?.let { it.height + 4.dp.toPx() }
+                        ?: minVisibleHeight
+                    val barHeight = (size.height * fraction)
+                        .coerceAtLeast(maxOf(minVisibleHeight, minLabelHeight))
+                        .coerceAtMost(size.height)
                     val left = slotLeft + (slotWidth - barWidth) / 2f
                     val top = size.height - barHeight
                     val radius = (barWidth / 2f).coerceAtMost(8.dp.toPx())
@@ -190,16 +213,23 @@ fun PeriodBarChart(
                         size = Size(barWidth, barHeight),
                         cornerRadius = CornerRadius(radius, radius),
                     )
+                    labelLayout?.let { layout ->
+                        drawBarValueLabel(
+                            textLayout = layout,
+                            left = left,
+                            top = top,
+                            width = barWidth,
+                            height = barHeight,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
-            ChartXAxisWithYAxis {
-                PeriodChartXAxis(
-                    dates = buckets.map { it.date },
-                    selectedRange = selectedRange,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                )
-            }
+            PeriodChartXAxis(
+                dates = buckets.map { it.date },
+                selectedRange = selectedRange,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = summaryText,
@@ -207,6 +237,115 @@ fun PeriodBarChart(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+private data class BarValueLabelLayout(
+    val lines: List<TextLayoutResult>,
+    val width: Int,
+    val height: Int,
+)
+
+private fun DrawScope.measureBarValueLabel(
+    textMeasurer: TextMeasurer,
+    text: String,
+    style: TextStyle,
+    width: Float,
+): BarValueLabelLayout? {
+    if (text.isBlank()) return null
+    val horizontalPadding = 2.dp.toPx()
+    val maxWidth = width - horizontalPadding * 2f
+    val splitLabel = splitBarValueLabel(text)
+    return if (splitLabel != null) {
+        measureBarValueLabelLines(
+            textMeasurer = textMeasurer,
+            lines = splitLabel,
+            style = style,
+            maxWidth = maxWidth,
+        )
+    } else {
+        measureBarValueLabelLines(
+            textMeasurer = textMeasurer,
+            lines = listOf(text.trim()),
+            style = style,
+            maxWidth = maxWidth,
+        )
+    }
+}
+
+private fun DrawScope.measureBarValueLabelLines(
+    textMeasurer: TextMeasurer,
+    lines: List<String>,
+    style: TextStyle,
+    maxWidth: Float,
+): BarValueLabelLayout? {
+    val lineGap = 1.dp.toPx().toInt()
+    val layouts = lines.map { line ->
+        textMeasurer.measure(
+            text = line,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+        )
+    }
+    if (layouts.any { it.size.width > maxWidth }) return null
+
+    return BarValueLabelLayout(
+        lines = layouts,
+        width = layouts.maxOfOrNull { it.size.width } ?: 0,
+        height = layouts.sumOf { it.size.height } + lineGap * (layouts.size - 1).coerceAtLeast(0),
+    )
+}
+
+private fun splitBarValueLabel(text: String): List<String>? {
+    val trimmed = text.trim()
+    val splitIndex = trimmed.lastIndexOf(' ')
+    if (splitIndex <= 0 || splitIndex >= trimmed.lastIndex) return null
+    return listOf(
+        trimmed.substring(0, splitIndex).withoutIntegerGroupingSeparators(),
+        trimmed.substring(splitIndex + 1),
+    )
+}
+
+private fun String.withoutIntegerGroupingSeparators(): String {
+    val signedValue = trim()
+    val sign = signedValue.firstOrNull()?.takeIf { it == '-' || it == '+' }?.toString().orEmpty()
+    val unsignedValue = if (sign.isNotEmpty()) signedValue.drop(1) else signedValue
+    if (unsignedValue.isEmpty()) return signedValue
+    if (unsignedValue.any { !it.isDigit() && !it.isIntegerGroupingSeparator() }) return signedValue
+
+    val groups = unsignedValue.split(*IntegerGroupingSeparators)
+    if (groups.size <= 1 || groups.any { it.isEmpty() }) return signedValue
+    if (groups.drop(1).any { it.length != 3 }) return signedValue
+
+    return sign + groups.joinToString(separator = "")
+}
+
+private fun Char.isIntegerGroupingSeparator(): Boolean =
+    this == ',' || this == '.' || this == '\'' || isWhitespace() || this == '\u00A0'
+
+private val IntegerGroupingSeparators = charArrayOf(',', '.', '\'', ' ', '\u00A0')
+
+private fun DrawScope.drawBarValueLabel(
+    textLayout: BarValueLabelLayout,
+    left: Float,
+    top: Float,
+    width: Float,
+    height: Float,
+) {
+    val verticalPadding = 2.dp.toPx()
+    if (height < textLayout.height + verticalPadding * 2f) return
+
+    var lineTop = top + (height - textLayout.height) / 2f
+    textLayout.lines.forEach { line ->
+        drawText(
+            textLayoutResult = line,
+            topLeft = Offset(
+                x = left + (width - line.size.width) / 2f,
+                y = lineTop,
+            ),
+        )
+        lineTop += line.size.height + 1.dp.toPx()
     }
 }
 
