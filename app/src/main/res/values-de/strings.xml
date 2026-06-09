@@ -50,6 +50,7 @@
     <string name="screen_dashboard">Übersicht</string>
     <string name="screen_steps">Schritte</string>
     <string name="screen_activities">Aktivitäten</string>
+    <string name="screen_calories">Kalorien</string>
     <string name="screen_activity_detail">Aktivitätsdetails</string>
     <string name="screen_sleep">Schlaf</string>
     <string name="screen_sleep_detail">Schlafdetails</string>
@@ -430,6 +431,7 @@
     <string name="section_cycle_calendar">Zykluskalender</string>
     <string name="section_basal_body_temperature">Basaltemperatur</string>
     <string name="section_statistics">Statistiken</string>
+    <string name="section_calorie_trends">Kalorientrends</string>
 
     <string name="summary_daily_average">%1$s Tagesdurchschnitt</string>
     <string name="summary_days_in_range">%1$s Tage im Zeitraum</string>
@@ -465,6 +467,8 @@
     <string name="stat_highest">Höchster Wert</string>
     <string name="stat_readings">Messwerte</string>
     <string name="stat_daily_average">Tagesdurchschnitt</string>
+    <string name="calories_stat_active_average">Aktiver Durchschnitt</string>
+    <string name="calories_stat_bmr_readings">BMR-Messwerte</string>
     <string name="stat_average_duration">Durchschnittliche Dauer</string>
     <string name="stat_total_intake">Gesamtaufnahme</string>
     <string name="stat_best_day">Bester Tag</string>
@@ -656,6 +660,7 @@
     <string name="message_no_calories_burned">Es wurden keine Daten zu Gesamtkalorien aufgezeichnet</string>
     <string name="message_no_floors_climbed">Es wurden keine Daten zu gestiegenen Etagen aufgezeichnet</string>
     <string name="message_no_active_calories">Es wurden keine Daten zu aktiven Kalorien aufgezeichnet</string>
+    <string name="message_no_calorie_data_period">Keine Daten zu Gesamtkalorien, aktiven Kalorien oder BMR in diesem Zeitraum.</string>
     <string name="message_no_elevation">Es wurden keine Höhendaten aufgezeichnet</string>
     <string name="message_no_sleep_day_selected">Keine Schlafdaten für den ausgewählten Tag.</string>
     <string name="message_no_sleep_period">Keine Schlafdaten im ausgewählten Zeitraum.</string>

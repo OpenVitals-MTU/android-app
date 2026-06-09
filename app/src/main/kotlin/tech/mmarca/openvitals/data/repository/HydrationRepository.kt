@@ -26,6 +26,7 @@ class HydrationRepository @Inject constructor(
 
     companion object {
         private const val TAG = "HydrationRepository"
+        private const val DefaultHydrationDailyGoalLiters = 2.0
     }
 
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
@@ -38,6 +39,11 @@ class HydrationRepository @Inject constructor(
     fun setHydrationContainerVolumeMilliliters(containerId: String, milliliters: Double) {
         preferencesRepository?.setHydrationContainerVolumeMilliliters(containerId, milliliters)
     }
+
+    fun hydrationDailyGoalLiters(): Double =
+        preferencesRepository?.hydrationDailyGoalLiters
+            ?.takeIf { it > 0.0 && it.isFinite() }
+            ?: DefaultHydrationDailyGoalLiters
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()

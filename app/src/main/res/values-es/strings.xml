@@ -50,6 +50,7 @@
     <string name="screen_dashboard">Resumen</string>
     <string name="screen_steps">Pasos</string>
     <string name="screen_activities">Actividades</string>
+    <string name="screen_calories">Calorías</string>
     <string name="screen_activity_detail">Detalle de actividad</string>
     <string name="screen_sleep">Sueño</string>
     <string name="screen_sleep_detail">Detalle de sueño</string>
@@ -430,6 +431,7 @@
     <string name="section_cycle_calendar">Calendario del ciclo</string>
     <string name="section_basal_body_temperature">Temperatura corporal basal</string>
     <string name="section_statistics">Estadísticas</string>
+    <string name="section_calorie_trends">Tendencias de calorías</string>
 
     <string name="summary_daily_average">media diaria de %1$s</string>
     <string name="summary_days_in_range">%1$s días en el rango</string>
@@ -465,6 +467,8 @@
     <string name="stat_highest">Máximo</string>
     <string name="stat_readings">Lecturas</string>
     <string name="stat_daily_average">Media diaria</string>
+    <string name="calories_stat_active_average">Media activa</string>
+    <string name="calories_stat_bmr_readings">Lecturas de BMR</string>
     <string name="stat_average_duration">Duración media</string>
     <string name="stat_total_intake">Ingesta total</string>
     <string name="stat_best_day">Mejor día</string>
@@ -656,6 +660,7 @@
     <string name="message_no_calories_burned">No se registraron datos de calorías totales</string>
     <string name="message_no_floors_climbed">No se registraron datos de pisos subidos</string>
     <string name="message_no_active_calories">No se registraron datos de calorías activas</string>
+    <string name="message_no_calorie_data_period">No hay datos de calorías totales, activas ni BMR en este periodo.</string>
     <string name="message_no_elevation">No se registraron datos de elevación</string>
     <string name="message_no_sleep_day_selected">No hay datos de sueño para el día seleccionado.</string>
     <string name="message_no_sleep_period">No hay datos de sueño en el periodo seleccionado.</string>

@@ -30,10 +30,12 @@ class HydrationEntryViewModelTest {
     private fun entryRepo(
         canWrite: Boolean = true,
         dailyHydration: List<DailyHydration> = emptyList(),
+        dailyGoalLiters: Double = 2.0,
         containerVolumeMilliliters: Map<String, Double> = emptyMap(),
     ) = mockk<HydrationRepository>().also { repo ->
         every { repo.hydrationWritePermissions } returns setOf("write_hydration")
         every { repo.hydrationContainerVolumeMilliliters() } returns containerVolumeMilliliters
+        every { repo.hydrationDailyGoalLiters() } returns dailyGoalLiters
         every { repo.setHydrationContainerVolumeMilliliters(any(), any()) } returns Unit
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
@@ -46,6 +48,13 @@ class HydrationEntryViewModelTest {
 
         assertFalse(vm.uiState.value.isCheckingPermission)
         assertTrue(vm.uiState.value.canWriteHydration)
+    }
+
+    @Test fun `initial state uses configured daily hydration goal`() = runTest {
+        val vm = HydrationEntryViewModel(entryRepo(dailyGoalLiters = 2.75))
+        advanceUntilIdle()
+
+        assertEquals(2.75, vm.uiState.value.dailyGoalLiters, 0.0001)
     }
 
     @Test fun `container presets use expected defaults`() = runTest {

@@ -32,7 +32,7 @@ val hasReleaseSigning = listOf(
 
 android {
     namespace = "tech.mmarca.openvitals"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "tech.mmarca.openvitals"

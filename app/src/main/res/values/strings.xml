@@ -50,6 +50,7 @@
     <string name="screen_dashboard">Summary</string>
     <string name="screen_steps">Steps</string>
     <string name="screen_activities">Activities</string>
+    <string name="screen_calories">Calories</string>
     <string name="screen_activity_detail">Activity detail</string>
     <string name="screen_sleep">Sleep</string>
     <string name="screen_sleep_detail">Sleep detail</string>
@@ -430,6 +431,7 @@
     <string name="section_cycle_calendar">Cycle calendar</string>
     <string name="section_basal_body_temperature">Basal body temperature</string>
     <string name="section_statistics">Statistics</string>
+    <string name="section_calorie_trends">Calorie trends</string>
 
     <string name="summary_daily_average">%1$s daily average</string>
     <string name="summary_days_in_range">%1$s days in range</string>
@@ -465,6 +467,8 @@
     <string name="stat_highest">Highest</string>
     <string name="stat_readings">Readings</string>
     <string name="stat_daily_average">Daily average</string>
+    <string name="calories_stat_active_average">Active average</string>
+    <string name="calories_stat_bmr_readings">BMR readings</string>
     <string name="stat_average_duration">Average duration</string>
     <string name="stat_total_intake">Total intake</string>
     <string name="stat_best_day">Best day</string>
@@ -656,6 +660,7 @@
     <string name="message_no_calories_burned">No total calorie data was recorded</string>
     <string name="message_no_floors_climbed">No floors climbed data was recorded</string>
     <string name="message_no_active_calories">No active calories data was recorded</string>
+    <string name="message_no_calorie_data_period">No total, active, or BMR calorie data in this period.</string>
     <string name="message_no_elevation">No elevation data was recorded</string>
     <string name="message_no_sleep_day_selected">No sleep data for the selected day.</string>
     <string name="message_no_sleep_period">No sleep data in the selected period.</string>

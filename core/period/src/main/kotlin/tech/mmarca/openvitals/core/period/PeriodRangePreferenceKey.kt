@@ -5,6 +5,7 @@ enum class PeriodRangePreferenceKey(
     val defaultRange: TimeRange,
 ) {
     STEPS("detail_range_steps", TimeRange.WEEK),
+    CALORIES("detail_range_calories", TimeRange.WEEK),
     ACTIVITIES("detail_range_activities", TimeRange.WEEK),
     SLEEP("detail_range_sleep", TimeRange.WEEK),
     HEART("detail_range_heart", TimeRange.WEEK),

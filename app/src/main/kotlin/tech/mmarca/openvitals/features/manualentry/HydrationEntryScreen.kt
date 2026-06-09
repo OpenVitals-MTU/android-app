@@ -2,6 +2,8 @@ package tech.mmarca.openvitals.features.manualentry
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -28,8 +30,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
@@ -44,7 +48,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -163,6 +170,7 @@ private fun HydrationTrackerCard(
 
             HydrationTodayCounter(
                 liters = state.todayHydrationLiters,
+                dailyGoalLiters = state.dailyGoalLiters,
                 unitFormatter = unitFormatter,
             )
 
@@ -221,34 +229,70 @@ private fun HydrationTrackerCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HydrationTodayCounter(
     liters: Double,
+    dailyGoalLiters: Double,
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     val todayHydration = unitFormatter.hydration(liters)
+    val dailyGoal = unitFormatter.hydration(dailyGoalLiters)
+    val targetProgress = if (dailyGoalLiters > 0.0) {
+        (liters / dailyGoalLiters).toFloat().coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val progress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = tween(durationMillis = 650),
+        label = "HydrationTodayGoalProgress",
+    )
+    val trackColor = MaterialTheme.colorScheme.outlineVariant
+    val progressColor = HydrationColor.copy(alpha = 0.86f)
+    val strokeWidth = with(LocalDensity.current) { 5.dp.toPx() }
+    val progressStroke = remember(strokeWidth) {
+        Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = stringResource(R.string.period_today),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = todayHydration.text,
-                style = MaterialTheme.typography.titleMedium,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.period_today),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${todayHydration.text} / ${dailyGoal.text}",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+            LinearWavyProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(18.dp),
+                color = progressColor,
+                trackColor = trackColor,
+                stroke = progressStroke,
+                trackStroke = progressStroke,
+                wavelength = 34.dp,
+                waveSpeed = 34.dp,
             )
         }
     }

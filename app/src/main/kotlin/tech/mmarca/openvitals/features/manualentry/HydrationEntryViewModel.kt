@@ -80,6 +80,7 @@ data class HydrationEntryUiState(
     val hydrationWritePermissions: Set<String> = emptySet(),
     val canWriteHydration: Boolean = false,
     val todayHydrationLiters: Double = 0.0,
+    val dailyGoalLiters: Double = 2.0,
     val isSavingEntry: Boolean = false,
     val beverageOptions: List<HydrationBeverage> = HydrationBeverage.DisplayOrder,
     val selectedBeverage: HydrationBeverage = HydrationBeverage.WATER,
@@ -119,6 +120,7 @@ class HydrationEntryViewModel @Inject constructor(
 
     fun refresh() {
         refreshPermission()
+        refreshDailyGoal()
         refreshTodayHydration()
     }
 
@@ -147,6 +149,12 @@ class HydrationEntryViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun refreshDailyGoal() {
+        _uiState.value = _uiState.value.copy(
+            dailyGoalLiters = repository.hydrationDailyGoalLiters(),
+        )
     }
 
     fun refreshTodayHydration(today: LocalDate = LocalDate.now()) {
@@ -312,6 +320,7 @@ private fun initialHydrationEntryState(
     return HydrationEntryUiState(
         containerOptions = options,
         selectedContainer = options.first(),
+        dailyGoalLiters = repository.hydrationDailyGoalLiters(),
         editRecordId = editRecordId,
     )
 }

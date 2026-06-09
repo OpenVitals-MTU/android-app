@@ -41,6 +41,8 @@ import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
 import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
 import tech.mmarca.openvitals.features.activity.CaloriesOutScreen
+import tech.mmarca.openvitals.features.activity.CaloriesScreen
+import tech.mmarca.openvitals.features.activity.CaloriesViewModel
 import tech.mmarca.openvitals.features.activity.CardioLoadDetailScreen
 import tech.mmarca.openvitals.features.activity.DistanceScreen
 import tech.mmarca.openvitals.features.activity.ElevationScreen
@@ -229,6 +231,7 @@ fun AppNavigation(
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_vitals_measurement_entry)
         Screen.Steps.route -> stringResource(R.string.screen_steps)
+        Screen.Calories.route -> stringResource(R.string.screen_calories)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
@@ -348,6 +351,9 @@ fun AppNavigation(
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                     onOpenMetric = { metricId ->
                         when (metricId) {
+                            DashboardWidgetId.CALORIES_OUT,
+                            DashboardWidgetId.ACTIVE_CALORIES,
+                            DashboardWidgetId.BMR -> navController.navigate(Screen.Calories.route)
                             DashboardWidgetId.WORKOUT -> navController.navigate(Screen.Activity.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
@@ -570,6 +576,9 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onOpenMetric = { targetMetricId ->
                         when (targetMetricId) {
+                            DashboardWidgetId.CALORIES_OUT,
+                            DashboardWidgetId.ACTIVE_CALORIES,
+                            DashboardWidgetId.BMR -> navController.navigate(Screen.Calories.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
@@ -618,6 +627,15 @@ fun AppNavigation(
                 )
             }
 
+            composable(Screen.Calories.route) {
+                val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
+                CaloriesScreen(
+                    viewModel = caloriesViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
+
             composable(Screen.Activity.route) {
                 val activitiesViewModel = hiltViewModel<ActivitiesViewModel>()
                 ActivitiesScreen(
@@ -640,7 +658,7 @@ fun AppNavigation(
                         navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.DISTANCE.name))
                     },
                     onOpenEnergyBurned = {
-                        navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.CALORIES_OUT.name))
+                        navController.navigate(Screen.Calories.route)
                     },
                     onOpenHrv = {
                         navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
@@ -815,6 +833,11 @@ private fun DashboardWidgetId.entryRoute(): String? =
         else -> null
     }
 
+private fun DashboardWidgetId.isCaloriesDetailMetric(): Boolean =
+    this == DashboardWidgetId.CALORIES_OUT ||
+        this == DashboardWidgetId.ACTIVE_CALORIES ||
+        this == DashboardWidgetId.BMR
+
 @Composable
 private fun MetricRouteContent(
     metricId: DashboardWidgetId?,
@@ -832,6 +855,16 @@ private fun MetricRouteContent(
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
+    if (metricId?.isCaloriesDetailMetric() == true) {
+        val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
+        CaloriesScreen(
+            viewModel = caloriesViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+        return
+    }
+
     metricId?.toActivityMetricOrNull()?.let { activityMetric ->
         val activityViewModel = hiltViewModel<ActivityViewModel>()
         ActivityMetricRouteScreen(
@@ -1092,8 +1125,8 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
     when (metricId) {
         DashboardWidgetId.STEPS -> R.string.metric_steps
         DashboardWidgetId.DISTANCE -> R.string.metric_distance
-        DashboardWidgetId.CALORIES_OUT -> R.string.metric_calories_out
-        DashboardWidgetId.ACTIVE_CALORIES -> R.string.metric_active_calories
+        DashboardWidgetId.CALORIES_OUT -> R.string.screen_calories
+        DashboardWidgetId.ACTIVE_CALORIES -> R.string.screen_calories
         DashboardWidgetId.FLOORS -> R.string.metric_floors_climbed
         DashboardWidgetId.ELEVATION -> R.string.metric_elevation
         DashboardWidgetId.WORKOUT -> R.string.metric_workout
@@ -1108,7 +1141,7 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.BMI -> R.string.metric_bmi
         DashboardWidgetId.BODY_FAT -> R.string.metric_body_fat
         DashboardWidgetId.LEAN_MASS -> R.string.metric_lean_mass
-        DashboardWidgetId.BMR -> R.string.metric_bmr
+        DashboardWidgetId.BMR -> R.string.screen_calories
         DashboardWidgetId.BONE_MASS -> R.string.metric_bone_mass
         DashboardWidgetId.AVG_HEART_RATE -> R.string.metric_avg_heart_rate
         DashboardWidgetId.RESTING_HEART_RATE -> R.string.metric_resting_heart_rate
