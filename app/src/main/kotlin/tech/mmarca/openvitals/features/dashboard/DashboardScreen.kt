@@ -97,7 +97,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -114,6 +113,7 @@ import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardWeeklyCardioLoad
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
+import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
@@ -1870,16 +1870,15 @@ private fun DashboardPillWidget(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     if (showTitle) {
-                        Text(
+                        AutoResizeText(
                             text = title,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Text(
+                    AutoResizeText(
                         text = message ?: dashboardDisplayValue(value),
                         style = if (subtitle == null || !showTitle) {
                             MaterialTheme.typography.titleLarge
@@ -1893,16 +1892,14 @@ private fun DashboardPillWidget(
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                     if (message == null && subtitle != null) {
-                        Text(
+                        AutoResizeText(
                             text = subtitle,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = subtitleColor,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -1978,27 +1975,25 @@ private fun DashboardCircleWidget(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
+                AutoResizeText(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
-                Text(
+                AutoResizeText(
                     text = value.value,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                 )
-                Text(
+                AutoResizeText(
                     text = progress.label,
                     style = MaterialTheme.typography.labelSmall,
                     color = accentColor,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

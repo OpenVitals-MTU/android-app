@@ -44,7 +44,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
@@ -76,6 +75,7 @@ import tech.mmarca.openvitals.data.model.SleepStage
 import tech.mmarca.openvitals.data.model.dailySleepSummary
 import tech.mmarca.openvitals.data.model.sleepDurationMsFromStages
 import tech.mmarca.openvitals.data.model.sleepSessionsForRange
+import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
@@ -537,24 +537,22 @@ private fun SleepOverviewTopCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(
+                AutoResizeText(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(2.dp))
                 SleepOverviewValue(
                     value = value,
                     emphasis = SleepOverviewValueEmphasis.Medium,
                 )
-                Text(
+                AutoResizeText(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -606,12 +604,11 @@ private fun SleepOverviewMetricCard(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(
+                    AutoResizeText(
                         text = title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Spacer(Modifier.height(12.dp))
@@ -619,12 +616,11 @@ private fun SleepOverviewMetricCard(
                     value = value,
                     emphasis = valueEmphasis,
                 )
-                Text(
+                AutoResizeText(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
             chartContent?.invoke()
@@ -712,12 +708,11 @@ private fun SleepOverviewValue(
         SleepOverviewValueEmphasis.Small -> MaterialTheme.typography.bodySmall
     }
     Row(verticalAlignment = Alignment.Bottom) {
-        Text(
+        AutoResizeText(
             text = value.value,
             style = valueStyle,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
         if (value.unit.isNotBlank()) {
             Spacer(Modifier.width(4.dp))

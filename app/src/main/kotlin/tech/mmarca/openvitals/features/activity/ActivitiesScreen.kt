@@ -79,6 +79,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
@@ -693,19 +694,17 @@ private fun ActivityOverviewWorkoutRowContent(
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AutoResizeText(
                 text = workout.title ?: exerciseTypeLabel(workout.exerciseType),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
-            Text(
+            AutoResizeText(
                 text = "${localizedDayTitle(start.toLocalDate())} / ${dateTimeFormatterProvider.shortTime().format(start)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(Modifier.width(12.dp))
@@ -777,42 +776,38 @@ private fun ActivityMetricCard(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(
+                    AutoResizeText(
                         text = title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Column {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
+                        AutoResizeText(
                             text = value.value,
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                         )
                         if (value.unit.isNotBlank()) {
                             Spacer(Modifier.width(4.dp))
-                            Text(
+                            AutoResizeText(
                                 text = value.unit,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(bottom = 5.dp),
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
-                    Text(
+                    AutoResizeText(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = subtitleColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -878,22 +873,23 @@ private fun ActivityMiniLineChart(values: List<Double>, accentColor: Color) {
             end = Offset(size.width, size.height * 0.72f),
             strokeWidth = 2.dp.toPx(),
         )
+        val lineStrokeWidth = 4.dp.toPx()
+        points.singleOrNull()?.let { point ->
+            drawLine(
+                color = accentColor,
+                start = Offset(lineStrokeWidth / 2f, point.y),
+                end = Offset(size.width - lineStrokeWidth / 2f, point.y),
+                strokeWidth = lineStrokeWidth,
+                cap = StrokeCap.Round,
+            )
+            return@Canvas
+        }
         points.zipWithNext().forEach { (start, end) ->
             drawLine(
                 color = accentColor,
                 start = start,
                 end = end,
-                strokeWidth = 4.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
-        }
-        points.singleOrNull()?.let { point ->
-            val halfLineWidth = (size.width * 0.18f).coerceAtLeast(18.dp.toPx())
-            drawLine(
-                color = accentColor,
-                start = Offset((point.x - halfLineWidth).coerceAtLeast(0f), point.y),
-                end = Offset((point.x + halfLineWidth).coerceAtMost(size.width), point.y),
-                strokeWidth = 4.dp.toPx(),
+                strokeWidth = lineStrokeWidth,
                 cap = StrokeCap.Round,
             )
         }

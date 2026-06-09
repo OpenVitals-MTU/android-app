@@ -65,7 +65,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.health.connect.client.PermissionController
@@ -73,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
@@ -755,12 +755,11 @@ private fun ManualEntryMetricTile(
                 tint = accentColor.copy(alpha = 0.75f),
                 modifier = Modifier.size(ManualEntryTileIconSize),
             )
-            Text(
+            AutoResizeText(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

@@ -70,7 +70,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.core.content.ContextCompat
@@ -90,6 +89,7 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.ActivityPauseInterval
 import tech.mmarca.openvitals.features.activity.RoutePreview
+import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
@@ -950,19 +950,17 @@ private fun ActivityPickerField(
                     .padding(start = 8.dp)
                     .weight(1f),
             ) {
-                Text(
+                AutoResizeText(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
                     color = contentColor,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
-                Text(
+                AutoResizeText(
                     text = value,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -1361,12 +1359,11 @@ private fun RecordingStat(
                 )
             }
         }
-        Text(
+        AutoResizeText(
             text = label.uppercase(),
             style = MaterialTheme.typography.labelLarge,
             color = WorkoutColor,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
     }
 }
