@@ -354,14 +354,16 @@ private fun LazyListScope.averageHeartRateContent(
 ) {
     when {
         state.selectedRange == TimeRange.DAY && state.daySamples.isNotEmpty() -> {
-            item {
-                HeartRateTimelineCard(
-                    date = state.selectedDate,
-                    samples = state.daySamples,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
-                )
+            if (state.daySamples.size > 1) {
+                item {
+                    HeartRateTimelineCard(
+                        date = state.selectedDate,
+                        samples = state.daySamples,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = metricModifier(),
+                    )
+                }
             }
             heartRateThresholdChecks(
                 state = state,
@@ -847,6 +849,7 @@ private fun LazyListScope.bloodPressureContent(
                 selectedRange = state.selectedRange,
                 period = period,
                 unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
             )
         }
@@ -900,8 +903,11 @@ private fun LazyListScope.spO2Content(
         item {
             VitalsLineChart(
                 title = stringResource(R.string.metric_oxygen_saturation),
-                values = sorted.map { it.percent },
-                dates = sorted.map { it.time.atZone(ZoneId.systemDefault()).toLocalDate() },
+                points = rawVitalsPoints(
+                    entries = sorted,
+                    time = { it.time },
+                    value = { it.percent },
+                ),
                 selectedRange = state.selectedRange,
                 period = period,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -972,6 +978,18 @@ private fun LazyListScope.vo2MaxContent(
 ) {
     val latest = state.latestVo2Max
     if (latest != null) {
+        if (state.vo2Max.size > 1) {
+            item {
+                Vo2MaxChart(
+                    entries = state.vo2Max,
+                    selectedRange = state.selectedRange,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = metricModifier(),
+                )
+            }
+        }
         item {
             val value = unitFormatter.vo2Max(latest.vo2MaxMlPerKgPerMin)
             MetricCard(
@@ -1027,7 +1045,19 @@ private fun LazyListScope.respiratoryRateContent(
 ) {
     if (state.respiratoryRate.isNotEmpty()) {
         item {
-            if (state.selectedRange == TimeRange.DAY) {
+            RespiratoryRateChart(
+                entries = state.respiratoryRate,
+                selectedRange = state.selectedRange,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+        if (state.selectedRange == TimeRange.DAY) {
+            item {
                 SimpleVitalsList(
                     title = stringResource(R.string.vitals_respiratory_rate_readings),
                     entries = state.respiratoryRate,
@@ -1039,17 +1069,6 @@ private fun LazyListScope.respiratoryRateContent(
                     editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
                     onEdit = { onEditVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
                     onDelete = { onDeleteVitalsMeasurement(VitalsMeasurementType.RESPIRATORY_RATE, it.id) },
-                )
-            } else {
-                RespiratoryRateChart(
-                    entries = state.respiratoryRate,
-                    selectedRange = state.selectedRange,
-                    period = period,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
-                    selectedDate = chartDaySelection.selectedDate,
-                    onDateSelected = chartDaySelection.onDateSelected,
                 )
             }
         }
@@ -1128,6 +1147,16 @@ private fun LazyListScope.bodyTemperatureContent(
     onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.bodyTemperature.isNotEmpty()) {
+        item {
+            BodyTemperatureChart(
+                entries = state.bodyTemperature,
+                selectedRange = state.selectedRange,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+            )
+        }
         item {
             SimpleVitalsList(
                 title = stringResource(R.string.vitals_body_temperature_readings),

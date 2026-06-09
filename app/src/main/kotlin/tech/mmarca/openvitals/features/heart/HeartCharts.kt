@@ -11,8 +11,6 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSummary
-import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import java.time.LocalDate
@@ -47,12 +45,23 @@ internal fun HeartRateChart(
         localizedPeriodTitle(selectedRange, period)
     }
 
-    PeriodHistoryChart(
+    val avgPoints = sorted.map { VitalsLinePoint(date = it.date, value = it.avgBpm.toDouble()) }
+    val minPoints = sorted.map { VitalsLinePoint(date = it.date, value = it.minBpm.toDouble()) }
+    val maxPoints = sorted.map { VitalsLinePoint(date = it.date, value = it.maxBpm.toDouble()) }
+    val hasRange = sorted.any { it.minBpm != it.maxBpm }
+
+    VitalsTrendLineChart(
         title = stringResource(R.string.metric_average_heart_rate),
-        values = sorted.map { PeriodChartValue(date = it.date, value = it.avgBpm.toDouble()) },
+        series = buildList {
+            add(VitalsLineSeries(avgPoints, HeartColor, stringResource(R.string.summary_average)))
+            if (hasRange) {
+                add(VitalsLineSeries(minPoints, HeartColor.copy(alpha = 0.55f), stringResource(R.string.stat_lowest)))
+                add(VitalsLineSeries(maxPoints, HeartColor.copy(alpha = 0.9f), stringResource(R.string.stat_highest)))
+            }
+        },
         selectedRange = selectedRange,
         period = period,
-        accentColor = HeartColor.copy(alpha = 0.85f),
+        accentColor = HeartColor,
         summaryText = summaryText,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
@@ -78,12 +87,18 @@ internal fun RestingHRChart(
     val minBpm = sorted.minOfOrNull { it.bpm } ?: 40L
     val avg = sorted.map { it.bpm }.average().takeUnless { it.isNaN() }?.roundToInt() ?: 0
 
-    PeriodHistoryChart(
+    VitalsTrendLineChart(
         title = stringResource(R.string.metric_resting_heart_rate),
-        values = sorted.map { PeriodChartValue(date = it.date, value = it.bpm.toDouble()) },
+        series = listOf(
+            VitalsLineSeries(
+                points = sorted.map { VitalsLinePoint(date = it.date, value = it.bpm.toDouble()) },
+                color = HeartColor,
+                label = stringResource(R.string.metric_resting_heart_rate),
+            )
+        ),
         selectedRange = selectedRange,
         period = period,
-        accentColor = HeartColor.copy(alpha = 0.85f),
+        accentColor = HeartColor,
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
             stringResource(
                 R.string.summary_avg_value_range,
@@ -116,12 +131,18 @@ internal fun HRVChart(
     val minMs = sorted.minOfOrNull { it.rmssdMs } ?: 0.0
     val avg = sorted.map { it.rmssdMs }.average().takeUnless { it.isNaN() } ?: 0.0
 
-    PeriodHistoryChart(
+    VitalsTrendLineChart(
         title = stringResource(R.string.metric_hrv),
-        values = sorted.map { PeriodChartValue(date = it.date, value = it.rmssdMs) },
+        series = listOf(
+            VitalsLineSeries(
+                points = sorted.map { VitalsLinePoint(date = it.date, value = it.rmssdMs) },
+                color = HeartColor.copy(alpha = 0.85f),
+                label = stringResource(R.string.metric_hrv),
+            )
+        ),
         selectedRange = selectedRange,
         period = period,
-        accentColor = HeartColor.copy(alpha = 0.7f),
+        accentColor = HeartColor,
         summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
             stringResource(
                 R.string.summary_avg_value_range,

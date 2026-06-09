@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -93,6 +94,58 @@ class HeartVitalsSummariesTest {
         assertEquals(12.0, summaries[0].min, 0.0)
         assertEquals(18.0, summaries[0].max, 0.0)
         assertEquals(2, summaries[0].readings)
+    }
+
+    @Test fun `raw vitals points keep sample times sorted`() {
+        val points = rawVitalsPoints(
+            entries = listOf(
+                reading("2026-04-20T18:00:00Z", 18.0),
+                reading("2026-04-20T12:00:00Z", 12.0),
+            ),
+            time = { it.time },
+            value = { it.breathsPerMinute },
+        )
+
+        assertEquals(Instant.parse("2026-04-20T12:00:00Z"), points[0].time)
+        assertEquals(12.0, points[0].value, 0.0)
+        assertEquals(Instant.parse("2026-04-20T18:00:00Z"), points[1].time)
+    }
+
+    @Test fun `dailyAverageVitalsPoints averages points per date`() {
+        val points = dailyAverageVitalsPoints(
+            rawVitalsPoints(
+                entries = listOf(
+                    reading("2026-04-20T12:00:00Z", 12.0),
+                    reading("2026-04-20T18:00:00Z", 18.0),
+                    reading("2026-04-21T12:00:00Z", 21.0),
+                ),
+                time = { it.time },
+                value = { it.breathsPerMinute },
+            )
+        )
+
+        assertEquals(2, points.size)
+        assertEquals(LocalDate.of(2026, 4, 20), points[0].date)
+        assertEquals(15.0, points[0].value, 0.0)
+        assertNull(points[0].time)
+    }
+
+    @Test fun `dailyRangeVitalsPoints exposes average min and max lines`() {
+        val range = dailyRangeVitalsPoints(
+            entries = listOf(
+                reading("2026-04-20T12:00:00Z", 12.0),
+                reading("2026-04-20T18:00:00Z", 18.0),
+                reading("2026-04-21T12:00:00Z", 21.0),
+            ),
+            time = { it.time },
+            value = { it.breathsPerMinute },
+        )
+
+        assertEquals(2, range.average.size)
+        assertEquals(15.0, range.average[0].value, 0.0)
+        assertEquals(12.0, range.min[0].value, 0.0)
+        assertEquals(18.0, range.max[0].value, 0.0)
+        assertTrue(range.hasRange)
     }
 
     private fun reading(

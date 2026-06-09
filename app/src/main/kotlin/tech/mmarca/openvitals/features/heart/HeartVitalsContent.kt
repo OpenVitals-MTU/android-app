@@ -80,6 +80,7 @@ fun LazyListScope.HeartVitalsContent(
                     selectedRange = selectedRange,
                     period = period,
                     unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -91,8 +92,11 @@ fun LazyListScope.HeartVitalsContent(
             item {
                 VitalsLineChart(
                     title = stringResource(R.string.metric_oxygen_saturation),
-                    values = sortedSpO2.map { it.percent },
-                    dates = sortedSpO2.map { it.time.atZone(ZoneId.systemDefault()).toLocalDate() },
+                    points = rawVitalsPoints(
+                        entries = sortedSpO2,
+                        time = { it.time },
+                        value = { it.percent },
+                    ),
                     selectedRange = selectedRange,
                     period = period,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -109,6 +113,20 @@ fun LazyListScope.HeartVitalsContent(
         }
         state.latestVo2Max?.let { latest ->
             val vo2Max = unitFormatter.vo2Max(latest.vo2MaxMlPerKgPerMin)
+            if (state.vo2Max.size > 1) {
+                item {
+                    Vo2MaxChart(
+                        entries = state.vo2Max,
+                        selectedRange = selectedRange,
+                        period = period,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
             item {
                 MetricCard(
                     title = stringResource(R.string.metric_vo2_max),
@@ -142,22 +160,23 @@ fun LazyListScope.HeartVitalsContent(
         }
         if (state.respiratoryRate.isNotEmpty()) {
             item {
-                if (selectedRange == TimeRange.DAY) {
+                RespiratoryRateChart(
+                    entries = state.respiratoryRate,
+                    selectedRange = selectedRange,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            if (selectedRange == TimeRange.DAY) {
+                item {
                     SimpleVitalsList(
                         title = stringResource(R.string.vitals_respiratory_rate_readings),
                         entries = state.respiratoryRate,
                         value = { unitFormatter.respiratoryRate(it.breathsPerMinute).text },
                         source = { it.source },
                         time = { it.time },
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                } else {
-                    RespiratoryRateChart(
-                        entries = state.respiratoryRate,
-                        selectedRange = selectedRange,
-                        period = period,
-                        unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
@@ -180,6 +199,16 @@ fun LazyListScope.HeartVitalsContent(
             }
         }
         if (state.bodyTemperature.isNotEmpty()) {
+            item {
+                BodyTemperatureChart(
+                    entries = state.bodyTemperature,
+                    selectedRange = selectedRange,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
             item {
                 SimpleVitalsList(
                     title = stringResource(R.string.vitals_body_temperature_readings),
