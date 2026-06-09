@@ -112,6 +112,7 @@ import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DashboardData
 import tech.mmarca.openvitals.data.model.DashboardWeeklyCardioLoad
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.features.activity.exerciseTypeIcon
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.DayNavigator
@@ -2058,7 +2059,7 @@ private fun WorkoutCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
+                    imageVector = exerciseTypeIcon(workout.exerciseType),
                     contentDescription = null,
                     tint = WorkoutColor,
                     modifier = Modifier.size(20.dp),

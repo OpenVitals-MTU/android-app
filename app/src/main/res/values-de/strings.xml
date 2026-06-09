@@ -643,7 +643,7 @@
     <string name="dashboard_add_widgets">Widgets hinzufügen</string>
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
     <string name="dashboard_action_log">Protokollieren</string>
-    <string name="dashboard_activities_today">Aktivitäten heute</string>
+    <string name="dashboard_activities_today">Aktivitäten</string>
     <string name="dashboard_goal_of">von %1$s</string>
     <string name="calories_estimated_active_bmr">Kein Gesamteintrag, geschätzt aus aktiv + BMR</string>
     <string name="calories_estimated_value">Gesch. %1$s</string>

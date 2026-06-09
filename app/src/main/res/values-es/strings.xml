@@ -643,7 +643,7 @@
     <string name="dashboard_add_widgets">Añadir widgets</string>
     <string name="dashboard_all_widgets_added">Todos los widgets ya están en el resumen.</string>
     <string name="dashboard_action_log">Registrar</string>
-    <string name="dashboard_activities_today">Actividades de hoy</string>
+    <string name="dashboard_activities_today">Actividades</string>
     <string name="dashboard_goal_of">de %1$s</string>
     <string name="calories_estimated_active_bmr">Sin total, estimado con activas + BMR</string>
     <string name="calories_estimated_value">Est. %1$s</string>
