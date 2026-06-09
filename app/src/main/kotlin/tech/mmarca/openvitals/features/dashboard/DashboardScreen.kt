@@ -188,7 +188,6 @@ fun DashboardScreen(
                 canGoForward = state.selectedDate.isBefore(LocalDate.now()),
                 showPermissionsCallout = state.showPermissionsCallout,
                 trackCycle = state.trackCycle,
-                showOpenVitalsCalculatedCalories = state.showOpenVitalsCalculatedCalories,
                 dashboardWidgets = state.dashboardWidgets,
                 pendingWidgets = state.pendingWidgets,
                 dailyGoals = state.dailyGoals,
@@ -235,7 +234,6 @@ private fun DashboardContent(
     canGoForward: Boolean,
     showPermissionsCallout: Boolean,
     trackCycle: Boolean,
-    showOpenVitalsCalculatedCalories: Boolean,
     dashboardWidgets: List<DashboardWidgetId>,
     pendingWidgets: Set<DashboardWidgetId>,
     dailyGoals: DashboardDailyGoals,
@@ -268,7 +266,6 @@ private fun DashboardContent(
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         trackCycle = trackCycle,
-        showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
         dailyGoals = dailyGoals,
         widgetIds = specWidgetIds,
         pendingWidgets = pendingWidgets,
@@ -1083,7 +1080,6 @@ private fun dashboardWidgetSpecs(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     trackCycle: Boolean,
-    showOpenVitalsCalculatedCalories: Boolean,
     dailyGoals: DashboardDailyGoals,
     widgetIds: Collection<DashboardWidgetId>,
     pendingWidgets: Set<DashboardWidgetId>,
@@ -1159,35 +1155,25 @@ private fun dashboardWidgetSpecs(
         )
     }
     if (shouldBuild(DashboardWidgetId.CALORIES_OUT)) {
-        val caloriesValue = data.caloriesKcalSource
-            .takeUnless { it == CaloriesBurnedSource.NO_DATA }
-            ?.let { unitFormatter.energy(data.caloriesKcal) }
+        val caloriesKcal = if (data.caloriesKcalSource == CaloriesBurnedSource.NO_DATA) 0.0 else data.caloriesKcal
+        val caloriesValue = unitFormatter.energy(caloriesKcal)
         addOptionalMetric(
             id = DashboardWidgetId.CALORIES_OUT,
             title = stringResource(R.string.metric_calories_out),
             value = caloriesValue,
             icon = Icons.Outlined.LocalFireDepartment,
             accentColor = CaloriesColor,
-            noDataMessage = stringResource(
-                if (showOpenVitalsCalculatedCalories) {
-                    R.string.message_no_total_calories_estimate
-                } else {
-                    R.string.message_no_health_connect_total_calories
-                }
-            ),
             subtitle = if (data.caloriesKcalSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR) {
                 stringResource(R.string.calories_estimated_active_bmr)
             } else {
                 null
             },
             subtitleColor = MaterialTheme.colorScheme.onSurface,
-            progress = caloriesValue?.let {
-                dashboardGoalProgress(
-                    current = data.caloriesKcal,
-                    target = dailyGoals.caloriesOutKcal,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.energy(dailyGoals.caloriesOutKcal))),
-                )
-            },
+            progress = dashboardGoalProgress(
+                current = caloriesKcal,
+                target = dailyGoals.caloriesOutKcal,
+                label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.energy(dailyGoals.caloriesOutKcal))),
+            ),
             loadingMessage = loadingMessageFor(DashboardWidgetId.CALORIES_OUT),
             onClick = openMetric(DashboardWidgetId.CALORIES_OUT),
         )
