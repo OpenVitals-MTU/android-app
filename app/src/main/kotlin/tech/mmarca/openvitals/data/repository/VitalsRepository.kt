@@ -71,6 +71,22 @@ class VitalsRepository @Inject constructor(
         val granted = grantedPermissionsIfAvailable()
         val missingPermissions = phase3Permissions.filterNot { it in granted }.toSet()
         when (metric) {
+            VitalsPeriodMetric.ALL -> {
+                val current = windows.current
+                val bloodPressure = async { loadBloodPressure(current.start, current.end, granted) }
+                val spO2 = async { loadSpO2(current.start, current.end, granted) }
+                val vo2Max = async { loadVo2Max(current.start, current.end, granted) }
+                val respiratoryRate = async { loadRespiratoryRate(current.start, current.end, granted) }
+                val bodyTemperature = async { loadBodyTemperature(current.start, current.end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    bloodPressure = bloodPressure.await(),
+                    spO2 = spO2.await(),
+                    respiratoryRate = respiratoryRate.await(),
+                    bodyTemperature = bodyTemperature.await(),
+                    vo2Max = vo2Max.await(),
+                )
+            }
             VitalsPeriodMetric.BLOOD_PRESSURE -> {
                 val entries = loadPeriodTriplet(windows) { start, end -> loadBloodPressure(start, end, granted) }
                 VitalsPeriodData(
@@ -277,6 +293,7 @@ private data class VitalsPeriodTriplet<T>(
 )
 
 enum class VitalsPeriodMetric {
+    ALL,
     BLOOD_PRESSURE,
     SPO2,
     VO2_MAX,

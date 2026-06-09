@@ -31,6 +31,8 @@ import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -113,7 +115,7 @@ class HeartViewModel(
     private val vitalsRepository: VitalsRepository,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val selectedMetric: HeartMetric = HeartMetric.AVERAGE_HEART_RATE,
+    private val selectedMetric: HeartMetric? = HeartMetric.AVERAGE_HEART_RATE,
     private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     initialHighHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
@@ -255,18 +257,31 @@ class HeartViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                when (selectedMetric) {
+                when (val metric = selectedMetric) {
+                    null -> coroutineScope {
+                        val heart = async {
+                            repository
+                                .loadHeartPeriod(query, HeartPeriodMetric.ALL)
+                                .toLoadResult()
+                        }
+                        val vitals = async {
+                            vitalsRepository
+                                .loadVitalsPeriod(query, VitalsPeriodMetric.ALL)
+                                .toLoadResult()
+                        }
+                        heart.await().merge(vitals.await())
+                    }
                     HeartMetric.AVERAGE_HEART_RATE,
                     HeartMetric.RESTING_HEART_RATE,
                     HeartMetric.HRV -> repository
-                        .loadHeartPeriod(query, selectedMetric.toHeartPeriodMetric())
+                        .loadHeartPeriod(query, metric.toHeartPeriodMetric())
                         .toLoadResult()
                     HeartMetric.BLOOD_PRESSURE,
                     HeartMetric.SPO2,
                     HeartMetric.VO2_MAX,
                     HeartMetric.RESPIRATORY_RATE,
                     HeartMetric.BODY_TEMPERATURE -> vitalsRepository
-                        .loadVitalsPeriod(query, selectedMetric.toVitalsPeriodMetric())
+                        .loadVitalsPeriod(query, metric.toVitalsPeriodMetric())
                         .toLoadResult()
                 }
             }.onSuccess { result ->
@@ -590,8 +605,46 @@ private fun VitalsPeriodData.toLoadResult(): HeartLoadResult =
         baselineVo2Max = baselineVo2Max,
     )
 
-private fun heartMetricFromRoute(metricId: String?): HeartMetric =
-    when (metricId) {
+private fun HeartLoadResult.merge(other: HeartLoadResult): HeartLoadResult =
+    HeartLoadResult(
+        daySamples = daySamples + other.daySamples,
+        previousDaySamples = previousDaySamples + other.previousDaySamples,
+        dailySummaries = dailySummaries + other.dailySummaries,
+        previousDailySummaries = previousDailySummaries + other.previousDailySummaries,
+        baselineDailySummaries = baselineDailySummaries + other.baselineDailySummaries,
+        dayRestingBpm = dayRestingBpm ?: other.dayRestingBpm,
+        previousDayRestingBpm = previousDayRestingBpm ?: other.previousDayRestingBpm,
+        dayHrvMs = dayHrvMs ?: other.dayHrvMs,
+        previousDayHrvMs = previousDayHrvMs ?: other.previousDayHrvMs,
+        dailyRestingHR = dailyRestingHR + other.dailyRestingHR,
+        previousDailyRestingHR = previousDailyRestingHR + other.previousDailyRestingHR,
+        baselineDailyRestingHR = baselineDailyRestingHR + other.baselineDailyRestingHR,
+        dailyHrv = dailyHrv + other.dailyHrv,
+        previousDailyHrv = previousDailyHrv + other.previousDailyHrv,
+        baselineDailyHrv = baselineDailyHrv + other.baselineDailyHrv,
+        missingVitalsPermissions = missingVitalsPermissions + other.missingVitalsPermissions,
+        bloodPressure = bloodPressure + other.bloodPressure,
+        previousBloodPressure = previousBloodPressure + other.previousBloodPressure,
+        baselineBloodPressure = baselineBloodPressure + other.baselineBloodPressure,
+        spO2 = spO2 + other.spO2,
+        previousSpO2 = previousSpO2 + other.previousSpO2,
+        baselineSpO2 = baselineSpO2 + other.baselineSpO2,
+        respiratoryRate = respiratoryRate + other.respiratoryRate,
+        previousRespiratoryRate = previousRespiratoryRate + other.previousRespiratoryRate,
+        baselineRespiratoryRate = baselineRespiratoryRate + other.baselineRespiratoryRate,
+        bodyTemperature = bodyTemperature + other.bodyTemperature,
+        previousBodyTemperature = previousBodyTemperature + other.previousBodyTemperature,
+        baselineBodyTemperature = baselineBodyTemperature + other.baselineBodyTemperature,
+        vo2Max = vo2Max + other.vo2Max,
+        previousVo2Max = previousVo2Max + other.previousVo2Max,
+        baselineVo2Max = baselineVo2Max + other.baselineVo2Max,
+    )
+
+private fun heartMetricFromRoute(metricId: String?): HeartMetric? {
+    if (metricId == null) return null
+    return when (metricId) {
+        "AVG_HEART_RATE",
+        "AVERAGE_HEART_RATE" -> HeartMetric.AVERAGE_HEART_RATE
         "RESTING_HEART_RATE" -> HeartMetric.RESTING_HEART_RATE
         "HRV" -> HeartMetric.HRV
         "BLOOD_PRESSURE" -> HeartMetric.BLOOD_PRESSURE
@@ -601,3 +654,4 @@ private fun heartMetricFromRoute(metricId: String?): HeartMetric =
         "BODY_TEMPERATURE" -> HeartMetric.BODY_TEMPERATURE
         else -> HeartMetric.AVERAGE_HEART_RATE
     }
+}

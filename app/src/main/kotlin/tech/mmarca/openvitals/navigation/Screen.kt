@@ -48,6 +48,7 @@ sealed class Screen(val route: String) {
     data object Calories : Screen("calories")
     data object Nutrition : Screen("nutrition")
     data object Body : Screen("body")
+    data object HeartVitals : Screen("heart_vitals")
     data object Activity : Screen("activity")
     data object ActivityDetail : Screen("activity_detail/{$ACTIVITY_DETAIL_ID_ARG}") {
         fun createRoute(activityId: String): String = "activity_detail/${Uri.encode(activityId)}"

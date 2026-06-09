@@ -433,6 +433,7 @@
     <string name="section_sessions">Sitzungen</string>
     <string name="section_daily_breakdown">Tägliche Aufschlüsselung</string>
     <string name="section_vitals">Vitalwerte</string>
+    <string name="section_heart">Herz</string>
     <string name="section_cardiovascular">Kardiovaskulär</string>
     <string name="section_respiratory">Atmung</string>
     <string name="section_respiratory_rate_daily_breakdown">Tägliche Aufschlüsselung der Atemfrequenz</string>

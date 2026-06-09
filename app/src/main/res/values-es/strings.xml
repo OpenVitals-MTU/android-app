@@ -433,6 +433,7 @@
     <string name="section_sessions">Sesiones</string>
     <string name="section_daily_breakdown">Desglose diario</string>
     <string name="section_vitals">Constantes</string>
+    <string name="section_heart">Corazón</string>
     <string name="section_cardiovascular">Cardiovascular</string>
     <string name="section_respiratory">Respiratorio</string>
     <string name="section_respiratory_rate_daily_breakdown">Desglose diario de frecuencia respiratoria</string>

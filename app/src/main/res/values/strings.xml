@@ -433,6 +433,7 @@
     <string name="section_sessions">Sessions</string>
     <string name="section_daily_breakdown">Daily breakdown</string>
     <string name="section_vitals">Vitals</string>
+    <string name="section_heart">Heart</string>
     <string name="section_cardiovascular">Cardiovascular</string>
     <string name="section_respiratory">Respiratory</string>
     <string name="section_respiratory_rate_daily_breakdown">Respiratory rate daily breakdown</string>

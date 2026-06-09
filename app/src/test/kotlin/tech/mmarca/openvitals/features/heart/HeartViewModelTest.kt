@@ -52,6 +52,31 @@ class HeartViewModelTest {
             val metric = secondArg<HeartPeriodMetric>()
             val windows = query.windows
             when (metric) {
+                HeartPeriodMetric.ALL -> if (query.range == TimeRange.DAY) {
+                    HeartPeriodData(
+                        daySamples = repo.loadHeartRateSamples(query.selectedDate),
+                        previousDaySamples = repo.loadHeartRateSamples(windows.previous.start),
+                        baselineDailySummaries = repo.loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
+                        dayRestingBpm = repo.loadRestingHeartRate(query.selectedDate),
+                        previousDayRestingBpm = repo.loadRestingHeartRate(windows.previous.start),
+                        baselineDailyRestingHR = repo.loadDailyRestingHR(windows.baseline.start, windows.baseline.end),
+                        dayHrvMs = repo.loadHrvRmssd(query.selectedDate),
+                        previousDayHrvMs = repo.loadHrvRmssd(windows.previous.start),
+                        baselineDailyHrv = repo.loadDailyHRV(windows.baseline.start, windows.baseline.end),
+                    )
+                } else {
+                    HeartPeriodData(
+                        dailySummaries = repo.loadDailyHeartRateSummaries(windows.current.start, windows.current.end),
+                        previousDailySummaries = repo.loadDailyHeartRateSummaries(windows.previous.start, windows.previous.end),
+                        baselineDailySummaries = repo.loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
+                        dailyRestingHR = repo.loadDailyRestingHR(windows.current.start, windows.current.end),
+                        previousDailyRestingHR = repo.loadDailyRestingHR(windows.previous.start, windows.previous.end),
+                        baselineDailyRestingHR = repo.loadDailyRestingHR(windows.baseline.start, windows.baseline.end),
+                        dailyHrv = repo.loadDailyHRV(windows.current.start, windows.current.end),
+                        previousDailyHrv = repo.loadDailyHRV(windows.previous.start, windows.previous.end),
+                        baselineDailyHrv = repo.loadDailyHRV(windows.baseline.start, windows.baseline.end),
+                    )
+                }
                 HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
                     HeartPeriodData(
                         daySamples = repo.loadHeartRateSamples(query.selectedDate),
@@ -109,6 +134,24 @@ class HeartViewModelTest {
             val metric = secondArg<VitalsPeriodMetric>()
             val windows = query.windows
             when (metric) {
+                VitalsPeriodMetric.ALL -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    bloodPressure = repo.loadBloodPressure(windows.current.start, windows.current.end),
+                    previousBloodPressure = repo.loadBloodPressure(windows.previous.start, windows.previous.end),
+                    baselineBloodPressure = repo.loadBloodPressure(windows.baseline.start, windows.baseline.end),
+                    spO2 = repo.loadSpO2(windows.current.start, windows.current.end),
+                    previousSpO2 = repo.loadSpO2(windows.previous.start, windows.previous.end),
+                    baselineSpO2 = repo.loadSpO2(windows.baseline.start, windows.baseline.end),
+                    respiratoryRate = repo.loadRespiratoryRate(windows.current.start, windows.current.end),
+                    previousRespiratoryRate = repo.loadRespiratoryRate(windows.previous.start, windows.previous.end),
+                    baselineRespiratoryRate = repo.loadRespiratoryRate(windows.baseline.start, windows.baseline.end),
+                    bodyTemperature = repo.loadBodyTemperature(windows.current.start, windows.current.end),
+                    previousBodyTemperature = repo.loadBodyTemperature(windows.previous.start, windows.previous.end),
+                    baselineBodyTemperature = repo.loadBodyTemperature(windows.baseline.start, windows.baseline.end),
+                    vo2Max = repo.loadVo2Max(windows.current.start, windows.current.end),
+                    previousVo2Max = repo.loadVo2Max(windows.previous.start, windows.previous.end),
+                    baselineVo2Max = repo.loadVo2Max(windows.baseline.start, windows.baseline.end),
+                )
                 VitalsPeriodMetric.BLOOD_PRESSURE -> VitalsPeriodData(
                     missingVitalsPermissions = repo.missingPermissions(),
                     bloodPressure = repo.loadBloodPressure(windows.current.start, windows.current.end),

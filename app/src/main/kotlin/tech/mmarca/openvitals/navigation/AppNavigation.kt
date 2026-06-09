@@ -69,6 +69,7 @@ import tech.mmarca.openvitals.features.heart.BloodPressureScreen
 import tech.mmarca.openvitals.features.heart.BodyTemperatureScreen
 import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.heart.HeartViewModel
+import tech.mmarca.openvitals.features.heart.HeartVitalsOverviewScreen
 import tech.mmarca.openvitals.features.heart.HrvScreen
 import tech.mmarca.openvitals.features.heart.RespiratoryRateScreen
 import tech.mmarca.openvitals.features.heart.RestingHeartRateScreen
@@ -244,6 +245,7 @@ fun AppNavigation(
         Screen.Calories.route -> stringResource(R.string.screen_calories)
         Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
         Screen.Body.route -> stringResource(R.string.screen_body)
+        Screen.HeartVitals.route -> stringResource(R.string.screen_heart_vitals)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
@@ -381,7 +383,11 @@ fun AppNavigation(
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
-                            else -> navController.navigate(Screen.Metric.createRoute(metricId.name))
+                            else -> if (metricId.isHeartVitalsMetric()) {
+                                navController.navigate(Screen.HeartVitals.route)
+                            } else {
+                                navController.navigate(Screen.Metric.createRoute(metricId.name))
+                            }
                         }
                     },
                     onOpenActivities = {
@@ -583,6 +589,18 @@ fun AppNavigation(
                     viewModel = vitalsMeasurementViewModel,
                     unitFormatter = unitFormatter,
                     onEntrySaved = { navController.popBackStack() },
+                )
+            }
+
+            composable(Screen.HeartVitals.route) {
+                val heartViewModel = hiltViewModel<HeartViewModel>()
+                HeartVitalsOverviewScreen(
+                    viewModel = heartViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onOpenMetric = { metric ->
+                        navController.navigate(Screen.Metric.createRoute(metric.toDashboardWidgetId().name))
+                    },
                 )
             }
 
@@ -895,6 +913,9 @@ private fun DashboardWidgetId.isBodyDetailMetric(): Boolean =
         this == DashboardWidgetId.BONE_MASS ||
         this == DashboardWidgetId.BODY_WATER_MASS
 
+private fun DashboardWidgetId.isHeartVitalsMetric(): Boolean =
+    toHeartMetricOrNull() != null
+
 @Composable
 private fun MetricRouteContent(
     metricId: DashboardWidgetId?,
@@ -1151,6 +1172,18 @@ private fun DashboardWidgetId.toHeartMetricOrNull(): HeartMetric? =
         DashboardWidgetId.RESPIRATORY_RATE -> HeartMetric.RESPIRATORY_RATE
         DashboardWidgetId.BODY_TEMPERATURE -> HeartMetric.BODY_TEMPERATURE
         else -> null
+    }
+
+private fun HeartMetric.toDashboardWidgetId(): DashboardWidgetId =
+    when (this) {
+        HeartMetric.AVERAGE_HEART_RATE -> DashboardWidgetId.AVG_HEART_RATE
+        HeartMetric.RESTING_HEART_RATE -> DashboardWidgetId.RESTING_HEART_RATE
+        HeartMetric.HRV -> DashboardWidgetId.HRV
+        HeartMetric.BLOOD_PRESSURE -> DashboardWidgetId.BLOOD_PRESSURE
+        HeartMetric.SPO2 -> DashboardWidgetId.SPO2
+        HeartMetric.VO2_MAX -> DashboardWidgetId.VO2_MAX
+        HeartMetric.RESPIRATORY_RATE -> DashboardWidgetId.RESPIRATORY_RATE
+        HeartMetric.BODY_TEMPERATURE -> DashboardWidgetId.BODY_TEMPERATURE
     }
 
 private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =

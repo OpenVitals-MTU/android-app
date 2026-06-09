@@ -40,6 +40,7 @@ class HeartRepository @Inject constructor(
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         when (metric) {
+            HeartPeriodMetric.ALL -> loadAllHeartPeriod(query, granted)
             HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
                 val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
                 val previousDaySamples = async { loadHeartRateSamples(windows.previous.start, granted) }
@@ -107,6 +108,34 @@ class HeartRepository @Inject constructor(
                     baselineDailyHrv = baselineDailyHrv.await(),
                 )
             }
+        }
+    }
+
+    private suspend fun loadAllHeartPeriod(
+        query: PeriodLoadQuery,
+        granted: Set<String>,
+    ): HeartPeriodData = coroutineScope {
+        if (query.range == TimeRange.DAY) {
+            val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
+            val dayRestingBpm = async { loadRestingHeartRate(query.selectedDate, granted) }
+            val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
+            HeartPeriodData(
+                daySamples = daySamples.await(),
+                dayRestingBpm = dayRestingBpm.await(),
+                dayHrvMs = dayHrvMs.await(),
+            )
+        } else {
+            val current = query.windows.current
+            val dailySummaries = async {
+                loadDailyHeartRateSummaries(current.start, current.end, granted)
+            }
+            val dailyRestingHR = async { loadDailyRestingHR(current.start, current.end, granted) }
+            val dailyHrv = async { loadDailyHRV(current.start, current.end, granted) }
+            HeartPeriodData(
+                dailySummaries = dailySummaries.await(),
+                dailyRestingHR = dailyRestingHR.await(),
+                dailyHrv = dailyHrv.await(),
+            )
         }
     }
 
@@ -228,6 +257,7 @@ class HeartRepository @Inject constructor(
 }
 
 enum class HeartPeriodMetric {
+    ALL,
     AVERAGE_HEART_RATE,
     RESTING_HEART_RATE,
     HRV,
