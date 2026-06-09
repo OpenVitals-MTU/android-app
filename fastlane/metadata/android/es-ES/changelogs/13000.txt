@@ -1,0 +1,1 @@
+Añade importación de exportaciones de Apple Health para registros compatibles de actividad, corazón, cuerpo, hidratación y constantes; importación FIT para actividades; seguimiento de impulsos de silla de ruedas; vistas más completas de Corazón/Constantes y Cuerpo; y mejoras en nutrición, gráficos, ajustes, unidades y parsers de rutas.

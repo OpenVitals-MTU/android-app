@@ -1,0 +1,1 @@
+Adds Apple Health export import for supported activity, heart, body, hydration, and vitals records; FIT route import for activity entries; wheelchair push tracking and wheelchair activity support; richer Heart & Vitals and Body overview screens; improved nutrition charts, settings groups, unit formatting, and route parser reliability.

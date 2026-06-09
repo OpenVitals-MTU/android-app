@@ -6,7 +6,7 @@
 
 Privacy-first Health Connect dashboard, activity tracker, and manual entry app for Android.
 
-OpenVitals helps you review Health Connect data, record or import workouts, and add supported manual entries without creating an account or sending health data to an OpenVitals server. The dashboard is read-only by default; writes happen only when you explicitly save an entry back to Health Connect.
+OpenVitals helps you review Health Connect data, record or import workouts, import supported Apple Health exports, and add supported manual entries without creating an account or sending health data to an OpenVitals server. The dashboard is read-only by default; writes happen only when you explicitly save or import records back to Health Connect.
 
 ## Install
 
@@ -34,6 +34,8 @@ OpenVitals helps you review Health Connect data, record or import workouts, and 
 - Opt-in hydration reminders with active hours and daily-goal pause logic
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ/FIT route import and GPS activity recording with review before saving
+- Apple Health export import for supported activity, heart, body, hydration, and vitals records
+- Wheelchair activity and wheelchair push tracking when Health Connect data is available
 - Dedicated Calories detail screen with total, active, and BMR calorie context
 - Activities and Sleep detail screens with integrated overview cards and direct metric links
 - Metric and imperial unit support
@@ -67,6 +69,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
+- Data Import setting for supported Apple Health `export.xml` or `export.zip` records
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
@@ -74,11 +77,11 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 ## Current coverage
 
-- Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, BMR context, floors climbed, elevation gain, workout sessions, and cardio load
+- Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, BMR context, floors climbed, elevation gain, wheelchair pushes, workout sessions, and cardio load
 - Sleep: sessions, duration, sleep stages, sleep score, sleep efficiency, and period overview cards
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
-- Body: weight, BMI, body fat, lean mass, bone mass, basal metabolic rate
+- Body: weight, BMI, body fat, lean mass, bone mass, body water mass, basal metabolic rate
 - Manual entry: hydration, activity sessions with optional GPX/KML/KMZ/FIT route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
 - Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
@@ -101,6 +104,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
   - Manual entry write access: available from one-tap onboarding or when you use Add entry or a metric entry screen that needs it
 - Permissions can be managed later in Settings
 - Health Connect remains the source of truth; OpenVitals does not store health records locally
+- Imported Apple Health export records are written to Health Connect and are not uploaded to an OpenVitals service
 
 The current manifest does not request the `INTERNET` permission.
 
@@ -177,7 +181,7 @@ OpenVitals is intentionally simple today:
 - Hilt constructor injection for repositories, services, and ViewModels
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
-- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, timer/background-sound settings, hydration container sizes, reminders, and cycle-tracking opt-in
+- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, data import status, timer/background-sound settings, hydration container sizes, reminders, and cycle-tracking opt-in
 - shared presentation formatters for units and date/time labels
 
 The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).

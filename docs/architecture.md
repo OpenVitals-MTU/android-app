@@ -282,7 +282,7 @@ Current files:
 - [`features/manualentry/VitalsMeasurementEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/VitalsMeasurementEntryScreen.kt)
 - [`features/manualentry/MindfulnessEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/MindfulnessEntryScreen.kt)
 
-The current manual entry widgets cover hydration, activity sessions with optional GPX/KML/KMZ route import or GPS recording, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
+The current manual entry widgets cover hydration, activity sessions with optional GPX/KML/KMZ/FIT route import or GPS recording, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
 
 Write permissions are requested lazily from Add entry or the specific metric entry route. Onboarding and the dashboard should only request read permissions. Each write goes directly to Health Connect; OpenVitals keeps only local UI preferences such as widget order and mindfulness timer/background-sound settings.
 

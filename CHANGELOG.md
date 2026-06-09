@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.3.0 - 2026-06-09
+
+### English
+
+- Add Apple Health export import from Settings for supported activity, heart, body, hydration, and vitals records, writing imported records into Health Connect.
+- Add FIT route file import alongside GPX/KML/KMZ, with parser tests and clearer handling for route metadata and large files.
+- Add wheelchair activity support, wheelchair push summaries, charts, dashboard widgets, and Health Connect permission coverage.
+- Expand Heart & Vitals with a combined overview screen, stronger charts, and high/low heart-rate check summaries.
+- Unify Body and Nutrition detail screens with richer period overviews, body composition coverage, and meal/macro chart improvements.
+- Rework Settings into grouped sections with data import permissions, clearer controls, and improved unit and chart formatting.
+
+### Español
+
+- Añade importación de exportaciones de Apple Health desde Ajustes para registros compatibles de actividad, corazón, cuerpo, hidratación y constantes, escribiéndolos en Health Connect.
+- Añade importación de rutas FIT junto con GPX/KML/KMZ, con pruebas del parser y manejo más claro de metadatos de ruta y archivos grandes.
+- Añade soporte para actividades en silla de ruedas, resúmenes de impulsos, gráficos, widgets del panel y cobertura de permisos de Health Connect.
+- Amplía Corazón y Constantes con una pantalla general combinada, gráficos más sólidos y resúmenes de comprobaciones de frecuencia alta/baja.
+- Unifica las pantallas de Cuerpo y Nutrición con vistas por periodo más completas, más cobertura de composición corporal y mejoras de gráficos de comidas y macros.
+- Reorganiza Ajustes en secciones agrupadas con permisos de importación, controles más claros y mejor formato de unidades y gráficos.
+
+### Deutsch
+
+- Ergänzt in den Einstellungen den Import von Apple-Health-Exporten für unterstützte Aktivitäts-, Herz-, Körper-, Flüssigkeits- und Vitalwerte und schreibt sie in Health Connect.
+- Ergänzt den FIT-Routenimport neben GPX/KML/KMZ, mit Parser-Tests und klarerer Verarbeitung von Routenmetadaten und großen Dateien.
+- Fügt Rollstuhl-Aktivitäten, Rollstuhl-Schubzusammenfassungen, Diagramme, Dashboard-Widgets und passende Health-Connect-Berechtigungen hinzu.
+- Erweitert Herz & Vitalwerte um eine kombinierte Übersicht, stärkere Diagramme und Zusammenfassungen hoher/niedriger Herzfrequenzwerte.
+- Vereinheitlicht Körper- und Ernährungsdetails mit reicheren Zeitraumübersichten, mehr Körperzusammensetzung und verbesserten Mahlzeit-/Makrodiagrammen.
+- Überarbeitet die Einstellungen in gruppierte Bereiche mit Importberechtigungen, klareren Bedienelementen und besserer Einheiten- und Diagrammformatierung.
+
 ## 1.2.3 - 2026-06-09
 
 ### English
@@ -9,7 +38,6 @@
 - Clarify dashboard messaging when Health Connect has no total-calorie record or OpenVitals is estimating totals from active calories plus BMR.
 - Improve hydration entry cup-size controls with better alignment and more readable saved container values.
 - Add auto-resizing text to compact dashboard, metric, and chart cards so longer labels and values fit more reliably.
-- Add FIT activity file import alongside GPX/KML/KMZ route import.
 - Fix Activities today handling and update CI/build tooling for Android SDK 37, AGP 9.1.1, and the newer Material 3 library.
 
 ### Español
@@ -19,7 +47,6 @@
 - Aclara los mensajes del panel cuando Health Connect no tiene un registro de calorías totales o cuando OpenVitals estima totales con calorías activas más BMR.
 - Mejora los controles de tamaño de vaso o taza en hidratación, con mejor alineación y valores guardados más legibles.
 - Añade texto autoajustable en tarjetas compactas del panel, métricas y gráficos para que etiquetas y valores largos encajen mejor.
-- Añade importación de archivos de actividad FIT junto con la importación de rutas GPX/KML/KMZ.
 - Corrige el manejo de hoy en Actividades y actualiza CI/compilación a Android SDK 37, AGP 9.1.1 y la biblioteca Material 3 más reciente.
 
 ### Deutsch
@@ -29,7 +56,6 @@
 - Verdeutlicht Dashboard-Meldungen, wenn Health Connect keinen Gesamtkalorienwert liefert oder OpenVitals Werte aus aktiven Kalorien plus BMR schätzt.
 - Verbessert die Bedienelemente für Trinkgefäßgrößen mit besserer Ausrichtung und lesbareren gespeicherten Werten.
 - Ergänzt automatisch verkleinernden Text in kompakten Dashboard-, Metrik- und Diagrammkarten, damit längere Beschriftungen und Werte zuverlässiger passen.
-- Fügt den Import von FIT-Aktivitätsdateien neben dem GPX/KML/KMZ-Routenimport hinzu.
 - Behebt die Heute-Behandlung in Aktivitäten und aktualisiert CI/Build auf Android SDK 37, AGP 9.1.1 und die neuere Material-3-Bibliothek.
 
 ## 1.2.2 - 2026-06-09

@@ -81,7 +81,7 @@
     <string name="mindfulness_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen von Achtsamkeitseinträgen benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Sitzungen nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="activity_entry_subtitle">Erstelle eine Aktivitätssitzung in Health Connect. Routendateien werden nur geschrieben, wenn du eine importierst.</string>
     <string name="activity_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Um Aktivitäten ohne spätere Unterbrechungen hinzuzufügen, benötigen wir Health-Connect-Schreibberechtigungen für Sitzungen, Routen, Distanz, Höhenmeter, aktive Kalorien und Gesamtkalorien. OpenVitals speichert diese Einträge nicht; sie werden in Health Connect gespeichert.</string>
-    <string name="activity_entry_source_body">Erstelle eine leere Aktivität, zeichne eine GPS-Route auf oder importiere zuerst GPX/KMZ/FIT und prüfe die erkannte Route, Zeit, den Titel, die Notizen und den Typ vor dem Speichern.</string>
+    <string name="activity_entry_source_body">Erstelle eine leere Aktivität, zeichne eine GPS-Route auf oder importiere zuerst GPX/KML/KMZ/FIT und prüfe die erkannte Route, Zeit, den Titel, die Notizen und den Typ vor dem Speichern.</string>
     <string name="activity_entry_create_manual">Manuell erstellen</string>
     <string name="activity_entry_record_gps">Aktivität aufzeichnen</string>
     <string name="activity_entry_choose_another_source">Andere Methode wählen</string>
@@ -94,7 +94,7 @@
     <string name="activity_entry_distance_label">Distanz %1$s optional</string>
     <string name="activity_entry_elevation_label">Höhe %1$s optional</string>
     <string name="activity_entry_notes_label">Notizen optional</string>
-    <string name="activity_entry_import_route_file">GPX/KMZ/FIT importieren</string>
+    <string name="activity_entry_import_route_file">GPX/KML/KMZ/FIT importieren</string>
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
     <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und starte die Aufzeichnung, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
@@ -1014,7 +1014,7 @@
     <string name="data_confidence_warning_no_sources">Dieses Aggregat stellt keine Details nach Quelle bereit.</string>
 
     <string name="privacy_policy_title">Datenschutzerklärung</string>
-    <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KMZ/FIT-Aktivitätsrouten, werden in Health Connect geschrieben.</string>
+    <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KML/KMZ/FIT-Aktivitätsrouten, werden in Health Connect geschrieben.</string>
     <string name="privacy_policy_body_2">Diese App lädt deine Gesundheitsdaten nicht in einen Cloud-Dienst hoch, enthält keine Werbung und teilt keine Daten mit Dritten.</string>
     <string name="privacy_policy_body_3">OpenVitals ist kein Medizinprodukt und diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Es ersetzt keine medizinische Beratung, Diagnose oder Behandlung durch qualifiziertes medizinisches Fachpersonal.</string>
 </resources>

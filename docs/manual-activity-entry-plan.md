@@ -38,7 +38,7 @@ Implemented:
 - Added an Activity Entry route and top bar title.
 - Added an entry source choice for:
   - creating an activity manually without a route file
-  - importing GPX/KML/KMZ first, then reviewing and completing missing details before saving
+  - importing GPX/KML/KMZ/FIT first, then reviewing and completing missing details before saving
 - Added an Activity Entry screen with:
   - activity type selector
   - title
@@ -67,25 +67,26 @@ Status: Mostly done
 
 Implemented:
 
-- Added GPX/KML/KMZ import from Android document picker.
+- Added GPX/KML/KMZ/FIT import from Android document picker.
 - Parses `trkpt` and `rtept` points with latitude, longitude, elevation, and timestamp.
 - Parses timestamped KML `gx:Track` points from KMZ files.
 - Parses KML `LineString` coordinates from KML/KMZ files even when the file has no per-point timestamps.
 - Retimes untimestamped imported routes from the user-selected start date, start time, and duration before writing to Health Connect.
 - Reads basic route metadata when present: name, description, and type where the format provides it.
+- Reads FIT activity route points and sport metadata from supported FIT files.
 - Computes route distance and elevation gain.
 - Applies imported route start time, duration, title, notes, inferred activity type, distance, and elevation to the entry form.
 - Estimates active and total calories for imported routes while preserving user-entered calorie values.
 - Shows a route preview using the existing route preview style.
 - Writes imported route points into the Health Connect exercise session.
 - Simplifies very large imported routes to a bounded point count for Health Connect writes while keeping distance and elevation summaries based on the full imported route.
-- Added more specific route import error messages for unsupported or malformed GPX/KML/KMZ files.
-- Added tests for GPX parsing, KMZ parsing, untimestamped KML `LineString` parsing, route retiming, large-route simplification, and route summary behavior.
+- Added more specific route import error messages for unsupported or malformed GPX/KML/KMZ/FIT files.
+- Added tests for GPX parsing, KMZ parsing, FIT parsing, untimestamped KML `LineString` parsing, route retiming, large-route simplification, and route summary behavior.
 - Decided for MVP: laps, segments, speed series, and other route extensions are ignored during import. The manual entry writes one Health Connect exercise session plus optional route and summary records.
 
 Still needed:
 
-- Test with real GPX/KML/KMZ exports from OpenTracks and other apps.
+- Test with real GPX/KML/KMZ/FIT exports from OpenTracks and other apps.
 - Real-device validation that simplified and untimestamped KML/KMZ routes write and display correctly through Health Connect.
 
 ## Phase 4: Live GPS Recorder
@@ -125,7 +126,7 @@ Implemented:
   - 500 ms minimum sample spacing
   - activity-aware minimum accepted sample distance: lower for open-water swimming, moderate for walking/running/hiking, higher for cycling/skiing/sailing
 - Computes live distance and elevation gain from accepted GPS points.
-- Finishing a recording creates the same route-backed entry shape used by GPX/KML/KMZ import, so final save still uses the Phase 1 Health Connect activity write path.
+- Finishing a recording creates the same route-backed entry shape used by GPX/KML/KMZ/FIT import, so final save still uses the Phase 1 Health Connect activity write path.
 - If a recording finishes without enough GPS points, the screen falls back to a manual activity entry with the recorded start time, duration, and calorie estimates.
 - Fully manual activity entries do not estimate calories automatically.
 - Checked OpenTracks and FitoTrack GPS recording behavior before tuning:

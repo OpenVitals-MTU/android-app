@@ -12,18 +12,18 @@ Code that should be reused by a separate connected app is extracted into Gradle 
 | --- | --- | --- |
 | `:openvitals-core-period` | `tech.mmarca.openvitals:openvitals-core-period:<version>` | Shared period range, date window, and period navigation primitives. |
 
-Artifact versions default to `1.2.3-SNAPSHOT`.
+Artifact versions default to `1.3.0-SNAPSHOT`.
 
 Override the version with either:
 
 ```bash
-./gradlew publishOpenVitalsArtifactsToMavenLocal -PopenVitalsArtifactVersion=1.2.3
+./gradlew publishOpenVitalsArtifactsToMavenLocal -PopenVitalsArtifactVersion=1.3.0
 ```
 
 or:
 
 ```bash
-OPENVITALS_ARTIFACT_VERSION=1.2.3 ./gradlew publishOpenVitalsArtifactsToMavenLocal
+OPENVITALS_ARTIFACT_VERSION=1.3.0 ./gradlew publishOpenVitalsArtifactsToMavenLocal
 ```
 
 ## Local Publishing
@@ -52,7 +52,7 @@ The shared artifact module supports a configurable Maven repository:
 
 ```bash
 ./gradlew :openvitals-core-period:publishMavenPublicationToOpenVitalsReleaseRepository \
-  -PopenVitalsArtifactVersion=1.2.3 \
+  -PopenVitalsArtifactVersion=1.3.0 \
   -PopenVitalsMavenRepositoryUrl=https://example.invalid/maven \
   -PopenVitalsMavenUsername=... \
   -PopenVitalsMavenPassword=...
@@ -71,7 +71,7 @@ In the connected app repository:
 
 ```kotlin
 dependencies {
-    implementation("tech.mmarca.openvitals:openvitals-core-period:1.2.3")
+    implementation("tech.mmarca.openvitals:openvitals-core-period:1.3.0")
 }
 ```
 

@@ -1,0 +1,1 @@
+Ergänzt Apple-Health-Exportimport für unterstützte Aktivitäts-, Herz-, Körper-, Flüssigkeits- und Vitalwerte, FIT-Routenimport für Aktivitäten, Rollstuhl-Schubtracking, umfangreichere Herz-/Vital- und Körperübersichten sowie Verbesserungen an Ernährung, Diagrammen, Einstellungen, Einheiten und Routenparsern.

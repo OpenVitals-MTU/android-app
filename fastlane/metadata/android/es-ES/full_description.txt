@@ -11,7 +11,8 @@ Que puedes hacer
 * Revisar frecuencia cardiaca, frecuencia en reposo, HRV, presion arterial, SpO2, frecuencia respiratoria, temperatura corporal, VO2 max, metricas corporales, hidratacion, nutricion y mindfulness cuando esten disponibles
 * Anadir y editar entradas creadas por OpenVitals de hidratacion, medidas corporales, signos vitales, mindfulness y actividades directamente en Health Connect
 * Seguir insignias de logros para actividad, distancia, pisos, entrenamientos, hidratacion, sueno y mindfulness
-* Importar rutas GPX, KML y KMZ, previsualizarlas y guardar entrenamientos con ruta
+* Importar rutas GPX, KML, KMZ y FIT, previsualizarlas y guardar entrenamientos con ruta
+* Importar registros compatibles de exportaciones de Apple Health a Health Connect
 * Grabar actividades GPS con pausa, reanudacion, finalizacion, descarte, previsualizacion de ruta, distancia, elevacion, tiempo en movimiento y notificacion persistente
 * Estimar calorias activas y totales en actividades importadas o grabadas antes de guardar
 * Activar recordatorios de hidratacion opcionales con horas activas y pausa al alcanzar el objetivo diario
