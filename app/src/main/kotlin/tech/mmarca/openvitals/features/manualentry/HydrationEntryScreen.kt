@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+
+private val HydrationContainerIconSlotSize = 30.dp
 
 @Composable
 fun HydrationEntryScreen(
@@ -390,11 +393,16 @@ private fun HydrationContainerOptionItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = option.icon(),
-                contentDescription = null,
-                modifier = Modifier.size(option.iconSize()),
-            )
+            Box(
+                modifier = Modifier.size(HydrationContainerIconSlotSize),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = option.icon(),
+                    contentDescription = null,
+                    modifier = Modifier.size(option.iconSize()),
+                )
+            }
             Text(
                 text = stringResource(option.labelRes()),
                 style = MaterialTheme.typography.labelLarge,
