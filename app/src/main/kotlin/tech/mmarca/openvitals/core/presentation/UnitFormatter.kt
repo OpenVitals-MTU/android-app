@@ -69,6 +69,25 @@ class UnitFormatter(
             UnitSystem.IMPERIAL -> DisplayValue(decimal(celsiusToFahrenheit(celsius), 1), "deg F")
         }
 
+    fun temperatureDelta(celsius: Double): DisplayValue {
+        val value = when (unitSystem()) {
+            UnitSystem.METRIC -> celsius
+            UnitSystem.IMPERIAL -> celsius * 9.0 / 5.0
+        }
+        val prefix = if (value > 0.0) "+" else ""
+        val unit = when (unitSystem()) {
+            UnitSystem.METRIC -> "deg C"
+            UnitSystem.IMPERIAL -> "deg F"
+        }
+        return DisplayValue("$prefix${decimal(value, 1)}", unit)
+    }
+
+    fun bloodGlucose(millimolesPerLiter: Double): DisplayValue =
+        when (unitSystem()) {
+            UnitSystem.METRIC -> DisplayValue(decimal(millimolesPerLiter, 1), "mmol/L")
+            UnitSystem.IMPERIAL -> DisplayValue(decimal(millimolesPerLiter * 18.0, 0), "mg/dL")
+        }
+
     fun percent(value: Double, decimals: Int = 1): DisplayValue =
         DisplayValue(decimal(value, decimals), "%")
 
@@ -101,6 +120,16 @@ class UnitFormatter(
             UnitSystem.IMPERIAL -> DisplayValue(decimal(metersPerHour / 1609.344, 1), "mph")
         }
     }
+
+    fun speed(metersPerSecond: Double): DisplayValue =
+        when (unitSystem()) {
+            UnitSystem.METRIC -> DisplayValue(decimal(metersPerSecond * 3.6, 1), "km/h")
+            UnitSystem.IMPERIAL -> DisplayValue(decimal(metersPerSecond * 2.2369362921, 1), "mph")
+        }
+
+    fun power(watts: Double): DisplayValue = DisplayValue(decimal(watts, 0), "W")
+
+    fun cadence(value: Double): DisplayValue = DisplayValue(decimal(value, 1), "rpm")
 
     fun averagePace(distanceMeters: Double, durationMs: Long): DisplayValue? {
         if (distanceMeters <= 0.0 || durationMs <= 0L) return null

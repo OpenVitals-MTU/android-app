@@ -57,8 +57,20 @@ class NutritionViewModelTest {
 
     @Test fun `load success populates macros entries and derived totals`() = runTest {
         val macros = listOf(
-            DailyMacros(today.minusDays(1), 1_900.0, 90.0, 220.0, 60.0),
-            DailyMacros(today, 2_100.0, 100.0, 250.0, 70.0),
+            DailyMacros(
+                date = today.minusDays(1),
+                energyKcal = 1_900.0,
+                proteinGrams = 90.0,
+                carbsGrams = 220.0,
+                fatGrams = 60.0,
+            ),
+            DailyMacros(
+                date = today,
+                energyKcal = 2_100.0,
+                proteinGrams = 100.0,
+                carbsGrams = 250.0,
+                fatGrams = 70.0,
+            ),
         )
         val entries = listOf(
             NutritionEntry(

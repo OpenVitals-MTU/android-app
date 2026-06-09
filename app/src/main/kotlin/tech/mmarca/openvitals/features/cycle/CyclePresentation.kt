@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.cycle
 
 import android.content.res.Resources
+import androidx.health.connect.client.records.SexualActivityRecord
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
@@ -119,6 +120,26 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                 )
             )
         }
+        data.intermenstrualBleeding.forEach { bleeding ->
+            add(
+                CycleObservation(
+                    time = bleeding.time,
+                    title = resources.getString(R.string.cycle_observation_intermenstrual_bleeding),
+                    value = resources.getString(R.string.recording_actively_recorded),
+                    source = bleeding.source,
+                )
+            )
+        }
+        data.sexualActivity.forEach { activity ->
+            add(
+                CycleObservation(
+                    time = activity.time,
+                    title = resources.getString(R.string.cycle_observation_sexual_activity),
+                    value = sexualActivityProtectionLabel(activity.protectionUsed, resources),
+                    source = activity.source,
+                )
+            )
+        }
     }.sortedByDescending { it.time }
 }
 
@@ -193,6 +214,14 @@ private fun mucusLabel(mucus: CervicalMucusEntry, resources: Resources): String 
         resources.getString(sensation),
     )
 }
+
+private fun sexualActivityProtectionLabel(protectionUsed: Int, resources: Resources): String = resources.getString(
+    when (protectionUsed) {
+        SexualActivityRecord.PROTECTION_USED_PROTECTED -> R.string.cycle_protection_protected
+        SexualActivityRecord.PROTECTION_USED_UNPROTECTED -> R.string.cycle_protection_unprotected
+        else -> R.string.cycle_protection_unknown
+    }
+)
 
 internal const val FLOW_UNKNOWN = 0
 internal const val FLOW_LIGHT = 1

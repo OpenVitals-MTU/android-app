@@ -48,6 +48,8 @@ class BodyViewModelTest {
         coEvery { repo.loadBmrEntries(any(), any()) } returns emptyList()
         coEvery { repo.loadLatestBoneMass() } returns null
         coEvery { repo.loadBoneMassEntries(any(), any()) } returns emptyList()
+        coEvery { repo.loadLatestBodyWaterMass() } returns null
+        coEvery { repo.loadBodyWaterMassEntries(any(), any()) } returns emptyList()
         coEvery { repo.deleteBodyMeasurementEntry(any(), any()) } returns Unit
         coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
@@ -89,6 +91,20 @@ class BodyViewModelTest {
                     boneMassEntries = repo.loadBoneMassEntries(windows.current.start, windows.current.end),
                     previousBoneMassEntries = repo.loadBoneMassEntries(windows.previous.start, windows.previous.end),
                     baselineBoneMassEntries = repo.loadBoneMassEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.BODY_WATER_MASS -> BodyPeriodData(
+                    bodyWaterMassEntries = repo.loadBodyWaterMassEntries(windows.current.start, windows.current.end),
+                    previousBodyWaterMassEntries = repo.loadBodyWaterMassEntries(windows.previous.start, windows.previous.end),
+                    baselineBodyWaterMassEntries = repo.loadBodyWaterMassEntries(windows.baseline.start, windows.baseline.end),
+                )
+                BodyPeriodMetric.ALL -> BodyPeriodData(
+                    weightEntries = repo.loadWeightEntries(windows.current.start, windows.current.end),
+                    heightEntries = repo.loadHeightEntries(windows.current.start, windows.current.end),
+                    bodyFatEntries = repo.loadBodyFatEntries(windows.current.start, windows.current.end),
+                    leanMassEntries = repo.loadLeanBodyMassEntries(windows.current.start, windows.current.end),
+                    bmrEntries = repo.loadBmrEntries(windows.current.start, windows.current.end),
+                    boneMassEntries = repo.loadBoneMassEntries(windows.current.start, windows.current.end),
+                    bodyWaterMassEntries = repo.loadBodyWaterMassEntries(windows.current.start, windows.current.end),
                 )
             }
         }

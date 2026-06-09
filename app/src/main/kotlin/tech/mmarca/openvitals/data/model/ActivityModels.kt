@@ -17,6 +17,10 @@ data class ExerciseData(
     val activeCaloriesKcal: Double? = null,
     val steps: Long? = null,
     val wheelchairPushes: Long? = null,
+    val averageSpeedMetersPerSecond: Double? = null,
+    val averagePowerWatts: Double? = null,
+    val averageStepsCadenceRate: Double? = null,
+    val averageCyclingCadenceRpm: Double? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val notes: String? = null,
@@ -102,6 +106,21 @@ data class ActivityWriteRequest(
     val activeCaloriesKcal: Double? = null,
     val totalCaloriesKcal: Double? = null,
 )
+
+data class PlannedExerciseData(
+    val id: String,
+    val title: String?,
+    val exerciseType: Int,
+    val startTime: Instant,
+    val endTime: Instant,
+    val hasExplicitTime: Boolean,
+    val completedExerciseSessionId: String?,
+    val notes: String?,
+    val blockCount: Int,
+    val source: String,
+) {
+    val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
+}
 
 data class DailySteps(
     val date: LocalDate,

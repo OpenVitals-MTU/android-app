@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
@@ -27,6 +28,7 @@ import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
@@ -107,6 +109,8 @@ class HealthRepository @Inject constructor(
     private val readVo2MaxPermission = HealthPermission.getReadPermission(Vo2MaxRecord::class)
     private val readRespiratoryRatePermission = HealthPermission.getReadPermission(RespiratoryRateRecord::class)
     private val readBodyTemperaturePermission = HealthPermission.getReadPermission(BodyTemperatureRecord::class)
+    private val readBloodGlucosePermission = HealthPermission.getReadPermission(BloodGlucoseRecord::class)
+    private val readSkinTemperaturePermission = HealthPermission.getReadPermission(SkinTemperatureRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
     private val readWheelchairPushesPermission = HealthPermission.getReadPermission(WheelchairPushesRecord::class)
@@ -368,6 +372,24 @@ class HealthRepository @Inject constructor(
                 .maxByOrNull { it.time }
                 ?.temperatureCelsius
         }
+        val bloodGlucose = readIfNeeded(
+            wants(DashboardMetric.BLOOD_GLUCOSE),
+            readBloodGlucosePermission,
+            "blood glucose",
+        ) {
+            hc.readBloodGlucoseEntries(dayStart, dayEnd)
+                .maxByOrNull { it.time }
+                ?.millimolesPerLiter
+        }
+        val skinTemperature = readIfNeeded(
+            wants(DashboardMetric.SKIN_TEMPERATURE) && hc.isSkinTemperatureAvailable(),
+            readSkinTemperaturePermission,
+            "skin temperature",
+        ) {
+            hc.readSkinTemperatureEntries(dayStart, dayEnd)
+                .maxByOrNull { it.time }
+                ?.averageDeltaCelsius
+        }
         val weeklyCardioLoad = if (wants(DashboardMetric.WEEKLY_CARDIO_LOAD)) {
             async {
                 dashboardMetric("weekly cardio load") {
@@ -472,6 +494,8 @@ class HealthRepository @Inject constructor(
             latestVo2Max = vo2Max?.await()?.vo2MaxMlPerKgPerMin,
             avgRespiratoryRate = respiratoryRate?.await(),
             latestBodyTemperatureCelsius = bodyTemperature?.await(),
+            latestBloodGlucoseMillimolesPerLiter = bloodGlucose?.await(),
+            latestSkinTemperatureDeltaCelsius = skinTemperature?.await(),
             weeklyCardioLoad = weeklyCardioLoad?.await(),
             floorsClimbed = floors?.await(),
             elevationGainedMeters = elevation?.await(),
@@ -684,6 +708,12 @@ class HealthRepository @Inject constructor(
                 DashboardMetric.VO2_MAX -> setOf(readVo2MaxPermission)
                 DashboardMetric.RESPIRATORY_RATE -> setOf(readRespiratoryRatePermission)
                 DashboardMetric.BODY_TEMPERATURE -> setOf(readBodyTemperaturePermission)
+                DashboardMetric.BLOOD_GLUCOSE -> setOf(readBloodGlucosePermission)
+                DashboardMetric.SKIN_TEMPERATURE -> if (hc.isSkinTemperatureAvailable()) {
+                    setOf(readSkinTemperaturePermission)
+                } else {
+                    emptySet()
+                }
                 DashboardMetric.WEEKLY_CARDIO_LOAD -> setOf(readStepsPermission)
                 DashboardMetric.MINDFULNESS -> setOf(readMindfulnessPermission)
                 DashboardMetric.CYCLE -> setOf(

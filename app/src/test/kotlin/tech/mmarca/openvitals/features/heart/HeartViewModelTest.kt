@@ -128,6 +128,8 @@ class HeartViewModelTest {
         coEvery { repo.loadRespiratoryRate(any(), any()) } returns emptyList()
         coEvery { repo.loadBodyTemperature(any(), any()) } returns emptyList()
         coEvery { repo.loadVo2Max(any(), any()) } returns emptyList()
+        coEvery { repo.loadBloodGlucose(any(), any()) } returns emptyList()
+        coEvery { repo.loadSkinTemperature(any(), any()) } returns emptyList()
         coEvery { repo.deleteVitalsMeasurementEntry(any(), any()) } returns Unit
         coEvery { repo.loadVitalsPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
@@ -151,6 +153,12 @@ class HeartViewModelTest {
                     vo2Max = repo.loadVo2Max(windows.current.start, windows.current.end),
                     previousVo2Max = repo.loadVo2Max(windows.previous.start, windows.previous.end),
                     baselineVo2Max = repo.loadVo2Max(windows.baseline.start, windows.baseline.end),
+                    bloodGlucose = repo.loadBloodGlucose(windows.current.start, windows.current.end),
+                    previousBloodGlucose = repo.loadBloodGlucose(windows.previous.start, windows.previous.end),
+                    baselineBloodGlucose = repo.loadBloodGlucose(windows.baseline.start, windows.baseline.end),
+                    skinTemperature = repo.loadSkinTemperature(windows.current.start, windows.current.end),
+                    previousSkinTemperature = repo.loadSkinTemperature(windows.previous.start, windows.previous.end),
+                    baselineSkinTemperature = repo.loadSkinTemperature(windows.baseline.start, windows.baseline.end),
                 )
                 VitalsPeriodMetric.BLOOD_PRESSURE -> VitalsPeriodData(
                     missingVitalsPermissions = repo.missingPermissions(),
@@ -181,6 +189,18 @@ class HeartViewModelTest {
                     bodyTemperature = repo.loadBodyTemperature(windows.current.start, windows.current.end),
                     previousBodyTemperature = repo.loadBodyTemperature(windows.previous.start, windows.previous.end),
                     baselineBodyTemperature = repo.loadBodyTemperature(windows.baseline.start, windows.baseline.end),
+                )
+                VitalsPeriodMetric.BLOOD_GLUCOSE -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    bloodGlucose = repo.loadBloodGlucose(windows.current.start, windows.current.end),
+                    previousBloodGlucose = repo.loadBloodGlucose(windows.previous.start, windows.previous.end),
+                    baselineBloodGlucose = repo.loadBloodGlucose(windows.baseline.start, windows.baseline.end),
+                )
+                VitalsPeriodMetric.SKIN_TEMPERATURE -> VitalsPeriodData(
+                    missingVitalsPermissions = repo.missingPermissions(),
+                    skinTemperature = repo.loadSkinTemperature(windows.current.start, windows.current.end),
+                    previousSkinTemperature = repo.loadSkinTemperature(windows.previous.start, windows.previous.end),
+                    baselineSkinTemperature = repo.loadSkinTemperature(windows.baseline.start, windows.baseline.end),
                 )
             }
         }

@@ -4,8 +4,10 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
+import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.OvulationTestRecord
+import androidx.health.connect.client.records.SexualActivityRecord
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
@@ -33,6 +35,9 @@ class CycleRepository @Inject constructor(
     private val readCervicalMucusPermission = HealthPermission.getReadPermission(CervicalMucusRecord::class)
     private val readBasalBodyTemperaturePermission =
         HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
+    private val readIntermenstrualBleedingPermission =
+        HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class)
+    private val readSexualActivityPermission = HealthPermission.getReadPermission(SexualActivityRecord::class)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -88,6 +93,18 @@ class CycleRepository @Inject constructor(
                 Log.w(TAG, "Skipping basal body temperature missingCount=1")
                 null
             }
+            val intermenstrualBleeding = if (readIntermenstrualBleedingPermission in granted) {
+                async { hc.readIntermenstrualBleedingEntries(startInstant, endInstant) }
+            } else {
+                Log.w(TAG, "Skipping intermenstrual bleeding missingCount=1")
+                null
+            }
+            val sexualActivity = if (readSexualActivityPermission in granted) {
+                async { hc.readSexualActivityEntries(startInstant, endInstant) }
+            } else {
+                Log.w(TAG, "Skipping sexual activity missingCount=1")
+                null
+            }
 
             CycleData(
                 menstruationFlows = flows?.await().orEmpty(),
@@ -95,6 +112,8 @@ class CycleRepository @Inject constructor(
                 ovulationTests = ovulationTests?.await().orEmpty(),
                 cervicalMucus = cervicalMucus?.await().orEmpty(),
                 basalBodyTemperature = basalBodyTemperature?.await().orEmpty(),
+                intermenstrualBleeding = intermenstrualBleeding?.await().orEmpty(),
+                sexualActivity = sexualActivity?.await().orEmpty(),
             )
         }
     }

@@ -118,6 +118,22 @@ internal fun MetricsCard(
         DetailRow(stringResource(R.string.metric_average_pace), workout.averagePace(unitFormatter)?.text ?: notAvailable)
         DetailRow(stringResource(R.string.metric_average_speed), workout.averageSpeed(unitFormatter)?.text ?: notAvailable)
         DetailRow(
+            stringResource(R.string.metric_recorded_speed),
+            workout.averageSpeedMetersPerSecond?.let { unitFormatter.speed(it).text } ?: notAvailable,
+        )
+        DetailRow(
+            stringResource(R.string.metric_average_power),
+            workout.averagePowerWatts?.let { unitFormatter.power(it).text } ?: notAvailable,
+        )
+        DetailRow(
+            stringResource(R.string.metric_steps_cadence),
+            workout.averageStepsCadenceRate?.let { unitFormatter.cadence(it).text } ?: notAvailable,
+        )
+        DetailRow(
+            stringResource(R.string.metric_cycling_cadence),
+            workout.averageCyclingCadenceRpm?.let { unitFormatter.cadence(it).text } ?: notAvailable,
+        )
+        DetailRow(
             stringResource(R.string.metric_calories_burned),
             workout.totalCaloriesKcal?.let { calories ->
                 val value = unitFormatter.energy(calories).text

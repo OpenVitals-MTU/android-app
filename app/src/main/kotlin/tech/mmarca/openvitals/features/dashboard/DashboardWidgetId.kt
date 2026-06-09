@@ -33,6 +33,8 @@ enum class DashboardWidgetId {
     VO2_MAX,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    BLOOD_GLUCOSE,
+    SKIN_TEMPERATURE,
     WEEKLY_CARDIO_LOAD,
     CARDIO_LOAD,
     MINDFULNESS,
@@ -171,6 +173,8 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.VO2_MAX -> DashboardMetric.VO2_MAX
     DashboardWidgetId.RESPIRATORY_RATE -> DashboardMetric.RESPIRATORY_RATE
     DashboardWidgetId.BODY_TEMPERATURE -> DashboardMetric.BODY_TEMPERATURE
+    DashboardWidgetId.BLOOD_GLUCOSE -> DashboardMetric.BLOOD_GLUCOSE
+    DashboardWidgetId.SKIN_TEMPERATURE -> DashboardMetric.SKIN_TEMPERATURE
     DashboardWidgetId.WEEKLY_CARDIO_LOAD -> DashboardMetric.WEEKLY_CARDIO_LOAD
     DashboardWidgetId.CARDIO_LOAD -> DashboardMetric.WEEKLY_CARDIO_LOAD
     DashboardWidgetId.MINDFULNESS -> DashboardMetric.MINDFULNESS

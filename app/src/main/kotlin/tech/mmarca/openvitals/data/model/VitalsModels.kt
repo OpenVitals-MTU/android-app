@@ -35,6 +35,28 @@ data class BodyTempEntry(
     val isOpenVitalsEntry: Boolean = false,
 )
 
+data class BloodGlucoseEntry(
+    val time: Instant,
+    val millimolesPerLiter: Double,
+    val specimenSource: Int,
+    val mealType: Int,
+    val relationToMeal: Int,
+    val source: String,
+)
+
+data class SkinTemperatureEntry(
+    val startTime: Instant,
+    val endTime: Instant,
+    val baselineCelsius: Double?,
+    val averageDeltaCelsius: Double?,
+    val minDeltaCelsius: Double?,
+    val maxDeltaCelsius: Double?,
+    val measurementLocation: Int,
+    val source: String,
+) {
+    val time: Instant get() = endTime
+}
+
 data class Vo2MaxEntry(
     val time: Instant,
     val vo2MaxMlPerKgPerMin: Double,

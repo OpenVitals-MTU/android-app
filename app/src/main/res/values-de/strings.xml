@@ -325,6 +325,12 @@
     <string name="metric_respiratory_rate">Atemfrequenz</string>
     <string name="metric_avg_respiratory_rate">Durchschn. Atemfrequenz</string>
     <string name="metric_body_temp">Körpertemp.</string>
+    <string name="metric_blood_glucose">Blutzucker</string>
+    <string name="metric_skin_temperature">Hauttemperatur</string>
+    <string name="metric_recorded_speed">Aufgezeichnete Geschwindigkeit</string>
+    <string name="metric_average_power">Durchschnittsleistung</string>
+    <string name="metric_steps_cadence">Schrittfrequenz</string>
+    <string name="metric_cycling_cadence">Trittfrequenz</string>
 
     <string name="unit_steps">Schritte</string>
     <string name="unit_pushes">Schübe</string>
@@ -336,6 +342,7 @@
     <string name="unit_grams">g</string>
 
     <string name="section_activities">Aktivitäten</string>
+    <string name="section_planned_workouts">Geplante Trainings</string>
     <string name="activities_key_metrics">Wichtige Messwerte</string>
     <string name="recovery_sleep_score">Schlafwert</string>
     <string name="recovery_sleep_duration">Schlafdauer</string>
@@ -658,6 +665,8 @@
     <string name="message_no_blood_pressure">Kein Blutdruckmesswert.</string>
     <string name="message_no_oxygen">Kein Sauerstoffmesswert.</string>
     <string name="message_no_vo2_max">Kein VO2-max-Messwert.</string>
+    <string name="message_no_blood_glucose">Kein Blutzuckermesswert.</string>
+    <string name="message_no_skin_temperature">Kein Hauttemperaturmesswert.</string>
     <string name="message_cycle_browse">Zykluskalender und Messwerte anzeigen.</string>
     <string name="dashboard_add_widgets">Widgets hinzufügen</string>
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
@@ -671,6 +680,8 @@
     <string name="dashboard_cardio_load_percent">%1$d%% Belastung</string>
     <string name="dashboard_cardio_load_today_delta">+%1$d%% heute</string>
     <string name="message_no_activities_period">Keine Aktivitäten im ausgewählten Zeitraum.</string>
+    <string name="planned_workout_completed">Abgeschlossen</string>
+    <string name="planned_workout_blocks">%1$d Blöcke</string>
     <string name="message_no_step_updates">Es wurden keine Schrittaktualisierungen aufgezeichnet</string>
     <string name="message_no_distance_updates">Es wurden keine Distanzaktualisierungen aufgezeichnet</string>
     <string name="message_no_calories_burned">Es wurden keine Daten zu Gesamtkalorien aufgezeichnet</string>
@@ -873,6 +884,11 @@
     <string name="cycle_observation_ovulation_test">Ovulationstest</string>
     <string name="cycle_observation_cervical_mucus">Zervixschleim</string>
     <string name="cycle_observation_basal_body_temperature">Basaltemperatur</string>
+    <string name="cycle_observation_intermenstrual_bleeding">Zwischenblutung</string>
+    <string name="cycle_observation_sexual_activity">Sexuelle Aktivität</string>
+    <string name="cycle_protection_protected">Geschützt</string>
+    <string name="cycle_protection_unprotected">Ungeschützt</string>
+    <string name="cycle_protection_unknown">Schutz unbekannt</string>
     <string name="cycle_basal_temperature_value">%1$.1f C · %2$s</string>
     <string name="cycle_days_value">%1$d %2$s</string>
     <string name="cycle_day_singular">Tag</string>
@@ -914,7 +930,7 @@
     <string name="weekday_sunday_short">S</string>
 
     <string name="vitals_permissions_needed_title">Vitalwertberechtigungen erforderlich</string>
-    <string name="vitals_permissions_needed_body">Erteile Berechtigungen für Blutdruck, Sauerstoffsättigung, Atemfrequenz, Temperatur und VO2 max, um diese Ansicht zu füllen.</string>
+    <string name="vitals_permissions_needed_body">Erteile Berechtigungen für Blutdruck, Sauerstoffsättigung, Atemfrequenz, Temperatur, VO2 max und Blutzucker, um diese Ansicht zu füllen.</string>
     <string name="vitals_respiratory_rate_readings">Atemfrequenz-Messwerte</string>
     <string name="vitals_body_temperature_readings">Körpertemperatur-Messwerte</string>
     <string name="heart_rate_health_checks_title">Herzfrequenzchecks</string>

@@ -79,6 +79,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.data.model.PlannedExerciseData
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
@@ -167,6 +168,11 @@ fun ActivitiesScreen(
             onOpenActivity = onOpenActivity,
             onEditActivity = onEditActivity,
             onDeleteActivity = viewModel::deleteActivityEntry,
+        )
+        plannedWorkoutListSection(
+            plannedWorkouts = state.plannedWorkouts,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
         activityPeriodOverview(
             overviewDays = state.overviewDays,
@@ -545,6 +551,130 @@ private fun ActivityWorkoutListCard(
                     Text(stringResource(R.string.action_load_more_entries))
                 }
             }
+        }
+    }
+}
+
+private fun LazyListScope.plannedWorkoutListSection(
+    plannedWorkouts: List<PlannedExerciseData>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    if (plannedWorkouts.isEmpty()) return
+
+    item {
+        PlannedWorkoutListCard(
+            plannedWorkouts = plannedWorkouts,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+    }
+}
+
+@Composable
+private fun PlannedWorkoutListCard(
+    plannedWorkouts: List<PlannedExerciseData>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(text = stringResource(R.string.section_planned_workouts))
+        Card(
+            modifier = metricModifier(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            plannedWorkouts.sortedBy { it.startTime }.forEachIndexed { index, plannedWorkout ->
+                PlannedWorkoutRow(
+                    plannedWorkout = plannedWorkout,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+                if (index < plannedWorkouts.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlannedWorkoutRow(
+    plannedWorkout: PlannedExerciseData,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    val zone = ZoneId.systemDefault()
+    val start = plannedWorkout.startTime.atZone(zone)
+    val end = plannedWorkout.endTime.atZone(zone)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(WorkoutColor.copy(alpha = 0.16f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (plannedWorkout.completedExerciseSessionId != null) {
+                    Icons.Outlined.CheckCircle
+                } else {
+                    exerciseTypeIcon(plannedWorkout.exerciseType)
+                },
+                contentDescription = null,
+                tint = WorkoutColor,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            AutoResizeText(
+                text = plannedWorkout.title ?: exerciseTypeLabel(plannedWorkout.exerciseType),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+            )
+            AutoResizeText(
+                text = "${localizedDayTitle(start.toLocalDate())} / ${dateTimeFormatterProvider.shortTime().format(start)}" +
+                    " - ${dateTimeFormatterProvider.shortTime().format(end)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            if (plannedWorkout.notes?.isNotBlank() == true) {
+                AutoResizeText(
+                    text = plannedWorkout.notes,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = unitFormatter.duration(plannedWorkout.durationMs),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = if (plannedWorkout.completedExerciseSessionId != null) {
+                    stringResource(R.string.planned_workout_completed)
+                } else {
+                    stringResource(R.string.planned_workout_blocks, plannedWorkout.blockCount)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

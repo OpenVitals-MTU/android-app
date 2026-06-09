@@ -40,6 +40,8 @@ data class DashboardData(
     val latestVo2Max: Double? = null,
     val avgRespiratoryRate: Double? = null,
     val latestBodyTemperatureCelsius: Double? = null,
+    val latestBloodGlucoseMillimolesPerLiter: Double? = null,
+    val latestSkinTemperatureDeltaCelsius: Double? = null,
     val weeklyCardioLoad: DashboardWeeklyCardioLoad? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
@@ -135,6 +137,16 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
             other.latestBodyTemperatureCelsius
         } else {
             latestBodyTemperatureCelsius
+        },
+        latestBloodGlucoseMillimolesPerLiter = if (DashboardMetric.BLOOD_GLUCOSE in other.loadedMetrics) {
+            other.latestBloodGlucoseMillimolesPerLiter
+        } else {
+            latestBloodGlucoseMillimolesPerLiter
+        },
+        latestSkinTemperatureDeltaCelsius = if (DashboardMetric.SKIN_TEMPERATURE in other.loadedMetrics) {
+            other.latestSkinTemperatureDeltaCelsius
+        } else {
+            latestSkinTemperatureDeltaCelsius
         },
         weeklyCardioLoad = if (DashboardMetric.WEEKLY_CARDIO_LOAD in other.loadedMetrics) {
             other.weeklyCardioLoad

@@ -55,6 +55,23 @@ class UnitFormatterTest {
         assertEquals("98.6 deg F", formatter(UnitSystem.IMPERIAL).temperature(37.0).text)
     }
 
+    @Test fun `metric temperature delta keeps celsius delta`() {
+        assertEquals("+1.5 deg C", formatter(UnitSystem.METRIC).temperatureDelta(1.5).text)
+        assertEquals("-0.4 deg C", formatter(UnitSystem.METRIC).temperatureDelta(-0.4).text)
+    }
+
+    @Test fun `imperial temperature delta converts to fahrenheit delta`() {
+        assertEquals("+2.7 deg F", formatter(UnitSystem.IMPERIAL).temperatureDelta(1.5).text)
+    }
+
+    @Test fun `metric blood glucose uses mmol per liter`() {
+        assertEquals("5.6 mmol/L", formatter(UnitSystem.METRIC).bloodGlucose(5.6).text)
+    }
+
+    @Test fun `imperial blood glucose uses milligrams per deciliter`() {
+        assertEquals("101 mg/dL", formatter(UnitSystem.IMPERIAL).bloodGlucose(5.6).text)
+    }
+
     @Test fun `blood pressure is not converted`() {
         assertEquals("120/80 mmHg", formatter(UnitSystem.METRIC).bloodPressure(120, 80).text)
     }
@@ -69,6 +86,22 @@ class UnitFormatterTest {
 
     @Test fun `imperial average speed uses miles per hour`() {
         assertEquals("6.0 mph", formatter(UnitSystem.IMPERIAL).averageSpeed(1_609.344, 600_000L).text)
+    }
+
+    @Test fun `metric recorded speed uses kilometers per hour`() {
+        assertEquals("18.0 km/h", formatter(UnitSystem.METRIC).speed(5.0).text)
+    }
+
+    @Test fun `imperial recorded speed uses miles per hour`() {
+        assertEquals("11.2 mph", formatter(UnitSystem.IMPERIAL).speed(5.0).text)
+    }
+
+    @Test fun `power uses watts`() {
+        assertEquals("250 W", formatter(UnitSystem.METRIC).power(250.4).text)
+    }
+
+    @Test fun `cadence uses rpm`() {
+        assertEquals("82.5 rpm", formatter(UnitSystem.METRIC).cadence(82.5).text)
     }
 
     @Test fun `metric average pace uses minutes per kilometer`() {

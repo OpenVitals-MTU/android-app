@@ -32,9 +32,11 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.data.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.PeriodChartXAxis
@@ -239,6 +241,79 @@ internal fun BodyTemperatureChart(
         selectedDate = selectedDate,
         onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.temperature(it).text },
+    )
+}
+
+@Composable
+internal fun BloodGlucoseChart(
+    entries: List<BloodGlucoseEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
+) {
+    val sorted = entries.sortedBy { it.time }
+    VitalsLineChart(
+        title = stringResource(R.string.metric_blood_glucose),
+        points = rawVitalsPoints(
+            entries = sorted,
+            time = { it.time },
+            value = { it.millimolesPerLiter },
+        ),
+        selectedRange = selectedRange,
+        period = period,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        accentColor = glucoseColor,
+        summary = "${localizedPeriodTitle(selectedRange, period)} · ${
+            stringResource(R.string.summary_value_avg, unitFormatter.bloodGlucose(sorted.map { it.millimolesPerLiter }.average()).text)
+        }",
+        modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+        valueFormatter = { unitFormatter.bloodGlucose(it).text },
+    )
+}
+
+@Composable
+internal fun SkinTemperatureChart(
+    entries: List<SkinTemperatureEntry>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
+) {
+    val chartEntries = entries
+        .filter { it.averageDeltaCelsius != null }
+        .sortedBy { it.time }
+    if (chartEntries.isEmpty()) return
+
+    VitalsLineChart(
+        title = stringResource(R.string.metric_skin_temperature),
+        points = rawVitalsPoints(
+            entries = chartEntries,
+            time = { it.time },
+            value = { it.averageDeltaCelsius ?: 0.0 },
+        ),
+        selectedRange = selectedRange,
+        period = period,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        accentColor = temperatureColor,
+        summary = "${localizedPeriodTitle(selectedRange, period)} · ${
+            stringResource(
+                R.string.summary_value_avg,
+                unitFormatter.temperatureDelta(chartEntries.mapNotNull { it.averageDeltaCelsius }.average()).text,
+            )
+        }",
+        modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+        valueFormatter = { unitFormatter.temperatureDelta(it).text },
     )
 }
 

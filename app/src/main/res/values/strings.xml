@@ -325,6 +325,12 @@
     <string name="metric_respiratory_rate">Respiratory rate</string>
     <string name="metric_avg_respiratory_rate">Avg respiratory rate</string>
     <string name="metric_body_temp">Body temp</string>
+    <string name="metric_blood_glucose">Blood glucose</string>
+    <string name="metric_skin_temperature">Skin temperature</string>
+    <string name="metric_recorded_speed">Recorded speed</string>
+    <string name="metric_average_power">Average power</string>
+    <string name="metric_steps_cadence">Step cadence</string>
+    <string name="metric_cycling_cadence">Cycling cadence</string>
 
     <string name="unit_steps">steps</string>
     <string name="unit_pushes">pushes</string>
@@ -336,6 +342,7 @@
     <string name="unit_grams">g</string>
 
     <string name="section_activities">Activities</string>
+    <string name="section_planned_workouts">Planned workouts</string>
     <string name="activities_key_metrics">Key metrics</string>
     <string name="recovery_sleep_score">Sleep score</string>
     <string name="recovery_sleep_duration">Sleep duration</string>
@@ -658,6 +665,8 @@
     <string name="message_no_blood_pressure">No blood pressure reading.</string>
     <string name="message_no_oxygen">No oxygen reading.</string>
     <string name="message_no_vo2_max">No VO2 max reading.</string>
+    <string name="message_no_blood_glucose">No blood glucose reading.</string>
+    <string name="message_no_skin_temperature">No skin temperature reading.</string>
     <string name="message_cycle_browse">View cycle calendar and readings.</string>
     <string name="dashboard_add_widgets">Add widgets</string>
     <string name="dashboard_all_widgets_added">All widgets are already on the summary.</string>
@@ -671,6 +680,8 @@
     <string name="dashboard_cardio_load_percent">%1$d%% load</string>
     <string name="dashboard_cardio_load_today_delta">+%1$d%% today</string>
     <string name="message_no_activities_period">No activities in the selected period.</string>
+    <string name="planned_workout_completed">Completed</string>
+    <string name="planned_workout_blocks">%1$d blocks</string>
     <string name="message_no_step_updates">No step updates were recorded</string>
     <string name="message_no_distance_updates">No distance updates were recorded</string>
     <string name="message_no_calories_burned">No total calorie data was recorded</string>
@@ -873,6 +884,11 @@
     <string name="cycle_observation_ovulation_test">Ovulation test</string>
     <string name="cycle_observation_cervical_mucus">Cervical mucus</string>
     <string name="cycle_observation_basal_body_temperature">Basal body temperature</string>
+    <string name="cycle_observation_intermenstrual_bleeding">Intermenstrual bleeding</string>
+    <string name="cycle_observation_sexual_activity">Sexual activity</string>
+    <string name="cycle_protection_protected">Protected</string>
+    <string name="cycle_protection_unprotected">Unprotected</string>
+    <string name="cycle_protection_unknown">Protection unknown</string>
     <string name="cycle_basal_temperature_value">%1$.1f C · %2$s</string>
     <string name="cycle_days_value">%1$d %2$s</string>
     <string name="cycle_day_singular">day</string>
@@ -914,7 +930,7 @@
     <string name="weekday_sunday_short">S</string>
 
     <string name="vitals_permissions_needed_title">Vitals permissions needed</string>
-    <string name="vitals_permissions_needed_body">Grant blood pressure, oxygen saturation, respiratory rate, temperature, and VO2 max permissions to fill this screen.</string>
+    <string name="vitals_permissions_needed_body">Grant blood pressure, oxygen saturation, respiratory rate, temperature, VO2 max, and glucose permissions to fill this screen.</string>
     <string name="vitals_respiratory_rate_readings">Respiratory rate readings</string>
     <string name="vitals_body_temperature_readings">Body temperature readings</string>
     <string name="heart_rate_health_checks_title">Heart rate checks</string>

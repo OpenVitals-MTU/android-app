@@ -163,18 +163,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.cycleDataConfidence(
                         data.menstruationPeriods.map { it.startTime.atZone(zone).toLocalDate() } +
                         data.ovulationTests.map { it.time.atZone(zone).toLocalDate() } +
                         data.cervicalMucus.map { it.time.atZone(zone).toLocalDate() } +
-                        data.basalBodyTemperature.map { it.time.atZone(zone).toLocalDate() },
+                        data.basalBodyTemperature.map { it.time.atZone(zone).toLocalDate() } +
+                        data.intermenstrualBleeding.map { it.time.atZone(zone).toLocalDate() } +
+                        data.sexualActivity.map { it.time.atZone(zone).toLocalDate() },
                 sampleCount = data.menstruationFlows.size +
                     data.menstruationPeriods.size +
                     data.ovulationTests.size +
                     data.cervicalMucus.size +
-                    data.basalBodyTemperature.size,
+                    data.basalBodyTemperature.size +
+                    data.intermenstrualBleeding.size +
+                    data.sexualActivity.size,
                 sources =
                     data.menstruationFlows.map { it.source } +
                         data.menstruationPeriods.map { it.source } +
                         data.ovulationTests.map { it.source } +
                         data.cervicalMucus.map { it.source } +
-                        data.basalBodyTemperature.map { it.source },
+                        data.basalBodyTemperature.map { it.source } +
+                        data.intermenstrualBleeding.map { it.source } +
+                        data.sexualActivity.map { it.source },
                 valueKind = DataValueKind.MEASURED,
             ),
             accentColor = CycleColor,
@@ -197,7 +203,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.cycleStatistics(
             data.menstruationPeriods.size +
             data.ovulationTests.size +
             data.cervicalMucus.size +
-            data.basalBodyTemperature.size
+            data.basalBodyTemperature.size +
+            data.intermenstrualBleeding.size +
+            data.sexualActivity.size
 
         InsightStatGrid(
             stats = listOf(

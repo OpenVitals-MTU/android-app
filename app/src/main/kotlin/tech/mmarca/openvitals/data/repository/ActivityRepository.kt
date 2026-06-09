@@ -4,11 +4,16 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
+import androidx.health.connect.client.records.PowerRecord
+import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
@@ -17,6 +22,7 @@ import tech.mmarca.openvitals.data.model.DailyNutrition
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.model.PlannedExerciseData
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -49,6 +55,11 @@ class ActivityRepository @Inject constructor(
     private val readBmrPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
     private val readWheelchairPushesPermission = HealthPermission.getReadPermission(WheelchairPushesRecord::class)
+    private val readSpeedPermission = HealthPermission.getReadPermission(SpeedRecord::class)
+    private val readPowerPermission = HealthPermission.getReadPermission(PowerRecord::class)
+    private val readStepsCadencePermission = HealthPermission.getReadPermission(StepsCadenceRecord::class)
+    private val readCyclingCadencePermission = HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)
+    private val readPlannedExercisePermission = HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)
     private val writeExercisePermission = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
     private val writeDistancePermission = HealthPermission.getWritePermission(DistanceRecord::class)
     private val writeElevationPermission = HealthPermission.getWritePermission(ElevationGainedRecord::class)
@@ -144,10 +155,12 @@ class ActivityRepository @Inject constructor(
         val workouts = async { loadWorkouts(windows.current.start, windows.current.end, granted) }
         val previousWorkouts = async { loadWorkouts(windows.previous.start, windows.previous.end, granted) }
         val baselineWorkouts = async { loadWorkouts(windows.baseline.start, windows.baseline.end, granted) }
+        val plannedWorkouts = async { loadPlannedWorkouts(windows.current.start, windows.current.end, granted) }
         ActivitiesPeriodData(
             workouts = workouts.await(),
             previousWorkouts = previousWorkouts.await(),
             baselineWorkouts = baselineWorkouts.await(),
+            plannedWorkouts = plannedWorkouts.await(),
         )
     }
 
@@ -265,7 +278,31 @@ class ActivityRepository @Inject constructor(
             includeWheelchairPushes = readWheelchairPushesPermission in granted,
             includeFloors = readFloorsPermission in granted,
             includeElevation = readElevationPermission in granted,
+            includeSpeed = readSpeedPermission in granted,
+            includePower = readPowerPermission in granted,
+            includeStepsCadence = readStepsCadencePermission in granted,
+            includeCyclingCadence = readCyclingCadencePermission in granted,
         )
+    }
+
+    suspend fun loadPlannedWorkouts(start: LocalDate, end: LocalDate): List<PlannedExerciseData> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadPlannedWorkouts(start, end, granted)
+    }
+
+    private suspend fun loadPlannedWorkouts(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<PlannedExerciseData> {
+        if (!hc.isPlannedExerciseAvailable() || readPlannedExercisePermission !in granted) {
+            Log.w(TAG, "Skipping loadPlannedWorkouts missingCount=1")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        val startInstant = start.atStartOfDay(zone).toInstant()
+        val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
+        return hc.readPlannedExerciseSessions(startInstant, endInstant)
     }
 
     suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition> {
@@ -400,4 +437,5 @@ data class ActivitiesPeriodData(
     val workouts: List<ExerciseData> = emptyList(),
     val previousWorkouts: List<ExerciseData> = emptyList(),
     val baselineWorkouts: List<ExerciseData> = emptyList(),
+    val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
 )

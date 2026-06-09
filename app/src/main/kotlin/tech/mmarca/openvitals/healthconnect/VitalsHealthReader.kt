@@ -1,10 +1,12 @@
 package tech.mmarca.openvitals.healthconnect
 
+import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -12,9 +14,11 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.celsius
 import androidx.health.connect.client.units.millimetersOfMercury
 import androidx.health.connect.client.units.percent
+import tech.mmarca.openvitals.data.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.data.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementEntry
@@ -157,6 +161,47 @@ internal class VitalsHealthReader(
                 Vo2MaxEntry(
                     time = record.time,
                     vo2MaxMlPerKgPerMin = record.vo2MillilitersPerMinuteKilogram,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readBloodGlucoseEntries(start: Instant, end: Instant): List<BloodGlucoseEntry> =
+        support.withLogging("readBloodGlucoseEntries[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = BloodGlucoseRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 200,
+            ).map { record ->
+                BloodGlucoseEntry(
+                    time = record.time,
+                    millimolesPerLiter = record.level.inMillimolesPerLiter,
+                    specimenSource = record.specimenSource,
+                    mealType = record.mealType,
+                    relationToMeal = record.relationToMeal,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readSkinTemperatureEntries(start: Instant, end: Instant): List<SkinTemperatureEntry> =
+        support.withLogging("readSkinTemperatureEntries[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = SkinTemperatureRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 200,
+            ).map { record ->
+                val deltasCelsius = record.deltas.map { delta -> delta.delta.inCelsius }
+                SkinTemperatureEntry(
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    baselineCelsius = record.baseline?.inCelsius,
+                    averageDeltaCelsius = deltasCelsius.averageOrNull(),
+                    minDeltaCelsius = deltasCelsius.minOrNull(),
+                    maxDeltaCelsius = deltasCelsius.maxOrNull(),
+                    measurementLocation = record.measurementLocation,
                     source = record.metadata.dataOrigin.packageName,
                 )
             }
@@ -406,3 +451,6 @@ private const val MaxDiastolicMmHg = 180.0
 private const val MaxPercent = 100.0
 private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
+
+private fun List<Double>.averageOrNull(): Double? =
+    takeIf { it.isNotEmpty() }?.average()

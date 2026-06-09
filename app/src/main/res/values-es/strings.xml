@@ -325,6 +325,12 @@
     <string name="metric_respiratory_rate">Frecuencia respiratoria</string>
     <string name="metric_avg_respiratory_rate">Frecuencia respiratoria media</string>
     <string name="metric_body_temp">Temp. corporal</string>
+    <string name="metric_blood_glucose">Glucosa en sangre</string>
+    <string name="metric_skin_temperature">Temperatura de la piel</string>
+    <string name="metric_recorded_speed">Velocidad registrada</string>
+    <string name="metric_average_power">Potencia media</string>
+    <string name="metric_steps_cadence">Cadencia de pasos</string>
+    <string name="metric_cycling_cadence">Cadencia de ciclismo</string>
 
     <string name="unit_steps">pasos</string>
     <string name="unit_pushes">impulsos</string>
@@ -336,6 +342,7 @@
     <string name="unit_grams">g</string>
 
     <string name="section_activities">Actividades</string>
+    <string name="section_planned_workouts">Entrenamientos planificados</string>
     <string name="activities_key_metrics">Métricas clave</string>
     <string name="recovery_sleep_score">Puntuación de sueño</string>
     <string name="recovery_sleep_duration">Duración del sueño</string>
@@ -658,6 +665,8 @@
     <string name="message_no_blood_pressure">No hay lectura de presión arterial.</string>
     <string name="message_no_oxygen">No hay lectura de oxígeno.</string>
     <string name="message_no_vo2_max">No hay lectura de VO2 máx.</string>
+    <string name="message_no_blood_glucose">No hay lectura de glucosa en sangre.</string>
+    <string name="message_no_skin_temperature">No hay lectura de temperatura de la piel.</string>
     <string name="message_cycle_browse">Ver calendario y lecturas del ciclo.</string>
     <string name="dashboard_add_widgets">Añadir widgets</string>
     <string name="dashboard_all_widgets_added">Todos los widgets ya están en el resumen.</string>
@@ -671,6 +680,8 @@
     <string name="dashboard_cardio_load_percent">%1$d%% carga</string>
     <string name="dashboard_cardio_load_today_delta">+%1$d%% hoy</string>
     <string name="message_no_activities_period">No hay actividades en el periodo seleccionado.</string>
+    <string name="planned_workout_completed">Completado</string>
+    <string name="planned_workout_blocks">%1$d bloques</string>
     <string name="message_no_step_updates">No se registraron actualizaciones de pasos</string>
     <string name="message_no_distance_updates">No se registraron actualizaciones de distancia</string>
     <string name="message_no_calories_burned">No se registraron datos de calorías totales</string>
@@ -873,6 +884,11 @@
     <string name="cycle_observation_ovulation_test">Prueba de ovulación</string>
     <string name="cycle_observation_cervical_mucus">Moco cervical</string>
     <string name="cycle_observation_basal_body_temperature">Temperatura corporal basal</string>
+    <string name="cycle_observation_intermenstrual_bleeding">Sangrado intermenstrual</string>
+    <string name="cycle_observation_sexual_activity">Actividad sexual</string>
+    <string name="cycle_protection_protected">Con protección</string>
+    <string name="cycle_protection_unprotected">Sin protección</string>
+    <string name="cycle_protection_unknown">Protección desconocida</string>
     <string name="cycle_basal_temperature_value">%1$.1f C · %2$s</string>
     <string name="cycle_days_value">%1$d %2$s</string>
     <string name="cycle_day_singular">día</string>
@@ -914,7 +930,7 @@
     <string name="weekday_sunday_short">D</string>
 
     <string name="vitals_permissions_needed_title">Permisos de constantes necesarios</string>
-    <string name="vitals_permissions_needed_body">Concede permisos de presión arterial, saturación de oxígeno, frecuencia respiratoria, temperatura y VO2 máx. para completar esta pantalla.</string>
+    <string name="vitals_permissions_needed_body">Concede permisos de presión arterial, saturación de oxígeno, frecuencia respiratoria, temperatura, VO2 máx. y glucosa para completar esta pantalla.</string>
     <string name="vitals_respiratory_rate_readings">Lecturas de frecuencia respiratoria</string>
     <string name="vitals_body_temperature_readings">Lecturas de temperatura corporal</string>
     <string name="heart_rate_health_checks_title">Comprobaciones de frecuencia cardiaca</string>

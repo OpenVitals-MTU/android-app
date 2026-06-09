@@ -66,6 +66,7 @@ import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.AverageHeartRateScreen
+import tech.mmarca.openvitals.features.heart.BloodGlucoseScreen
 import tech.mmarca.openvitals.features.heart.BloodPressureScreen
 import tech.mmarca.openvitals.features.heart.BodyTemperatureScreen
 import tech.mmarca.openvitals.features.heart.HeartMetric
@@ -74,6 +75,7 @@ import tech.mmarca.openvitals.features.heart.HeartVitalsOverviewScreen
 import tech.mmarca.openvitals.features.heart.HrvScreen
 import tech.mmarca.openvitals.features.heart.RespiratoryRateScreen
 import tech.mmarca.openvitals.features.heart.RestingHeartRateScreen
+import tech.mmarca.openvitals.features.heart.SkinTemperatureScreen
 import tech.mmarca.openvitals.features.heart.SpO2Screen
 import tech.mmarca.openvitals.features.heart.Vo2MaxScreen
 import tech.mmarca.openvitals.features.hydration.HydrationScreen
@@ -1120,6 +1122,8 @@ private fun HeartMetricRouteScreen(
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
         )
+        HeartMetric.BLOOD_GLUCOSE -> BloodGlucoseScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.SKIN_TEMPERATURE -> SkinTemperatureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
     }
 }
 
@@ -1174,6 +1178,8 @@ private fun DashboardWidgetId.toHeartMetricOrNull(): HeartMetric? =
         DashboardWidgetId.VO2_MAX -> HeartMetric.VO2_MAX
         DashboardWidgetId.RESPIRATORY_RATE -> HeartMetric.RESPIRATORY_RATE
         DashboardWidgetId.BODY_TEMPERATURE -> HeartMetric.BODY_TEMPERATURE
+        DashboardWidgetId.BLOOD_GLUCOSE -> HeartMetric.BLOOD_GLUCOSE
+        DashboardWidgetId.SKIN_TEMPERATURE -> HeartMetric.SKIN_TEMPERATURE
         else -> null
     }
 
@@ -1187,6 +1193,8 @@ private fun HeartMetric.toDashboardWidgetId(): DashboardWidgetId =
         HeartMetric.VO2_MAX -> DashboardWidgetId.VO2_MAX
         HeartMetric.RESPIRATORY_RATE -> DashboardWidgetId.RESPIRATORY_RATE
         HeartMetric.BODY_TEMPERATURE -> DashboardWidgetId.BODY_TEMPERATURE
+        HeartMetric.BLOOD_GLUCOSE -> DashboardWidgetId.BLOOD_GLUCOSE
+        HeartMetric.SKIN_TEMPERATURE -> DashboardWidgetId.SKIN_TEMPERATURE
     }
 
 private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =
@@ -1234,6 +1242,8 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.VO2_MAX -> R.string.metric_vo2_max
         DashboardWidgetId.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
         DashboardWidgetId.BODY_TEMPERATURE -> R.string.metric_body_temp
+        DashboardWidgetId.BLOOD_GLUCOSE -> R.string.metric_blood_glucose
+        DashboardWidgetId.SKIN_TEMPERATURE -> R.string.metric_skin_temperature
         DashboardWidgetId.WEEKLY_CARDIO_LOAD -> R.string.metric_weekly_cardio_load
         DashboardWidgetId.CARDIO_LOAD -> R.string.metric_weekly_cardio_load
         DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness

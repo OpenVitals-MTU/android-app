@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.data.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
@@ -31,6 +32,7 @@ import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.HeightEntry
 import tech.mmarca.openvitals.data.model.HydrationEntry
 import tech.mmarca.openvitals.data.model.HydrationWriteRequest
+import tech.mmarca.openvitals.data.model.IntermenstrualBleedingEntry
 import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
@@ -39,7 +41,10 @@ import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.data.model.NutritionEntry
 import tech.mmarca.openvitals.data.model.OvulationTestEntry
 import tech.mmarca.openvitals.data.model.PermissionGrantMode
+import tech.mmarca.openvitals.data.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.data.model.SexualActivityEntry
+import tech.mmarca.openvitals.data.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.data.model.SleepData
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.StepProgressPoint
@@ -127,6 +132,12 @@ class HealthConnectManager @Inject constructor(
 
     fun isMindfulnessSessionAvailable(): Boolean =
         permissionService.isMindfulnessSessionAvailable()
+
+    fun isSkinTemperatureAvailable(): Boolean =
+        permissionService.isSkinTemperatureAvailable()
+
+    fun isPlannedExerciseAvailable(): Boolean =
+        permissionService.isPlannedExerciseAvailable()
 
     suspend fun grantedPermissions(): Set<String> =
         permissionService.grantedPermissions()
@@ -266,6 +277,10 @@ class HealthConnectManager @Inject constructor(
         includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeElevation: Boolean,
+        includeSpeed: Boolean,
+        includePower: Boolean,
+        includeStepsCadence: Boolean,
+        includeCyclingCadence: Boolean,
     ): ExerciseData? =
         activityReader.readExerciseSession(
             id = id,
@@ -277,7 +292,14 @@ class HealthConnectManager @Inject constructor(
             includeWheelchairPushes = includeWheelchairPushes,
             includeFloors = includeFloors,
             includeElevation = includeElevation,
+            includeSpeed = includeSpeed,
+            includePower = includePower,
+            includeStepsCadence = includeStepsCadence,
+            includeCyclingCadence = includeCyclingCadence,
         )
+
+    suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =
+        activityReader.readPlannedExerciseSessions(start, end)
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String =
         activityReader.writeActivityEntry(request)
@@ -441,6 +463,12 @@ class HealthConnectManager @Inject constructor(
     suspend fun readBasalBodyTemperatureEntries(start: Instant, end: Instant): List<BasalBodyTemperatureEntry> =
         cycleReader.readBasalBodyTemperatureEntries(start, end)
 
+    suspend fun readIntermenstrualBleedingEntries(start: Instant, end: Instant): List<IntermenstrualBleedingEntry> =
+        cycleReader.readIntermenstrualBleedingEntries(start, end)
+
+    suspend fun readSexualActivityEntries(start: Instant, end: Instant): List<SexualActivityEntry> =
+        cycleReader.readSexualActivityEntries(start, end)
+
     suspend fun readBloodPressureEntries(start: Instant, end: Instant): List<BloodPressureEntry> =
         vitalsReader.readBloodPressureEntries(start, end)
 
@@ -464,6 +492,12 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readLatestVo2Max(date: LocalDate): Vo2MaxEntry? =
         vitalsReader.readLatestVo2Max(date)
+
+    suspend fun readBloodGlucoseEntries(start: Instant, end: Instant): List<BloodGlucoseEntry> =
+        vitalsReader.readBloodGlucoseEntries(start, end)
+
+    suspend fun readSkinTemperatureEntries(start: Instant, end: Instant): List<SkinTemperatureEntry> =
+        vitalsReader.readSkinTemperatureEntries(start, end)
 
     suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String =
         vitalsReader.writeVitalsMeasurementEntry(request)

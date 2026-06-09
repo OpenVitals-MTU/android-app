@@ -59,6 +59,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.DailyHrv
@@ -66,6 +67,7 @@ import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.data.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.Vo2MaxEntry
@@ -100,6 +102,8 @@ enum class HeartMetric {
     VO2_MAX,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    BLOOD_GLUCOSE,
+    SKIN_TEMPERATURE,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -224,6 +228,34 @@ fun BodyTemperatureScreen(
 }
 
 @Composable
+fun BloodGlucoseScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.BLOOD_GLUCOSE,
+    )
+}
+
+@Composable
+fun SkinTemperatureScreen(
+    viewModel: HeartViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    HeartMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = HeartMetric.SKIN_TEMPERATURE,
+    )
+}
+
+@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun HeartMetricScreen(
     viewModel: HeartViewModel,
@@ -335,6 +367,32 @@ private fun HeartMetricScreen(
                     dateTimeFormatterProvider,
                     onEditVitalsMeasurement,
                     viewModel::deleteVitalsMeasurementEntry,
+                )
+            }
+            HeartMetric.BLOOD_GLUCOSE -> vitalsMetricContent(
+                state = state,
+                phase3Permissions = viewModel.vitalsPermissions,
+                onGrantPermissions = requestVitalsPermissions::launch,
+            ) {
+                bloodGlucoseContent(
+                    state = state,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    chartDaySelection = chartDaySelection,
+                )
+            }
+            HeartMetric.SKIN_TEMPERATURE -> vitalsMetricContent(
+                state = state,
+                phase3Permissions = viewModel.vitalsPermissions,
+                onGrantPermissions = requestVitalsPermissions::launch,
+            ) {
+                skinTemperatureContent(
+                    state = state,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    chartDaySelection = chartDaySelection,
                 )
             }
         }
@@ -1207,6 +1265,134 @@ private fun LazyListScope.bodyTemperatureContent(
     }
 }
 
+private fun LazyListScope.bloodGlucoseContent(
+    state: HeartUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+) {
+    if (state.bloodGlucose.isNotEmpty()) {
+        item {
+            BloodGlucoseChart(
+                entries = state.bloodGlucose,
+                selectedRange = state.selectedRange,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            heartEntryRows(
+                entries = state.bloodGlucose.filter {
+                    it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
+                },
+                value = { unitFormatter.bloodGlucose(it.millimolesPerLiter).text },
+                source = { it.source },
+                time = { it.time },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                titleDate = selectedDate,
+            )
+        }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.bloodGlucose,
+            source = { it.source },
+            time = { it.time },
+            accentColor = glucoseColor,
+        )
+        bloodGlucoseStatistics(
+            entries = state.bloodGlucose,
+            previousEntries = state.previousBloodGlucose,
+            baselineEntries = state.baselineBloodGlucose,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
+        heartEntryRows(
+            entries = state.bloodGlucose,
+            value = { unitFormatter.bloodGlucose(it.millimolesPerLiter).text },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+    } else if (!state.isLoading) {
+        noHeartMetricData(
+            titleRes = R.string.metric_blood_glucose,
+            messageRes = R.string.message_no_blood_glucose,
+            icon = Icons.Outlined.Favorite,
+            accentColor = glucoseColor,
+        )
+    }
+}
+
+private fun LazyListScope.skinTemperatureContent(
+    state: HeartUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+) {
+    if (state.skinTemperature.isNotEmpty()) {
+        item {
+            SkinTemperatureChart(
+                entries = state.skinTemperature,
+                selectedRange = state.selectedRange,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            heartEntryRows(
+                entries = state.skinTemperature.filter {
+                    it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
+                },
+                value = { it.skinTemperatureValue(unitFormatter) },
+                source = { it.source },
+                time = { it.time },
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                titleDate = selectedDate,
+            )
+        }
+        heartRawDataConfidence(
+            period = period,
+            entries = state.skinTemperature,
+            source = { it.source },
+            time = { it.time },
+            accentColor = temperatureColor,
+        )
+        skinTemperatureStatistics(
+            entries = state.skinTemperature,
+            previousEntries = state.previousSkinTemperature,
+            baselineEntries = state.baselineSkinTemperature,
+            period = period,
+            selectedRange = state.selectedRange,
+            unitFormatter = unitFormatter,
+        )
+        heartEntryRows(
+            entries = state.skinTemperature,
+            value = { it.skinTemperatureValue(unitFormatter) },
+            source = { it.source },
+            time = { it.time },
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+    } else if (!state.isLoading) {
+        noHeartMetricData(
+            titleRes = R.string.metric_skin_temperature,
+            messageRes = R.string.message_no_skin_temperature,
+            icon = Icons.Outlined.DeviceThermostat,
+            accentColor = temperatureColor,
+        )
+    }
+}
+
 private fun LazyListScope.heartAggregateDataConfidence(
     period: DatePeriod,
     trackedDates: Collection<LocalDate>,
@@ -1691,6 +1877,65 @@ private fun LazyListScope.bodyTemperatureStatistics(
     )
 }
 
+private fun LazyListScope.bloodGlucoseStatistics(
+    entries: List<BloodGlucoseEntry>,
+    previousEntries: List<BloodGlucoseEntry>,
+    baselineEntries: List<BloodGlucoseEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    val values = entries.map { it.millimolesPerLiter }
+    val previousValues = previousEntries.map { it.millimolesPerLiter }
+    heartNumericStatistics(
+        unitFormatter = unitFormatter,
+        average = unitFormatter.bloodGlucose(values.average()),
+        low = unitFormatter.bloodGlucose(values.minOrNull() ?: 0.0),
+        high = unitFormatter.bloodGlucose(values.maxOrNull() ?: 0.0),
+        readings = entries.size,
+        comparison = previousValues.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(values.average(), it.average())
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.bloodGlucose(it) },
+        icon = Icons.Outlined.Favorite,
+        accentColor = glucoseColor,
+        period = period,
+        baselineCurrentValue = values.average(),
+        baselineValues = baselineEntries.map { it.bloodGlucoseBaselineValue() },
+    )
+}
+
+private fun LazyListScope.skinTemperatureStatistics(
+    entries: List<SkinTemperatureEntry>,
+    previousEntries: List<SkinTemperatureEntry>,
+    baselineEntries: List<SkinTemperatureEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    val values = entries.mapNotNull { it.averageDeltaCelsius }
+    if (values.isEmpty()) return
+    val previousValues = previousEntries.mapNotNull { it.averageDeltaCelsius }
+    heartNumericStatistics(
+        unitFormatter = unitFormatter,
+        average = unitFormatter.temperatureDelta(values.average()),
+        low = unitFormatter.temperatureDelta(values.minOrNull() ?: 0.0),
+        high = unitFormatter.temperatureDelta(values.maxOrNull() ?: 0.0),
+        readings = entries.size,
+        comparison = previousValues.takeIf { it.isNotEmpty() }?.let {
+            periodComparison(values.average(), it.average())
+        },
+        selectedRange = selectedRange,
+        comparisonValueFormatter = { unitFormatter.temperatureDelta(it) },
+        icon = Icons.Outlined.DeviceThermostat,
+        accentColor = temperatureColor,
+        period = period,
+        baselineCurrentValue = values.average(),
+        baselineValues = baselineEntries.mapNotNull { it.skinTemperatureBaselineValue() },
+    )
+}
+
 private fun LazyListScope.heartNumericStatistics(
     unitFormatter: UnitFormatter,
     average: DisplayValue,
@@ -1915,3 +2160,23 @@ private fun Vo2MaxEntry.vo2BaselineValue(): BaselineValue =
         date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
         value = vo2MaxMlPerKgPerMin,
     )
+
+private fun BloodGlucoseEntry.bloodGlucoseBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = millimolesPerLiter,
+    )
+
+private fun SkinTemperatureEntry.skinTemperatureBaselineValue(): BaselineValue? =
+    averageDeltaCelsius?.let { delta ->
+        BaselineValue(
+            date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+            value = delta,
+        )
+    }
+
+private fun SkinTemperatureEntry.skinTemperatureValue(unitFormatter: UnitFormatter): String =
+    averageDeltaCelsius
+        ?.let { unitFormatter.temperatureDelta(it).text }
+        ?: baselineCelsius?.let { unitFormatter.temperature(it).text }
+        ?: ""

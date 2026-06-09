@@ -329,6 +329,20 @@ private fun LazyListScope.cardiovascularOverviewCharts(
             )
         }
     }
+    if (state.bloodGlucose.hasRenderableChartData(state.selectedRange) { it.time }) {
+        item {
+            BloodGlucoseChart(
+                entries = state.bloodGlucose,
+                selectedRange = state.selectedRange,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = overviewMetricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+    }
 }
 
 private fun LazyListScope.respiratoryOverviewCharts(
@@ -356,6 +370,20 @@ private fun LazyListScope.respiratoryOverviewCharts(
         item {
             BodyTemperatureChart(
                 entries = state.bodyTemperature,
+                selectedRange = state.selectedRange,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = overviewMetricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+    }
+    if (state.skinTemperature.hasRenderableChartData(state.selectedRange) { it.time }) {
+        item {
+            SkinTemperatureChart(
+                entries = state.skinTemperature,
                 selectedRange = state.selectedRange,
                 period = period,
                 unitFormatter = unitFormatter,
@@ -428,6 +456,14 @@ private fun cardiovascularOverviewMetrics(
             color = vo2Color,
             source = state.latestVo2Max?.source,
         ),
+        OverviewMetricCardData(
+            metric = HeartMetric.BLOOD_GLUCOSE,
+            titleRes = R.string.metric_blood_glucose,
+            value = state.latestBloodGlucose?.let { unitFormatter.bloodGlucose(it.millimolesPerLiter) },
+            icon = Icons.Outlined.Favorite,
+            color = glucoseColor,
+            source = state.latestBloodGlucose?.source,
+        ),
     )
 
 private fun respiratoryOverviewMetrics(
@@ -455,6 +491,14 @@ private fun respiratoryOverviewMetrics(
             icon = Icons.Outlined.DeviceThermostat,
             color = temperatureColor,
             source = state.latestBodyTemperature?.source,
+        ),
+        OverviewMetricCardData(
+            metric = HeartMetric.SKIN_TEMPERATURE,
+            titleRes = R.string.metric_skin_temperature,
+            value = state.latestSkinTemperature?.averageDeltaCelsius?.let(unitFormatter::temperatureDelta),
+            icon = Icons.Outlined.DeviceThermostat,
+            color = temperatureColor,
+            source = state.latestSkinTemperature?.source,
         ),
     )
 
@@ -557,7 +601,9 @@ private val HeartUiState.hasOverviewData: Boolean
         spO2.isNotEmpty() ||
         respiratoryRate.isNotEmpty() ||
         bodyTemperature.isNotEmpty() ||
-        vo2Max.isNotEmpty()
+        vo2Max.isNotEmpty() ||
+        bloodGlucose.isNotEmpty() ||
+        skinTemperature.isNotEmpty()
 
 private fun overviewMetricModifier(): Modifier =
     Modifier

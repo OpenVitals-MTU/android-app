@@ -30,6 +30,7 @@ class ActivitiesViewModelTest {
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
         coEvery { repo.loadWorkouts(any(), any()) } returns emptyList()
+        coEvery { repo.loadPlannedWorkouts(any(), any()) } returns emptyList()
         coEvery { repo.loadDailySteps(any(), any()) } returns emptyList()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns emptyList()
         coEvery { repo.deleteActivityEntry(any()) } returns Unit

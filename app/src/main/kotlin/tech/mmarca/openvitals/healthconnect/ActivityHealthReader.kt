@@ -2,14 +2,19 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.util.Log
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
+import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import androidx.health.connect.client.records.metadata.Device
@@ -29,6 +34,7 @@ import tech.mmarca.openvitals.data.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.data.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.model.StepProgressPoint
 import java.time.Duration
 import java.time.Instant
@@ -412,6 +418,10 @@ internal class ActivityHealthReader(
         includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeElevation: Boolean,
+        includeSpeed: Boolean,
+        includePower: Boolean,
+        includeStepsCadence: Boolean,
+        includeCyclingCadence: Boolean,
     ): ExerciseData? =
         support.withNullableLogging("readExerciseSession[$id]") {
             val record = support.client().readRecord(ExerciseSessionRecord::class, id).record
@@ -426,6 +436,10 @@ internal class ActivityHealthReader(
                 if (includeWheelchairPushes) add(WheelchairPushesRecord.COUNT_TOTAL)
                 if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
                 if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
+                if (includeSpeed) add(SpeedRecord.SPEED_AVG)
+                if (includePower) add(PowerRecord.POWER_AVG)
+                if (includeStepsCadence) add(StepsCadenceRecord.RATE_AVG)
+                if (includeCyclingCadence) add(CyclingPedalingCadenceRecord.RPM_AVG)
             }
             val aggregate = if (metrics.isEmpty()) {
                 null
@@ -499,8 +513,51 @@ internal class ActivityHealthReader(
                 } else {
                     null
                 },
+                averageSpeedMetersPerSecond = if (includeSpeed && aggregate != null) {
+                    aggregate[SpeedRecord.SPEED_AVG]?.inMetersPerSecond
+                } else {
+                    null
+                },
+                averagePowerWatts = if (includePower && aggregate != null) {
+                    aggregate[PowerRecord.POWER_AVG]?.inWatts
+                } else {
+                    null
+                },
+                averageStepsCadenceRate = if (includeStepsCadence && aggregate != null) {
+                    aggregate[StepsCadenceRecord.RATE_AVG]
+                } else {
+                    null
+                },
+                averageCyclingCadenceRpm = if (includeCyclingCadence && aggregate != null) {
+                    aggregate[CyclingPedalingCadenceRecord.RPM_AVG]
+                } else {
+                    null
+                },
                 appPackageName = appPackageName,
             )
+        }
+
+    suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =
+        support.withLogging("readPlannedExerciseSessions[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = PlannedExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+                pageSize = 100,
+            ).map { record ->
+                PlannedExerciseData(
+                    id = record.metadata.id,
+                    title = record.title,
+                    exerciseType = record.exerciseType,
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    hasExplicitTime = record.hasExplicitTime,
+                    completedExerciseSessionId = record.completedExerciseSessionId,
+                    notes = record.notes,
+                    blockCount = record.blocks.size,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
         }
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String = withContext(Dispatchers.IO) {

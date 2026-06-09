@@ -13,12 +13,14 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -27,6 +29,7 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
@@ -34,9 +37,15 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
+import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.SexualActivityRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.SpeedRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
@@ -91,13 +100,21 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(BodyWaterMassRecord::class),
     )
 
-    val activityExtrasPermissions: Set<String> = setOf(
-        HealthPermission.getReadPermission(FloorsClimbedRecord::class),
-        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(ElevationGainedRecord::class),
-        HealthPermission.getReadPermission(WheelchairPushesRecord::class),
-        HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-    )
+    val activityExtrasPermissions: Set<String>
+        get() = buildSet {
+            add(HealthPermission.getReadPermission(FloorsClimbedRecord::class))
+            add(HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class))
+            add(HealthPermission.getReadPermission(ElevationGainedRecord::class))
+            add(HealthPermission.getReadPermission(WheelchairPushesRecord::class))
+            add(HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class))
+            add(HealthPermission.getReadPermission(SpeedRecord::class))
+            add(HealthPermission.getReadPermission(PowerRecord::class))
+            add(HealthPermission.getReadPermission(StepsCadenceRecord::class))
+            add(HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class))
+            if (isPlannedExerciseAvailable()) {
+                add(HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class))
+            }
+        }
 
     val nutritionHydrationPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HydrationRecord::class),
@@ -132,13 +149,18 @@ internal class HealthConnectPermissionService(
             }
         }
 
-    val vitalsPermissions: Set<String> = setOf(
-        HealthPermission.getReadPermission(BloodPressureRecord::class),
-        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
-        HealthPermission.getReadPermission(RespiratoryRateRecord::class),
-        HealthPermission.getReadPermission(BodyTemperatureRecord::class),
-        HealthPermission.getReadPermission(Vo2MaxRecord::class),
-    )
+    val vitalsPermissions: Set<String>
+        get() = buildSet {
+            add(HealthPermission.getReadPermission(BloodPressureRecord::class))
+            add(HealthPermission.getReadPermission(OxygenSaturationRecord::class))
+            add(HealthPermission.getReadPermission(RespiratoryRateRecord::class))
+            add(HealthPermission.getReadPermission(BodyTemperatureRecord::class))
+            add(HealthPermission.getReadPermission(Vo2MaxRecord::class))
+            add(HealthPermission.getReadPermission(BloodGlucoseRecord::class))
+            if (isSkinTemperatureAvailable()) {
+                add(HealthPermission.getReadPermission(SkinTemperatureRecord::class))
+            }
+        }
 
     val vitalsWritePermissions: Set<String> = setOf(
         HealthPermission.getWritePermission(BloodPressureRecord::class),
@@ -153,6 +175,8 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(OvulationTestRecord::class),
         HealthPermission.getReadPermission(CervicalMucusRecord::class),
         HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class),
+        HealthPermission.getReadPermission(SexualActivityRecord::class),
     )
 
     /** Phase 1 - core metrics requested on first launch */
@@ -167,7 +191,7 @@ internal class HealthConnectPermissionService(
             (if (isMindfulnessSessionAvailable()) mindfulnessPermissions else emptySet())
 
     /** Phase 3 - vitals, requested by category during onboarding or when opening Heart & Vitals */
-    val phase3Permissions: Set<String> = vitalsPermissions
+    val phase3Permissions: Set<String> get() = vitalsPermissions
 
     /** Phase 4 - sensitive cycle tracking, requested only after explicit opt-in from Settings */
     val phase4Permissions: Set<String> = cyclePermissions
@@ -259,6 +283,32 @@ internal class HealthConnectPermissionService(
         }
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "backgroundFeatureStatus=$status available=$available ${diagnostics.summary()}")
+        return available
+    }
+
+    fun isSkinTemperatureAvailable(): Boolean =
+        isFeatureAvailable(
+            feature = HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE,
+            logName = "skinTemperature",
+        )
+
+    fun isPlannedExerciseAvailable(): Boolean =
+        isFeatureAvailable(
+            feature = HealthConnectFeatures.FEATURE_PLANNED_EXERCISE,
+            logName = "plannedExercise",
+        )
+
+    private fun isFeatureAvailable(feature: Int, logName: String): Boolean {
+        if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
+
+        val status = withLogging(
+            "features.getFeatureStatus[$logName]",
+            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
+        ) {
+            clientProvider().features.getFeatureStatus(feature)
+        }
+        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        Log.d(TAG, "${logName}FeatureStatus=$status available=$available ${diagnostics.summary()}")
         return available
     }
 

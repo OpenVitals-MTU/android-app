@@ -11,9 +11,11 @@ import tech.mmarca.openvitals.data.model.DailyHrv
 import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.HeartRateSample
 import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.data.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.data.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
@@ -91,12 +93,20 @@ data class HeartUiState(
     val vo2Max: List<Vo2MaxEntry> = emptyList(),
     val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
     val baselineVo2Max: List<Vo2MaxEntry> = emptyList(),
+    val bloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val previousBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val baselineBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
+    val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
+    val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
     val hasVitalsData: Boolean = false,
     val latestBloodPressure: BloodPressureEntry? = null,
     val latestSpO2: SpO2Entry? = null,
     val latestRespiratoryRate: RespiratoryRateEntry? = null,
     val latestBodyTemperature: BodyTempEntry? = null,
     val latestVo2Max: Vo2MaxEntry? = null,
+    val latestBloodGlucose: BloodGlucoseEntry? = null,
+    val latestSkinTemperature: SkinTemperatureEntry? = null,
     val missingVitalsPermissions: Set<String> = emptySet(),
     val highHeartRateCheck: HeartRateThresholdCheck = HeartRateThresholdCheck(
         type = HeartRateThresholdCheckType.HIGH,
@@ -280,7 +290,9 @@ class HeartViewModel(
                     HeartMetric.SPO2,
                     HeartMetric.VO2_MAX,
                     HeartMetric.RESPIRATORY_RATE,
-                    HeartMetric.BODY_TEMPERATURE -> vitalsRepository
+                    HeartMetric.BODY_TEMPERATURE,
+                    HeartMetric.BLOOD_GLUCOSE,
+                    HeartMetric.SKIN_TEMPERATURE -> vitalsRepository
                         .loadVitalsPeriod(query, metric.toVitalsPeriodMetric())
                         .toLoadResult()
                 }
@@ -331,12 +343,20 @@ class HeartViewModel(
                     vo2Max = result.vo2Max,
                     previousVo2Max = result.previousVo2Max,
                     baselineVo2Max = result.baselineVo2Max,
+                    bloodGlucose = result.bloodGlucose,
+                    previousBloodGlucose = result.previousBloodGlucose,
+                    baselineBloodGlucose = result.baselineBloodGlucose,
+                    skinTemperature = result.skinTemperature,
+                    previousSkinTemperature = result.previousSkinTemperature,
+                    baselineSkinTemperature = result.baselineSkinTemperature,
                     hasVitalsData = vitalsSummary.hasVitalsData,
                     latestBloodPressure = vitalsSummary.latestBloodPressure,
                     latestSpO2 = vitalsSummary.latestSpO2,
                     latestRespiratoryRate = vitalsSummary.latestRespiratoryRate,
                     latestBodyTemperature = vitalsSummary.latestBodyTemperature,
                     latestVo2Max = vitalsSummary.latestVo2Max,
+                    latestBloodGlucose = vitalsSummary.latestBloodGlucose,
+                    latestSkinTemperature = vitalsSummary.latestSkinTemperature,
                     highHeartRateCheck = highHeartRateCheck,
                     lowHeartRateCheck = lowHeartRateCheck,
                 )
@@ -464,6 +484,12 @@ private data class HeartLoadResult(
     val vo2Max: List<Vo2MaxEntry> = emptyList(),
     val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
     val baselineVo2Max: List<Vo2MaxEntry> = emptyList(),
+    val bloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val previousBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val baselineBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
+    val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
+    val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
 )
 
 private data class HeartVitalsSummary(
@@ -473,6 +499,8 @@ private data class HeartVitalsSummary(
     val latestRespiratoryRate: RespiratoryRateEntry?,
     val latestBodyTemperature: BodyTempEntry?,
     val latestVo2Max: Vo2MaxEntry?,
+    val latestBloodGlucose: BloodGlucoseEntry?,
+    val latestSkinTemperature: SkinTemperatureEntry?,
 )
 
 private fun HeartLoadResult.vitalsSummary(): HeartVitalsSummary =
@@ -481,12 +509,16 @@ private fun HeartLoadResult.vitalsSummary(): HeartVitalsSummary =
             spO2.isNotEmpty() ||
             respiratoryRate.isNotEmpty() ||
             bodyTemperature.isNotEmpty() ||
-            vo2Max.isNotEmpty(),
+            vo2Max.isNotEmpty() ||
+            bloodGlucose.isNotEmpty() ||
+            skinTemperature.isNotEmpty(),
         latestBloodPressure = bloodPressure.maxByOrNull { it.time },
         latestSpO2 = spO2.maxByOrNull { it.time },
         latestRespiratoryRate = respiratoryRate.maxByOrNull { it.time },
         latestBodyTemperature = bodyTemperature.maxByOrNull { it.time },
         latestVo2Max = vo2Max.maxByOrNull { it.time },
+        latestBloodGlucose = bloodGlucose.maxByOrNull { it.time },
+        latestSkinTemperature = skinTemperature.maxByOrNull { it.time },
     )
 
 private fun HeartLoadResult.heartRateThresholdCheck(
@@ -563,6 +595,8 @@ private fun HeartMetric.toVitalsPeriodMetric(): VitalsPeriodMetric =
         HeartMetric.VO2_MAX -> VitalsPeriodMetric.VO2_MAX
         HeartMetric.RESPIRATORY_RATE -> VitalsPeriodMetric.RESPIRATORY_RATE
         HeartMetric.BODY_TEMPERATURE -> VitalsPeriodMetric.BODY_TEMPERATURE
+        HeartMetric.BLOOD_GLUCOSE -> VitalsPeriodMetric.BLOOD_GLUCOSE
+        HeartMetric.SKIN_TEMPERATURE -> VitalsPeriodMetric.SKIN_TEMPERATURE
         else -> error("$this is not a vitals period metric")
     }
 
@@ -603,6 +637,12 @@ private fun VitalsPeriodData.toLoadResult(): HeartLoadResult =
         vo2Max = vo2Max,
         previousVo2Max = previousVo2Max,
         baselineVo2Max = baselineVo2Max,
+        bloodGlucose = bloodGlucose,
+        previousBloodGlucose = previousBloodGlucose,
+        baselineBloodGlucose = baselineBloodGlucose,
+        skinTemperature = skinTemperature,
+        previousSkinTemperature = previousSkinTemperature,
+        baselineSkinTemperature = baselineSkinTemperature,
     )
 
 private fun HeartLoadResult.merge(other: HeartLoadResult): HeartLoadResult =
@@ -638,6 +678,12 @@ private fun HeartLoadResult.merge(other: HeartLoadResult): HeartLoadResult =
         vo2Max = vo2Max + other.vo2Max,
         previousVo2Max = previousVo2Max + other.previousVo2Max,
         baselineVo2Max = baselineVo2Max + other.baselineVo2Max,
+        bloodGlucose = bloodGlucose + other.bloodGlucose,
+        previousBloodGlucose = previousBloodGlucose + other.previousBloodGlucose,
+        baselineBloodGlucose = baselineBloodGlucose + other.baselineBloodGlucose,
+        skinTemperature = skinTemperature + other.skinTemperature,
+        previousSkinTemperature = previousSkinTemperature + other.previousSkinTemperature,
+        baselineSkinTemperature = baselineSkinTemperature + other.baselineSkinTemperature,
     )
 
 private fun heartMetricFromRoute(metricId: String?): HeartMetric? {
@@ -652,6 +698,8 @@ private fun heartMetricFromRoute(metricId: String?): HeartMetric? {
         "VO2_MAX" -> HeartMetric.VO2_MAX
         "RESPIRATORY_RATE" -> HeartMetric.RESPIRATORY_RATE
         "BODY_TEMPERATURE" -> HeartMetric.BODY_TEMPERATURE
+        "BLOOD_GLUCOSE" -> HeartMetric.BLOOD_GLUCOSE
+        "SKIN_TEMPERATURE" -> HeartMetric.SKIN_TEMPERATURE
         else -> HeartMetric.AVERAGE_HEART_RATE
     }
 }

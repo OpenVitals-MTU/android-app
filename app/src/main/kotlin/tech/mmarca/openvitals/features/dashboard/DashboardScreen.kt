@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -1563,6 +1564,30 @@ private fun dashboardWidgetSpecs(
             accentColor = VitalsColor,
             loadingMessage = loadingMessageFor(DashboardWidgetId.BODY_TEMPERATURE),
             onClick = openMetric(DashboardWidgetId.BODY_TEMPERATURE),
+        )
+    }
+    if (shouldBuild(DashboardWidgetId.BLOOD_GLUCOSE)) {
+        addOptionalMetric(
+            id = DashboardWidgetId.BLOOD_GLUCOSE,
+            title = stringResource(R.string.metric_blood_glucose),
+            value = data.latestBloodGlucoseMillimolesPerLiter?.let(unitFormatter::bloodGlucose),
+            icon = Icons.Outlined.Favorite,
+            accentColor = VitalsColor,
+            noDataMessage = stringResource(R.string.message_no_blood_glucose),
+            loadingMessage = loadingMessageFor(DashboardWidgetId.BLOOD_GLUCOSE),
+            onClick = openMetric(DashboardWidgetId.BLOOD_GLUCOSE),
+        )
+    }
+    if (shouldBuild(DashboardWidgetId.SKIN_TEMPERATURE)) {
+        addOptionalMetric(
+            id = DashboardWidgetId.SKIN_TEMPERATURE,
+            title = stringResource(R.string.metric_skin_temperature),
+            value = data.latestSkinTemperatureDeltaCelsius?.let(unitFormatter::temperatureDelta),
+            icon = Icons.Outlined.DeviceThermostat,
+            accentColor = VitalsColor,
+            noDataMessage = stringResource(R.string.message_no_skin_temperature),
+            loadingMessage = loadingMessageFor(DashboardWidgetId.SKIN_TEMPERATURE),
+            onClick = openMetric(DashboardWidgetId.SKIN_TEMPERATURE),
         )
     }
     if (shouldBuild(DashboardWidgetId.MINDFULNESS)) {

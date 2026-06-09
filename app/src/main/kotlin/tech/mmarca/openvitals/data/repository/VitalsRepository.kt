@@ -2,17 +2,21 @@ package tech.mmarca.openvitals.data.repository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
+import tech.mmarca.openvitals.data.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.data.model.BloodPressureEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.data.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.data.model.SpO2Entry
 import tech.mmarca.openvitals.data.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.model.VitalsMeasurementEntry
@@ -44,6 +48,8 @@ class VitalsRepository @Inject constructor(
     private val readRespiratoryRatePermission = HealthPermission.getReadPermission(RespiratoryRateRecord::class)
     private val readBodyTemperaturePermission = HealthPermission.getReadPermission(BodyTemperatureRecord::class)
     private val readVo2MaxPermission = HealthPermission.getReadPermission(Vo2MaxRecord::class)
+    private val readBloodGlucosePermission = HealthPermission.getReadPermission(BloodGlucoseRecord::class)
+    private val readSkinTemperaturePermission = HealthPermission.getReadPermission(SkinTemperatureRecord::class)
     private val writeBloodPressurePermission = HealthPermission.getWritePermission(BloodPressureRecord::class)
     private val writeSpO2Permission = HealthPermission.getWritePermission(OxygenSaturationRecord::class)
     private val writeRespiratoryRatePermission = HealthPermission.getWritePermission(RespiratoryRateRecord::class)
@@ -78,6 +84,8 @@ class VitalsRepository @Inject constructor(
                 val vo2Max = async { loadVo2Max(current.start, current.end, granted) }
                 val respiratoryRate = async { loadRespiratoryRate(current.start, current.end, granted) }
                 val bodyTemperature = async { loadBodyTemperature(current.start, current.end, granted) }
+                val bloodGlucose = async { loadBloodGlucose(current.start, current.end, granted) }
+                val skinTemperature = async { loadSkinTemperature(current.start, current.end, granted) }
                 VitalsPeriodData(
                     missingVitalsPermissions = missingPermissions,
                     bloodPressure = bloodPressure.await(),
@@ -85,6 +93,8 @@ class VitalsRepository @Inject constructor(
                     respiratoryRate = respiratoryRate.await(),
                     bodyTemperature = bodyTemperature.await(),
                     vo2Max = vo2Max.await(),
+                    bloodGlucose = bloodGlucose.await(),
+                    skinTemperature = skinTemperature.await(),
                 )
             }
             VitalsPeriodMetric.BLOOD_PRESSURE -> {
@@ -130,6 +140,24 @@ class VitalsRepository @Inject constructor(
                     bodyTemperature = entries.current,
                     previousBodyTemperature = entries.previous,
                     baselineBodyTemperature = entries.baseline,
+                )
+            }
+            VitalsPeriodMetric.BLOOD_GLUCOSE -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadBloodGlucose(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    bloodGlucose = entries.current,
+                    previousBloodGlucose = entries.previous,
+                    baselineBloodGlucose = entries.baseline,
+                )
+            }
+            VitalsPeriodMetric.SKIN_TEMPERATURE -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadSkinTemperature(start, end, granted) }
+                VitalsPeriodData(
+                    missingVitalsPermissions = missingPermissions,
+                    skinTemperature = entries.current,
+                    previousSkinTemperature = entries.previous,
+                    baselineSkinTemperature = entries.baseline,
                 )
             }
         }
@@ -234,6 +262,40 @@ class VitalsRepository @Inject constructor(
         return hc.readVo2MaxEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
+    suspend fun loadBloodGlucose(start: LocalDate, end: LocalDate): List<BloodGlucoseEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadBloodGlucose(start, end, granted)
+    }
+
+    private suspend fun loadBloodGlucose(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<BloodGlucoseEntry> {
+        if (readBloodGlucosePermission !in granted) {
+            Log.w(TAG, "Skipping loadBloodGlucose missingCount=1")
+            return emptyList()
+        }
+        return hc.readBloodGlucoseEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
+    suspend fun loadSkinTemperature(start: LocalDate, end: LocalDate): List<SkinTemperatureEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadSkinTemperature(start, end, granted)
+    }
+
+    private suspend fun loadSkinTemperature(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<SkinTemperatureEntry> {
+        if (!hc.isSkinTemperatureAvailable() || readSkinTemperaturePermission !in granted) {
+            Log.w(TAG, "Skipping loadSkinTemperature missingCount=1")
+            return emptyList()
+        }
+        return hc.readSkinTemperatureEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
     suspend fun hasVitalsWritePermission(type: VitalsMeasurementType): Boolean =
         vitalsWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
 
@@ -299,6 +361,8 @@ enum class VitalsPeriodMetric {
     VO2_MAX,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
+    BLOOD_GLUCOSE,
+    SKIN_TEMPERATURE,
 }
 
 data class VitalsPeriodData(
@@ -318,4 +382,10 @@ data class VitalsPeriodData(
     val vo2Max: List<Vo2MaxEntry> = emptyList(),
     val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
     val baselineVo2Max: List<Vo2MaxEntry> = emptyList(),
+    val bloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val previousBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val baselineBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
+    val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
+    val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
+    val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
 )

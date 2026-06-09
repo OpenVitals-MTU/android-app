@@ -301,6 +301,7 @@ class DashboardViewModelTest {
                 DashboardMetric.STEPS,
                 DashboardMetric.DISTANCE,
                 DashboardMetric.CALORIES_OUT,
+                DashboardMetric.WHEELCHAIR_PUSHES,
                 DashboardMetric.WORKOUT,
             ),
             queries.first().visibleMetrics,

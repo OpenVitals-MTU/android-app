@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.data.model.DailyRestingHR
 import tech.mmarca.openvitals.data.model.DailySteps
 import tech.mmarca.openvitals.data.model.ExerciseData
 import tech.mmarca.openvitals.data.model.HeartRateSample
+import tech.mmarca.openvitals.data.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -46,6 +47,7 @@ data class ActivitiesUiState(
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val dailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
     val workouts: List<ExerciseData> = emptyList(),
+    val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
     val previousWorkouts: List<ExerciseData> = emptyList(),
     val baselineWorkouts: List<ExerciseData> = emptyList(),
     val overviewDays: List<ActivityOverviewDay> = emptyList(),
@@ -191,6 +193,7 @@ class ActivitiesViewModel(
                 coroutineScope {
                     val currentDataEnd = windows.currentDataEnd
                     val workouts = async { repository.loadWorkouts(windows.current.start, currentDataEnd) }
+                    val plannedWorkouts = async { repository.loadPlannedWorkouts(windows.current.start, windows.current.end) }
                     val previousWorkouts = async { repository.loadWorkouts(windows.previous.start, windows.previous.end) }
                     val baselineWorkouts = async { repository.loadWorkouts(windows.baseline.start, windows.baseline.end) }
                     val dailySteps = async { repository.loadDailySteps(windows.current.start, currentDataEnd) }
@@ -212,6 +215,7 @@ class ActivitiesViewModel(
                     val loadedWorkouts = workouts.await()
                     ActivitiesLoadResult(
                         workouts = loadedWorkouts,
+                        plannedWorkouts = plannedWorkouts.await(),
                         previousWorkouts = previousWorkouts.await(),
                         baselineWorkouts = baselineWorkouts.await(),
                         overviewDays = activityOverviewDays(
@@ -234,6 +238,7 @@ class ActivitiesViewModel(
                         isLoading = false,
                         selectedDate = date,
                         workouts = result.workouts,
+                        plannedWorkouts = result.plannedWorkouts,
                         previousWorkouts = result.previousWorkouts,
                         baselineWorkouts = result.baselineWorkouts,
                         overviewDays = result.overviewDays,
@@ -253,6 +258,7 @@ class ActivitiesViewModel(
 
     private data class ActivitiesLoadResult(
         val workouts: List<ExerciseData>,
+        val plannedWorkouts: List<PlannedExerciseData>,
         val previousWorkouts: List<ExerciseData>,
         val baselineWorkouts: List<ExerciseData>,
         val overviewDays: List<ActivityOverviewDay>,
