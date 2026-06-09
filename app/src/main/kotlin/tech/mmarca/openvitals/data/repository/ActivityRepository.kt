@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.data.model.ActivityWriteRequest
 import tech.mmarca.openvitals.data.model.ActivityProgressPoint
 import tech.mmarca.openvitals.data.model.DailyNutrition
@@ -47,6 +48,7 @@ class ActivityRepository @Inject constructor(
     private val readActiveCaloriesPermission = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
     private val readBmrPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
+    private val readWheelchairPushesPermission = HealthPermission.getReadPermission(WheelchairPushesRecord::class)
     private val writeExercisePermission = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
     private val writeDistancePermission = HealthPermission.getWritePermission(DistanceRecord::class)
     private val writeElevationPermission = HealthPermission.getWritePermission(ElevationGainedRecord::class)
@@ -57,17 +59,52 @@ class ActivityRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadActivityPeriod(query: PeriodLoadQuery, includeSteps: Boolean, includeNutrition: Boolean): ActivityPeriodData = coroutineScope {
+    suspend fun loadActivityPeriod(
+        query: PeriodLoadQuery,
+        includeSteps: Boolean,
+        includeNutrition: Boolean,
+        includeWheelchairPushes: Boolean = false,
+    ): ActivityPeriodData = coroutineScope {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         val dailySteps = async {
-            if (includeSteps) loadDailySteps(windows.current.start, windows.current.end, granted) else emptyList()
+            if (includeSteps || includeWheelchairPushes) {
+                loadDailySteps(
+                    start = windows.current.start,
+                    end = windows.current.end,
+                    granted = granted,
+                    includeSteps = includeSteps,
+                    includeWheelchairPushes = includeWheelchairPushes,
+                )
+            } else {
+                emptyList()
+            }
         }
         val previousDailySteps = async {
-            if (includeSteps) loadDailySteps(windows.previous.start, windows.previous.end, granted) else emptyList()
+            if (includeSteps || includeWheelchairPushes) {
+                loadDailySteps(
+                    start = windows.previous.start,
+                    end = windows.previous.end,
+                    granted = granted,
+                    includeSteps = includeSteps,
+                    includeWheelchairPushes = includeWheelchairPushes,
+                )
+            } else {
+                emptyList()
+            }
         }
         val baselineDailySteps = async {
-            if (includeSteps) loadDailySteps(windows.baseline.start, windows.baseline.end, granted) else emptyList()
+            if (includeSteps || includeWheelchairPushes) {
+                loadDailySteps(
+                    start = windows.baseline.start,
+                    end = windows.baseline.end,
+                    granted = granted,
+                    includeSteps = includeSteps,
+                    includeWheelchairPushes = includeWheelchairPushes,
+                )
+            } else {
+                emptyList()
+            }
         }
         val nutrition = async {
             if (includeNutrition) loadDailyNutrition(windows.current.start, windows.current.end, granted) else emptyList()
@@ -79,7 +116,16 @@ class ActivityRepository @Inject constructor(
             if (includeNutrition) loadDailyNutrition(windows.baseline.start, windows.baseline.end, granted) else emptyList()
         }
         val activityProgress = async {
-            if (query.range == TimeRange.DAY) loadActivityProgress(windows.current.start, granted) else emptyList()
+            if (query.range == TimeRange.DAY && (includeSteps || includeWheelchairPushes)) {
+                loadActivityProgress(
+                    date = windows.current.start,
+                    granted = granted,
+                    includeSteps = includeSteps,
+                    includeWheelchairPushes = includeWheelchairPushes,
+                )
+            } else {
+                emptyList()
+            }
         }
         ActivityPeriodData(
             dailySteps = dailySteps.await(),
@@ -114,16 +160,24 @@ class ActivityRepository @Inject constructor(
         start: LocalDate,
         end: LocalDate,
         granted: Set<String>,
+        includeSteps: Boolean = true,
+        includeWheelchairPushes: Boolean = false,
     ): List<DailySteps> {
-        if (readStepsPermission !in granted) {
-            Log.w(TAG, "Skipping loadDailySteps missingCount=1")
+        val missingRequired = buildSet {
+            if (includeSteps && readStepsPermission !in granted) add(readStepsPermission)
+            if (includeWheelchairPushes && readWheelchairPushesPermission !in granted) add(readWheelchairPushesPermission)
+        }
+        if (missingRequired.isNotEmpty()) {
+            Log.w(TAG, "Skipping loadDailySteps missingCount=${missingRequired.size}")
             return emptyList()
         }
         val effectiveStart = activityHistoryStart(start, end, granted)
         return hc.readDailySteps(
             startDate = effectiveStart,
             endDate = end,
+            includeSteps = includeSteps,
             includeDistance = readDistancePermission in granted,
+            includeWheelchairPushes = includeWheelchairPushes && readWheelchairPushesPermission in granted,
             includeFloors = readFloorsPermission in granted,
             includeActiveCalories = readActiveCaloriesPermission in granted,
             includeElevation = readElevationPermission in granted,
@@ -151,17 +205,25 @@ class ActivityRepository @Inject constructor(
     private suspend fun loadActivityProgress(
         date: LocalDate,
         granted: Set<String>,
+        includeSteps: Boolean = true,
+        includeWheelchairPushes: Boolean = false,
     ): List<ActivityProgressPoint> {
-        if (readStepsPermission !in granted) {
-            Log.w(TAG, "Skipping loadActivityProgress missingCount=1")
+        val missingRequired = buildSet {
+            if (includeSteps && readStepsPermission !in granted) add(readStepsPermission)
+            if (includeWheelchairPushes && readWheelchairPushesPermission !in granted) add(readWheelchairPushesPermission)
+        }
+        if (missingRequired.isNotEmpty()) {
+            Log.w(TAG, "Skipping loadActivityProgress missingCount=${missingRequired.size}")
             return emptyList()
         }
         return hc.readActivityProgress(
             date = date,
+            includeSteps = includeSteps,
             includeDistance = readDistancePermission in granted,
             includeCalories = readCaloriesPermission in granted,
             includeActiveCalories = readActiveCaloriesPermission in granted,
             includeCaloriesEstimate = canEstimateTotalCalories(granted),
+            includeWheelchairPushes = includeWheelchairPushes && readWheelchairPushesPermission in granted,
             includeFloors = readFloorsPermission in granted,
             includeElevation = readElevationPermission in granted,
         )
@@ -200,6 +262,7 @@ class ActivityRepository @Inject constructor(
             includeTotalCalories = readCaloriesPermission in granted,
             includeActiveCalories = readActiveCaloriesPermission in granted,
             includeTotalCaloriesEstimate = canEstimateTotalCalories(granted),
+            includeWheelchairPushes = readWheelchairPushesPermission in granted,
             includeFloors = readFloorsPermission in granted,
             includeElevation = readElevationPermission in granted,
         )

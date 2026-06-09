@@ -23,6 +23,7 @@ enum class MetricDailyGoalKey(
     ACTIVE_CALORIES_KCAL("goal_active_calories_kcal", 400.0, 25.0, 3_000.0, 25.0),
     FLOORS("goal_floors", 10.0, 1.0, 200.0, 1.0),
     ELEVATION_METERS("goal_elevation_meters", 100.0, 5.0, 3_000.0, 5.0),
+    WHEELCHAIR_PUSHES("goal_wheelchair_pushes", 1_000.0, 50.0, 50_000.0, 50.0),
     SLEEP_HOURS("goal_sleep_hours", 8.0, 1.0, 14.0, 0.25),
     WORKOUT_MINUTES("goal_workout_minutes", 30.0, 5.0, 240.0, 5.0),
     MINDFULNESS_MINUTES("goal_mindfulness_minutes", 10.0, 1.0, 120.0, 1.0),

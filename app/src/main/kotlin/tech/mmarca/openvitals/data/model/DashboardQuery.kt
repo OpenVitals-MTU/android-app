@@ -21,6 +21,7 @@ enum class DashboardMetric {
     ACTIVE_CALORIES,
     FLOORS,
     ELEVATION,
+    WHEELCHAIR_PUSHES,
     WORKOUT,
     SLEEP,
     HYDRATION,

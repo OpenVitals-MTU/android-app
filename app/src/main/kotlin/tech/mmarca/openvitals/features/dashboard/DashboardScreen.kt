@@ -34,6 +34,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Accessible
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.Add
@@ -138,6 +139,7 @@ import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
+import tech.mmarca.openvitals.ui.theme.WheelchairPushesColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import tech.mmarca.openvitals.ui.theme.accentSurfaceContainerColor
 import java.time.Instant
@@ -1234,6 +1236,29 @@ private fun dashboardWidgetSpecs(
             },
             loadingMessage = loadingMessageFor(DashboardWidgetId.ELEVATION),
             onClick = openMetric(DashboardWidgetId.ELEVATION),
+        )
+    }
+    if (shouldBuild(DashboardWidgetId.WHEELCHAIR_PUSHES)) {
+        addOptionalMetric(
+            id = DashboardWidgetId.WHEELCHAIR_PUSHES,
+            title = stringResource(R.string.metric_wheelchair_pushes),
+            value = data.wheelchairPushes?.let {
+                DisplayValue(unitFormatter.count(it), stringResource(R.string.unit_pushes))
+            },
+            icon = Icons.AutoMirrored.Outlined.Accessible,
+            accentColor = WheelchairPushesColor,
+            progress = data.wheelchairPushes?.let {
+                dashboardGoalProgress(
+                    current = it.toDouble(),
+                    target = dailyGoals.wheelchairPushes,
+                    label = stringResource(
+                        R.string.dashboard_goal_of,
+                        unitFormatter.count(dailyGoals.wheelchairPushes.roundToInt()),
+                    ),
+                )
+            },
+            loadingMessage = loadingMessageFor(DashboardWidgetId.WHEELCHAIR_PUSHES),
+            onClick = openMetric(DashboardWidgetId.WHEELCHAIR_PUSHES),
         )
     }
     if (shouldBuild(DashboardWidgetId.SLEEP)) {

@@ -129,6 +129,7 @@ internal fun MetricsCard(
             } ?: notAvailable,
         )
         DetailRow(stringResource(R.string.metric_active_calories), workout.activeCaloriesKcal?.let { unitFormatter.energy(it).text } ?: notAvailable)
+        DetailRow(stringResource(R.string.metric_wheelchair_pushes), workout.wheelchairPushes?.let { unitFormatter.count(it) } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_floors_climbed), workout.floorsClimbed?.let { unitFormatter.count(it) } ?: notAvailable)
         DetailRow(stringResource(R.string.metric_elevation_gained), workout.elevationGainedMeters?.let { unitFormatter.elevation(it).text } ?: notAvailable)
     }

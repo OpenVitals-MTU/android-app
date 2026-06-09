@@ -244,6 +244,7 @@
     <string name="metric_active_calories">Active calories</string>
     <string name="metric_elevation">Elevation</string>
     <string name="metric_elevation_gained">Elevation gained</string>
+    <string name="metric_wheelchair_pushes">Wheelchair pushes</string>
     <string name="metric_workout">Workout</string>
     <string name="metric_sleep">Sleep</string>
     <string name="metric_hydration">Hydration</string>
@@ -326,6 +327,7 @@
     <string name="metric_body_temp">Body temp</string>
 
     <string name="unit_steps">steps</string>
+    <string name="unit_pushes">pushes</string>
     <string name="unit_floors">floors</string>
     <string name="unit_days">days</string>
     <string name="unit_nights">nights</string>
@@ -676,6 +678,7 @@
     <string name="message_no_active_calories">No active calories data was recorded</string>
     <string name="message_no_calorie_data_period">No total, active, or BMR calorie data in this period.</string>
     <string name="message_no_elevation">No elevation data was recorded</string>
+    <string name="message_no_wheelchair_pushes">No wheelchair push data was recorded</string>
     <string name="message_no_sleep_day_selected">No sleep data for the selected day.</string>
     <string name="message_no_sleep_period">No sleep data in the selected period.</string>
     <string name="message_no_heart_period">No heart rate data in the selected period.\n\nMake sure the heart rate permission is granted and a connected device has synced data.</string>

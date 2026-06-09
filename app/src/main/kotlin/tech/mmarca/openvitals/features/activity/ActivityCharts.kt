@@ -39,6 +39,7 @@ import tech.mmarca.openvitals.ui.theme.DistanceColor
 import tech.mmarca.openvitals.ui.theme.ElevationColor
 import tech.mmarca.openvitals.ui.theme.FloorsColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import tech.mmarca.openvitals.ui.theme.WheelchairPushesColor
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -228,6 +229,32 @@ internal fun ElevationBarChart(
         selectedDate = selectedDate,
         onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.elevation(it).text },
+    )
+}
+
+@Composable
+internal fun WheelchairPushesBarChart(
+    data: List<DailySteps>,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
+) {
+    MetricBarChartCard(
+        title = stringResource(R.string.metric_wheelchair_pushes),
+        values = data.map { PeriodChartValue(date = it.date, value = (it.wheelchairPushes ?: 0L).toDouble()) },
+        selectedRange = selectedRange,
+        period = period,
+        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.count(data.sumOf { it.wheelchairPushes ?: 0L })} ${stringResource(R.string.unit_pushes)}",
+        accentColor = WheelchairPushesColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = modifier,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+        valueFormatter = { unitFormatter.count(it.roundToLong()) },
     )
 }
 

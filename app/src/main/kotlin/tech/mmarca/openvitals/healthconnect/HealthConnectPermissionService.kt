@@ -41,6 +41,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -94,6 +95,7 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(FloorsClimbedRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(ElevationGainedRecord::class),
+        HealthPermission.getReadPermission(WheelchairPushesRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
     )
 

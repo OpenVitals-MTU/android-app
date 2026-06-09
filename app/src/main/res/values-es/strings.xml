@@ -244,6 +244,7 @@
     <string name="metric_active_calories">Calorías activas</string>
     <string name="metric_elevation">Elevación</string>
     <string name="metric_elevation_gained">Elevación ganada</string>
+    <string name="metric_wheelchair_pushes">Impulsos de silla de ruedas</string>
     <string name="metric_workout">Entrenamiento</string>
     <string name="metric_sleep">Sueño</string>
     <string name="metric_hydration">Hidratación</string>
@@ -326,6 +327,7 @@
     <string name="metric_body_temp">Temp. corporal</string>
 
     <string name="unit_steps">pasos</string>
+    <string name="unit_pushes">impulsos</string>
     <string name="unit_floors">pisos</string>
     <string name="unit_days">días</string>
     <string name="unit_nights">noches</string>
@@ -676,6 +678,7 @@
     <string name="message_no_active_calories">No se registraron datos de calorías activas</string>
     <string name="message_no_calorie_data_period">No hay datos de calorías totales, activas ni BMR en este periodo.</string>
     <string name="message_no_elevation">No se registraron datos de elevación</string>
+    <string name="message_no_wheelchair_pushes">No se registraron impulsos de silla de ruedas</string>
     <string name="message_no_sleep_day_selected">No hay datos de sueño para el día seleccionado.</string>
     <string name="message_no_sleep_period">No hay datos de sueño en el periodo seleccionado.</string>
     <string name="message_no_heart_period">No hay datos de frecuencia cardiaca en el periodo seleccionado.\n\nComprueba que el permiso de frecuencia cardiaca esté concedido y que un dispositivo conectado haya sincronizado datos.</string>

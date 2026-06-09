@@ -16,6 +16,7 @@ data class ExerciseData(
     val totalCaloriesKcal: Double? = null,
     val activeCaloriesKcal: Double? = null,
     val steps: Long? = null,
+    val wheelchairPushes: Long? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val notes: String? = null,
@@ -106,6 +107,7 @@ data class DailySteps(
     val date: LocalDate,
     val steps: Long,
     val distanceMeters: Double,
+    val wheelchairPushes: Long? = null,
     val floorsClimbed: Int? = null,
     val activeCaloriesKcal: Double? = null,
     val elevationGainedMeters: Double? = null,
@@ -122,6 +124,7 @@ data class ActivityProgressPoint(
     val totalDistanceMeters: Double?,
     val totalCaloriesBurnedKcal: Double?,
     val totalActiveCaloriesKcal: Double? = null,
+    val totalWheelchairPushes: Long? = null,
     val totalFloorsClimbed: Int? = null,
     val totalElevationGainedMeters: Double? = null,
 )

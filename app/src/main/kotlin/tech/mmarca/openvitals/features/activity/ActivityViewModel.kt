@@ -179,6 +179,7 @@ class ActivityViewModel(
                     query = query,
                     includeSteps = selectedMetric.usesDailySteps,
                     includeNutrition = selectedMetric.usesDailyNutrition,
+                    includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
                 )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
@@ -213,10 +214,13 @@ class ActivityViewModel(
 }
 
 private val ActivityMetric.usesDailySteps: Boolean
-    get() = this != ActivityMetric.CALORIES_BURNED
+    get() = this != ActivityMetric.CALORIES_BURNED && this != ActivityMetric.WHEELCHAIR_PUSHES
 
 private val ActivityMetric.usesDailyNutrition: Boolean
     get() = this == ActivityMetric.CALORIES_BURNED
+
+private val ActivityMetric.usesWheelchairPushes: Boolean
+    get() = this == ActivityMetric.WHEELCHAIR_PUSHES
 
 private fun activityMetricFromRoute(metricId: String?): ActivityMetric =
     when (metricId) {
@@ -225,5 +229,6 @@ private fun activityMetricFromRoute(metricId: String?): ActivityMetric =
         "ACTIVE_CALORIES" -> ActivityMetric.ACTIVE_CALORIES
         "FLOORS" -> ActivityMetric.FLOORS
         "ELEVATION" -> ActivityMetric.ELEVATION
+        "WHEELCHAIR_PUSHES" -> ActivityMetric.WHEELCHAIR_PUSHES
         else -> ActivityMetric.STEPS
     }

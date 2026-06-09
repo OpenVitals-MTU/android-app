@@ -43,6 +43,7 @@ data class DashboardDailyGoals(
     val activeCaloriesKcal: Double = MetricDailyGoalKey.ACTIVE_CALORIES_KCAL.defaultValue,
     val floors: Double = MetricDailyGoalKey.FLOORS.defaultValue,
     val elevationMeters: Double = MetricDailyGoalKey.ELEVATION_METERS.defaultValue,
+    val wheelchairPushes: Double = MetricDailyGoalKey.WHEELCHAIR_PUSHES.defaultValue,
     val sleepHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
     val hydrationLiters: Double = 2.0,
     val caloriesInKcal: Double = MetricDailyGoalKey.CALORIES_IN_KCAL.defaultValue,
@@ -335,6 +336,7 @@ private val DashboardFastMetrics = setOf(
     DashboardMetric.STEPS,
     DashboardMetric.DISTANCE,
     DashboardMetric.CALORIES_OUT,
+    DashboardMetric.WHEELCHAIR_PUSHES,
     DashboardMetric.WORKOUT,
 )
 
@@ -346,6 +348,7 @@ private fun PreferencesRepository.dashboardDailyGoals(): DashboardDailyGoals =
         activeCaloriesKcal = dailyGoalFor(MetricDailyGoalKey.ACTIVE_CALORIES_KCAL),
         floors = dailyGoalFor(MetricDailyGoalKey.FLOORS),
         elevationMeters = dailyGoalFor(MetricDailyGoalKey.ELEVATION_METERS),
+        wheelchairPushes = dailyGoalFor(MetricDailyGoalKey.WHEELCHAIR_PUSHES),
         sleepHours = dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
         hydrationLiters = hydrationDailyGoalLiters,
         caloriesInKcal = dailyGoalFor(MetricDailyGoalKey.CALORIES_IN_KCAL),

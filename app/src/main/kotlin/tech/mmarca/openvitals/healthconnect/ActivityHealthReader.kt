@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
@@ -59,7 +60,9 @@ internal class ActivityHealthReader(
     suspend fun readDailySteps(
         startDate: LocalDate,
         endDate: LocalDate,
+        includeSteps: Boolean = true,
         includeDistance: Boolean = true,
+        includeWheelchairPushes: Boolean = false,
         includeFloors: Boolean = false,
         includeActiveCalories: Boolean = false,
         includeElevation: Boolean = false,
@@ -68,7 +71,9 @@ internal class ActivityHealthReader(
             readDailyStepsChunk(
                 startDate = chunkStart,
                 endDate = chunkEnd,
+                includeSteps = includeSteps,
                 includeDistance = includeDistance,
+                includeWheelchairPushes = includeWheelchairPushes,
                 includeFloors = includeFloors,
                 includeActiveCalories = includeActiveCalories,
                 includeElevation = includeElevation,
@@ -78,7 +83,9 @@ internal class ActivityHealthReader(
     private suspend fun readDailyStepsChunk(
         startDate: LocalDate,
         endDate: LocalDate,
+        includeSteps: Boolean,
         includeDistance: Boolean,
+        includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeActiveCalories: Boolean,
         includeElevation: Boolean,
@@ -88,8 +95,9 @@ internal class ActivityHealthReader(
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailySteps[$start..$end]", emptyList()) {
             val metrics = buildSet {
-                add(StepsRecord.COUNT_TOTAL)
+                if (includeSteps) add(StepsRecord.COUNT_TOTAL)
                 if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
+                if (includeWheelchairPushes) add(WheelchairPushesRecord.COUNT_TOTAL)
                 if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
                 if (includeActiveCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                 if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
@@ -103,11 +111,20 @@ internal class ActivityHealthReader(
             ).map { bucket ->
                 DailySteps(
                     date = bucket.startTime.atZone(zone).toLocalDate(),
-                    steps = bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L,
+                    steps = if (includeSteps) {
+                        bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L
+                    } else {
+                        0L
+                    },
                     distanceMeters = if (includeDistance) {
                         bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
                     } else {
                         0.0
+                    },
+                    wheelchairPushes = if (includeWheelchairPushes) {
+                        bucket.result[WheelchairPushesRecord.COUNT_TOTAL] ?: 0L
+                    } else {
+                        null
                     },
                     floorsClimbed = if (includeFloors) {
                         bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
@@ -126,6 +143,18 @@ internal class ActivityHealthReader(
                     },
                 )
             }
+        }
+    }
+
+    suspend fun readWheelchairPushes(date: LocalDate): Long {
+        val (start, end) = support.dayRange(date)
+        return support.withLogging("readWheelchairPushes[$date][$start..$end]", 0L) {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(WheelchairPushesRecord.COUNT_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[WheelchairPushesRecord.COUNT_TOTAL] ?: 0L
         }
     }
 
@@ -173,10 +202,12 @@ internal class ActivityHealthReader(
 
     suspend fun readActivityProgress(
         date: LocalDate,
+        includeSteps: Boolean = true,
         includeDistance: Boolean,
         includeCalories: Boolean,
         includeActiveCalories: Boolean,
         includeCaloriesEstimate: Boolean = false,
+        includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeElevation: Boolean,
     ): List<ActivityProgressPoint> {
@@ -194,12 +225,13 @@ internal class ActivityHealthReader(
             }
             val includeActiveCaloriesForTotalEstimate = includeEstimatedCalories && bmrKcalPerDay != null
             val metrics = buildSet {
-                add(StepsRecord.COUNT_TOTAL)
+                if (includeSteps) add(StepsRecord.COUNT_TOTAL)
                 if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
                 if (includeTotalCaloriesFromRecords) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
                 if (includeActiveCalories || includeActiveCaloriesForTotalEstimate) {
                     add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                 }
+                if (includeWheelchairPushes) add(WheelchairPushesRecord.COUNT_TOTAL)
                 if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
                 if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
             }
@@ -208,6 +240,7 @@ internal class ActivityHealthReader(
             var cumulativeCalories = 0.0
             var cumulativeActiveCalories = 0.0
             var hasActiveCaloriesData = false
+            var cumulativeWheelchairPushes = 0L
             var cumulativeFloors = 0
             var cumulativeElevation = 0.0
 
@@ -218,7 +251,9 @@ internal class ActivityHealthReader(
                     timeRangeSlicer = Duration.ofHours(1),
                 )
             ).map { bucket ->
-                cumulativeSteps += bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L
+                if (includeSteps) {
+                    cumulativeSteps += bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L
+                }
                 if (includeDistance) {
                     cumulativeDistance += bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
                 }
@@ -229,6 +264,9 @@ internal class ActivityHealthReader(
                     val activeCalories = bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]
                     hasActiveCaloriesData = hasActiveCaloriesData || activeCalories != null
                     cumulativeActiveCalories += activeCalories?.inKilocalories ?: 0.0
+                }
+                if (includeWheelchairPushes) {
+                    cumulativeWheelchairPushes += bucket.result[WheelchairPushesRecord.COUNT_TOTAL] ?: 0L
                 }
                 if (includeFloors) {
                     cumulativeFloors += bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
@@ -257,6 +295,7 @@ internal class ActivityHealthReader(
                     totalDistanceMeters = if (includeDistance) cumulativeDistance else null,
                     totalCaloriesBurnedKcal = totalCaloriesBurnedKcal,
                     totalActiveCaloriesKcal = if (includeActiveCalories) cumulativeActiveCalories else null,
+                    totalWheelchairPushes = if (includeWheelchairPushes) cumulativeWheelchairPushes else null,
                     totalFloorsClimbed = if (includeFloors) cumulativeFloors else null,
                     totalElevationGainedMeters = if (includeElevation) cumulativeElevation else null,
                 )
@@ -370,6 +409,7 @@ internal class ActivityHealthReader(
         includeTotalCalories: Boolean,
         includeActiveCalories: Boolean,
         includeTotalCaloriesEstimate: Boolean = false,
+        includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeElevation: Boolean,
     ): ExerciseData? =
@@ -383,6 +423,7 @@ internal class ActivityHealthReader(
                 if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
                 if (includeTotalCaloriesFromRecords) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
                 if (includeActiveCalories || includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeWheelchairPushes) add(WheelchairPushesRecord.COUNT_TOTAL)
                 if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
                 if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
             }
@@ -440,6 +481,11 @@ internal class ActivityHealthReader(
                 totalCaloriesSource = totalCalories?.source ?: CaloriesBurnedSource.NO_DATA,
                 activeCaloriesKcal = if (includeActiveCalories && aggregate != null) {
                     activeCaloriesMetricKcal ?: 0.0
+                } else {
+                    null
+                },
+                wheelchairPushes = if (includeWheelchairPushes && aggregate != null) {
+                    aggregate[WheelchairPushesRecord.COUNT_TOTAL] ?: 0L
                 } else {
                     null
                 },

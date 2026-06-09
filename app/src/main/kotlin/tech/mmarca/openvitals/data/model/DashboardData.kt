@@ -43,6 +43,7 @@ data class DashboardData(
     val weeklyCardioLoad: DashboardWeeklyCardioLoad? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
+    val wheelchairPushes: Long? = null,
     val mindfulnessMinutes: Int? = null,
     val menstruationPeriodDays: Int? = null,
     val ovulationTestCount: Int? = null,
@@ -145,6 +146,11 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
             other.elevationGainedMeters
         } else {
             elevationGainedMeters
+        },
+        wheelchairPushes = if (DashboardMetric.WHEELCHAIR_PUSHES in other.loadedMetrics) {
+            other.wheelchairPushes
+        } else {
+            wheelchairPushes
         },
         mindfulnessMinutes = if (DashboardMetric.MINDFULNESS in other.loadedMetrics) {
             other.mindfulnessMinutes

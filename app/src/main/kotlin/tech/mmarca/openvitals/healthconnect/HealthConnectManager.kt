@@ -146,7 +146,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun readDailySteps(
         startDate: LocalDate,
         endDate: LocalDate,
+        includeSteps: Boolean = true,
         includeDistance: Boolean = true,
+        includeWheelchairPushes: Boolean = false,
         includeFloors: Boolean = false,
         includeActiveCalories: Boolean = false,
         includeElevation: Boolean = false,
@@ -154,11 +156,16 @@ class HealthConnectManager @Inject constructor(
         activityReader.readDailySteps(
             startDate = startDate,
             endDate = endDate,
+            includeSteps = includeSteps,
             includeDistance = includeDistance,
+            includeWheelchairPushes = includeWheelchairPushes,
             includeFloors = includeFloors,
             includeActiveCalories = includeActiveCalories,
             includeElevation = includeElevation,
         )
+
+    suspend fun readWheelchairPushes(date: LocalDate): Long =
+        activityReader.readWheelchairPushes(date)
 
     suspend fun readFloorsClimbed(date: LocalDate): Int =
         activityReader.readFloorsClimbed(date)
@@ -171,19 +178,23 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readActivityProgress(
         date: LocalDate,
+        includeSteps: Boolean = true,
         includeDistance: Boolean,
         includeCalories: Boolean,
         includeActiveCalories: Boolean,
         includeCaloriesEstimate: Boolean = false,
+        includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeElevation: Boolean,
     ): List<ActivityProgressPoint> =
         activityReader.readActivityProgress(
             date = date,
+            includeSteps = includeSteps,
             includeDistance = includeDistance,
             includeCalories = includeCalories,
             includeActiveCalories = includeActiveCalories,
             includeCaloriesEstimate = includeCaloriesEstimate,
+            includeWheelchairPushes = includeWheelchairPushes,
             includeFloors = includeFloors,
             includeElevation = includeElevation,
         )
@@ -252,6 +263,7 @@ class HealthConnectManager @Inject constructor(
         includeTotalCalories: Boolean,
         includeActiveCalories: Boolean,
         includeTotalCaloriesEstimate: Boolean = false,
+        includeWheelchairPushes: Boolean,
         includeFloors: Boolean,
         includeElevation: Boolean,
     ): ExerciseData? =
@@ -262,6 +274,7 @@ class HealthConnectManager @Inject constructor(
             includeTotalCalories = includeTotalCalories,
             includeActiveCalories = includeActiveCalories,
             includeTotalCaloriesEstimate = includeTotalCaloriesEstimate,
+            includeWheelchairPushes = includeWheelchairPushes,
             includeFloors = includeFloors,
             includeElevation = includeElevation,
         )

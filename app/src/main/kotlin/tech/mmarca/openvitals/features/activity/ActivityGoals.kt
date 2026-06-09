@@ -10,4 +10,5 @@ internal val ActivityMetric.dailyGoalKey: MetricDailyGoalKey
         ActivityMetric.ACTIVE_CALORIES -> MetricDailyGoalKey.ACTIVE_CALORIES_KCAL
         ActivityMetric.FLOORS -> MetricDailyGoalKey.FLOORS
         ActivityMetric.ELEVATION -> MetricDailyGoalKey.ELEVATION_METERS
+        ActivityMetric.WHEELCHAIR_PUSHES -> MetricDailyGoalKey.WHEELCHAIR_PUSHES
     }

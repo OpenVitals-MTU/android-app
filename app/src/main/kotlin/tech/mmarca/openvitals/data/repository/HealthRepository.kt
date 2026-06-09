@@ -32,6 +32,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
@@ -108,6 +109,7 @@ class HealthRepository @Inject constructor(
     private val readBodyTemperaturePermission = HealthPermission.getReadPermission(BodyTemperatureRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
     private val readElevationPermission = HealthPermission.getReadPermission(ElevationGainedRecord::class)
+    private val readWheelchairPushesPermission = HealthPermission.getReadPermission(WheelchairPushesRecord::class)
     private val readMindfulnessPermission = HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
     private val readHrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
     private val readHeightPermission = HealthPermission.getReadPermission(HeightRecord::class)
@@ -385,6 +387,13 @@ class HealthRepository @Inject constructor(
         val elevation = readIfNeeded(wants(DashboardMetric.ELEVATION), readElevationPermission, "elevation") {
             hc.readElevationGained(date)
         }
+        val wheelchairPushes = readIfNeeded(
+            wants(DashboardMetric.WHEELCHAIR_PUSHES),
+            readWheelchairPushesPermission,
+            "wheelchair pushes",
+        ) {
+            hc.readWheelchairPushes(date)
+        }
         val mindfulnessMinutes = readIfNeeded(
             wants(DashboardMetric.MINDFULNESS),
             readMindfulnessPermission,
@@ -466,6 +475,7 @@ class HealthRepository @Inject constructor(
             weeklyCardioLoad = weeklyCardioLoad?.await(),
             floorsClimbed = floors?.await(),
             elevationGainedMeters = elevation?.await(),
+            wheelchairPushes = wheelchairPushes?.await(),
             mindfulnessMinutes = mindfulnessMinutes?.await(),
             menstruationPeriodDays = menstruationPeriods?.await()?.sumOf { period ->
                 val startDate = period.startTime.atZone(zone).toLocalDate()
@@ -650,6 +660,7 @@ class HealthRepository @Inject constructor(
                 )
                 DashboardMetric.FLOORS -> setOf(readFloorsPermission)
                 DashboardMetric.ELEVATION -> setOf(readElevationPermission)
+                DashboardMetric.WHEELCHAIR_PUSHES -> setOf(readWheelchairPushesPermission)
                 DashboardMetric.WORKOUT -> setOf(readExercisePermission)
                 DashboardMetric.SLEEP -> setOf(readSleepPermission)
                 DashboardMetric.HYDRATION -> setOf(readHydrationPermission)

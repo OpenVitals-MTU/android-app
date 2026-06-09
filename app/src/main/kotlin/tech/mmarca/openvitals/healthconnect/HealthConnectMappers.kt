@@ -31,6 +31,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     activeCaloriesKcal: Double? = null,
     floorsClimbed: Int? = null,
     elevationGainedMeters: Double? = null,
+    wheelchairPushes: Long? = null,
     appPackageName: String? = null,
 ) = ExerciseData(
     id = metadata.id,
@@ -45,6 +46,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     totalCaloriesSource = totalCaloriesSource,
     activeCaloriesKcal = activeCaloriesKcal,
     steps = steps,
+    wheelchairPushes = wheelchairPushes,
     floorsClimbed = floorsClimbed,
     elevationGainedMeters = elevationGainedMeters,
     notes = notes,

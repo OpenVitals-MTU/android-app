@@ -48,6 +48,7 @@ import tech.mmarca.openvitals.features.activity.DistanceScreen
 import tech.mmarca.openvitals.features.activity.ElevationScreen
 import tech.mmarca.openvitals.features.activity.FloorsScreen
 import tech.mmarca.openvitals.features.activity.StepsScreen
+import tech.mmarca.openvitals.features.activity.WheelchairPushesScreen
 import tech.mmarca.openvitals.features.body.BmiScreen
 import tech.mmarca.openvitals.features.body.BmrScreen
 import tech.mmarca.openvitals.features.body.BodyFatScreen
@@ -1083,6 +1084,7 @@ private fun ActivityMetricRouteScreen(
         ActivityMetric.ACTIVE_CALORIES -> ActiveCaloriesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         ActivityMetric.FLOORS -> FloorsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         ActivityMetric.ELEVATION -> ElevationScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.WHEELCHAIR_PUSHES -> WheelchairPushesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
     }
 }
 
@@ -1158,6 +1160,7 @@ private fun DashboardWidgetId.toActivityMetricOrNull(): ActivityMetric? =
         DashboardWidgetId.ACTIVE_CALORIES -> ActivityMetric.ACTIVE_CALORIES
         DashboardWidgetId.FLOORS -> ActivityMetric.FLOORS
         DashboardWidgetId.ELEVATION -> ActivityMetric.ELEVATION
+        DashboardWidgetId.WHEELCHAIR_PUSHES -> ActivityMetric.WHEELCHAIR_PUSHES
         else -> null
     }
 
@@ -1207,6 +1210,7 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.ACTIVE_CALORIES -> R.string.screen_calories
         DashboardWidgetId.FLOORS -> R.string.metric_floors_climbed
         DashboardWidgetId.ELEVATION -> R.string.metric_elevation
+        DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
         DashboardWidgetId.WORKOUT -> R.string.metric_workout
         DashboardWidgetId.SLEEP -> R.string.metric_sleep
         DashboardWidgetId.HYDRATION -> R.string.metric_hydration

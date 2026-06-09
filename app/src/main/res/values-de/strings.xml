@@ -244,6 +244,7 @@
     <string name="metric_active_calories">Aktive Kalorien</string>
     <string name="metric_elevation">Höhe</string>
     <string name="metric_elevation_gained">Höhenmeter</string>
+    <string name="metric_wheelchair_pushes">Rollstuhlschübe</string>
     <string name="metric_workout">Training</string>
     <string name="metric_sleep">Schlaf</string>
     <string name="metric_hydration">Hydrierung</string>
@@ -326,6 +327,7 @@
     <string name="metric_body_temp">Körpertemp.</string>
 
     <string name="unit_steps">Schritte</string>
+    <string name="unit_pushes">Schübe</string>
     <string name="unit_floors">Etagen</string>
     <string name="unit_days">Tage</string>
     <string name="unit_nights">Nächte</string>
@@ -676,6 +678,7 @@
     <string name="message_no_active_calories">Es wurden keine Daten zu aktiven Kalorien aufgezeichnet</string>
     <string name="message_no_calorie_data_period">Keine Daten zu Gesamtkalorien, aktiven Kalorien oder BMR in diesem Zeitraum.</string>
     <string name="message_no_elevation">Es wurden keine Höhendaten aufgezeichnet</string>
+    <string name="message_no_wheelchair_pushes">Es wurden keine Rollstuhlschübe aufgezeichnet</string>
     <string name="message_no_sleep_day_selected">Keine Schlafdaten für den ausgewählten Tag.</string>
     <string name="message_no_sleep_period">Keine Schlafdaten im ausgewählten Zeitraum.</string>
     <string name="message_no_heart_period">Keine Herzfrequenzdaten im ausgewählten Zeitraum.\n\nStelle sicher, dass die Herzfrequenzberechtigung erteilt ist und ein verbundenes Gerät Daten synchronisiert hat.</string>
