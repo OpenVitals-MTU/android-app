@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Straighten
@@ -37,6 +38,7 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.BodyWaterMassEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -51,14 +53,18 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
+import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -70,9 +76,48 @@ enum class BodyMetric {
     LEAN_MASS,
     BMR,
     BONE_MASS,
+    BODY_WATER_MASS,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BodyScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val chartDaySelection = rememberChartDaySelection(
+        selectedRange = state.selectedRange,
+        selectedDate = state.selectedDate,
+        key = "body",
+    )
+
+    MetricDetailScaffold(
+        isLoading = state.isLoading,
+        selectedRange = state.selectedRange,
+        selectedDate = state.selectedDate,
+        error = state.error,
+        onRefresh = viewModel::load,
+        onSelectRange = viewModel::selectRange,
+        onPreviousPeriod = viewModel::previousPeriod,
+        onNextPeriod = viewModel::nextPeriod,
+        onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
+    ) { period ->
+        bodyContent(
+            state = state,
+            period = period,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            chartDaySelection = chartDaySelection,
+            onEditBodyMeasurement = onEditBodyMeasurement,
+            onDeleteBodyMeasurement = viewModel::deleteBodyMeasurementEntry,
+        )
+    }
+}
+
 @Composable
 fun WeightScreen(
     viewModel: BodyViewModel,
@@ -80,11 +125,10 @@ fun WeightScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.WEIGHT,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -96,11 +140,10 @@ fun HeightScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.HEIGHT,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -112,11 +155,10 @@ fun BmiScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.BMI,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -128,11 +170,10 @@ fun BodyFatScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.BODY_FAT,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -143,11 +184,10 @@ fun LeanMassScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.LEAN_MASS,
     )
 }
 
@@ -157,11 +197,10 @@ fun BmrScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.BMR,
     )
 }
 
@@ -171,11 +210,23 @@ fun BoneMassScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyMetricScreen(
+    BodyScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = BodyMetric.BONE_MASS,
+    )
+}
+
+@Composable
+fun BodyWaterMassScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
     )
 }
 
@@ -400,6 +451,246 @@ private fun BodyMetricScreen(
                     )
                 },
             )
+            BodyMetric.BODY_WATER_MASS -> singleBodyMetricContent(
+                state = state,
+                period = period,
+                titleRes = R.string.metric_body_water_mass,
+                value = state.latestBodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
+                comparison = state.previousLatestBodyWaterMassKg?.let { previous ->
+                    periodComparison(currentValue = state.latestBodyWaterMassKg ?: 0.0, previousValue = previous)
+                },
+                comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
+                icon = Icons.Outlined.MonitorWeight,
+                accentColor = WeightColor,
+                unitFormatter = unitFormatter,
+                selectedRange = state.selectedRange,
+                entryCount = state.bodyWaterMassEntries.size,
+                baselineCurrentValue = state.latestBodyWaterMassKg,
+                baselineValues = state.baselineBodyWaterMassEntries.map { it.bodyWaterMassBaselineValue() },
+                contextContent = {
+                    bodyEntryDataConfidence(
+                        period = period,
+                        entries = state.bodyWaterMassEntries,
+                        source = { it.source },
+                        time = { it.time },
+                        accentColor = WeightColor,
+                    )
+                },
+                entriesContent = {
+                    bodyReadingEntries(
+                        entries = state.bodyWaterMassEntries,
+                        value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
+                        source = { it.source },
+                        time = { it.time },
+                        accentColor = WeightColor,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    )
+                },
+            )
+        }
+    }
+}
+
+private fun LazyListScope.bodyContent(
+    state: BodyUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+) {
+    val metricsData = bodyMetricData(state, unitFormatter)
+    val trackedMetricsData = metricsData.filter { it.hasTrackedValues }
+    val hasAnyBodyData = metricsData.any { it.latest != null || it.values.isNotEmpty() } ||
+        state.weightEntries.isNotEmpty() ||
+        state.heightEntries.isNotEmpty() ||
+        state.bodyFatEntries.isNotEmpty() ||
+        state.leanMassEntries.isNotEmpty() ||
+        state.bmrEntries.isNotEmpty() ||
+        state.boneMassEntries.isNotEmpty() ||
+        state.bodyWaterMassEntries.isNotEmpty()
+
+    if (!hasAnyBodyData && !state.isLoading) {
+        item {
+            MetricCardPlaceholder(
+                title = stringResource(R.string.screen_body),
+                icon = Icons.Outlined.MonitorWeight,
+                accentColor = WeightColor,
+                message = stringResource(R.string.message_no_readings_period),
+                modifier = metricModifier(),
+            )
+        }
+        return
+    }
+
+    bodyOverviewStatistics(metricsData)
+
+    if (trackedMetricsData.isNotEmpty()) {
+        item { SectionHeader(stringResource(R.string.section_body_trends)) }
+        trackedMetricsData.forEach { metricData ->
+            bodyMetricTrend(
+                metricData = metricData,
+                state = state,
+                period = period,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+    }
+
+    chartDaySelection.selectedDate?.let { selectedDate ->
+        selectedDateBodyEntries(
+            state = state,
+            selectedDate = selectedDate,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEditBodyMeasurement = onEditBodyMeasurement,
+            onDeleteBodyMeasurement = onDeleteBodyMeasurement,
+        )
+    }
+
+    bodyAllReadingEntries(
+        state = state,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        onEditBodyMeasurement = onEditBodyMeasurement,
+        onDeleteBodyMeasurement = onDeleteBodyMeasurement,
+    )
+
+    if (state.bmi != null) {
+        bmiContextCard(state.bmi)
+    }
+}
+
+private fun LazyListScope.bodyOverviewStatistics(
+    metricsData: List<BodyMetricData>,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        InsightStatGrid(
+            stats = metricsData.map { metricData ->
+                val value = metricData.latest
+                InsightStat(
+                    title = stringResource(metricData.titleRes),
+                    value = value?.value ?: stringResource(R.string.no_data),
+                    unit = value?.unit.orEmpty(),
+                    icon = metricData.icon,
+                    accentColor = metricData.color,
+                )
+            },
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.bodyMetricTrend(
+    metricData: BodyMetricData,
+    state: BodyUiState,
+    period: DatePeriod,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+) {
+    item {
+        val summary = metricData.latest?.text
+            ?: stringResource(R.string.summary_entries, metricData.values.size.toString())
+        PeriodHistoryChart(
+            title = stringResource(metricData.titleRes),
+            values = metricData.values,
+            selectedRange = state.selectedRange,
+            period = period,
+            accentColor = metricData.color.copy(alpha = 0.85f),
+            summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · $summary",
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = metricModifier(),
+            selectedDate = selectedDate,
+            onDateSelected = onDateSelected,
+            valueFormatter = { metricData.valueDisplayFormatter(it).text },
+        )
+    }
+}
+
+private fun LazyListScope.selectedDateBodyEntries(
+    state: BodyUiState,
+    selectedDate: LocalDate,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+) {
+    val zone = ZoneId.systemDefault()
+    item {
+        val entries = bodyReadingItems(
+            state = state,
+            unitFormatter = unitFormatter,
+            weightLabel = stringResource(R.string.metric_weight),
+            heightLabel = stringResource(R.string.metric_height),
+            bodyFatLabel = stringResource(R.string.metric_body_fat),
+            leanMassLabel = stringResource(R.string.metric_lean_mass),
+            bmrLabel = stringResource(R.string.metric_bmr),
+            boneMassLabel = stringResource(R.string.metric_bone_mass),
+            bodyWaterMassLabel = stringResource(R.string.metric_body_water_mass),
+            onEditBodyMeasurement = onEditBodyMeasurement,
+            onDeleteBodyMeasurement = onDeleteBodyMeasurement,
+        ).filter { it.time.atZone(zone).toLocalDate() == selectedDate }
+            .sortedByDescending { it.time }
+        PaginatedEntryList(
+            title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+            entries = entries,
+        ) { entry, rowModifier ->
+            BodyReadingRow(
+                value = entry.value,
+                source = entry.source,
+                time = entry.time,
+                accentColor = entry.accentColor,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEdit = entry.onEdit,
+                onDelete = entry.onDelete,
+                modifier = rowModifier,
+            )
+        }
+    }
+}
+
+private fun LazyListScope.bodyAllReadingEntries(
+    state: BodyUiState,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+) {
+    item {
+        val entries = bodyReadingItems(
+            state = state,
+            unitFormatter = unitFormatter,
+            weightLabel = stringResource(R.string.metric_weight),
+            heightLabel = stringResource(R.string.metric_height),
+            bodyFatLabel = stringResource(R.string.metric_body_fat),
+            leanMassLabel = stringResource(R.string.metric_lean_mass),
+            bmrLabel = stringResource(R.string.metric_bmr),
+            boneMassLabel = stringResource(R.string.metric_bone_mass),
+            bodyWaterMassLabel = stringResource(R.string.metric_body_water_mass),
+            onEditBodyMeasurement = onEditBodyMeasurement,
+            onDeleteBodyMeasurement = onDeleteBodyMeasurement,
+        ).sortedByDescending { it.time }
+        if (entries.isNotEmpty()) {
+            PaginatedEntryList(
+                title = stringResource(R.string.section_entries),
+                entries = entries,
+            ) { entry, rowModifier ->
+                BodyReadingRow(
+                    value = entry.value,
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = entry.accentColor,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEdit = entry.onEdit,
+                    onDelete = entry.onDelete,
+                    modifier = rowModifier,
+                )
+            }
         }
     }
 }
@@ -980,6 +1271,258 @@ private fun LazyListScope.bmiEntries(
     )
 }
 
+private data class BodyMetricData(
+    val metric: BodyMetric,
+    val titleRes: Int,
+    val latest: DisplayValue?,
+    val values: List<PeriodChartValue>,
+    val color: Color,
+    val icon: ImageVector,
+    val valueDisplayFormatter: (Double) -> DisplayValue,
+) {
+    val hasTrackedValues: Boolean = values.isNotEmpty()
+}
+
+private data class BodyReadingItem(
+    val value: String,
+    val source: String,
+    val time: Instant,
+    val accentColor: Color,
+    val onEdit: (() -> Unit)? = null,
+    val onDelete: (() -> Unit)? = null,
+)
+
+private fun bodyMetricData(
+    state: BodyUiState,
+    unitFormatter: UnitFormatter,
+): List<BodyMetricData> =
+    listOf(
+        BodyMetricData(
+            metric = BodyMetric.WEIGHT,
+            titleRes = R.string.metric_weight,
+            latest = state.latestWeightKg?.let(unitFormatter::weight),
+            values = dailyLatestValues(state.weightEntries, time = { it.time }, value = { it.weightKg }),
+            color = WeightColor,
+            icon = Icons.Outlined.MonitorWeight,
+            valueDisplayFormatter = { unitFormatter.weight(it) },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.HEIGHT,
+            titleRes = R.string.metric_height,
+            latest = state.latestHeightCm?.let(unitFormatter::height),
+            values = dailyLatestValues(state.heightEntries, time = { it.time }, value = { it.heightCm }),
+            color = WeightColor,
+            icon = Icons.Outlined.Straighten,
+            valueDisplayFormatter = { unitFormatter.height(it) },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.BMI,
+            titleRes = R.string.metric_bmi,
+            latest = state.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
+            values = bmiHistoryValues(state.weightEntries, state.heightCm),
+            color = WeightColor,
+            icon = Icons.Outlined.MonitorWeight,
+            valueDisplayFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.BODY_FAT,
+            titleRes = R.string.metric_body_fat,
+            latest = state.latestBodyFatPercent?.let(unitFormatter::percent),
+            values = dailyLatestValues(state.bodyFatEntries, time = { it.time }, value = { it.percent }),
+            color = BodyFatColor,
+            icon = Icons.Outlined.MonitorWeight,
+            valueDisplayFormatter = { unitFormatter.percent(it) },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.LEAN_MASS,
+            titleRes = R.string.metric_lean_mass,
+            latest = state.latestLeanMassKg?.let(unitFormatter::bodyMass),
+            values = dailyLatestValues(state.leanMassEntries, time = { it.time }, value = { it.massKg }),
+            color = WeightColor,
+            icon = Icons.Outlined.MonitorWeight,
+            valueDisplayFormatter = { unitFormatter.bodyMass(it) },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.BONE_MASS,
+            titleRes = R.string.metric_bone_mass,
+            latest = state.latestBoneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
+            values = dailyLatestValues(state.boneMassEntries, time = { it.time }, value = { it.massKg }),
+            color = WeightColor,
+            icon = Icons.Outlined.MonitorWeight,
+            valueDisplayFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.BODY_WATER_MASS,
+            titleRes = R.string.metric_body_water_mass,
+            latest = state.latestBodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
+            values = dailyLatestValues(state.bodyWaterMassEntries, time = { it.time }, value = { it.massKg }),
+            color = WeightColor,
+            icon = Icons.Outlined.LocalDrink,
+            valueDisplayFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.BMR,
+            titleRes = R.string.metric_bmr,
+            latest = state.latestBmrKcal?.let(unitFormatter::energy),
+            values = dailyLatestValues(state.bmrEntries, time = { it.time }, value = { it.kcalPerDay }),
+            color = CaloriesColor,
+            icon = Icons.Outlined.LocalFireDepartment,
+            valueDisplayFormatter = { unitFormatter.energy(it) },
+        ),
+    )
+
+private fun bodyReadingItems(
+    state: BodyUiState,
+    unitFormatter: UnitFormatter,
+    weightLabel: String,
+    heightLabel: String,
+    bodyFatLabel: String,
+    leanMassLabel: String,
+    bmrLabel: String,
+    boneMassLabel: String,
+    bodyWaterMassLabel: String,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+): List<BodyReadingItem> =
+    buildList {
+        state.weightEntries.forEach { entry ->
+            val editable = entry.isOpenVitalsEntry && entry.id.isNotBlank()
+            add(
+                BodyReadingItem(
+                    value = "$weightLabel · ${unitFormatter.weight(entry.weightKg).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = WeightColor,
+                    onEdit = if (editable) {
+                        { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, entry.id) }
+                    } else {
+                        null
+                    },
+                    onDelete = if (editable) {
+                        { onDeleteBodyMeasurement(BodyMeasurementType.WEIGHT, entry.id) }
+                    } else {
+                        null
+                    },
+                )
+            )
+        }
+        state.heightEntries.forEach { entry ->
+            val editable = entry.isOpenVitalsEntry && entry.id.isNotBlank()
+            add(
+                BodyReadingItem(
+                    value = "$heightLabel · ${unitFormatter.height(entry.heightCm).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = WeightColor,
+                    onEdit = if (editable) {
+                        { onEditBodyMeasurement(BodyMeasurementType.HEIGHT, entry.id) }
+                    } else {
+                        null
+                    },
+                    onDelete = if (editable) {
+                        { onDeleteBodyMeasurement(BodyMeasurementType.HEIGHT, entry.id) }
+                    } else {
+                        null
+                    },
+                )
+            )
+        }
+        state.bodyFatEntries.forEach { entry ->
+            val editable = entry.isOpenVitalsEntry && entry.id.isNotBlank()
+            add(
+                BodyReadingItem(
+                    value = "$bodyFatLabel · ${unitFormatter.percent(entry.percent).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = BodyFatColor,
+                    onEdit = if (editable) {
+                        { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, entry.id) }
+                    } else {
+                        null
+                    },
+                    onDelete = if (editable) {
+                        { onDeleteBodyMeasurement(BodyMeasurementType.BODY_FAT, entry.id) }
+                    } else {
+                        null
+                    },
+                )
+            )
+        }
+        state.leanMassEntries.forEach { entry ->
+            add(
+                BodyReadingItem(
+                    value = "$leanMassLabel · ${unitFormatter.bodyMass(entry.massKg).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = WeightColor,
+                )
+            )
+        }
+        state.bmrEntries.forEach { entry ->
+            add(
+                BodyReadingItem(
+                    value = "$bmrLabel · ${unitFormatter.energy(entry.kcalPerDay).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = CaloriesColor,
+                )
+            )
+        }
+        state.boneMassEntries.forEach { entry ->
+            add(
+                BodyReadingItem(
+                    value = "$boneMassLabel · ${unitFormatter.bodyMass(entry.massKg, decimals = 2).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = WeightColor,
+                )
+            )
+        }
+        state.bodyWaterMassEntries.forEach { entry ->
+            add(
+                BodyReadingItem(
+                    value = "$bodyWaterMassLabel · ${unitFormatter.bodyMass(entry.massKg, decimals = 2).text}",
+                    source = entry.source,
+                    time = entry.time,
+                    accentColor = WeightColor,
+                )
+            )
+        }
+    }
+
+private fun <T> dailyLatestValues(
+    entries: List<T>,
+    time: (T) -> Instant,
+    value: (T) -> Double,
+): List<PeriodChartValue> =
+    entries
+        .groupBy { time(it).atZone(ZoneId.systemDefault()).toLocalDate() }
+        .map { (date, dayEntries) ->
+            PeriodChartValue(
+                date = date,
+                value = dayEntries.maxByOrNull(time)?.let(value) ?: 0.0,
+            )
+        }
+        .sortedBy { it.date }
+
+private fun bmiHistoryValues(
+    entries: List<WeightEntry>,
+    heightCm: Double?,
+): List<PeriodChartValue> {
+    val heightMeters = heightCm?.takeIf { it > 0.0 }?.let { it / 100.0 } ?: return emptyList()
+    return entries
+        .groupBy { it.time.atZone(ZoneId.systemDefault()).toLocalDate() }
+        .mapNotNull { (date, dayEntries) ->
+            dayEntries.maxByOrNull { it.time }?.let { entry ->
+                PeriodChartValue(
+                    date = date,
+                    value = entry.weightKg / (heightMeters * heightMeters),
+                )
+            }
+        }
+        .sortedBy { it.date }
+}
+
 private fun WeightEntry.editAction(
     type: BodyMeasurementType,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
@@ -1036,6 +1579,12 @@ private fun BmrEntry.bmrBaselineValue(): BaselineValue =
     )
 
 private fun BoneMassEntry.boneMassBaselineValue(): BaselineValue =
+    BaselineValue(
+        date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
+        value = massKg,
+    )
+
+private fun BodyWaterMassEntry.bodyWaterMassBaselineValue(): BaselineValue =
     BaselineValue(
         date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
         value = massKg,

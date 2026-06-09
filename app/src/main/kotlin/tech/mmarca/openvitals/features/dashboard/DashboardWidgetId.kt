@@ -23,6 +23,7 @@ enum class DashboardWidgetId {
     LEAN_MASS,
     BMR,
     BONE_MASS,
+    BODY_WATER_MASS,
     AVG_HEART_RATE,
     RESTING_HEART_RATE,
     HRV,
@@ -64,6 +65,7 @@ val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.LEAN_MASS,
     DashboardWidgetId.BMR,
     DashboardWidgetId.BONE_MASS,
+    DashboardWidgetId.BODY_WATER_MASS,
     DashboardWidgetId.AVG_HEART_RATE,
     DashboardWidgetId.RESTING_HEART_RATE,
     DashboardWidgetId.HRV,
@@ -157,6 +159,7 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.LEAN_MASS -> DashboardMetric.LEAN_MASS
     DashboardWidgetId.BMR -> DashboardMetric.BMR
     DashboardWidgetId.BONE_MASS -> DashboardMetric.BONE_MASS
+    DashboardWidgetId.BODY_WATER_MASS -> DashboardMetric.BODY_WATER_MASS
     DashboardWidgetId.AVG_HEART_RATE -> DashboardMetric.AVG_HEART_RATE
     DashboardWidgetId.RESTING_HEART_RATE -> DashboardMetric.RESTING_HEART_RATE
     DashboardWidgetId.HRV -> DashboardMetric.HRV

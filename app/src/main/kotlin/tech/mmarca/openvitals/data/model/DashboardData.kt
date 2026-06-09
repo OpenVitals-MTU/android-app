@@ -29,6 +29,7 @@ data class DashboardData(
     val leanMassKg: Double? = null,
     val bmrKcal: Double? = null,
     val boneMassKg: Double? = null,
+    val bodyWaterMassKg: Double? = null,
     val caloriesInKcal: Double? = null,
     val proteinGrams: Double? = null,
     val carbsGrams: Double? = null,
@@ -103,6 +104,11 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         leanMassKg = if (DashboardMetric.LEAN_MASS in other.loadedMetrics) other.leanMassKg else leanMassKg,
         bmrKcal = if (DashboardMetric.BMR in other.loadedMetrics) other.bmrKcal else bmrKcal,
         boneMassKg = if (DashboardMetric.BONE_MASS in other.loadedMetrics) other.boneMassKg else boneMassKg,
+        bodyWaterMassKg = if (DashboardMetric.BODY_WATER_MASS in other.loadedMetrics) {
+            other.bodyWaterMassKg
+        } else {
+            bodyWaterMassKg
+        },
         caloriesInKcal = if (DashboardMetric.CALORIES_IN in other.loadedMetrics) other.caloriesInKcal else caloriesInKcal,
         proteinGrams = if (DashboardMetric.PROTEIN in other.loadedMetrics) other.proteinGrams else proteinGrams,
         carbsGrams = if (DashboardMetric.CARBS in other.loadedMetrics) other.carbsGrams else carbsGrams,

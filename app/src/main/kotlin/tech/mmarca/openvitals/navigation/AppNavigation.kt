@@ -52,7 +52,9 @@ import tech.mmarca.openvitals.features.body.BmiScreen
 import tech.mmarca.openvitals.features.body.BmrScreen
 import tech.mmarca.openvitals.features.body.BodyFatScreen
 import tech.mmarca.openvitals.features.body.BodyMetric
+import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
+import tech.mmarca.openvitals.features.body.BodyWaterMassScreen
 import tech.mmarca.openvitals.features.body.BoneMassScreen
 import tech.mmarca.openvitals.features.body.HeightScreen
 import tech.mmarca.openvitals.features.body.LeanMassScreen
@@ -91,12 +93,8 @@ import tech.mmarca.openvitals.features.manualentry.VitalsMeasurementEntryViewMod
 import tech.mmarca.openvitals.features.manualentry.titleRes
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
-import tech.mmarca.openvitals.features.nutrition.CaloriesInScreen
-import tech.mmarca.openvitals.features.nutrition.CarbsScreen
-import tech.mmarca.openvitals.features.nutrition.FatScreen
-import tech.mmarca.openvitals.features.nutrition.NutritionMetric
+import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
-import tech.mmarca.openvitals.features.nutrition.ProteinScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
 import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
@@ -244,6 +242,8 @@ fun AppNavigation(
             ?.let { stringResource(it.titleRes()) }
             ?: stringResource(R.string.screen_vitals_measurement_entry)
         Screen.Calories.route -> stringResource(R.string.screen_calories)
+        Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
+        Screen.Body.route -> stringResource(R.string.screen_body)
         Screen.Activity.route -> stringResource(R.string.screen_activities)
         Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
         Screen.Sleep.route -> stringResource(R.string.screen_sleep)
@@ -366,6 +366,17 @@ fun AppNavigation(
                             DashboardWidgetId.CALORIES_OUT,
                             DashboardWidgetId.ACTIVE_CALORIES,
                             DashboardWidgetId.BMR -> navController.navigate(Screen.Calories.route)
+                            DashboardWidgetId.CALORIES_IN,
+                            DashboardWidgetId.PROTEIN,
+                            DashboardWidgetId.CARBS,
+                            DashboardWidgetId.FAT -> navController.navigate(Screen.Nutrition.route)
+                            DashboardWidgetId.WEIGHT,
+                            DashboardWidgetId.HEIGHT,
+                            DashboardWidgetId.BMI,
+                            DashboardWidgetId.BODY_FAT,
+                            DashboardWidgetId.LEAN_MASS,
+                            DashboardWidgetId.BONE_MASS,
+                            DashboardWidgetId.BODY_WATER_MASS -> navController.navigate(Screen.Body.route)
                             DashboardWidgetId.WORKOUT -> navController.navigate(Screen.Activity.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
@@ -591,6 +602,17 @@ fun AppNavigation(
                             DashboardWidgetId.CALORIES_OUT,
                             DashboardWidgetId.ACTIVE_CALORIES,
                             DashboardWidgetId.BMR -> navController.navigate(Screen.Calories.route)
+                            DashboardWidgetId.CALORIES_IN,
+                            DashboardWidgetId.PROTEIN,
+                            DashboardWidgetId.CARBS,
+                            DashboardWidgetId.FAT -> navController.navigate(Screen.Nutrition.route)
+                            DashboardWidgetId.WEIGHT,
+                            DashboardWidgetId.HEIGHT,
+                            DashboardWidgetId.BMI,
+                            DashboardWidgetId.BODY_FAT,
+                            DashboardWidgetId.LEAN_MASS,
+                            DashboardWidgetId.BONE_MASS,
+                            DashboardWidgetId.BODY_WATER_MASS -> navController.navigate(Screen.Body.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
@@ -636,6 +658,27 @@ fun AppNavigation(
                     viewModel = caloriesViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
+
+            composable(Screen.Nutrition.route) {
+                val nutritionViewModel = hiltViewModel<NutritionViewModel>()
+                NutritionScreen(
+                    viewModel = nutritionViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                )
+            }
+
+            composable(Screen.Body.route) {
+                val bodyViewModel = hiltViewModel<BodyViewModel>()
+                BodyScreen(
+                    viewModel = bodyViewModel,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditBodyMeasurement = { type, entryId ->
+                        navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
+                    },
                 )
             }
 
@@ -837,6 +880,21 @@ private fun DashboardWidgetId.isCaloriesDetailMetric(): Boolean =
         this == DashboardWidgetId.ACTIVE_CALORIES ||
         this == DashboardWidgetId.BMR
 
+private fun DashboardWidgetId.isNutritionDetailMetric(): Boolean =
+    this == DashboardWidgetId.CALORIES_IN ||
+        this == DashboardWidgetId.PROTEIN ||
+        this == DashboardWidgetId.CARBS ||
+        this == DashboardWidgetId.FAT
+
+private fun DashboardWidgetId.isBodyDetailMetric(): Boolean =
+    this == DashboardWidgetId.WEIGHT ||
+        this == DashboardWidgetId.HEIGHT ||
+        this == DashboardWidgetId.BMI ||
+        this == DashboardWidgetId.BODY_FAT ||
+        this == DashboardWidgetId.LEAN_MASS ||
+        this == DashboardWidgetId.BONE_MASS ||
+        this == DashboardWidgetId.BODY_WATER_MASS
+
 @Composable
 private fun MetricRouteContent(
     metricId: DashboardWidgetId?,
@@ -860,6 +918,27 @@ private fun MetricRouteContent(
             viewModel = caloriesViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+        return
+    }
+
+    if (metricId?.isNutritionDetailMetric() == true) {
+        val nutritionViewModel = hiltViewModel<NutritionViewModel>()
+        NutritionScreen(
+            viewModel = nutritionViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+        return
+    }
+
+    if (metricId?.isBodyDetailMetric() == true) {
+        val bodyViewModel = hiltViewModel<BodyViewModel>()
+        BodyScreen(
+            viewModel = bodyViewModel,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEditBodyMeasurement = onEditBodyMeasurement,
         )
         return
     }
@@ -895,17 +974,6 @@ private fun MetricRouteContent(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditBodyMeasurement = onEditBodyMeasurement,
-        )
-        return
-    }
-
-    metricId?.toNutritionMetricOrNull()?.let { nutritionMetric ->
-        val nutritionViewModel = hiltViewModel<NutritionViewModel>()
-        NutritionMetricRouteScreen(
-            metric = nutritionMetric,
-            viewModel = nutritionViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
         return
     }
@@ -1048,21 +1116,7 @@ private fun BodyMetricRouteScreen(
         BodyMetric.LEAN_MASS -> LeanMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         BodyMetric.BONE_MASS -> BoneMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-    }
-}
-
-@Composable
-private fun NutritionMetricRouteScreen(
-    metric: NutritionMetric,
-    viewModel: NutritionViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-) {
-    when (metric) {
-        NutritionMetric.CALORIES_IN -> CaloriesInScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        NutritionMetric.PROTEIN -> ProteinScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        NutritionMetric.CARBS -> CarbsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        NutritionMetric.FAT -> FatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.BODY_WATER_MASS -> BodyWaterMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
     }
 }
 
@@ -1108,15 +1162,7 @@ private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =
         DashboardWidgetId.LEAN_MASS -> BodyMetric.LEAN_MASS
         DashboardWidgetId.BMR -> BodyMetric.BMR
         DashboardWidgetId.BONE_MASS -> BodyMetric.BONE_MASS
-        else -> null
-    }
-
-private fun DashboardWidgetId.toNutritionMetricOrNull(): NutritionMetric? =
-    when (this) {
-        DashboardWidgetId.CALORIES_IN -> NutritionMetric.CALORIES_IN
-        DashboardWidgetId.PROTEIN -> NutritionMetric.PROTEIN
-        DashboardWidgetId.CARBS -> NutritionMetric.CARBS
-        DashboardWidgetId.FAT -> NutritionMetric.FAT
+        DashboardWidgetId.BODY_WATER_MASS -> BodyMetric.BODY_WATER_MASS
         else -> null
     }
 
@@ -1131,17 +1177,18 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.WORKOUT -> R.string.metric_workout
         DashboardWidgetId.SLEEP -> R.string.metric_sleep
         DashboardWidgetId.HYDRATION -> R.string.metric_hydration
-        DashboardWidgetId.CALORIES_IN -> R.string.metric_calories_in
-        DashboardWidgetId.PROTEIN -> R.string.metric_protein
-        DashboardWidgetId.CARBS -> R.string.metric_carbs
-        DashboardWidgetId.FAT -> R.string.metric_fat
-        DashboardWidgetId.WEIGHT -> R.string.metric_weight
-        DashboardWidgetId.HEIGHT -> R.string.metric_height
-        DashboardWidgetId.BMI -> R.string.metric_bmi
-        DashboardWidgetId.BODY_FAT -> R.string.metric_body_fat
-        DashboardWidgetId.LEAN_MASS -> R.string.metric_lean_mass
+        DashboardWidgetId.CALORIES_IN -> R.string.screen_nutrition
+        DashboardWidgetId.PROTEIN -> R.string.screen_nutrition
+        DashboardWidgetId.CARBS -> R.string.screen_nutrition
+        DashboardWidgetId.FAT -> R.string.screen_nutrition
+        DashboardWidgetId.WEIGHT -> R.string.screen_body
+        DashboardWidgetId.HEIGHT -> R.string.screen_body
+        DashboardWidgetId.BMI -> R.string.screen_body
+        DashboardWidgetId.BODY_FAT -> R.string.screen_body
+        DashboardWidgetId.LEAN_MASS -> R.string.screen_body
         DashboardWidgetId.BMR -> R.string.screen_calories
-        DashboardWidgetId.BONE_MASS -> R.string.metric_bone_mass
+        DashboardWidgetId.BONE_MASS -> R.string.screen_body
+        DashboardWidgetId.BODY_WATER_MASS -> R.string.screen_body
         DashboardWidgetId.AVG_HEART_RATE -> R.string.metric_avg_heart_rate
         DashboardWidgetId.RESTING_HEART_RATE -> R.string.metric_resting_heart_rate
         DashboardWidgetId.HRV -> R.string.metric_hrv

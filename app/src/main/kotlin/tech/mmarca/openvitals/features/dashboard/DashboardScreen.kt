@@ -1434,6 +1434,17 @@ private fun dashboardWidgetSpecs(
             onClick = openMetric(DashboardWidgetId.BONE_MASS),
         )
     }
+    if (shouldBuild(DashboardWidgetId.BODY_WATER_MASS)) {
+        addOptionalMetric(
+            id = DashboardWidgetId.BODY_WATER_MASS,
+            title = stringResource(R.string.metric_body_water_mass),
+            value = data.bodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
+            icon = Icons.Outlined.LocalDrink,
+            accentColor = WeightColor,
+            loadingMessage = loadingMessageFor(DashboardWidgetId.BODY_WATER_MASS),
+            onClick = openMetric(DashboardWidgetId.BODY_WATER_MASS),
+        )
+    }
     if (shouldBuild(DashboardWidgetId.AVG_HEART_RATE)) {
         addMetric(
             id = DashboardWidgetId.AVG_HEART_RATE,

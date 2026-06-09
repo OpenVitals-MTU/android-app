@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
+import tech.mmarca.openvitals.data.model.BodyWaterMassEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -60,6 +61,10 @@ data class BodyUiState(
     val boneMassEntries: List<BoneMassEntry> = emptyList(),
     val previousBoneMassEntries: List<BoneMassEntry> = emptyList(),
     val baselineBoneMassEntries: List<BoneMassEntry> = emptyList(),
+    val bodyWaterMassKg: Double? = null,
+    val bodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
+    val previousBodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
+    val baselineBodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
     val latestWeightKg: Double? = weightEntries.maxByOrNull { it.time }?.weightKg,
     val previousLatestWeightKg: Double? = previousWeightEntries.maxByOrNull { it.time }?.weightKg,
     val firstWeightKg: Double? = weightEntries.minByOrNull { it.time }?.weightKg,
@@ -79,6 +84,8 @@ data class BodyUiState(
     val previousLatestBmrKcal: Double? = previousBmrEntries.maxByOrNull { it.time }?.kcalPerDay,
     val latestBoneMassKg: Double? = boneMassEntries.maxByOrNull { it.time }?.massKg ?: boneMassKg,
     val previousLatestBoneMassKg: Double? = previousBoneMassEntries.maxByOrNull { it.time }?.massKg,
+    val latestBodyWaterMassKg: Double? = bodyWaterMassEntries.maxByOrNull { it.time }?.massKg ?: bodyWaterMassKg,
+    val previousLatestBodyWaterMassKg: Double? = previousBodyWaterMassEntries.maxByOrNull { it.time }?.massKg,
     val previousBmi: Double? = previousLatestWeightKg.bmiWith(heightCm),
     val error: String? = null,
 )
@@ -200,7 +207,7 @@ class BodyViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadBodyPeriod(query, selectedMetric.toPeriodMetric())
+                repository.loadBodyPeriod(query, BodyPeriodMetric.ALL)
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load
@@ -208,11 +215,14 @@ class BodyViewModel(
                     val leanMassKg = result.leanMassEntries.maxByOrNull { it.time }?.massKg ?: result.leanMassKg
                     val bmrKcal = result.bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: result.bmrKcal
                     val boneMassKg = result.boneMassEntries.maxByOrNull { it.time }?.massKg ?: result.boneMassKg
+                    val bodyWaterMassKg = result.bodyWaterMassEntries.maxByOrNull { it.time }?.massKg
+                        ?: result.bodyWaterMassKg
                     val summary = result.summary(
                         heightCm = heightCm,
                         leanMassKg = leanMassKg,
                         bmrKcal = bmrKcal,
                         boneMassKg = boneMassKg,
+                        bodyWaterMassKg = bodyWaterMassKg,
                     )
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -239,6 +249,10 @@ class BodyViewModel(
                         boneMassEntries = result.boneMassEntries,
                         previousBoneMassEntries = result.previousBoneMassEntries,
                         baselineBoneMassEntries = result.baselineBoneMassEntries,
+                        bodyWaterMassKg = bodyWaterMassKg,
+                        bodyWaterMassEntries = result.bodyWaterMassEntries,
+                        previousBodyWaterMassEntries = result.previousBodyWaterMassEntries,
+                        baselineBodyWaterMassEntries = result.baselineBodyWaterMassEntries,
                         latestWeightKg = summary.latestWeightKg,
                         previousLatestWeightKg = summary.previousLatestWeightKg,
                         firstWeightKg = summary.firstWeightKg,
@@ -254,6 +268,8 @@ class BodyViewModel(
                         previousLatestBmrKcal = summary.previousLatestBmrKcal,
                         latestBoneMassKg = summary.latestBoneMassKg,
                         previousLatestBoneMassKg = summary.previousLatestBoneMassKg,
+                        latestBodyWaterMassKg = summary.latestBodyWaterMassKg,
+                        previousLatestBodyWaterMassKg = summary.previousLatestBodyWaterMassKg,
                         previousBmi = summary.previousBmi,
                     )
                 }
@@ -304,6 +320,7 @@ private fun BodyMetric.toPeriodMetric(): BodyPeriodMetric =
         BodyMetric.LEAN_MASS -> BodyPeriodMetric.LEAN_MASS
         BodyMetric.BMR -> BodyPeriodMetric.BMR
         BodyMetric.BONE_MASS -> BodyPeriodMetric.BONE_MASS
+        BodyMetric.BODY_WATER_MASS -> BodyPeriodMetric.BODY_WATER_MASS
     }
 
 private fun bodyMetricFromRoute(metricId: String?): BodyMetric =
@@ -325,6 +342,8 @@ private data class BodySummary(
     val previousLatestBmrKcal: Double?,
     val latestBoneMassKg: Double?,
     val previousLatestBoneMassKg: Double?,
+    val latestBodyWaterMassKg: Double?,
+    val previousLatestBodyWaterMassKg: Double?,
     val previousBmi: Double?,
 )
 
@@ -333,6 +352,7 @@ private fun BodyPeriodData.summary(
     leanMassKg: Double?,
     bmrKcal: Double?,
     boneMassKg: Double?,
+    bodyWaterMassKg: Double?,
 ): BodySummary {
     val latestWeightKg = weightEntries.maxByOrNull { it.time }?.weightKg
     val previousLatestWeightKg = previousWeightEntries.maxByOrNull { it.time }?.weightKg
@@ -358,6 +378,8 @@ private fun BodyPeriodData.summary(
         previousLatestBmrKcal = previousBmrEntries.maxByOrNull { it.time }?.kcalPerDay,
         latestBoneMassKg = boneMassEntries.maxByOrNull { it.time }?.massKg ?: boneMassKg,
         previousLatestBoneMassKg = previousBoneMassEntries.maxByOrNull { it.time }?.massKg,
+        latestBodyWaterMassKg = bodyWaterMassEntries.maxByOrNull { it.time }?.massKg ?: bodyWaterMassKg,
+        previousLatestBodyWaterMassKg = previousBodyWaterMassEntries.maxByOrNull { it.time }?.massKg,
         previousBmi = previousLatestWeightKg.bmiWith(heightCm),
     )
 }

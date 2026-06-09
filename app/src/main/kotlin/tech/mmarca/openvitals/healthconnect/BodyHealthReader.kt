@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.healthconnect
 import android.util.Log
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
@@ -20,6 +21,7 @@ import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
+import tech.mmarca.openvitals.data.model.BodyWaterMassEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -229,6 +231,32 @@ internal class BodyHealthReader(
                 ascendingOrder = true,
             ).map { record ->
                 BoneMassEntry(
+                    time = record.time,
+                    massKg = record.mass.inKilograms,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
+
+    suspend fun readLatestBodyWaterMass(): Double? =
+        support.withNullableLogging("readLatestBodyWaterMass") {
+            support.client().readRecordsPaged(
+                recordType = BodyWaterMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.before(Instant.now()),
+                ascendingOrder = false,
+                pageSize = 1,
+                maxRecords = 1,
+            ).firstOrNull()?.mass?.inKilograms
+        }
+
+    suspend fun readBodyWaterMassEntries(start: Instant, end: Instant): List<BodyWaterMassEntry> =
+        support.withLogging("readBodyWaterMassEntries[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = BodyWaterMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+            ).map { record ->
+                BodyWaterMassEntry(
                     time = record.time,
                     massKg = record.mass.inKilograms,
                     source = record.metadata.dataOrigin.packageName,

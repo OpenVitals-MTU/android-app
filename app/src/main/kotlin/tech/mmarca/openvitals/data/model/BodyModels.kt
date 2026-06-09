@@ -56,6 +56,12 @@ data class BoneMassEntry(
     val source: String,
 )
 
+data class BodyWaterMassEntry(
+    val time: Instant,
+    val massKg: Double,
+    val source: String,
+)
+
 data class BodyMeasurementEntry(
     val id: String,
     val type: BodyMeasurementType,

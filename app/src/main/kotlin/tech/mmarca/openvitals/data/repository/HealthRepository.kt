@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -113,6 +114,7 @@ class HealthRepository @Inject constructor(
     private val readLeanMassPermission = HealthPermission.getReadPermission(LeanBodyMassRecord::class)
     private val readBmrPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readBoneMassPermission = HealthPermission.getReadPermission(BoneMassRecord::class)
+    private val readBodyWaterMassPermission = HealthPermission.getReadPermission(BodyWaterMassRecord::class)
     private val readMenstruationPeriodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     private val readOvulationTestPermission = HealthPermission.getReadPermission(OvulationTestRecord::class)
     private val readBasalBodyTemperaturePermission = HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
@@ -312,6 +314,13 @@ class HealthRepository @Inject constructor(
         val boneMass = readIfNeeded(wants(DashboardMetric.BONE_MASS), readBoneMassPermission, "bone mass") {
             hc.readLatestBoneMass()
         }
+        val bodyWaterMass = readIfNeeded(
+            wants(DashboardMetric.BODY_WATER_MASS),
+            readBodyWaterMassPermission,
+            "body water mass",
+        ) {
+            hc.readLatestBodyWaterMass()
+        }
         val heartRate = readIfNeeded(wants(DashboardMetric.AVG_HEART_RATE), readHeartRatePermission, "heart rate") {
             hc.readAvgHeartRate(date)
         }
@@ -444,6 +453,7 @@ class HealthRepository @Inject constructor(
             leanMassKg = leanMass?.await(),
             bmrKcal = bmr?.await(),
             boneMassKg = boneMass?.await(),
+            bodyWaterMassKg = bodyWaterMass?.await(),
             avgHeartRateBpm = heartRate?.await() ?: 0,
             restingHeartRateBpm = restingHR?.await() ?: 0,
             hrvRmssdMs = hrv?.await(),
@@ -654,6 +664,7 @@ class HealthRepository @Inject constructor(
                 DashboardMetric.LEAN_MASS -> setOf(readLeanMassPermission)
                 DashboardMetric.BMR -> setOf(readBmrPermission)
                 DashboardMetric.BONE_MASS -> setOf(readBoneMassPermission)
+                DashboardMetric.BODY_WATER_MASS -> setOf(readBodyWaterMassPermission)
                 DashboardMetric.AVG_HEART_RATE -> setOf(readHeartRatePermission)
                 DashboardMetric.RESTING_HEART_RATE -> setOf(readRestingHRPermission)
                 DashboardMetric.HRV -> setOf(readHrvPermission)

@@ -16,6 +16,7 @@ import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -86,6 +87,7 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(LeanBodyMassRecord::class),
         HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
         HealthPermission.getReadPermission(BoneMassRecord::class),
+        HealthPermission.getReadPermission(BodyWaterMassRecord::class),
     )
 
     val activityExtrasPermissions: Set<String> = setOf(

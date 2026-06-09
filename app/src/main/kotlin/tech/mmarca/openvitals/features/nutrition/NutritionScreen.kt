@@ -30,6 +30,10 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.model.DailyMacros
+import tech.mmarca.openvitals.data.model.NutritionNutrient
+import tech.mmarca.openvitals.data.model.NutritionNutrientGroup
+import tech.mmarca.openvitals.data.model.NutritionNutrientUnit
+import tech.mmarca.openvitals.data.model.valueFor
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
@@ -50,6 +54,7 @@ import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.NutritionColor
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
@@ -60,22 +65,63 @@ enum class NutritionMetric {
     FAT,
 }
 
+private val nutritionMetrics = listOf(
+    NutritionNutrient.ENERGY,
+    NutritionNutrient.PROTEIN,
+    NutritionNutrient.TOTAL_CARBOHYDRATE,
+    NutritionNutrient.TOTAL_FAT,
+)
+
 private val proteinMetricColor = Color(0xFF7E57C2)
 private val carbsMetricColor = Color(0xFF26A69A)
 private val fatMetricColor = Color(0xFFFFB300)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun NutritionScreen(
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val chartDaySelection = rememberChartDaySelection(
+        selectedRange = state.selectedRange,
+        selectedDate = state.selectedDate,
+        key = "nutrition",
+    )
+
+    MetricDetailScaffold(
+        isLoading = state.isLoading,
+        selectedRange = state.selectedRange,
+        selectedDate = state.selectedDate,
+        error = state.error,
+        onRefresh = viewModel::load,
+        onSelectRange = viewModel::selectRange,
+        onPreviousPeriod = viewModel::previousPeriod,
+        onNextPeriod = viewModel::nextPeriod,
+        onSelectDate = viewModel::selectDate,
+        weekPeriodMode = state.weekPeriodMode,
+    ) { period ->
+        nutritionContent(
+            state = state,
+            period = period,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            chartDaySelection = chartDaySelection,
+        )
+    }
+}
+
+@Composable
 fun CaloriesInScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    NutritionMetricScreen(
+    NutritionScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = NutritionMetric.CALORIES_IN,
     )
 }
 
@@ -85,11 +131,10 @@ fun ProteinScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    NutritionMetricScreen(
+    NutritionScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = NutritionMetric.PROTEIN,
     )
 }
 
@@ -99,11 +144,10 @@ fun CarbsScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    NutritionMetricScreen(
+    NutritionScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = NutritionMetric.CARBS,
     )
 }
 
@@ -113,11 +157,10 @@ fun FatScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    NutritionMetricScreen(
+    NutritionScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = NutritionMetric.FAT,
     )
 }
 
@@ -154,6 +197,184 @@ private fun NutritionMetricScreen(
             onDecreaseGoal = viewModel::decreaseDailyGoal,
             onIncreaseGoal = viewModel::increaseDailyGoal,
         )
+    }
+}
+
+private fun LazyListScope.nutritionContent(
+    state: NutritionUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+) {
+    val metricsData = NutritionNutrient.entries.map { nutrient ->
+        nutritionMetricData(nutrient, state.dailyMacros, unitFormatter)
+    }
+    val primaryMetricsData = nutritionMetrics.map { nutrient ->
+        nutritionMetricData(nutrient, state.dailyMacros, unitFormatter)
+    }
+    val trackedMetricsData = metricsData.filter { it.hasTrackedValues }
+    val additionalMetricsData = trackedMetricsData.filterNot { it.nutrient in nutritionMetrics }
+
+    if (state.dailyMacros.isEmpty() && state.entries.isEmpty() && !state.isLoading) {
+        item {
+            MetricCardPlaceholder(
+                title = stringResource(R.string.screen_nutrition),
+                icon = Icons.Outlined.Restaurant,
+                accentColor = NutritionColor,
+                message = stringResource(R.string.message_no_nutrition_period),
+                modifier = metricModifier(),
+            )
+        }
+        return
+    }
+
+    if (state.dailyMacros.isNotEmpty()) {
+        nutritionOverviewStatistics(primaryMetricsData)
+        nutritionAdditionalTotals(additionalMetricsData)
+        if (trackedMetricsData.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.section_nutrition_trends)) }
+            trackedMetricsData.forEach { metricData ->
+                nutritionMetricTrend(
+                    metricData = metricData,
+                    state = state,
+                    period = period,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                )
+            }
+        }
+        chartDaySelection.selectedDate?.let { selectedDate ->
+            selectedDateNutritionEntries(
+                state = state,
+                selectedDate = selectedDate,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+        }
+        nutritionDataConfidence(
+            state = state,
+            period = period,
+            accentColor = NutritionColor,
+        )
+        macroSplitContext(
+            data = state.dailyMacros,
+            unitFormatter = unitFormatter,
+            accentColor = NutritionColor,
+        )
+    }
+
+    if (state.entries.isNotEmpty()) {
+        item {
+            PaginatedEntryList(
+                title = stringResource(R.string.section_meals),
+                entries = state.entries.sortedByDescending { it.time },
+            ) { entry, rowModifier ->
+                NutritionEntryRow(
+                    entry = entry,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = rowModifier,
+                )
+            }
+        }
+    }
+}
+
+private fun LazyListScope.nutritionAdditionalTotals(
+    metricsData: List<NutritionMetricData>,
+) {
+    NutritionNutrientGroup.entries
+        .filter { it != NutritionNutrientGroup.OVERVIEW }
+        .forEach { group ->
+            val groupMetrics = metricsData.filter { it.nutrient.group == group }
+            if (groupMetrics.isNotEmpty()) {
+                item { SectionHeader(stringResource(group.titleRes())) }
+                item {
+                    InsightStatGrid(
+                        stats = groupMetrics.map { metricData ->
+                            InsightStat(
+                                title = stringResource(metricData.titleRes),
+                                value = metricData.total.value,
+                                unit = metricData.total.unit,
+                                icon = Icons.Outlined.Restaurant,
+                                accentColor = metricData.color,
+                            )
+                        },
+                        modifier = metricModifier(),
+                    )
+                }
+            }
+        }
+}
+
+private fun LazyListScope.nutritionOverviewStatistics(
+    metricsData: List<NutritionMetricData>,
+) {
+    item { SectionHeader(stringResource(R.string.section_statistics)) }
+    item {
+        InsightStatGrid(
+            stats = metricsData.map { metricData ->
+                InsightStat(
+                    title = stringResource(metricData.titleRes),
+                    value = metricData.total.value,
+                    unit = metricData.total.unit,
+                    icon = Icons.Outlined.Restaurant,
+                    accentColor = metricData.color,
+                )
+            },
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.nutritionMetricTrend(
+    metricData: NutritionMetricData,
+    state: NutritionUiState,
+    period: DatePeriod,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+) {
+    item {
+        PeriodHistoryChart(
+            title = stringResource(metricData.titleRes),
+            values = metricData.values,
+            selectedRange = state.selectedRange,
+            period = period,
+            accentColor = metricData.color.copy(alpha = 0.85f),
+            summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${metricData.total.text}",
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = metricModifier(),
+            selectedDate = selectedDate,
+            onDateSelected = onDateSelected,
+            valueFormatter = { metricData.valueDisplayFormatter(it).text },
+        )
+    }
+}
+
+private fun LazyListScope.selectedDateNutritionEntries(
+    state: NutritionUiState,
+    selectedDate: LocalDate,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    val zone = ZoneId.systemDefault()
+    item {
+        PaginatedEntryList(
+            title = entryListTitle(selectedDate, dateTimeFormatterProvider),
+            entries = state.entries
+                .filter { it.time.atZone(zone).toLocalDate() == selectedDate }
+                .sortedByDescending { it.time },
+        ) { entry, rowModifier ->
+            NutritionEntryRow(
+                entry = entry,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = rowModifier,
+            )
+        }
     }
 }
 
@@ -282,6 +503,31 @@ private fun LazyListScope.nutritionMetricContent(
 private fun LazyListScope.nutritionDataConfidence(
     state: NutritionUiState,
     period: DatePeriod,
+    accentColor: Color,
+) {
+    if (period.start == period.end) return
+
+    val trackedDates = state.dailyMacros
+        .filter { it.hasNutritionData() }
+        .map { it.date }
+    item {
+        DataConfidenceCard(
+            confidence = dataConfidence(
+                period = period,
+                trackedDates = trackedDates,
+                sampleCount = state.entries.takeIf { it.isNotEmpty() }?.size ?: trackedDates.size,
+                sources = state.entries.map { it.source },
+                valueKind = DataValueKind.AGGREGATED,
+            ),
+            accentColor = accentColor,
+            modifier = metricModifier(),
+        )
+    }
+}
+
+private fun LazyListScope.nutritionDataConfidence(
+    state: NutritionUiState,
+    period: DatePeriod,
     metricData: NutritionMetricData,
 ) {
     if (period.start == period.end) return
@@ -301,6 +547,13 @@ private fun LazyListScope.nutritionDataConfidence(
         )
     }
 }
+
+private fun DailyMacros.hasNutritionData(): Boolean =
+    nutrientValues.any { (_, value) -> value > 0.0 } ||
+        energyKcal > 0.0 ||
+        proteinGrams > 0.0 ||
+        carbsGrams > 0.0 ||
+        fatGrams > 0.0
 
 private fun LazyListScope.macroSplitContext(
     data: List<DailyMacros>,
@@ -341,36 +594,24 @@ private fun nutritionMetricData(
     metric: NutritionMetric,
     data: List<DailyMacros>,
     unitFormatter: UnitFormatter,
-): NutritionMetricData =
-    when (metric) {
-        NutritionMetric.CALORIES_IN -> NutritionMetricData(
-            titleRes = R.string.metric_calories_in,
-            total = unitFormatter.energy(data.sumOf { it.energyKcal }),
-            values = data.map { PeriodChartValue(date = it.date, value = it.energyKcal) },
-            color = NutritionColor,
-            valueDisplayFormatter = { unitFormatter.energy(it) },
-        )
-        NutritionMetric.PROTEIN -> NutritionMetricData(
-            titleRes = R.string.metric_protein,
-            total = DisplayValue(unitFormatter.count(data.sumOf { it.proteinGrams }.roundToInt()), GramsUnit),
-            values = data.map { PeriodChartValue(date = it.date, value = it.proteinGrams) },
-            color = proteinMetricColor,
-            valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
-        )
-        NutritionMetric.CARBS -> NutritionMetricData(
-            titleRes = R.string.metric_carbs,
-            total = DisplayValue(unitFormatter.count(data.sumOf { it.carbsGrams }.roundToInt()), GramsUnit),
-            values = data.map { PeriodChartValue(date = it.date, value = it.carbsGrams) },
-            color = carbsMetricColor,
-            valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
-        )
-        NutritionMetric.FAT -> NutritionMetricData(
-            titleRes = R.string.metric_fat,
-            total = DisplayValue(unitFormatter.count(data.sumOf { it.fatGrams }.roundToInt()), GramsUnit),
-            values = data.map { PeriodChartValue(date = it.date, value = it.fatGrams) },
-            color = fatMetricColor,
-            valueDisplayFormatter = { DisplayValue(unitFormatter.count(it.roundToInt()), GramsUnit) },
-        )
+): NutritionMetricData = nutritionMetricData(metric.nutrient, data, unitFormatter)
+
+private fun nutritionMetricData(
+    nutrient: NutritionNutrient,
+    data: List<DailyMacros>,
+    unitFormatter: UnitFormatter,
+): NutritionMetricData {
+    val values = data.map { PeriodChartValue(date = it.date, value = it.valueFor(nutrient)) }
+    val totalValue = values.sumOf { it.value }
+    return NutritionMetricData(
+        nutrient = nutrient,
+        titleRes = nutrient.titleRes(),
+        total = nutrient.displayValue(totalValue, unitFormatter),
+        totalValue = totalValue,
+        values = values,
+        color = nutrient.color(),
+        valueDisplayFormatter = { nutrient.displayValue(it, unitFormatter) },
+    )
 }
 
 private fun LazyListScope.nutritionGoal(
@@ -489,15 +730,120 @@ private fun LazyListScope.nutritionStatistics(
     }
 }
 
-private const val GramsUnit = "g"
-
 private data class NutritionMetricData(
+    val nutrient: NutritionNutrient,
     val titleRes: Int,
     val total: DisplayValue,
+    val totalValue: Double,
     val values: List<PeriodChartValue>,
     val color: Color,
     val valueDisplayFormatter: (Double) -> DisplayValue,
-)
+) {
+    val hasTrackedValues: Boolean = values.any { it.value > 0.0 }
+}
+
+private val NutritionMetric.nutrient: NutritionNutrient
+    get() = when (this) {
+        NutritionMetric.CALORIES_IN -> NutritionNutrient.ENERGY
+        NutritionMetric.PROTEIN -> NutritionNutrient.PROTEIN
+        NutritionMetric.CARBS -> NutritionNutrient.TOTAL_CARBOHYDRATE
+        NutritionMetric.FAT -> NutritionNutrient.TOTAL_FAT
+    }
+
+private fun NutritionNutrient.displayValue(
+    value: Double,
+    unitFormatter: UnitFormatter,
+): DisplayValue =
+    when (unit) {
+        NutritionNutrientUnit.ENERGY_KCAL -> unitFormatter.energy(value)
+        NutritionNutrientUnit.MASS_GRAMS -> DisplayValue(unitFormatter.count(value.roundToInt()), "g")
+        NutritionNutrientUnit.MASS_ADAPTIVE -> adaptiveMassDisplay(value, unitFormatter)
+    }
+
+private fun adaptiveMassDisplay(
+    grams: Double,
+    unitFormatter: UnitFormatter,
+): DisplayValue {
+    val milligrams = grams * 1_000.0
+    val micrograms = grams * 1_000_000.0
+    return when {
+        grams >= 1.0 -> DisplayValue(unitFormatter.decimal(grams, if (grams < 10.0) 1 else 0), "g")
+        milligrams >= 1.0 -> DisplayValue(unitFormatter.decimal(milligrams, if (milligrams < 10.0) 1 else 0), "mg")
+        else -> DisplayValue(unitFormatter.decimal(micrograms, if (micrograms < 10.0) 1 else 0), "mcg")
+    }
+}
+
+private fun NutritionNutrient.color(): Color =
+    when (group) {
+        NutritionNutrientGroup.OVERVIEW -> when (this) {
+            NutritionNutrient.ENERGY -> NutritionColor
+            NutritionNutrient.PROTEIN -> proteinMetricColor
+            NutritionNutrient.TOTAL_CARBOHYDRATE -> carbsMetricColor
+            NutritionNutrient.TOTAL_FAT -> fatMetricColor
+            else -> NutritionColor
+        }
+        NutritionNutrientGroup.CARBOHYDRATES -> carbsMetricColor
+        NutritionNutrientGroup.FATS -> fatMetricColor
+        NutritionNutrientGroup.VITAMINS -> Color(0xFF5E7CE2)
+        NutritionNutrientGroup.MINERALS -> Color(0xFF8D6E63)
+        NutritionNutrientGroup.OTHER -> Color(0xFF00897B)
+    }
+
+private fun NutritionNutrientGroup.titleRes(): Int =
+    when (this) {
+        NutritionNutrientGroup.OVERVIEW -> R.string.screen_nutrition
+        NutritionNutrientGroup.CARBOHYDRATES -> R.string.section_carbohydrates
+        NutritionNutrientGroup.FATS -> R.string.section_fats
+        NutritionNutrientGroup.VITAMINS -> R.string.section_vitamins
+        NutritionNutrientGroup.MINERALS -> R.string.section_minerals
+        NutritionNutrientGroup.OTHER -> R.string.section_other_nutrients
+    }
+
+private fun NutritionNutrient.titleRes(): Int =
+    when (this) {
+        NutritionNutrient.ENERGY -> R.string.metric_calories_in
+        NutritionNutrient.PROTEIN -> R.string.metric_protein
+        NutritionNutrient.TOTAL_CARBOHYDRATE -> R.string.metric_carbs
+        NutritionNutrient.TOTAL_FAT -> R.string.metric_fat
+        NutritionNutrient.DIETARY_FIBER -> R.string.metric_dietary_fiber
+        NutritionNutrient.SUGAR -> R.string.metric_sugar
+        NutritionNutrient.ENERGY_FROM_FAT -> R.string.metric_energy_from_fat
+        NutritionNutrient.MONOUNSATURATED_FAT -> R.string.metric_monounsaturated_fat
+        NutritionNutrient.POLYUNSATURATED_FAT -> R.string.metric_polyunsaturated_fat
+        NutritionNutrient.SATURATED_FAT -> R.string.metric_saturated_fat
+        NutritionNutrient.TRANS_FAT -> R.string.metric_trans_fat
+        NutritionNutrient.UNSATURATED_FAT -> R.string.metric_unsaturated_fat
+        NutritionNutrient.CHOLESTEROL -> R.string.metric_cholesterol
+        NutritionNutrient.BIOTIN -> R.string.metric_biotin
+        NutritionNutrient.FOLATE -> R.string.metric_folate
+        NutritionNutrient.FOLIC_ACID -> R.string.metric_folic_acid
+        NutritionNutrient.NIACIN -> R.string.metric_niacin
+        NutritionNutrient.PANTOTHENIC_ACID -> R.string.metric_pantothenic_acid
+        NutritionNutrient.RIBOFLAVIN -> R.string.metric_riboflavin
+        NutritionNutrient.THIAMIN -> R.string.metric_thiamin
+        NutritionNutrient.VITAMIN_A -> R.string.metric_vitamin_a
+        NutritionNutrient.VITAMIN_B12 -> R.string.metric_vitamin_b12
+        NutritionNutrient.VITAMIN_B6 -> R.string.metric_vitamin_b6
+        NutritionNutrient.VITAMIN_C -> R.string.metric_vitamin_c
+        NutritionNutrient.VITAMIN_D -> R.string.metric_vitamin_d
+        NutritionNutrient.VITAMIN_E -> R.string.metric_vitamin_e
+        NutritionNutrient.VITAMIN_K -> R.string.metric_vitamin_k
+        NutritionNutrient.CALCIUM -> R.string.metric_calcium
+        NutritionNutrient.CHLORIDE -> R.string.metric_chloride
+        NutritionNutrient.CHROMIUM -> R.string.metric_chromium
+        NutritionNutrient.COPPER -> R.string.metric_copper
+        NutritionNutrient.IODINE -> R.string.metric_iodine
+        NutritionNutrient.IRON -> R.string.metric_iron
+        NutritionNutrient.MAGNESIUM -> R.string.metric_magnesium
+        NutritionNutrient.MANGANESE -> R.string.metric_manganese
+        NutritionNutrient.MOLYBDENUM -> R.string.metric_molybdenum
+        NutritionNutrient.PHOSPHORUS -> R.string.metric_phosphorus
+        NutritionNutrient.POTASSIUM -> R.string.metric_potassium
+        NutritionNutrient.SELENIUM -> R.string.metric_selenium
+        NutritionNutrient.SODIUM -> R.string.metric_sodium
+        NutritionNutrient.ZINC -> R.string.metric_zinc
+        NutritionNutrient.CAFFEINE -> R.string.metric_caffeine
+    }
 
 private fun metricModifier(): Modifier =
     Modifier

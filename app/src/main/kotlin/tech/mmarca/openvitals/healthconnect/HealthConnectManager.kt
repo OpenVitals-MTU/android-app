@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyMeasurementType
 import tech.mmarca.openvitals.data.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
+import tech.mmarca.openvitals.data.model.BodyWaterMassEntry
 import tech.mmarca.openvitals.data.model.BodyTempEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
@@ -354,6 +355,12 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readBoneMassEntries(start: Instant, end: Instant): List<BoneMassEntry> =
         bodyReader.readBoneMassEntries(start, end)
+
+    suspend fun readLatestBodyWaterMass(): Double? =
+        bodyReader.readLatestBodyWaterMass()
+
+    suspend fun readBodyWaterMassEntries(start: Instant, end: Instant): List<BodyWaterMassEntry> =
+        bodyReader.readBodyWaterMassEntries(start, end)
 
     suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String =
         bodyReader.writeBodyMeasurementEntry(request)

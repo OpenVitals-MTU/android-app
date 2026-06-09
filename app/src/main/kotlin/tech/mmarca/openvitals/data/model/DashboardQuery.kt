@@ -35,6 +35,7 @@ enum class DashboardMetric {
     LEAN_MASS,
     BMR,
     BONE_MASS,
+    BODY_WATER_MASS,
     AVG_HEART_RATE,
     RESTING_HEART_RATE,
     HRV,

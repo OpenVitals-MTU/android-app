@@ -5,6 +5,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
@@ -14,6 +15,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
 import tech.mmarca.openvitals.data.model.BodyFatEntry
 import tech.mmarca.openvitals.data.model.BodyMeasurementEntry
+import tech.mmarca.openvitals.data.model.BodyWaterMassEntry
 import tech.mmarca.openvitals.data.model.BmrEntry
 import tech.mmarca.openvitals.data.model.BoneMassEntry
 import tech.mmarca.openvitals.data.model.HeightEntry
@@ -45,6 +47,7 @@ class BodyRepository @Inject constructor(
     private val readLeanMassPermission = HealthPermission.getReadPermission(LeanBodyMassRecord::class)
     private val readBMRPermission = HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
     private val readBoneMassPermission = HealthPermission.getReadPermission(BoneMassRecord::class)
+    private val readBodyWaterMassPermission = HealthPermission.getReadPermission(BodyWaterMassRecord::class)
     private val writeWeightPermission = HealthPermission.getWritePermission(WeightRecord::class)
     private val writeHeightPermission = HealthPermission.getWritePermission(HeightRecord::class)
     private val writeBodyFatPermission = HealthPermission.getWritePermission(BodyFatRecord::class)
@@ -64,6 +67,7 @@ class BodyRepository @Inject constructor(
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         when (metric) {
+            BodyPeriodMetric.ALL -> loadAllBodyPeriod(windows, granted)
             BodyPeriodMetric.WEIGHT -> {
                 val entries = loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) }
                 BodyPeriodData(
@@ -123,7 +127,62 @@ class BodyRepository @Inject constructor(
                     baselineBoneMassEntries = entries.baseline,
                 )
             }
+            BodyPeriodMetric.BODY_WATER_MASS -> {
+                val entries = loadPeriodTriplet(windows) { start, end -> loadBodyWaterMassEntries(start, end, granted) }
+                BodyPeriodData(
+                    bodyWaterMassEntries = entries.current,
+                    previousBodyWaterMassEntries = entries.previous,
+                    baselineBodyWaterMassEntries = entries.baseline,
+                )
+            }
         }
+    }
+
+    private suspend fun loadAllBodyPeriod(
+        windows: PeriodWindows,
+        granted: Set<String>,
+    ): BodyPeriodData = coroutineScope {
+        val weight = async { loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) } }
+        val height = async { loadPeriodTriplet(windows) { start, end -> loadHeightEntries(start, end, granted) } }
+        val latestHeight = async { loadLatestHeight(granted) }
+        val bodyFat = async { loadPeriodTriplet(windows) { start, end -> loadBodyFatEntries(start, end, granted) } }
+        val leanMass = async { loadPeriodTriplet(windows) { start, end -> loadLeanBodyMassEntries(start, end, granted) } }
+        val bmr = async { loadPeriodTriplet(windows) { start, end -> loadBmrEntries(start, end, granted) } }
+        val boneMass = async { loadPeriodTriplet(windows) { start, end -> loadBoneMassEntries(start, end, granted) } }
+        val bodyWaterMass = async {
+            loadPeriodTriplet(windows) { start, end -> loadBodyWaterMassEntries(start, end, granted) }
+        }
+        val weightEntries = weight.await()
+        val heightEntries = height.await()
+        val bodyFatEntries = bodyFat.await()
+        val leanMassEntries = leanMass.await()
+        val bmrEntries = bmr.await()
+        val boneMassEntries = boneMass.await()
+        val bodyWaterMassEntries = bodyWaterMass.await()
+        BodyPeriodData(
+            weightEntries = weightEntries.current,
+            previousWeightEntries = weightEntries.previous,
+            baselineWeightEntries = weightEntries.baseline,
+            heightCm = latestHeight.await(),
+            heightEntries = heightEntries.current,
+            previousHeightEntries = heightEntries.previous,
+            baselineHeightEntries = heightEntries.baseline,
+            bodyFatEntries = bodyFatEntries.current,
+            previousBodyFatEntries = bodyFatEntries.previous,
+            baselineBodyFatEntries = bodyFatEntries.baseline,
+            leanMassEntries = leanMassEntries.current,
+            previousLeanMassEntries = leanMassEntries.previous,
+            baselineLeanMassEntries = leanMassEntries.baseline,
+            bmrEntries = bmrEntries.current,
+            previousBmrEntries = bmrEntries.previous,
+            baselineBmrEntries = bmrEntries.baseline,
+            boneMassEntries = boneMassEntries.current,
+            previousBoneMassEntries = boneMassEntries.previous,
+            baselineBoneMassEntries = boneMassEntries.baseline,
+            bodyWaterMassEntries = bodyWaterMassEntries.current,
+            previousBodyWaterMassEntries = bodyWaterMassEntries.previous,
+            baselineBodyWaterMassEntries = bodyWaterMassEntries.baseline,
+        )
     }
 
     private suspend fun <T> loadPeriodTriplet(
@@ -288,6 +347,33 @@ class BodyRepository @Inject constructor(
         return hc.readBoneMassEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
+    suspend fun loadLatestBodyWaterMass(): Double? {
+        val granted = grantedPermissionsIfAvailable()
+        return loadLatestBodyWaterMass(granted)
+    }
+
+    private suspend fun loadLatestBodyWaterMass(granted: Set<String>): Double? {
+        if (readBodyWaterMassPermission !in granted) return null
+        return hc.readLatestBodyWaterMass()
+    }
+
+    suspend fun loadBodyWaterMassEntries(start: LocalDate, end: LocalDate): List<BodyWaterMassEntry> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadBodyWaterMassEntries(start, end, granted)
+    }
+
+    private suspend fun loadBodyWaterMassEntries(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<BodyWaterMassEntry> {
+        if (readBodyWaterMassPermission !in granted) {
+            Log.w(TAG, "Skipping loadBodyWaterMassEntries missingCount=1")
+            return emptyList()
+        }
+        return hc.readBodyWaterMassEntries(start.toInstant(), end.plusDays(1).toInstant())
+    }
+
     suspend fun hasBodyWritePermission(type: BodyMeasurementType): Boolean =
         bodyWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
 
@@ -346,6 +432,7 @@ private data class BodyPeriodTriplet<T>(
 )
 
 enum class BodyPeriodMetric {
+    ALL,
     WEIGHT,
     HEIGHT,
     BMI,
@@ -353,6 +440,7 @@ enum class BodyPeriodMetric {
     LEAN_MASS,
     BMR,
     BONE_MASS,
+    BODY_WATER_MASS,
 }
 
 data class BodyPeriodData(
@@ -378,4 +466,8 @@ data class BodyPeriodData(
     val boneMassEntries: List<BoneMassEntry> = emptyList(),
     val previousBoneMassEntries: List<BoneMassEntry> = emptyList(),
     val baselineBoneMassEntries: List<BoneMassEntry> = emptyList(),
+    val bodyWaterMassKg: Double? = null,
+    val bodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
+    val previousBodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
+    val baselineBodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
 )
