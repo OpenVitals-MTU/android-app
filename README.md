@@ -180,6 +180,7 @@ OpenVitals is intentionally simple today:
 - `ViewModel` + `StateFlow`
 - Hilt constructor injection for repositories, services, and ViewModels
 - Health Connect AndroidX client wrapped by `HealthConnectManager`
+- WorkManager for user-started Apple Health imports that need to continue outside the Settings screen
 - feature-specific repositories for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, data import status, timer/background-sound settings, hydration container sizes, reminders, and cycle-tracking opt-in
 - shared presentation formatters for units and date/time labels

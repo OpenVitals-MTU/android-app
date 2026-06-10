@@ -74,22 +74,26 @@ internal data class MutableAppleImportTypeStats(
 internal class AppleHealthImportConverter(
     private val trackCycle: Boolean,
     private val mindfulnessAvailable: Boolean,
+    private val diagnosticLimit: Int = 200,
 ) {
     private val diagnostics = mutableListOf<AppleHealthImportDiagnostic>()
-    private val typeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
+    internal val typeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
     private val consumedRecordFingerprints = mutableSetOf<String>()
+    private val workoutOverlapCandidates = mutableListOf<AppleWorkoutOverlapCandidate>()
 
     fun convert(export: AppleParsedExport): AppleHealthConversionResult {
         export.parsedTypeCounts.forEach { (type, count) ->
             typeStats.getOrPut(type) { MutableAppleImportTypeStats() }.parsed += count
         }
 
+        val workoutOverlaps = export.records.mapNotNull { it.toWorkoutOverlapCandidate() }
+
         val converted = buildList {
             addAll(convertBloodPressureCorrelations(export.correlations))
             addAll(convertStandaloneBloodPressure(export.records))
             addAll(convertSleep(export.records))
             addAll(convertNutrition(export.records))
-            addAll(convertWorkouts(export.workouts, export.records))
+            addAll(convertWorkouts(export.workouts, workoutOverlaps))
             export.records.forEach { record ->
                 if (record.sourceFingerprint in consumedRecordFingerprints) return@forEach
                 convertSingleRecord(record)?.let(::add)
@@ -118,6 +122,55 @@ internal class AppleHealthImportConverter(
             typeStats = typeStats,
         )
     }
+
+    fun markParsed(appleType: String) {
+        typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.parsed += 1
+    }
+
+    fun diagnosticsSnapshot(): List<AppleHealthImportDiagnostic> = diagnostics.toList()
+
+    fun shouldBufferRecord(record: AppleRecord): Boolean =
+        record.type == AppleBloodPressureSystolic ||
+            record.type == AppleBloodPressureDiastolic ||
+            record.type == AppleSleepAnalysis ||
+            (record.type in AppleNutritionTypes && record.type != AppleDietaryWater)
+
+    fun noteWorkoutOverlap(record: AppleRecord) {
+        record.toWorkoutOverlapCandidate()?.let(workoutOverlapCandidates::add)
+    }
+
+    fun convertStreamingRecord(record: AppleRecord): ConvertedAppleRecord? =
+        convertSingleRecord(record)
+
+    fun convertBufferedGroups(
+        records: List<AppleRecord>,
+        workouts: List<AppleWorkout>,
+        correlations: List<AppleCorrelation>,
+        parsedActivitySummaries: Int,
+    ): List<ConvertedAppleRecord> =
+        buildList {
+            addAll(convertBloodPressureCorrelations(correlations))
+            addAll(convertStandaloneBloodPressure(records))
+            addAll(convertSleep(records))
+            addAll(convertNutrition(records))
+            addAll(convertWorkouts(workouts, workoutOverlapCandidates))
+            correlations
+                .filterNot { it.type == AppleBloodPressureCorrelation }
+                .forEach { correlation ->
+                    unsupported(
+                        appleType = correlation.type,
+                        detail = "Correlation type has no direct Health Connect import mapping.",
+                        timeRange = correlation.timeRangeOrNull()?.toString(),
+                    )
+                }
+            if (parsedActivitySummaries > 0) {
+                unsupported(
+                    appleType = "ActivitySummary",
+                    detail = "Apple activity rings and stand hours have no direct writable Health Connect record.",
+                    timeRange = null,
+                )
+            }
+        }
 
     private fun convertSingleRecord(record: AppleRecord): ConvertedAppleRecord? {
         val start = record.startDate ?: return invalid(record, "Record is missing startDate.")
@@ -932,7 +985,10 @@ internal class AppleHealthImportConverter(
         }
     }
 
-    private fun convertWorkouts(workouts: List<AppleWorkout>, records: List<AppleRecord>): List<ConvertedAppleRecord> =
+    private fun convertWorkouts(
+        workouts: List<AppleWorkout>,
+        overlapCandidates: List<AppleWorkoutOverlapCandidate>,
+    ): List<ConvertedAppleRecord> =
         workouts.flatMap { workout ->
             val start = workout.startDate ?: return@flatMap emptyList<ConvertedAppleRecord>().also {
                 invalid(workout.workoutActivityType, "Workout is missing startDate.", null)
@@ -964,7 +1020,7 @@ internal class AppleHealthImportConverter(
             markConverted(workout.workoutActivityType)
             buildList {
                 add(convertedSession)
-                if (!records.hasOverlapping(workout, AppleDistanceTypes)) {
+                if (!overlapCandidates.hasOverlapping(workout, AppleDistanceTypes)) {
                     workout.totalDistance
                         ?.toMeters(workout.totalDistanceUnit)
                         ?.takeIf { it > 0.0 }
@@ -991,7 +1047,7 @@ internal class AppleHealthImportConverter(
                             )
                         }
                 }
-                if (!records.hasOverlapping(workout, setOf(AppleActiveEnergyBurned))) {
+                if (!overlapCandidates.hasOverlapping(workout, setOf(AppleActiveEnergyBurned))) {
                     workout.totalEnergyBurned
                         ?.toKilocalories(workout.totalEnergyBurnedUnit)
                         ?.takeIf { it > 0.0 }
@@ -1031,7 +1087,7 @@ internal class AppleHealthImportConverter(
         unit: String? = null,
         value: String? = null,
     ): Nothing? {
-        diagnostics += AppleHealthImportDiagnostic(appleType, null, "invalid", timeRange, unit, value, detail)
+        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "invalid", timeRange, unit, value, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.failed += 1
         return null
     }
@@ -1046,19 +1102,35 @@ internal class AppleHealthImportConverter(
         unit: String? = null,
         value: String? = null,
     ): Nothing? {
-        diagnostics += AppleHealthImportDiagnostic(appleType, null, "unsupported", timeRange, unit, value, detail)
+        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "unsupported", timeRange, unit, value, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.unsupported += 1
         return null
     }
 
     private fun skippedNull(record: AppleRecord, reasonCode: String, detail: String): Nothing? {
-        diagnostics += AppleHealthImportDiagnostic(record.type, null, reasonCode, record.timeRangeOrNull()?.toString(), record.unit, record.valueForReport, detail)
+        addDiagnostic(
+            AppleHealthImportDiagnostic(
+                record.type,
+                null,
+                reasonCode,
+                record.timeRangeOrNull()?.toString(),
+                record.unit,
+                record.valueForReport,
+                detail,
+            ),
+        )
         typeStats.getOrPut(record.type) { MutableAppleImportTypeStats() }.skipped += 1
         return null
     }
 
     private fun markConverted(appleType: String) {
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.converted += 1
+    }
+
+    private fun addDiagnostic(diagnostic: AppleHealthImportDiagnostic) {
+        if (diagnostics.size < diagnosticLimit) {
+            diagnostics += diagnostic
+        }
     }
 }
 
@@ -1083,6 +1155,13 @@ private data class SleepStageCandidate(
     val end: AppleDateTime,
     val stage: Int,
     val inBedOnly: Boolean,
+)
+
+private data class AppleWorkoutOverlapCandidate(
+    val type: String,
+    val sourceName: String?,
+    val startDate: AppleDateTime?,
+    val endDate: AppleDateTime?,
 )
 
 private fun List<SleepStageCandidate>.splitSleepSessions(): List<List<SleepStageCandidate>> {
@@ -1269,7 +1348,19 @@ private fun AppleCorrelation.timeRangeOrNull(): AppleImportTimeRange? {
     return AppleImportTimeRange(start, end)
 }
 
-private fun List<AppleRecord>.hasOverlapping(workout: AppleWorkout, types: Set<String>): Boolean {
+private fun AppleRecord.toWorkoutOverlapCandidate(): AppleWorkoutOverlapCandidate? =
+    if (type in AppleDistanceTypes || type == AppleActiveEnergyBurned) {
+        AppleWorkoutOverlapCandidate(
+            type = type,
+            sourceName = sourceName,
+            startDate = startDate,
+            endDate = endDate,
+        )
+    } else {
+        null
+    }
+
+private fun List<AppleWorkoutOverlapCandidate>.hasOverlapping(workout: AppleWorkout, types: Set<String>): Boolean {
     val workoutStart = workout.startDate?.instant ?: return false
     val workoutEnd = workout.endDate?.instant ?: return false
     return any { record ->

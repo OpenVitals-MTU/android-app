@@ -33,9 +33,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
@@ -47,11 +49,15 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -69,13 +75,16 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
+import tech.mmarca.openvitals.features.imports.applehealth.labelRes
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.theme.HydrationColor
 
 @Composable
 internal fun SettingsCardSpacer() {
@@ -575,6 +584,7 @@ internal fun AppleHealthImportCard(
     importPermissions: Set<String>,
     grantedPermissions: Set<String>,
     isImporting: Boolean,
+    progress: AppleHealthImportProgress?,
     result: AppleHealthImportResult?,
     error: String?,
     onGrantPermissions: () -> Unit,
@@ -691,6 +701,32 @@ internal fun AppleHealthImportCard(
                 )
             }
 
+            if (isImporting) {
+                AppleHealthImportProgressBar(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                )
+                val importProgress = progress ?: AppleHealthImportProgress()
+                Text(
+                    text = stringResource(
+                        R.string.settings_apple_health_import_progress,
+                        stringResource(importProgress.phase.labelRes),
+                        importProgress.parsedElements,
+                        importProgress.importedRecords,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Text(
+                    text = stringResource(R.string.settings_apple_health_import_background),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+
             if (missingPermissions.isNotEmpty()) {
                 FilledTonalButton(
                     onClick = onGrantPermissions,
@@ -720,6 +756,24 @@ internal fun AppleHealthImportCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppleHealthImportProgressBar(modifier: Modifier = Modifier) {
+    val strokeWidth = with(LocalDensity.current) { 5.dp.toPx() }
+    val progressStroke = remember(strokeWidth) {
+        Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    }
+    LinearWavyProgressIndicator(
+        modifier = modifier.height(18.dp),
+        color = HydrationColor.copy(alpha = 0.86f),
+        trackColor = MaterialTheme.colorScheme.outlineVariant,
+        stroke = progressStroke,
+        trackStroke = progressStroke,
+        wavelength = 34.dp,
+        waveSpeed = 34.dp,
+    )
 }
 
 @Composable

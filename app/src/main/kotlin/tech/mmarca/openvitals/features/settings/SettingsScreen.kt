@@ -312,6 +312,7 @@ fun SettingsScreen(
                             importPermissions = state.dataImportWritePermissions,
                             grantedPermissions = state.grantedPermissions,
                             isImporting = state.isImportingAppleHealth,
+                            progress = state.appleHealthImportProgress,
                             result = state.appleHealthImportResult,
                             error = state.appleHealthImportError,
                             onGrantPermissions = {

@@ -1,9 +1,11 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
 import androidx.health.connect.client.records.Record
+import androidx.annotation.StringRes
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.reflect.KClass
+import tech.mmarca.openvitals.R
 
 data class AppleHealthImportResult(
     val parsedRecords: Int,
@@ -22,6 +24,41 @@ data class AppleHealthImportResult(
 ) {
     val unsupportedRecords: Int get() = unsupportedElements
 }
+
+data class AppleHealthImportProgress(
+    val phase: AppleHealthImportPhase = AppleHealthImportPhase.QUEUED,
+    val parsedRecords: Int = 0,
+    val parsedWorkouts: Int = 0,
+    val parsedCorrelations: Int = 0,
+    val parsedActivitySummaries: Int = 0,
+    val convertedRecords: Int = 0,
+    val importedRecords: Int = 0,
+    val duplicateSkippedRecords: Int = 0,
+    val unsupportedElements: Int = 0,
+    val skippedRecords: Int = 0,
+    val failedRecords: Int = 0,
+) {
+    val parsedElements: Int
+        get() = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
+}
+
+enum class AppleHealthImportPhase {
+    QUEUED,
+    PARSING,
+    WRITING,
+    FINISHING,
+    COMPLETE,
+}
+
+@get:StringRes
+val AppleHealthImportPhase.labelRes: Int
+    get() = when (this) {
+        AppleHealthImportPhase.QUEUED -> R.string.settings_apple_health_import_progress_queued
+        AppleHealthImportPhase.PARSING -> R.string.settings_apple_health_import_progress_parsing
+        AppleHealthImportPhase.WRITING -> R.string.settings_apple_health_import_progress_writing
+        AppleHealthImportPhase.FINISHING -> R.string.settings_apple_health_import_progress_finishing
+        AppleHealthImportPhase.COMPLETE -> R.string.settings_apple_health_import_progress_complete
+    }
 
 data class AppleHealthImportTypeSummary(
     val appleType: String,

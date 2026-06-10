@@ -119,6 +119,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
+    // Background work
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Health Connect
     implementation(libs.health.connect.client)
 

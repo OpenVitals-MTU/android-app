@@ -18,7 +18,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
-- Room and WorkManager are intentionally absent until a concrete cache or background refresh design exists
+- WorkManager is present only for user-started Apple Health imports; Room is still absent
 
 Most importantly, body and entry/session browsing now live in metric-owned detail screens. The former global Browse destination is no longer part of the app architecture.
 
@@ -469,11 +469,11 @@ For example, [`MetricCard.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/
 
 This is fine for the current repo size, but if shared UI keeps growing, these should split by responsibility.
 
-### 4. Room and WorkManager are not active architectural constraints yet
+### 4. Background work is narrow and explicit
 
-The project does not declare Room or WorkManager dependencies because there is no current repository/cache/job architecture built around them.
+The project does not declare Room, and there is no repository/cache architecture built around a local database.
 
-Do not design new features as if a cache/database/background-sync layer already exists.
+WorkManager is used for the Apple Health import worker because that workflow can be long-running and user-visible. Do not design new features as if a general background-sync layer already exists.
 
 ### 5. Do not over-correct into a universal framework
 

@@ -11,6 +11,7 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -27,7 +28,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 class SettingsViewModelTest {
@@ -50,7 +51,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs(trackCycle = false),
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         assertEquals(setOf("steps", "write", "route"), vm.uiState.value.visiblePermissions)
@@ -61,7 +62,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs(trackCycle = true),
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
@@ -72,7 +73,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(grantedPermissions = setOf("steps")),
             preferencesRepository = prefs(trackCycle = true),
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         assertEquals(setOf("write", "route", "cycle"), vm.uiState.value.missingVisiblePermissions)
@@ -83,7 +84,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(trackCycle = true),
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         assertTrue(vm.uiState.value.missingVisiblePermissions.isEmpty())
@@ -95,7 +96,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.setTrackCycle(true)
@@ -110,7 +111,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.selectAppLanguage(AppLanguage.SPANISH)
@@ -124,7 +125,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.selectAppThemeMode(AppThemeMode.AMOLED)
@@ -138,7 +139,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.selectSleepRangeMode(SleepRangeMode.NOON)
@@ -152,7 +153,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.selectActivityWeekMode(ActivityWeekMode.LAST_7_DAYS)
@@ -166,7 +167,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.setShowOpenVitalsCalculatedCalories(true)
@@ -180,7 +181,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         vm.selectFavoriteActivity(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
@@ -195,7 +196,7 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             repository = repository,
             preferencesRepository = prefs(trackCycle = true),
-            appleHealthImportService = importService(),
+            appleHealthImportWorkController = importController(),
         )
 
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, vm.uiState.value.availability)
@@ -247,6 +248,8 @@ class SettingsViewModelTest {
             every { prefs.trackCycle = any() } just runs
         }
 
-    private fun importService(): AppleHealthImportService =
-        mockk(relaxed = true)
+    private fun importController(): AppleHealthImportWorkController =
+        mockk<AppleHealthImportWorkController>(relaxed = true).also { controller ->
+            every { controller.workInfos } returns emptyFlow()
+        }
 }

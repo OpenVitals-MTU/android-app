@@ -15,13 +15,16 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.work.WorkInfo
 
 data class SettingsUiState(
     val isLoading: Boolean = true,
@@ -33,6 +36,7 @@ data class SettingsUiState(
     val dataImportWritePermissions: Set<String> = emptySet(),
     val manualOnlyPermissions: Set<String> = emptySet(),
     val isImportingAppleHealth: Boolean = false,
+    val appleHealthImportProgress: AppleHealthImportProgress? = null,
     val appleHealthImportResult: AppleHealthImportResult? = null,
     val appleHealthImportError: String? = null,
     val trackCycle: Boolean = false,
@@ -72,7 +76,7 @@ data class SettingsPermissionCategory(
 class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val appleHealthImportService: AppleHealthImportService,
+    private val appleHealthImportWorkController: AppleHealthImportWorkController,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -83,6 +87,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         refresh()
+        observeAppleHealthImportWork()
     }
 
     fun refresh() {
@@ -121,28 +126,73 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isImportingAppleHealth = true,
+                appleHealthImportProgress = AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
                 appleHealthImportResult = null,
                 appleHealthImportError = null,
             )
 
-            runCatching { appleHealthImportService.importAppleHealthExport(uri) }
-                .onSuccess { result ->
-                    Log.d(TAG, "Apple Health import completed result=$result")
-                    _uiState.value = _uiState.value.copy(
-                        isImportingAppleHealth = false,
-                        appleHealthImportResult = result,
-                        appleHealthImportError = null,
-                    )
-                }
+            runCatching { appleHealthImportWorkController.enqueue(uri) }
                 .onFailure { error ->
-                    Log.e(TAG, "Apple Health import failed", error)
+                    Log.e(TAG, "Apple Health import enqueue failed", error)
                     _uiState.value = _uiState.value.copy(
                         isImportingAppleHealth = false,
+                        appleHealthImportProgress = null,
                         appleHealthImportResult = null,
                         appleHealthImportError = error.localizedMessage
                             ?: "Apple Health import failed.",
                     )
                 }
+        }
+    }
+
+    private fun observeAppleHealthImportWork() {
+        viewModelScope.launch {
+            appleHealthImportWorkController.workInfos.collect { workInfos ->
+                val workInfo = workInfos.firstOrNull() ?: return@collect
+                when (workInfo.state) {
+                    WorkInfo.State.ENQUEUED,
+                    WorkInfo.State.BLOCKED,
+                    WorkInfo.State.RUNNING,
+                    -> {
+                        _uiState.value = _uiState.value.copy(
+                            isImportingAppleHealth = true,
+                            appleHealthImportProgress = appleHealthImportWorkController.progressFor(workInfo)
+                                ?: AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
+                            appleHealthImportResult = null,
+                            appleHealthImportError = null,
+                        )
+                    }
+                    WorkInfo.State.SUCCEEDED -> {
+                        val result = appleHealthImportWorkController.resultFor(workInfo)
+                        Log.d(TAG, "Apple Health import completed result=$result")
+                        _uiState.value = _uiState.value.copy(
+                            isImportingAppleHealth = false,
+                            appleHealthImportProgress = null,
+                            appleHealthImportResult = result,
+                            appleHealthImportError = null,
+                        )
+                    }
+                    WorkInfo.State.FAILED -> {
+                        val error = appleHealthImportWorkController.errorFor(workInfo)
+                            ?: "Apple Health import failed."
+                        Log.e(TAG, "Apple Health import failed: $error")
+                        _uiState.value = _uiState.value.copy(
+                            isImportingAppleHealth = false,
+                            appleHealthImportProgress = null,
+                            appleHealthImportResult = null,
+                            appleHealthImportError = error,
+                        )
+                    }
+                    WorkInfo.State.CANCELLED -> {
+                        if (_uiState.value.isImportingAppleHealth) {
+                            _uiState.value = _uiState.value.copy(
+                                isImportingAppleHealth = false,
+                                appleHealthImportProgress = null,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 

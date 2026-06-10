@@ -16,26 +16,38 @@ import org.xml.sax.helpers.DefaultHandler
 
 internal object AppleHealthImportParser {
     fun parse(input: BufferedInputStream): AppleParsedExport =
+        parseInternal(input, consumer = null)
+
+    fun parse(
+        input: BufferedInputStream,
+        consumer: AppleHealthXmlEventConsumer,
+    ): AppleParsedExport =
+        parseInternal(input, consumer = consumer)
+
+    private fun parseInternal(
+        input: BufferedInputStream,
+        consumer: AppleHealthXmlEventConsumer?,
+    ): AppleParsedExport =
         if (input.hasZipHeader()) {
-            parseZipExport(input)
+            parseZipExport(input, consumer)
         } else {
-            parseXmlExport(input)
+            parseXmlExport(input, consumer)
         }
 
-    private fun parseZipExport(input: InputStream): AppleParsedExport {
+    private fun parseZipExport(input: InputStream, consumer: AppleHealthXmlEventConsumer?): AppleParsedExport {
         ZipInputStream(input).use { zipInput ->
             while (true) {
                 val entry = zipInput.nextEntry ?: break
                 if (!entry.isDirectory && entry.name.isAppleHealthExportXml()) {
-                    return parseXmlExport(zipInput)
+                    return parseXmlExport(zipInput, consumer)
                 }
             }
         }
         throw IllegalArgumentException("Apple Health export.zip must contain export.xml.")
     }
 
-    private fun parseXmlExport(input: InputStream): AppleParsedExport {
-        val handler = AppleHealthXmlHandler()
+    private fun parseXmlExport(input: InputStream, consumer: AppleHealthXmlEventConsumer?): AppleParsedExport {
+        val handler = AppleHealthXmlHandler(consumer)
         val factory =
             SAXParserFactory.newInstance().apply {
                 isNamespaceAware = false
@@ -49,7 +61,17 @@ internal object AppleHealthImportParser {
     }
 }
 
-private class AppleHealthXmlHandler : DefaultHandler() {
+internal interface AppleHealthXmlEventConsumer {
+    fun onParsedType(type: String)
+    fun onRecord(record: AppleRecord)
+    fun onWorkout(workout: AppleWorkout)
+    fun onCorrelation(correlation: AppleCorrelation)
+    fun onActivitySummary()
+}
+
+private class AppleHealthXmlHandler(
+    private val consumer: AppleHealthXmlEventConsumer?,
+) : DefaultHandler() {
     private val stack = ArrayDeque<MutableAppleElement>()
     private val records = mutableListOf<AppleRecord>()
     private val workouts = mutableListOf<AppleWorkout>()
@@ -71,18 +93,21 @@ private class AppleHealthXmlHandler : DefaultHandler() {
                 parsedRecords += 1
                 val type = attributes.value("type") ?: "Record"
                 countType(type)
+                consumer?.onParsedType(type)
                 stack.addLast(MutableAppleRecord(attributes.snapshot(), stack.lastOrNull() as? MutableAppleCorrelation))
             }
             "Workout" -> {
                 parsedWorkouts += 1
                 val type = attributes.value("workoutActivityType") ?: "Workout"
                 countType(type)
+                consumer?.onParsedType(type)
                 stack.addLast(MutableAppleWorkout(attributes.snapshot()))
             }
             "Correlation" -> {
                 parsedCorrelations += 1
                 val type = attributes.value("type") ?: "Correlation"
                 countType(type)
+                consumer?.onParsedType(type)
                 stack.addLast(MutableAppleCorrelation(attributes.snapshot()))
             }
             "MetadataEntry" -> {
@@ -104,6 +129,8 @@ private class AppleHealthXmlHandler : DefaultHandler() {
             "ActivitySummary" -> {
                 parsedActivitySummaries += 1
                 countType("ActivitySummary")
+                consumer?.onParsedType("ActivitySummary")
+                consumer?.onActivitySummary()
             }
         }
     }
@@ -117,16 +144,30 @@ private class AppleHealthXmlHandler : DefaultHandler() {
                 if (parent != null) {
                     parent.records += record.copy(correlationType = parent.type)
                 } else {
-                    records += record
+                    if (consumer != null) {
+                        consumer.onRecord(record)
+                    } else {
+                        records += record
+                    }
                 }
             }
             "Workout" -> {
                 val element = stack.removeLastOrNull() as? MutableAppleWorkout ?: return
-                workouts += element.toWorkout()
+                val workout = element.toWorkout()
+                if (consumer != null) {
+                    consumer.onWorkout(workout)
+                } else {
+                    workouts += workout
+                }
             }
             "Correlation" -> {
                 val element = stack.removeLastOrNull() as? MutableAppleCorrelation ?: return
-                correlations += element.toCorrelation()
+                val correlation = element.toCorrelation()
+                if (consumer != null) {
+                    consumer.onCorrelation(correlation)
+                } else {
+                    correlations += correlation
+                }
             }
         }
     }
