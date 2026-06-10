@@ -3,7 +3,6 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kover) apply false
     alias(libs.plugins.hilt.android) apply false
@@ -29,9 +28,8 @@ tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
 
 tasks.register("verifyLocalApp") {
     group = "verification"
-    description = "Runs CI verification for the local internet-free OpenVitals app and shared artifacts."
+    description = "Runs CI verification for the local internet-free OpenVitals app."
     dependsOn(
-        ":openvitals-core-period:test",
         ":app:testDebugUnitTest",
         ":app:lintDebug",
         ":app:assembleDebug",
@@ -40,22 +38,9 @@ tasks.register("verifyLocalApp") {
 
 tasks.register("verifyLocalReleaseChecks") {
     group = "verification"
-    description = "Runs release preflight checks for the local internet-free OpenVitals app and shared artifacts."
+    description = "Runs release preflight checks for the local internet-free OpenVitals app."
     dependsOn(
-        ":openvitals-core-period:test",
         ":app:testDebugUnitTest",
         ":app:lintDebug",
     )
-}
-
-tasks.register("publishOpenVitalsArtifactsToMavenLocal") {
-    group = "publishing"
-    description = "Publishes OpenVitals shared artifacts to the local Maven cache."
-    dependsOn(":openvitals-core-period:publishToMavenLocal")
-}
-
-tasks.register("publishOpenVitalsArtifactsToLocalRepository") {
-    group = "publishing"
-    description = "Publishes OpenVitals shared artifacts to build/openvitals-maven-repository."
-    dependsOn(":openvitals-core-period:publishAllPublicationsToOpenVitalsLocalRepository")
 }

@@ -14,9 +14,9 @@ import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.DailyNutrition
-import tech.mmarca.openvitals.data.model.DailySteps
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.DailyNutrition
+import tech.mmarca.openvitals.domain.model.DailySteps
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class ActivityRepositoryTest {

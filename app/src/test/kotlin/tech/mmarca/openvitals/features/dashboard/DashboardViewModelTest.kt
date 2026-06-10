@@ -1,12 +1,12 @@
 package tech.mmarca.openvitals.features.dashboard
 
-import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.core.performance.RefreshMode
-import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
-import tech.mmarca.openvitals.data.model.DashboardData
-import tech.mmarca.openvitals.data.model.DashboardMetric
-import tech.mmarca.openvitals.data.model.DashboardQuery
+import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.domain.model.DashboardMetric
+import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule

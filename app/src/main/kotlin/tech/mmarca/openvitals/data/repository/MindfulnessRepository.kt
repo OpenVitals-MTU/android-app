@@ -4,9 +4,9 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.MindfulnessSession
-import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import java.time.LocalDate

@@ -8,8 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.PeriodComparison
-import tech.mmarca.openvitals.core.insights.PeriodComparisonDirection
+import tech.mmarca.openvitals.domain.insights.PeriodComparison
+import tech.mmarca.openvitals.domain.insights.PeriodComparisonDirection
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter

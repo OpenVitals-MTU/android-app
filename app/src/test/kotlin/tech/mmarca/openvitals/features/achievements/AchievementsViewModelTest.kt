@@ -10,7 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 

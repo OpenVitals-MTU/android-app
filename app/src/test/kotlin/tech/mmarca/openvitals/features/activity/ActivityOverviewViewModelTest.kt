@@ -1,14 +1,14 @@
 package tech.mmarca.openvitals.features.activity
 
-import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
-import tech.mmarca.openvitals.core.insights.CardioLoadMethod
-import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.data.model.DailyHrv
-import tech.mmarca.openvitals.data.model.DailyNutrition
-import tech.mmarca.openvitals.data.model.DailyRestingHR
-import tech.mmarca.openvitals.data.model.DailySteps
-import tech.mmarca.openvitals.data.model.ExerciseData
-import tech.mmarca.openvitals.data.model.HeartRateSample
+import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
+import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
+import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.DailyNutrition
+import tech.mmarca.openvitals.domain.model.DailyRestingHR
+import tech.mmarca.openvitals.domain.model.DailySteps
+import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule

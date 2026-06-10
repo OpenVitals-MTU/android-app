@@ -4,10 +4,10 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.data.model.DailyHydration
-import tech.mmarca.openvitals.data.model.HydrationEntry
-import tech.mmarca.openvitals.data.model.HydrationWriteRequest
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import java.time.LocalDate

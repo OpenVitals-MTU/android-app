@@ -45,17 +45,7 @@ Woodpecker uses the Gradle wrapper directly. The test pipeline runs:
 git diff --check
 ```
 
-Release CI also uses the wrapper for local app test/lint and release artifact builds. Shared Maven artifacts are built as dependencies and tested, but publishing them is a separate explicit Gradle action.
-
-## Shared Artifacts
-
-Publish reusable OpenVitals modules to Maven local with:
-
-```bash
-./gradlew publishOpenVitalsArtifactsToMavenLocal -PopenVitalsArtifactVersion=1.3.0-SNAPSHOT
-```
-
-See [`shared-artifacts.md`](shared-artifacts.md) for remote publishing and connected-repo consumption.
+Release CI also uses the wrapper for local app test/lint and release artifact builds.
 
 Release CI is beta-first. A `v*` tag publishes signed APK and Android App Bundle
 assets to Codeberg as a prerelease, and publishes the signed App Bundle to the
@@ -108,7 +98,7 @@ For a stable release:
 
 1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
 2. Add Play changelog files under `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
-3. Add Codeberg release notes under `docs/releases/<versionName>.md` and copy the user-facing summary to `CHANGELOG.md`.
+3. Add the user-facing release summary to `CHANGELOG.md`.
 4. Update README or docs when the user-facing navigation, permissions, screenshots, or bundled assets change.
 5. Run:
 
@@ -117,7 +107,7 @@ For a stable release:
 git diff --check
 ```
 
-6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag such as `v0.7.0` using `docs/releases/<versionName>.md` as the tag message, and push both the branch and tag. The tag pipeline publishes the beta release to Codeberg and Google Play open testing.
+6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag message, and push both the branch and tag. The tag pipeline publishes the beta release to Codeberg and Google Play open testing.
 7. After beta approval, start a Woodpecker deployment from the successful tag pipeline with deploy target `production`. The deployment promotes the Play release to production and marks the Codeberg release stable.
 
 Use the exact `versionName` for release notes, changelog references, and tags.

@@ -21,8 +21,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.core.preferences.AppThemeMode
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.AppNavigation

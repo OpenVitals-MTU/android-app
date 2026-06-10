@@ -5,7 +5,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
+import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 
 class MindfulnessReminderScheduleTest {
     private val zone = ZoneId.of("UTC")

@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.features.hydration.reminders
 
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import tech.mmarca.openvitals.data.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 
 internal fun calculateNextHydrationReminderTime(
     now: ZonedDateTime,

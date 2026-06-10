@@ -27,9 +27,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.CrossMetricDirection
-import tech.mmarca.openvitals.core.insights.CrossMetricInsight
-import tech.mmarca.openvitals.core.insights.CrossMetricStrength
+import tech.mmarca.openvitals.domain.insights.CrossMetricDirection
+import tech.mmarca.openvitals.domain.insights.CrossMetricInsight
+import tech.mmarca.openvitals.domain.insights.CrossMetricStrength
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

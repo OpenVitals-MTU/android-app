@@ -1,6 +1,6 @@
 package tech.mmarca.openvitals.features.dashboard
 
-import tech.mmarca.openvitals.data.model.DashboardMetric
+import tech.mmarca.openvitals.domain.model.DashboardMetric
 
 enum class DashboardWidgetId {
     STEPS,

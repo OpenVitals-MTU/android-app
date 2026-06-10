@@ -11,9 +11,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
-import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule

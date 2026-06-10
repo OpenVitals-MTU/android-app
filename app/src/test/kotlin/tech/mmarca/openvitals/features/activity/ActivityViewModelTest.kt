@@ -1,8 +1,8 @@
 package tech.mmarca.openvitals.features.activity
 
-import tech.mmarca.openvitals.data.model.ActivityProgressPoint
-import tech.mmarca.openvitals.data.model.DailyNutrition
-import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
+import tech.mmarca.openvitals.domain.model.DailyNutrition
+import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityPeriodData

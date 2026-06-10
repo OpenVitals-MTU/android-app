@@ -9,9 +9,9 @@ import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Volume
-import tech.mmarca.openvitals.data.model.DailyHydration
-import tech.mmarca.openvitals.data.model.HydrationEntry
-import tech.mmarca.openvitals.data.model.HydrationWriteRequest
+import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate

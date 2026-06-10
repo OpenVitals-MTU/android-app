@@ -3,7 +3,7 @@ package tech.mmarca.openvitals.features.mindfulness
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -11,11 +11,11 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
-import tech.mmarca.openvitals.data.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
-import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
-import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
+import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController

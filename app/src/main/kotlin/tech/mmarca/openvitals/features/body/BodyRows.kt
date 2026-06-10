@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.theme.WeightColor

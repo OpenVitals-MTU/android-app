@@ -3,8 +3,8 @@ package tech.mmarca.openvitals.healthconnect
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.time.TimeRangeFilter
-import tech.mmarca.openvitals.data.model.MindfulnessSession
-import tech.mmarca.openvitals.data.model.MindfulnessSessionWriteRequest
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

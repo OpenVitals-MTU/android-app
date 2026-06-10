@@ -3,7 +3,7 @@ package tech.mmarca.openvitals.features.activity
 import androidx.health.connect.client.records.ExerciseSegment
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseData
 
 internal fun ExerciseData.pausedDurationMs(): Long =
     segments

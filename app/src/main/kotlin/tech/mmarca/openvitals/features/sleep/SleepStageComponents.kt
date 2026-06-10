@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.domain.model.SleepStage
 import java.time.Duration
 import java.time.Instant
 

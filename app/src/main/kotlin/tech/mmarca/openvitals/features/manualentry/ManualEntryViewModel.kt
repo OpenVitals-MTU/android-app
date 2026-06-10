@@ -1,5 +1,16 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import tech.mmarca.openvitals.features.manualentry.*
+import tech.mmarca.openvitals.features.manualentry.activity.*
+import tech.mmarca.openvitals.features.manualentry.activity.recording.*
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
+import tech.mmarca.openvitals.features.manualentry.body.*
+import tech.mmarca.openvitals.features.manualentry.hydration.*
+import tech.mmarca.openvitals.features.manualentry.mindfulness.*
+import tech.mmarca.openvitals.features.manualentry.vitals.*
+
+
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -8,8 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import tech.mmarca.openvitals.data.model.BodyMeasurementType
-import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository

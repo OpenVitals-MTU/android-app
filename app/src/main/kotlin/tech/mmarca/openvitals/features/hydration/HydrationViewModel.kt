@@ -10,10 +10,10 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
-import tech.mmarca.openvitals.data.model.DailyHydration
-import tech.mmarca.openvitals.data.model.HydrationEntry
-import tech.mmarca.openvitals.data.model.HydrationReminderConfig
-import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository

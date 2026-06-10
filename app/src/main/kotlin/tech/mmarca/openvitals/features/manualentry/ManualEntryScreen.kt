@@ -1,5 +1,16 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import tech.mmarca.openvitals.features.manualentry.*
+import tech.mmarca.openvitals.features.manualentry.activity.*
+import tech.mmarca.openvitals.features.manualentry.activity.recording.*
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
+import tech.mmarca.openvitals.features.manualentry.body.*
+import tech.mmarca.openvitals.features.manualentry.hydration.*
+import tech.mmarca.openvitals.features.manualentry.mindfulness.*
+import tech.mmarca.openvitals.features.manualentry.vitals.*
+
+
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
@@ -70,8 +81,8 @@ import androidx.compose.ui.zIndex
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.data.model.BodyMeasurementType
-import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor

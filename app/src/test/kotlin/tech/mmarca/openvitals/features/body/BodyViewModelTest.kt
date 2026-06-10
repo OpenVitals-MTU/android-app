@@ -1,14 +1,14 @@
 package tech.mmarca.openvitals.features.body
 
-import tech.mmarca.openvitals.data.model.BodyFatEntry
-import tech.mmarca.openvitals.data.model.BodyMeasurementType
-import tech.mmarca.openvitals.data.model.BmrEntry
-import tech.mmarca.openvitals.data.model.BoneMassEntry
-import tech.mmarca.openvitals.data.model.HeightEntry
+import tech.mmarca.openvitals.domain.model.BodyFatEntry
+import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.model.BmrEntry
+import tech.mmarca.openvitals.domain.model.BoneMassEntry
+import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.model.LeanBodyMassEntry
-import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
+import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository

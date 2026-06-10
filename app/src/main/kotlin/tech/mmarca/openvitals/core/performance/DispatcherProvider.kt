@@ -14,8 +14,3 @@ object DefaultDispatcherProvider : DispatcherProvider {
     override val io: CoroutineContext = Dispatchers.IO
     override val default: CoroutineContext = Dispatchers.Default
 }
-
-enum class RefreshMode {
-    NORMAL,
-    FORCE,
-}

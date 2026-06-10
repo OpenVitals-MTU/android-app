@@ -11,8 +11,8 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
-import tech.mmarca.openvitals.data.model.DailyMacros
-import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.DailyMacros
+import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG

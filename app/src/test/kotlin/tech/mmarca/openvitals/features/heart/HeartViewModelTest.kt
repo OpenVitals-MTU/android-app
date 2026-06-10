@@ -1,10 +1,10 @@
 package tech.mmarca.openvitals.features.heart
 
-import tech.mmarca.openvitals.data.model.BloodPressureEntry
-import tech.mmarca.openvitals.data.model.DailyHrv
-import tech.mmarca.openvitals.data.model.DailyRestingHR
-import tech.mmarca.openvitals.data.model.HeartRateSample
-import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.BloodPressureEntry
+import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.DailyRestingHR
+import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HeartPeriodData
@@ -13,7 +13,7 @@ import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.VitalsPeriodData
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.VitalsRepository
-import tech.mmarca.openvitals.data.model.VitalsMeasurementType
+import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify

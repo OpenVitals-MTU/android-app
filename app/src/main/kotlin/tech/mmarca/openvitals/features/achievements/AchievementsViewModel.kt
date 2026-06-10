@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 
 private val LegacyActivityStartDate: LocalDate = LocalDate.of(2009, 1, 1)

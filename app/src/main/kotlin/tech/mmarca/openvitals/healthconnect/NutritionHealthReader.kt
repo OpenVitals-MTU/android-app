@@ -11,11 +11,11 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Mass
-import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
-import tech.mmarca.openvitals.data.model.DailyMacros
-import tech.mmarca.openvitals.data.model.DailyNutrition
-import tech.mmarca.openvitals.data.model.NutritionEntry
-import tech.mmarca.openvitals.data.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.DailyMacros
+import tech.mmarca.openvitals.domain.model.DailyNutrition
+import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate

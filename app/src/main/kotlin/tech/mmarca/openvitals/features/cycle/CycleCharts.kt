@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.ui.components.YAxisChart
 import tech.mmarca.openvitals.ui.components.chartYAxisLabels
 import tech.mmarca.openvitals.ui.components.drawYAxisGuides

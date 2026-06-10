@@ -1,8 +1,8 @@
 package tech.mmarca.openvitals.features.hydration
 
-import tech.mmarca.openvitals.data.model.DailyHydration
-import tech.mmarca.openvitals.data.model.HydrationEntry
-import tech.mmarca.openvitals.data.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationPeriodData

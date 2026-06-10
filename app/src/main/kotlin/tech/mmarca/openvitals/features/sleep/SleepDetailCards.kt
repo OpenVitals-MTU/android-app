@@ -27,8 +27,8 @@ import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.ZoneId

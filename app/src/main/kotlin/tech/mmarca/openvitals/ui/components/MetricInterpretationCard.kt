@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import tech.mmarca.openvitals.core.insights.InterpretationSeverity
+import tech.mmarca.openvitals.domain.insights.InterpretationSeverity
 
 @Composable
 fun MetricInterpretationCard(

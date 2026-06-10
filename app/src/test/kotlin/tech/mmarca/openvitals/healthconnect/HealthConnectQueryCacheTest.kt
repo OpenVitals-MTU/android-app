@@ -5,7 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import tech.mmarca.openvitals.core.performance.RefreshMode
+import tech.mmarca.openvitals.domain.model.RefreshMode
 
 class HealthConnectQueryCacheTest {
 

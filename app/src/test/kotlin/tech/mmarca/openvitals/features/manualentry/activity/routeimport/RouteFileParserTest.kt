@@ -1,0 +1,332 @@
+package tech.mmarca.openvitals.features.manualentry.activity.routeimport
+
+import tech.mmarca.openvitals.features.manualentry.*
+import tech.mmarca.openvitals.features.manualentry.activity.*
+import tech.mmarca.openvitals.features.manualentry.activity.recording.*
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
+import tech.mmarca.openvitals.features.manualentry.body.*
+import tech.mmarca.openvitals.features.manualentry.hydration.*
+import tech.mmarca.openvitals.features.manualentry.mindfulness.*
+import tech.mmarca.openvitals.features.manualentry.vitals.*
+
+
+
+import java.io.ByteArrayOutputStream
+import java.time.Instant
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class RouteFileParserTest {
+
+    @Test fun `parse extracts timestamped GPX track points and summaries`() {
+        val result = RouteFileParser.parse(
+            """
+            <gpx version="1.1" creator="OpenTracks">
+              <trk>
+                <name>Morning ride</name>
+                <desc>Easy commute</desc>
+                <type>cycling</type>
+                <trkseg>
+                  <trkpt lat="59.0000" lon="24.0000">
+                    <ele>10.0</ele>
+                    <time>2026-05-26T08:30:00Z</time>
+                  </trkpt>
+                  <trkpt lat="59.0010" lon="24.0020">
+                    <ele>18.0</ele>
+                    <time>2026-05-26T08:31:00Z</time>
+                  </trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+            """.trimIndent(),
+            fileName = "run.gpx",
+        )
+
+        assertEquals("run.gpx", result.fileName)
+        assertEquals("Morning ride", result.name)
+        assertEquals("Easy commute", result.description)
+        assertEquals("cycling", result.type)
+        assertEquals(2, result.points.size)
+        assertEquals(8.0, result.elevationGainedMeters, 0.001)
+        assertTrue(result.distanceMeters > 0.0)
+    }
+
+    @Test fun `parseFile extracts timestamped KML gx track from KMZ`() {
+        val result = RouteFileParser.parseFile(
+            kmzBytes(
+                """
+                <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+                  <Document>
+                    <name>Archive route</name>
+                    <Placemark>
+                      <name>Evening run</name>
+                      <description>Progression effort</description>
+                      <gx:Track>
+                        <when>2026-05-26T18:00:00Z</when>
+                        <when>2026-05-26T18:01:00Z</when>
+                        <gx:coord>24.0000 59.0000 10.0</gx:coord>
+                        <gx:coord>24.0020 59.0010 22.0</gx:coord>
+                      </gx:Track>
+                    </Placemark>
+                  </Document>
+                </kml>
+                """.trimIndent(),
+            ),
+            fileName = "run.kmz",
+        )
+
+        assertEquals("run.kmz", result.fileName)
+        assertEquals("Evening run", result.name)
+        assertEquals("Progression effort", result.description)
+        assertEquals(2, result.points.size)
+        assertEquals(12.0, result.elevationGainedMeters, 0.001)
+        assertTrue(result.distanceMeters > 0.0)
+    }
+
+    @Test fun `parseFile extracts timestamped FIT activity records and sport`() {
+        val result = RouteFileParser.parseFile(
+            fitActivityBytes(
+                sport = 2,
+                points = listOf(
+                    FitTestPoint(
+                        time = Instant.parse("2026-05-26T08:30:00Z"),
+                        latitude = 59.0000,
+                        longitude = 24.0000,
+                        altitudeMeters = 10.0,
+                    ),
+                    FitTestPoint(
+                        time = Instant.parse("2026-05-26T08:31:00Z"),
+                        latitude = 59.0010,
+                        longitude = 24.0020,
+                        altitudeMeters = 22.0,
+                    ),
+                ),
+            ),
+            fileName = "morning-ride.fit",
+        )
+
+        assertEquals("morning-ride.fit", result.fileName)
+        assertEquals("cycling", result.type)
+        assertEquals(2, result.points.size)
+        assertEquals(Instant.parse("2026-05-26T08:30:00Z"), result.startTime)
+        assertEquals(Instant.parse("2026-05-26T08:31:00Z"), result.endTime)
+        assertEquals(12.0, result.elevationGainedMeters, 0.001)
+        assertTrue(result.distanceMeters > 0.0)
+    }
+
+    @Test fun `parseFile extracts untimestamped KML line string with synthetic timing`() {
+        val result = RouteFileParser.parseFile(
+            """
+            <kml xmlns="http://www.opengis.net/kml/2.2">
+              <Document>
+                <Placemark>
+                  <name>Manual route</name>
+                  <description>Imported path</description>
+                  <LineString>
+                    <coordinates>
+                      24.0000,59.0000,10.0
+                      24.0020,59.0010,22.0
+                      24.0040,59.0020,20.0
+                    </coordinates>
+                  </LineString>
+                </Placemark>
+              </Document>
+            </kml>
+            """.trimIndent().toByteArray(Charsets.UTF_8),
+            fileName = "route.kml",
+        )
+
+        assertEquals("Manual route", result.name)
+        assertFalse(result.hasRecordedTimestamps)
+        assertFalse(result.hasImportedTimeRange)
+        assertEquals(3, result.points.size)
+        assertTrue(result.distanceMeters > 0.0)
+    }
+
+    @Test fun `parse simplifies very large route files`() {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val points = (0 until 2_100).joinToString(separator = "\n") { index ->
+            """
+            <trkpt lat="${59.0 + index * 0.00001}" lon="${24.0 + index * 0.00001}">
+              <time>${start.plusSeconds(index.toLong())}</time>
+            </trkpt>
+            """.trimIndent()
+        }
+        val result = RouteFileParser.parse(
+            """
+            <gpx version="1.1">
+              <trk><trkseg>
+                $points
+              </trkseg></trk>
+            </gpx>
+            """.trimIndent(),
+            fileName = "large.gpx",
+        )
+
+        assertEquals(2_100, result.originalPointCount)
+        assertTrue(result.points.size < result.originalPointCount)
+        assertEquals(2_000, result.points.size)
+    }
+
+    @Test fun `parse rejects GPX without two timestamped points`() {
+        val failure = runCatching {
+            RouteFileParser.parse(
+                """
+                <gpx version="1.1">
+                  <trk><trkseg><trkpt lat="59.0" lon="24.0" /></trkseg></trk>
+                </gpx>
+                """.trimIndent(),
+            )
+        }
+
+        assertTrue(failure.isFailure)
+    }
+
+    @Test fun `parseFile rejects oversized raw route file before parsing`() {
+        val failure = runCatching {
+            RouteFileParser.parseFile(ByteArray(MaxRouteFileBytes + 1), fileName = "large.gpx")
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals("Route file is too large.", failure.exceptionOrNull()?.message)
+    }
+
+    @Test fun `parseFile rejects oversized KMZ route entry before XML parsing`() {
+        val failure = runCatching {
+            RouteFileParser.parseFile(oversizedKmzBytes(), fileName = "large.kmz")
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals("KMZ route entry is too large.", failure.exceptionOrNull()?.message)
+    }
+
+    private fun kmzBytes(kmlText: String): ByteArray {
+        val output = ByteArrayOutputStream()
+        ZipOutputStream(output).use { zip ->
+            zip.putNextEntry(ZipEntry("doc.kml"))
+            zip.write(kmlText.toByteArray(Charsets.UTF_8))
+            zip.closeEntry()
+        }
+        return output.toByteArray()
+    }
+
+    private fun fitActivityBytes(sport: Int, points: List<FitTestPoint>): ByteArray {
+        val data = ByteArrayOutputStream()
+        data.writeFitDefinition(
+            localMessageType = 1,
+            globalMessageNumber = 18,
+            fields = listOf(
+                FitTestFieldDefinition(number = 253, size = 4, baseType = 134),
+                FitTestFieldDefinition(number = 5, size = 1, baseType = 0),
+            ),
+        )
+        data.write(1)
+        data.writeUInt32(points.first().time.fitTimestamp())
+        data.write(sport)
+
+        data.writeFitDefinition(
+            localMessageType = 0,
+            globalMessageNumber = 20,
+            fields = listOf(
+                FitTestFieldDefinition(number = 253, size = 4, baseType = 134),
+                FitTestFieldDefinition(number = 0, size = 4, baseType = 133),
+                FitTestFieldDefinition(number = 1, size = 4, baseType = 133),
+                FitTestFieldDefinition(number = 2, size = 2, baseType = 132),
+            ),
+        )
+        points.forEach { point ->
+            data.write(0)
+            data.writeUInt32(point.time.fitTimestamp())
+            data.writeInt32(point.latitude.semicircles())
+            data.writeInt32(point.longitude.semicircles())
+            data.writeUInt16(point.altitudeRaw())
+        }
+
+        val dataBytes = data.toByteArray()
+        return ByteArrayOutputStream().apply {
+            write(14)
+            write(16)
+            writeUInt16(0)
+            writeUInt32(dataBytes.size.toLong())
+            write(byteArrayOf('.'.code.toByte(), 'F'.code.toByte(), 'I'.code.toByte(), 'T'.code.toByte()))
+            writeUInt16(0)
+            write(dataBytes)
+            writeUInt16(0)
+        }.toByteArray()
+    }
+
+    private fun ByteArrayOutputStream.writeFitDefinition(
+        localMessageType: Int,
+        globalMessageNumber: Int,
+        fields: List<FitTestFieldDefinition>,
+    ) {
+        write(0x40 or localMessageType)
+        write(0)
+        write(0)
+        writeUInt16(globalMessageNumber)
+        write(fields.size)
+        fields.forEach { field ->
+            write(field.number)
+            write(field.size)
+            write(field.baseType)
+        }
+    }
+
+    private fun ByteArrayOutputStream.writeUInt16(value: Int) {
+        write(value and 0xFF)
+        write((value ushr 8) and 0xFF)
+    }
+
+    private fun ByteArrayOutputStream.writeUInt32(value: Long) {
+        write((value and 0xFF).toInt())
+        write(((value ushr 8) and 0xFF).toInt())
+        write(((value ushr 16) and 0xFF).toInt())
+        write(((value ushr 24) and 0xFF).toInt())
+    }
+
+    private fun ByteArrayOutputStream.writeInt32(value: Int) {
+        writeUInt32(value.toLong() and 0xFFFFFFFFL)
+    }
+
+    private fun Instant.fitTimestamp(): Long =
+        epochSecond - 631_065_600L
+
+    private fun Double.semicircles(): Int =
+        Math.round(this * 2_147_483_648.0 / 180.0).toInt()
+
+    private fun FitTestPoint.altitudeRaw(): Int =
+        Math.round((altitudeMeters + 500.0) * 5.0).toInt()
+
+    private fun oversizedKmzBytes(): ByteArray {
+        val output = ByteArrayOutputStream()
+        val chunk = ByteArray(8 * 1024) { 'a'.code.toByte() }
+        var remaining = MaxKmzRouteEntryBytes + 1
+        ZipOutputStream(output).use { zip ->
+            zip.putNextEntry(ZipEntry("doc.kml"))
+            while (remaining > 0) {
+                val size = minOf(remaining, chunk.size)
+                zip.write(chunk, 0, size)
+                remaining -= size
+            }
+            zip.closeEntry()
+        }
+        return output.toByteArray()
+    }
+
+    private data class FitTestPoint(
+        val time: Instant,
+        val latitude: Double,
+        val longitude: Double,
+        val altitudeMeters: Double,
+    )
+
+    private data class FitTestFieldDefinition(
+        val number: Int,
+        val size: Int,
+        val baseType: Int,
+    )
+}

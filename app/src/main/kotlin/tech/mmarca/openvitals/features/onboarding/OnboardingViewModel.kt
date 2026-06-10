@@ -6,9 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.preferences.AppLanguage
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.PermissionGrantMode
+import tech.mmarca.openvitals.domain.preferences.AppLanguage
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import javax.inject.Inject

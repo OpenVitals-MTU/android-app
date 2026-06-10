@@ -4,8 +4,8 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.time.TimeRangeFilter
-import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
-import tech.mmarca.openvitals.data.model.CaloriesBurnedValue
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate

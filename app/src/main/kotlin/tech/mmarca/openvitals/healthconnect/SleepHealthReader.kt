@@ -2,9 +2,9 @@ package tech.mmarca.openvitals.healthconnect
 
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.time.TimeRangeFilter
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.mergeSleepSessions
-import tech.mmarca.openvitals.data.model.mergedSleepSessionComponentIds
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.mergeSleepSessions
+import tech.mmarca.openvitals.domain.model.mergedSleepSessionComponentIds
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate

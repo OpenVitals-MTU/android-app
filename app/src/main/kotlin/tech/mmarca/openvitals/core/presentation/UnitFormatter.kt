@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.core.presentation
 
-import tech.mmarca.openvitals.core.preferences.UnitSystem
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -10,10 +9,6 @@ class UnitFormatter(
     private val unitSystemProvider: () -> UnitSystem,
     private val localeProvider: () -> Locale = { Locale.getDefault() },
 ) {
-    constructor(preferencesRepository: PreferencesRepository) : this(
-        unitSystemProvider = { preferencesRepository.unitSystem },
-    )
-
     fun unitSystem(): UnitSystem = unitSystemProvider()
 
     fun count(value: Long): String = integerFormat().format(value)

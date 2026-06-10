@@ -8,13 +8,13 @@ import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.SexualActivityRecord
 import androidx.health.connect.client.time.TimeRangeFilter
-import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
-import tech.mmarca.openvitals.data.model.CervicalMucusEntry
-import tech.mmarca.openvitals.data.model.IntermenstrualBleedingEntry
-import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
-import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
-import tech.mmarca.openvitals.data.model.OvulationTestEntry
-import tech.mmarca.openvitals.data.model.SexualActivityEntry
+import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
+import tech.mmarca.openvitals.domain.model.IntermenstrualBleedingEntry
+import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
+import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
+import tech.mmarca.openvitals.domain.model.OvulationTestEntry
+import tech.mmarca.openvitals.domain.model.SexualActivityEntry
 import java.time.Instant
 
 internal class CycleHealthReader(

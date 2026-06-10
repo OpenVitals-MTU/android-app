@@ -5,7 +5,7 @@ import java.util.LinkedHashMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import tech.mmarca.openvitals.core.performance.RefreshMode
+import tech.mmarca.openvitals.domain.model.RefreshMode
 
 data class HealthConnectQueryKey(
     val operation: String,

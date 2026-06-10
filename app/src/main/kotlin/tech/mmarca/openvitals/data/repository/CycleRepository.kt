@@ -11,8 +11,8 @@ import androidx.health.connect.client.records.SexualActivityRecord
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.data.model.CycleData
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
 import java.time.ZoneId

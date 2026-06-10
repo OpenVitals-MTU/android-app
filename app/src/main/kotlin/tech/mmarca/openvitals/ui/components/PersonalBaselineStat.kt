@@ -10,8 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.BaselineStatus
-import tech.mmarca.openvitals.core.insights.PersonalBaselineInsight
+import tech.mmarca.openvitals.domain.insights.BaselineStatus
+import tech.mmarca.openvitals.domain.insights.PersonalBaselineInsight
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import kotlin.math.abs

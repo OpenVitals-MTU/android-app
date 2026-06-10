@@ -1,10 +1,10 @@
 package tech.mmarca.openvitals.features.sleep
 
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.SleepStage
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.data.repository.SleepPeriodData
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule

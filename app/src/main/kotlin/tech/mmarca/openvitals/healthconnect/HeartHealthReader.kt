@@ -6,10 +6,10 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import tech.mmarca.openvitals.data.model.DailyHrv
-import tech.mmarca.openvitals.data.model.DailyRestingHR
-import tech.mmarca.openvitals.data.model.HeartRateSample
-import tech.mmarca.openvitals.data.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.DailyRestingHR
+import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate

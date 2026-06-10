@@ -7,7 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 
 class HydrationReminderScheduleTest {
     private val zone = ZoneId.of("UTC")

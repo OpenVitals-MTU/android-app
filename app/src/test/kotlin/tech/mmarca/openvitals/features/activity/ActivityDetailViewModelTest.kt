@@ -1,6 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
-import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery

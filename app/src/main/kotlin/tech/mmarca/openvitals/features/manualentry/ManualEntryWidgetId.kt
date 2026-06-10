@@ -1,5 +1,16 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import tech.mmarca.openvitals.features.manualentry.*
+import tech.mmarca.openvitals.features.manualentry.activity.*
+import tech.mmarca.openvitals.features.manualentry.activity.recording.*
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
+import tech.mmarca.openvitals.features.manualentry.body.*
+import tech.mmarca.openvitals.features.manualentry.hydration.*
+import tech.mmarca.openvitals.features.manualentry.mindfulness.*
+import tech.mmarca.openvitals.features.manualentry.vitals.*
+
+
+
 enum class ManualEntryWidgetId {
     HYDRATION,
     ACTIVITY,

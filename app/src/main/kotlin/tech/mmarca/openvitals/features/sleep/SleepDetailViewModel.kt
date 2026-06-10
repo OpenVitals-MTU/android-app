@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.SleepRepository
 import tech.mmarca.openvitals.navigation.SLEEP_DETAIL_ID_ARG
 import javax.inject.Inject

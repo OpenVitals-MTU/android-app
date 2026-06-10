@@ -13,8 +13,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.CycleData
-import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
+import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.CyclePeriodData

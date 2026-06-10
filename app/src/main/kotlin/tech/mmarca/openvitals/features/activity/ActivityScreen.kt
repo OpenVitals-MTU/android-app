@@ -31,14 +31,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.BaselineValue
-import tech.mmarca.openvitals.core.insights.DataValueKind
-import tech.mmarca.openvitals.core.insights.DailyGoalDirection
-import tech.mmarca.openvitals.core.insights.DailyGoalValue
-import tech.mmarca.openvitals.core.insights.dailyGoalProgress
-import tech.mmarca.openvitals.core.insights.dataConfidence
-import tech.mmarca.openvitals.core.insights.periodComparison
-import tech.mmarca.openvitals.core.insights.personalBaselineInsight
+import tech.mmarca.openvitals.domain.insights.BaselineValue
+import tech.mmarca.openvitals.domain.insights.DataValueKind
+import tech.mmarca.openvitals.domain.insights.DailyGoalDirection
+import tech.mmarca.openvitals.domain.insights.DailyGoalValue
+import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
+import tech.mmarca.openvitals.domain.insights.dataConfidence
+import tech.mmarca.openvitals.domain.insights.periodComparison
+import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -291,7 +291,7 @@ private fun LazyListScope.stepsContent(
                     },
                     accentColor = StepsColor,
                     yAxisValueFormatter = { unitFormatter.count(it.roundToLong()) },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 StepsBarChart(
@@ -300,7 +300,7 @@ private fun LazyListScope.stepsContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -410,7 +410,7 @@ private fun LazyListScope.distanceContent(
                     },
                     accentColor = DistanceColor,
                     yAxisValueFormatter = { unitFormatter.distance(it).text },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 DistanceBarChart(
@@ -419,7 +419,7 @@ private fun LazyListScope.distanceContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -513,7 +513,7 @@ private fun LazyListScope.caloriesContent(
                     },
                     accentColor = CaloriesColor,
                     yAxisValueFormatter = { unitFormatter.energy(it).text },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 CaloriesBarChart(
@@ -522,7 +522,7 @@ private fun LazyListScope.caloriesContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -616,7 +616,7 @@ private fun LazyListScope.activeCaloriesContent(
                     },
                     accentColor = ActiveCaloriesColor,
                     yAxisValueFormatter = { unitFormatter.energy(it).text },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 ActiveCaloriesBarChart(
@@ -625,7 +625,7 @@ private fun LazyListScope.activeCaloriesContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -724,7 +724,7 @@ private fun LazyListScope.floorsContent(
                     },
                     accentColor = FloorsColor,
                     yAxisValueFormatter = { unitFormatter.count(it.roundToLong()) },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 FloorsBarChart(
@@ -733,7 +733,7 @@ private fun LazyListScope.floorsContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -840,7 +840,7 @@ private fun LazyListScope.elevationContent(
                     },
                     accentColor = ElevationColor,
                     yAxisValueFormatter = { unitFormatter.elevation(it).text },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 ElevationBarChart(
@@ -849,7 +849,7 @@ private fun LazyListScope.elevationContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -943,7 +943,7 @@ private fun LazyListScope.wheelchairPushesContent(
                     },
                     accentColor = WheelchairPushesColor,
                     yAxisValueFormatter = { unitFormatter.count(it.roundToLong()) },
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                 )
             } else {
                 WheelchairPushesBarChart(
@@ -952,7 +952,7 @@ private fun LazyListScope.wheelchairPushesContent(
                     period = period,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
+                    modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
                 )
@@ -1043,225 +1043,4 @@ private fun LazyListScope.wheelchairPushesContent(
     }
 }
 
-private fun LazyListScope.activityDataConfidence(
-    period: DatePeriod,
-    trackedDates: Collection<LocalDate>,
-    sampleCount: Int,
-    accentColor: Color,
-) {
-    if (period.start == period.end) return
 
-    item {
-        DataConfidenceCard(
-            confidence = dataConfidence(
-                period = period,
-                trackedDates = trackedDates,
-                sampleCount = sampleCount,
-                valueKind = DataValueKind.AGGREGATED,
-            ),
-            accentColor = accentColor,
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun LazyListScope.activityGoal(
-    state: ActivityUiState,
-    period: DatePeriod,
-    values: List<DailyGoalValue>,
-    unitFormatter: UnitFormatter,
-    icon: ImageVector,
-    accentColor: Color,
-    direction: DailyGoalDirection,
-    goalFormatter: @Composable (Double) -> DisplayValue,
-    onDecreaseGoal: () -> Unit,
-    onIncreaseGoal: () -> Unit,
-) {
-    val progress = dailyGoalProgress(
-        values = values,
-        period = period,
-        target = state.dailyGoal,
-        direction = direction,
-    )
-    item {
-        DailyGoalCard(
-            goal = goalFormatter(state.dailyGoal),
-            progress = progress,
-            icon = icon,
-            accentColor = accentColor,
-            onDecreaseGoal = onDecreaseGoal,
-            onIncreaseGoal = onIncreaseGoal,
-            modifier = metricModifier(),
-        )
-    }
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
-    item {
-        DailyGoalStatistics(
-            progress = progress,
-            averageGap = goalFormatter(progress.averageGapToGoal),
-            unitFormatter = unitFormatter,
-            icon = icon,
-            accentColor = accentColor,
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun LazyListScope.activityStatistics(
-    unitFormatter: UnitFormatter,
-    period: DatePeriod,
-    total: @Composable () -> DisplayValue,
-    average: @Composable () -> DisplayValue,
-    best: @Composable () -> DisplayValue,
-    activeDays: Int,
-    comparison: tech.mmarca.openvitals.core.insights.PeriodComparison,
-    selectedRange: TimeRange,
-    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
-    baselineCurrentValue: Double,
-    baselineValues: List<BaselineValue>,
-    icon: ImageVector,
-    accentColor: Color,
-    includeHeader: Boolean = true,
-) {
-    if (includeHeader) {
-        item { SectionHeader(stringResource(R.string.section_statistics)) }
-    }
-    item {
-        val totalValue = total()
-        val averageValue = average()
-        val bestValue = best()
-        InsightStatGrid(
-            stats = listOf(
-                InsightStat(
-                    title = stringResource(R.string.stat_total),
-                    value = totalValue.value,
-                    unit = totalValue.unit,
-                    icon = icon,
-                    accentColor = accentColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_daily_average),
-                    value = averageValue.value,
-                    unit = averageValue.unit,
-                    icon = Icons.Outlined.Star,
-                    accentColor = accentColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_best_day),
-                    value = bestValue.value,
-                    unit = bestValue.unit,
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = accentColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_active_days),
-                    value = unitFormatter.count(activeDays),
-                    unit = stringResource(R.string.unit_days),
-                    icon = Icons.Outlined.CheckCircle,
-                    accentColor = accentColor,
-                ),
-                previousPeriodInsightStat(
-                    comparison = comparison,
-                    selectedRange = selectedRange,
-                    unitFormatter = unitFormatter,
-                    valueFormatter = comparisonValueFormatter,
-                    accentColor = accentColor,
-                ),
-            ) + personalBaselineInsightStats(
-                insight = personalBaselineInsight(
-                    currentValue = baselineCurrentValue,
-                    values = baselineValues,
-                    referenceDate = period.start.minusDays(1),
-                ),
-                unitFormatter = unitFormatter,
-                valueFormatter = comparisonValueFormatter,
-                accentColor = accentColor,
-            ),
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun LazyListScope.noMetricData(
-    titleRes: Int,
-    messageRes: Int,
-    icon: ImageVector,
-    accentColor: Color,
-) {
-    item {
-        MetricCardPlaceholder(
-            title = stringResource(titleRes),
-            icon = icon,
-            accentColor = accentColor,
-            message = stringResource(messageRes),
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun <T> LazyListScope.activityDailyEntries(
-    entries: List<T>,
-    date: (T) -> LocalDate,
-    value: @Composable (T) -> DisplayValue,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    accentColor: Color,
-    titleDate: LocalDate? = null,
-) {
-    val sortedEntries = entries.sortedByDescending(date)
-    item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = sortedEntries,
-        ) { entry, rowModifier ->
-            ActivityDailyEntryRow(
-                date = date(entry),
-                value = value(entry),
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                accentColor = accentColor,
-                modifier = rowModifier,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActivityDailyEntryRow(
-    date: LocalDate,
-    value: DisplayValue,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    accentColor: Color,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = dateTimeFormatterProvider.mediumDate().format(date),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Text(
-                text = value.text,
-                style = MaterialTheme.typography.titleMedium,
-                color = accentColor,
-            )
-        }
-    }
-}
-
-private fun metricModifier(): Modifier =
-    Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 8.dp)
-
-private fun averageOrZero(total: Double, activeDays: Int): Double =
-    activeDays.takeIf { it > 0 }?.let { total / it } ?: 0.0

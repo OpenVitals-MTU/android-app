@@ -18,12 +18,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.DataValueKind
-import tech.mmarca.openvitals.core.insights.dataConfidence
+import tech.mmarca.openvitals.domain.insights.DataValueKind
+import tech.mmarca.openvitals.domain.insights.dataConfidence
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.CycleData
+import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid

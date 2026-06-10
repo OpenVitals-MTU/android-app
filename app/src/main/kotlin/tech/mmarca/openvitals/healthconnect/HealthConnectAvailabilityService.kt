@@ -5,7 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 
 internal class HealthConnectAvailabilityService(
     private val context: Context,

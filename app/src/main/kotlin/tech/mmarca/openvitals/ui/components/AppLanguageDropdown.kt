@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.preferences.AppLanguage
+import tech.mmarca.openvitals.domain.preferences.AppLanguage
 
 @Composable
 fun AppLanguageDropdown(

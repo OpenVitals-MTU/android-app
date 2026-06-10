@@ -8,8 +8,8 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.BodyFatEntry
-import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.domain.model.BodyFatEntry
+import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle

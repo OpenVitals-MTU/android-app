@@ -12,10 +12,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.ActivityExerciseSegmentWrite
-import tech.mmarca.openvitals.data.model.ActivityPauseInterval
-import tech.mmarca.openvitals.data.model.ActivityWriteRequest
-import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
+import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
+import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 
 class ActivityHealthReaderTest {
     @Test fun `exercise segments include active intervals around pauses`() {

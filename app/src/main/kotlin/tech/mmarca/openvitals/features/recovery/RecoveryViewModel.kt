@@ -10,14 +10,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import tech.mmarca.openvitals.core.insights.SleepScoreEstimate
-import tech.mmarca.openvitals.core.insights.calculateSleepScoresByDate
+import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
+import tech.mmarca.openvitals.domain.insights.calculateSleepScoresByDate
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.SleepStage
-import tech.mmarca.openvitals.data.model.sleepDurationMsFromStages
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 import tech.mmarca.openvitals.data.repository.SleepRepository
 
 private const val RecoveryLookbackDays = 7L

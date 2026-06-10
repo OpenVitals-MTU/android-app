@@ -22,12 +22,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
-import tech.mmarca.openvitals.data.model.CervicalMucusEntry
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
-import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
-import tech.mmarca.openvitals.data.model.OvulationTestEntry
+import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
+import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
+import tech.mmarca.openvitals.domain.model.OvulationTestEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class CycleRepositoryTest {

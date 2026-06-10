@@ -53,8 +53,8 @@ import androidx.health.connect.client.records.WheelchairPushesRecord
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.PermissionGrantMode
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 
 internal class HealthConnectPermissionService(
     private val context: Context,

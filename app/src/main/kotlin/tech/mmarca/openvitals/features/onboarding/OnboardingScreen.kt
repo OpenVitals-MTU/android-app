@@ -45,8 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.PermissionGrantMode
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading

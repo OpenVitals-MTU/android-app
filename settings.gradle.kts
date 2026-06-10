@@ -22,7 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HealthConnectDashboard"
+rootProject.name = "OpenVitals"
 include(":app")
-include(":openvitals-core-period")
-project(":openvitals-core-period").projectDir = file("core/period")

@@ -19,7 +19,6 @@ The goal is:
 
 Use these docs together:
 
-- [plan.md](plan.md): product direction and scope
 - [docs/README.md](docs/README.md): doc index
 - [docs/architecture.md](docs/architecture.md): target architecture
 - [docs/feature-playbook.md](docs/feature-playbook.md): step-by-step guide for adding a feature
@@ -44,7 +43,7 @@ The following areas are still transitional and should not be copied as the defau
 
 - duplicated period selection logic in multiple ViewModels
 - broad shared component files that still mix several concerns
-- a future `core/period` extraction that has not happened yet
+- oversized screen files that should keep being split into route, section, card, and helper files
 
 ## Golden Path For New Metric Features
 
@@ -95,8 +94,9 @@ A feature should own:
 Shared code belongs in:
 
 - `ui/components` for reusable shell components
-- future `core/period` for period math and formatting
-- future `core/presentation` for shared formatters or UI models
+- `core/period` for app-local period math and formatting
+- `domain/model`, `domain/insights`, and `domain/preferences` for app-local pure models, calculations, and preference enums
+- `core/presentation` for shared formatters or UI models that remain repository-free
 
 Do not put feature-specific business logic into `ui/components`.
 

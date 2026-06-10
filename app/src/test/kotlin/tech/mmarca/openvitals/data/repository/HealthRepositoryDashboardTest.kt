@@ -28,18 +28,18 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
-import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
-import tech.mmarca.openvitals.data.model.CaloriesBurnedValue
-import tech.mmarca.openvitals.data.model.DailySteps
-import tech.mmarca.openvitals.data.model.DashboardMetric
-import tech.mmarca.openvitals.data.model.DashboardQuery
-import tech.mmarca.openvitals.data.model.ExerciseData
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.HeightEntry
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.WeightEntry
+import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
+import tech.mmarca.openvitals.domain.model.DailySteps
+import tech.mmarca.openvitals.domain.model.DashboardMetric
+import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.HeightEntry
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class HealthRepositoryDashboardTest {

@@ -1,7 +1,7 @@
 package tech.mmarca.openvitals.features.nutrition
 
-import tech.mmarca.openvitals.data.model.DailyMacros
-import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.DailyMacros
+import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.NutritionPeriodData

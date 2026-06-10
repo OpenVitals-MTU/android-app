@@ -2,8 +2,8 @@ package tech.mmarca.openvitals.features.activity
 
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.core.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.data.model.ExerciseData
+import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivitiesPeriodData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule

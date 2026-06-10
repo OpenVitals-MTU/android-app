@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
-import tech.mmarca.openvitals.data.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 

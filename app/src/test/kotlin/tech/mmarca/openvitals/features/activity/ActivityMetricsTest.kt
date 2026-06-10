@@ -6,10 +6,10 @@ import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.ExerciseData
-import tech.mmarca.openvitals.data.model.ExerciseSegmentData
+import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
 
 class ActivityMetricsTest {
 

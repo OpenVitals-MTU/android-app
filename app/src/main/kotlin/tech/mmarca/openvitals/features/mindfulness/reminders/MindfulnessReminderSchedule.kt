@@ -1,7 +1,7 @@
 package tech.mmarca.openvitals.features.mindfulness.reminders
 
 import java.time.ZonedDateTime
-import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
+import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 
 internal fun calculateNextMindfulnessReminderTime(
     now: ZonedDateTime,

@@ -27,7 +27,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideUnitFormatter(preferencesRepository: PreferencesRepository): UnitFormatter =
-        UnitFormatter(preferencesRepository)
+        UnitFormatter(unitSystemProvider = { preferencesRepository.unitSystem })
 
     @Provides
     @Singleton

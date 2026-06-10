@@ -15,10 +15,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.DataConfidence
-import tech.mmarca.openvitals.core.insights.DataConfidenceLevel
-import tech.mmarca.openvitals.core.insights.DataSourceConsistency
-import tech.mmarca.openvitals.core.insights.DataValueKind
+import tech.mmarca.openvitals.domain.insights.DataConfidence
+import tech.mmarca.openvitals.domain.insights.DataConfidenceLevel
+import tech.mmarca.openvitals.domain.insights.DataSourceConsistency
+import tech.mmarca.openvitals.domain.insights.DataValueKind
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 

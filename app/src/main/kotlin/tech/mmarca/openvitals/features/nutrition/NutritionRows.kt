@@ -22,7 +22,7 @@ import androidx.health.connect.client.records.MealType
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor

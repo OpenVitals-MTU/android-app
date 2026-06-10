@@ -4,19 +4,19 @@ import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
-import tech.mmarca.openvitals.data.model.CaloriesBurnedSource
-import tech.mmarca.openvitals.data.model.ExerciseData
-import tech.mmarca.openvitals.data.model.ExerciseDeviceData
-import tech.mmarca.openvitals.data.model.ExerciseLapData
-import tech.mmarca.openvitals.data.model.ExerciseRouteData
-import tech.mmarca.openvitals.data.model.ExerciseRoutePoint
-import tech.mmarca.openvitals.data.model.ExerciseRouteStatus
-import tech.mmarca.openvitals.data.model.ExerciseSegmentData
-import tech.mmarca.openvitals.data.model.MindfulnessSession
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.SleepDeviceData
-import tech.mmarca.openvitals.data.model.SleepStage
-import tech.mmarca.openvitals.data.model.sleepDurationMsFromStages
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseDeviceData
+import tech.mmarca.openvitals.domain.model.ExerciseLapData
+import tech.mmarca.openvitals.domain.model.ExerciseRouteData
+import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
+import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepDeviceData
+import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 
 internal fun ExerciseSessionRecord.toExerciseData(
     steps: Long? = null,

@@ -37,9 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.CardioLoadConfidence
-import tech.mmarca.openvitals.core.insights.CardioLoadEstimate
-import tech.mmarca.openvitals.core.insights.CardioLoadMethod
+import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
+import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
+import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.AutoResizeText

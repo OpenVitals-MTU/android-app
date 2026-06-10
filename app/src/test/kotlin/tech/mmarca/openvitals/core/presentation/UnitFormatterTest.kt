@@ -3,7 +3,7 @@ package tech.mmarca.openvitals.core.presentation
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import tech.mmarca.openvitals.core.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 class UnitFormatterTest {
 

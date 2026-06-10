@@ -14,9 +14,9 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.model.BmrEntry
-import tech.mmarca.openvitals.data.model.DailyNutrition
-import tech.mmarca.openvitals.data.model.DailySteps
+import tech.mmarca.openvitals.domain.model.BmrEntry
+import tech.mmarca.openvitals.domain.model.DailyNutrition
+import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.data.repository.ActivityPeriodData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository

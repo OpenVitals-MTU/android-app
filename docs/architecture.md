@@ -4,15 +4,16 @@
 
 This document describes the architecture of OpenVitals as it exists today, plus the direction new work should follow.
 
-The repo still has one Android app module for the local app, plus small shared modules when code needs to be published as versioned Maven artifacts. The goal is not to force a broad multi-module design. The goal is to keep boundaries clear enough that new metrics can be added without copying screen scaffolding, period math, or Health Connect plumbing everywhere, and to let separate apps consume shared code without depending on the local app module.
+The repo now has one Android app module for the local app. The goal is to keep boundaries clear enough that new metrics can be added without copying screen scaffolding, period math, or Health Connect plumbing everywhere, while keeping code app-local until there is a concrete need for a new module.
 
 ## Current Snapshot
 
 - App namespace: `tech.mmarca.openvitals`
-- Project shape: one local Android app module under `app/`, plus publishable shared modules such as `:openvitals-core-period`
+- Project shape: one local Android app module under `app/`
 - Dependency wiring: Hilt in the single `:app` module, rooted at [`OpenVitalsApp`](../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt)
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
+- App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../app/src/main/kotlin/tech/mmarca/openvitals/domain)
 - Shared period shell: in place and used by all metric detail/list screens
 - Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
@@ -20,8 +21,6 @@ The repo still has one Android app module for the local app, plus small shared m
 - Room and WorkManager are intentionally absent until a concrete cache or background refresh design exists
 
 Most importantly, body and entry/session browsing now live in metric-owned detail screens. The former global Browse destination is no longer part of the app architecture.
-
-The local `:app` module is not published as a dependency. A separate connected app should consume shared Maven artifacts from this repository, such as `tech.mmarca.openvitals:openvitals-core-period`, and extend them in its own repository.
 
 ## Architectural Principles
 
@@ -71,7 +70,7 @@ The canonical interaction model for metric screens is:
 - forward navigation capped at the current period
 - last selected range remembered independently per detail/list screen
 
-This pattern is implemented today by period primitives in `:openvitals-core-period` and shell components in `ui/components`.
+This pattern is implemented today by app-local period primitives in `core/period` and shell components in `ui/components`.
 
 ### 4. ViewModels own screen state and orchestration
 
@@ -107,20 +106,17 @@ The current app does not need:
 
 Those may become useful later, but they are not the baseline for new work today.
 
-### 7. Publish shared code, not app shells
+### 7. Keep module boundaries proportional
 
-Reusable code for other OpenVitals apps should move into narrow, publishable modules. The app shell stays local and internet-free.
+The current project should stay single-module unless a future app or library has a concrete, active need for extracted code. Prefer package boundaries first:
 
-Follow this shape:
-
-- extract stable shared code into an artifact module
-- keep app-only resources, navigation, Hilt application wiring, and local-only policy in `:app`
-- publish shared modules with explicit Maven coordinates
-- let the connected app consume artifacts or use a Gradle composite build during local development
+- app-local domain models and calculations in `domain`
+- period primitives in `core/period`
+- app-only resources, navigation, Hilt wiring, and local policy in `:app`
 
 ## Logical Layers In The Current App
 
-These are mostly logical layers inside the local app module. Shared artifact modules are added only when another app needs to consume stable code.
+These are logical layers inside the local app module.
 
 ### App shell
 
@@ -173,7 +169,7 @@ Current files:
 - [`data/repository/CycleRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/CycleRepository.kt)
 - [`data/repository/VitalsRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/VitalsRepository.kt)
 - [`data/repository/PreferencesRepository.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/PreferencesRepository.kt)
-- feature-oriented model files under [`data/model`](../app/src/main/kotlin/tech/mmarca/openvitals/data/model)
+- feature-oriented model files under [`domain/model`](../app/src/main/kotlin/tech/mmarca/openvitals/domain/model)
 
 Current boundary shape:
 
@@ -181,6 +177,7 @@ Current boundary shape:
 - `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
 - Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
 - Manual entry ViewModels use the same feature repositories for writes, so write permission and write behavior stay below the UI route.
+- `healthconnect` depends on app-local domain models, not on `data.repository`; repositories depend on `healthconnect` and `domain`.
 
 This is a meaningful improvement over the earlier centralized repository approach. New feature reads should follow the feature-repository pattern, not expand `HealthRepository`.
 
@@ -206,8 +203,8 @@ Current files:
 
 Important current detail:
 
-- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodSelectionDriver`, and period formatting helpers live in the publishable `:openvitals-core-period` module
-- `PeriodRangePreferenceKey` lives in `:openvitals-core-period`; `PreferencesRepository` persists the last selected `TimeRange` per detail/list screen
+- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, `PeriodSelectionDriver`, and period formatting helpers live in `core/period`
+- `PeriodRangePreferenceKey` lives in `core/period`; `PreferencesRepository` persists the last selected `TimeRange` per detail/list screen
 - `PeriodNavigator` remains a UI component in `ui/components`
 
 ### Feature layer
@@ -275,12 +272,13 @@ Current files:
 
 - [`features/manualentry/ManualEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryScreen.kt)
 - [`features/manualentry/ManualEntryViewModel.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryViewModel.kt)
-- [`features/manualentry/ActivityEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ActivityEntryScreen.kt)
-- [`features/manualentry/ActivityEntryViewModel.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/ActivityEntryViewModel.kt)
-- [`features/manualentry/HydrationEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/HydrationEntryScreen.kt)
-- [`features/manualentry/BodyMeasurementEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/BodyMeasurementEntryScreen.kt)
-- [`features/manualentry/VitalsMeasurementEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/VitalsMeasurementEntryScreen.kt)
-- [`features/manualentry/MindfulnessEntryScreen.kt`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/MindfulnessEntryScreen.kt)
+- [`features/manualentry/activity`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity)
+- [`features/manualentry/activity/recording`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/recording)
+- [`features/manualentry/activity/routeimport`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/routeimport)
+- [`features/manualentry/hydration`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/hydration)
+- [`features/manualentry/body`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/body)
+- [`features/manualentry/vitals`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/vitals)
+- [`features/manualentry/mindfulness`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/mindfulness)
 
 The current manual entry widgets cover hydration, activity sessions with optional GPX/KML/KMZ/FIT route import or GPS recording, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
 
@@ -346,7 +344,7 @@ Keep derived fields in the state only when they genuinely simplify the UI.
 
 Today the shared period model is:
 
-- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, and `PeriodSelectionDriver` in `:openvitals-core-period`
+- `TimeRange`, `DatePeriod`, `PeriodLoadQuery`, `PeriodWindows`, and `PeriodSelectionDriver` in `core/period`
 
 The feature should load data against the selected period query rather than inventing custom navigation rules.
 

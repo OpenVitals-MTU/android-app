@@ -13,12 +13,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
-import tech.mmarca.openvitals.data.model.BasalBodyTemperatureEntry
-import tech.mmarca.openvitals.data.model.CervicalMucusEntry
-import tech.mmarca.openvitals.data.model.CycleData
-import tech.mmarca.openvitals.data.model.MenstruationFlowEntry
-import tech.mmarca.openvitals.data.model.MenstruationPeriodEntry
-import tech.mmarca.openvitals.data.model.OvulationTestEntry
+import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
+import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
+import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
+import tech.mmarca.openvitals.domain.model.OvulationTestEntry
 
 class CyclePresentationTest {
 

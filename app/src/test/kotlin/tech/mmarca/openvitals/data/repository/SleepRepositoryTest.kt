@@ -18,8 +18,8 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import tech.mmarca.openvitals.data.model.HealthConnectAvailability
-import tech.mmarca.openvitals.data.model.SleepData
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class SleepRepositoryTest {

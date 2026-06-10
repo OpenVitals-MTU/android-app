@@ -47,20 +47,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.core.insights.BaselineValue
-import tech.mmarca.openvitals.core.insights.CrossMetricValue
-import tech.mmarca.openvitals.core.insights.DataValueKind
-import tech.mmarca.openvitals.core.insights.DailyGoalValue
-import tech.mmarca.openvitals.core.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.core.insights.SleepScoreConfidence
-import tech.mmarca.openvitals.core.insights.SleepScoreEstimate
-import tech.mmarca.openvitals.core.insights.calculateSleepScoreForDate
-import tech.mmarca.openvitals.core.insights.crossMetricInsight
-import tech.mmarca.openvitals.core.insights.dailyGoalProgress
-import tech.mmarca.openvitals.core.insights.dataConfidence
-import tech.mmarca.openvitals.core.insights.periodComparison
-import tech.mmarca.openvitals.core.insights.personalBaselineInsight
-import tech.mmarca.openvitals.core.insights.sleepTargetInterpretation
+import tech.mmarca.openvitals.domain.insights.BaselineValue
+import tech.mmarca.openvitals.domain.insights.CrossMetricValue
+import tech.mmarca.openvitals.domain.insights.DataValueKind
+import tech.mmarca.openvitals.domain.insights.DailyGoalValue
+import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
+import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
+import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
+import tech.mmarca.openvitals.domain.insights.crossMetricInsight
+import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
+import tech.mmarca.openvitals.domain.insights.dataConfidence
+import tech.mmarca.openvitals.domain.insights.periodComparison
+import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
+import tech.mmarca.openvitals.domain.insights.sleepTargetInterpretation
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.baselinePeriodBefore
@@ -69,12 +69,12 @@ import tech.mmarca.openvitals.core.period.previousPeriodFor
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.core.preferences.SleepRangeMode
-import tech.mmarca.openvitals.data.model.SleepData
-import tech.mmarca.openvitals.data.model.SleepStage
-import tech.mmarca.openvitals.data.model.dailySleepSummary
-import tech.mmarca.openvitals.data.model.sleepDurationMsFromStages
-import tech.mmarca.openvitals.data.model.sleepSessionsForRange
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.domain.model.dailySleepSummary
+import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
+import tech.mmarca.openvitals.domain.model.sleepSessionsForRange
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
@@ -970,235 +970,4 @@ private enum class SleepOverviewValueEmphasis {
     Small,
 }
 
-private fun LazyListScope.sleepDataConfidence(
-    sessions: List<SleepData>,
-    durationPoints: List<SleepDurationPoint>,
-    period: DatePeriod,
-) {
-    if (period.start == period.end) return
 
-    item {
-        DataConfidenceCard(
-            confidence = dataConfidence(
-                period = period,
-                trackedDates = durationPoints.filter { it.hours > 0.0 }.map { it.date },
-                sampleCount = sessions.size,
-                sources = sessions.map { it.source },
-                valueKind = DataValueKind.MEASURED,
-                manualEntryCount = sessions.count {
-                    it.recordingMethod == Metadata.RECORDING_METHOD_MANUAL_ENTRY
-                },
-            ),
-            accentColor = SleepColor,
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun LazyListScope.sleepTargetContext(
-    durationPoints: List<SleepDurationPoint>,
-    targetHours: Double,
-    unitFormatter: UnitFormatter,
-) {
-    val nights = durationPoints.filter { it.hours > 0.0 }
-    val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: return
-    val interpretation = sleepTargetInterpretation(
-        averageHours = averageHours,
-        targetHours = targetHours,
-    ) ?: return
-    val averageDisplay = sleepHoursDisplay(interpretation.averageHours, unitFormatter).text
-    val targetDisplay = sleepHoursDisplay(interpretation.targetHours, unitFormatter).text
-    val gapDisplay = sleepHoursDisplay(interpretation.gapHours, unitFormatter).text
-
-    item { SectionHeader(stringResource(R.string.section_metric_context)) }
-    item {
-        MetricInterpretationCard(
-            title = stringResource(R.string.interpretation_sleep_title),
-            status = when (interpretation.status) {
-                tech.mmarca.openvitals.core.insights.SleepTargetStatus.BELOW_TARGET ->
-                    stringResource(R.string.interpretation_sleep_below)
-                tech.mmarca.openvitals.core.insights.SleepTargetStatus.NEAR_TARGET ->
-                    stringResource(R.string.interpretation_sleep_near)
-                tech.mmarca.openvitals.core.insights.SleepTargetStatus.MET_TARGET ->
-                    stringResource(R.string.interpretation_sleep_met)
-            },
-            body = when (interpretation.status) {
-                tech.mmarca.openvitals.core.insights.SleepTargetStatus.BELOW_TARGET ->
-                    stringResource(R.string.interpretation_sleep_below_body, gapDisplay)
-                tech.mmarca.openvitals.core.insights.SleepTargetStatus.NEAR_TARGET ->
-                    stringResource(R.string.interpretation_sleep_near_body, averageDisplay, targetDisplay)
-                tech.mmarca.openvitals.core.insights.SleepTargetStatus.MET_TARGET ->
-                    stringResource(R.string.interpretation_sleep_met_body, averageDisplay, targetDisplay)
-            },
-            source = stringResource(R.string.interpretation_sleep_source),
-            icon = Icons.Outlined.Bed,
-            accentColor = SleepColor,
-            severity = interpretation.severity,
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun dailySleepTimeRangeText(
-    sessions: List<SleepData>,
-    selectedDate: LocalDate,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-): String {
-    val zone = ZoneId.systemDefault()
-    val dateFormatter = dateTimeFormatterProvider.mediumDate()
-    val timeFormatter = dateTimeFormatterProvider.shortTime()
-    val ranges = sessions
-        .sortedWith(compareBy<SleepData> { it.startTime }.thenBy { it.endTime })
-        .joinToString(" | ") { session ->
-            val start = session.startTime.atZone(zone)
-            val end = session.endTime.atZone(zone)
-            "${timeFormatter.format(start)} - ${timeFormatter.format(end)}"
-        }
-
-    return "${dateFormatter.format(selectedDate)}  ·  $ranges"
-}
-
-private fun LazyListScope.sleepGoal(
-    state: SleepUiState,
-    period: DatePeriod,
-    durationPoints: List<SleepDurationPoint>,
-    unitFormatter: UnitFormatter,
-    onDecreaseGoal: () -> Unit,
-    onIncreaseGoal: () -> Unit,
-) {
-    val goalKey = MetricDailyGoalKey.SLEEP_HOURS
-    val progress = dailyGoalProgress(
-        values = durationPoints.map { DailyGoalValue(date = it.date, value = it.hours) },
-        period = period,
-        target = state.dailyGoalHours,
-        direction = goalKey.direction,
-    )
-    item {
-        DailyGoalCard(
-            goal = sleepHoursDisplay(state.dailyGoalHours, unitFormatter),
-            progress = progress,
-            icon = Icons.Outlined.Bed,
-            accentColor = SleepColor,
-            onDecreaseGoal = onDecreaseGoal,
-            onIncreaseGoal = onIncreaseGoal,
-            modifier = metricModifier(),
-        )
-    }
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
-    item {
-        DailyGoalStatistics(
-            progress = progress,
-            averageGap = sleepHoursDisplay(progress.averageGapToGoal, unitFormatter),
-            unitFormatter = unitFormatter,
-            icon = Icons.Outlined.Bed,
-            accentColor = SleepColor,
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun LazyListScope.sleepStatistics(
-    durationPoints: List<SleepDurationPoint>,
-    previousDurationPoints: List<SleepDurationPoint>,
-    baselineDurationPoints: List<SleepDurationPoint>,
-    period: DatePeriod,
-    selectedRange: TimeRange,
-    unitFormatter: UnitFormatter,
-    includeHeader: Boolean = true,
-) {
-    if (includeHeader) {
-        item { SectionHeader(stringResource(R.string.section_statistics)) }
-    }
-    item {
-        val nights = durationPoints.filter { it.hours > 0.0 }
-        val totalHours = nights.sumOf { it.hours }
-        val averageHours = nights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
-        val longestHours = nights.maxOfOrNull { it.hours } ?: 0.0
-        val previousNights = previousDurationPoints.filter { it.hours > 0.0 }
-        val previousAverageHours = previousNights.takeIf { it.isNotEmpty() }?.map { it.hours }?.average() ?: 0.0
-
-        InsightStatGrid(
-            stats = listOf(
-                InsightStat(
-                    title = stringResource(R.string.stat_total),
-                    value = unitFormatter.duration((totalHours * 3_600_000).roundToLong()),
-                    unit = "",
-                    icon = Icons.Outlined.Bed,
-                    accentColor = SleepColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_daily_average),
-                    value = unitFormatter.duration((averageHours * 3_600_000).roundToLong()),
-                    unit = "",
-                    icon = Icons.Outlined.Star,
-                    accentColor = SleepColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_longest_sleep),
-                    value = unitFormatter.duration((longestHours * 3_600_000).roundToLong()),
-                    unit = "",
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = SleepColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_nights_logged),
-                    value = unitFormatter.count(nights.size),
-                    unit = stringResource(R.string.unit_nights),
-                    icon = Icons.Outlined.CheckCircle,
-                    accentColor = SleepColor,
-                ),
-                previousPeriodInsightStat(
-                    comparison = periodComparison(
-                        currentValue = averageHours,
-                        previousValue = previousAverageHours,
-                    ),
-                    selectedRange = selectedRange,
-                    unitFormatter = unitFormatter,
-                    valueFormatter = { sleepHoursDisplay(it, unitFormatter) },
-                    accentColor = SleepColor,
-                ),
-            ) + personalBaselineInsightStats(
-                insight = personalBaselineInsight(
-                    currentValue = averageHours,
-                    values = baselineDurationPoints.map { BaselineValue(it.date, it.hours) },
-                    referenceDate = period.start.minusDays(1),
-                ),
-                unitFormatter = unitFormatter,
-                valueFormatter = { sleepHoursDisplay(it, unitFormatter) },
-                accentColor = SleepColor,
-            ),
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun LazyListScope.sleepHrvInsight(
-    durationPoints: List<SleepDurationPoint>,
-    hrvValues: List<CrossMetricValue>,
-) {
-    val insight = crossMetricInsight(
-        primaryValues = durationPoints.map { CrossMetricValue(it.date, it.hours) },
-        secondaryValues = hrvValues,
-    ) ?: return
-
-    item { SectionHeader(stringResource(R.string.section_cross_metric_insights)) }
-    item {
-        CrossMetricInsightCard(
-            insight = insight,
-            title = stringResource(R.string.cross_sleep_hrv_title),
-            positiveMessage = stringResource(R.string.cross_sleep_hrv_positive),
-            negativeMessage = stringResource(R.string.cross_sleep_hrv_negative),
-            neutralMessage = stringResource(R.string.cross_sleep_hrv_neutral),
-            accentColor = SleepColor,
-            modifier = metricModifier(),
-        )
-    }
-}
-
-private fun metricModifier(): Modifier =
-    Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 8.dp)
-
-private fun sleepHoursDisplay(hours: Double, unitFormatter: UnitFormatter): DisplayValue =
-    DisplayValue(unitFormatter.duration((hours * 3_600_000).roundToLong()), "")

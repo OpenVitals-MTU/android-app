@@ -1,7 +1,7 @@
 package tech.mmarca.openvitals.features.mindfulness
 
-import tech.mmarca.openvitals.data.model.MindfulnessSession
-import tech.mmarca.openvitals.data.model.MindfulnessReminderConfig
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.MindfulnessPeriodData

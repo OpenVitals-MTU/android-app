@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import tech.mmarca.openvitals.core.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = Blue80,

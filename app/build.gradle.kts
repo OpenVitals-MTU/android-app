@@ -88,8 +88,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":openvitals-core-period"))
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
 

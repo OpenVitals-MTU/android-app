@@ -174,7 +174,6 @@ After launching the app:
 OpenVitals is intentionally simple today:
 
 - one local Android app module
-- versioned shared Maven artifacts for code reused by separate OpenVitals apps
 - Jetpack Compose UI with Material 3 app shell and theming
 - Navigation Compose
 - `ViewModel` + `StateFlow`
@@ -189,22 +188,19 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 ## Project layout
 
 - [`app/`](app): Android app module
-- [`core/period/`](core/period): publishable period/date-window artifact
+- [`app/src/main/kotlin/tech/mmarca/openvitals/core/period/`](app/src/main/kotlin/tech/mmarca/openvitals/core/period): app-local period/date-window primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
-- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local performance, preference, and presentation primitives
+- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
+- [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components
-- [`docs/`](docs): architecture notes, playbooks, and roadmap
+- [`docs/`](docs): current architecture, development, and feature guides
 
 ## Documentation
 
-- [`plan.md`](plan.md): product direction and scope
 - [`docs/development.md`](docs/development.md): local build, verification, CI, and Windows cleanup notes
 - [`docs/architecture.md`](docs/architecture.md): current architecture and target direction
 - [`docs/feature-playbook.md`](docs/feature-playbook.md): checklist for adding a new metric feature
-- [`docs/shared-artifacts.md`](docs/shared-artifacts.md): Maven artifact publishing and consumption notes
-- [`docs/metrics-roadmap.md`](docs/metrics-roadmap.md): metric coverage gaps and future feature roadmap
-- [`docs/units-localization-plan.md`](docs/units-localization-plan.md): display-unit and localization architecture notes
 - [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
 
 

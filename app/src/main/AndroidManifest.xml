@@ -221,7 +221,7 @@
         </activity>
 
         <service
-            android:name=".features.manualentry.ActivityRecordingService"
+            android:name=".features.manualentry.activity.recording.ActivityRecordingService"
             android:exported="false"
             android:foregroundServiceType="location|health" />
 
