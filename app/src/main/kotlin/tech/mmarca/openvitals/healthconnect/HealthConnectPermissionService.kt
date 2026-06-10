@@ -168,9 +168,7 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(BodyTemperatureRecord::class),
     )
 
-    val dataImportWritePermissions: Set<String> get() = dataImportWritePermissions(trackCycle = true)
-
-    fun dataImportWritePermissions(trackCycle: Boolean): Set<String> = buildSet {
+    val dataImportWritePermissions: Set<String> get() = buildSet {
         add(HealthPermission.getWritePermission(StepsRecord::class))
         add(HealthPermission.getWritePermission(DistanceRecord::class))
         add(HealthPermission.getWritePermission(ExerciseSessionRecord::class))
@@ -200,14 +198,12 @@ internal class HealthConnectPermissionService(
         if (isMindfulnessSessionAvailable()) {
             add(HealthPermission.getWritePermission(MindfulnessSessionRecord::class))
         }
-        if (trackCycle) {
-            add(HealthPermission.getWritePermission(MenstruationFlowRecord::class))
-            add(HealthPermission.getWritePermission(OvulationTestRecord::class))
-            add(HealthPermission.getWritePermission(CervicalMucusRecord::class))
-            add(HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class))
-            add(HealthPermission.getWritePermission(IntermenstrualBleedingRecord::class))
-            add(HealthPermission.getWritePermission(SexualActivityRecord::class))
-        }
+        add(HealthPermission.getWritePermission(MenstruationFlowRecord::class))
+        add(HealthPermission.getWritePermission(OvulationTestRecord::class))
+        add(HealthPermission.getWritePermission(CervicalMucusRecord::class))
+        add(HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class))
+        add(HealthPermission.getWritePermission(IntermenstrualBleedingRecord::class))
+        add(HealthPermission.getWritePermission(SexualActivityRecord::class))
     }
 
     val cyclePermissions: Set<String> = setOf(
@@ -234,7 +230,7 @@ internal class HealthConnectPermissionService(
     /** Phase 3 - vitals, requested by category during onboarding or when opening Heart & Vitals */
     val phase3Permissions: Set<String> get() = vitalsPermissions
 
-    /** Phase 4 - sensitive cycle tracking, requested only after explicit opt-in from Settings */
+    /** Phase 4 - cycle records, surfaced as a regular optional permission category. */
     val phase4Permissions: Set<String> = cyclePermissions
 
     val manualOnlyPermissions: Set<String> get() = routePermissions
@@ -252,6 +248,7 @@ internal class HealthConnectPermissionService(
     val onboardingRequestablePermissions: Set<String>
         get() = requestableAllPermissions +
             phase3Permissions +
+            phase4Permissions +
             additionalDataAccessPermissions +
             requestableWritePermissions
 
@@ -261,6 +258,7 @@ internal class HealthConnectPermissionService(
     val allPermissions: Set<String> get() =
         requestableAllPermissions +
             phase3Permissions +
+            phase4Permissions +
             additionalDataAccessPermissions +
             manualOnlyPermissions +
             activityWritePermissions +

@@ -25,7 +25,6 @@ data class OnboardingUiState(
     val phase2Granted: Boolean = false,
     val phase3Granted: Boolean = false,
     val phase4Granted: Boolean = false,
-    val cycleTrackingEnabled: Boolean = false,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val isCheckingPermissions: Boolean = true,
 )
@@ -37,7 +36,6 @@ data class OnboardingPermissionCategory(
     val permissions: Set<String>,
     val manualPermissions: Set<String> = emptySet(),
     val required: Boolean = false,
-    val optIn: Boolean = false,
     val grantMode: PermissionGrantMode = PermissionGrantMode.REQUESTABLE,
     val available: Boolean = true,
     @param:StringRes val unavailableReasonRes: Int? = null,
@@ -125,7 +123,6 @@ class OnboardingViewModel @Inject constructor(
                 titleRes = R.string.onboarding_category_cycle_tracking,
                 descriptionRes = R.string.onboarding_category_cycle_tracking_desc,
                 permissions = repository.cyclePermissions,
-                optIn = true,
             ),
         ).filter { it.permissions.isNotEmpty() }
 
@@ -163,16 +160,10 @@ class OnboardingViewModel @Inject constructor(
                 phase2Granted = repository.phase2Permissions.all { it in granted },
                 phase3Granted = repository.phase3Permissions.all { it in granted },
                 phase4Granted = repository.phase4Permissions.all { it in granted },
-                cycleTrackingEnabled = preferencesRepository.trackCycle,
                 appLanguage = preferencesRepository.appLanguage,
                 isCheckingPermissions = false,
             )
         }
-    }
-
-    fun enableCycleTracking() {
-        preferencesRepository.trackCycle = true
-        _uiState.value = _uiState.value.copy(cycleTrackingEnabled = true)
     }
 
     fun onPermissionsResult(granted: Set<String>) {
@@ -186,7 +177,6 @@ class OnboardingViewModel @Inject constructor(
                 phase2Granted = repository.phase2Permissions.all { it in allGranted },
                 phase3Granted = repository.phase3Permissions.all { it in allGranted },
                 phase4Granted = repository.phase4Permissions.all { it in allGranted },
-                cycleTrackingEnabled = preferencesRepository.trackCycle,
             )
         }
     }

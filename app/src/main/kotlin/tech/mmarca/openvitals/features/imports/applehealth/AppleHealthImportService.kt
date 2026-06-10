@@ -13,7 +13,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.data.repository.HealthRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
 @Singleton
 class AppleHealthImportService
@@ -21,7 +20,6 @@ class AppleHealthImportService
     constructor(
         @param:ApplicationContext private val context: Context,
         private val healthRepository: HealthRepository,
-        private val preferencesRepository: PreferencesRepository,
     ) {
         suspend fun importAppleHealthExport(
             uri: Uri,
@@ -29,7 +27,6 @@ class AppleHealthImportService
         ): AppleHealthImportResult =
             withContext(Dispatchers.IO) {
                 val converter = AppleHealthImportConverter(
-                    trackCycle = preferencesRepository.trackCycle,
                     mindfulnessAvailable = healthRepository.isMindfulnessAvailable(),
                     diagnosticLimit = DiagnosticReportLimit,
                 )

@@ -765,7 +765,6 @@
     <string name="onboarding_status_not_supported">Not supported</string>
     <string name="onboarding_status_granted">Granted</string>
     <string name="onboarding_status_partially_granted">%1$d/%2$d granted</string>
-    <string name="onboarding_status_off">Off</string>
     <string name="onboarding_status_manual">Manual</string>
     <string name="onboarding_status_required">Required</string>
     <string name="onboarding_status_optional">Optional</string>
@@ -790,7 +789,7 @@
     <string name="onboarding_category_vitals">Vitals</string>
     <string name="onboarding_category_vitals_desc">Blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max.</string>
     <string name="onboarding_category_cycle_tracking">Cycle tracking</string>
-    <string name="onboarding_category_cycle_tracking_desc">Optional sensitive cycle data: period dates, flow, ovulation, cervical mucus, and basal body temperature.</string>
+    <string name="onboarding_category_cycle_tracking_desc">Sensitive cycle data: period dates, flow, ovulation, cervical mucus, basal body temperature, and sexual activity.</string>
 
     <string name="settings_all_requestable_granted">All requestable permissions granted</string>
     <string name="settings_manual_permissions_title">Manual permissions required</string>
@@ -805,7 +804,7 @@
     <string name="settings_sleep_group_title">Sleep</string>
     <string name="settings_sleep_group_body">Sleep range</string>
     <string name="settings_cycle_group_title">Menstrual cycle</string>
-    <string name="settings_cycle_group_body">Track menstrual cycle</string>
+    <string name="settings_cycle_group_body">Cycle data and Health Connect permissions</string>
     <string name="settings_data_import_group_title">Data Import</string>
     <string name="settings_data_import_group_body">Import Apple Health export records with Health Connect equivalents</string>
     <string name="settings_permissions_group_title">Permissions</string>
@@ -840,9 +839,8 @@
     <string name="settings_sleep_range_rolling_24h">Rolling 24h</string>
     <string name="settings_sleep_range_noon">Noon</string>
     <string name="settings_sleep_range_evening">18:00</string>
-    <string name="settings_track_cycle">Track menstrual cycle</string>
+    <string name="settings_cycle_permissions_title">Cycle permissions</string>
     <string name="settings_cycle_permissions_granted">%1$d/%2$d cycle permissions granted.</string>
-    <string name="settings_cycle_off_body">Off by default. Enable to request cycle and basal temperature access.</string>
     <string name="settings_apple_health_import_title">Apple Health export</string>
     <string name="settings_apple_health_import_body">Import Health Connect-compatible records from Apple Health export.xml or export.zip, with duplicate checks and a shareable diagnostics report.</string>
     <string name="settings_apple_health_import_permissions">%1$d/%2$d import permissions granted.</string>

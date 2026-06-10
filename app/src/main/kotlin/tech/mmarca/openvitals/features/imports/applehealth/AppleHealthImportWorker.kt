@@ -43,7 +43,6 @@ class AppleHealthImportWorker(
             val service = AppleHealthImportService(
                 context = appContext,
                 healthRepository = healthRepository,
-                preferencesRepository = preferencesRepository,
             )
             var lastNotificationUpdateMillis = 0L
             val result = service.importAppleHealthExport(uri) { progress ->

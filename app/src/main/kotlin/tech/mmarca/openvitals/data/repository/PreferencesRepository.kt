@@ -57,12 +57,6 @@ class PreferencesRepository @Inject constructor(
             _unitSystem.value = value
         }
 
-    var trackCycle: Boolean
-        get() = prefs.getBoolean(KEY_TRACK_CYCLE, false)
-        set(value) {
-            prefs.edit().putBoolean(KEY_TRACK_CYCLE, value).apply()
-        }
-
     var appLanguage: AppLanguage
         get() = _appLanguage.value
         set(value) {
@@ -373,7 +367,6 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_ACKNOWLEDGED_PERMISSIONS = "acknowledged_permissions"
         private const val KEY_UNIT_SYSTEM = "unit_system"
-        private const val KEY_TRACK_CYCLE = "track_cycle"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"

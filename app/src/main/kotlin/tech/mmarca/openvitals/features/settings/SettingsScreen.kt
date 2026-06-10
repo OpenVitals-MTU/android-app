@@ -41,7 +41,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -289,15 +288,13 @@ fun SettingsScreen(
                 SettingsSection.CYCLE -> {
                     item { SectionHeader(stringResource(section.titleRes)) }
                     item {
-                        CycleTrackingCard(
-                            enabled = state.trackCycle,
+                        CyclePermissionsCard(
                             availability = state.availability,
                             cyclePermissions = state.cyclePermissions,
                             grantedPermissions = state.grantedPermissions,
-                            onEnabledChange = { enabled ->
-                                viewModel.setTrackCycle(enabled)
-                                if (enabled && state.availability == HealthConnectAvailability.AVAILABLE) {
-                                    requestCyclePermissions.launch(state.cyclePermissions)
+                            onGrantPermissions = {
+                                if (state.availability == HealthConnectAvailability.AVAILABLE) {
+                                    requestCyclePermissions.launch(state.cyclePermissions - state.grantedPermissions)
                                 }
                             },
                             modifier = Modifier.padding(horizontal = 16.dp),

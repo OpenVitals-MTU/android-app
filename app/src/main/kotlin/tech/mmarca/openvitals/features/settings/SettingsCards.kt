@@ -527,15 +527,16 @@ internal fun UnitSystemCard(
 }
 
 @Composable
-internal fun CycleTrackingCard(
-    enabled: Boolean,
+internal fun CyclePermissionsCard(
     availability: HealthConnectAvailability,
     cyclePermissions: Set<String>,
     grantedPermissions: Set<String>,
-    onEnabledChange: (Boolean) -> Unit,
+    onGrantPermissions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val grantedCount = cyclePermissions.count { it in grantedPermissions }
+    val missingPermissions = cyclePermissions - grantedPermissions
+    val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -557,23 +558,28 @@ internal fun CycleTrackingCard(
                     .padding(horizontal = 12.dp)
                     .weight(1f),
             ) {
-                Text(text = stringResource(R.string.settings_track_cycle), style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.settings_cycle_permissions_title), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = if (enabled) {
-                        stringResource(R.string.settings_cycle_permissions_granted, grantedCount, cyclePermissions.size)
-                    } else {
-                        stringResource(R.string.settings_cycle_off_body)
-                    },
+                    text = stringResource(R.string.settings_cycle_permissions_granted, grantedCount, cyclePermissions.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            Switch(
-                checked = enabled,
-                onCheckedChange = onEnabledChange,
-                enabled = availability == HealthConnectAvailability.AVAILABLE,
-            )
+            if (missingPermissions.isEmpty()) {
+                Icon(
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = stringResource(R.string.onboarding_status_granted),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            } else {
+                FilledTonalButton(
+                    onClick = onGrantPermissions,
+                    enabled = healthConnectAvailable,
+                ) {
+                    Text(stringResource(R.string.action_grant))
+                }
+            }
         }
     }
 }

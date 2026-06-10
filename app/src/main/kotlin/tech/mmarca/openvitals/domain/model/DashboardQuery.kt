@@ -10,7 +10,6 @@ data class DashboardQuery(
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val visibleMetrics: Set<DashboardMetric> = DashboardMetric.entries.toSet(),
-    val trackCycle: Boolean = false,
     val refreshMode: RefreshMode = RefreshMode.NORMAL,
 )
 

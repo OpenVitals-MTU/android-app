@@ -150,7 +150,6 @@ class HealthRepository @Inject constructor(
     val vitalsPermissions get() = hc.vitalsPermissions
     val vitalsWritePermissions get() = hc.vitalsWritePermissions
     val dataImportWritePermissions get() = hc.dataImportWritePermissions
-    fun dataImportWritePermissions(trackCycle: Boolean) = hc.dataImportWritePermissions(trackCycle)
     val cyclePermissions get() = hc.cyclePermissions
     val manualOnlyPermissions get() = hc.manualOnlyPermissions
     val requestableWritePermissions get() = hc.requestableWritePermissions
@@ -198,7 +197,7 @@ class HealthRepository @Inject constructor(
         withContext(dispatchers.io) {
             val startedAt = System.currentTimeMillis()
             val granted = grantedPermissionsIfAvailable()
-            val loadMetrics = query.visibleMetrics.metricsAllowedByPreferences(query.trackCycle)
+            val loadMetrics = query.visibleMetrics
             val showOpenVitalsCalculatedCalories = preferencesRepository?.showOpenVitalsCalculatedCalories == true
             val cacheKey = HealthConnectQueryKey(
                 operation = "dashboard",
@@ -206,7 +205,6 @@ class HealthRepository @Inject constructor(
                     query.date.toString(),
                     query.sleepRangeMode.name,
                     query.activityWeekMode.name,
-                    query.trackCycle.toString(),
                     showOpenVitalsCalculatedCalories.toString(),
                     loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
                 ),
@@ -672,13 +670,6 @@ class HealthRepository @Inject constructor(
         runCatching { block() }
             .onFailure { Log.w(TAG, "Skipping dashboard metric $name after Health Connect failure", it) }
             .getOrNull()
-
-    private fun Set<DashboardMetric>.metricsAllowedByPreferences(trackCycle: Boolean): Set<DashboardMetric> =
-        if (trackCycle) {
-            this
-        } else {
-            this - DashboardMetric.CYCLE
-        }
 
     private fun dashboardPermissionsFor(
         metrics: Set<DashboardMetric>,

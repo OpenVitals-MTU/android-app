@@ -39,7 +39,6 @@ data class SettingsUiState(
     val appleHealthImportProgress: AppleHealthImportProgress? = null,
     val appleHealthImportResult: AppleHealthImportResult? = null,
     val appleHealthImportError: String? = null,
-    val trackCycle: Boolean = false,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
@@ -49,8 +48,7 @@ data class SettingsUiState(
     val favoriteActivityExerciseType: Int? = null,
 ) {
     val visiblePermissions: Set<String>
-        get() = permissionCategories.flatMap { it.permissions }.toSet() +
-            if (trackCycle) cyclePermissions else emptySet()
+        get() = permissionCategories.flatMap { it.permissions }.toSet()
 
     val missingVisiblePermissions: Set<String>
         get() = visiblePermissions - grantedPermissions
@@ -96,7 +94,6 @@ class SettingsViewModel @Inject constructor(
             val granted = if (avail == HealthConnectAvailability.AVAILABLE) {
                 repository.grantedPermissions()
             } else emptySet()
-            val trackCycle = preferencesRepository.trackCycle
             Log.d(TAG, "refresh availability=$avail grantedCount=${granted.size}")
 
             _uiState.value = _uiState.value.copy(
@@ -106,9 +103,8 @@ class SettingsViewModel @Inject constructor(
                 permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 cyclePermissions = repository.cyclePermissions,
-                dataImportWritePermissions = repository.dataImportWritePermissions(trackCycle),
+                dataImportWritePermissions = repository.dataImportWritePermissions,
                 manualOnlyPermissions = repository.manualOnlyPermissions,
-                trackCycle = trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
                 appThemeMode = preferencesRepository.appThemeMode,
@@ -199,11 +195,6 @@ class SettingsViewModel @Inject constructor(
     fun selectUnitSystem(unitSystem: UnitSystem) {
         preferencesRepository.unitSystem = unitSystem
         _uiState.value = _uiState.value.copy(unitSystem = unitSystem)
-    }
-
-    fun setTrackCycle(enabled: Boolean) {
-        preferencesRepository.trackCycle = enabled
-        _uiState.value = _uiState.value.copy(trackCycle = enabled)
     }
 
     fun selectAppLanguage(appLanguage: AppLanguage) {
@@ -301,6 +292,12 @@ class SettingsViewModel @Inject constructor(
                 titleRes = R.string.onboarding_category_vitals,
                 descriptionRes = R.string.onboarding_category_vitals_desc,
                 permissions = repository.vitalsPermissions,
+            ),
+            SettingsPermissionCategory(
+                id = "cycle_tracking",
+                titleRes = R.string.onboarding_category_cycle_tracking,
+                descriptionRes = R.string.onboarding_category_cycle_tracking_desc,
+                permissions = repository.cyclePermissions,
             ),
         ).filter { it.permissions.isNotEmpty() }
     }

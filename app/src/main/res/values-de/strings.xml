@@ -765,7 +765,6 @@
     <string name="onboarding_status_not_supported">Nicht unterstützt</string>
     <string name="onboarding_status_granted">Erteilt</string>
     <string name="onboarding_status_partially_granted">%1$d/%2$d erteilt</string>
-    <string name="onboarding_status_off">Aus</string>
     <string name="onboarding_status_manual">Manuell</string>
     <string name="onboarding_status_required">Erforderlich</string>
     <string name="onboarding_status_optional">Optional</string>
@@ -790,7 +789,7 @@
     <string name="onboarding_category_vitals">Vitalwerte</string>
     <string name="onboarding_category_vitals_desc">Blutdruck, Sauerstoffsättigung, Atemfrequenz, Körpertemperatur und VO2 max.</string>
     <string name="onboarding_category_cycle_tracking">Zyklusverfolgung</string>
-    <string name="onboarding_category_cycle_tracking_desc">Optionale sensible Zyklusdaten: Periodendaten, Blutungsstärke, Ovulation, Zervixschleim und Basaltemperatur.</string>
+    <string name="onboarding_category_cycle_tracking_desc">Sensible Zyklusdaten: Periodendaten, Blutungsstärke, Ovulation, Zervixschleim, Basaltemperatur und sexuelle Aktivität.</string>
 
     <string name="settings_all_requestable_granted">Alle anforderbaren Berechtigungen erteilt</string>
     <string name="settings_manual_permissions_title">Manuelle Berechtigungen erforderlich</string>
@@ -805,7 +804,7 @@
     <string name="settings_sleep_group_title">Schlaf</string>
     <string name="settings_sleep_group_body">Schlafzeitraum</string>
     <string name="settings_cycle_group_title">Menstruationszyklus</string>
-    <string name="settings_cycle_group_body">Menstruationszyklus verfolgen</string>
+    <string name="settings_cycle_group_body">Zyklusdaten und Health-Connect-Berechtigungen</string>
     <string name="settings_data_import_group_title">Datenimport</string>
     <string name="settings_data_import_group_body">Unterstützte Apple-Health-Exportdaten importieren</string>
     <string name="settings_permissions_group_title">Berechtigungen</string>
@@ -840,9 +839,8 @@
     <string name="settings_sleep_range_rolling_24h">Gleitende 24 h</string>
     <string name="settings_sleep_range_noon">Mittag</string>
     <string name="settings_sleep_range_evening">18:00</string>
-    <string name="settings_track_cycle">Menstruationszyklus verfolgen</string>
+    <string name="settings_cycle_permissions_title">Zyklusberechtigungen</string>
     <string name="settings_cycle_permissions_granted">%1$d/%2$d Zyklusberechtigungen erteilt.</string>
-    <string name="settings_cycle_off_body">Standardmäßig aus. Aktivieren, um Zugriff auf Zyklus und Basaltemperatur anzufordern.</string>
     <string name="settings_apple_health_import_title">Apple-Health-Export</string>
     <string name="settings_apple_health_import_body">Importiere unterstützte Datensätze aus Apple Health export.xml oder export.zip in Health Connect.</string>
     <string name="settings_apple_health_import_permissions">%1$d/%2$d Importberechtigungen erteilt.</string>

@@ -72,7 +72,6 @@ internal data class MutableAppleImportTypeStats(
 )
 
 internal class AppleHealthImportConverter(
-    private val trackCycle: Boolean,
     private val mindfulnessAvailable: Boolean,
     private val diagnosticLimit: Int = 200,
 ) {
@@ -605,7 +604,6 @@ internal class AppleHealthImportConverter(
     }
 
     private fun convertBasalBodyTemperature(record: AppleRecord, start: AppleDateTime, metadata: Metadata): ConvertedAppleRecord? {
-        if (!trackCycle) return skippedNull(record, "cycle_disabled", "Cycle tracking is disabled.")
         val celsius = record.numericValue?.toCelsius(record.unit)
             ?: return invalid(record, "Basal body temperature is missing or has an unsupported unit.")
         val fingerprint = record.stableClientRecordId("basal_body_temperature")
@@ -654,7 +652,6 @@ internal class AppleHealthImportConverter(
     }
 
     private fun convertCycleCategory(record: AppleRecord, start: AppleDateTime, metadata: Metadata): ConvertedAppleRecord? {
-        if (!trackCycle) return skippedNull(record, "cycle_disabled", "Cycle tracking is disabled.")
         val fingerprint = record.stableClientRecordId("cycle")
         val rawValue = record.rawValue.orEmpty()
         val convertedRecord: Record =

@@ -57,7 +57,6 @@ class OnboardingViewModelTest {
         assertFalse(state.phase2Granted)
         assertFalse(state.phase3Granted)
         assertFalse(state.phase4Granted)
-        assertFalse(state.cycleTrackingEnabled)
         assertEquals(AppLanguage.SYSTEM, state.appLanguage)
     }
 
@@ -177,6 +176,7 @@ class OnboardingViewModelTest {
                 "history",
                 "background",
                 "vitals",
+                "cycle",
                 "write",
             ),
             vm.onboardingPermissions,
@@ -216,7 +216,6 @@ class OnboardingViewModelTest {
         assertEquals(setOf("write"), categories.single { it.id == "manual_entry_write" }.permissions)
         assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
         assertFalse(categories.drop(1).any { it.required })
-        assertTrue(categories.last().optIn)
         assertEquals("cycle_tracking", categories.last().id)
         assertTrue(categories.all { it.descriptionRes != 0 })
     }
@@ -252,7 +251,7 @@ class OnboardingViewModelTest {
             grantedPermissions = emptySet(),
             mindfulnessAvailable = false,
             phase2Permissions = setOf("heart", "body", "activity", "nutrition"),
-            onboardingPermissions = setOf("steps", "heart", "body", "activity", "nutrition", "vitals"),
+            onboardingPermissions = setOf("steps", "heart", "body", "activity", "nutrition", "vitals", "cycle"),
         )
         val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
@@ -278,7 +277,7 @@ class OnboardingViewModelTest {
         assertTrue("mindfulness" in vm.onboardingPermissions)
     }
 
-    @Test fun `cycle category is an explicit opt-in and excluded from grant all request set`() = runTest {
+    @Test fun `cycle category is included in grant all request set`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
@@ -286,9 +285,8 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         val cycle = vm.permissionCategories.single { it.id == "cycle_tracking" }
-        assertTrue(cycle.optIn)
         assertEquals(setOf("cycle"), cycle.permissions)
-        assertFalse("cycle" in vm.onboardingPermissions)
+        assertTrue("cycle" in vm.onboardingPermissions)
     }
 
     @Test fun `route permission is grouped with additional data access and excluded from grant all request set`() = runTest {
@@ -317,20 +315,10 @@ class OnboardingViewModelTest {
         assertFalse(vm.permissionCategories.any { it.id == "cycle_tracking" })
     }
 
-    @Test fun `checkState reflects existing cycle opt-in preference`() = runTest {
-        val vm = OnboardingViewModel(
-            repository = repo(grantedPermissions = emptySet()),
-            preferencesRepository = prefs(trackCycle = true),
-        )
-        advanceUntilIdle()
-
-        assertTrue(vm.uiState.value.cycleTrackingEnabled)
-    }
-
     @Test fun `onPermissionsResult refreshes phase 4 permission state`() = runTest {
         val repository = repo(grantedPermissions = emptySet())
         coEvery { repository.grantedPermissions() } returnsMany listOf(emptySet(), setOf("cycle"))
-        val vm = OnboardingViewModel(repository, prefs(trackCycle = true))
+        val vm = OnboardingViewModel(repository, prefs())
         advanceUntilIdle()
 
         vm.onPermissionsResult(setOf("cycle"))
@@ -338,21 +326,6 @@ class OnboardingViewModelTest {
 
         assertEquals(setOf("cycle"), vm.uiState.value.grantedPermissions)
         assertTrue(vm.uiState.value.phase4Granted)
-        assertTrue(vm.uiState.value.cycleTrackingEnabled)
-    }
-
-    @Test fun `enableCycleTracking persists opt-in before requesting permissions`() = runTest {
-        val prefs = prefs(trackCycle = false)
-        val vm = OnboardingViewModel(
-            repository = repo(grantedPermissions = emptySet()),
-            preferencesRepository = prefs,
-        )
-        advanceUntilIdle()
-
-        vm.enableCycleTracking()
-
-        verify { prefs.trackCycle = true }
-        assertTrue(vm.uiState.value.cycleTrackingEnabled)
     }
 
     @Test fun `selectAppLanguage persists preference and updates ui state`() = runTest {
@@ -421,12 +394,9 @@ class OnboardingViewModelTest {
         }
 
     private fun prefs(
-        trackCycle: Boolean = false,
         appLanguage: AppLanguage = AppLanguage.SYSTEM,
     ): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->
-            every { prefs.trackCycle } returns trackCycle
-            every { prefs.trackCycle = any() } just runs
             every { prefs.appLanguage } returns appLanguage
             every { prefs.appLanguage = any() } just runs
         }
@@ -442,8 +412,9 @@ class OnboardingViewModelTest {
             "history",
             "background",
             "vitals",
+            "cycle",
             "write",
         )
-        private val allPermissions = standardPermissions + setOf("cycle")
+        private val allPermissions = standardPermissions
     }
 }

@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -47,32 +46,20 @@ class SettingsViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    @Test fun `refresh keeps cycle permissions hidden when cycle tracking is off`() = runTest {
+    @Test fun `refresh includes cycle permissions with visible permissions`() = runTest {
         val vm = SettingsViewModel(
             repository = repo(),
-            preferencesRepository = prefs(trackCycle = false),
-            appleHealthImportWorkController = importController(),
-        )
-
-        assertEquals(setOf("steps", "write", "route"), vm.uiState.value.visiblePermissions)
-        assertFalse(vm.uiState.value.trackCycle)
-    }
-
-    @Test fun `refresh includes cycle permissions when cycle tracking is on`() = runTest {
-        val vm = SettingsViewModel(
-            repository = repo(),
-            preferencesRepository = prefs(trackCycle = true),
+            preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
         )
 
         assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
-        assertTrue(vm.uiState.value.trackCycle)
     }
 
     @Test fun `missingVisiblePermissions excludes already granted visible permissions`() = runTest {
         val vm = SettingsViewModel(
             repository = repo(grantedPermissions = setOf("steps")),
-            preferencesRepository = prefs(trackCycle = true),
+            preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
         )
 
@@ -83,7 +70,7 @@ class SettingsViewModelTest {
     @Test fun `missingVisiblePermissions is empty when all visible permissions are granted`() = runTest {
         val vm = SettingsViewModel(
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
-            preferencesRepository = prefs(trackCycle = true),
+            preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
         )
 
@@ -91,23 +78,8 @@ class SettingsViewModelTest {
         assertTrue(vm.uiState.value.missingManualVisiblePermissions.isEmpty())
     }
 
-    @Test fun `setTrackCycle persists preference and updates visible permissions`() = runTest {
-        val prefs = prefs(trackCycle = false)
-        val vm = SettingsViewModel(
-            repository = repo(),
-            preferencesRepository = prefs,
-            appleHealthImportWorkController = importController(),
-        )
-
-        vm.setTrackCycle(true)
-
-        verify { prefs.trackCycle = true }
-        assertTrue(vm.uiState.value.trackCycle)
-        assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
-    }
-
     @Test fun `selectAppLanguage persists preference and updates ui state`() = runTest {
-        val prefs = prefs(trackCycle = false)
+        val prefs = prefs()
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
@@ -121,7 +93,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `selectAppThemeMode persists preference and updates ui state`() = runTest {
-        val prefs = prefs(trackCycle = false)
+        val prefs = prefs()
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
@@ -135,7 +107,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `selectSleepRangeMode persists preference and updates ui state`() = runTest {
-        val prefs = prefs(trackCycle = false)
+        val prefs = prefs()
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
@@ -149,7 +121,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `selectActivityWeekMode persists preference and updates ui state`() = runTest {
-        val prefs = prefs(trackCycle = false)
+        val prefs = prefs()
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
@@ -163,7 +135,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `setShowOpenVitalsCalculatedCalories persists preference and updates ui state`() = runTest {
-        val prefs = prefs(trackCycle = false)
+        val prefs = prefs()
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
@@ -177,7 +149,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `selectFavoriteActivity persists preference and updates ui state`() = runTest {
-        val prefs = prefs(trackCycle = false)
+        val prefs = prefs()
         val vm = SettingsViewModel(
             repository = repo(),
             preferencesRepository = prefs,
@@ -195,7 +167,7 @@ class SettingsViewModelTest {
 
         val vm = SettingsViewModel(
             repository = repository,
-            preferencesRepository = prefs(trackCycle = true),
+            preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
         )
 
@@ -221,15 +193,14 @@ class SettingsViewModelTest {
             every { repo.additionalDataAccessPermissions } returns emptySet()
             every { repo.vitalsPermissions } returns emptySet()
             every { repo.dataImportWritePermissions } returns emptySet()
-            every { repo.dataImportWritePermissions(any()) } returns emptySet()
             every { repo.isMindfulnessAvailable() } returns false
-            every { repo.allPermissions } returns setOf("steps", "write", "route")
+            every { repo.allPermissions } returns setOf("steps", "write", "route", "cycle")
             every { repo.cyclePermissions } returns setOf("cycle")
             every { repo.manualOnlyPermissions } returns setOf("route")
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 
-    private fun prefs(trackCycle: Boolean): PreferencesRepository =
+    private fun prefs(): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.unitSystem } returns UnitSystem.METRIC
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
@@ -238,14 +209,12 @@ class SettingsViewModelTest {
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
             every { prefs.showOpenVitalsCalculatedCalories } returns false
             every { prefs.favoriteActivityExerciseType } returns null
-            every { prefs.trackCycle } returns trackCycle
             every { prefs.appLanguage = any() } just runs
             every { prefs.appThemeMode = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
             every { prefs.activityWeekMode = any() } just runs
             every { prefs.showOpenVitalsCalculatedCalories = any() } just runs
             every { prefs.favoriteActivityExerciseType = any() } just runs
-            every { prefs.trackCycle = any() } just runs
         }
 
     private fun importController(): AppleHealthImportWorkController =

@@ -23,7 +23,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.HealthRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
 class AppleHealthImportServiceTest {
 
@@ -39,7 +38,7 @@ class AppleHealthImportServiceTest {
             """.trimIndent(),
         )
 
-        val result = AppleHealthImportConverter(trackCycle = false, mindfulnessAvailable = true).convert(parsed)
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
 
         assertEquals(1, parsed.parsedRecords)
         assertEquals(1, result.converted.size)
@@ -65,7 +64,7 @@ class AppleHealthImportServiceTest {
             """.trimIndent(),
         )
 
-        val result = AppleHealthImportConverter(trackCycle = false, mindfulnessAvailable = true).convert(parsed)
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
 
         assertEquals(2, parsed.parsedRecords)
         assertEquals(1, parsed.parsedCorrelations)
@@ -79,7 +78,7 @@ class AppleHealthImportServiceTest {
     fun `synthetic export fixture covers supported converter targets`() {
         val parsed = parseFixture("synthetic_supported_export.xml")
 
-        val result = AppleHealthImportConverter(trackCycle = true, mindfulnessAvailable = true).convert(parsed)
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
         val targetTypes = result.converted.mapTo(mutableSetOf()) { it.targetType }
 
         assertEquals(41, parsed.parsedRecords)
@@ -141,19 +140,8 @@ class AppleHealthImportServiceTest {
         val parsed = AppleHealthImportParser.parse(BufferedInputStream(ByteArrayInputStream(zipExport(xml))))
 
         assertEquals(1, parsed.parsedRecords)
-        val result = AppleHealthImportConverter(trackCycle = false, mindfulnessAvailable = true).convert(parsed)
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
         assertEquals("StepsRecord", result.converted.single().targetType)
-    }
-
-    @Test
-    fun `cycle records are skipped when cycle tracking is disabled`() {
-        val parsed = parseFixture("synthetic_supported_export.xml")
-
-        val result = AppleHealthImportConverter(trackCycle = false, mindfulnessAvailable = true).convert(parsed)
-
-        assertTrue(result.converted.none { it.targetType == "MenstruationFlowRecord" })
-        assertTrue(result.converted.none { it.targetType == "BasalBodyTemperatureRecord" })
-        assertTrue(result.diagnostics.any { it.reasonCode == "cycle_disabled" })
     }
 
     @Test
@@ -173,17 +161,15 @@ class AppleHealthImportServiceTest {
         val resolver = mockk<ContentResolver>()
         val context = mockk<Context>()
         val repository = mockk<HealthRepository>()
-        val preferences = mockk<PreferencesRepository>()
         val insertedRecords = slot<List<androidx.health.connect.client.records.Record>>()
 
         every { context.contentResolver } returns resolver
         every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
-        every { preferences.trackCycle } returns false
         every { repository.isMindfulnessAvailable() } returns true
         coEvery { repository.readImportedClientRecordIds(any(), any(), any()) } returns emptySet()
         coEvery { repository.insertImportedRecords(capture(insertedRecords)) } just runs
 
-        val result = AppleHealthImportService(context, repository, preferences).importAppleHealthExport(uri)
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(uri)
 
         assertEquals(2, result.parsedRecords)
         assertEquals(1, result.importedRecords)

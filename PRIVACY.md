@@ -51,7 +51,7 @@ OpenVitals does not include advertising SDKs or analytics SDKs.
 
 ## Local Storage
 
-OpenVitals stores app preferences locally on your device, such as display unit settings, widget order, mindfulness timer settings, hydration reminder settings, acknowledged permission prompts, and whether optional cycle tracking is enabled.
+OpenVitals stores app preferences locally on your device, such as display unit settings, widget order, mindfulness timer settings, hydration reminder settings, and acknowledged permission prompts.
 
 If hydration reminders are enabled, Android may restore the local reminder schedule after a device restart. OpenVitals uses the notification permission only for reminders and active recording notifications.
 

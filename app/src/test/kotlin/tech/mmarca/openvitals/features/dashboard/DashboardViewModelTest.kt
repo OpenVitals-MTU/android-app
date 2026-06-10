@@ -34,14 +34,12 @@ class DashboardViewModelTest {
     private val yesterday = today.minusDays(1)
 
     private fun prefs(
-        trackCycle: Boolean = false,
         sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
         activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
         showOpenVitalsCalculatedCalories: Boolean = false,
     ) = mockk<PreferencesRepository>().also {
         every { it.acknowledgedPermissions() } returns emptySet()
         every { it.acknowledgePermissions(any()) } returns Unit
-        every { it.trackCycle } returns trackCycle
         every { it.sleepRangeMode } returns sleepRangeMode
         every { it.activityWeekMode } returns activityWeekMode
         every { it.showOpenVitalsCalculatedCalories } returns showOpenVitalsCalculatedCalories
@@ -430,28 +428,6 @@ class DashboardViewModelTest {
         vm.load(today)
 
         assertEquals(today, vm.uiState.value.data?.date)
-    }
-
-    @Test fun `trackCycle flag follows preferences`() = runTest {
-        val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-
-        val vm = DashboardViewModel(repo, prefs(trackCycle = true))
-
-        assertTrue(vm.uiState.value.trackCycle)
-    }
-
-    @Test fun `refreshPreferences updates trackCycle without loading dashboard`() = runTest {
-        val repo = mockk<HealthRepository>()
-        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val prefs = prefs(trackCycle = false)
-        every { prefs.trackCycle } returnsMany listOf(false, true)
-        val vm = DashboardViewModel(repo, prefs)
-
-        vm.refreshPreferences()
-
-        assertTrue(vm.uiState.value.trackCycle)
-        coVerify(exactly = 1) { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.EVENING_18H }) }
     }
 
     @Test fun `refreshPreferences reloads dashboard when sleep range mode changes`() = runTest {

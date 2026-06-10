@@ -538,7 +538,6 @@ internal fun dashboardWidgetSpecs(
     data: DashboardData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    trackCycle: Boolean,
     dailyGoals: DashboardDailyGoals,
     widgetIds: Collection<DashboardWidgetId>,
     pendingWidgets: Set<DashboardWidgetId>,
@@ -547,7 +546,7 @@ internal fun dashboardWidgetSpecs(
 ): List<DashboardWidgetSpec> = buildList {
     val widgetIdsToBuild = widgetIds.toSet()
     fun shouldBuild(widgetId: DashboardWidgetId): Boolean =
-        widgetId in widgetIdsToBuild && (trackCycle || widgetId != DashboardWidgetId.CYCLE)
+        widgetId in widgetIdsToBuild
     val loadingMessage = stringResource(R.string.loading)
     fun loadingMessageFor(widgetId: DashboardWidgetId): String? =
         loadingMessage.takeIf { widgetId in pendingWidgets }

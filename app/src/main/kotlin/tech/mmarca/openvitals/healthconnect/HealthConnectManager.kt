@@ -116,8 +116,6 @@ class HealthConnectManager @Inject constructor(
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
     val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
     val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
-    fun dataImportWritePermissions(trackCycle: Boolean): Set<String> =
-        permissionService.dataImportWritePermissions(trackCycle)
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val phase1Permissions: Set<String> get() = permissionService.phase1Permissions
     val phase2Permissions: Set<String> get() = permissionService.phase2Permissions

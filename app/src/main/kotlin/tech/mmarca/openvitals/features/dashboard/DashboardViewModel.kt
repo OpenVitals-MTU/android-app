@@ -26,7 +26,6 @@ data class DashboardUiState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val showPermissionsCallout: Boolean = false,
-    val trackCycle: Boolean = false,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val showOpenVitalsCalculatedCalories: Boolean = false,
@@ -63,7 +62,6 @@ class DashboardViewModel @Inject constructor(
         DashboardUiState(
             dashboardWidgets = dashboardWidgetIdsFromStored(prefs.dashboardWidgetOrder()),
             dailyGoals = prefs.dashboardDailyGoals(),
-            trackCycle = prefs.trackCycle,
             sleepRangeMode = prefs.sleepRangeMode,
             activityWeekMode = prefs.activityWeekMode,
             showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
@@ -81,7 +79,6 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshPreferences() {
-        val trackCycle = prefs.trackCycle
         val sleepRangeMode = prefs.sleepRangeMode
         val activityWeekMode = prefs.activityWeekMode
         val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
@@ -91,14 +88,12 @@ class DashboardViewModel @Inject constructor(
         val activityWeekModeChanged = current.activityWeekMode != activityWeekMode
         val calorieModeChanged = current.showOpenVitalsCalculatedCalories != showOpenVitalsCalculatedCalories
         if (
-            current.trackCycle != trackCycle ||
             sleepRangeChanged ||
             activityWeekModeChanged ||
             calorieModeChanged ||
             current.dailyGoals != dailyGoals
         ) {
             _uiState.value = current.copy(
-                trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
                 activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
@@ -113,7 +108,6 @@ class DashboardViewModel @Inject constructor(
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         loadCoordinator.launch(viewModelScope) load@{
-            val trackCycle = prefs.trackCycle
             val sleepRangeMode = prefs.sleepRangeMode
             val activityWeekMode = prefs.activityWeekMode
             val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
@@ -131,7 +125,6 @@ class DashboardViewModel @Inject constructor(
                 selectedDate = clampedDate,
                 isLoading = true,
                 errorMessage = null,
-                trackCycle = trackCycle,
                 sleepRangeMode = sleepRangeMode,
                 activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
@@ -145,7 +138,6 @@ class DashboardViewModel @Inject constructor(
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         visibleMetrics = primaryMetrics,
-                        trackCycle = trackCycle,
                         refreshMode = refreshMode,
                     )
                 )
@@ -157,7 +149,6 @@ class DashboardViewModel @Inject constructor(
                         data = data,
                         isLoading = false,
                         showPermissionsCallout = unacknowledged.isNotEmpty(),
-                        trackCycle = prefs.trackCycle,
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
@@ -168,7 +159,6 @@ class DashboardViewModel @Inject constructor(
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         widgets = deferredWidgets.toList(),
-                        trackCycle = trackCycle,
                         refreshMode = refreshMode,
                         isCurrentLoad = { isCurrent },
                     )
@@ -272,7 +262,6 @@ class DashboardViewModel @Inject constructor(
         sleepRangeMode: SleepRangeMode,
         activityWeekMode: ActivityWeekMode,
         widgets: List<DashboardWidgetId>,
-        trackCycle: Boolean,
         refreshMode: RefreshMode,
         isCurrentLoad: () -> Boolean,
     ) {
@@ -298,7 +287,6 @@ class DashboardViewModel @Inject constructor(
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         visibleMetrics = setOf(metric),
-                        trackCycle = trackCycle,
                         refreshMode = refreshMode,
                     )
                 )

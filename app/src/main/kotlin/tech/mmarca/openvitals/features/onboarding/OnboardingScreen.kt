@@ -258,7 +258,6 @@ fun OnboardingScreen(
             PermissionCategoryRow(
                 category = category,
                 grantedPermissions = state.grantedPermissions,
-                cycleTrackingEnabled = state.cycleTrackingEnabled,
                 onGrant = {
                     if (category.available) {
                         val missingPermissions = category.permissions - state.grantedPermissions
@@ -266,9 +265,6 @@ fun OnboardingScreen(
                         val manualPermissions = missingPermissions.intersect(category.manualPermissions)
                         when {
                             requestablePermissions.isNotEmpty() -> {
-                                if (category.optIn) {
-                                    viewModel.enableCycleTracking()
-                                }
                                 requestPermissions.launch(requestablePermissions)
                             }
                             manualPermissions.isNotEmpty() -> openManualPermissionSettings()
@@ -320,13 +316,11 @@ private fun FeatureCard(icon: ImageVector, title: String, body: String) {
 private fun PermissionCategoryRow(
     category: OnboardingPermissionCategory,
     grantedPermissions: Set<String>,
-    cycleTrackingEnabled: Boolean,
     onGrant: () -> Unit,
 ) {
     val grantedCount = category.permissions.count { it in grantedPermissions }
-    val optInEnabled = !category.optIn || cycleTrackingEnabled
-    val granted = category.available && optInEnabled && grantedCount == category.permissions.size
-    val partial = category.available && optInEnabled && grantedCount > 0 && !granted
+    val granted = category.available && grantedCount == category.permissions.size
+    val partial = category.available && grantedCount > 0 && !granted
     val missingPermissions = category.permissions - grantedPermissions
     val missingRequestableCount = (missingPermissions - category.manualPermissions).size
     val missingManualCount = missingPermissions.intersect(category.manualPermissions).size
@@ -341,7 +335,6 @@ private fun PermissionCategoryRow(
             grantedCount,
             category.permissions.size,
         )
-        category.optIn && !cycleTrackingEnabled -> stringResource(R.string.onboarding_status_off)
         isManualGrant -> stringResource(R.string.onboarding_status_manual)
         category.required -> stringResource(R.string.onboarding_status_required)
         else -> stringResource(R.string.onboarding_status_optional)
@@ -412,7 +405,6 @@ private fun PermissionCategoryRow(
                     Text(
                         when {
                             isManualGrant -> stringResource(R.string.action_open)
-                            category.optIn && !cycleTrackingEnabled -> stringResource(R.string.action_enable)
                             partial -> stringResource(R.string.action_review)
                             else -> stringResource(R.string.action_grant)
                         }

@@ -38,6 +38,7 @@ import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeightEntry
+import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -341,23 +342,32 @@ class HealthRepositoryDashboardTest {
         assertEquals(heightTime, data.heightTime)
     }
 
-    @Test fun `loadDashboard skips cycle reads when cycle tracking is disabled`() = runTest {
+    @Test fun `loadDashboard reads cycle metric when requested and permitted`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
+        val start = Instant.parse("2026-05-16T05:00:00Z")
+        val end = Instant.parse("2026-05-17T05:00:00Z")
         val hc = mockk<HealthConnectManager>()
         every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
         every { hc.requestableAllPermissions } returns setOf(menstruationPermission)
         coEvery { hc.grantedPermissions() } returns setOf(menstruationPermission)
+        coEvery { hc.readMenstruationPeriods(any(), any()) } returns listOf(
+            MenstruationPeriodEntry(
+                startTime = start,
+                endTime = end,
+                source = "test",
+            ),
+        )
 
         val data = HealthRepository(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.CYCLE),
-                trackCycle = false,
             )
         )
 
-        assertEquals(emptySet<DashboardMetric>(), data.loadedMetrics)
-        coVerify(exactly = 0) { hc.readMenstruationPeriods(any(), any()) }
+        assertEquals(setOf(DashboardMetric.CYCLE), data.loadedMetrics)
+        assertEquals(2, data.menstruationPeriodDays)
+        coVerify(exactly = 1) { hc.readMenstruationPeriods(any(), any()) }
     }
 
     @Test fun `weekly cardio load uses rolling last seven days when selected`() = runTest {
