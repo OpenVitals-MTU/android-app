@@ -22,6 +22,8 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
@@ -50,8 +52,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
@@ -115,7 +119,11 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
+    val reportCopied = stringResource(R.string.settings_apple_health_import_report_copied)
+    val reportSaved = stringResource(R.string.settings_apple_health_import_report_saved)
+    val reportSaveFailed = stringResource(R.string.settings_apple_health_import_report_save_failed)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -153,6 +161,26 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.importAppleHealthExport(uri)
+        }
+    }
+
+    val appleHealthReportSaver = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                val reportText = state.appleHealthImportResult?.shareableReportText.orEmpty()
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(reportText.toByteArray())
+                } ?: error("Unable to open destination.")
+            }.fold(
+                onSuccess = {
+                    Toast.makeText(context, reportSaved, Toast.LENGTH_SHORT).show()
+                },
+                onFailure = {
+                    Toast.makeText(context, reportSaveFailed, Toast.LENGTH_SHORT).show()
+                },
+            )
         }
     }
 
@@ -290,6 +318,13 @@ fun SettingsScreen(
                             },
                             onImport = {
                                 appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
+                            },
+                            onCopyReport = { reportText ->
+                                clipboardManager.setText(AnnotatedString(reportText))
+                                Toast.makeText(context, reportCopied, Toast.LENGTH_SHORT).show()
+                            },
+                            onSaveReport = {
+                                appleHealthReportSaver.launch("openvitals-apple-health-import-report.txt")
                             },
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
@@ -855,6 +890,8 @@ private fun AppleHealthImportCard(
     error: String?,
     onGrantPermissions: () -> Unit,
     onImport: () -> Unit,
+    onCopyReport: (String) -> Unit,
+    onSaveReport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val grantedCount = importPermissions.count { it in grantedPermissions }
@@ -912,13 +949,48 @@ private fun AppleHealthImportCard(
                     text = stringResource(
                         R.string.settings_apple_health_import_result,
                         importResult.importedRecords,
-                        importResult.unsupportedRecords,
+                        importResult.duplicateSkippedRecords,
+                        importResult.unsupportedElements,
+                        importResult.skippedRecords,
                         importResult.failedRecords,
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 8.dp),
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { onCopyReport(importResult.shareableReportText) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.widthIn(min = 6.dp))
+                        Text(stringResource(R.string.settings_apple_health_import_copy_report))
+                    }
+                    OutlinedButton(
+                        onClick = onSaveReport,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.widthIn(min = 6.dp))
+                        Text(stringResource(R.string.settings_apple_health_import_save_report))
+                    }
+                }
             }
 
             if (!error.isNullOrBlank()) {

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<HealthData locale="en_US">
+    <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Fixture" startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000" unit="count" value="1200" />
+    <Record type="HKQuantityTypeIdentifierDistanceWalkingRunning" sourceName="Fixture" startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000" unit="km" value="1.2" />
+    <Record type="HKQuantityTypeIdentifierDistanceCycling" sourceName="Fixture" startDate="2026-01-01 09:00:00 +0000" endDate="2026-01-01 09:20:00 +0000" unit="km" value="6.5" />
+    <Record type="HKQuantityTypeIdentifierDistanceSwimming" sourceName="Fixture" startDate="2026-01-01 10:00:00 +0000" endDate="2026-01-01 10:30:00 +0000" unit="m" value="900" />
+    <Record type="HKQuantityTypeIdentifierDistanceWheelchair" sourceName="Fixture" startDate="2026-01-01 11:00:00 +0000" endDate="2026-01-01 11:30:00 +0000" unit="m" value="500" />
+    <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="Fixture" startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000" unit="kcal" value="80" />
+    <Record type="HKQuantityTypeIdentifierBasalEnergyBurned" sourceName="Fixture" startDate="2026-01-01 00:00:00 +0000" endDate="2026-01-02 00:00:00 +0000" unit="kcal" value="1600" />
+    <Record type="HKQuantityTypeIdentifierFlightsClimbed" sourceName="Fixture" startDate="2026-01-01 12:00:00 +0000" endDate="2026-01-01 12:10:00 +0000" unit="count" value="8" />
+    <Record type="HKQuantityTypeIdentifierElevationAscended" sourceName="Fixture" startDate="2026-01-01 12:00:00 +0000" endDate="2026-01-01 12:10:00 +0000" unit="m" value="24" />
+    <Record type="HKQuantityTypeIdentifierPushCount" sourceName="Fixture" startDate="2026-01-01 11:00:00 +0000" endDate="2026-01-01 11:30:00 +0000" unit="count" value="40" />
+    <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Fixture" startDate="2026-01-01 07:00:00 +0000" endDate="2026-01-01 07:00:05 +0000" unit="count/min" value="72" />
+    <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Fixture" startDate="2026-01-01 07:00:00 +0000" endDate="2026-01-01 07:00:00 +0000" unit="count/min" value="60" />
+    <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Fixture" startDate="2026-01-01 07:05:00 +0000" endDate="2026-01-01 07:05:00 +0000" unit="kg" value="70" />
+    <Record type="HKQuantityTypeIdentifierHeight" sourceName="Fixture" startDate="2026-01-01 07:06:00 +0000" endDate="2026-01-01 07:06:00 +0000" unit="cm" value="175" />
+    <Record type="HKQuantityTypeIdentifierBodyFatPercentage" sourceName="Fixture" startDate="2026-01-01 07:07:00 +0000" endDate="2026-01-01 07:07:00 +0000" unit="%" value="22.5" />
+    <Record type="HKQuantityTypeIdentifierLeanBodyMass" sourceName="Fixture" startDate="2026-01-01 07:08:00 +0000" endDate="2026-01-01 07:08:00 +0000" unit="kg" value="54" />
+    <Record type="HKQuantityTypeIdentifierBoneMass" sourceName="Fixture" startDate="2026-01-01 07:09:00 +0000" endDate="2026-01-01 07:09:00 +0000" unit="kg" value="3" />
+    <Record type="HKQuantityTypeIdentifierBodyWaterMass" sourceName="Fixture" startDate="2026-01-01 07:10:00 +0000" endDate="2026-01-01 07:10:00 +0000" unit="kg" value="40" />
+    <Record type="HKQuantityTypeIdentifierDietaryWater" sourceName="Fixture" startDate="2026-01-01 13:00:00 +0000" endDate="2026-01-01 13:05:00 +0000" unit="ml" value="350" />
+    <Record type="HKQuantityTypeIdentifierOxygenSaturation" sourceName="Fixture" startDate="2026-01-01 07:11:00 +0000" endDate="2026-01-01 07:11:00 +0000" unit="%" value="98" />
+    <Record type="HKQuantityTypeIdentifierRespiratoryRate" sourceName="Fixture" startDate="2026-01-01 07:12:00 +0000" endDate="2026-01-01 07:12:00 +0000" unit="count/min" value="14" />
+    <Record type="HKQuantityTypeIdentifierBodyTemperature" sourceName="Fixture" startDate="2026-01-01 07:13:00 +0000" endDate="2026-01-01 07:13:00 +0000" unit="degC" value="36.7" />
+    <Record type="HKQuantityTypeIdentifierBloodGlucose" sourceName="Fixture" startDate="2026-01-01 07:14:00 +0000" endDate="2026-01-01 07:14:00 +0000" unit="mg/dL" value="95" />
+    <Record type="HKQuantityTypeIdentifierVO2Max" sourceName="Fixture" startDate="2026-01-01 07:15:00 +0000" endDate="2026-01-01 07:15:00 +0000" unit="mL/kg/min" value="42" />
+    <Record type="HKQuantityTypeIdentifierBasalBodyTemperature" sourceName="Fixture" startDate="2026-01-01 07:16:00 +0000" endDate="2026-01-01 07:16:00 +0000" unit="degC" value="36.4" />
+    <Record type="HKCategoryTypeIdentifierMindfulSession" sourceName="Fixture" startDate="2026-01-01 14:00:00 +0000" endDate="2026-01-01 14:10:00 +0000" value="HKCategoryValueNotApplicable" />
+    <Record type="HKCategoryTypeIdentifierMenstrualFlow" sourceName="Fixture" startDate="2026-01-01 07:20:00 +0000" endDate="2026-01-01 07:20:00 +0000" value="HKCategoryValueMenstrualFlowMedium" />
+    <Record type="HKCategoryTypeIdentifierOvulationTestResult" sourceName="Fixture" startDate="2026-01-01 07:21:00 +0000" endDate="2026-01-01 07:21:00 +0000" value="HKCategoryValueOvulationTestResultPositive" />
+    <Record type="HKCategoryTypeIdentifierCervicalMucusQuality" sourceName="Fixture" startDate="2026-01-01 07:22:00 +0000" endDate="2026-01-01 07:22:00 +0000" value="HKCategoryValueCervicalMucusQualityEggWhite" />
+    <Record type="HKCategoryTypeIdentifierIntermenstrualBleeding" sourceName="Fixture" startDate="2026-01-01 07:23:00 +0000" endDate="2026-01-01 07:23:00 +0000" value="HKCategoryValueNotApplicable" />
+    <Record type="HKCategoryTypeIdentifierSexualActivity" sourceName="Fixture" startDate="2026-01-01 07:24:00 +0000" endDate="2026-01-01 07:24:00 +0000" value="HKCategoryValueNotApplicable">
+        <MetadataEntry key="HKMetadataKeySexualActivityProtectionUsed" value="true" />
+    </Record>
+    <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Fixture" startDate="2026-01-01 22:00:00 +0000" endDate="2026-01-01 23:00:00 +0000" value="HKCategoryValueSleepAnalysisAsleepCore" />
+    <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Fixture" startDate="2026-01-01 23:00:00 +0000" endDate="2026-01-02 01:00:00 +0000" value="HKCategoryValueSleepAnalysisAsleepDeep" />
+    <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Fixture" startDate="2026-01-02 01:00:00 +0000" endDate="2026-01-02 02:00:00 +0000" value="HKCategoryValueSleepAnalysisAsleepREM" />
+    <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Fixture" startDate="2026-01-02 02:00:00 +0000" endDate="2026-01-02 02:10:00 +0000" value="HKCategoryValueSleepAnalysisAwake" />
+    <Record type="HKQuantityTypeIdentifierDietaryEnergyConsumed" sourceName="Fixture" startDate="2026-01-01 13:00:00 +0000" endDate="2026-01-01 13:00:00 +0000" unit="kcal" value="500">
+        <MetadataEntry key="HKMetadataKeyFoodType" value="Fixture meal" />
+    </Record>
+    <Record type="HKQuantityTypeIdentifierDietaryProtein" sourceName="Fixture" startDate="2026-01-01 13:00:00 +0000" endDate="2026-01-01 13:00:00 +0000" unit="g" value="30">
+        <MetadataEntry key="HKMetadataKeyFoodType" value="Fixture meal" />
+    </Record>
+    <Record type="HKQuantityTypeIdentifierDietaryCarbohydrates" sourceName="Fixture" startDate="2026-01-01 13:00:00 +0000" endDate="2026-01-01 13:00:00 +0000" unit="g" value="70">
+        <MetadataEntry key="HKMetadataKeyFoodType" value="Fixture meal" />
+    </Record>
+    <Record type="HKQuantityTypeIdentifierDietaryFatTotal" sourceName="Fixture" startDate="2026-01-01 13:00:00 +0000" endDate="2026-01-01 13:00:00 +0000" unit="g" value="18">
+        <MetadataEntry key="HKMetadataKeyFoodType" value="Fixture meal" />
+    </Record>
+    <Correlation type="HKCorrelationTypeIdentifierBloodPressure" sourceName="Fixture" startDate="2026-01-01 07:30:00 +0000" endDate="2026-01-01 07:30:00 +0000">
+        <Record type="HKQuantityTypeIdentifierBloodPressureSystolic" sourceName="Fixture" startDate="2026-01-01 07:30:00 +0000" endDate="2026-01-01 07:30:00 +0000" unit="mmHg" value="120" />
+        <Record type="HKQuantityTypeIdentifierBloodPressureDiastolic" sourceName="Fixture" startDate="2026-01-01 07:30:00 +0000" endDate="2026-01-01 07:30:00 +0000" unit="mmHg" value="80" />
+    </Correlation>
+    <Workout workoutActivityType="HKWorkoutActivityTypeRunning" sourceName="Fixture" startDate="2026-01-01 15:00:00 +0000" endDate="2026-01-01 15:30:00 +0000" duration="30" durationUnit="min" />
+    <ActivitySummary dateComponents="2026-01-01" activeEnergyBurned="300" activeEnergyBurnedGoal="500" activeEnergyBurnedUnit="kcal" appleMoveTime="30" appleMoveTimeGoal="60" appleExerciseTime="30" appleExerciseTimeGoal="30" appleStandHours="8" appleStandHoursGoal="12" />
+</HealthData>

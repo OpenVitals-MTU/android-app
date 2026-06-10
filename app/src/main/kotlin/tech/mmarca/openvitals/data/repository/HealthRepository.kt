@@ -76,6 +76,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.KClass
 import kotlin.math.roundToInt
 
 @Singleton
@@ -149,6 +150,7 @@ class HealthRepository @Inject constructor(
     val vitalsPermissions get() = hc.vitalsPermissions
     val vitalsWritePermissions get() = hc.vitalsWritePermissions
     val dataImportWritePermissions get() = hc.dataImportWritePermissions
+    fun dataImportWritePermissions(trackCycle: Boolean) = hc.dataImportWritePermissions(trackCycle)
     val cyclePermissions get() = hc.cyclePermissions
     val manualOnlyPermissions get() = hc.manualOnlyPermissions
     val requestableWritePermissions get() = hc.requestableWritePermissions
@@ -164,6 +166,15 @@ class HealthRepository @Inject constructor(
     suspend fun insertImportedRecords(records: List<Record>) =
         withContext(dispatchers.io) {
             hc.insertImportedRecords(records)
+        }
+
+    suspend fun readImportedClientRecordIds(
+        recordType: KClass<out Record>,
+        start: java.time.Instant,
+        end: java.time.Instant,
+    ): Set<String> =
+        withContext(dispatchers.io) {
+            hc.readImportedClientRecordIds(recordType, start, end)
         }
 
     suspend fun missingPhase1(): Set<String> {

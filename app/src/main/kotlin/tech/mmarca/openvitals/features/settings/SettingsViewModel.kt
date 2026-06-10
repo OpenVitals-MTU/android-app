@@ -89,6 +89,7 @@ class SettingsViewModel @Inject constructor(
             val granted = if (avail == HealthConnectAvailability.AVAILABLE) {
                 repository.grantedPermissions()
             } else emptySet()
+            val trackCycle = preferencesRepository.trackCycle
             Log.d(TAG, "refresh availability=$avail grantedCount=${granted.size}")
 
             _uiState.value = _uiState.value.copy(
@@ -98,9 +99,9 @@ class SettingsViewModel @Inject constructor(
                 permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 cyclePermissions = repository.cyclePermissions,
-                dataImportWritePermissions = repository.dataImportWritePermissions,
+                dataImportWritePermissions = repository.dataImportWritePermissions(trackCycle),
                 manualOnlyPermissions = repository.manualOnlyPermissions,
-                trackCycle = preferencesRepository.trackCycle,
+                trackCycle = trackCycle,
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
                 appThemeMode = preferencesRepository.appThemeMode,

@@ -219,6 +219,7 @@ class SettingsViewModelTest {
             every { repo.additionalDataAccessPermissions } returns emptySet()
             every { repo.vitalsPermissions } returns emptySet()
             every { repo.dataImportWritePermissions } returns emptySet()
+            every { repo.dataImportWritePermissions(any()) } returns emptySet()
             every { repo.isMindfulnessAvailable() } returns false
             every { repo.allPermissions } returns setOf("steps", "write", "route")
             every { repo.cyclePermissions } returns setOf("cycle")

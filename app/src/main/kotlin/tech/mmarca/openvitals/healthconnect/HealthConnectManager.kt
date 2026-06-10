@@ -2,6 +2,8 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.R
@@ -56,6 +58,7 @@ import tech.mmarca.openvitals.data.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.model.WeightEntry
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.reflect.KClass
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -113,6 +116,8 @@ class HealthConnectManager @Inject constructor(
     val vitalsPermissions: Set<String> get() = permissionService.vitalsPermissions
     val vitalsWritePermissions: Set<String> get() = permissionService.vitalsWritePermissions
     val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
+    fun dataImportWritePermissions(trackCycle: Boolean): Set<String> =
+        permissionService.dataImportWritePermissions(trackCycle)
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val phase1Permissions: Set<String> get() = permissionService.phase1Permissions
     val phase2Permissions: Set<String> get() = permissionService.phase2Permissions
@@ -515,6 +520,32 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun insertImportedRecords(records: List<Record>) {
         client().insertRecords(records)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    suspend fun readImportedClientRecordIds(
+        recordType: KClass<out Record>,
+        start: Instant,
+        end: Instant,
+    ): Set<String> {
+        val typedRecordType = recordType as KClass<Record>
+        val clientRecordIds = mutableSetOf<String>()
+        var pageToken: String? = null
+        do {
+            val response = client().readRecords(
+                ReadRecordsRequest(
+                    recordType = typedRecordType,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    pageSize = 1000,
+                    pageToken = pageToken,
+                ),
+            )
+            response.records.mapNotNullTo(clientRecordIds) { record ->
+                record.metadata.clientRecordId?.takeIf { it.startsWith("apple_health_") }
+            }
+            pageToken = response.pageToken
+        } while (!pageToken.isNullOrBlank())
+        return clientRecordIds
     }
 
     private fun client(): HealthConnectClient =

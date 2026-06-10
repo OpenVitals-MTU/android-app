@@ -167,24 +167,47 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(BodyTemperatureRecord::class),
     )
 
-    val dataImportWritePermissions: Set<String> = setOf(
-        HealthPermission.getWritePermission(StepsRecord::class),
-        HealthPermission.getWritePermission(DistanceRecord::class),
-        HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
-        HealthPermission.getWritePermission(FloorsClimbedRecord::class),
-        HealthPermission.getWritePermission(HeartRateRecord::class),
-        HealthPermission.getWritePermission(RestingHeartRateRecord::class),
-        HealthPermission.getWritePermission(WeightRecord::class),
-        HealthPermission.getWritePermission(HeightRecord::class),
-        HealthPermission.getWritePermission(BodyFatRecord::class),
-        HealthPermission.getWritePermission(LeanBodyMassRecord::class),
-        HealthPermission.getWritePermission(BoneMassRecord::class),
-        HealthPermission.getWritePermission(BodyWaterMassRecord::class),
-        HealthPermission.getWritePermission(HydrationRecord::class),
-        HealthPermission.getWritePermission(OxygenSaturationRecord::class),
-        HealthPermission.getWritePermission(RespiratoryRateRecord::class),
-        HealthPermission.getWritePermission(BodyTemperatureRecord::class),
-    )
+    val dataImportWritePermissions: Set<String> get() = dataImportWritePermissions(trackCycle = true)
+
+    fun dataImportWritePermissions(trackCycle: Boolean): Set<String> = buildSet {
+        add(HealthPermission.getWritePermission(StepsRecord::class))
+        add(HealthPermission.getWritePermission(DistanceRecord::class))
+        add(HealthPermission.getWritePermission(ExerciseSessionRecord::class))
+        add(HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class))
+        add(HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class))
+        add(HealthPermission.getWritePermission(FloorsClimbedRecord::class))
+        add(HealthPermission.getWritePermission(ElevationGainedRecord::class))
+        add(HealthPermission.getWritePermission(WheelchairPushesRecord::class))
+        add(HealthPermission.getWritePermission(HeartRateRecord::class))
+        add(HealthPermission.getWritePermission(RestingHeartRateRecord::class))
+        add(HealthPermission.getWritePermission(WeightRecord::class))
+        add(HealthPermission.getWritePermission(HeightRecord::class))
+        add(HealthPermission.getWritePermission(BodyFatRecord::class))
+        add(HealthPermission.getWritePermission(LeanBodyMassRecord::class))
+        add(HealthPermission.getWritePermission(BasalMetabolicRateRecord::class))
+        add(HealthPermission.getWritePermission(BoneMassRecord::class))
+        add(HealthPermission.getWritePermission(BodyWaterMassRecord::class))
+        add(HealthPermission.getWritePermission(HydrationRecord::class))
+        add(HealthPermission.getWritePermission(NutritionRecord::class))
+        add(HealthPermission.getWritePermission(SleepSessionRecord::class))
+        add(HealthPermission.getWritePermission(BloodPressureRecord::class))
+        add(HealthPermission.getWritePermission(OxygenSaturationRecord::class))
+        add(HealthPermission.getWritePermission(RespiratoryRateRecord::class))
+        add(HealthPermission.getWritePermission(BodyTemperatureRecord::class))
+        add(HealthPermission.getWritePermission(BloodGlucoseRecord::class))
+        add(HealthPermission.getWritePermission(Vo2MaxRecord::class))
+        if (isMindfulnessSessionAvailable()) {
+            add(HealthPermission.getWritePermission(MindfulnessSessionRecord::class))
+        }
+        if (trackCycle) {
+            add(HealthPermission.getWritePermission(MenstruationFlowRecord::class))
+            add(HealthPermission.getWritePermission(OvulationTestRecord::class))
+            add(HealthPermission.getWritePermission(CervicalMucusRecord::class))
+            add(HealthPermission.getWritePermission(BasalBodyTemperatureRecord::class))
+            add(HealthPermission.getWritePermission(IntermenstrualBleedingRecord::class))
+            add(HealthPermission.getWritePermission(SexualActivityRecord::class))
+        }
+    }
 
     val cyclePermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(MenstruationFlowRecord::class),
