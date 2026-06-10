@@ -1,0 +1,1 @@
+Verschiebt Apple-Health-Exporte in einen WorkManager-gestützten Hintergrundimport, damit große export.xml/export.zip-Dateien nach dem Verlassen der Einstellungen weiterlaufen. Ergänzt Live-Fortschritt, Benachrichtigungen, klarere Zählungen und Streaming-Verarbeitung mit geringerem Speicherbedarf.

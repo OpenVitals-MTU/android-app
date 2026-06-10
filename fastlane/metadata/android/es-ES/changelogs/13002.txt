@@ -1,0 +1,1 @@
+Mueve exportaciones de Apple Health a una importación en segundo plano con WorkManager para que export.xml/export.zip grandes continúen al salir de Ajustes. Añade progreso y notificaciones en vivo, recuentos más claros de duplicados/no compatibles/omitidos/fallidos y procesamiento en streaming para reducir memoria.

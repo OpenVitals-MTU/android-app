@@ -34,7 +34,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Opt-in hydration reminders with active hours and daily-goal pause logic
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ/FIT route import and GPS activity recording with review before saving
-- Apple Health export import for supported activity, heart, body, hydration, and vitals records
+- Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
 - Dedicated Calories detail screen with total, active, and BMR calorie context
@@ -70,7 +70,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
-- Data Import setting for supported Apple Health `export.xml` or `export.zip` records
+- Data Import setting for supported Apple Health `export.xml` or `export.zip` records, with live progress while the import continues in the background
 - Opt-in cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking

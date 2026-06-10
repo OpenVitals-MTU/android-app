@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.3.2 - 2026-06-10
+
+### English
+
+- Move Apple Health export imports to a WorkManager-backed background job so large `export.xml` or `export.zip` imports can continue after leaving Settings.
+- Add live import progress, foreground notification text, and clearer parsed/imported/duplicate/unsupported/skipped/failed result counts.
+- Stream Apple Health parsing and record writing to reduce memory pressure on large exports while preserving diagnostics and per-type summaries.
+- Declare the data-sync foreground service path needed for reliable long-running Apple Health imports on newer Android versions.
+
+### Español
+
+- Mueve las importaciones de exportaciones de Apple Health a un trabajo en segundo plano con WorkManager para que importaciones grandes de `export.xml` o `export.zip` continúen al salir de Ajustes.
+- Añade progreso de importación en vivo, texto de notificación en primer plano y recuentos más claros de analizados/importados/duplicados/no compatibles/omitidos/fallidos.
+- Procesa en streaming el análisis de Apple Health y la escritura de registros para reducir el uso de memoria en exportaciones grandes, conservando diagnósticos y resúmenes por tipo.
+- Declara la ruta de servicio en primer plano de sincronización de datos necesaria para importaciones largas y fiables de Apple Health en versiones recientes de Android.
+
+### Deutsch
+
+- Verschiebt Apple-Health-Exportimporte in einen WorkManager-gestützten Hintergrundauftrag, sodass große `export.xml`- oder `export.zip`-Importe nach dem Verlassen der Einstellungen weiterlaufen können.
+- Ergänzt Live-Importfortschritt, Vordergrund-Benachrichtigungstexte und klarere Zählungen für gelesen/importiert/Duplikate/nicht unterstützt/übersprungen/fehlgeschlagen.
+- Streamt Apple-Health-Parsing und Datensatzschreiben, um den Speicherbedarf bei großen Exporten zu senken und Diagnosen sowie Typzusammenfassungen zu behalten.
+- Deklariert den Daten-Sync-Foreground-Service-Pfad, der für zuverlässige lange Apple-Health-Importe auf neueren Android-Versionen nötig ist.
+
 ## 1.3.1 - 2026-06-10
 
 ### English

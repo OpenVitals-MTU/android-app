@@ -1,0 +1,1 @@
+Moves Apple Health exports to a WorkManager-backed background import so large export.xml/export.zip files can continue after leaving Settings. Adds live progress and notification text, clearer duplicate/unsupported/skipped/failed counts, and streaming handling to reduce memory pressure.
