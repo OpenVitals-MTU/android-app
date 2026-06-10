@@ -16,6 +16,7 @@ const val VITALS_ENTRY_ID_ARG = "vitalsEntryId"
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
     data object Dashboard : Screen("dashboard")
+    data object DailyReadiness : Screen("daily_readiness")
     data object ManualEntry : Screen("manual_entry")
     data object HydrationEntry : Screen("manual_entry/hydration")
     data object HydrationEntryEdit : Screen("manual_entry/hydration/edit/{$HYDRATION_ENTRY_ID_ARG}") {

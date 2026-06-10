@@ -5,6 +5,7 @@
     <string name="cd_back">Atrás</string>
     <string name="cd_settings">Ajustes</string>
     <string name="cd_achievements">Logros</string>
+    <string name="cd_daily_readiness">Preparación diaria</string>
     <string name="cd_edit_dashboard">Editar resumen</string>
     <string name="cd_finish_dashboard_editing">Terminar edición del resumen</string>
     <string name="cd_edit_manual_entry_widgets">Editar widgets de añadir entrada</string>
@@ -58,6 +59,7 @@
     <string name="screen_nutrition">Nutrición</string>
     <string name="screen_mindfulness">Mindfulness</string>
     <string name="screen_cycle">Ciclo</string>
+    <string name="screen_daily_readiness">Preparación diaria</string>
     <string name="screen_settings">Ajustes</string>
     <string name="screen_achievements">Logros</string>
     <string name="screen_manual_entry">Añadir entrada</string>
@@ -706,6 +708,18 @@
     <string name="dashboard_all_widgets_added">Todos los widgets ya están en el resumen.</string>
     <string name="dashboard_action_log">Registrar</string>
     <string name="dashboard_activities_today">Actividades</string>
+    <string name="dashboard_readiness_title">Preparación diaria</string>
+    <string name="dashboard_readiness_score">Preparación</string>
+    <string name="dashboard_readiness_body_energy">Energía corporal</string>
+    <string name="dashboard_readiness_training">Preparación para entrenar</string>
+    <string name="dashboard_readiness_recommended">Recomendado</string>
+    <string name="dashboard_readiness_avoid">Evitar</string>
+    <string name="dashboard_readiness_alternative">Alternativa</string>
+    <string name="dashboard_readiness_strain">Objetivo de esfuerzo</string>
+    <string name="dashboard_readiness_goal">Objetivo adaptable</string>
+    <string name="dashboard_readiness_recovery_mode">Modo recuperación</string>
+    <string name="dashboard_readiness_recovery_mode_body">Los objetivos de actividad se reducen para que puedas centrarte en descansar.</string>
+    <string name="dashboard_readiness_why">Por qué esta recomendación</string>
     <string name="dashboard_goal_of">de %1$s</string>
     <string name="calories_estimated_active_bmr">Sin total, estimado con activas + BMR</string>
     <string name="calories_estimated_value">Est. %1$s</string>

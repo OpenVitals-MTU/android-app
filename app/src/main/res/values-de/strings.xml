@@ -5,6 +5,7 @@
     <string name="cd_back">Zurück</string>
     <string name="cd_settings">Einstellungen</string>
     <string name="cd_achievements">Auszeichnungen</string>
+    <string name="cd_daily_readiness">Tägliche Bereitschaft</string>
     <string name="cd_edit_dashboard">Übersicht bearbeiten</string>
     <string name="cd_finish_dashboard_editing">Übersichtsbearbeitung beenden</string>
     <string name="cd_edit_manual_entry_widgets">Widgets zum Hinzufügen von Einträgen bearbeiten</string>
@@ -58,6 +59,7 @@
     <string name="screen_nutrition">Ernährung</string>
     <string name="screen_mindfulness">Achtsamkeit</string>
     <string name="screen_cycle">Zyklus</string>
+    <string name="screen_daily_readiness">Tägliche Bereitschaft</string>
     <string name="screen_settings">Einstellungen</string>
     <string name="screen_achievements">Auszeichnungen</string>
     <string name="screen_manual_entry">Eintrag hinzufügen</string>
@@ -706,6 +708,18 @@
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
     <string name="dashboard_action_log">Protokollieren</string>
     <string name="dashboard_activities_today">Aktivitäten</string>
+    <string name="dashboard_readiness_title">Tägliche Bereitschaft</string>
+    <string name="dashboard_readiness_score">Bereitschaft</string>
+    <string name="dashboard_readiness_body_energy">Körperenergie</string>
+    <string name="dashboard_readiness_training">Trainingsbereitschaft</string>
+    <string name="dashboard_readiness_recommended">Empfohlen</string>
+    <string name="dashboard_readiness_avoid">Vermeiden</string>
+    <string name="dashboard_readiness_alternative">Alternative</string>
+    <string name="dashboard_readiness_strain">Belastungsziel</string>
+    <string name="dashboard_readiness_goal">Adaptives Ziel</string>
+    <string name="dashboard_readiness_recovery_mode">Erholungsmodus</string>
+    <string name="dashboard_readiness_recovery_mode_body">Aktivitätsziele werden reduziert, damit du dich auf Erholung konzentrieren kannst.</string>
+    <string name="dashboard_readiness_why">Warum diese Empfehlung</string>
     <string name="dashboard_goal_of">von %1$s</string>
     <string name="calories_estimated_active_bmr">Kein Gesamteintrag, geschätzt aus aktiv + BMR</string>
     <string name="calories_estimated_value">Gesch. %1$s</string>

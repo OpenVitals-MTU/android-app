@@ -351,8 +351,24 @@ class HealthRepository @Inject constructor(
         ) {
             hc.readRestingHeartRate(date)
         }
+        val restingHRBaseline = readIfNeeded(
+            wants(DashboardMetric.RESTING_HEART_RATE),
+            readRestingHRPermission,
+            "resting heart rate baseline",
+        ) {
+            hc.readDailyRestingHR(date.minusDays(28), date.minusDays(1))
+                .map { it.bpm }
+                .filter { it > 0L }
+                .medianLongOrNull()
+        }
         val hrv = readIfNeeded(wants(DashboardMetric.HRV), readHrvPermission, "HRV") {
             hc.readHrvRmssd(date)
+        }
+        val hrvBaseline = readIfNeeded(wants(DashboardMetric.HRV), readHrvPermission, "HRV baseline") {
+            hc.readDailyHRV(date.minusDays(28), date.minusDays(1))
+                .map { it.rmssdMs }
+                .filter { it > 0.0 }
+                .medianDoubleValuesOrNull()
         }
         val bloodPressure = readIfNeeded(
             wants(DashboardMetric.BLOOD_PRESSURE),
@@ -501,7 +517,9 @@ class HealthRepository @Inject constructor(
             bodyWaterMassKg = bodyWaterMass?.await(),
             avgHeartRateBpm = heartRate?.await() ?: 0,
             restingHeartRateBpm = restingHR?.await() ?: 0,
+            restingHeartRateBaselineBpm = restingHRBaseline?.await(),
             hrvRmssdMs = hrv?.await(),
+            hrvBaselineRmssdMs = hrvBaseline?.await(),
             latestSystolicMmHg = latestBloodPressure?.systolicMmHg,
             latestDiastolicMmHg = latestBloodPressure?.diastolicMmHg,
             latestSpO2Percent = spO2?.await()?.percent,
@@ -820,6 +838,17 @@ private fun List<Int>.medianDoubleOrNull(): Double? {
         (sorted[middle - 1] + sorted[middle]) / 2.0
     } else {
         sorted[middle].toDouble()
+    }
+}
+
+private fun List<Double>.medianDoubleValuesOrNull(): Double? {
+    if (isEmpty()) return null
+    val sorted = sorted()
+    val middle = sorted.size / 2
+    return if (sorted.size % 2 == 0) {
+        (sorted[middle - 1] + sorted[middle]) / 2.0
+    } else {
+        sorted[middle]
     }
 }
 

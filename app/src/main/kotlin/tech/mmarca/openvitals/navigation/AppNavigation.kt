@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -102,6 +103,8 @@ import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
+import tech.mmarca.openvitals.features.readiness.DailyReadinessScreen
+import tech.mmarca.openvitals.features.readiness.DailyReadinessViewModel
 import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
 import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
@@ -229,6 +232,7 @@ fun AppNavigation(
 
     val topBarTitle = when (currentRoute) {
         Screen.Dashboard.route -> stringResource(R.string.app_name)
+        Screen.DailyReadiness.route -> stringResource(R.string.screen_daily_readiness)
         CardioLoadDetailRoute -> stringResource(R.string.metric_cardio_load)
         SleepEfficiencyDetailRoute -> stringResource(R.string.recovery_sleep_efficiency)
         SleepScoreDetailRoute -> stringResource(R.string.recovery_sleep_score)
@@ -311,6 +315,25 @@ fun AppNavigation(
                         } else {
                             androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                         },
+                    )
+                }
+            }
+            if (
+                showTopBar &&
+                !isTaskRoute &&
+                !isSettingsRoute &&
+                currentRoute != Screen.DailyReadiness.route
+            ) {
+                IconButton(
+                    onClick = {
+                        navController.navigate(Screen.DailyReadiness.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.SelfImprovement,
+                        contentDescription = stringResource(R.string.cd_daily_readiness),
                     )
                 }
             }
@@ -406,6 +429,14 @@ fun AppNavigation(
                     onStartActivity = {
                         navController.navigate(Screen.ActivityEntry.route)
                     },
+                )
+            }
+
+            composable(Screen.DailyReadiness.route) {
+                val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
+                DailyReadinessScreen(
+                    viewModel = dailyReadinessViewModel,
+                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                 )
             }
 

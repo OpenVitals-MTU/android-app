@@ -5,6 +5,7 @@
     <string name="cd_back">Back</string>
     <string name="cd_settings">Settings</string>
     <string name="cd_achievements">Achievements</string>
+    <string name="cd_daily_readiness">Daily Readiness</string>
     <string name="cd_edit_dashboard">Edit summary</string>
     <string name="cd_finish_dashboard_editing">Finish editing summary</string>
     <string name="cd_edit_manual_entry_widgets">Edit add entry widgets</string>
@@ -58,6 +59,7 @@
     <string name="screen_nutrition">Nutrition</string>
     <string name="screen_mindfulness">Mindfulness</string>
     <string name="screen_cycle">Cycle</string>
+    <string name="screen_daily_readiness">Daily Readiness</string>
     <string name="screen_settings">Settings</string>
     <string name="screen_achievements">Achievements</string>
     <string name="screen_manual_entry">Add entry</string>
@@ -706,6 +708,18 @@
     <string name="dashboard_all_widgets_added">All widgets are already on the summary.</string>
     <string name="dashboard_action_log">Log</string>
     <string name="dashboard_activities_today">Activities</string>
+    <string name="dashboard_readiness_title">Daily Readiness</string>
+    <string name="dashboard_readiness_score">Readiness</string>
+    <string name="dashboard_readiness_body_energy">Body Energy</string>
+    <string name="dashboard_readiness_training">Training Readiness</string>
+    <string name="dashboard_readiness_recommended">Recommended</string>
+    <string name="dashboard_readiness_avoid">Avoid</string>
+    <string name="dashboard_readiness_alternative">Alternative</string>
+    <string name="dashboard_readiness_strain">Strain target</string>
+    <string name="dashboard_readiness_goal">Adaptive goal</string>
+    <string name="dashboard_readiness_recovery_mode">Recovery Mode</string>
+    <string name="dashboard_readiness_recovery_mode_body">Activity goals are reduced so you can focus on rest.</string>
+    <string name="dashboard_readiness_why">Why this recommendation</string>
     <string name="dashboard_goal_of">of %1$s</string>
     <string name="calories_estimated_active_bmr">No total record, est. active + BMR</string>
     <string name="calories_estimated_value">Est. %1$s</string>

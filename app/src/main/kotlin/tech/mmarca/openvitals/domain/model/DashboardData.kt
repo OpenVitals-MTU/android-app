@@ -24,7 +24,9 @@ data class DashboardData(
     val bmi: Double? = null,
     val avgHeartRateBpm: Long = 0,
     val restingHeartRateBpm: Long = 0,
+    val restingHeartRateBaselineBpm: Long? = null,
     val hrvRmssdMs: Double? = null,
+    val hrvBaselineRmssdMs: Double? = null,
     val bodyFatPercent: Double = 0.0,
     val leanMassKg: Double? = null,
     val bmrKcal: Double? = null,
@@ -102,7 +104,13 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         } else {
             restingHeartRateBpm
         },
+        restingHeartRateBaselineBpm = if (DashboardMetric.RESTING_HEART_RATE in other.loadedMetrics) {
+            other.restingHeartRateBaselineBpm
+        } else {
+            restingHeartRateBaselineBpm
+        },
         hrvRmssdMs = if (DashboardMetric.HRV in other.loadedMetrics) other.hrvRmssdMs else hrvRmssdMs,
+        hrvBaselineRmssdMs = if (DashboardMetric.HRV in other.loadedMetrics) other.hrvBaselineRmssdMs else hrvBaselineRmssdMs,
         bodyFatPercent = if (DashboardMetric.BODY_FAT in other.loadedMetrics) other.bodyFatPercent else bodyFatPercent,
         leanMassKg = if (DashboardMetric.LEAN_MASS in other.loadedMetrics) other.leanMassKg else leanMassKg,
         bmrKcal = if (DashboardMetric.BMR in other.loadedMetrics) other.bmrKcal else bmrKcal,

@@ -8,9 +8,11 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.HeightRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.WeightRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -35,6 +37,8 @@ import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeightEntry
@@ -55,6 +59,8 @@ class HealthRepositoryDashboardTest {
     private val menstruationPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     private val weightPermission = HealthPermission.getReadPermission(WeightRecord::class)
     private val heightPermission = HealthPermission.getReadPermission(HeightRecord::class)
+    private val restingHeartRatePermission = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
+    private val hrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
 
     @Before
     fun setUp() {
@@ -413,6 +419,38 @@ class HealthRepositoryDashboardTest {
                 includeElevation = false,
             )
         }
+    }
+
+    @Test fun `loadDashboard reads personal baselines for resting heart rate and HRV`() = runTest {
+        val date = LocalDate.of(2026, 6, 10)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(restingHeartRatePermission, hrvPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(restingHeartRatePermission, hrvPermission)
+        coEvery { hc.readRestingHeartRate(date) } returns 58L
+        coEvery { hc.readHrvRmssd(date) } returns 48.0
+        coEvery { hc.readDailyRestingHR(date.minusDays(28), date.minusDays(1)) } returns listOf(
+            DailyRestingHR(date.minusDays(3), 56),
+            DailyRestingHR(date.minusDays(2), 57),
+            DailyRestingHR(date.minusDays(1), 60),
+        )
+        coEvery { hc.readDailyHRV(date.minusDays(28), date.minusDays(1)) } returns listOf(
+            DailyHrv(date.minusDays(3), 42.0),
+            DailyHrv(date.minusDays(2), 50.0),
+            DailyHrv(date.minusDays(1), 56.0),
+        )
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.RESTING_HEART_RATE, DashboardMetric.HRV),
+            )
+        )
+
+        assertEquals(58L, data.restingHeartRateBpm)
+        assertEquals(57L, data.restingHeartRateBaselineBpm)
+        assertEquals(48.0, data.hrvRmssdMs ?: 0.0, 0.01)
+        assertEquals(50.0, data.hrvBaselineRmssdMs ?: 0.0, 0.01)
     }
 
     private fun sleep(
