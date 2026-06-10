@@ -35,6 +35,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ/FIT route import and GPS activity recording with review before saving
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records
+- Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
 - Dedicated Calories detail screen with total, active, and BMR calorie context
 - Activities and Sleep detail screens with integrated overview cards and direct metric links
@@ -123,7 +124,7 @@ Health Connect platform notes:
 - On Android 13 and older, the Health Connect app must be installed separately
 - Health Connect is not supported in work profiles
 - Mindfulness sessions require a Health Connect provider version that supports `FEATURE_MINDFULNESS_SESSION`
-- The app uses `androidx.health.connect:connect-client` 1.1.0 or newer so AndroidX maps mindfulness sessions to the platform `android.permission.health.READ_MINDFULNESS` permission
+- The app uses `androidx.health.connect:connect-client` 1.2.0-alpha04 so AndroidX maps newer activity, mindfulness, and aggregation APIs to the current platform permissions
 
 ## Build from source
 

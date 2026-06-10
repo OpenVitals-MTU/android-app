@@ -1,0 +1,1 @@
+Actualiza Health Connect a 1.2.0-alpha04, amplía tipos de actividad grabada y detalles de repeticiones, rediseña la importación de Apple Health con pruebas más claras de parser/conversión y divide panel, ajustes, entradas manuales, periodos y métricas en archivos más pequeños.

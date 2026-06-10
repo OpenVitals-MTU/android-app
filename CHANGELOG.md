@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.3.1 - 2026-06-10
+
+### English
+
+- Update AndroidX Health Connect to 1.2.0-alpha04 and align activity recording with the newer activity-recognition, health foreground-service, and high-sampling sensor permissions.
+- Expand recorded activity support with newer exercise types and repetition-set details where Health Connect provides them.
+- Redesign the Apple Health import implementation into a dedicated importer package with clearer parser/converter tests and broader write-permission handling for supported records.
+- Split dashboard, settings, manual entry, activity recording, route import, period helpers, and metric sections into smaller feature-owned files for safer future changes.
+- Move app-local models, insights, and preferences into domain packages while keeping HealthRepository focused on availability, permissions, and dashboard aggregation.
+
+### Español
+
+- Actualiza AndroidX Health Connect a 1.2.0-alpha04 y alinea la grabación de actividades con los permisos más recientes de reconocimiento de actividad, servicio en primer plano de salud y sensores de alta frecuencia.
+- Amplía el soporte de actividades grabadas con tipos de ejercicio más nuevos y detalles de series de repeticiones cuando Health Connect los proporciona.
+- Rediseña la importación de Apple Health en un paquete de importación dedicado, con pruebas más claras de parser/conversión y manejo más amplio de permisos de escritura para registros compatibles.
+- Divide panel, ajustes, entradas manuales, grabación de actividades, importación de rutas, helpers de periodo y secciones de métricas en archivos más pequeños y propios de cada feature para cambios futuros más seguros.
+- Mueve modelos, insights y preferencias locales de la app a paquetes de dominio, manteniendo HealthRepository centrado en disponibilidad, permisos y agregación del panel.
+
+### Deutsch
+
+- Aktualisiert AndroidX Health Connect auf 1.2.0-alpha04 und richtet die Aktivitätsaufzeichnung auf die neueren Berechtigungen für Aktivitätserkennung, Health-Foreground-Service und hochfrequente Sensoren aus.
+- Erweitert aufgezeichnete Aktivitäten um neuere Trainingstypen und Wiederholungssatz-Details, sofern Health Connect sie bereitstellt.
+- Überarbeitet den Apple-Health-Import in einem eigenen Importpaket mit klareren Parser-/Converter-Tests und breiterer Schreibberechtigungsbehandlung für unterstützte Datensätze.
+- Teilt Dashboard, Einstellungen, manuelle Eingaben, Aktivitätsaufzeichnung, Routenimport, Zeitraumhelfer und Metrikbereiche in kleinere feature-eigene Dateien für sicherere künftige Änderungen.
+- Verschiebt app-lokale Modelle, Insights und Einstellungen in Domain-Pakete und hält HealthRepository auf Verfügbarkeit, Berechtigungen und Dashboard-Aggregation fokussiert.
+
 ## 1.3.0 - 2026-06-09
 
 ### English

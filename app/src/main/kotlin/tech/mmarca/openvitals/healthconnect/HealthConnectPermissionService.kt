@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -293,7 +294,7 @@ internal class HealthConnectPermissionService(
             "features.getFeatureStatus[mindfulness]",
             HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
         ) {
-            clientProvider().features.getFeatureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION)
+            featureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION)
         }
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "mindfulnessFeatureStatus=$status available=$available ${diagnostics.summary()}")
@@ -307,7 +308,7 @@ internal class HealthConnectPermissionService(
             "features.getFeatureStatus[history]",
             HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
         ) {
-            clientProvider().features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY)
+            featureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY)
         }
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "historyFeatureStatus=$status available=$available ${diagnostics.summary()}")
@@ -321,7 +322,7 @@ internal class HealthConnectPermissionService(
             "features.getFeatureStatus[background]",
             HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
         ) {
-            clientProvider().features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
+            featureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
         }
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "backgroundFeatureStatus=$status available=$available ${diagnostics.summary()}")
@@ -347,7 +348,7 @@ internal class HealthConnectPermissionService(
             "features.getFeatureStatus[$logName]",
             HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
         ) {
-            clientProvider().features.getFeatureStatus(feature)
+            featureStatus(feature)
         }
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "${logName}FeatureStatus=$status available=$available ${diagnostics.summary()}")
@@ -391,6 +392,10 @@ internal class HealthConnectPermissionService(
         Log.e(TAG, "Failed $operation ${diagnostics.summary()}", t)
         fallback
     }
+
+    @SuppressLint("WrongConstant")
+    private fun featureStatus(feature: Int): Int =
+        clientProvider().features.getFeatureStatus(feature)
 
     private companion object {
         private const val TAG = "HealthConnectPermissions"
