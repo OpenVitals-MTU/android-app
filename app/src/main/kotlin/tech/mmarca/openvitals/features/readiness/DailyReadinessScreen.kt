@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.readiness
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.SelfImprovement
@@ -67,6 +69,9 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 fun DailyReadinessScreen(
     viewModel: DailyReadinessViewModel,
     onGrantPermissions: () -> Unit,
+    onOpenBodyEnergyDetails: (LocalDate) -> Unit,
+    onOpenTrainingReadinessDetails: (LocalDate) -> Unit,
+    onOpenStressDetails: (LocalDate) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showDatePicker by remember { mutableStateOf(false) }
@@ -95,6 +100,9 @@ fun DailyReadinessScreen(
                     onGrantPermissions()
                 },
                 onDismissPermissionsCallout = viewModel::acknowledgePermissionsCallout,
+                onOpenBodyEnergyDetails = { onOpenBodyEnergyDetails(state.selectedDate) },
+                onOpenTrainingReadinessDetails = { onOpenTrainingReadinessDetails(state.selectedDate) },
+                onOpenStressDetails = { onOpenStressDetails(state.selectedDate) },
             )
             else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
         }
@@ -121,6 +129,9 @@ private fun DailyReadinessContent(
     onOpenCalendar: () -> Unit,
     onGrantPermissions: () -> Unit,
     onDismissPermissionsCallout: () -> Unit,
+    onOpenBodyEnergyDetails: () -> Unit,
+    onOpenTrainingReadinessDetails: () -> Unit,
+    onOpenStressDetails: () -> Unit,
 ) {
     val insight = state.insight ?: return
     Box(
@@ -159,6 +170,9 @@ private fun DailyReadinessContent(
             item {
                 DailyReadinessPanel(
                     insight = insight,
+                    onOpenBodyEnergyDetails = onOpenBodyEnergyDetails,
+                    onOpenTrainingReadinessDetails = onOpenTrainingReadinessDetails,
+                    onOpenStressDetails = onOpenStressDetails,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -169,6 +183,9 @@ private fun DailyReadinessContent(
 @Composable
 private fun DailyReadinessPanel(
     insight: DailyReadinessInsight,
+    onOpenBodyEnergyDetails: () -> Unit,
+    onOpenTrainingReadinessDetails: () -> Unit,
+    onOpenStressDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val accentColor = readinessAccentColor(insight.state)
@@ -246,6 +263,7 @@ private fun DailyReadinessPanel(
                     value = "${insight.bodyEnergyScore}/100",
                     icon = Icons.Outlined.Favorite,
                     color = HeartColor,
+                    onClick = onOpenBodyEnergyDetails,
                     modifier = Modifier.weight(1f),
                 )
                 DailyReadinessMetric(
@@ -253,9 +271,24 @@ private fun DailyReadinessPanel(
                     value = "${insight.trainingReadinessScore}/100",
                     icon = Icons.Outlined.FitnessCenter,
                     color = WorkoutColor,
+                    onClick = onOpenTrainingReadinessDetails,
                     modifier = Modifier.weight(1f),
                 )
             }
+
+            DailyReadinessInlineInfo(
+                label = stringResource(R.string.dashboard_readiness_hrv_status),
+                value = "${insight.hrvStatus.label} · ${insight.hrvStatus.detail}",
+            )
+            DailyReadinessInlineInfo(
+                label = stringResource(R.string.dashboard_readiness_intensity_minutes),
+                value = "${insight.intensityMinutes.label} · ${insight.intensityMinutes.detail}",
+            )
+            DailyReadinessTappableInfo(
+                label = stringResource(R.string.dashboard_readiness_stress_level),
+                value = stressValue(insight),
+                onClick = onOpenStressDetails,
+            )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
 
@@ -330,12 +363,14 @@ private fun DailyReadinessMetric(
     value: String,
     icon: ImageVector,
     color: Color,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(color.copy(alpha = 0.10f))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -346,7 +381,7 @@ private fun DailyReadinessMetric(
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.width(8.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
@@ -357,6 +392,15 @@ private fun DailyReadinessMetric(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (onClick != null) {
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -427,6 +471,45 @@ private fun DailyReadinessInlineInfo(
 }
 
 @Composable
+private fun DailyReadinessTappableInfo(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
 private fun DailyReadinessFactors(
     factors: List<DailyReadinessFactor>,
 ) {
@@ -466,6 +549,12 @@ private fun DailyReadinessFactors(
             }
         }
     }
+}
+
+private fun stressValue(insight: DailyReadinessInsight): String {
+    val stress = insight.physiologicalStress
+    val score = stress.score?.let { " · $it/100" }.orEmpty()
+    return "${stress.label}$score · ${stress.summary}"
 }
 
 @Composable

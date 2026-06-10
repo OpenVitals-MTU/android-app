@@ -153,11 +153,14 @@ class DailyReadinessViewModel @Inject constructor(
 
 private val DailyReadinessMetrics = setOf(
     DashboardMetric.SLEEP,
+    DashboardMetric.WORKOUT,
+    DashboardMetric.AVG_HEART_RATE,
     DashboardMetric.RESTING_HEART_RATE,
     DashboardMetric.HRV,
     DashboardMetric.BODY_TEMPERATURE,
     DashboardMetric.SKIN_TEMPERATURE,
     DashboardMetric.WEEKLY_CARDIO_LOAD,
+    DashboardMetric.INTENSITY_MINUTES,
     DashboardMetric.HYDRATION,
     DashboardMetric.CALORIES_IN,
     DashboardMetric.PROTEIN,

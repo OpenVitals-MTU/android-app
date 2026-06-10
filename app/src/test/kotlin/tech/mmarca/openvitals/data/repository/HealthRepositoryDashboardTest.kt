@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.HeightRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -42,6 +43,8 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeightEntry
+import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.WeightEntry
@@ -59,6 +62,7 @@ class HealthRepositoryDashboardTest {
     private val menstruationPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     private val weightPermission = HealthPermission.getReadPermission(WeightRecord::class)
     private val heightPermission = HealthPermission.getReadPermission(HeightRecord::class)
+    private val heartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
     private val restingHeartRatePermission = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
     private val hrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
 
@@ -421,6 +425,73 @@ class HealthRepositoryDashboardTest {
         }
     }
 
+    @Test fun `weekly intensity minutes use heart rate reserve when available`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val start = Instant.parse("2026-06-02T10:00:00Z")
+        val workout = workout(
+            id = "run-1",
+            start = start.toString(),
+            end = start.plusSeconds(30 * 60L).toString(),
+            duration = Duration.ofMinutes(30),
+        )
+        val samples = listOf(
+            HeartRateSample(
+                time = start.minusSeconds(60 * 60L),
+                beatsPerMinute = 180L,
+                source = "watch",
+            ),
+        ) + (0..30).map { minute ->
+            HeartRateSample(
+                time = start.plusSeconds(minute * 60L),
+                beatsPerMinute = 120L,
+                source = "watch",
+            )
+        }
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(
+            stepsPermission,
+            distancePermission,
+            activeCaloriesPermission,
+            exercisePermission,
+            heartRatePermission,
+            restingHeartRatePermission,
+        )
+        coEvery { hc.grantedPermissions() } returns setOf(
+            stepsPermission,
+            distancePermission,
+            activeCaloriesPermission,
+            exercisePermission,
+            heartRatePermission,
+            restingHeartRatePermission,
+        )
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns emptyList()
+        coEvery { hc.readHeartRateSamples(any(), any()) } returns samples
+        coEvery { hc.readDailyRestingHR(any(), any()) } returns listOf(DailyRestingHR(date, 60L))
+        coEvery { hc.readExerciseSessions(any(), any()) } returns listOf(workout)
+
+        val data = HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.INTENSITY_MINUTES),
+            )
+        )
+
+        assertEquals(30, data.weeklyIntensityMinutes?.moderateEquivalentMinutes)
+        assertEquals(30, data.weeklyIntensityMinutes?.todayModerateEquivalentMinutes)
+        assertEquals(setOf(DashboardMetric.INTENSITY_MINUTES), data.loadedMetrics)
+    }
+
     @Test fun `loadDashboard reads personal baselines for resting heart rate and HRV`() = runTest {
         val date = LocalDate.of(2026, 6, 10)
         val hc = mockk<HealthConnectManager>()
@@ -428,7 +499,18 @@ class HealthRepositoryDashboardTest {
         every { hc.requestableAllPermissions } returns setOf(restingHeartRatePermission, hrvPermission)
         coEvery { hc.grantedPermissions() } returns setOf(restingHeartRatePermission, hrvPermission)
         coEvery { hc.readRestingHeartRate(date) } returns 58L
-        coEvery { hc.readHrvRmssd(date) } returns 48.0
+        coEvery { hc.readHrvSamples(any(), any()) } returns listOf(
+            HrvSample(
+                time = Instant.parse("2026-06-10T05:00:00Z"),
+                rmssdMs = 46.0,
+                source = "watch",
+            ),
+            HrvSample(
+                time = Instant.parse("2026-06-10T06:00:00Z"),
+                rmssdMs = 50.0,
+                source = "watch",
+            ),
+        )
         coEvery { hc.readDailyRestingHR(date.minusDays(28), date.minusDays(1)) } returns listOf(
             DailyRestingHR(date.minusDays(3), 56),
             DailyRestingHR(date.minusDays(2), 57),
@@ -451,6 +533,9 @@ class HealthRepositoryDashboardTest {
         assertEquals(57L, data.restingHeartRateBaselineBpm)
         assertEquals(48.0, data.hrvRmssdMs ?: 0.0, 0.01)
         assertEquals(50.0, data.hrvBaselineRmssdMs ?: 0.0, 0.01)
+        assertEquals(2, data.hrvSampleCount)
+        assertEquals(Instant.parse("2026-06-10T05:00:00Z"), data.hrvSampleStartTime)
+        assertEquals(Instant.parse("2026-06-10T06:00:00Z"), data.hrvSampleEndTime)
     }
 
     private fun sleep(

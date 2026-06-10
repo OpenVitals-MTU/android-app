@@ -103,8 +103,11 @@ import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
+import tech.mmarca.openvitals.features.readiness.BodyEnergyDetailsScreen
 import tech.mmarca.openvitals.features.readiness.DailyReadinessScreen
 import tech.mmarca.openvitals.features.readiness.DailyReadinessViewModel
+import tech.mmarca.openvitals.features.readiness.StressDetailsScreen
+import tech.mmarca.openvitals.features.readiness.TrainingReadinessDetailsScreen
 import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
 import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
@@ -233,6 +236,9 @@ fun AppNavigation(
     val topBarTitle = when (currentRoute) {
         Screen.Dashboard.route -> stringResource(R.string.app_name)
         Screen.DailyReadiness.route -> stringResource(R.string.screen_daily_readiness)
+        Screen.StressDetails.route -> stringResource(R.string.screen_stress_tracking)
+        Screen.BodyEnergyDetails.route -> stringResource(R.string.screen_body_energy)
+        Screen.TrainingReadinessDetails.route -> stringResource(R.string.screen_training_readiness)
         CardioLoadDetailRoute -> stringResource(R.string.metric_cardio_load)
         SleepEfficiencyDetailRoute -> stringResource(R.string.recovery_sleep_efficiency)
         SleepScoreDetailRoute -> stringResource(R.string.recovery_sleep_score)
@@ -436,6 +442,63 @@ fun AppNavigation(
                 val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
                 DailyReadinessScreen(
                     viewModel = dailyReadinessViewModel,
+                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
+                    onOpenBodyEnergyDetails = { date ->
+                        navController.navigate(Screen.BodyEnergyDetails.createRoute(date.toString()))
+                    },
+                    onOpenTrainingReadinessDetails = { date ->
+                        navController.navigate(Screen.TrainingReadinessDetails.createRoute(date.toString()))
+                    },
+                    onOpenStressDetails = { date ->
+                        navController.navigate(Screen.StressDetails.createRoute(date.toString()))
+                    },
+                )
+            }
+
+            composable(
+                route = Screen.BodyEnergyDetails.route,
+                arguments = listOf(navArgument(BODY_ENERGY_DATE_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
+                val selectedDate = entry.arguments
+                    ?.getString(BODY_ENERGY_DATE_ARG)
+                    ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+                    ?: java.time.LocalDate.now()
+                BodyEnergyDetailsScreen(
+                    viewModel = dailyReadinessViewModel,
+                    selectedDate = selectedDate,
+                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
+                )
+            }
+
+            composable(
+                route = Screen.TrainingReadinessDetails.route,
+                arguments = listOf(navArgument(TRAINING_READINESS_DATE_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
+                val selectedDate = entry.arguments
+                    ?.getString(TRAINING_READINESS_DATE_ARG)
+                    ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+                    ?: java.time.LocalDate.now()
+                TrainingReadinessDetailsScreen(
+                    viewModel = dailyReadinessViewModel,
+                    selectedDate = selectedDate,
+                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
+                )
+            }
+
+            composable(
+                route = Screen.StressDetails.route,
+                arguments = listOf(navArgument(STRESS_DATE_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
+                val selectedDate = entry.arguments
+                    ?.getString(STRESS_DATE_ARG)
+                    ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+                    ?: java.time.LocalDate.now()
+                StressDetailsScreen(
+                    viewModel = dailyReadinessViewModel,
+                    selectedDate = selectedDate,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                 )
             }

@@ -12,11 +12,24 @@ const val HYDRATION_ENTRY_ID_ARG = "hydrationEntryId"
 const val MINDFULNESS_ENTRY_ID_ARG = "mindfulnessEntryId"
 const val VITALS_MEASUREMENT_TYPE_ARG = "vitalsMeasurementType"
 const val VITALS_ENTRY_ID_ARG = "vitalsEntryId"
+const val STRESS_DATE_ARG = "stressDate"
+const val BODY_ENERGY_DATE_ARG = "bodyEnergyDate"
+const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
 
 sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
     data object Dashboard : Screen("dashboard")
     data object DailyReadiness : Screen("daily_readiness")
+    data object StressDetails : Screen("daily_readiness/stress/{$STRESS_DATE_ARG}") {
+        fun createRoute(date: String): String = "daily_readiness/stress/${Uri.encode(date)}"
+    }
+    data object BodyEnergyDetails : Screen("daily_readiness/body_energy/{$BODY_ENERGY_DATE_ARG}") {
+        fun createRoute(date: String): String = "daily_readiness/body_energy/${Uri.encode(date)}"
+    }
+    data object TrainingReadinessDetails :
+        Screen("daily_readiness/training_readiness/{$TRAINING_READINESS_DATE_ARG}") {
+        fun createRoute(date: String): String = "daily_readiness/training_readiness/${Uri.encode(date)}"
+    }
     data object ManualEntry : Screen("manual_entry")
     data object HydrationEntry : Screen("manual_entry/hydration")
     data object HydrationEntryEdit : Screen("manual_entry/hydration/edit/{$HYDRATION_ENTRY_ID_ARG}") {

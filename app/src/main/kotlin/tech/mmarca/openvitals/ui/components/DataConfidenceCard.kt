@@ -189,7 +189,6 @@ private fun displaySourceName(packageName: String): String = when {
     packageName.contains("fitbit") -> "Fitbit"
     packageName.contains("opentracks") -> "OpenTracks"
     packageName.contains("strava") -> "Strava"
-    packageName.contains("garmin") -> "Garmin"
     packageName.contains("polar") -> "Polar"
     packageName.contains("google.android.apps.fitness") -> "Google Fit"
     else -> packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }

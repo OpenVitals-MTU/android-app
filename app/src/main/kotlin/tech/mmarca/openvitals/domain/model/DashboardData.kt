@@ -4,6 +4,8 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
+import tech.mmarca.openvitals.domain.insights.DefaultWeeklyIntensityMinutesTarget
+import tech.mmarca.openvitals.domain.insights.IntensityMinutesConfidence
 import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
 
 data class DashboardData(
@@ -23,10 +25,16 @@ data class DashboardData(
     val heightTime: Instant? = null,
     val bmi: Double? = null,
     val avgHeartRateBpm: Long = 0,
+    val heartRateSampleCount: Int = 0,
+    val heartRateSampleStartTime: Instant? = null,
+    val heartRateSampleEndTime: Instant? = null,
     val restingHeartRateBpm: Long = 0,
     val restingHeartRateBaselineBpm: Long? = null,
     val hrvRmssdMs: Double? = null,
     val hrvBaselineRmssdMs: Double? = null,
+    val hrvSampleCount: Int = 0,
+    val hrvSampleStartTime: Instant? = null,
+    val hrvSampleEndTime: Instant? = null,
     val bodyFatPercent: Double = 0.0,
     val leanMassKg: Double? = null,
     val bmrKcal: Double? = null,
@@ -45,6 +53,7 @@ data class DashboardData(
     val latestBloodGlucoseMillimolesPerLiter: Double? = null,
     val latestSkinTemperatureDeltaCelsius: Double? = null,
     val weeklyCardioLoad: DashboardWeeklyCardioLoad? = null,
+    val weeklyIntensityMinutes: DashboardWeeklyIntensityMinutes? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val wheelchairPushes: Long? = null,
@@ -99,6 +108,21 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         },
         bmi = if (DashboardMetric.BMI in other.loadedMetrics) other.bmi else bmi,
         avgHeartRateBpm = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) other.avgHeartRateBpm else avgHeartRateBpm,
+        heartRateSampleCount = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) {
+            other.heartRateSampleCount
+        } else {
+            heartRateSampleCount
+        },
+        heartRateSampleStartTime = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) {
+            other.heartRateSampleStartTime
+        } else {
+            heartRateSampleStartTime
+        },
+        heartRateSampleEndTime = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) {
+            other.heartRateSampleEndTime
+        } else {
+            heartRateSampleEndTime
+        },
         restingHeartRateBpm = if (DashboardMetric.RESTING_HEART_RATE in other.loadedMetrics) {
             other.restingHeartRateBpm
         } else {
@@ -111,6 +135,17 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         },
         hrvRmssdMs = if (DashboardMetric.HRV in other.loadedMetrics) other.hrvRmssdMs else hrvRmssdMs,
         hrvBaselineRmssdMs = if (DashboardMetric.HRV in other.loadedMetrics) other.hrvBaselineRmssdMs else hrvBaselineRmssdMs,
+        hrvSampleCount = if (DashboardMetric.HRV in other.loadedMetrics) other.hrvSampleCount else hrvSampleCount,
+        hrvSampleStartTime = if (DashboardMetric.HRV in other.loadedMetrics) {
+            other.hrvSampleStartTime
+        } else {
+            hrvSampleStartTime
+        },
+        hrvSampleEndTime = if (DashboardMetric.HRV in other.loadedMetrics) {
+            other.hrvSampleEndTime
+        } else {
+            hrvSampleEndTime
+        },
         bodyFatPercent = if (DashboardMetric.BODY_FAT in other.loadedMetrics) other.bodyFatPercent else bodyFatPercent,
         leanMassKg = if (DashboardMetric.LEAN_MASS in other.loadedMetrics) other.leanMassKg else leanMassKg,
         bmrKcal = if (DashboardMetric.BMR in other.loadedMetrics) other.bmrKcal else bmrKcal,
@@ -160,6 +195,11 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
             other.weeklyCardioLoad
         } else {
             weeklyCardioLoad
+        },
+        weeklyIntensityMinutes = if (DashboardMetric.INTENSITY_MINUTES in other.loadedMetrics) {
+            other.weeklyIntensityMinutes
+        } else {
+            weeklyIntensityMinutes
         },
         floorsClimbed = if (DashboardMetric.FLOORS in other.loadedMetrics) other.floorsClimbed else floorsClimbed,
         elevationGainedMeters = if (DashboardMetric.ELEVATION in other.loadedMetrics) {
@@ -220,4 +260,34 @@ data class DashboardWeeklyCardioLoad(
 enum class DashboardWeeklyCardioLoadTargetSource {
     RECENT_HISTORY,
     CURRENT_PACE,
+}
+
+data class DashboardWeeklyIntensityMinutes(
+    val moderateMinutes: Int,
+    val vigorousMinutes: Int,
+    val moderateEquivalentMinutes: Int,
+    val targetMinutes: Int = DefaultWeeklyIntensityMinutesTarget,
+    val todayModerateEquivalentMinutes: Int,
+    val daysElapsed: Int,
+    val confidence: IntensityMinutesConfidence,
+) {
+    val progressFraction: Float
+        get() = if (targetMinutes > 0) {
+            (moderateEquivalentMinutes / targetMinutes.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+    val progressPercent: Int
+        get() = (progressFraction * 100f).roundToInt()
+
+    val expectedByNowMinutes: Int
+        get() = if (targetMinutes > 0) {
+            (targetMinutes * daysElapsed.coerceIn(1, 7) / 7.0).roundToInt().coerceAtLeast(1)
+        } else {
+            0
+        }
+
+    val isOnPace: Boolean
+        get() = moderateEquivalentMinutes >= expectedByNowMinutes
 }

@@ -5,6 +5,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
+import tech.mmarca.openvitals.domain.model.DashboardWeeklyIntensityMinutes
 
 enum class ReadinessState {
     READY,
@@ -42,11 +43,18 @@ enum class ReadinessFactorKind {
     RESTING_HR_ELEVATED,
     RESTING_HR_NORMAL,
     HRV_BELOW_BASELINE,
+    HRV_ABOVE_BASELINE,
     HRV_NORMAL,
     STRESS_HIGH,
     STRESS_LOW,
     TRAINING_LOAD_HIGH,
     TRAINING_LOAD_NORMAL,
+    INTENSITY_MINUTES_ON_TARGET,
+    INTENSITY_MINUTES_BEHIND,
+    MISSING_INTENSITY_MINUTES,
+    PHYSIOLOGICAL_STRESS_HIGH,
+    PHYSIOLOGICAL_STRESS_LOW,
+    MISSING_STRESS_DATA,
     TEMPERATURE_ELEVATED,
     HYDRATION_LOW,
     NUTRITION_LOGGED,
@@ -54,6 +62,43 @@ enum class ReadinessFactorKind {
     MISSING_HRV_DATA,
     NEW_USER_NOT_ENOUGH_BASELINE,
 }
+
+enum class HrvStatus {
+    BALANCED,
+    LOW,
+    HIGH,
+    UNUSUALLY_LOW,
+    UNUSUALLY_HIGH,
+    NEEDS_MORE_HRV,
+}
+
+data class HrvStatusInsight(
+    val status: HrvStatus,
+    val label: String,
+    val detail: String,
+    val currentRmssdMs: Double?,
+    val baselineRmssdMs: Double?,
+    val percentFromBaseline: Int?,
+)
+
+enum class IntensityMinutesStatus {
+    GOAL_MET,
+    ON_TRACK,
+    BEHIND,
+    LOW,
+    NEEDS_MORE_DATA,
+}
+
+data class IntensityMinutesReadinessInsight(
+    val status: IntensityMinutesStatus,
+    val label: String,
+    val detail: String,
+    val moderateEquivalentMinutes: Int?,
+    val targetMinutes: Int,
+    val todayModerateEquivalentMinutes: Int?,
+    val progressPercent: Int,
+    val confidence: IntensityMinutesConfidence,
+)
 
 data class DailyReadinessGoalInputs(
     val stepsGoal: Double = 8_000.0,
@@ -85,9 +130,149 @@ data class DailyReadinessInsight(
     val adaptiveGoal: String,
     val confidence: ReadinessConfidence,
     val confidenceReason: String,
+    val hrvStatus: HrvStatusInsight,
+    val intensityMinutes: IntensityMinutesReadinessInsight,
+    val physiologicalStress: PhysiologicalStressEstimate,
     val factors: List<DailyReadinessFactor>,
     val recoveryModeSuggested: Boolean,
 )
+
+fun calculateHrvStatus(
+    hrvRmssdMs: Double?,
+    baselineRmssdMs: Double?,
+    hasHrvData: Boolean,
+): HrvStatusInsight {
+    if (!hasHrvData || hrvRmssdMs == null || hrvRmssdMs <= 0.0) {
+        return HrvStatusInsight(
+            status = HrvStatus.NEEDS_MORE_HRV,
+            label = "Needs more HRV",
+            detail = "HRV was not available for this day.",
+            currentRmssdMs = hrvRmssdMs,
+            baselineRmssdMs = baselineRmssdMs,
+            percentFromBaseline = null,
+        )
+    }
+    if (baselineRmssdMs == null || baselineRmssdMs <= 0.0) {
+        return HrvStatusInsight(
+            status = HrvStatus.NEEDS_MORE_HRV,
+            label = "Needs more HRV",
+            detail = "HRV is recorded, but there is not enough history yet for a personal baseline.",
+            currentRmssdMs = hrvRmssdMs,
+            baselineRmssdMs = baselineRmssdMs,
+            percentFromBaseline = null,
+        )
+    }
+
+    val percent = ((hrvRmssdMs - baselineRmssdMs) / baselineRmssdMs * 100.0).roundToInt()
+    val status = when {
+        percent <= -30 -> HrvStatus.UNUSUALLY_LOW
+        percent <= -15 -> HrvStatus.LOW
+        percent >= 30 -> HrvStatus.UNUSUALLY_HIGH
+        percent >= 15 -> HrvStatus.HIGH
+        else -> HrvStatus.BALANCED
+    }
+    val label = when (status) {
+        HrvStatus.BALANCED -> "Balanced"
+        HrvStatus.LOW -> "Low"
+        HrvStatus.HIGH -> "High"
+        HrvStatus.UNUSUALLY_LOW -> "Unusually low"
+        HrvStatus.UNUSUALLY_HIGH -> "Unusually high"
+        HrvStatus.NEEDS_MORE_HRV -> "Needs more HRV"
+    }
+    val comparison = when {
+        percent == 0 -> "near your usual baseline"
+        percent > 0 -> "$percent% above your usual baseline"
+        else -> "${abs(percent)}% below your usual baseline"
+    }
+    val detail = when (status) {
+        HrvStatus.BALANCED -> "HRV is $comparison."
+        HrvStatus.LOW -> "HRV is $comparison, which can point to incomplete recovery."
+        HrvStatus.HIGH -> "HRV is $comparison. Higher HRV can be positive when other signals agree."
+        HrvStatus.UNUSUALLY_LOW -> "HRV is $comparison, outside your usual range."
+        HrvStatus.UNUSUALLY_HIGH -> "HRV is $comparison, outside your usual range."
+        HrvStatus.NEEDS_MORE_HRV -> "HRV status needs more data."
+    }
+    return HrvStatusInsight(
+        status = status,
+        label = label,
+        detail = detail,
+        currentRmssdMs = hrvRmssdMs,
+        baselineRmssdMs = baselineRmssdMs,
+        percentFromBaseline = percent,
+    )
+}
+
+fun calculateIntensityMinutesReadiness(
+    weeklyIntensityMinutes: DashboardWeeklyIntensityMinutes?,
+    hasIntensityData: Boolean,
+): IntensityMinutesReadinessInsight {
+    if (!hasIntensityData || weeklyIntensityMinutes == null ||
+        weeklyIntensityMinutes.confidence == IntensityMinutesConfidence.NO_DATA
+    ) {
+        return IntensityMinutesReadinessInsight(
+            status = IntensityMinutesStatus.NEEDS_MORE_DATA,
+            label = "Needs more data",
+            detail = "Intensity minutes need workouts, heart rate, active calories, or activity load history.",
+            moderateEquivalentMinutes = null,
+            targetMinutes = DefaultWeeklyIntensityMinutesTarget,
+            todayModerateEquivalentMinutes = null,
+            progressPercent = 0,
+            confidence = IntensityMinutesConfidence.NO_DATA,
+        )
+    }
+
+    val minutes = weeklyIntensityMinutes.moderateEquivalentMinutes
+    val target = weeklyIntensityMinutes.targetMinutes
+    val status = when {
+        target > 0 && minutes >= target -> IntensityMinutesStatus.GOAL_MET
+        weeklyIntensityMinutes.isOnPace -> IntensityMinutesStatus.ON_TRACK
+        target > 0 && minutes >= target * 0.5 -> IntensityMinutesStatus.BEHIND
+        else -> IntensityMinutesStatus.LOW
+    }
+    val label = when (status) {
+        IntensityMinutesStatus.GOAL_MET -> "Goal met"
+        IntensityMinutesStatus.ON_TRACK -> "On track"
+        IntensityMinutesStatus.BEHIND -> "Behind pace"
+        IntensityMinutesStatus.LOW -> "Low"
+        IntensityMinutesStatus.NEEDS_MORE_DATA -> "Needs more data"
+    }
+    val confidenceText = when (weeklyIntensityMinutes.confidence) {
+        IntensityMinutesConfidence.HIGH -> "high confidence"
+        IntensityMinutesConfidence.MEDIUM -> "medium confidence"
+        IntensityMinutesConfidence.LOW -> "low confidence estimate"
+        IntensityMinutesConfidence.NO_DATA -> "no data"
+    }
+    val todayText = if (weeklyIntensityMinutes.todayModerateEquivalentMinutes > 0) {
+        " Today added ${weeklyIntensityMinutes.todayModerateEquivalentMinutes}."
+    } else {
+        ""
+    }
+    val detail = when (status) {
+        IntensityMinutesStatus.GOAL_MET -> {
+            "$minutes/$target moderate-equivalent min this week; vigorous minutes count double.$todayText"
+        }
+        IntensityMinutesStatus.ON_TRACK -> {
+            "$minutes/$target moderate-equivalent min this week, on pace for day ${weeklyIntensityMinutes.daysElapsed}."
+        }
+        IntensityMinutesStatus.BEHIND -> {
+            "$minutes/$target moderate-equivalent min this week; expected about ${weeklyIntensityMinutes.expectedByNowMinutes} by now."
+        }
+        IntensityMinutesStatus.LOW -> {
+            "$minutes/$target moderate-equivalent min this week; add easy aerobic work if recovery allows."
+        }
+        IntensityMinutesStatus.NEEDS_MORE_DATA -> "Intensity minutes need more data."
+    }
+    return IntensityMinutesReadinessInsight(
+        status = status,
+        label = label,
+        detail = "$detail $confidenceText.",
+        moderateEquivalentMinutes = minutes,
+        targetMinutes = target,
+        todayModerateEquivalentMinutes = weeklyIntensityMinutes.todayModerateEquivalentMinutes,
+        progressPercent = weeklyIntensityMinutes.progressPercent,
+        confidence = weeklyIntensityMinutes.confidence,
+    )
+}
 
 fun calculateDailyReadiness(
     data: DashboardData,
@@ -181,51 +366,73 @@ fun calculateDailyReadiness(
 
     val hrv = data.hrvRmssdMs
     val hrvBaseline = data.hrvBaselineRmssdMs
+    val hrvStatus = calculateHrvStatus(
+        hrvRmssdMs = hrv,
+        baselineRmssdMs = hrvBaseline,
+        hasHrvData = DashboardMetric.HRV in data.loadedMetrics,
+    )
     if (DashboardMetric.HRV in data.loadedMetrics && hrv != null && hrv > 0.0) {
         availableSignals += 1
         if (hrvBaseline != null && hrvBaseline > 0.0) {
             baselineSignals += 1
-            val percent = ((hrv - hrvBaseline) / hrvBaseline * 100.0).roundToInt()
-            val detail = when {
-                percent == 0 -> "HRV is near your usual baseline."
-                percent > 0 -> "HRV is $percent% above your usual baseline."
-                else -> "HRV is ${abs(percent)}% below your usual baseline."
-            }
-            when {
-                percent <= -25 -> {
+            when (hrvStatus.status) {
+                HrvStatus.UNUSUALLY_LOW -> {
                     score -= 17
                     bodyEnergyScore -= 11
                     trainingReadinessScore -= 19
                     elevatedBodySignals += 1
                     addFactor(
                         kind = ReadinessFactorKind.HRV_BELOW_BASELINE,
-                        label = "HRV is below baseline",
-                        detail = detail,
+                        label = "HRV Status: ${hrvStatus.label}",
+                        detail = hrvStatus.detail,
                         impact = ReadinessFactorImpact.WARNING,
                     )
                 }
-                percent <= -10 -> {
+                HrvStatus.LOW -> {
                     score -= 8
                     bodyEnergyScore -= 5
                     trainingReadinessScore -= 10
                     addFactor(
                         kind = ReadinessFactorKind.HRV_BELOW_BASELINE,
-                        label = "HRV is a bit low",
-                        detail = detail,
+                        label = "HRV Status: ${hrvStatus.label}",
+                        detail = hrvStatus.detail,
                         impact = ReadinessFactorImpact.NEGATIVE,
                     )
                 }
-                else -> {
+                HrvStatus.UNUSUALLY_HIGH -> {
+                    score -= 4
+                    bodyEnergyScore -= 2
+                    trainingReadinessScore -= 3
+                    addFactor(
+                        kind = ReadinessFactorKind.HRV_ABOVE_BASELINE,
+                        label = "HRV Status: ${hrvStatus.label}",
+                        detail = hrvStatus.detail,
+                        impact = ReadinessFactorImpact.NEGATIVE,
+                    )
+                }
+                HrvStatus.HIGH -> {
+                    score += 3
+                    bodyEnergyScore += 2
+                    trainingReadinessScore += 3
+                    addFactor(
+                        kind = ReadinessFactorKind.HRV_ABOVE_BASELINE,
+                        label = "HRV Status: ${hrvStatus.label}",
+                        detail = hrvStatus.detail,
+                        impact = ReadinessFactorImpact.POSITIVE,
+                    )
+                }
+                HrvStatus.BALANCED -> {
                     score += 5
                     bodyEnergyScore += 3
                     trainingReadinessScore += 6
                     addFactor(
                         kind = ReadinessFactorKind.HRV_NORMAL,
-                        label = "HRV is normal",
-                        detail = detail,
+                        label = "HRV Status: ${hrvStatus.label}",
+                        detail = hrvStatus.detail,
                         impact = ReadinessFactorImpact.POSITIVE,
                     )
                 }
+                HrvStatus.NEEDS_MORE_HRV -> Unit
             }
         } else {
             missingReasons += "new_user_not_enough_baseline"
@@ -304,6 +511,12 @@ fun calculateDailyReadiness(
         }
     }
 
+    val intensityMinutes = calculateIntensityMinutesReadiness(
+        weeklyIntensityMinutes = data.weeklyIntensityMinutes,
+        hasIntensityData = DashboardMetric.INTENSITY_MINUTES in data.loadedMetrics,
+    )
+    val physiologicalStress = calculatePhysiologicalStress(data)
+
     data.weeklyCardioLoad?.let { load ->
         availableSignals += 1
         val ratio = if (load.targetScore > 0) {
@@ -343,6 +556,97 @@ fun calculateDailyReadiness(
                     impact = ReadinessFactorImpact.NEUTRAL,
                 )
             }
+        }
+    }
+
+    if (DashboardMetric.INTENSITY_MINUTES in data.loadedMetrics) {
+        if (data.weeklyIntensityMinutes != null &&
+            data.weeklyIntensityMinutes.confidence != IntensityMinutesConfidence.NO_DATA
+        ) {
+            availableSignals += 1
+            when (intensityMinutes.status) {
+                IntensityMinutesStatus.GOAL_MET -> {
+                    score += 3
+                    trainingReadinessScore += 6
+                    addFactor(
+                        kind = ReadinessFactorKind.INTENSITY_MINUTES_ON_TARGET,
+                        label = "Intensity minutes goal met",
+                        detail = intensityMinutes.detail,
+                        impact = ReadinessFactorImpact.POSITIVE,
+                    )
+                }
+                IntensityMinutesStatus.ON_TRACK -> {
+                    score += 2
+                    trainingReadinessScore += 4
+                    addFactor(
+                        kind = ReadinessFactorKind.INTENSITY_MINUTES_ON_TARGET,
+                        label = "Intensity minutes on track",
+                        detail = intensityMinutes.detail,
+                        impact = ReadinessFactorImpact.POSITIVE,
+                    )
+                }
+                IntensityMinutesStatus.BEHIND -> {
+                    addFactor(
+                        kind = ReadinessFactorKind.INTENSITY_MINUTES_BEHIND,
+                        label = "Intensity minutes behind pace",
+                        detail = intensityMinutes.detail,
+                        impact = ReadinessFactorImpact.NEUTRAL,
+                    )
+                }
+                IntensityMinutesStatus.LOW -> {
+                    trainingReadinessScore -= 2
+                    addFactor(
+                        kind = ReadinessFactorKind.INTENSITY_MINUTES_BEHIND,
+                        label = "Intensity minutes are low",
+                        detail = intensityMinutes.detail,
+                        impact = ReadinessFactorImpact.NEUTRAL,
+                    )
+                }
+                IntensityMinutesStatus.NEEDS_MORE_DATA -> Unit
+            }
+        } else {
+            addFactor(
+                kind = ReadinessFactorKind.MISSING_INTENSITY_MINUTES,
+                label = "Intensity minutes need more data",
+                detail = intensityMinutes.detail,
+                impact = ReadinessFactorImpact.NEUTRAL,
+            )
+        }
+    }
+
+    when (physiologicalStress.level) {
+        PhysiologicalStressLevel.HIGH -> {
+            addFactor(
+                kind = ReadinessFactorKind.PHYSIOLOGICAL_STRESS_HIGH,
+                label = "Physiological stress: ${physiologicalStress.label}",
+                detail = physiologicalStress.summary,
+                impact = ReadinessFactorImpact.WARNING,
+            )
+        }
+        PhysiologicalStressLevel.MEDIUM -> {
+            addFactor(
+                kind = ReadinessFactorKind.PHYSIOLOGICAL_STRESS_HIGH,
+                label = "Physiological stress: ${physiologicalStress.label}",
+                detail = physiologicalStress.summary,
+                impact = ReadinessFactorImpact.NEGATIVE,
+            )
+        }
+        PhysiologicalStressLevel.RESTING,
+        PhysiologicalStressLevel.LOW -> {
+            addFactor(
+                kind = ReadinessFactorKind.PHYSIOLOGICAL_STRESS_LOW,
+                label = "Physiological stress: ${physiologicalStress.label}",
+                detail = physiologicalStress.summary,
+                impact = ReadinessFactorImpact.POSITIVE,
+            )
+        }
+        PhysiologicalStressLevel.NEEDS_MORE_DATA -> {
+            addFactor(
+                kind = ReadinessFactorKind.MISSING_STRESS_DATA,
+                label = "Physiological stress needs more data",
+                detail = physiologicalStress.summary,
+                impact = ReadinessFactorImpact.NEUTRAL,
+            )
         }
     }
 
@@ -478,6 +782,9 @@ fun calculateDailyReadiness(
         adaptiveGoal = adaptiveGoalFor(state, goals),
         confidence = confidence,
         confidenceReason = confidenceReason,
+        hrvStatus = hrvStatus,
+        intensityMinutes = intensityMinutes,
+        physiologicalStress = physiologicalStress,
         factors = factors.sortedWith(compareByDescending<DailyReadinessFactor> { it.impact.priority }.thenBy { it.label }),
         recoveryModeSuggested = state == ReadinessState.REST || clampedScore < 35,
     )
@@ -526,6 +833,8 @@ private fun explanationFor(
         .filterNot {
             it.kind == ReadinessFactorKind.MISSING_SLEEP_DATA ||
                 it.kind == ReadinessFactorKind.MISSING_HRV_DATA ||
+                it.kind == ReadinessFactorKind.MISSING_INTENSITY_MINUTES ||
+                it.kind == ReadinessFactorKind.MISSING_STRESS_DATA ||
                 it.kind == ReadinessFactorKind.NEW_USER_NOT_ENOUGH_BASELINE
         }
         .sortedByDescending { it.impact.priority }

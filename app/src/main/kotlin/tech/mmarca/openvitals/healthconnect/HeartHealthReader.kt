@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.HrvSample
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -117,16 +118,28 @@ internal class HeartHealthReader(
     suspend fun readHrvRmssd(date: LocalDate): Double? {
         val (start, end) = support.dayRange(date)
         return support.withNullableLogging("readHrvRmssd[$date][$start..$end]") {
-            val records = support.client().readRecordsPaged(
+            readHrvSamples(start, end)
+                .takeIf { it.isNotEmpty() }
+                ?.map { it.rmssdMs }
+                ?.average()
+        }
+    }
+
+    suspend fun readHrvSamples(start: Instant, end: Instant): List<HrvSample> =
+        support.withLogging("readHrvSamples[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
                 recordType = HeartRateVariabilityRmssdRecord::class,
                 timeRangeFilter = TimeRangeFilter.between(start, end),
                 ascendingOrder = true,
                 pageSize = 100,
-            )
-            if (records.isEmpty()) null
-            else records.map { it.heartRateVariabilityMillis }.average()
+            ).map { record ->
+                HrvSample(
+                    time = record.time,
+                    rmssdMs = record.heartRateVariabilityMillis,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
         }
-    }
 
     suspend fun readDailyHRV(startDate: LocalDate, endDate: LocalDate): List<DailyHrv> {
         val zone = ZoneId.systemDefault()

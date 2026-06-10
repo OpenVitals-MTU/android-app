@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
 import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoadTargetSource
+import tech.mmarca.openvitals.domain.model.DashboardWeeklyIntensityMinutes
 import tech.mmarca.openvitals.domain.model.SleepData
 
 class DailyReadinessTest {
@@ -27,13 +28,17 @@ class DailyReadinessTest {
                 restingHeartRateBaselineBpm = 58,
                 hrvRmssdMs = 62.0,
                 hrvBaselineRmssdMs = 56.0,
+                avgHeartRateBpm = 68,
                 weeklyCardioLoad = weeklyLoad(current = 90, target = 100, today = 12),
+                weeklyIntensityMinutes = weeklyIntensity(minutes = 160, today = 34),
                 mindfulnessMinutes = 10,
                 loadedMetrics = setOf(
                     DashboardMetric.SLEEP,
+                    DashboardMetric.AVG_HEART_RATE,
                     DashboardMetric.RESTING_HEART_RATE,
                     DashboardMetric.HRV,
                     DashboardMetric.WEEKLY_CARDIO_LOAD,
+                    DashboardMetric.INTENSITY_MINUTES,
                     DashboardMetric.MINDFULNESS,
                 ),
             )
@@ -42,8 +47,12 @@ class DailyReadinessTest {
         assertEquals(ReadinessState.READY, insight.state)
         assertEquals(ReadinessRecommendationType.HARD_TRAINING, insight.recommendationType)
         assertEquals(ReadinessConfidence.HIGH, insight.confidence)
+        assertEquals(HrvStatus.BALANCED, insight.hrvStatus.status)
+        assertEquals(IntensityMinutesStatus.GOAL_MET, insight.intensityMinutes.status)
+        assertEquals(PhysiologicalStressLevel.RESTING, insight.physiologicalStress.level)
         assertTrue(insight.score >= 80)
         assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.HRV_NORMAL })
+        assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.INTENSITY_MINUTES_ON_TARGET })
         assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.RESTING_HR_NORMAL })
     }
 
@@ -58,9 +67,11 @@ class DailyReadinessTest {
                 restingHeartRateBaselineBpm = 58,
                 hrvRmssdMs = 35.0,
                 hrvBaselineRmssdMs = 55.0,
+                avgHeartRateBpm = 94,
                 weeklyCardioLoad = weeklyLoad(current = 145, target = 100, today = 20),
                 loadedMetrics = setOf(
                     DashboardMetric.SLEEP,
+                    DashboardMetric.AVG_HEART_RATE,
                     DashboardMetric.RESTING_HEART_RATE,
                     DashboardMetric.HRV,
                     DashboardMetric.WEEKLY_CARDIO_LOAD,
@@ -70,10 +81,48 @@ class DailyReadinessTest {
 
         assertEquals(ReadinessState.REST, insight.state)
         assertEquals(ReadinessRecommendationType.REST, insight.recommendationType)
+        assertEquals(HrvStatus.UNUSUALLY_LOW, insight.hrvStatus.status)
+        assertEquals(PhysiologicalStressLevel.HIGH, insight.physiologicalStress.level)
         assertTrue(insight.recoveryModeSuggested)
         assertTrue(insight.score < 40)
         assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.STRESS_HIGH })
         assertTrue(insight.recommendation.contains("Avoid intense training"))
+    }
+
+    @Test
+    fun hrvStatusUsesPersonalBaselineThresholds() {
+        assertEquals(
+            HrvStatus.BALANCED,
+            calculateHrvStatus(hrvRmssdMs = 51.0, baselineRmssdMs = 50.0, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.LOW,
+            calculateHrvStatus(hrvRmssdMs = 42.0, baselineRmssdMs = 50.0, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.UNUSUALLY_LOW,
+            calculateHrvStatus(hrvRmssdMs = 34.0, baselineRmssdMs = 50.0, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.HIGH,
+            calculateHrvStatus(hrvRmssdMs = 58.0, baselineRmssdMs = 50.0, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.UNUSUALLY_HIGH,
+            calculateHrvStatus(hrvRmssdMs = 66.0, baselineRmssdMs = 50.0, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.NEEDS_MORE_HRV,
+            calculateHrvStatus(hrvRmssdMs = null, baselineRmssdMs = 50.0, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.NEEDS_MORE_HRV,
+            calculateHrvStatus(hrvRmssdMs = 50.0, baselineRmssdMs = null, hasHrvData = true).status,
+        )
+        assertEquals(
+            HrvStatus.NEEDS_MORE_HRV,
+            calculateHrvStatus(hrvRmssdMs = 50.0, baselineRmssdMs = 50.0, hasHrvData = false).status,
+        )
     }
 
     @Test
@@ -101,6 +150,38 @@ class DailyReadinessTest {
         assertEquals(ReadinessRecommendationType.CHECK_SYMPTOMS, insight.recommendationType)
         assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.TEMPERATURE_ELEVATED })
         assertTrue(insight.recommendation.contains("If you feel unwell"))
+    }
+
+    @Test
+    fun intensityMinutesReadinessUsesWeeklyPace() {
+        assertEquals(
+            IntensityMinutesStatus.GOAL_MET,
+            calculateIntensityMinutesReadiness(
+                weeklyIntensityMinutes = weeklyIntensity(minutes = 151, today = 20),
+                hasIntensityData = true,
+            ).status,
+        )
+        assertEquals(
+            IntensityMinutesStatus.ON_TRACK,
+            calculateIntensityMinutesReadiness(
+                weeklyIntensityMinutes = weeklyIntensity(minutes = 70, today = 10, daysElapsed = 3),
+                hasIntensityData = true,
+            ).status,
+        )
+        assertEquals(
+            IntensityMinutesStatus.BEHIND,
+            calculateIntensityMinutesReadiness(
+                weeklyIntensityMinutes = weeklyIntensity(minutes = 90, today = 0, daysElapsed = 6),
+                hasIntensityData = true,
+            ).status,
+        )
+        assertEquals(
+            IntensityMinutesStatus.NEEDS_MORE_DATA,
+            calculateIntensityMinutesReadiness(
+                weeklyIntensityMinutes = null,
+                hasIntensityData = true,
+            ).status,
+        )
     }
 
     @Test
@@ -132,6 +213,7 @@ class DailyReadinessTest {
 
         assertEquals(ReadinessConfidence.LOW, insight.confidence)
         assertEquals("new_user_not_enough_baseline", insight.confidenceReason)
+        assertEquals(HrvStatus.NEEDS_MORE_HRV, insight.hrvStatus.status)
         assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.NEW_USER_NOT_ENOUGH_BASELINE })
     }
 
@@ -166,5 +248,20 @@ class DailyReadinessTest {
             todayScore = today,
             confidence = CardioLoadConfidence.HIGH,
             targetSource = DashboardWeeklyCardioLoadTargetSource.RECENT_HISTORY,
+        )
+
+    private fun weeklyIntensity(
+        minutes: Int,
+        today: Int,
+        daysElapsed: Int = 7,
+        confidence: IntensityMinutesConfidence = IntensityMinutesConfidence.HIGH,
+    ): DashboardWeeklyIntensityMinutes =
+        DashboardWeeklyIntensityMinutes(
+            moderateMinutes = minutes,
+            vigorousMinutes = 0,
+            moderateEquivalentMinutes = minutes,
+            todayModerateEquivalentMinutes = today,
+            daysElapsed = daysElapsed,
+            confidence = confidence,
         )
 }

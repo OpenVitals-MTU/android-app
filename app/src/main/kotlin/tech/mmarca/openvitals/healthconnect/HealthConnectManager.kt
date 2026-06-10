@@ -33,6 +33,7 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HeightEntry
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.IntermenstrualBleedingEntry
@@ -350,6 +351,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readHrvRmssd(date: LocalDate): Double? =
         heartReader.readHrvRmssd(date)
+
+    suspend fun readHrvSamples(start: Instant, end: Instant): List<HrvSample> =
+        heartReader.readHrvSamples(start, end)
 
     suspend fun readDailyHRV(startDate: LocalDate, endDate: LocalDate): List<DailyHrv> =
         heartReader.readDailyHRV(startDate, endDate)

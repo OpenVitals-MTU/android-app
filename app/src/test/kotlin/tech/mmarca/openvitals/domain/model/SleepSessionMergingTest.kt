@@ -122,8 +122,8 @@ class SleepSessionMergingTest {
             end = "2026-05-06T04:07:00Z",
         )
         val second = sleep(
-            id = "garmin",
-            source = "garmin",
+            id = "watch",
+            source = "watch",
             start = "2026-05-06T04:22:00Z",
             end = "2026-05-06T07:03:00Z",
         )

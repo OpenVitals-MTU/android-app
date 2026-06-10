@@ -47,6 +47,7 @@ enum class DashboardMetric {
     BLOOD_GLUCOSE,
     SKIN_TEMPERATURE,
     WEEKLY_CARDIO_LOAD,
+    INTENSITY_MINUTES,
     MINDFULNESS,
     CYCLE,
 }
