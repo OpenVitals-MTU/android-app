@@ -46,8 +46,8 @@ steps:
             "" \
             "Distribution flow:" \
             "- Codeberg prerelease with signed APK and signed Android App Bundle assets" \
-            "- Google Play open testing track" \
-            "- Production promotion after approved Woodpecker deployment" \
+            "- Codeberg stable release after approved Woodpecker deployment" \
+            "- Google Play open testing and production promotion are temporarily skipped" \
             "" \
             "Assets:" \
             "- Signed release APK" \
@@ -147,7 +147,7 @@ steps:
           aab:".woodpecker/tmp/OpenVitals-$${release_tag}.aab" \
           version_code:"$${version_code}"
     when:
-      - event: tag
+      - evaluate: 'false'
 
   - name: publish-codeberg-beta
     image: woodpeckerci/plugin-release
@@ -195,12 +195,11 @@ steps:
           json_key:"$${play_key_path}" \
           version_code:"$${version_code}"
     when:
-      - event: deployment
-        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
+      - evaluate: 'false'
 
   - name: publish-codeberg-stable
     depends_on:
-      - promote-play-production
+      - resolve-release-context
     image: alpine:3.20
     environment:
       CODEBERG_RELEASE_API_KEY:
