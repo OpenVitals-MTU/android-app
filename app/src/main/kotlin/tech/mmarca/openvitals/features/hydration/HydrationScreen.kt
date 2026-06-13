@@ -5,6 +5,8 @@ import android.os.Build
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,9 +29,11 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -47,7 +51,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -185,6 +192,7 @@ fun HydrationScreen(
                     data = state.dailyHydration,
                     selectedRange = state.selectedRange,
                     period = period,
+                    dailyGoalLiters = state.dailyGoalLiters,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
@@ -785,12 +793,24 @@ private fun HydrationHistoryChart(
     data: List<DailyHydration>,
     selectedRange: TimeRange,
     period: DatePeriod,
+    dailyGoalLiters: Double,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     selectedDate: LocalDate? = null,
     onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
+    if (selectedRange == TimeRange.DAY) {
+        HydrationDayGoalProgress(
+            liters = data.sumOf { it.liters },
+            dailyGoalLiters = dailyGoalLiters,
+            period = period,
+            unitFormatter = unitFormatter,
+            modifier = modifier,
+        )
+        return
+    }
+
     val values = data.map { PeriodChartValue(date = it.date, value = it.liters) }
     val summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
         unitFormatter.hydration(data.sumOf { it.liters }).text
@@ -813,6 +833,77 @@ private fun HydrationHistoryChart(
         onDateSelected = onDateSelected,
         valueFormatter = { unitFormatter.hydration(it).text },
     )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun HydrationDayGoalProgress(
+    liters: Double,
+    dailyGoalLiters: Double,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val hydration = unitFormatter.hydration(liters)
+    val goal = unitFormatter.hydration(dailyGoalLiters)
+    val targetProgress = if (dailyGoalLiters > 0.0) {
+        (liters / dailyGoalLiters).toFloat().coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val progress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = tween(durationMillis = 650),
+        label = "HydrationDetailDayGoalProgress",
+    )
+    val strokeWidth = with(LocalDensity.current) { 5.dp.toPx() }
+    val progressStroke = remember(strokeWidth) {
+        Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.metric_hydration_trend),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = localizedPeriodTitle(TimeRange.DAY, period),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${hydration.text} / ${goal.text}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            LinearWavyProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(18.dp),
+                color = HydrationColor.copy(alpha = 0.86f),
+                trackColor = MaterialTheme.colorScheme.outlineVariant,
+                stroke = progressStroke,
+                trackStroke = progressStroke,
+                wavelength = 34.dp,
+                waveSpeed = 34.dp,
+            )
+        }
+    }
 }
 
 private fun LazyListScope.hydrationWeightInsight(
