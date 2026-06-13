@@ -185,13 +185,6 @@ private fun HydrationTrackerCard(
                 unitFormatter = unitFormatter,
             )
 
-            HydrationBeverageCarousel(
-                beverages = state.beverageOptions,
-                selectedBeverage = state.selectedBeverage,
-                isSavingEntry = state.isSavingEntry,
-                onSelectBeverage = onSelectBeverage,
-            )
-
             HydrationContainerCarousel(
                 options = state.containerOptions,
                 selectedContainer = state.selectedContainer,
@@ -199,6 +192,13 @@ private fun HydrationTrackerCard(
                 isSavingEntry = state.isSavingEntry,
                 onSelectContainer = onSelectContainer,
                 onUpdateContainerSize = onUpdateContainerSize,
+            )
+
+            HydrationBeverageCarousel(
+                beverages = state.beverageOptions,
+                selectedBeverage = state.selectedBeverage,
+                isSavingEntry = state.isSavingEntry,
+                onSelectBeverage = onSelectBeverage,
             )
 
             Button(
