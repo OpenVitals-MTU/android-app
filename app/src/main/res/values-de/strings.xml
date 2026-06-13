@@ -831,6 +831,8 @@
     <string name="onboarding_category_nutrition_hydration_desc">Wasseraufnahme, Kalorienaufnahme, Mahlzeiten und Makros.</string>
     <string name="onboarding_category_manual_entry_write">Schreibzugriff für manuelle Einträge</string>
     <string name="onboarding_category_manual_entry_write_desc">Ermöglicht OpenVitals, Hydrierungs-, Aktivitäts-, Körper-, Vitalwert- und Achtsamkeitseinträge, die du erstellst, in Health Connect zu speichern.</string>
+    <string name="onboarding_category_data_import_write">Schreibzugriff für Datenimporte</string>
+    <string name="onboarding_category_data_import_write_desc">Ermöglicht OpenVitals, unterstützte importierte Datensätze, z. B. Apple-Health-Exporte, in Health Connect zu schreiben.</string>
     <string name="onboarding_category_mindfulness">Achtsamkeit</string>
     <string name="onboarding_category_mindfulness_desc">Dauer und Verlauf von Achtsamkeitssitzungen.</string>
     <string name="onboarding_category_mindfulness_unavailable">Achtsamkeitssitzungen erfordern eine neuere Health-Connect-Version.</string>

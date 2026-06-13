@@ -250,7 +250,8 @@ internal class HealthConnectPermissionService(
             phase3Permissions +
             phase4Permissions +
             additionalDataAccessPermissions +
-            requestableWritePermissions
+            requestableWritePermissions +
+            dataImportWritePermissions
 
     val requestableManagedPermissions: Set<String>
         get() = onboardingRequestablePermissions + phase4Permissions

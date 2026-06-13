@@ -178,6 +178,7 @@ class OnboardingViewModelTest {
                 "vitals",
                 "cycle",
                 "write",
+                "import_write",
             ),
             vm.onboardingPermissions,
         )
@@ -199,6 +200,7 @@ class OnboardingViewModelTest {
                 R.string.onboarding_category_activity_extras,
                 R.string.onboarding_category_nutrition_hydration,
                 R.string.onboarding_category_manual_entry_write,
+                R.string.onboarding_category_data_import_write,
                 R.string.onboarding_category_mindfulness,
                 R.string.onboarding_category_additional_data_access,
                 R.string.onboarding_category_vitals,
@@ -214,6 +216,7 @@ class OnboardingViewModelTest {
             categories.single { it.id == "additional_data_access" }.permissions,
         )
         assertEquals(setOf("write"), categories.single { it.id == "manual_entry_write" }.permissions)
+        assertEquals(setOf("import_write"), categories.single { it.id == "data_import_write" }.permissions)
         assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
         assertFalse(categories.drop(1).any { it.required })
         assertEquals("cycle_tracking", categories.last().id)
@@ -238,6 +241,7 @@ class OnboardingViewModelTest {
                 "activity_extras",
                 "nutrition_hydration",
                 "manual_entry_write",
+                "data_import_write",
                 "additional_data_access",
                 "vitals",
                 "cycle_tracking",
@@ -287,6 +291,18 @@ class OnboardingViewModelTest {
         val cycle = vm.permissionCategories.single { it.id == "cycle_tracking" }
         assertEquals(setOf("cycle"), cycle.permissions)
         assertTrue("cycle" in vm.onboardingPermissions)
+    }
+
+    @Test fun `data import write category is included in grant all request set`() = runTest {
+        val vm = OnboardingViewModel(
+            repository = repo(grantedPermissions = emptySet()),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        val dataImport = vm.permissionCategories.single { it.id == "data_import_write" }
+        assertEquals(setOf("import_write"), dataImport.permissions)
+        assertTrue("import_write" in vm.onboardingPermissions)
     }
 
     @Test fun `route permission is grouped with additional data access and excluded from grant all request set`() = runTest {
@@ -360,6 +376,7 @@ class OnboardingViewModelTest {
         mindfulnessPermissions: Set<String> = setOf("mindfulness"),
         additionalDataAccessPermissions: Set<String> = setOf("history", "background"),
         requestableWritePermissions: Set<String> = setOf("write"),
+        dataImportWritePermissions: Set<String> = setOf("import_write"),
         cyclePermissions: Set<String> = setOf("cycle"),
         onboardingPermissions: Set<String> = standardPermissions,
     ): HealthRepository =
@@ -384,6 +401,7 @@ class OnboardingViewModelTest {
             every { repo.activityExtrasPermissions } returns setOf("activity")
             every { repo.nutritionHydrationPermissions } returns setOf("nutrition")
             every { repo.requestableWritePermissions } returns requestableWritePermissions
+            every { repo.dataImportWritePermissions } returns dataImportWritePermissions
             every { repo.mindfulnessPermissions } returns mindfulnessPermissions
             every { repo.additionalDataAccessPermissions } returns additionalDataAccessPermissions
             every { repo.vitalsPermissions } returns setOf("vitals")
@@ -414,6 +432,7 @@ class OnboardingViewModelTest {
             "vitals",
             "cycle",
             "write",
+            "import_write",
         )
         private val allPermissions = standardPermissions
     }

@@ -831,6 +831,8 @@
     <string name="onboarding_category_nutrition_hydration_desc">Water intake, calories in, meals, and macros.</string>
     <string name="onboarding_category_manual_entry_write">Manual entry write access</string>
     <string name="onboarding_category_manual_entry_write_desc">Allows OpenVitals to save hydration, activity, body, vitals, and mindfulness entries you create into Health Connect.</string>
+    <string name="onboarding_category_data_import_write">Data import write access</string>
+    <string name="onboarding_category_data_import_write_desc">Allows OpenVitals to write supported imported records, such as Apple Health exports, into Health Connect.</string>
     <string name="onboarding_category_mindfulness">Mindfulness</string>
     <string name="onboarding_category_mindfulness_desc">Mindfulness session duration and history.</string>
     <string name="onboarding_category_mindfulness_unavailable">Mindfulness sessions require a newer Health Connect version.</string>
