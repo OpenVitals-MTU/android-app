@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -91,6 +92,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.abs
+
+private val HydrationWeekChartColor = Color(0xFFB8C0FF)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -798,7 +801,11 @@ private fun HydrationHistoryChart(
         values = values,
         selectedRange = selectedRange,
         period = period,
-        accentColor = HydrationColor.copy(alpha = 0.85f),
+        accentColor = if (selectedRange == TimeRange.WEEK) {
+            HydrationWeekChartColor
+        } else {
+            HydrationColor.copy(alpha = 0.85f)
+        },
         summaryText = summaryText,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         modifier = modifier,
