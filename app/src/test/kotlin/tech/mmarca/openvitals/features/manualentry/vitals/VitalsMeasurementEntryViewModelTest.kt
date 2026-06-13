@@ -68,7 +68,11 @@ class VitalsMeasurementEntryViewModelTest {
         assertFalse(vm.uiState.value.isSavingEntry)
         assertEquals("", vm.uiState.value.inputText)
         assertEquals("", vm.uiState.value.secondaryInputText)
+        assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryError)
+
+        vm.onSaveCompletedHandled()
+        assertFalse(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `body temperature entry writes celsius value`() = runTest {

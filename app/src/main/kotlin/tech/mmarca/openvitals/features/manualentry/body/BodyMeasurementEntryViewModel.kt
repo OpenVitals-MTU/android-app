@@ -159,7 +159,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
                     isSavingEntry = false,
-                    saveCompleted = _uiState.value.isEditMode,
+                    saveCompleted = true,
                     entryError = null,
                     writeErrorMessage = null,
                 )

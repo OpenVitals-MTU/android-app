@@ -176,7 +176,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
                     secondaryInputText = if (_uiState.value.isEditMode) _uiState.value.secondaryInputText else "",
                     isSavingEntry = false,
-                    saveCompleted = _uiState.value.isEditMode,
+                    saveCompleted = true,
                     entryError = null,
                     writeErrorMessage = null,
                 )

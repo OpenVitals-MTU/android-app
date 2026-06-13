@@ -161,6 +161,16 @@ fun AppNavigation(
         null
     }
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
+    var dashboardRefreshRequest by remember { mutableStateOf(0) }
+
+    fun markDashboardDirty() {
+        dashboardRefreshRequest += 1
+    }
+
+    fun markDashboardDirtyAndPopBack() {
+        markDashboardDirty()
+        navController.popBackStack()
+    }
 
     val topLevelDestinations = remember {
         listOf(
@@ -397,6 +407,7 @@ fun AppNavigation(
                     viewModel = dashboardViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    refreshRequest = dashboardRefreshRequest,
                     onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                     onOpenMetric = { metricId ->
                         when (metricId) {
@@ -559,6 +570,7 @@ fun AppNavigation(
                 HydrationEntryScreen(
                     viewModel = hydrationViewModel,
                     unitFormatter = unitFormatter,
+                    onEntrySaved = ::markDashboardDirty,
                 )
             }
 
@@ -570,7 +582,7 @@ fun AppNavigation(
                 HydrationEntryScreen(
                     viewModel = hydrationViewModel,
                     unitFormatter = unitFormatter,
-                    onEntrySaved = { navController.popBackStack() },
+                    onEntrySaved = ::markDashboardDirtyAndPopBack,
                 )
             }
 
@@ -583,6 +595,7 @@ fun AppNavigation(
                     pendingRouteImportRequestId = routeImportRequest?.id,
                     onPendingRouteImportHandled = onRouteImportRequestHandled,
                     onEntrySaved = {
+                        markDashboardDirty()
                         navController.navigate(Screen.Dashboard.route) {
                             popUpTo(Screen.Dashboard.route)
                             launchSingleTop = true
@@ -600,13 +613,16 @@ fun AppNavigation(
                 ActivityEntryScreen(
                     viewModel = activityEntryViewModel,
                     unitFormatter = unitFormatter,
-                    onEntrySaved = { navController.popBackStack() },
+                    onEntrySaved = ::markDashboardDirtyAndPopBack,
                 )
             }
 
             composable(Screen.MindfulnessEntry.route) {
                 val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
-                MindfulnessEntryScreen(viewModel = mindfulnessEntryViewModel)
+                MindfulnessEntryScreen(
+                    viewModel = mindfulnessEntryViewModel,
+                    onEntrySaved = ::markDashboardDirty,
+                )
             }
 
             composable(
@@ -616,7 +632,7 @@ fun AppNavigation(
                 val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
                 MindfulnessEntryScreen(
                     viewModel = mindfulnessEntryViewModel,
-                    onEntrySaved = { navController.popBackStack() },
+                    onEntrySaved = ::markDashboardDirtyAndPopBack,
                 )
             }
 
@@ -633,6 +649,7 @@ fun AppNavigation(
                     type = type,
                     viewModel = bodyMeasurementViewModel,
                     unitFormatter = unitFormatter,
+                    onEntrySaved = ::markDashboardDirty,
                 )
             }
 
@@ -652,7 +669,7 @@ fun AppNavigation(
                     type = type,
                     viewModel = bodyMeasurementViewModel,
                     unitFormatter = unitFormatter,
-                    onEntrySaved = { navController.popBackStack() },
+                    onEntrySaved = ::markDashboardDirtyAndPopBack,
                 )
             }
 
@@ -669,6 +686,7 @@ fun AppNavigation(
                     type = type,
                     viewModel = vitalsMeasurementViewModel,
                     unitFormatter = unitFormatter,
+                    onEntrySaved = ::markDashboardDirty,
                 )
             }
 
@@ -688,7 +706,7 @@ fun AppNavigation(
                     type = type,
                     viewModel = vitalsMeasurementViewModel,
                     unitFormatter = unitFormatter,
-                    onEntrySaved = { navController.popBackStack() },
+                    onEntrySaved = ::markDashboardDirtyAndPopBack,
                 )
             }
 

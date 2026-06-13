@@ -335,6 +335,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     timerCompleted = false,
                     remainingSeconds = duration * 60,
                     totalSeconds = duration * 60,
+                    saveCompleted = true,
                     entryError = null,
                     writeErrorMessage = null,
                 )
@@ -364,7 +365,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     manualMinutesText = if (_uiState.value.isEditMode) _uiState.value.manualMinutesText else "",
-                    saveCompleted = _uiState.value.isEditMode,
+                    saveCompleted = true,
                     entryError = null,
                     writeErrorMessage = null,
                 )

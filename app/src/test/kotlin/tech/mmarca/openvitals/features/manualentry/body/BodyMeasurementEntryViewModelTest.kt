@@ -64,7 +64,11 @@ class BodyMeasurementEntryViewModelTest {
         }
         assertFalse(vm.uiState.value.isSavingEntry)
         assertEquals("", vm.uiState.value.inputText)
+        assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryError)
+
+        vm.onSaveCompletedHandled()
+        assertFalse(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `body fat entry writes percent value`() = runTest {

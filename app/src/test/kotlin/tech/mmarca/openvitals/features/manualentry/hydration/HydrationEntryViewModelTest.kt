@@ -165,7 +165,11 @@ class HydrationEntryViewModelTest {
         }
         assertFalse(vm.uiState.value.isSavingEntry)
         assertEquals(0.5, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryError)
+
+        vm.onSaveCompletedHandled()
+        assertFalse(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `beverage multiplier adjusts written hydration volume`() = runTest {

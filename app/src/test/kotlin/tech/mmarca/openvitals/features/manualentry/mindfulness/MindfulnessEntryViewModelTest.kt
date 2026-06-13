@@ -145,7 +145,11 @@ class MindfulnessEntryViewModelTest {
         }
         assertFalse(vm.uiState.value.isSavingEntry)
         assertEquals("", vm.uiState.value.manualMinutesText)
+        assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryError)
+
+        vm.onSaveCompletedHandled()
+        assertFalse(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `invalid manual entry does not write`() = runTest {
@@ -209,6 +213,10 @@ class MindfulnessEntryViewModelTest {
             })
         }
         assertFalse(vm.uiState.value.timerCompleted)
+        assertTrue(vm.uiState.value.saveCompleted)
+
+        vm.onSaveCompletedHandled()
+        assertFalse(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `stopping timer pauses with resume save and discard state`() = runTest {

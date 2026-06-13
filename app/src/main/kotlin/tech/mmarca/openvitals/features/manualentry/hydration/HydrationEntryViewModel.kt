@@ -308,7 +308,7 @@ class HydrationEntryViewModel @Inject constructor(
                     } else {
                         _uiState.value.todayHydrationLiters + effectiveLiters
                     },
-                    saveCompleted = current.isEditMode,
+                    saveCompleted = true,
                     entryError = null,
                     writeErrorMessage = null,
                 )

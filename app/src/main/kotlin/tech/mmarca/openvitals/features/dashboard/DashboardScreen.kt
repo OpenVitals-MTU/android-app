@@ -121,6 +121,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    refreshRequest: Int = 0,
     onGrantPermissions: () -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenActivities: () -> Unit,
@@ -134,6 +135,11 @@ fun DashboardScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshPreferences()
+    }
+    LaunchedEffect(refreshRequest) {
+        if (refreshRequest > 0) {
+            viewModel.refresh()
+        }
     }
 
     PullToRefreshBox(
