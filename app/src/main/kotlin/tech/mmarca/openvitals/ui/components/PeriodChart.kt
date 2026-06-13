@@ -407,8 +407,8 @@ private fun periodChartLabel(
     selectedRange: TimeRange,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ): String = when (selectedRange) {
-    TimeRange.DAY,
-    TimeRange.WEEK -> dateTimeFormatterProvider.chartDay().format(date)
+    TimeRange.DAY -> dateTimeFormatterProvider.chartDay().format(date)
+    TimeRange.WEEK,
     TimeRange.MONTH -> dateTimeFormatterProvider.chartDayOfMonth().format(date)
     TimeRange.YEAR -> dateTimeFormatterProvider.chartMonth().format(date)
 }
