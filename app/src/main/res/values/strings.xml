@@ -21,6 +21,7 @@
     <string name="cd_next_period">Next period</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
+    <string name="action_add_custom">Add custom</string>
     <string name="action_save">Save</string>
     <string name="action_close">Close</string>
     <string name="action_details">Details</string>
@@ -669,6 +670,7 @@
     <string name="hydration_bhi_write_explanation">Drink types use Beverage Hydration Index-style multipliers based on Maughan et al. 2016. OpenVitals calculates effective hydration from the selected size: %1$s selected, %2$s written to Health Connect. Health Connect stores only the hydration volume, not drink type or cup size.</string>
     <string name="hydration_invalid_amount">Enter an amount greater than zero and no more than 100 L.</string>
     <string name="hydration_container_edit_title">Container size</string>
+    <string name="hydration_custom_amount_title">Custom amount</string>
     <string name="hydration_container_amount_ml">Amount (ml)</string>
     <string name="hydration_container_invalid_amount">Enter an amount from 1 to 100,000 ml.</string>
     <string name="hydration_write_failed">Could not save hydration entry: %1$s</string>

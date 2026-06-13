@@ -21,6 +21,7 @@
     <string name="cd_next_period">Nächster Zeitraum</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_add">Hinzufügen</string>
+    <string name="action_add_custom">Benutzerdefiniert hinzufügen</string>
     <string name="action_save">Speichern</string>
     <string name="action_close">Schließen</string>
     <string name="action_details">Details</string>
@@ -669,6 +670,7 @@
     <string name="hydration_bhi_write_explanation">Getränketypen verwenden Multiplikatoren im Stil des Beverage Hydration Index basierend auf Maughan et al. 2016. OpenVitals berechnet die effektive Hydrierung aus der ausgewählten Größe: %1$s ausgewählt, %2$s in Health Connect geschrieben. Health Connect speichert nur das Hydrierungsvolumen, nicht Getränketyp oder Bechergröße.</string>
     <string name="hydration_invalid_amount">Gib eine Menge größer als null und höchstens 100 l ein.</string>
     <string name="hydration_container_edit_title">Behältergröße</string>
+    <string name="hydration_custom_amount_title">Eigene Menge</string>
     <string name="hydration_container_amount_ml">Menge (ml)</string>
     <string name="hydration_container_invalid_amount">Gib eine Menge von 1 bis 100.000 ml ein.</string>
     <string name="hydration_write_failed">Hydrierungseintrag konnte nicht gespeichert werden: %1$s</string>

@@ -110,7 +110,9 @@ fun HydrationEntryScreen(
                 unitFormatter = unitFormatter,
                 onSelectBeverage = viewModel::selectBeverage,
                 onSelectContainer = viewModel::selectContainer,
+                onAddContainerEntry = viewModel::addContainerHydrationEntry,
                 onAddSelectedEntry = viewModel::addSelectedHydrationEntry,
+                onAddCustomEntry = viewModel::addCustomHydrationEntry,
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.hydrationWritePermissions)
                 },
@@ -127,12 +129,15 @@ private fun HydrationTrackerCard(
     unitFormatter: UnitFormatter,
     onSelectBeverage: (HydrationBeverage) -> Unit,
     onSelectContainer: (HydrationContainerOption) -> Unit,
+    onAddContainerEntry: (HydrationContainerOption) -> Unit,
     onAddSelectedEntry: () -> Unit,
+    onAddCustomEntry: (Double) -> Unit,
     onRequestWritePermission: () -> Unit,
     onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWriteHydration && !state.isSavingEntry && !state.isCheckingPermission
+    var addingCustomAmount by remember { mutableStateOf(false) }
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -189,8 +194,14 @@ private fun HydrationTrackerCard(
                 options = state.containerOptions,
                 selectedContainer = state.selectedContainer,
                 unitFormatter = unitFormatter,
-                isSavingEntry = state.isSavingEntry,
-                onSelectContainer = onSelectContainer,
+                enabled = if (state.isEditMode) !state.isSavingEntry else enabled,
+                onSelectContainer = { container ->
+                    if (state.isEditMode) {
+                        onSelectContainer(container)
+                    } else {
+                        onAddContainerEntry(container)
+                    }
+                },
                 onUpdateContainerSize = onUpdateContainerSize,
             )
 
@@ -201,26 +212,48 @@ private fun HydrationTrackerCard(
                 onSelectBeverage = onSelectBeverage,
             )
 
-            Button(
-                onClick = onAddSelectedEntry,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = if (state.isEditMode) {
-                        stringResource(R.string.action_save)
-                    } else {
-                        stringResource(
-                            R.string.hydration_add_selected,
-                            hydrationAmountLabel(state.selectedContainerEffectiveLiters, unitFormatter),
-                        )
+            if (state.isEditMode) {
+                Button(
+                    onClick = onAddSelectedEntry,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_save),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            } else {
+                Button(
+                    onClick = { addingCustomAmount = true },
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_add_custom),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            }
+
+            if (addingCustomAmount) {
+                HydrationCustomAmountDialog(
+                    initialMilliliters = state.selectedContainer.volumeMilliliters,
+                    onDismiss = { addingCustomAmount = false },
+                    onSave = { milliliters ->
+                        addingCustomAmount = false
+                        onAddCustomEntry(milliliters)
                     },
-                    modifier = Modifier.padding(start = 6.dp),
                 )
             }
 
@@ -355,7 +388,7 @@ private fun HydrationContainerCarousel(
     options: List<HydrationContainerOption>,
     selectedContainer: HydrationContainerOption,
     unitFormatter: UnitFormatter,
-    isSavingEntry: Boolean,
+    enabled: Boolean,
     onSelectContainer: (HydrationContainerOption) -> Unit,
     onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
     modifier: Modifier = Modifier,
@@ -381,7 +414,7 @@ private fun HydrationContainerCarousel(
                     option = option,
                     selected = option == selectedContainer,
                     unitFormatter = unitFormatter,
-                    enabled = !isSavingEntry,
+                    enabled = enabled,
                     onSelect = { onSelectContainer(option) },
                     onEdit = { editingContainer = option },
                 )
@@ -480,8 +513,37 @@ private fun HydrationContainerSizeDialog(
     onDismiss: () -> Unit,
     onSave: (Double) -> Unit,
 ) {
-    var amountText by remember(option) {
-        mutableStateOf(option.volumeMilliliters.roundToInt().toString())
+    HydrationAmountDialog(
+        title = stringResource(R.string.hydration_container_edit_title),
+        initialMilliliters = option.volumeMilliliters,
+        onDismiss = onDismiss,
+        onSave = onSave,
+    )
+}
+
+@Composable
+private fun HydrationCustomAmountDialog(
+    initialMilliliters: Double,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit,
+) {
+    HydrationAmountDialog(
+        title = stringResource(R.string.hydration_custom_amount_title),
+        initialMilliliters = initialMilliliters,
+        onDismiss = onDismiss,
+        onSave = onSave,
+    )
+}
+
+@Composable
+private fun HydrationAmountDialog(
+    title: String,
+    initialMilliliters: Double,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit,
+) {
+    var amountText by remember(initialMilliliters) {
+        mutableStateOf(initialMilliliters.roundToInt().toString())
     }
     val amount = amountText.replace(',', '.').toDoubleOrNull()
     val isAmountValid = amount?.let(::isValidHydrationContainerMilliliters) == true
@@ -490,7 +552,7 @@ private fun HydrationContainerSizeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(stringResource(R.string.hydration_container_edit_title))
+            Text(title)
         },
         text = {
             OutlinedTextField(

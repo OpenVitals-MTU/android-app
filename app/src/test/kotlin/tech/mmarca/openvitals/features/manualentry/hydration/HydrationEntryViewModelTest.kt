@@ -172,6 +172,54 @@ class HydrationEntryViewModelTest {
         assertFalse(vm.uiState.value.saveCompleted)
     }
 
+    @Test fun `container tap writes tapped container volume`() = runTest {
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        val largeGlass = HydrationContainerOption.Defaults.first { it.id == "large_glass" }
+        vm.addContainerHydrationEntry(largeGlass)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
+                request.volumeLiters == 0.3
+            })
+        }
+        assertEquals(largeGlass, vm.uiState.value.selectedContainer)
+        assertEquals(0.3, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertTrue(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `custom hydration entry writes exact custom amount`() = runTest {
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.addCustomHydrationEntry(350.0)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
+                request.volumeLiters == 0.35
+            })
+        }
+        assertEquals(0.35, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertTrue(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `invalid custom hydration entry is rejected`() = runTest {
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.addCustomHydrationEntry(0.0)
+        advanceUntilIdle()
+
+        assertEquals(HydrationEntryError.INVALID_AMOUNT, vm.uiState.value.entryError)
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
+    }
+
     @Test fun `beverage multiplier adjusts written hydration volume`() = runTest {
         val repo = entryRepo()
         val vm = HydrationEntryViewModel(repo)

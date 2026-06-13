@@ -224,6 +224,31 @@ class HydrationEntryViewModel @Inject constructor(
         saveHydrationEntry(_uiState.value.selectedContainer.volumeLiters)
     }
 
+    fun addContainerHydrationEntry(container: HydrationContainerOption) {
+        if (_uiState.value.isEditMode) {
+            selectContainer(container)
+            return
+        }
+        _uiState.value = _uiState.value.copy(
+            selectedContainer = container,
+            saveCompleted = false,
+            entryError = null,
+            writeErrorMessage = null,
+        )
+        saveHydrationEntry(container.volumeLiters)
+    }
+
+    fun addCustomHydrationEntry(milliliters: Double) {
+        if (!isValidHydrationContainerMilliliters(milliliters)) {
+            _uiState.value = _uiState.value.copy(
+                entryError = HydrationEntryError.INVALID_AMOUNT,
+                writeErrorMessage = null,
+            )
+            return
+        }
+        saveHydrationEntry(milliliters / MillilitersPerLiter)
+    }
+
     fun onSaveCompletedHandled() {
         _uiState.value = _uiState.value.copy(saveCompleted = false)
     }
