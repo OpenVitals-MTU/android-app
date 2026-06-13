@@ -55,7 +55,13 @@ fun PeriodNavigator(
 
             TextButton(
                 onClick = onOpenCalendar,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .dateNavigationSwipe(
+                        canGoForward = canGoForward,
+                        onPrevious = onPreviousPeriod,
+                        onNext = onNextPeriod,
+                    ),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(

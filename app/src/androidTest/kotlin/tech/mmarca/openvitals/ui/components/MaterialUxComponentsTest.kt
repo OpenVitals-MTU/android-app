@@ -11,16 +11,21 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.insights.DataConfidence
 import tech.mmarca.openvitals.domain.insights.DataConfidenceLevel
 import tech.mmarca.openvitals.domain.insights.DataSourceConsistency
 import tech.mmarca.openvitals.domain.insights.DataValueKind
-import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
+import java.time.LocalDate
 
 class MaterialUxComponentsTest {
 
@@ -94,6 +99,77 @@ class MaterialUxComponentsTest {
 
         composeRule.runOnIdle {
             assertEquals(TimeRange.WEEK, selectedRange)
+        }
+    }
+
+    @Test
+    fun dayNavigator_swipesDateLabelBetweenDays() {
+        var previousCount = 0
+        var nextCount = 0
+        var calendarCount = 0
+
+        composeRule.setContent {
+            OpenVitalsTheme {
+                DayNavigator(
+                    date = LocalDate.now().minusDays(1),
+                    canGoForward = true,
+                    onPreviousDay = { previousCount += 1 },
+                    onNextDay = { nextCount += 1 },
+                    onOpenCalendar = { calendarCount += 1 },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Yesterday").performTouchInput { swipeLeft() }
+        composeRule.runOnIdle {
+            assertEquals(0, previousCount)
+            assertEquals(1, nextCount)
+            assertEquals(0, calendarCount)
+        }
+
+        composeRule.onNodeWithText("Yesterday").performTouchInput { swipeRight() }
+        composeRule.runOnIdle {
+            assertEquals(1, previousCount)
+            assertEquals(1, nextCount)
+            assertEquals(0, calendarCount)
+        }
+
+        composeRule.onNodeWithText("Yesterday").performClick()
+        composeRule.runOnIdle {
+            assertEquals(1, calendarCount)
+        }
+    }
+
+    @Test
+    fun periodNavigator_swipesDateLabelBetweenPeriods() {
+        var previousCount = 0
+        var nextCount = 0
+
+        val date = LocalDate.now().minusDays(1)
+
+        composeRule.setContent {
+            OpenVitalsTheme {
+                PeriodNavigator(
+                    selectedRange = TimeRange.DAY,
+                    period = DatePeriod(start = date, end = date),
+                    canGoForward = true,
+                    onPreviousPeriod = { previousCount += 1 },
+                    onNextPeriod = { nextCount += 1 },
+                    onOpenCalendar = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Yesterday").performTouchInput { swipeLeft() }
+        composeRule.runOnIdle {
+            assertEquals(0, previousCount)
+            assertEquals(1, nextCount)
+        }
+
+        composeRule.onNodeWithText("Yesterday").performTouchInput { swipeRight() }
+        composeRule.runOnIdle {
+            assertEquals(1, previousCount)
+            assertEquals(1, nextCount)
         }
     }
 

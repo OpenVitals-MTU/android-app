@@ -57,7 +57,13 @@ fun DayNavigator(
 
             TextButton(
                 onClick = onOpenCalendar,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .dateNavigationSwipe(
+                        canGoForward = canGoForward,
+                        onPrevious = onPreviousDay,
+                        onNext = onNextDay,
+                    ),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
