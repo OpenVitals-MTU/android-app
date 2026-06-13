@@ -100,6 +100,15 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - View component values such as duration, efficiency, continuity, regularity, and total sleep.
 - View references used by the scoring/explanation screens.
 
+### Daily Readiness
+
+- View a local Daily Readiness score with confidence context.
+- View Body Energy and Training Readiness scores.
+- View HRV status, intensity minutes, physiological stress level, recommended activity, activity to avoid, alternatives, strain target, and adaptive goal guidance.
+- View detailed Body Energy, Training Readiness, and Stress Tracking explanation screens.
+- View signal breakdowns and caveats that explain how available Health Connect data affected the recommendation.
+- Move between days, open the calendar, and refresh readiness data.
+
 ### Nutrition
 
 - View calories in.

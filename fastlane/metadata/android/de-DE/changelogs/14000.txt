@@ -1,0 +1,1 @@
+Daily Readiness ergänzt Body Energy, Training Readiness, HRV-Status, Intensitätsminuten, physiologischen Stress, adaptive Ziele und lokale Erklärungen. Flüssigkeitserfassung ist schneller: Gefäßgröße antippen, klarere Diagramme, korrigierte Summen und Dashboard-Refresh nach manuellen Einträgen. Zyklusberechtigungen sind jetzt explizit in Onboarding und Einstellungen.

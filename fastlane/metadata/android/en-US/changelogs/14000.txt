@@ -1,0 +1,1 @@
+Daily Readiness now adds Body Energy, Training Readiness, HRV status, intensity minutes, physiological stress, adaptive goals, and local explanations. Hydration logging is faster with tap-to-save container sizes, clearer charts, corrected totals, and dashboard refresh after manual entries. Cycle permissions are now explicit in onboarding and Settings.

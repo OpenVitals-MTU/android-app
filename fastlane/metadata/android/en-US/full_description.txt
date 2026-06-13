@@ -6,6 +6,7 @@ What you can do
 
 * View a daily Health Connect dashboard with grouped health and fitness cards
 * Explore period-based detail screens with Day, Week, Month, and Year views
+* Review Daily Readiness with Body Energy, Training Readiness, HRV status, intensity minutes, physiological stress, adaptive goals, and local explanations
 * Review steps, distance, calories, floors, elevation, and workout sessions
 * Review sleep sessions, duration, and sleep stages
 * Review heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, VO2 max, body metrics, hydration, nutrition, and mindfulness data when available
@@ -18,7 +19,7 @@ What you can do
 * Enable opt-in hydration reminders with active hours and daily-goal pause logic
 * Choose a fixed Mon-Sun activity week or a rolling last 7 days
 * Choose metric or imperial units
-* Enable sensitive cycle tracking only when you want it
+* Grant sensitive cycle permissions only when you want that data shown
 
 Why OpenVitals
 

@@ -6,6 +6,7 @@ Que puedes hacer
 
 * Ver un panel diario de Health Connect con tarjetas de salud y fitness agrupadas
 * Explorar pantallas por periodo con vistas Dia, Semana, Mes y Ano
+* Revisar Preparacion diaria con Energia corporal, Preparacion para entrenar, estado de HRV, minutos de intensidad, estres fisiologico, metas adaptativas y explicaciones locales
 * Revisar pasos, distancia, calorias, pisos, elevacion y entrenamientos
 * Revisar sesiones de sueno, duracion y fases del sueno
 * Revisar frecuencia cardiaca, frecuencia en reposo, HRV, presion arterial, SpO2, frecuencia respiratoria, temperatura corporal, VO2 max, metricas corporales, hidratacion, nutricion y mindfulness cuando esten disponibles
@@ -18,7 +19,7 @@ Que puedes hacer
 * Activar recordatorios de hidratacion opcionales con horas activas y pausa al alcanzar el objetivo diario
 * Elegir una semana fija Lun-Dom o los ultimos 7 dias para Actividades
 * Elegir unidades metricas o imperiales
-* Activar datos sensibles de ciclo solo cuando quieras
+* Conceder permisos de ciclo como categoria sensible solo cuando quieras ver esos datos
 
 Por que OpenVitals
 

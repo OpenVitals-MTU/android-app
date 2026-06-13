@@ -1,0 +1,1 @@
+Preparación diaria añade Energía corporal, Preparación para entrenar, estado de HRV, minutos de intensidad, estrés fisiológico, metas adaptativas y explicaciones locales. Registrar hidratación es más rápido con tamaños que guardan al tocar, gráficos más claros, totales corregidos y actualización del panel. Los permisos del ciclo ahora son explícitos en onboarding y Ajustes.

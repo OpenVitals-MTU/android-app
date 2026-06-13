@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.4.0 - 2026-06-13
+
+### English
+
+- Add Daily Readiness with local Body Energy, Training Readiness, HRV status, intensity minutes, physiological stress, adaptive goals, and explanation screens.
+- Improve hydration logging so tapping a container size can save immediately, with the container controls shown before beverage type and better today progress feedback.
+- Refresh hydration details with a wavy day trend, clearer week charts, and corrected totals based on the rounded values shown in the app.
+- Let day-based detail screens move between days by swiping the date header, and refresh the dashboard automatically after saving manual entries.
+- Move cycle tracking into the explicit Health Connect permission categories in onboarding and Settings, with clearer missing-permission handling.
+- Fix the monochrome launcher icon and keep release CI publishing Codeberg artifacts while automated Google Play uploads/promotions remain disabled.
+
+### Español
+
+- Añade Preparación diaria con Energía corporal, Preparación para entrenar, estado de HRV, minutos de intensidad, estrés fisiológico, metas adaptativas y pantallas de explicación calculadas localmente.
+- Mejora el registro de hidratación para que tocar un tamaño de recipiente pueda guardar al instante, con los controles de recipiente antes del tipo de bebida y mejor contexto del progreso de hoy.
+- Renueva los detalles de hidratación con tendencia diaria ondulada, gráficos semanales más claros y totales corregidos basados en los valores redondeados mostrados en la app.
+- Permite cambiar de día deslizando el encabezado de fecha en pantallas de detalle diario y actualiza el panel automáticamente después de guardar entradas manuales.
+- Mueve el seguimiento del ciclo a las categorías explícitas de permisos de Health Connect en onboarding y Ajustes, con un manejo más claro de permisos faltantes.
+- Corrige el icono monocromático del lanzador y mantiene CI publicando artefactos de Codeberg mientras las subidas/promociones automáticas de Google Play siguen deshabilitadas.
+
+### Deutsch
+
+- Ergänzt Daily Readiness mit lokal berechneter Body Energy, Training Readiness, HRV-Status, Intensitätsminuten, physiologischem Stress, adaptiven Zielen und Erklärseiten.
+- Verbessert die Flüssigkeitserfassung, sodass Tippen auf eine Gefäßgröße direkt speichern kann, mit Gefäßauswahl vor Getränketyp und klarerem Fortschritt für heute.
+- Überarbeitet die Hydration-Details mit wellenförmigem Tagestrend, klareren Wochendiagrammen und korrigierten Summen auf Basis der gerundeten App-Werte.
+- Ermöglicht den Tageswechsel per Wischgeste über die Datumszeile in Tagesdetails und aktualisiert das Dashboard automatisch nach gespeicherten manuellen Einträgen.
+- Verschiebt die Zyklusverfolgung in die expliziten Health-Connect-Berechtigungskategorien in Onboarding und Einstellungen, mit klarerer Behandlung fehlender Berechtigungen.
+- Korrigiert das monochrome Launcher-Icon und lässt die Release-CI Codeberg-Artefakte veröffentlichen, während automatisierte Google-Play-Uploads/Promotions deaktiviert bleiben.
+
 ## 1.3.2 - 2026-06-10
 
 ### English

@@ -6,6 +6,7 @@ Was du tun kannst
 
 * Ein tägliches Health Connect-Dashboard mit gruppierten Gesundheits- und Fitnesskarten anzeigen
 * Detailseiten nach Zeitraum mit Tages-, Wochen-, Monats- und Jahresansicht erkunden
+* Daily Readiness mit Body Energy, Training Readiness, HRV-Status, Intensitätsminuten, physiologischem Stress, adaptiven Zielen und lokalen Erklärungen prüfen
 * Schritte, Distanz, Kalorien, Etagen, Höhenmeter und Trainings prüfen
 * Schlafsitzungen, Dauer und Schlafphasen prüfen
 * Herzfrequenz, Ruhepuls, HRV, Blutdruck, SpO2, Atemfrequenz, Körpertemperatur, VO2 max, Körperwerte, Flüssigkeit, Ernährung und Achtsamkeit prüfen, wenn Daten verfügbar sind
@@ -18,7 +19,7 @@ Was du tun kannst
 * Optionale Flüssigkeitserinnerungen mit aktiven Zeiten und Pause nach Erreichen des Tagesziels aktivieren
 * Für Aktivitäten eine feste Mo-So-Woche oder die letzten 7 Tage wählen
 * Metrische oder imperiale Einheiten wählen
-* Sensible Zyklusdaten nur aktivieren, wenn du sie verwenden möchtest
+* Zyklusberechtigungen als sensible Kategorie nur erteilen, wenn du diese Daten sehen möchtest
 
 Warum OpenVitals
 
