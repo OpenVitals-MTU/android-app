@@ -48,7 +48,11 @@ class UnitFormatterTest {
     }
 
     @Test fun `metric hydration uses liters`() {
-        assertEquals("2.0 L", formatter(UnitSystem.METRIC).hydration(2.0).text)
+        assertEquals("2.00 L", formatter(UnitSystem.METRIC).hydration(2.0).text)
+    }
+
+    @Test fun `metric hydration keeps two decimals below one liter`() {
+        assertEquals("0.15 L", formatter(UnitSystem.METRIC).hydration(0.15).text)
     }
 
     @Test fun `imperial temperature uses fahrenheit`() {

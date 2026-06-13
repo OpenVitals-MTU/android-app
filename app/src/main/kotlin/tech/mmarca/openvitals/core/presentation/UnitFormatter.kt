@@ -52,7 +52,7 @@ class UnitFormatter(
 
     fun hydration(liters: Double): DisplayValue =
         when (unitSystem()) {
-            UnitSystem.METRIC -> DisplayValue(decimal(liters, 1), "L")
+            UnitSystem.METRIC -> DisplayValue(decimal(liters, 2), "L")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(litersToFluidOunces(liters), 0), "fl oz")
         }
 

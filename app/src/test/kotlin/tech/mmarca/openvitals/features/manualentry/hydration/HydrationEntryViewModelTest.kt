@@ -191,6 +191,23 @@ class HydrationEntryViewModelTest {
         assertTrue(vm.uiState.value.saveCompleted)
     }
 
+    @Test fun `container tap writes tea cup as one hundred fifty milliliters`() = runTest {
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        val teaCup = HydrationContainerOption.Defaults.first { it.id == "tea_cup" }
+        vm.addContainerHydrationEntry(teaCup)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
+                abs(request.volumeLiters - 0.15) < 0.0001
+            })
+        }
+        assertEquals(0.15, vm.uiState.value.todayHydrationLiters, 0.0001)
+    }
+
     @Test fun `custom hydration entry writes exact custom amount`() = runTest {
         val repo = entryRepo()
         val vm = HydrationEntryViewModel(repo)

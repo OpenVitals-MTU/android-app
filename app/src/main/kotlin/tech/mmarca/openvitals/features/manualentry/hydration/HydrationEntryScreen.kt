@@ -195,6 +195,7 @@ private fun HydrationTrackerCard(
                 selectedContainer = state.selectedContainer,
                 unitFormatter = unitFormatter,
                 enabled = if (state.isEditMode) !state.isSavingEntry else enabled,
+                highlightSelection = state.isEditMode,
                 onSelectContainer = { container ->
                     if (state.isEditMode) {
                         onSelectContainer(container)
@@ -311,21 +312,12 @@ private fun HydrationTodayCounter(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
+            Text(
+                text = "${todayHydration.text} / ${dailyGoal.text}",
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.period_today),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "${todayHydration.text} / ${dailyGoal.text}",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
+                textAlign = TextAlign.End,
+            )
             LinearWavyProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
@@ -389,6 +381,7 @@ private fun HydrationContainerCarousel(
     selectedContainer: HydrationContainerOption,
     unitFormatter: UnitFormatter,
     enabled: Boolean,
+    highlightSelection: Boolean,
     onSelectContainer: (HydrationContainerOption) -> Unit,
     onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
     modifier: Modifier = Modifier,
@@ -412,7 +405,7 @@ private fun HydrationContainerCarousel(
             items(options, key = { it.id }) { option ->
                 HydrationContainerOptionItem(
                     option = option,
-                    selected = option == selectedContainer,
+                    selected = highlightSelection && option == selectedContainer,
                     unitFormatter = unitFormatter,
                     enabled = enabled,
                     onSelect = { onSelectContainer(option) },
