@@ -1,0 +1,1 @@
+Korrigiert Anzeige und Bedienung der Flüssigkeitserfassung. Kleine metrische Einträge behalten zwei Liter-Dezimalstellen, sodass 150 ml als 0,15 L statt 0,2 L erscheint. Gefäßvoreinstellungen wirken im Hinzufügen-Modus nicht mehr ausgewählt; die redundante Heute-Beschriftung wurde entfernt.

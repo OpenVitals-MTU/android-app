@@ -87,7 +87,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, bone mass, body water mass, basal metabolic rate
 - Manual entry: hydration, activity sessions with optional GPX/KML/KMZ/FIT route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
-- Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, editable per-container serving sizes, and optional reminders
+- Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, tap-to-save container presets, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, and macros
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds

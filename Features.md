@@ -36,6 +36,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 ### Hydration
 
 - View total hydration for the selected period.
+- View metric hydration totals with two decimal places in liters.
 - View hydration history charts by day, week, month, and year.
 - View selected-day hydration entries.
 - View each entry's amount, date/time, and source.
@@ -223,6 +224,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 ### Hydration
 
 - Add hydration entries.
+- Tap a container size to save a hydration entry immediately.
 - Select beverage type: water, coffee, tea, soft drink, energy drink, sports drink, oral rehydration solution, milk, or fruit juice.
 - Select container sizes such as coffee cup, tea cup, small cup, medium glass, large glass, water bottle, and large bottle.
 - Use beverage hydration multipliers for effective hydration amount.

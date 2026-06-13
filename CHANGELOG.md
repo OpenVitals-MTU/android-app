@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.4.1 - 2026-06-13
+
+### English
+
+- Fix metric hydration totals so small entries such as 150 ml display as `0.15 L` instead of rounding to `0.2 L`.
+- Keep hydration preset taps writing the exact tapped container volume, with regression coverage for the 150 ml tea cup preset.
+- Remove the selected highlight from hydration container presets in normal add mode because tapping a preset now saves immediately.
+- Remove the redundant Today label above the hydration goal progress wave.
+
+### Español
+
+- Corrige los totales métricos de hidratación para que entradas pequeñas como 150 ml se muestren como `0,15 L` en vez de redondearse a `0,2 L`.
+- Mantiene los toques en tamaños predefinidos de hidratación escribiendo el volumen exacto tocado, con cobertura de regresión para la taza de té de 150 ml.
+- Quita el resaltado de selección de los tamaños predefinidos en el modo normal de añadir, porque tocar un tamaño ahora guarda al instante.
+- Quita la etiqueta redundante Hoy sobre la onda de progreso del objetivo de hidratación.
+
+### Deutsch
+
+- Korrigiert metrische Hydration-Summen, sodass kleine Einträge wie 150 ml als `0,15 L` statt gerundet als `0,2 L` angezeigt werden.
+- Stellt sicher, dass Tippen auf Hydration-Voreinstellungen exakt das angetippte Gefäßvolumen schreibt, mit Regressionstest für die 150-ml-Teetasse.
+- Entfernt die Auswahlhervorhebung der Hydration-Gefäße im normalen Hinzufügen-Modus, weil Tippen jetzt sofort speichert.
+- Entfernt die redundante Heute-Beschriftung über der Wellenanzeige des Hydrationsziels.
+
 ## 1.4.0 - 2026-06-13
 
 ### English

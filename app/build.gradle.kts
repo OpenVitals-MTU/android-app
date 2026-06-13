@@ -38,8 +38,8 @@ android {
         applicationId = "tech.mmarca.openvitals"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14000
-        versionName = "1.4.0"
+        versionCode = 14001
+        versionName = "1.4.1"
     }
 
     signingConfigs {

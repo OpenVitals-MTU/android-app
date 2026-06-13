@@ -1,0 +1,1 @@
+Corrige la visualización y el registro de hidratación. Las entradas métricas pequeñas mantienen dos decimales, así 150 ml se muestra como 0,15 L en vez de 0,2 L. Los tamaños predefinidos ya no parecen seleccionados al añadir y se quitó la etiqueta Hoy redundante.

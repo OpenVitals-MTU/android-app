@@ -1,0 +1,1 @@
+Fixes hydration display and logging polish. Small metric hydration entries now keep two decimal liters, so 150 ml shows as 0.15 L instead of rounding to 0.2 L. Container presets no longer look selected in normal add mode, and the redundant Today label above hydration progress was removed.
