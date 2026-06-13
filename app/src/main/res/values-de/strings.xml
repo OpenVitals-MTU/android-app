@@ -709,7 +709,7 @@
     <string name="message_cycle_browse">Zykluskalender und Messwerte anzeigen.</string>
     <string name="dashboard_add_widgets">Widgets hinzufügen</string>
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
-    <string name="dashboard_action_log">Protokollieren</string>
+    <string name="dashboard_action_log">Eintragen</string>
     <string name="dashboard_activities_today">Aktivitäten</string>
     <string name="dashboard_readiness_title">Tägliche Bereitschaft</string>
     <string name="dashboard_readiness_score">Bereitschaft</string>
