@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
@@ -154,7 +155,7 @@ class ActivityViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -175,7 +176,7 @@ class ActivityViewModel(
         _uiState.value = _uiState.value.copy(dailyGoal = normalized)
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -185,12 +186,22 @@ class ActivityViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadActivityPeriod(
-                    query = query,
-                    includeSteps = selectedMetric.usesDailySteps,
-                    includeNutrition = selectedMetric.usesDailyNutrition,
-                    includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
-                )
+                if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadActivityPeriod(
+                        query = query,
+                        includeSteps = selectedMetric.usesDailySteps,
+                        includeNutrition = selectedMetric.usesDailyNutrition,
+                        includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
+                    )
+                } else {
+                    repository.loadActivityPeriod(
+                        query = query,
+                        includeSteps = selectedMetric.usesDailySteps,
+                        includeNutrition = selectedMetric.usesDailyNutrition,
+                        includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
+                        refreshMode = refreshMode,
+                    )
+                }
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(

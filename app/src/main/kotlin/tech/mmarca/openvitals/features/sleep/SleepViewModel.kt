@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -144,7 +145,7 @@ class SleepViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -165,7 +166,7 @@ class SleepViewModel(
         _uiState.value = _uiState.value.copy(dailyGoalHours = goal)
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -177,7 +178,11 @@ class SleepViewModel(
             val sleepRangeMode = _uiState.value.sleepRangeMode
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val periodData = repository.loadSleepPeriod(query, sleepRangeMode)
+                val periodData = if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadSleepPeriod(query, sleepRangeMode)
+                } else {
+                    repository.loadSleepPeriod(query, sleepRangeMode, refreshMode)
+                }
                 SleepLoadResult(
                     sessions = periodData.sessions,
                     previousSessions = periodData.previousSessions,

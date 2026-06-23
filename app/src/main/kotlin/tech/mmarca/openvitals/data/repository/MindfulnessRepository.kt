@@ -4,15 +4,23 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.MindfulnessPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -20,6 +28,8 @@ import kotlinx.coroutines.coroutineScope
 class MindfulnessRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -33,9 +43,26 @@ class MindfulnessRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadMindfulnessPeriod(query: PeriodLoadQuery): MindfulnessPeriodData = coroutineScope {
+    suspend fun loadMindfulnessPeriod(
+        query: PeriodLoadQuery,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): MindfulnessPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = MindfulnessPeriodDataCodec.Surface,
+            query = query,
+            metricSet = "mindfulness",
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = MindfulnessPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = MindfulnessPeriodDataCodec::decode,
+            encode = MindfulnessPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         val sessions = async { loadMindfulnessSessions(windows.current.start, windows.current.end, granted) }
         val previousSessions = async { loadMindfulnessSessions(windows.previous.start, windows.previous.end, granted) }
         val baselineSessions = async { loadMindfulnessSessions(windows.baseline.start, windows.baseline.end, granted) }
@@ -44,7 +71,16 @@ class MindfulnessRepository @Inject constructor(
             previousSessions = previousSessions.await(),
             baselineSessions = baselineSessions.await(),
         )
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     suspend fun loadMindfulnessSessions(start: LocalDate, end: LocalDate): List<MindfulnessSession> {
         val granted = grantedPermissionsIfAvailable()

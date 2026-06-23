@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SleepRepository
@@ -149,7 +150,7 @@ class MindfulnessViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -191,14 +192,14 @@ class MindfulnessViewModel(
             runCatching {
                 repository.deleteMindfulnessSessionEntry(entryId)
             }.onSuccess {
-                load()
+                load(RefreshMode.FORCE)
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.message)
             }
         }
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -215,7 +216,11 @@ class MindfulnessViewModel(
             }
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val periodData = repository.loadMindfulnessPeriod(query)
+                val periodData = if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadMindfulnessPeriod(query)
+                } else {
+                    repository.loadMindfulnessPeriod(query, refreshMode)
+                }
                 MindfulnessLoadResult(
                     sessions = periodData.sessions,
                     previousSessions = periodData.previousSessions,

@@ -4,16 +4,24 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.HydrationPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -22,6 +30,8 @@ class HydrationRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -48,9 +58,26 @@ class HydrationRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadHydrationPeriod(query: PeriodLoadQuery): HydrationPeriodData = coroutineScope {
+    suspend fun loadHydrationPeriod(
+        query: PeriodLoadQuery,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): HydrationPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = HydrationPeriodDataCodec.Surface,
+            query = query,
+            metricSet = "hydration",
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = HydrationPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = HydrationPeriodDataCodec::decode,
+            encode = HydrationPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         val dailyHydration = async { loadDailyHydration(windows.current.start, windows.current.end, granted) }
         val previousDailyHydration = async { loadDailyHydration(windows.previous.start, windows.previous.end, granted) }
         val baselineDailyHydration = async { loadDailyHydration(windows.baseline.start, windows.baseline.end, granted) }
@@ -61,7 +88,16 @@ class HydrationRepository @Inject constructor(
             baselineDailyHydration = baselineDailyHydration.await(),
             hydrationEntries = hydrationEntries.await(),
         )
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     suspend fun loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration> {
         val granted = grantedPermissionsIfAvailable()

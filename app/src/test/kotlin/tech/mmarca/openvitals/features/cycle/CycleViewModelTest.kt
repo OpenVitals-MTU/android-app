@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.CyclePeriodData
 import tech.mmarca.openvitals.data.repository.CycleRepository
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 class CycleViewModelTest {
@@ -37,6 +38,14 @@ class CycleViewModelTest {
         coEvery { repo.missingPermissions() } returns missingPermissions
         coEvery { repo.loadCycleData(any(), any()) } returns data
         coEvery { repo.loadCyclePeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val period = query.windows.current
+            CyclePeriodData(
+                data = repo.loadCycleData(period.start, period.end),
+                missingPermissions = repo.missingPermissions(),
+            )
+        }
+        coEvery { repo.loadCyclePeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val period = query.windows.current
             CyclePeriodData(
@@ -174,6 +183,6 @@ class CycleViewModelTest {
 
         vm.onCyclePermissionsResult(setOf("cycle"))
 
-        coVerify(atLeast = 2) { repo.loadCycleData(any(), any()) }
+        coVerify { repo.loadCyclePeriod(any(), RefreshMode.FORCE) }
     }
 }

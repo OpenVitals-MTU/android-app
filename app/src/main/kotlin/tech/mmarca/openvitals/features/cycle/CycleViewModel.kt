@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
@@ -114,7 +115,7 @@ class CycleViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -122,10 +123,10 @@ class CycleViewModel(
     }
 
     fun onCyclePermissionsResult(granted: Set<String>) {
-        load()
+        load(RefreshMode.FORCE)
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -135,7 +136,11 @@ class CycleViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadCyclePeriod(query)
+                if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadCyclePeriod(query)
+                } else {
+                    repository.loadCyclePeriod(query, refreshMode)
+                }
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(

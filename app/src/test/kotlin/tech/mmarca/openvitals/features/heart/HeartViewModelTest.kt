@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
 import tech.mmarca.openvitals.data.repository.HeartRepository
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.VitalsPeriodData
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.VitalsRepository
@@ -131,11 +132,9 @@ class HeartViewModelTest {
         coEvery { repo.loadBloodGlucose(any(), any()) } returns emptyList()
         coEvery { repo.loadSkinTemperature(any(), any()) } returns emptyList()
         coEvery { repo.deleteVitalsMeasurementEntry(any(), any()) } returns Unit
-        coEvery { repo.loadVitalsPeriod(any(), any()) } coAnswers {
-            val query = firstArg<PeriodLoadQuery>()
-            val metric = secondArg<VitalsPeriodMetric>()
+        suspend fun periodData(query: PeriodLoadQuery, metric: VitalsPeriodMetric): VitalsPeriodData {
             val windows = query.windows
-            when (metric) {
+            return when (metric) {
                 VitalsPeriodMetric.ALL -> VitalsPeriodData(
                     missingVitalsPermissions = repo.missingPermissions(),
                     bloodPressure = repo.loadBloodPressure(windows.current.start, windows.current.end),
@@ -204,6 +203,12 @@ class HeartViewModelTest {
                 )
             }
         }
+        coEvery { repo.loadVitalsPeriod(any(), any()) } coAnswers {
+            periodData(firstArg(), secondArg())
+        }
+        coEvery { repo.loadVitalsPeriod(any(), any(), any()) } coAnswers {
+            periodData(firstArg(), secondArg())
+        }
     }
 
     // ─── Initial state ────────────────────────────────────────────────────────
@@ -247,7 +252,7 @@ class HeartViewModelTest {
 
         assertTrue(vm.uiState.value.bloodPressure.isEmpty())
         coVerify { vitalsRepo.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, "bp-id") }
-        coVerify(atLeast = 2) { vitalsRepo.loadVitalsPeriod(any(), any()) }
+        coVerify { vitalsRepo.loadVitalsPeriod(any(), VitalsPeriodMetric.BLOOD_PRESSURE, RefreshMode.FORCE) }
     }
 
     @Test fun `deleteVitalsMeasurementEntry ignores blood pressure not created by OpenVitals`() = runTest {

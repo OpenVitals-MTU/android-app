@@ -11,17 +11,27 @@ import androidx.health.connect.client.records.SexualActivityRecord
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.CyclePeriodDataCodec
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 
 @Singleton
 class CycleRepository @Inject constructor(
     private val hc: HealthConnectManager,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -47,15 +57,41 @@ class CycleRepository @Inject constructor(
         return phase4Permissions.filterNot { it in granted }.toSet()
     }
 
-    suspend fun loadCyclePeriod(query: PeriodLoadQuery): CyclePeriodData =
-        coroutineScope {
+    suspend fun loadCyclePeriod(
+        query: PeriodLoadQuery,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): CyclePeriodData {
+        val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = CyclePeriodDataCodec.Surface,
+            query = query,
+            metricSet = "cycle",
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = CyclePeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = CyclePeriodDataCodec::decode,
+            encode = CyclePeriodDataCodec::encode,
+        ) {
+            coroutineScope {
             val data = async { loadCycleData(query.windows.current.start, query.windows.current.end) }
             val missingPermissions = async { missingPermissions() }
             CyclePeriodData(
                 data = data.await(),
                 missingPermissions = missingPermissions.await(),
             )
+            }
         }
+    }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     suspend fun loadCycleData(start: LocalDate, end: LocalDate): CycleData {
         val granted = grantedPermissionsIfAvailable()

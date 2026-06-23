@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.HydrationPeriodData
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -38,6 +39,16 @@ class HydrationViewModelTest {
         coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
         coEvery { repo.deleteHydrationEntry(any()) } returns Unit
         coEvery { repo.loadHydrationPeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val windows = query.windows
+            HydrationPeriodData(
+                dailyHydration = repo.loadDailyHydration(windows.current.start, windows.current.end),
+                previousDailyHydration = repo.loadDailyHydration(windows.previous.start, windows.previous.end),
+                baselineDailyHydration = repo.loadDailyHydration(windows.baseline.start, windows.baseline.end),
+                hydrationEntries = repo.loadHydrationEntries(windows.current.start, windows.current.end),
+            )
+        }
+        coEvery { repo.loadHydrationPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
             HydrationPeriodData(
@@ -154,7 +165,7 @@ class HydrationViewModelTest {
         assertTrue(vm.uiState.value.hydrationEntries.isEmpty())
         assertEquals(0.0, vm.uiState.value.totalLiters, 0.01)
         coVerify { repo.deleteHydrationEntry("hydration-id") }
-        coVerify(atLeast = 2) { repo.loadHydrationPeriod(any()) }
+        coVerify { repo.loadHydrationPeriod(any(), RefreshMode.FORCE) }
     }
 
     @Test fun `deleteHydrationEntry ignores entries not created by OpenVitals`() = runTest {

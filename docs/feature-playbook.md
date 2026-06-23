@@ -20,6 +20,7 @@ Follow this checklist when adding or extending a metric screen.
 - Prefer bundled period APIs that return current, previous, and baseline data from one public call.
 - Keep Health Connect permissions and record types below the repository layer.
 - Keep granular APIs only for real entry-list/detail reads.
+- When a period load becomes expensive, cache derived summaries through the Room summary cache instead of storing raw Health Connect records.
 
 ## 4. Wire Through Hilt
 

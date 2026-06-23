@@ -4,20 +4,30 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.NutritionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.NutritionPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class NutritionRepository @Inject constructor(
     private val hc: HealthConnectManager,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -29,9 +39,26 @@ class NutritionRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadNutritionPeriod(query: PeriodLoadQuery): NutritionPeriodData = coroutineScope {
+    suspend fun loadNutritionPeriod(
+        query: PeriodLoadQuery,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): NutritionPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = NutritionPeriodDataCodec.Surface,
+            query = query,
+            metricSet = "nutrition",
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = NutritionPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = NutritionPeriodDataCodec::decode,
+            encode = NutritionPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         val dailyMacros = async { loadDailyMacros(windows.current.start, windows.current.end, granted) }
         val previousDailyMacros = async { loadDailyMacros(windows.previous.start, windows.previous.end, granted) }
         val baselineDailyMacros = async { loadDailyMacros(windows.baseline.start, windows.baseline.end, granted) }
@@ -42,7 +69,16 @@ class NutritionRepository @Inject constructor(
             baselineDailyMacros = baselineDailyMacros.await(),
             entries = entries.await(),
         )
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     suspend fun loadDailyMacros(start: LocalDate, end: LocalDate): List<DailyMacros> {
         val granted = grantedPermissionsIfAvailable()

@@ -18,7 +18,8 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
-- WorkManager is present only for user-started Apple Health imports; Room is still absent
+- Room is present for derived metric summary caching only; Health Connect remains the source of truth
+- WorkManager is used for user-started Apple Health imports and lightweight metric summary warmup
 
 Most importantly, body and entry/session browsing now live in metric-owned detail screens. The former global Browse destination is no longer part of the app architecture.
 
@@ -102,9 +103,11 @@ The current app does not need:
 
 - a reducer/effect architecture
 - a multi-module split
-- a cache/database architecture for all metrics
+- a raw Health Connect mirror
 
-Those may become useful later, but they are not the baseline for new work today.
+Derived summaries may be cached in Room when a screen otherwise repeats expensive Health Connect reads or calculations.
+The cache stores versioned UI/repository result envelopes and must be invalidated by permission fingerprint,
+calculation config, and schema version.
 
 ### 7. Keep module boundaries proportional
 
@@ -471,9 +474,12 @@ This is fine for the current repo size, but if shared UI keeps growing, these sh
 
 ### 4. Background work is narrow and explicit
 
-The project does not declare Room, and there is no repository/cache architecture built around a local database.
+Room-backed caching is intentionally narrow: it stores derived summaries, not raw Health Connect records.
+The first cached surface is dashboard-style daily summaries, which also powers daily readiness.
 
-WorkManager is used for the Apple Health import worker because that workflow can be long-running and user-visible. Do not design new features as if a general background-sync layer already exists.
+WorkManager is used for the Apple Health import worker because that workflow can be long-running and user-visible.
+It is also used for small metric summary warmup jobs after app open. Do not design new features as if a
+general background-sync layer or raw-record database already exists.
 
 ### 5. Do not over-correct into a universal framework
 

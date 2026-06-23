@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.BoneMassEntry
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
@@ -172,7 +173,7 @@ class BodyViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -200,14 +201,14 @@ class BodyViewModel(
             runCatching {
                 repository.deleteBodyMeasurementEntry(type, entryId)
             }.onSuccess {
-                load()
+                load(RefreshMode.FORCE)
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.message)
             }
         }
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -217,7 +218,11 @@ class BodyViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadBodyPeriod(query, BodyPeriodMetric.ALL)
+                if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadBodyPeriod(query, BodyPeriodMetric.ALL)
+                } else {
+                    repository.loadBodyPeriod(query, BodyPeriodMetric.ALL, refreshMode)
+                }
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load

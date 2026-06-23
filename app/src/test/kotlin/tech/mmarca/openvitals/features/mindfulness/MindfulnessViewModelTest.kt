@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.MindfulnessPeriodData
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -36,6 +37,15 @@ class MindfulnessViewModelTest {
         coEvery { repo.loadMindfulnessSessions(any(), any()) } returns emptyList()
         coEvery { repo.deleteMindfulnessSessionEntry(any()) } returns Unit
         coEvery { repo.loadMindfulnessPeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            val windows = query.windows
+            MindfulnessPeriodData(
+                sessions = repo.loadMindfulnessSessions(windows.current.start, windows.current.end),
+                previousSessions = repo.loadMindfulnessSessions(windows.previous.start, windows.previous.end),
+                baselineSessions = repo.loadMindfulnessSessions(windows.baseline.start, windows.baseline.end),
+            )
+        }
+        coEvery { repo.loadMindfulnessPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
             MindfulnessPeriodData(
@@ -130,7 +140,7 @@ class MindfulnessViewModelTest {
         assertTrue(vm.uiState.value.sessions.isEmpty())
         assertEquals(0L, vm.uiState.value.totalMinutes)
         coVerify { repo.deleteMindfulnessSessionEntry("session-id") }
-        coVerify(atLeast = 2) { repo.loadMindfulnessPeriod(any()) }
+        coVerify { repo.loadMindfulnessPeriod(any(), RefreshMode.FORCE) }
     }
 
     @Test fun `deleteMindfulnessSessionEntry ignores sessions not created by OpenVitals`() = runTest {

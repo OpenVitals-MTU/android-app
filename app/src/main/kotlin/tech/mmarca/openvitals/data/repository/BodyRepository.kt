@@ -13,6 +13,11 @@ import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.BodyPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.BodyFatEntry
 import tech.mmarca.openvitals.domain.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.domain.model.BodyWaterMassEntry
@@ -21,13 +26,16 @@ import tech.mmarca.openvitals.domain.model.BoneMassEntry
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -35,6 +43,8 @@ import kotlinx.coroutines.coroutineScope
 class BodyRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -63,9 +73,27 @@ class BodyRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadBodyPeriod(query: PeriodLoadQuery, metric: BodyPeriodMetric): BodyPeriodData = coroutineScope {
+    suspend fun loadBodyPeriod(
+        query: PeriodLoadQuery,
+        metric: BodyPeriodMetric,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): BodyPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = BodyPeriodDataCodec.Surface,
+            query = query,
+            metricSet = metric.name,
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = BodyPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = BodyPeriodDataCodec::decode,
+            encode = BodyPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         when (metric) {
             BodyPeriodMetric.ALL -> loadAllBodyPeriod(windows, granted)
             BodyPeriodMetric.WEIGHT -> {
@@ -136,7 +164,16 @@ class BodyRepository @Inject constructor(
                 )
             }
         }
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     private suspend fun loadAllBodyPeriod(
         windows: PeriodWindows,

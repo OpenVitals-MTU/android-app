@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
@@ -157,7 +158,7 @@ class HydrationViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -215,14 +216,14 @@ class HydrationViewModel(
             runCatching {
                 repository.deleteHydrationEntry(entryId)
             }.onSuccess {
-                load()
+                load(RefreshMode.FORCE)
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.message)
             }
         }
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -233,7 +234,11 @@ class HydrationViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val periodData = repository.loadHydrationPeriod(query)
+                val periodData = if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadHydrationPeriod(query)
+                } else {
+                    repository.loadHydrationPeriod(query, refreshMode)
+                }
                 HydrationLoadResult(
                     dailyHydration = periodData.dailyHydration,
                     previousDailyHydration = periodData.previousDailyHydration,

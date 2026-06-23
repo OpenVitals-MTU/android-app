@@ -31,6 +31,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.data.cache.FakeMetricSummaryCacheDao
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
@@ -100,6 +102,37 @@ class HealthRepositoryDashboardTest {
         assertEquals(0L, data.steps)
         assertEquals(1234.0, data.distanceMeters, 0.01)
         assertNull(data.workout)
+    }
+
+    @Test fun `loadDashboard fresh persistent cache hit avoids Health Connect reads`() = runTest {
+        val date = LocalDate.of(2026, 6, 23)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        coEvery { hc.readSteps(date) } returns 8_000L
+
+        val cacheStore = MetricSummaryCacheStore(
+            dao = FakeMetricSummaryCacheDao(),
+            today = { date },
+        )
+        val query = DashboardQuery(
+            date = date,
+            visibleMetrics = setOf(DashboardMetric.STEPS),
+        )
+
+        val first = HealthRepository(
+            hc = hc,
+            metricSummaryCacheStore = cacheStore,
+        ).loadDashboard(query)
+        val second = HealthRepository(
+            hc = hc,
+            metricSummaryCacheStore = cacheStore,
+        ).loadDashboard(query)
+
+        assertEquals(8_000L, first.steps)
+        assertEquals(8_000L, second.steps)
+        coVerify(exactly = 1) { hc.readSteps(date) }
     }
 
     @Test fun `loadDashboard combines sleep sessions with selected sleep range mode`() = runTest {

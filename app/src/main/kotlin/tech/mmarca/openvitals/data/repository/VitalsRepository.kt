@@ -11,11 +11,17 @@ import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.VitalsPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -24,10 +30,12 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -35,6 +43,8 @@ import kotlinx.coroutines.coroutineScope
 class VitalsRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -72,10 +82,28 @@ class VitalsRepository @Inject constructor(
         return phase3Permissions.filterNot { it in granted }.toSet()
     }
 
-    suspend fun loadVitalsPeriod(query: PeriodLoadQuery, metric: VitalsPeriodMetric): VitalsPeriodData = coroutineScope {
+    suspend fun loadVitalsPeriod(
+        query: PeriodLoadQuery,
+        metric: VitalsPeriodMetric,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): VitalsPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         val missingPermissions = phase3Permissions.filterNot { it in granted }.toSet()
+        val key = periodSummaryKey(
+            surface = VitalsPeriodDataCodec.Surface,
+            query = query,
+            metricSet = metric.name,
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = VitalsPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = VitalsPeriodDataCodec::decode,
+            encode = VitalsPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         when (metric) {
             VitalsPeriodMetric.ALL -> {
                 val current = windows.current
@@ -161,7 +189,16 @@ class VitalsRepository @Inject constructor(
                 )
             }
         }
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     private suspend fun <T> loadPeriodTriplet(
         windows: PeriodWindows,

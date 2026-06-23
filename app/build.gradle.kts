@@ -118,9 +118,15 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 
     // Background work
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Local summary cache
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // Home screen widgets
     implementation(libs.androidx.glance.appwidget)

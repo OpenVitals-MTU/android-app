@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
@@ -225,7 +226,7 @@ class HeartViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -256,7 +257,7 @@ class HeartViewModel(
             runCatching {
                 vitalsRepository.deleteVitalsMeasurementEntry(type, entryId)
             }.onSuccess {
-                load()
+                load(RefreshMode.FORCE)
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.message)
             }
@@ -264,10 +265,10 @@ class HeartViewModel(
     }
 
     fun onVitalsPermissionsResult(granted: Set<String>) {
-        load()
+        load(RefreshMode.FORCE)
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -280,31 +281,41 @@ class HeartViewModel(
                 when (val metric = selectedMetric) {
                     null -> coroutineScope {
                         val heart = async {
-                            repository
-                                .loadHeartPeriod(query, HeartPeriodMetric.ALL)
+                            if (refreshMode == RefreshMode.NORMAL) {
+                                repository.loadHeartPeriod(query, HeartPeriodMetric.ALL)
+                            } else {
+                                repository.loadHeartPeriod(query, HeartPeriodMetric.ALL, refreshMode)
+                            }
                                 .toLoadResult()
                         }
                         val vitals = async {
-                            vitalsRepository
-                                .loadVitalsPeriod(query, VitalsPeriodMetric.ALL)
+                            if (refreshMode == RefreshMode.NORMAL) {
+                                vitalsRepository.loadVitalsPeriod(query, VitalsPeriodMetric.ALL)
+                            } else {
+                                vitalsRepository.loadVitalsPeriod(query, VitalsPeriodMetric.ALL, refreshMode)
+                            }
                                 .toLoadResult()
                         }
                         heart.await().merge(vitals.await())
                     }
                     HeartMetric.AVERAGE_HEART_RATE,
                     HeartMetric.RESTING_HEART_RATE,
-                    HeartMetric.HRV -> repository
-                        .loadHeartPeriod(query, metric.toHeartPeriodMetric())
-                        .toLoadResult()
+                    HeartMetric.HRV -> if (refreshMode == RefreshMode.NORMAL) {
+                        repository.loadHeartPeriod(query, metric.toHeartPeriodMetric())
+                    } else {
+                        repository.loadHeartPeriod(query, metric.toHeartPeriodMetric(), refreshMode)
+                    }.toLoadResult()
                     HeartMetric.BLOOD_PRESSURE,
                     HeartMetric.SPO2,
                     HeartMetric.VO2_MAX,
                     HeartMetric.RESPIRATORY_RATE,
                     HeartMetric.BODY_TEMPERATURE,
                     HeartMetric.BLOOD_GLUCOSE,
-                    HeartMetric.SKIN_TEMPERATURE -> vitalsRepository
-                        .loadVitalsPeriod(query, metric.toVitalsPeriodMetric())
-                        .toLoadResult()
+                    HeartMetric.SKIN_TEMPERATURE -> if (refreshMode == RefreshMode.NORMAL) {
+                        vitalsRepository.loadVitalsPeriod(query, metric.toVitalsPeriodMetric())
+                    } else {
+                        vitalsRepository.loadVitalsPeriod(query, metric.toVitalsPeriodMetric(), refreshMode)
+                    }.toLoadResult()
                 }
             }.onSuccess { result ->
                 if (!isCurrent) return@load

@@ -37,6 +37,8 @@ import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.core.performance.PerformanceTrace
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.CardioLoadTimeWindow
@@ -51,6 +53,10 @@ import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
+import tech.mmarca.openvitals.data.cache.CachedSummaryFreshness
+import tech.mmarca.openvitals.data.cache.CachedSummaryKey
+import tech.mmarca.openvitals.data.cache.DashboardDataSummaryCodec
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
@@ -72,8 +78,10 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryKey
 import tech.mmarca.openvitals.healthconnect.currentDayTtlMillis
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
@@ -91,6 +99,8 @@ class HealthRepository @Inject constructor(
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -205,25 +215,57 @@ class HealthRepository @Inject constructor(
             val granted = grantedPermissionsIfAvailable()
             val loadMetrics = query.visibleMetrics
             val showOpenVitalsCalculatedCalories = preferencesRepository?.showOpenVitalsCalculatedCalories == true
-            val cacheKey = HealthConnectQueryKey(
-                operation = "dashboard",
-                parts = listOf(
-                    query.date.toString(),
-                    query.sleepRangeMode.name,
-                    query.activityWeekMode.name,
-                    showOpenVitalsCalculatedCalories.toString(),
-                    loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
-                ),
-                permissions = granted.permissionFingerprint(),
+            val healthConnectCacheKey = dashboardHealthConnectCacheKey(
+                query = query,
+                loadMetrics = loadMetrics,
+                granted = granted,
+                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+            )
+            val summaryCacheKey = dashboardSummaryCacheKey(
+                query = query,
+                loadMetrics = loadMetrics,
+                granted = granted,
+                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
             )
 
-            val data = queryCache.getOrPut(
-                key = cacheKey,
+            val cached = metricSummaryCacheStore?.read(
+                key = summaryCacheKey,
+                referenceDate = query.date,
                 refreshMode = query.refreshMode,
-                ttlMillis = currentDayTtlMillis(query.date),
-            ) {
-                loadDashboardUncached(query, loadMetrics, granted, showOpenVitalsCalculatedCalories)
+            )
+            if (cached?.isUsable == true) {
+                runCatching { DashboardDataSummaryCodec.decode(checkNotNull(cached.entry).payloadJson) }
+                    .onSuccess { cachedData ->
+                        if (cached.freshness == CachedSummaryFreshness.STALE) {
+                            refreshDashboardSummaryInBackground(
+                                query = query,
+                                loadMetrics = loadMetrics,
+                                granted = granted,
+                                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                                healthConnectCacheKey = healthConnectCacheKey,
+                                summaryCacheKey = summaryCacheKey,
+                            )
+                        }
+                        Log.d(
+                            TAG,
+                            "loadDashboard cacheHit freshness=${cached.freshness} date=${query.date} metrics=${loadMetrics.size}",
+                        )
+                        return@withContext cachedData
+                    }
+                    .onFailure {
+                        metricSummaryCacheStore?.invalidate(summaryCacheKey)
+                    }
             }
+
+            val data = loadDashboardFromHealthConnect(
+                query = query,
+                loadMetrics = loadMetrics,
+                granted = granted,
+                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                healthConnectCacheKey = healthConnectCacheKey,
+                refreshMode = query.refreshMode,
+            )
+            metricSummaryCacheStore?.write(summaryCacheKey, DashboardDataSummaryCodec.encode(data))
             Log.d(
                 TAG,
                 "loadDashboard completed date=${query.date} metrics=${loadMetrics.size} " +
@@ -231,6 +273,102 @@ class HealthRepository @Inject constructor(
             )
             data
         }
+
+    private suspend fun loadDashboardFromHealthConnect(
+        query: DashboardQuery,
+        loadMetrics: Set<DashboardMetric>,
+        granted: Set<String>,
+        showOpenVitalsCalculatedCalories: Boolean,
+        healthConnectCacheKey: HealthConnectQueryKey,
+        refreshMode: tech.mmarca.openvitals.domain.model.RefreshMode,
+    ): DashboardData =
+        queryCache.getOrPut(
+            key = healthConnectCacheKey,
+            refreshMode = refreshMode,
+            ttlMillis = currentDayTtlMillis(query.date),
+        ) {
+            PerformanceTrace.timed(
+                name = "dashboard.healthConnect",
+                attributes = mapOf(
+                    "date" to query.date,
+                    "metrics" to loadMetrics.size,
+                ),
+            ) {
+                loadDashboardUncached(query, loadMetrics, granted, showOpenVitalsCalculatedCalories)
+            }
+        }
+
+    private fun refreshDashboardSummaryInBackground(
+        query: DashboardQuery,
+        loadMetrics: Set<DashboardMetric>,
+        granted: Set<String>,
+        showOpenVitalsCalculatedCalories: Boolean,
+        healthConnectCacheKey: HealthConnectQueryKey,
+        summaryCacheKey: CachedSummaryKey,
+    ) {
+        val cacheStore = metricSummaryCacheStore ?: return
+        val scope = appScope ?: return
+        scope.launch(dispatchers.io) {
+            runCatching {
+                val refreshed = loadDashboardFromHealthConnect(
+                    query = query,
+                    loadMetrics = loadMetrics,
+                    granted = granted,
+                    showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                    healthConnectCacheKey = healthConnectCacheKey,
+                    refreshMode = tech.mmarca.openvitals.domain.model.RefreshMode.FORCE,
+                )
+                cacheStore.write(summaryCacheKey, DashboardDataSummaryCodec.encode(refreshed))
+            }.onFailure { error ->
+                Log.w(TAG, "Background dashboard summary refresh failed date=${query.date}", error)
+            }
+        }
+    }
+
+    private fun dashboardHealthConnectCacheKey(
+        query: DashboardQuery,
+        loadMetrics: Set<DashboardMetric>,
+        granted: Set<String>,
+        showOpenVitalsCalculatedCalories: Boolean,
+    ): HealthConnectQueryKey =
+        HealthConnectQueryKey(
+            operation = "dashboard",
+            parts = dashboardCacheParts(query, loadMetrics, showOpenVitalsCalculatedCalories),
+            permissions = granted.permissionFingerprint(),
+        )
+
+    private fun dashboardSummaryCacheKey(
+        query: DashboardQuery,
+        loadMetrics: Set<DashboardMetric>,
+        granted: Set<String>,
+        showOpenVitalsCalculatedCalories: Boolean,
+    ): CachedSummaryKey =
+        CachedSummaryKey(
+            surface = DashboardDataSummaryCodec.Surface,
+            startDate = query.date,
+            endDate = query.date,
+            metricSet = loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
+            permissionFingerprint = granted.permissionFingerprint(),
+            configHash = listOf(
+                query.sleepRangeMode.name,
+                query.activityWeekMode.name,
+                showOpenVitalsCalculatedCalories.toString(),
+            ).joinToString(separator = "|"),
+            schemaVersion = DashboardDataSummaryCodec.SchemaVersion,
+        )
+
+    private fun dashboardCacheParts(
+        query: DashboardQuery,
+        loadMetrics: Set<DashboardMetric>,
+        showOpenVitalsCalculatedCalories: Boolean,
+    ): List<String> =
+        listOf(
+            query.date.toString(),
+            query.sleepRangeMode.name,
+            query.activityWeekMode.name,
+            showOpenVitalsCalculatedCalories.toString(),
+            loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
+        )
 
     private suspend fun loadDashboardUncached(
         query: DashboardQuery,

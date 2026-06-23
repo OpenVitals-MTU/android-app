@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -13,8 +14,10 @@ internal suspend fun <T : Record> HealthConnectClient.readRecordsPaged(
     pageSize: Int = 1000,
     maxRecords: Int? = null,
 ): List<T> {
+    val startedAt = System.currentTimeMillis()
     val records = mutableListOf<T>()
     var pageToken: String? = null
+    var pageCount = 0
 
     do {
         val remaining = maxRecords?.minus(records.size)
@@ -32,7 +35,14 @@ internal suspend fun <T : Record> HealthConnectClient.readRecordsPaged(
 
         records += response.records
         pageToken = response.pageToken
+        pageCount++
     } while (pageToken != null && (maxRecords == null || records.size < maxRecords))
 
-    return maxRecords?.let { records.take(it) } ?: records
+    val result = maxRecords?.let { records.take(it) } ?: records
+    Log.d(
+        "OpenVitalsPerf",
+        "healthConnect.readRecordsPaged type=${recordType.simpleName} records=${result.size} " +
+            "pages=$pageCount durationMs=${System.currentTimeMillis() - startedAt}",
+    )
+    return result
 }

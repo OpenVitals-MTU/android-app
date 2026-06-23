@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -51,11 +52,9 @@ class BodyViewModelTest {
         coEvery { repo.loadLatestBodyWaterMass() } returns null
         coEvery { repo.loadBodyWaterMassEntries(any(), any()) } returns emptyList()
         coEvery { repo.deleteBodyMeasurementEntry(any(), any()) } returns Unit
-        coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers {
-            val query = firstArg<PeriodLoadQuery>()
-            val metric = secondArg<BodyPeriodMetric>()
+        suspend fun periodData(query: PeriodLoadQuery, metric: BodyPeriodMetric): BodyPeriodData {
             val windows = query.windows
-            when (metric) {
+            return when (metric) {
                 BodyPeriodMetric.WEIGHT -> BodyPeriodData(
                     weightEntries = repo.loadWeightEntries(windows.current.start, windows.current.end),
                     previousWeightEntries = repo.loadWeightEntries(windows.previous.start, windows.previous.end),
@@ -107,6 +106,12 @@ class BodyViewModelTest {
                     bodyWaterMassEntries = repo.loadBodyWaterMassEntries(windows.current.start, windows.current.end),
                 )
             }
+        }
+        coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers {
+            periodData(firstArg(), secondArg())
+        }
+        coEvery { repo.loadBodyPeriod(any(), any(), any()) } coAnswers {
+            periodData(firstArg(), secondArg())
         }
     }
 
@@ -194,7 +199,7 @@ class BodyViewModelTest {
 
         assertTrue(vm.uiState.value.weightEntries.isEmpty())
         coVerify { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") }
-        coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), any()) }
+        coVerify { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL, RefreshMode.FORCE) }
     }
 
     @Test fun `deleteBodyMeasurementEntry ignores weight not created by OpenVitals`() = runTest {

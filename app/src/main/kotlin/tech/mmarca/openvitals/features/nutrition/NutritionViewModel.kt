@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
@@ -138,7 +139,7 @@ class NutritionViewModel(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load()
+            if (refreshCurrent) load(RefreshMode.FORCE)
             return
         }
         applyPeriodSelection(selection)
@@ -159,7 +160,7 @@ class NutritionViewModel(
         _uiState.value = _uiState.value.copy(dailyGoal = normalized)
     }
 
-    fun load() {
+    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -169,7 +170,11 @@ class NutritionViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadNutritionPeriod(query)
+                if (refreshMode == RefreshMode.NORMAL) {
+                    repository.loadNutritionPeriod(query)
+                } else {
+                    repository.loadNutritionPeriod(query, refreshMode)
+                }
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val totals = result.dailyMacros.totals()

@@ -26,12 +26,21 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.ActivitiesPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.ActivityPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -41,6 +50,8 @@ class ActivityRepository @Inject constructor(
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -79,9 +90,28 @@ class ActivityRepository @Inject constructor(
         includeSteps: Boolean,
         includeNutrition: Boolean,
         includeWheelchairPushes: Boolean = false,
-    ): ActivityPeriodData = coroutineScope {
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): ActivityPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = ActivityPeriodDataCodec.Surface,
+            query = query,
+            metricSet = listOf(
+                "steps=$includeSteps",
+                "nutrition=$includeNutrition",
+                "wheelchair=$includeWheelchairPushes",
+            ).joinToString(separator = ","),
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = ActivityPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = ActivityPeriodDataCodec::decode,
+            encode = ActivityPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         val dailySteps = async {
             if (includeSteps || includeWheelchairPushes) {
                 loadDailySteps(
@@ -151,11 +181,30 @@ class ActivityRepository @Inject constructor(
             baselineNutrition = baselineNutrition.await(),
             activityProgress = activityProgress.await(),
         )
+            }
+        }
     }
 
-    suspend fun loadActivitiesPeriod(query: PeriodLoadQuery): ActivitiesPeriodData = coroutineScope {
+    suspend fun loadActivitiesPeriod(
+        query: PeriodLoadQuery,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): ActivitiesPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = ActivitiesPeriodDataCodec.Surface,
+            query = query,
+            metricSet = "activities",
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = ActivitiesPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = ActivitiesPeriodDataCodec::decode,
+            encode = ActivitiesPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         val workouts = async { loadWorkouts(windows.current.start, windows.current.end, granted) }
         val previousWorkouts = async { loadWorkouts(windows.previous.start, windows.previous.end, granted) }
         val baselineWorkouts = async { loadWorkouts(windows.baseline.start, windows.baseline.end, granted) }
@@ -166,7 +215,16 @@ class ActivityRepository @Inject constructor(
             baselineWorkouts = baselineWorkouts.await(),
             plannedWorkouts = plannedWorkouts.await(),
         )
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> {
         val granted = grantedPermissionsIfAvailable()

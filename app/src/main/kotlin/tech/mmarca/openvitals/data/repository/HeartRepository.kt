@@ -7,22 +7,32 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.performance.AppCoroutineScope
+import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
+import tech.mmarca.openvitals.data.cache.HeartPeriodDataCodec
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class HeartRepository @Inject constructor(
     private val hc: HealthConnectManager,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
     companion object {
@@ -36,9 +46,27 @@ class HeartRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadHeartPeriod(query: PeriodLoadQuery, metric: HeartPeriodMetric): HeartPeriodData = coroutineScope {
+    suspend fun loadHeartPeriod(
+        query: PeriodLoadQuery,
+        metric: HeartPeriodMetric,
+        refreshMode: RefreshMode = RefreshMode.NORMAL,
+    ): HeartPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
+        val key = periodSummaryKey(
+            surface = HeartPeriodDataCodec.Surface,
+            query = query,
+            metricSet = metric.name,
+            permissionFingerprint = granted.permissionFingerprint(),
+            schemaVersion = HeartPeriodDataCodec.SchemaVersion,
+        )
+        return periodCacheLoader().load(
+            key = key,
+            refreshMode = refreshMode,
+            decode = HeartPeriodDataCodec::decode,
+            encode = HeartPeriodDataCodec::encode,
+        ) {
+            coroutineScope {
         when (metric) {
             HeartPeriodMetric.ALL -> loadAllHeartPeriod(query, granted)
             HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
@@ -109,7 +137,16 @@ class HeartRepository @Inject constructor(
                 )
             }
         }
+            }
+        }
     }
+
+    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
+        CachedPeriodRepositoryLoader(
+            cacheStore = metricSummaryCacheStore,
+            appScope = appScope,
+            tag = TAG,
+        )
 
     private suspend fun loadAllHeartPeriod(
         query: PeriodLoadQuery,
