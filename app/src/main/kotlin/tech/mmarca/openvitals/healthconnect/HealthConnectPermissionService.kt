@@ -83,6 +83,16 @@ internal class HealthConnectPermissionService(
         HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE,
     )
 
+    val plannedExercisePermissions: Set<String>
+        get() = if (isPlannedExerciseAvailable()) {
+            setOf(
+                HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class),
+                HealthPermission.getWritePermission(PlannedExerciseSessionRecord::class),
+            )
+        } else {
+            emptySet()
+        }
+
     val heartPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
@@ -110,9 +120,7 @@ internal class HealthConnectPermissionService(
             add(HealthPermission.getReadPermission(PowerRecord::class))
             add(HealthPermission.getReadPermission(StepsCadenceRecord::class))
             add(HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class))
-            if (isPlannedExerciseAvailable()) {
-                add(HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class))
-            }
+            addAll(plannedExercisePermissions)
         }
 
     val nutritionHydrationPermissions: Set<String> = setOf(
@@ -240,6 +248,7 @@ internal class HealthConnectPermissionService(
 
     val requestableWritePermissions: Set<String>
         get() = activityWritePermissions +
+            plannedExercisePermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
@@ -263,6 +272,7 @@ internal class HealthConnectPermissionService(
             additionalDataAccessPermissions +
             manualOnlyPermissions +
             activityWritePermissions +
+            plannedExercisePermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
@@ -273,6 +283,7 @@ internal class HealthConnectPermissionService(
         requestableManagedPermissions +
             manualOnlyPermissions +
             activityWritePermissions +
+            plannedExercisePermissions +
             hydrationWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +

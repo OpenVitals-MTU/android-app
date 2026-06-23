@@ -2,6 +2,9 @@ package tech.mmarca.openvitals.healthconnect
 
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.PlannedExerciseBlock
+import androidx.health.connect.client.records.PlannedExerciseStep
+import androidx.health.connect.client.records.ExerciseCompletionGoal
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.kilocalories
@@ -16,6 +19,8 @@ import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
+import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 
 class ActivityHealthReaderTest {
     @Test fun `exercise segments include active intervals around pauses`() {
@@ -112,6 +117,49 @@ class ActivityHealthReaderTest {
         assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST, segments[1].segmentType)
         assertEquals(6, segments[2].repetitions)
         assertEquals(1, segments[2].setIndex)
+    }
+
+    @Test fun `planned exercise blocks preserve set repetitions and rest duration`() {
+        val block = PlannedExerciseBlock(
+            repetitions = 1,
+            description = "Main set",
+            steps = listOf(
+                PlannedExerciseStep(
+                    exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+                    exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                    completionGoal = ExerciseCompletionGoal.RepetitionsGoal(8),
+                    performanceTargets = emptyList(),
+                    description = "Set 1",
+                ),
+                PlannedExerciseStep(
+                    exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
+                    exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_REST,
+                    completionGoal = ExerciseCompletionGoal.DurationGoal(java.time.Duration.ofSeconds(60)),
+                    performanceTargets = emptyList(),
+                    description = "Rest",
+                ),
+            ),
+        )
+
+        val data = block.toPlannedExerciseBlockData()
+
+        assertEquals(1, data.repetitions)
+        assertEquals("Main set", data.description)
+        assertEquals(PlannedExerciseCompletion.Repetitions(8), data.steps[0].completion)
+        assertEquals(PlannedExerciseCompletion.DurationSeconds(60), data.steps[1].completion)
+    }
+
+    @Test fun `planned exercise step data writes repetitions goal`() {
+        val step = PlannedExerciseStepData(
+            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+            exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+            description = "Set 1",
+            completion = PlannedExerciseCompletion.Repetitions(6),
+        ).toPlannedExerciseStep()
+
+        assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP, step.exerciseType)
+        assertEquals(PlannedExerciseStep.EXERCISE_PHASE_ACTIVE, step.exercisePhase)
+        assertEquals(ExerciseCompletionGoal.RepetitionsGoal(6), step.completionGoal)
     }
 
     @Test

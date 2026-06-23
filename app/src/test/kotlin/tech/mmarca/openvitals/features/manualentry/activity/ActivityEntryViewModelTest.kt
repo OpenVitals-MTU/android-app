@@ -38,8 +38,15 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
+import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -301,6 +308,50 @@ class ActivityEntryViewModelTest {
         assertEquals(1, request.exerciseSegments[2].setIndex)
     }
 
+    @Test fun `buildWriteRequest links selected planned workout`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "pull_ups" },
+            selectedPlannedWorkoutId = "planned-id",
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "5",
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionSets = listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8"),
+            ),
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals("planned-id", request.plannedExerciseSessionId)
+    }
+
+    @Test fun `buildPlannedExerciseWriteRequest maps sets and rest steps`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "pull_ups" },
+            titleText = "Pull day",
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "5",
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionSets = listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "60"),
+                ActivityRepetitionSetInput(repetitionsText = "6"),
+            ),
+        )
+
+        val request = buildPlannedExerciseWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals("Pull day", request.title)
+        assertEquals(1, request.blocks.size)
+        assertEquals(3, request.blocks.first().steps.size)
+        assertEquals(PlannedExerciseCompletion.Repetitions(8), request.blocks.first().steps[0].completion)
+        assertEquals(PlannedExerciseCompletion.DurationSeconds(60), request.blocks.first().steps[1].completion)
+        assertEquals(PlannedExerciseCompletion.Repetitions(6), request.blocks.first().steps[2].completion)
+    }
+
     @Test fun `buildWriteRequest writes treadmill steps as steps count`() {
         val state = ActivityEntryUiState(
             selectedActivityType = DefaultActivityEntryTypes.first { it.id == "treadmill" },
@@ -357,6 +408,255 @@ class ActivityEntryViewModelTest {
         }
         assertFalse(vm.uiState.value.isSavingEntry)
         assertTrue(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `selecting planned workout prefills editable set structure`() = runTest {
+        val plan = plannedPullUpPlan()
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        advanceUntilIdle()
+        vm.applyPlannedWorkout("planned-id")
+
+        assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals("Pull-up ladder", vm.uiState.value.titleText)
+        assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
+        assertEquals(
+            listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "60"),
+                ActivityRepetitionSetInput(repetitionsText = "6"),
+            ),
+            vm.uiState.value.repetitionSets,
+        )
+    }
+
+    @Test fun `start from existing plan loads Health Connect plans`() = runTest {
+        val plan = plannedPullUpPlan()
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startFromExistingPlan()
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.PLAN_ACTIVITY_PICKER, vm.uiState.value.mode)
+        assertEquals(listOf(plan), vm.uiState.value.plannedWorkouts)
+        assertFalse(vm.uiState.value.isLoadingPlannedWorkouts)
+    }
+
+    @Test fun `selecting activity then plan opens editable manual entry`() = runTest {
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startFromExistingPlan()
+        advanceUntilIdle()
+        vm.selectPlannedWorkoutActivity("pull_ups")
+        vm.applyPlannedWorkout("planned-id")
+
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
+        assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
+        assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals("2026-05-26", vm.uiState.value.startDateText)
+    }
+
+    @Test fun `edit entry loads matching planned workouts without selecting a plan`() = runTest {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val plan = plannedPullUpPlan()
+        val workout = ExerciseData(
+            id = "activity-id",
+            title = "Pull-up ladder",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+            startTime = start,
+            endTime = start.plusSeconds(5 * 60),
+            durationMs = 5 * 60 * 1000,
+            source = "tech.mmarca.openvitals",
+            plannedExerciseSessionId = "planned-id",
+            segments = listOf(
+                ExerciseSegmentData(
+                    startTime = start,
+                    endTime = start.plusSeconds(60),
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+                    repetitions = 8,
+                )
+            ),
+            isOpenVitalsEntry = true,
+        )
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan), workout = workout)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+            editActivityId = "activity-id",
+        )
+        advanceUntilIdle()
+
+        vm.loadEditEntry(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
+        assertEquals(listOf(plan), vm.uiState.value.plannedWorkouts)
+        assertNull(vm.uiState.value.selectedPlannedWorkoutId)
+        coVerify {
+            repo.loadPlannedWorkoutOptions(any(), ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS)
+        }
+    }
+
+    @Test fun `missing planned read permission is surfaced when loading existing plans`() = runTest {
+        val repo = activityRepo(canWrite = true, canReadPlans = false)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startFromExistingPlan()
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.PLAN_ACTIVITY_PICKER, vm.uiState.value.mode)
+        assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
+        assertEquals(PlannedWorkoutWritePermissions, vm.uiState.value.writePermissions)
+    }
+
+    @Test fun `activity entry writes selected planned workout id`() = runTest {
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        advanceUntilIdle()
+        vm.applyPlannedWorkout("planned-id")
+        vm.addEntry(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeActivityEntry(match<ActivityWriteRequest> { it.plannedExerciseSessionId == "planned-id" })
+        }
+    }
+
+    @Test fun `saving current structure writes planned workout`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        vm.updateTitle("Pull-up ladder")
+        vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
+        vm.updateRepetitionSetRepetitions(0, "8")
+        vm.updateRepetitionSetRest(0, "60")
+        vm.addRepetitionSet()
+        vm.updateRepetitionSetRepetitions(1, "6")
+        advanceUntilIdle()
+        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
+                request.id == null &&
+                    request.blocks.first().steps.map { it.completion } == listOf(
+                        PlannedExerciseCompletion.Repetitions(8),
+                        PlannedExerciseCompletion.DurationSeconds(60),
+                        PlannedExerciseCompletion.Repetitions(6),
+                    )
+            })
+        }
+        assertEquals("saved-plan-id", vm.uiState.value.selectedPlannedWorkoutId)
+    }
+
+    @Test fun `saving current structure requires a training plan title`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
+        vm.updateRepetitionSetRepetitions(0, "8")
+        advanceUntilIdle()
+        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryError.INVALID_VALUE, vm.uiState.value.entryError)
+        assertTrue(
+            ActivityEntryValidationError.TRAINING_PLAN_TITLE_REQUIRED in vm.uiState.value.validationErrors
+        )
+        coVerify(exactly = 0) { repo.writePlannedWorkout(any()) }
+    }
+
+    @Test fun `new plan option clears selected plan and saves a new planned workout`() = runTest {
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        advanceUntilIdle()
+        vm.applyPlannedWorkout("planned-id")
+        vm.createNewPlannedWorkout()
+
+        assertNull(vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals("", vm.uiState.value.titleText)
+        assertEquals("", vm.uiState.value.notesText)
+        assertEquals("30", vm.uiState.value.durationMinutesText)
+        assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
+        assertEquals(listOf(ActivityRepetitionSetInput()), vm.uiState.value.repetitionSets)
+
+        vm.updateTitle("New pull-up plan")
+        vm.updateRepetitionSetRepetitions(0, "5")
+        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
+                request.id == null && request.title == "New pull-up plan"
+            })
+        }
+    }
+
+    @Test fun `missing planned workout permission is surfaced before saving plan`() = runTest {
+        val repo = activityRepo(canWrite = true, canWritePlan = false)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        vm.updateTitle("Pull-up ladder")
+        vm.updateRepetitionMode(ActivityRepetitionEntryMode.SETS)
+        vm.updateRepetitionSetRepetitions(0, "8")
+        advanceUntilIdle()
+        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
+        assertEquals(PlannedWorkoutWritePermissions, vm.uiState.value.writePermissions)
     }
 
     @Test fun `activity entry defaults to latest recorded activity when no favorite is set`() = runTest {
@@ -602,15 +902,30 @@ class ActivityEntryViewModelTest {
         assertEquals("126", vm.uiState.value.totalCaloriesText)
     }
 
-    private fun activityRepo(canWrite: Boolean): ActivityRepository =
+    private fun activityRepo(
+        canWrite: Boolean,
+        plannedWorkouts: List<PlannedExerciseData> = emptyList(),
+        workout: ExerciseData? = null,
+        canReadPlans: Boolean = true,
+        canWritePlan: Boolean = true,
+    ): ActivityRepository =
         mockk<ActivityRepository>().also { repo ->
             every { repo.activityWritePermissions() } returns ActivityWritePermissions
             every { repo.activityWritePermissions(any(), any(), any(), any(), any()) } returns ActivityWritePermissions
             every { repo.activityWritePermissions(any<ActivityWriteRequest>()) } returns ActivityWritePermissions
+            every { repo.plannedWorkoutWritePermissions() } returns PlannedWorkoutWritePermissions
             coEvery { repo.hasActivityWritePermission() } returns canWrite
             coEvery { repo.hasActivityWritePermission(any(), any(), any(), any(), any()) } returns canWrite
             coEvery { repo.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns canWrite
             coEvery { repo.writeActivityEntry(any()) } returns "activity-id"
+            coEvery { repo.loadWorkout(any()) } returns workout
+            coEvery { repo.loadPlannedWorkoutOptions(any(), any()) } returns plannedWorkouts
+            coEvery { repo.loadExistingPlannedWorkouts(any()) } answers {
+                if (canReadPlans) plannedWorkouts else throw SecurityException("Missing Health Connect planned exercise read permission.")
+            }
+            coEvery { repo.writePlannedWorkout(any()) } answers {
+                if (canWritePlan) "saved-plan-id" else throw SecurityException("Missing Health Connect planned exercise write permission.")
+            }
         }
 
     private fun activityPrefs(
@@ -646,5 +961,49 @@ class ActivityEntryViewModelTest {
             "write_active_calories",
             "write_total_calories",
         )
+        private val PlannedWorkoutWritePermissions = setOf(
+            "read_planned",
+            "write_planned",
+        )
     }
 }
+
+private fun plannedPullUpPlan(): PlannedExerciseData =
+    PlannedExerciseData(
+        id = "planned-id",
+        title = "Pull-up ladder",
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        startTime = Instant.parse("2026-05-26T08:30:00Z"),
+        endTime = Instant.parse("2026-05-26T08:35:00Z"),
+        hasExplicitTime = true,
+        completedExerciseSessionId = null,
+        notes = "Strict reps",
+        blockCount = 1,
+        source = "tech.mmarca.openvitals",
+        blocks = listOf(
+            PlannedExerciseBlockData(
+                repetitions = 1,
+                description = "Main set",
+                steps = listOf(
+                    PlannedExerciseStepData(
+                        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+                        exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                        description = "Set 1",
+                        completion = PlannedExerciseCompletion.Repetitions(8),
+                    ),
+                    PlannedExerciseStepData(
+                        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
+                        exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_REST,
+                        description = "Rest",
+                        completion = PlannedExerciseCompletion.DurationSeconds(60),
+                    ),
+                    PlannedExerciseStepData(
+                        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
+                        exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                        description = "Set 2",
+                        completion = PlannedExerciseCompletion.Repetitions(6),
+                    ),
+                ),
+            )
+        ),
+    )

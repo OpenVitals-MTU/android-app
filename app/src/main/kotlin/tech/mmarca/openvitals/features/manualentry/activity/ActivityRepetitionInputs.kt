@@ -123,7 +123,7 @@ internal fun ActivityRepetitionInputs(
                             OutlinedTextField(
                                 value = set.restMinutesText,
                                 onValueChange = { onSetRestChanged(index, it) },
-                                enabled = enabled && index < state.repetitionSets.lastIndex,
+                                enabled = enabled,
                                 singleLine = true,
                                 label = { Text(stringResource(R.string.activity_entry_set_rest_label)) },
                                 isError = errorText != null,

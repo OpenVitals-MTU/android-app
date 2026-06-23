@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 
 enum class ActivityEntryError {
     INVALID_VALUE,
@@ -29,6 +30,8 @@ enum class ActivityEntryError {
 
 enum class ActivityEntryMode {
     CHOOSE_SOURCE,
+    PLAN_ACTIVITY_PICKER,
+    PLAN_PICKER,
     MANUAL,
     ROUTE_IMPORT,
     RECORDING,
@@ -36,6 +39,7 @@ enum class ActivityEntryMode {
 
 enum class ActivityEntryField {
     ACTIVITY_TYPE,
+    TITLE,
     START_DATE,
     START_TIME,
     DURATION,
@@ -50,6 +54,7 @@ enum class ActivityEntryValidationError(
     val field: ActivityEntryField,
 ) {
     ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE(ActivityEntryField.ACTIVITY_TYPE),
+    TRAINING_PLAN_TITLE_REQUIRED(ActivityEntryField.TITLE),
     START_DATE_INVALID(ActivityEntryField.START_DATE),
     START_TIME_INVALID(ActivityEntryField.START_TIME),
     START_TIME_AFTER_ROUTE_START(ActivityEntryField.START_TIME),
@@ -90,6 +95,11 @@ data class ActivityEntryUiState(
     val repetitionMode: ActivityRepetitionEntryMode = ActivityRepetitionEntryMode.TOTAL,
     val repetitionTotalText: String = "",
     val repetitionSets: List<ActivityRepetitionSetInput> = listOf(ActivityRepetitionSetInput()),
+    val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
+    val selectedPlannedWorkoutId: String? = null,
+    val selectedPlannedWorkoutActivityTypeId: String? = null,
+    val isLoadingPlannedWorkouts: Boolean = false,
+    val isSavingPlannedWorkout: Boolean = false,
     val importedRoute: RouteFileImport? = null,
     val recordedPauseIntervals: List<ActivityPauseInterval> = emptyList(),
     val recordedLaps: List<ExerciseLapData> = emptyList(),

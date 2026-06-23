@@ -131,6 +131,7 @@ data class ActivityWriteRequest(
     val endTime: Instant,
     val title: String? = null,
     val notes: String? = null,
+    val plannedExerciseSessionId: String? = null,
     val routePoints: List<ExerciseRoutePoint> = emptyList(),
     val pauseIntervals: List<ActivityPauseInterval> = emptyList(),
     val laps: List<ExerciseLapData> = emptyList(),
@@ -153,9 +154,40 @@ data class PlannedExerciseData(
     val notes: String?,
     val blockCount: Int,
     val source: String,
+    val blocks: List<PlannedExerciseBlockData> = emptyList(),
 ) {
     val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
 }
+
+data class PlannedExerciseBlockData(
+    val repetitions: Int,
+    val description: String?,
+    val steps: List<PlannedExerciseStepData>,
+)
+
+data class PlannedExerciseStepData(
+    val exerciseType: Int,
+    val exercisePhase: Int,
+    val description: String?,
+    val completion: PlannedExerciseCompletion,
+)
+
+sealed interface PlannedExerciseCompletion {
+    data class Repetitions(val repetitions: Int) : PlannedExerciseCompletion
+    data class DurationSeconds(val seconds: Long) : PlannedExerciseCompletion
+    data object Manual : PlannedExerciseCompletion
+    data object Unknown : PlannedExerciseCompletion
+}
+
+data class PlannedExerciseWriteRequest(
+    val id: String? = null,
+    val exerciseType: Int,
+    val startTime: Instant,
+    val endTime: Instant,
+    val title: String? = null,
+    val notes: String? = null,
+    val blocks: List<PlannedExerciseBlockData>,
+)
 
 data class DailySteps(
     val date: LocalDate,

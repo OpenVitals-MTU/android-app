@@ -5,12 +5,15 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseCompletionGoal
 import androidx.health.connect.client.records.ExerciseLap
+import androidx.health.connect.client.records.PlannedExerciseBlock
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.PlannedExerciseSessionRecord
+import androidx.health.connect.client.records.PlannedExerciseStep
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SpeedRecord
@@ -36,7 +39,11 @@ import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.domain.model.StepProgressPoint
 import java.time.Duration
 import java.time.Instant
@@ -558,9 +565,40 @@ internal class ActivityHealthReader(
                     notes = record.notes,
                     blockCount = record.blocks.size,
                     source = record.metadata.dataOrigin.packageName,
+                    blocks = record.blocks.map { it.toPlannedExerciseBlockData() },
                 )
             }
         }
+
+    suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String = withContext(Dispatchers.IO) {
+        request.id?.let { existingId ->
+            support.client().deleteRecords(
+                recordType = PlannedExerciseSessionRecord::class,
+                recordIdsList = listOf(existingId),
+                clientRecordIdsList = emptyList(),
+            )
+        }
+        val zone = ZoneId.systemDefault()
+        val record = PlannedExerciseSessionRecord(
+            startTime = request.startTime,
+            startZoneOffset = zone.rules.getOffset(request.startTime),
+            endTime = request.endTime,
+            endZoneOffset = zone.rules.getOffset(request.endTime),
+            metadata = Metadata.manualEntry(
+                clientRecordId = "openvitals_planned_activity_${request.startTime.toEpochMilli()}_${UUID.randomUUID()}",
+                device = Device(type = Device.TYPE_PHONE),
+            ),
+            blocks = request.blocks.map { it.toPlannedExerciseBlock() },
+            exerciseType = request.exerciseType,
+            title = request.title?.trim()?.takeIf { it.isNotBlank() },
+            notes = request.notes?.trim()?.takeIf { it.isNotBlank() },
+        )
+        support.client()
+            .insertRecords(listOf(record))
+            .recordIdsList
+            .firstOrNull()
+            ?: record.metadata.clientRecordId.orEmpty()
+    }
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String = withContext(Dispatchers.IO) {
         validateActivityWriteRequest(request)
@@ -653,6 +691,7 @@ internal class ActivityHealthReader(
             segments = exerciseSegments,
             laps = toExerciseLaps(),
             exerciseRoute = routePoints.toExerciseRouteOrNull(),
+            plannedExerciseSessionId = plannedExerciseSessionId,
         )
 
     private fun ActivityWriteRequest.toManualActivityMetricRecords(zone: ZoneId): List<Record> {
@@ -853,6 +892,61 @@ internal fun dailyStepDateChunks(
     }
     return chunks
 }
+
+internal fun PlannedExerciseBlock.toPlannedExerciseBlockData(): PlannedExerciseBlockData =
+    PlannedExerciseBlockData(
+        repetitions = repetitions,
+        description = description,
+        steps = steps.map { it.toPlannedExerciseStepData() },
+    )
+
+internal fun PlannedExerciseStep.toPlannedExerciseStepData(): PlannedExerciseStepData =
+    PlannedExerciseStepData(
+        exerciseType = exerciseType,
+        exercisePhase = exercisePhase,
+        description = description,
+        completion = completionGoal.toPlannedExerciseCompletion(),
+    )
+
+internal fun PlannedExerciseBlockData.toPlannedExerciseBlock(): PlannedExerciseBlock =
+    PlannedExerciseBlock(
+        repetitions = repetitions,
+        description = description,
+        steps = steps.map { it.toPlannedExerciseStep() },
+    )
+
+internal fun PlannedExerciseStepData.toPlannedExerciseStep(): PlannedExerciseStep =
+    PlannedExerciseStep(
+        exerciseType = exerciseType,
+        exercisePhase = exercisePhase,
+        description = description,
+        completionGoal = completion.toExerciseCompletionGoal(),
+        performanceTargets = emptyList(),
+    )
+
+private fun ExerciseCompletionGoal.toPlannedExerciseCompletion(): PlannedExerciseCompletion =
+    when (this) {
+        is ExerciseCompletionGoal.RepetitionsGoal ->
+            PlannedExerciseCompletion.Repetitions(repetitions)
+        is ExerciseCompletionGoal.DurationGoal ->
+            PlannedExerciseCompletion.DurationSeconds(duration.seconds)
+        ExerciseCompletionGoal.ManualCompletion ->
+            PlannedExerciseCompletion.Manual
+        else ->
+            PlannedExerciseCompletion.Unknown
+    }
+
+private fun PlannedExerciseCompletion.toExerciseCompletionGoal(): ExerciseCompletionGoal =
+    when (this) {
+        is PlannedExerciseCompletion.Repetitions ->
+            ExerciseCompletionGoal.RepetitionsGoal(repetitions)
+        is PlannedExerciseCompletion.DurationSeconds ->
+            ExerciseCompletionGoal.DurationGoal(Duration.ofSeconds(seconds.coerceAtLeast(1L)))
+        PlannedExerciseCompletion.Manual ->
+            ExerciseCompletionGoal.ManualCompletion
+        PlannedExerciseCompletion.Unknown ->
+            ExerciseCompletionGoal.UnknownGoal
+    }
 
 internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {
     if (exerciseSegments.isNotEmpty()) {

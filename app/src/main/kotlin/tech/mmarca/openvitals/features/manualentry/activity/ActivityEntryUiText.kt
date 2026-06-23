@@ -45,6 +45,8 @@ internal fun ActivityEntryValidationError.validationMessage(): String = stringRe
     when (this) {
         ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE ->
             R.string.activity_entry_error_activity_type_route
+        ActivityEntryValidationError.TRAINING_PLAN_TITLE_REQUIRED ->
+            R.string.activity_entry_error_training_plan_title_required
         ActivityEntryValidationError.START_DATE_INVALID -> R.string.activity_entry_error_start_date
         ActivityEntryValidationError.START_TIME_INVALID -> R.string.activity_entry_error_start_time
         ActivityEntryValidationError.START_TIME_AFTER_ROUTE_START ->

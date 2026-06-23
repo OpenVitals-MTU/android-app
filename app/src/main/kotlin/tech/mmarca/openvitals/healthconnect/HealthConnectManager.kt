@@ -46,6 +46,7 @@ import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.OvulationTestEntry
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SexualActivityEntry
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
@@ -306,6 +307,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =
         activityReader.readPlannedExerciseSessions(start, end)
+
+    suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String =
+        activityReader.writePlannedExerciseSession(request)
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String =
         activityReader.writeActivityEntry(request)

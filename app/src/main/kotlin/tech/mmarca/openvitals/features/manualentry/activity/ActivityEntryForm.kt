@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
@@ -53,6 +52,10 @@ internal fun ActivityEntryCard(
     onRepetitionSetRestChanged: (Int, String) -> Unit,
     onAddRepetitionSet: () -> Unit,
     onRemoveRepetitionSet: (Int) -> Unit,
+    onCreateNewPlannedWorkout: () -> Unit,
+    onApplyPlannedWorkout: (String) -> Unit,
+    onSavePlannedWorkout: () -> Unit,
+    onUpdatePlannedWorkout: () -> Unit,
     onDistanceChanged: (String) -> Unit,
     onElevationChanged: (String) -> Unit,
     onActiveCaloriesChanged: (String) -> Unit,
@@ -66,6 +69,7 @@ internal fun ActivityEntryCard(
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission && !state.isImportingRoute
+    val titleError = state.validationErrorText(ActivityEntryField.TITLE)
     val durationError = state.validationErrorText(ActivityEntryField.DURATION)
 
     Card(
@@ -99,12 +103,21 @@ internal fun ActivityEntryCard(
                 errorText = state.validationErrorText(ActivityEntryField.ACTIVITY_TYPE),
             )
 
+            ActivityTrainingPlanSection(
+                state = state,
+                enabled = !state.isSavingEntry && !state.isSavingPlannedWorkout,
+                onCreateNewPlannedWorkout = onCreateNewPlannedWorkout,
+                onApplyPlannedWorkout = onApplyPlannedWorkout,
+            )
+
             OutlinedTextField(
                 value = state.titleText,
                 onValueChange = onTitleChanged,
                 enabled = !state.isSavingEntry,
                 singleLine = true,
                 label = { Text(stringResource(R.string.activity_entry_title_label)) },
+                isError = titleError != null,
+                supportingText = titleError?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -163,13 +176,20 @@ internal fun ActivityEntryCard(
                 onClearRoute = onClearRoute,
             )
 
+            ActivityTrainingPlanActions(
+                state = state,
+                enabled = !state.isSavingEntry && !state.isSavingPlannedWorkout,
+                onSavePlannedWorkout = onSavePlannedWorkout,
+                onUpdatePlannedWorkout = onUpdatePlannedWorkout,
+            )
+
             Button(
                 onClick = onAddEntry,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = if (isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
+                    imageVector = Icons.Outlined.Check,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )

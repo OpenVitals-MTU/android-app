@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -61,6 +62,7 @@ class ActivityRepository @Inject constructor(
     private val readStepsCadencePermission = HealthPermission.getReadPermission(StepsCadenceRecord::class)
     private val readCyclingCadencePermission = HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)
     private val readPlannedExercisePermission = HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)
+    private val writePlannedExercisePermission = HealthPermission.getWritePermission(PlannedExerciseSessionRecord::class)
     private val writeExercisePermission = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
     private val writeDistancePermission = HealthPermission.getWritePermission(DistanceRecord::class)
     private val writeElevationPermission = HealthPermission.getWritePermission(ElevationGainedRecord::class)
@@ -292,6 +294,34 @@ class ActivityRepository @Inject constructor(
         return loadPlannedWorkouts(start, end, granted)
     }
 
+    suspend fun loadPlannedWorkoutOptions(date: LocalDate, exerciseType: Int): List<PlannedExerciseData> =
+        loadPlannedWorkouts(date, date)
+            .filter { plan -> plan.exerciseType == exerciseType && plan.completedExerciseSessionId == null }
+
+    suspend fun loadExistingPlannedWorkouts(anchorDate: LocalDate = LocalDate.now()): List<PlannedExerciseData> {
+        val granted = grantedPermissionsIfAvailable()
+        if (!hc.isPlannedExerciseAvailable() || readPlannedExercisePermission !in granted) {
+            Log.w(TAG, "Skipping loadExistingPlannedWorkouts missingCount=1")
+            throw SecurityException("Missing Health Connect planned exercise read permission.")
+        }
+        return loadPlannedWorkouts(
+            start = anchorDate.minusYears(1),
+            end = anchorDate.plusYears(1),
+            granted = granted,
+        ).filter { plan -> plan.completedExerciseSessionId == null }
+    }
+
+    suspend fun writePlannedWorkout(request: PlannedExerciseWriteRequest): String {
+        val granted = grantedPermissionsIfAvailable()
+        if (!hc.isPlannedExerciseAvailable() || writePlannedExercisePermission !in granted) {
+            Log.w(TAG, "Skipping writePlannedWorkout missingCount=1")
+            throw SecurityException("Missing Health Connect planned exercise write permission.")
+        }
+        return hc.writePlannedExerciseSession(request).also {
+            queryCache.invalidateOperations("dashboard")
+        }
+    }
+
     private suspend fun loadPlannedWorkouts(
         start: LocalDate,
         end: LocalDate,
@@ -369,7 +399,18 @@ class ActivityRepository @Inject constructor(
             includeActiveCalories = request.activeCaloriesKcal != null,
             includeTotalCalories = request.totalCaloriesKcal != null,
             includeSteps = request.stepsCount != null,
-        )
+        ) + if (request.plannedExerciseSessionId != null && hc.isPlannedExerciseAvailable()) {
+            setOf(readPlannedExercisePermission)
+        } else {
+            emptySet()
+        }
+
+    fun plannedWorkoutWritePermissions(): Set<String> =
+        if (hc.isPlannedExerciseAvailable()) {
+            setOf(readPlannedExercisePermission, writePlannedExercisePermission)
+        } else {
+            emptySet()
+        }
 
     suspend fun hasActivityWritePermission(): Boolean =
         hasActivityWritePermission(

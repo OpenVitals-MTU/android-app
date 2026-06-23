@@ -56,6 +56,7 @@ fun ActivityEntryScreen(
     fun performSourceAction(action: ActivityEntrySourceAction) {
         when (action) {
             ActivityEntrySourceAction.MANUAL -> viewModel.startManualEntry()
+            ActivityEntrySourceAction.EXISTING_PLAN -> viewModel.startFromExistingPlan()
             ActivityEntrySourceAction.IMPORT_ROUTE_FILE -> importRouteFile.launch(RouteImportMimeTypes)
             ActivityEntrySourceAction.RECORD_GPS -> viewModel.prepareGpsRecording()
         }
@@ -182,6 +183,9 @@ fun ActivityEntryScreen(
                     onStartManualEntry = {
                         performSourceActionAfterPermission(ActivityEntrySourceAction.MANUAL)
                     },
+                    onCreateFromExistingPlan = {
+                        performSourceActionAfterPermission(ActivityEntrySourceAction.EXISTING_PLAN)
+                    },
                     onImportRouteFile = {
                         performSourceActionAfterPermission(ActivityEntrySourceAction.IMPORT_ROUTE_FILE)
                     },
@@ -191,6 +195,20 @@ fun ActivityEntryScreen(
                     onRequestWritePermission = {
                         requestWritePermissions.launch(state.writePermissions)
                     },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            } else if (state.mode == ActivityEntryMode.PLAN_ACTIVITY_PICKER) {
+                ActivityPlanActivityPickerCard(
+                    state = state,
+                    onSelectActivity = viewModel::selectPlannedWorkoutActivity,
+                    onChooseSource = viewModel::chooseSource,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            } else if (state.mode == ActivityEntryMode.PLAN_PICKER) {
+                ActivityPlanPickerCard(
+                    state = state,
+                    onSelectPlan = viewModel::applyPlannedWorkout,
+                    onChooseActivity = viewModel::choosePlannedWorkoutActivity,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             } else {
@@ -209,6 +227,14 @@ fun ActivityEntryScreen(
                     onRepetitionSetRestChanged = viewModel::updateRepetitionSetRest,
                     onAddRepetitionSet = viewModel::addRepetitionSet,
                     onRemoveRepetitionSet = viewModel::removeRepetitionSet,
+                    onCreateNewPlannedWorkout = viewModel::createNewPlannedWorkout,
+                    onApplyPlannedWorkout = viewModel::applyPlannedWorkout,
+                    onSavePlannedWorkout = {
+                        viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem())
+                    },
+                    onUpdatePlannedWorkout = {
+                        viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem(), updateSelected = true)
+                    },
                     onDistanceChanged = viewModel::updateDistance,
                     onElevationChanged = viewModel::updateElevation,
                     onActiveCaloriesChanged = viewModel::updateActiveCalories,

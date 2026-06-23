@@ -122,6 +122,7 @@ internal fun buildWriteRequest(
         endTime = end,
         title = state.titleText.trim().takeIf { it.isNotBlank() } ?: state.selectedActivityType.defaultTitle,
         notes = state.notesText.trim().takeIf { it.isNotBlank() },
+        plannedExerciseSessionId = state.selectedPlannedWorkoutId,
         routePoints = routePoints,
         pauseIntervals = pauseIntervals,
         laps = laps,
