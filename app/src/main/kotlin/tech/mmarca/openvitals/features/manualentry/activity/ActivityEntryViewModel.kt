@@ -604,6 +604,8 @@ class ActivityEntryViewModel(
         val editRecordId = _uiState.value.editRecordId
         val wasRecordingDraft = _uiState.value.isRecordingDraft
         val markersToSave = _uiState.value.recordedMarkers
+            .takeIf { _uiState.value.selectedActivityType.supportsGpsRoute }
+            .orEmpty()
         val requestPermissions = repository.activityWritePermissions(request)
 
         viewModelScope.launch {

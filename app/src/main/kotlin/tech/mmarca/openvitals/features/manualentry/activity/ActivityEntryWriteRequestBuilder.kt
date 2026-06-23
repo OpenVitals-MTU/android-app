@@ -105,12 +105,12 @@ internal fun buildWriteRequest(
     } else {
         null
     }
-    val pauseIntervals = if (exerciseSegments.isEmpty()) {
+    val pauseIntervals = if (exerciseSegments.isEmpty() && state.selectedActivityType.supportsGpsRoute) {
         state.recordedPauseIntervals.insideActivityRange(start, end)
     } else {
         emptyList()
     }
-    val laps = if (exerciseSegments.isEmpty()) {
+    val laps = if (exerciseSegments.isEmpty() && state.selectedActivityType.supportsGpsRoute) {
         state.recordedLaps.insideLapActivityRange(start, end)
     } else {
         emptyList()

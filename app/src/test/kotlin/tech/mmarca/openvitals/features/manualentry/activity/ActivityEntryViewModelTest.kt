@@ -38,6 +38,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -206,6 +207,41 @@ class ActivityEntryViewModelTest {
         assertEquals(pauseEnd, request.pauseIntervals.first().endTime)
     }
 
+    @Test fun `buildWriteRequest ignores recorded GPS metadata for non GPS activity`() {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val pauseStart = start.plusSeconds(600)
+        val pauseEnd = start.plusSeconds(900)
+        val zoneStart = start.atZone(ZoneId.systemDefault())
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first {
+                it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT
+            },
+            startDateText = zoneStart.toLocalDate().toString(),
+            startTimeText = zoneStart.toLocalTime().let { "${it.hour}:${it.minute.toString().padStart(2, '0')}" },
+            durationMinutesText = "45",
+            recordedPauseIntervals = listOf(
+                ActivityPauseInterval(
+                    startTime = pauseStart,
+                    endTime = pauseEnd,
+                )
+            ),
+            recordedLaps = listOf(
+                ExerciseLapData(
+                    startTime = pauseStart,
+                    endTime = pauseEnd,
+                    lengthMeters = 100.0,
+                )
+            ),
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertFalse(request.routePoints.isNotEmpty())
+        assertTrue(request.pauseIntervals.isEmpty())
+        assertTrue(request.laps.isEmpty())
+    }
+
     @Test fun `buildWriteRequest writes total push-ups as one set segment`() {
         val state = ActivityEntryUiState(
             selectedActivityType = DefaultActivityEntryTypes.first { it.id == "push_ups" },
@@ -213,6 +249,19 @@ class ActivityEntryViewModelTest {
             startTimeText = "8:30",
             durationMinutesText = "10",
             repetitionTotalText = "25",
+            recordedPauseIntervals = listOf(
+                ActivityPauseInterval(
+                    startTime = Instant.parse("2026-05-26T08:35:00Z"),
+                    endTime = Instant.parse("2026-05-26T08:36:00Z"),
+                )
+            ),
+            recordedLaps = listOf(
+                ExerciseLapData(
+                    startTime = Instant.parse("2026-05-26T08:35:00Z"),
+                    endTime = Instant.parse("2026-05-26T08:36:00Z"),
+                    lengthMeters = 100.0,
+                )
+            ),
         )
 
         val request = buildWriteRequest(state, UnitSystem.METRIC)
@@ -224,6 +273,8 @@ class ActivityEntryViewModelTest {
         assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT, request.exerciseSegments.first().segmentType)
         assertEquals(25, request.exerciseSegments.first().repetitions)
         assertEquals(0, request.exerciseSegments.first().setIndex)
+        assertTrue(request.pauseIntervals.isEmpty())
+        assertTrue(request.laps.isEmpty())
     }
 
     @Test fun `buildWriteRequest writes repetition sets and rest segments`() {

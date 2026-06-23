@@ -51,7 +51,7 @@ internal fun ActivityRouteAnalysisCard(
     modifier: Modifier = Modifier,
 ) {
     val routePoints = workout.route.takeIf { it.status == ExerciseRouteStatus.DATA }?.points.orEmpty()
-    if (routePoints.size < 2 && workout.laps.isEmpty() && markers.isEmpty()) return
+    if (routePoints.size < 2 && markers.isEmpty()) return
 
     var selectedTab by rememberSaveable { mutableStateOf(SavedActivityAnalysisTab.STATS) }
     val unitSystem = unitFormatter.unitSystem()
