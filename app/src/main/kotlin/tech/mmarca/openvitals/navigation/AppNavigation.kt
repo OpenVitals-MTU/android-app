@@ -11,7 +11,6 @@ import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -36,69 +34,22 @@ import tech.mmarca.openvitals.features.achievements.AchievementsViewModel
 import tech.mmarca.openvitals.features.activity.ActivityDetailScreen
 import tech.mmarca.openvitals.features.activity.ActivityDetailViewModel
 import tech.mmarca.openvitals.features.activity.ActivityOverviewViewModel
-import tech.mmarca.openvitals.features.activity.ActiveCaloriesScreen
-import tech.mmarca.openvitals.features.activity.ActivityMetric
-import tech.mmarca.openvitals.features.activity.ActivityViewModel
 import tech.mmarca.openvitals.features.activity.ActivitiesScreen
 import tech.mmarca.openvitals.features.activity.ActivitiesViewModel
-import tech.mmarca.openvitals.features.activity.CaloriesOutScreen
 import tech.mmarca.openvitals.features.activity.CaloriesScreen
 import tech.mmarca.openvitals.features.activity.CaloriesViewModel
 import tech.mmarca.openvitals.features.activity.CardioLoadDetailScreen
-import tech.mmarca.openvitals.features.activity.DistanceScreen
-import tech.mmarca.openvitals.features.activity.ElevationScreen
-import tech.mmarca.openvitals.features.activity.FloorsScreen
-import tech.mmarca.openvitals.features.activity.StepsScreen
-import tech.mmarca.openvitals.features.activity.WheelchairPushesScreen
-import tech.mmarca.openvitals.features.body.BmiScreen
-import tech.mmarca.openvitals.features.body.BmrScreen
-import tech.mmarca.openvitals.features.body.BodyFatScreen
-import tech.mmarca.openvitals.features.body.BodyMetric
 import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
-import tech.mmarca.openvitals.features.body.BodyWaterMassScreen
-import tech.mmarca.openvitals.features.body.BoneMassScreen
-import tech.mmarca.openvitals.features.body.HeightScreen
-import tech.mmarca.openvitals.features.body.LeanMassScreen
-import tech.mmarca.openvitals.features.body.WeightScreen
-import tech.mmarca.openvitals.features.cycle.CycleScreen
-import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
-import tech.mmarca.openvitals.features.heart.AverageHeartRateScreen
-import tech.mmarca.openvitals.features.heart.BloodGlucoseScreen
-import tech.mmarca.openvitals.features.heart.BloodPressureScreen
-import tech.mmarca.openvitals.features.heart.BodyTemperatureScreen
-import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.features.heart.HeartVitalsOverviewScreen
-import tech.mmarca.openvitals.features.heart.HrvScreen
-import tech.mmarca.openvitals.features.heart.RespiratoryRateScreen
-import tech.mmarca.openvitals.features.heart.RestingHeartRateScreen
-import tech.mmarca.openvitals.features.heart.SkinTemperatureScreen
-import tech.mmarca.openvitals.features.heart.SpO2Screen
-import tech.mmarca.openvitals.features.heart.Vo2MaxScreen
-import tech.mmarca.openvitals.features.hydration.HydrationScreen
-import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
-import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryScreen
-import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryViewModel
-import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryScreen
-import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryViewModel
-import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryScreen
-import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryViewModel
-import tech.mmarca.openvitals.features.manualentry.ManualEntryScreen
-import tech.mmarca.openvitals.features.manualentry.ManualEntryViewModel
-import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryScreen
-import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryViewModel
-import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntryScreen
-import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.body.titleRes
 import tech.mmarca.openvitals.features.manualentry.vitals.titleRes
-import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
-import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
@@ -111,9 +62,6 @@ import tech.mmarca.openvitals.features.readiness.TrainingReadinessDetailsScreen
 import tech.mmarca.openvitals.features.recovery.RecoveryViewModel
 import tech.mmarca.openvitals.features.recovery.SleepEfficiencyDetailScreen
 import tech.mmarca.openvitals.features.recovery.SleepScoreDetailScreen
-import tech.mmarca.openvitals.features.settings.SettingsScreen
-import tech.mmarca.openvitals.features.settings.SettingsSection
-import tech.mmarca.openvitals.features.settings.SettingsViewModel
 import tech.mmarca.openvitals.features.sleep.SleepDetailScreen
 import tech.mmarca.openvitals.features.sleep.SleepDetailViewModel
 import tech.mmarca.openvitals.features.sleep.SleepScreen
@@ -122,9 +70,9 @@ import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 
-private const val CardioLoadDetailRoute = "activity/cardio_load"
-private const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
-private const val SleepScoreDetailRoute = "recovery/sleep_score"
+internal const val CardioLoadDetailRoute = "activity/cardio_load"
+internal const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
+internal const val SleepScoreDetailRoute = "recovery/sleep_score"
 
 @Composable
 fun AppNavigation(
@@ -576,168 +524,18 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.ManualEntry.route) {
-                val manualEntryViewModel = hiltViewModel<ManualEntryViewModel>()
-                ManualEntryScreen(
-                    viewModel = manualEntryViewModel,
-                    onOpenHydrationEntry = {
-                        navController.navigate(Screen.HydrationEntry.route)
-                    },
-                    onOpenActivityEntry = {
-                        navController.navigate(Screen.ActivityEntry.route)
-                    },
-                    onOpenMindfulnessEntry = {
-                        navController.navigate(Screen.MindfulnessEntry.route)
-                    },
-                    onOpenBodyMeasurementEntry = { type ->
-                        navController.navigate(Screen.BodyMeasurementEntry.createRoute(type.name))
-                    },
-                    onOpenVitalsMeasurementEntry = { type ->
-                        navController.navigate(Screen.VitalsMeasurementEntry.createRoute(type.name))
-                    },
-                    onEditStateChanged = { isEditing, onToggleEdit ->
-                        manualEntryTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
-                )
-            }
-
-            composable(Screen.HydrationEntry.route) {
-                val hydrationViewModel = hiltViewModel<HydrationEntryViewModel>()
-                HydrationEntryScreen(
-                    viewModel = hydrationViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirty,
-                )
-            }
-
-            composable(
-                route = Screen.HydrationEntryEdit.route,
-                arguments = listOf(navArgument(HYDRATION_ENTRY_ID_ARG) { type = NavType.StringType }),
-            ) {
-                val hydrationViewModel = hiltViewModel<HydrationEntryViewModel>()
-                HydrationEntryScreen(
-                    viewModel = hydrationViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirtyAndPopBack,
-                )
-            }
-
-            composable(Screen.ActivityEntry.route) {
-                val activityEntryViewModel = hiltViewModel<ActivityEntryViewModel>()
-                ActivityEntryScreen(
-                    viewModel = activityEntryViewModel,
-                    unitFormatter = unitFormatter,
-                    pendingRouteImportUri = routeImportRequest?.uri,
-                    pendingRouteImportRequestId = routeImportRequest?.id,
-                    onPendingRouteImportHandled = onRouteImportRequestHandled,
-                    onEntrySaved = ::finishActivityEntrySave,
-                )
-            }
-
-            composable(
-                route = Screen.ActivityEntryEdit.route,
-                arguments = listOf(navArgument(ACTIVITY_ENTRY_ID_ARG) { type = NavType.StringType }),
-            ) {
-                val activityEntryViewModel = hiltViewModel<ActivityEntryViewModel>()
-                ActivityEntryScreen(
-                    viewModel = activityEntryViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirtyAndPopBack,
-                )
-            }
-
-            composable(Screen.MindfulnessEntry.route) {
-                val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
-                MindfulnessEntryScreen(
-                    viewModel = mindfulnessEntryViewModel,
-                    onEntrySaved = ::markDashboardDirty,
-                )
-            }
-
-            composable(
-                route = Screen.MindfulnessEntryEdit.route,
-                arguments = listOf(navArgument(MINDFULNESS_ENTRY_ID_ARG) { type = NavType.StringType }),
-            ) {
-                val mindfulnessEntryViewModel = hiltViewModel<MindfulnessEntryViewModel>()
-                MindfulnessEntryScreen(
-                    viewModel = mindfulnessEntryViewModel,
-                    onEntrySaved = ::markDashboardDirtyAndPopBack,
-                )
-            }
-
-            composable(
-                route = Screen.BodyMeasurementEntry.route,
-                arguments = listOf(navArgument(BODY_MEASUREMENT_TYPE_ARG) { type = NavType.StringType }),
-            ) { backStackEntry ->
-                val type = backStackEntry.arguments
-                    ?.getString(BODY_MEASUREMENT_TYPE_ARG)
-                    ?.toBodyMeasurementTypeOrNull()
-                    ?: BodyMeasurementType.WEIGHT
-                val bodyMeasurementViewModel = hiltViewModel<BodyMeasurementEntryViewModel>()
-                BodyMeasurementEntryScreen(
-                    type = type,
-                    viewModel = bodyMeasurementViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirty,
-                )
-            }
-
-            composable(
-                route = Screen.BodyMeasurementEntryEdit.route,
-                arguments = listOf(
-                    navArgument(BODY_MEASUREMENT_TYPE_ARG) { type = NavType.StringType },
-                    navArgument(BODY_ENTRY_ID_ARG) { type = NavType.StringType },
-                ),
-            ) { backStackEntry ->
-                val type = backStackEntry.arguments
-                    ?.getString(BODY_MEASUREMENT_TYPE_ARG)
-                    ?.toBodyMeasurementTypeOrNull()
-                    ?: BodyMeasurementType.WEIGHT
-                val bodyMeasurementViewModel = hiltViewModel<BodyMeasurementEntryViewModel>()
-                BodyMeasurementEntryScreen(
-                    type = type,
-                    viewModel = bodyMeasurementViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirtyAndPopBack,
-                )
-            }
-
-            composable(
-                route = Screen.VitalsMeasurementEntry.route,
-                arguments = listOf(navArgument(VITALS_MEASUREMENT_TYPE_ARG) { type = NavType.StringType }),
-            ) { backStackEntry ->
-                val type = backStackEntry.arguments
-                    ?.getString(VITALS_MEASUREMENT_TYPE_ARG)
-                    ?.toVitalsMeasurementTypeOrNull()
-                    ?: VitalsMeasurementType.BLOOD_PRESSURE
-                val vitalsMeasurementViewModel = hiltViewModel<VitalsMeasurementEntryViewModel>()
-                VitalsMeasurementEntryScreen(
-                    type = type,
-                    viewModel = vitalsMeasurementViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirty,
-                )
-            }
-
-            composable(
-                route = Screen.VitalsMeasurementEntryEdit.route,
-                arguments = listOf(
-                    navArgument(VITALS_MEASUREMENT_TYPE_ARG) { type = NavType.StringType },
-                    navArgument(VITALS_ENTRY_ID_ARG) { type = NavType.StringType },
-                ),
-            ) { backStackEntry ->
-                val type = backStackEntry.arguments
-                    ?.getString(VITALS_MEASUREMENT_TYPE_ARG)
-                    ?.toVitalsMeasurementTypeOrNull()
-                    ?: VitalsMeasurementType.BLOOD_PRESSURE
-                val vitalsMeasurementViewModel = hiltViewModel<VitalsMeasurementEntryViewModel>()
-                VitalsMeasurementEntryScreen(
-                    type = type,
-                    viewModel = vitalsMeasurementViewModel,
-                    unitFormatter = unitFormatter,
-                    onEntrySaved = ::markDashboardDirtyAndPopBack,
-                )
-            }
+            manualEntryRoutes(
+                navController = navController,
+                unitFormatter = unitFormatter,
+                routeImportRequest = routeImportRequest,
+                onRouteImportRequestHandled = onRouteImportRequestHandled,
+                onManualEntryEditStateChanged = { isEditing, onToggleEdit ->
+                    manualEntryTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                },
+                onEntrySaved = ::markDashboardDirty,
+                onEntrySavedAndPopBack = ::markDashboardDirtyAndPopBack,
+                onActivityEntrySaved = ::finishActivityEntrySave,
+            )
 
             composable(Screen.HeartVitals.route) {
                 val heartViewModel = hiltViewModel<HeartViewModel>()
@@ -931,87 +729,10 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Settings.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    onOpenSection = { section ->
-                        navController.navigate(settingsSectionRoute(section)) {
-                            launchSingleTop = true
-                        }
-                    },
-                )
-            }
-
-            composable(Screen.SettingsDisplay.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.DISPLAY,
-                )
-            }
-
-            composable(Screen.SettingsActivities.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.ACTIVITIES,
-                )
-            }
-
-            composable(Screen.SettingsCalories.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.CALORIES,
-                )
-            }
-
-            composable(Screen.SettingsSleep.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.SLEEP,
-                )
-            }
-
-            composable(Screen.SettingsCycle.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.CYCLE,
-                )
-            }
-
-            composable(Screen.SettingsDataImport.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.DATA_IMPORT,
-                )
-            }
-
-            composable(Screen.SettingsPermissions.route) {
-                val settingsViewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    section = SettingsSection.PERMISSIONS,
-                )
-            }
+            settingsRoutes(navController)
         }
     }
 }
-
-private fun settingsSectionRoute(section: SettingsSection): String =
-    when (section) {
-        SettingsSection.DISPLAY -> Screen.SettingsDisplay.route
-        SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
-        SettingsSection.CALORIES -> Screen.SettingsCalories.route
-        SettingsSection.SLEEP -> Screen.SettingsSleep.route
-        SettingsSection.CYCLE -> Screen.SettingsCycle.route
-        SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
-        SettingsSection.PERMISSIONS -> Screen.SettingsPermissions.route
-    }
 
 private fun addEntryActionForCurrentRoute(
     currentRoute: String?,
@@ -1046,320 +767,6 @@ private fun DashboardWidgetId.entryRoute(): String? =
             Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.RESPIRATORY_RATE.name)
         DashboardWidgetId.BODY_TEMPERATURE ->
             Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BODY_TEMPERATURE.name)
-        else -> null
-    }
-
-private fun DashboardWidgetId.isCaloriesDetailMetric(): Boolean =
-    this == DashboardWidgetId.CALORIES_OUT ||
-        this == DashboardWidgetId.ACTIVE_CALORIES ||
-        this == DashboardWidgetId.BMR
-
-private fun DashboardWidgetId.isNutritionDetailMetric(): Boolean =
-    this == DashboardWidgetId.CALORIES_IN ||
-        this == DashboardWidgetId.PROTEIN ||
-        this == DashboardWidgetId.CARBS ||
-        this == DashboardWidgetId.FAT
-
-private fun DashboardWidgetId.isBodyDetailMetric(): Boolean =
-    this == DashboardWidgetId.WEIGHT ||
-        this == DashboardWidgetId.HEIGHT ||
-        this == DashboardWidgetId.BMI ||
-        this == DashboardWidgetId.BODY_FAT ||
-        this == DashboardWidgetId.LEAN_MASS ||
-        this == DashboardWidgetId.BONE_MASS ||
-        this == DashboardWidgetId.BODY_WATER_MASS
-
-private fun DashboardWidgetId.isHeartVitalsMetric(): Boolean =
-    toHeartMetricOrNull() != null
-
-@Composable
-private fun MetricRouteContent(
-    metricId: DashboardWidgetId?,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onOpenMetric: (DashboardWidgetId) -> Unit,
-    onOpenCardioLoad: () -> Unit,
-    onOpenActivity: (String) -> Unit,
-    onEditActivity: (String) -> Unit,
-    onOpenSleepSession: (String) -> Unit,
-    onOpenSleepScore: () -> Unit,
-    onOpenSleepEfficiency: () -> Unit,
-    onEditHydrationEntry: (String) -> Unit,
-    onEditMindfulnessSession: (String) -> Unit,
-    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
-    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
-) {
-    if (metricId?.isCaloriesDetailMetric() == true) {
-        val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
-        CaloriesScreen(
-            viewModel = caloriesViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-        return
-    }
-
-    if (metricId?.isNutritionDetailMetric() == true) {
-        val nutritionViewModel = hiltViewModel<NutritionViewModel>()
-        NutritionScreen(
-            viewModel = nutritionViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-        return
-    }
-
-    if (metricId?.isBodyDetailMetric() == true) {
-        val bodyViewModel = hiltViewModel<BodyViewModel>()
-        BodyScreen(
-            viewModel = bodyViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onEditBodyMeasurement = onEditBodyMeasurement,
-        )
-        return
-    }
-
-    metricId?.toActivityMetricOrNull()?.let { activityMetric ->
-        val activityViewModel = hiltViewModel<ActivityViewModel>()
-        ActivityMetricRouteScreen(
-            metric = activityMetric,
-            viewModel = activityViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-        return
-    }
-
-    metricId?.toHeartMetricOrNull()?.let { heartMetric ->
-        val heartViewModel = hiltViewModel<HeartViewModel>()
-        HeartMetricRouteScreen(
-            metric = heartMetric,
-            viewModel = heartViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onEditVitalsMeasurement = onEditVitalsMeasurement,
-        )
-        return
-    }
-
-    metricId?.toBodyMetricOrNull()?.let { bodyMetric ->
-        val bodyViewModel = hiltViewModel<BodyViewModel>()
-        BodyMetricRouteScreen(
-            metric = bodyMetric,
-            viewModel = bodyViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onEditBodyMeasurement = onEditBodyMeasurement,
-        )
-        return
-    }
-
-    when (metricId) {
-        DashboardWidgetId.WORKOUT -> {
-            val activitiesViewModel = hiltViewModel<ActivitiesViewModel>()
-            ActivitiesScreen(
-                viewModel = activitiesViewModel,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onOpenActivity = onOpenActivity,
-                onEditActivity = onEditActivity,
-                onOpenCardioLoad = onOpenCardioLoad,
-                onOpenSteps = { onOpenMetric(DashboardWidgetId.STEPS) },
-                onOpenDistance = { onOpenMetric(DashboardWidgetId.DISTANCE) },
-                onOpenEnergyBurned = { onOpenMetric(DashboardWidgetId.CALORIES_OUT) },
-                onOpenHrv = { onOpenMetric(DashboardWidgetId.HRV) },
-            )
-        }
-        DashboardWidgetId.SLEEP -> {
-            val sleepViewModel = hiltViewModel<SleepViewModel>()
-            SleepScreen(
-                viewModel = sleepViewModel,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onOpenSleepSession = onOpenSleepSession,
-                onOpenSleepScore = onOpenSleepScore,
-                onOpenSleepEfficiency = onOpenSleepEfficiency,
-            )
-        }
-        DashboardWidgetId.HYDRATION -> {
-            val hydrationViewModel = hiltViewModel<HydrationViewModel>()
-            HydrationScreen(
-                viewModel = hydrationViewModel,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEditHydrationEntry = onEditHydrationEntry,
-            )
-        }
-        DashboardWidgetId.MINDFULNESS -> {
-            val mindfulnessViewModel = hiltViewModel<MindfulnessViewModel>()
-            MindfulnessScreen(
-                viewModel = mindfulnessViewModel,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEditMindfulnessSession = onEditMindfulnessSession,
-            )
-        }
-        DashboardWidgetId.CYCLE -> {
-            val cycleViewModel = hiltViewModel<CycleViewModel>()
-            CycleScreen(
-                viewModel = cycleViewModel,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
-        }
-        DashboardWidgetId.WEEKLY_CARDIO_LOAD,
-        DashboardWidgetId.CARDIO_LOAD -> {
-            val activityOverviewViewModel = hiltViewModel<ActivityOverviewViewModel>()
-            CardioLoadDetailScreen(
-                viewModel = activityOverviewViewModel,
-                unitFormatter = unitFormatter,
-            )
-        }
-        else -> {
-            Text(
-                text = stringResource(R.string.unknown_error),
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActivityMetricRouteScreen(
-    metric: ActivityMetric,
-    viewModel: ActivityViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-) {
-    when (metric) {
-        ActivityMetric.STEPS -> StepsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.DISTANCE -> DistanceScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.CALORIES_BURNED -> CaloriesOutScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.ACTIVE_CALORIES -> ActiveCaloriesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.FLOORS -> FloorsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.ELEVATION -> ElevationScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.WHEELCHAIR_PUSHES -> WheelchairPushesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-    }
-}
-
-@Composable
-private fun HeartMetricRouteScreen(
-    metric: HeartMetric,
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
-) {
-    when (metric) {
-        HeartMetric.AVERAGE_HEART_RATE -> AverageHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.RESTING_HEART_RATE -> RestingHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.BLOOD_PRESSURE -> BloodPressureScreen(
-            viewModel,
-            unitFormatter,
-            dateTimeFormatterProvider,
-            onEditVitalsMeasurement,
-        )
-        HeartMetric.SPO2 -> SpO2Screen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditVitalsMeasurement)
-        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(
-            viewModel,
-            unitFormatter,
-            dateTimeFormatterProvider,
-            onEditVitalsMeasurement,
-        )
-        HeartMetric.BODY_TEMPERATURE -> BodyTemperatureScreen(
-            viewModel,
-            unitFormatter,
-            dateTimeFormatterProvider,
-            onEditVitalsMeasurement,
-        )
-        HeartMetric.BLOOD_GLUCOSE -> BloodGlucoseScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.SKIN_TEMPERATURE -> SkinTemperatureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-    }
-}
-
-@Composable
-private fun BodyMetricRouteScreen(
-    metric: BodyMetric,
-    viewModel: BodyViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
-) {
-    when (metric) {
-        BodyMetric.WEIGHT -> WeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.HEIGHT -> HeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.BMI -> BmiScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.BODY_FAT -> BodyFatScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.LEAN_MASS -> LeanMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BONE_MASS -> BoneMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BODY_WATER_MASS -> BodyWaterMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-    }
-}
-
-private fun String.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
-    runCatching { DashboardWidgetId.valueOf(this) }.getOrNull()
-
-private fun String.toBodyMeasurementTypeOrNull(): BodyMeasurementType? =
-    runCatching { BodyMeasurementType.valueOf(this) }.getOrNull()
-
-private fun String.toVitalsMeasurementTypeOrNull(): VitalsMeasurementType? =
-    runCatching { VitalsMeasurementType.valueOf(this) }.getOrNull()
-
-private fun DashboardWidgetId.toActivityMetricOrNull(): ActivityMetric? =
-    when (this) {
-        DashboardWidgetId.STEPS -> ActivityMetric.STEPS
-        DashboardWidgetId.DISTANCE -> ActivityMetric.DISTANCE
-        DashboardWidgetId.CALORIES_OUT -> ActivityMetric.CALORIES_BURNED
-        DashboardWidgetId.ACTIVE_CALORIES -> ActivityMetric.ACTIVE_CALORIES
-        DashboardWidgetId.FLOORS -> ActivityMetric.FLOORS
-        DashboardWidgetId.ELEVATION -> ActivityMetric.ELEVATION
-        DashboardWidgetId.WHEELCHAIR_PUSHES -> ActivityMetric.WHEELCHAIR_PUSHES
-        else -> null
-    }
-
-private fun DashboardWidgetId.toHeartMetricOrNull(): HeartMetric? =
-    when (this) {
-        DashboardWidgetId.AVG_HEART_RATE -> HeartMetric.AVERAGE_HEART_RATE
-        DashboardWidgetId.RESTING_HEART_RATE -> HeartMetric.RESTING_HEART_RATE
-        DashboardWidgetId.HRV -> HeartMetric.HRV
-        DashboardWidgetId.BLOOD_PRESSURE -> HeartMetric.BLOOD_PRESSURE
-        DashboardWidgetId.SPO2 -> HeartMetric.SPO2
-        DashboardWidgetId.VO2_MAX -> HeartMetric.VO2_MAX
-        DashboardWidgetId.RESPIRATORY_RATE -> HeartMetric.RESPIRATORY_RATE
-        DashboardWidgetId.BODY_TEMPERATURE -> HeartMetric.BODY_TEMPERATURE
-        DashboardWidgetId.BLOOD_GLUCOSE -> HeartMetric.BLOOD_GLUCOSE
-        DashboardWidgetId.SKIN_TEMPERATURE -> HeartMetric.SKIN_TEMPERATURE
-        else -> null
-    }
-
-private fun HeartMetric.toDashboardWidgetId(): DashboardWidgetId =
-    when (this) {
-        HeartMetric.AVERAGE_HEART_RATE -> DashboardWidgetId.AVG_HEART_RATE
-        HeartMetric.RESTING_HEART_RATE -> DashboardWidgetId.RESTING_HEART_RATE
-        HeartMetric.HRV -> DashboardWidgetId.HRV
-        HeartMetric.BLOOD_PRESSURE -> DashboardWidgetId.BLOOD_PRESSURE
-        HeartMetric.SPO2 -> DashboardWidgetId.SPO2
-        HeartMetric.VO2_MAX -> DashboardWidgetId.VO2_MAX
-        HeartMetric.RESPIRATORY_RATE -> DashboardWidgetId.RESPIRATORY_RATE
-        HeartMetric.BODY_TEMPERATURE -> DashboardWidgetId.BODY_TEMPERATURE
-        HeartMetric.BLOOD_GLUCOSE -> DashboardWidgetId.BLOOD_GLUCOSE
-        HeartMetric.SKIN_TEMPERATURE -> DashboardWidgetId.SKIN_TEMPERATURE
-    }
-
-private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =
-    when (this) {
-        DashboardWidgetId.WEIGHT -> BodyMetric.WEIGHT
-        DashboardWidgetId.HEIGHT -> BodyMetric.HEIGHT
-        DashboardWidgetId.BMI -> BodyMetric.BMI
-        DashboardWidgetId.BODY_FAT -> BodyMetric.BODY_FAT
-        DashboardWidgetId.LEAN_MASS -> BodyMetric.LEAN_MASS
-        DashboardWidgetId.BMR -> BodyMetric.BMR
-        DashboardWidgetId.BONE_MASS -> BodyMetric.BONE_MASS
-        DashboardWidgetId.BODY_WATER_MASS -> BodyMetric.BODY_WATER_MASS
         else -> null
     }
 

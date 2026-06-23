@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Notifications
@@ -70,7 +69,6 @@ import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.DailyHydration
-import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -83,13 +81,9 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
-import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
-import tech.mmarca.openvitals.ui.components.SourceChip
-import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
-import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
@@ -98,7 +92,6 @@ import tech.mmarca.openvitals.ui.theme.HydrationColor
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import kotlin.math.abs
 
 private val HydrationWeekChartColor = Color(0xFFB8C0FF)
 
@@ -926,137 +919,5 @@ private fun LazyListScope.hydrationWeightInsight(
             accentColor = HydrationColor,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
-    }
-}
-
-private fun LazyListScope.hydrationEntries(
-    entries: List<HydrationEntry>,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    titleDate: LocalDate? = null,
-    onEditHydrationEntry: (String) -> Unit = {},
-    onDeleteHydrationEntry: (String) -> Unit = {},
-) {
-    val sortedEntries = entries.sortedByDescending { it.startTime }
-    item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = sortedEntries,
-        ) { entry, rowModifier ->
-            HydrationEntryRow(
-                entry = entry,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEdit = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
-                    { onEditHydrationEntry(entry.id) }
-                } else {
-                    null
-                },
-                onDelete = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
-                    { onDeleteHydrationEntry(entry.id) }
-                } else {
-                    null
-                },
-                modifier = rowModifier,
-            )
-        }
-    }
-}
-
-@Composable
-private fun HydrationEntryRow(
-    entry: HydrationEntry,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEdit: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-) {
-    if (onDelete != null) {
-        SwipeToDeleteEntryRow(
-            onDelete = onDelete,
-            modifier = modifier,
-        ) {
-            HydrationEntryRowContent(
-                entry = entry,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEdit = onEdit,
-            )
-        }
-    } else {
-        HydrationEntryRowContent(
-            entry = entry,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onEdit = onEdit,
-            modifier = modifier,
-        )
-    }
-}
-
-@Composable
-private fun HydrationEntryRowContent(
-    entry: HydrationEntry,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEdit: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-) {
-    val zone = ZoneId.systemDefault()
-    val start = entry.startTime.atZone(zone)
-    val end = entry.endTime.atZone(zone)
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = dateTimeFormatterProvider.mediumDate().format(start),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = "${dateTimeFormatterProvider.shortTime().format(start)} - ${dateTimeFormatterProvider.shortTime().format(end)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                SourceChip(source = entry.source)
-            }
-            Text(
-                text = unitFormatter.hydration(entry.liters).text,
-                style = MaterialTheme.typography.titleMedium,
-                color = HydrationColor,
-            )
-            if (onEdit != null) {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = stringResource(R.string.cd_edit_entry),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun weightFluctuationValues(entries: List<WeightEntry>): List<CrossMetricValue> {
-    val zone = ZoneId.systemDefault()
-    val dailyWeights = entries
-        .groupBy { it.time.atZone(zone).toLocalDate() }
-        .mapValues { (_, dayEntries) -> dayEntries.map { it.weightKg }.average() }
-        .toSortedMap()
-
-    var previousWeight: Double? = null
-    return dailyWeights.mapNotNull { (date, weight) ->
-        val previous = previousWeight
-        previousWeight = weight
-        previous?.let { CrossMetricValue(date, abs(weight - it)) }
     }
 }
