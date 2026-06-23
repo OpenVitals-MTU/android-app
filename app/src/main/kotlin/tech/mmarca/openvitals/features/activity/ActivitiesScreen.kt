@@ -55,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
@@ -128,6 +130,10 @@ fun ActivitiesScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.load()
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,

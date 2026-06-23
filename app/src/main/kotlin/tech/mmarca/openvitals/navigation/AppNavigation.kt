@@ -172,6 +172,27 @@ fun AppNavigation(
         navController.popBackStack()
     }
 
+    fun navigateToDashboardAfterActivitySave() {
+        navController.navigate(Screen.Dashboard.route) {
+            popUpTo(Screen.Dashboard.route)
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    fun finishActivityEntrySave() {
+        markDashboardDirty()
+        val previousRoute = navController.previousBackStackEntry?.destination?.route
+        if (
+            previousRoute == Screen.Dashboard.route ||
+            previousRoute == Screen.Activity.route ||
+            previousRoute == Screen.Metric.route
+        ) {
+            if (navController.popBackStack()) return
+        }
+        navigateToDashboardAfterActivitySave()
+    }
+
     val topLevelDestinations = remember {
         listOf(
             OpenVitalsNavigationDestination(
@@ -594,14 +615,7 @@ fun AppNavigation(
                     pendingRouteImportUri = routeImportRequest?.uri,
                     pendingRouteImportRequestId = routeImportRequest?.id,
                     onPendingRouteImportHandled = onRouteImportRequestHandled,
-                    onEntrySaved = {
-                        markDashboardDirty()
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.Dashboard.route)
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onEntrySaved = ::finishActivityEntrySave,
                 )
             }
 
