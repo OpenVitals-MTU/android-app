@@ -25,7 +25,6 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
@@ -90,7 +89,6 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.reflect.KClass
 import kotlin.math.roundToInt
 
 @Singleton
@@ -177,20 +175,6 @@ class HealthRepository @Inject constructor(
     fun isMindfulnessAvailable(): Boolean = hc.isMindfulnessSessionAvailable()
 
     suspend fun grantedPermissions(): Set<String> = hc.grantedPermissions()
-
-    suspend fun insertImportedRecords(records: List<Record>) =
-        withContext(dispatchers.io) {
-            hc.insertImportedRecords(records)
-        }
-
-    suspend fun readImportedClientRecordIds(
-        recordType: KClass<out Record>,
-        start: java.time.Instant,
-        end: java.time.Instant,
-    ): Set<String> =
-        withContext(dispatchers.io) {
-            hc.readImportedClientRecordIds(recordType, start, end)
-        }
 
     suspend fun missingPhase1(): Set<String> {
         val granted = hc.grantedPermissions()

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.homewidgets
 
+import android.annotation.SuppressLint
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
@@ -104,6 +105,7 @@ class HomeMetricWidgetReceiver : GlanceAppWidgetReceiver() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
@@ -226,7 +228,7 @@ suspend fun refreshHomeMetricWidget(
 ) {
     if (!hasAppWidgetInfo(context, appWidgetId)) return
 
-    val glanceId = AppWidgetId(appWidgetId)
+    val glanceId = glanceAppWidgetId(appWidgetId)
     val preferencesMetricId = getAppWidgetState(context, HomeMetricWidgetState.definition, glanceId)[HomeMetricWidgetState.metricIdKey]
         .toDashboardWidgetIdOrNull()
     val resolvedMetricId = metricId
@@ -576,6 +578,10 @@ fun homeMetricWidgetCatalog(): List<DashboardWidgetId> =
 private fun String?.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
     this?.let { stored -> runCatching { DashboardWidgetId.valueOf(stored) }.getOrNull() }
 
+@SuppressLint("RestrictedApi")
+internal fun glanceAppWidgetId(appWidgetId: Int): GlanceId = AppWidgetId(appWidgetId)
+
+@SuppressLint("RestrictedApi")
 private fun GlanceId.appWidgetIdOrNull(): Int? = (this as? AppWidgetId)?.appWidgetId
 
 internal fun openMetricIntent(context: Context, route: String): Intent =

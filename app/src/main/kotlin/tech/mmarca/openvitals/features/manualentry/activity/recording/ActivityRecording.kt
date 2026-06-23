@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import android.annotation.SuppressLint
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -764,12 +765,15 @@ class ActivityRecordingController @Inject constructor(
         context.stopService(Intent(context, ActivityRecordingService::class.java))
     }
 
+    @SuppressLint("NewApi")
     private fun Location.withMslAltitude(): Location {
         val converted = Location(this)
         val converter = altitudeConverter ?: return converted
         if (!converted.hasAltitude()) return converted
-        runCatching {
-            converter.addMslAltitudeToLocation(context, converted)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            runCatching {
+                converter.addMslAltitudeToLocation(context, converted)
+            }
         }
         return converted
     }

@@ -49,6 +49,25 @@
     <string name="no_data">Sin datos</string>
     <string name="loading">Cargando...</string>
 
+    <string name="home_metric_widget_description">Métrica de OpenVitals</string>
+    <string name="home_metric_widget_config_title">Elegir métrica</string>
+    <string name="home_metric_widget_config_prompt">Elige la métrica para el widget:</string>
+    <string name="home_metric_widget_no_metrics">No hay métricas disponibles.</string>
+    <string name="home_metric_widget_permission_needed">Concede el permiso en OpenVitals</string>
+    <string name="home_metric_widget_update_failed">No se puede actualizar</string>
+    <string name="home_metric_widget_open_for_details">Abrir detalles</string>
+    <string name="home_metric_widget_not_configured">Selecciona una métrica</string>
+    <string name="home_daily_readiness_widget_description">Preparación diaria de OpenVitals</string>
+    <string name="home_body_energy_widget_description">Energía corporal de OpenVitals</string>
+    <string name="home_today_vitals_widget_description">Constantes de hoy en OpenVitals</string>
+    <string name="home_widget_today_title">Hoy</string>
+    <string name="home_widget_context">Contexto</string>
+    <string name="home_widget_hrv_short">VFC</string>
+    <string name="home_widget_body_energy_charged">Cargada</string>
+    <string name="home_widget_body_energy_steady">Estable</string>
+    <string name="home_widget_body_energy_limited">Limitada</string>
+    <string name="home_widget_body_energy_low">Baja</string>
+
     <string name="screen_steps">Pasos</string>
     <string name="screen_activities">Actividades</string>
     <string name="screen_calories">Calorías</string>
@@ -93,6 +112,7 @@
     <string name="activity_entry_permission_needed">Para el resumen, OpenVitals solo pide permisos de lectura. Para añadir actividades sin interrupciones posteriores, necesitamos permisos de escritura en Health Connect para sesiones, rutas, distancia, elevación, calorías activas y calorías totales. OpenVitals no almacenará estas entradas; se guardan en Health Connect.</string>
     <string name="activity_entry_source_body">Crea una actividad vacía, graba una ruta GPS, o importa primero un GPX/KML/KMZ/FIT y revisa la ruta, hora, título, notas y tipo detectados antes de guardar.</string>
     <string name="activity_entry_create_manual">Crear manualmente</string>
+    <string name="activity_entry_create_from_existing_plan">Crear desde un plan existente</string>
     <string name="activity_entry_record_gps">Grabar actividad</string>
     <string name="activity_entry_choose_another_source">Elegir otro método</string>
     <string name="activity_entry_type_label">Tipo de actividad</string>
@@ -110,6 +130,25 @@
     <string name="activity_entry_set_repetitions_label">Serie %1$d repeticiones</string>
     <string name="activity_entry_set_rest_label">Tiempo de descanso</string>
     <string name="activity_entry_add_set">Añadir serie</string>
+    <string name="activity_entry_training_plans_title">Planes de entrenamiento</string>
+    <string name="activity_entry_training_plans_loading">Cargando planes de Health Connect</string>
+    <string name="activity_entry_training_plans_empty">No hay planes de Health Connect para esta fecha y tipo de actividad</string>
+    <string name="activity_entry_training_plan_label">Plan de entrenamiento</string>
+    <string name="activity_entry_training_plan_select">Seleccionar plan</string>
+    <string name="activity_entry_training_plan_new">Nuevo plan</string>
+    <string name="activity_entry_training_plan_unnamed">Plan sin nombre</string>
+    <string name="activity_entry_save_training_plan">Guardar plan</string>
+    <string name="activity_entry_update_training_plan">Actualizar plan</string>
+    <string name="activity_entry_plan_activity_picker_title">Actividades con planes</string>
+    <string name="activity_entry_plan_activity_picker_empty">No se encontraron planes de Health Connect</string>
+    <string name="activity_entry_plan_picker_title">Elegir un plan</string>
+    <string name="activity_entry_plan_picker_empty">No hay planes para esta actividad</string>
+    <string name="activity_entry_plan_choose_activity">Elegir otra actividad</string>
+    <string name="activity_entry_plan_one_set_summary">1 serie • %1$d repeticiones</string>
+    <string name="activity_entry_plan_summary">%1$d series • %2$d repeticiones</string>
+    <string name="activity_entry_plan_preview_reps">%1$d repeticiones</string>
+    <string name="activity_entry_plan_preview_rest">descanso %1$d s</string>
+    <string name="activity_entry_plan_preview_more">+%1$d más</string>
     <string name="activity_entry_distance_label">Distancia %1$s opcional</string>
     <string name="activity_entry_elevation_label">Elevación %1$s opcional</string>
     <string name="activity_entry_notes_label">Notas opcionales</string>
@@ -174,6 +213,7 @@
     <string name="activity_entry_add">Guardar actividad</string>
     <string name="activity_entry_invalid_value">Corrige los campos resaltados antes de guardar la actividad.</string>
     <string name="activity_entry_error_activity_type_route">Elige un tipo de actividad compatible con rutas GPS.</string>
+    <string name="activity_entry_error_training_plan_title_required">Introduce un título para guardar este plan de entrenamiento.</string>
     <string name="activity_entry_error_start_date">Elige una fecha de inicio válida.</string>
     <string name="activity_entry_error_start_time">Elige una hora de inicio válida.</string>
     <string name="activity_entry_error_start_time_after_route">La hora de inicio debe ser igual o anterior al inicio de la ruta importada.</string>

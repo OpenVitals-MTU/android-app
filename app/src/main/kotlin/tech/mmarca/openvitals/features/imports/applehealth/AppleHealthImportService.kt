@@ -12,14 +12,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.BuildConfig
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 
 @Singleton
 class AppleHealthImportService
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-        private val healthRepository: HealthRepository,
+        private val importRepository: AppleHealthImportRepository,
     ) {
         suspend fun importAppleHealthExport(
             uri: Uri,
@@ -27,7 +27,7 @@ class AppleHealthImportService
         ): AppleHealthImportResult =
             withContext(Dispatchers.IO) {
                 val converter = AppleHealthImportConverter(
-                    mindfulnessAvailable = healthRepository.isMindfulnessAvailable(),
+                    mindfulnessAvailable = importRepository.isMindfulnessAvailable(),
                     diagnosticLimit = DiagnosticReportLimit,
                 )
                 val importState = StreamingAppleHealthImportState(
@@ -235,7 +235,7 @@ class AppleHealthImportService
                     val end = grouped.maxOfOrNull { it.sourceTimeRange.end }?.plusSeconds(1) ?: return@flatMapTo emptySet()
                     val wantedIds = grouped.mapNotNullTo(mutableSetOf()) { it.clientRecordId }
                     runCatching {
-                        healthRepository.readImportedClientRecordIds(recordType, start, end)
+                        importRepository.readImportedClientRecordIds(recordType, start, end)
                             .intersect(wantedIds)
                     }.getOrElse {
                         emptySet()
@@ -250,7 +250,7 @@ class AppleHealthImportService
         ): AppleHealthInsertionResult {
             if (records.isEmpty()) return AppleHealthInsertionResult()
             val batchResult = runCatching {
-                healthRepository.insertImportedRecords(records.map { it.record })
+                importRepository.insertImportedRecords(records.map { it.record })
             }
             if (batchResult.isSuccess) {
                 records.forEach { converted ->
@@ -260,7 +260,7 @@ class AppleHealthImportService
             }
 
             return records.fold(AppleHealthInsertionResult()) { result, converted ->
-                runCatching { healthRepository.insertImportedRecords(listOf(converted.record)) }
+                runCatching { importRepository.insertImportedRecords(listOf(converted.record)) }
                     .fold(
                         onSuccess = {
                             typeStats.getOrPut(converted.appleType) { MutableAppleImportTypeStats() }.imported += 1

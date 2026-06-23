@@ -13,7 +13,6 @@ import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -122,6 +121,7 @@ abstract class UpdatingHomeWidgetReceiver : GlanceAppWidgetReceiver() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
@@ -139,7 +139,7 @@ abstract class UpdatingHomeWidgetReceiver : GlanceAppWidgetReceiver() {
 suspend fun refreshDailyReadinessWidget(context: Context, appWidgetId: Int) {
     if (!hasAppWidgetInfo(context, appWidgetId)) return
 
-    val glanceId = AppWidgetId(appWidgetId)
+    val glanceId = glanceAppWidgetId(appWidgetId)
     val snapshot = loadDailyReadinessSnapshot(context)
     writeHomeWidgetSnapshot(context, glanceId, "daily_readiness", snapshot)
     HomeDailyReadinessWidget().update(context, glanceId)
@@ -148,7 +148,7 @@ suspend fun refreshDailyReadinessWidget(context: Context, appWidgetId: Int) {
 suspend fun refreshBodyEnergyWidget(context: Context, appWidgetId: Int) {
     if (!hasAppWidgetInfo(context, appWidgetId)) return
 
-    val glanceId = AppWidgetId(appWidgetId)
+    val glanceId = glanceAppWidgetId(appWidgetId)
     val snapshot = loadBodyEnergySnapshot(context)
     writeHomeWidgetSnapshot(context, glanceId, "body_energy", snapshot)
     HomeBodyEnergyWidget().update(context, glanceId)
@@ -157,7 +157,7 @@ suspend fun refreshBodyEnergyWidget(context: Context, appWidgetId: Int) {
 suspend fun refreshTodayVitalsWidget(context: Context, appWidgetId: Int) {
     if (!hasAppWidgetInfo(context, appWidgetId)) return
 
-    val glanceId = AppWidgetId(appWidgetId)
+    val glanceId = glanceAppWidgetId(appWidgetId)
     val snapshot = loadTodayVitalsSnapshot(context)
     writeHomeWidgetSnapshot(context, glanceId, "today_vitals", snapshot)
     HomeTodayVitalsWidget().update(context, glanceId)

@@ -14,11 +14,12 @@ import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.data.repository.HealthRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class AppleHealthImportWorker(
     appContext: Context,
@@ -35,15 +36,11 @@ class AppleHealthImportWorker(
 
         return runCatching {
             val appContext = applicationContext
-            val preferencesRepository = PreferencesRepository(appContext)
-            val healthRepository = HealthRepository(
-                hc = HealthConnectManager(appContext),
-                preferencesRepository = preferencesRepository,
+            val entryPoint = EntryPointAccessors.fromApplication(
+                appContext,
+                AppleHealthImportWorkerEntryPoint::class.java,
             )
-            val service = AppleHealthImportService(
-                context = appContext,
-                healthRepository = healthRepository,
-            )
+            val service = entryPoint.appleHealthImportService()
             var lastNotificationUpdateMillis = 0L
             val result = service.importAppleHealthExport(uri) { progress ->
                 setProgress(progress.toData())
@@ -231,4 +228,10 @@ class AppleHealthImportWorker(
             )
 
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AppleHealthImportWorkerEntryPoint {
+    fun appleHealthImportService(): AppleHealthImportService
 }

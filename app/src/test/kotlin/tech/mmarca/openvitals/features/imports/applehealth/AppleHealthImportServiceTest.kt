@@ -23,7 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 
 class AppleHealthImportServiceTest {
 
@@ -161,7 +161,7 @@ class AppleHealthImportServiceTest {
         val uri = mockk<Uri>()
         val resolver = mockk<ContentResolver>()
         val context = mockk<Context>()
-        val repository = mockk<HealthRepository>()
+        val repository = mockk<AppleHealthImportRepository>()
         val insertedRecords = slot<List<androidx.health.connect.client.records.Record>>()
 
         every { context.contentResolver } returns resolver
@@ -204,7 +204,7 @@ class AppleHealthImportServiceTest {
         val uri = mockk<Uri>()
         val resolver = mockk<ContentResolver>()
         val context = mockk<Context>()
-        val repository = mockk<HealthRepository>()
+        val repository = mockk<AppleHealthImportRepository>()
 
         every { context.contentResolver } returns resolver
         every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
