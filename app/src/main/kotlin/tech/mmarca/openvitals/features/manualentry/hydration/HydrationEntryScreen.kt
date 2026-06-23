@@ -258,7 +258,8 @@ private fun HydrationTrackerCard(
 
             if (addingCustomAmount) {
                 HydrationCustomAmountDialog(
-                    initialMilliliters = state.selectedContainer.volumeMilliliters,
+                    initialMilliliters = state.lastCustomAmountMilliliters
+                        ?: state.selectedContainer.volumeMilliliters,
                     onDismiss = { addingCustomAmount = false },
                     onSave = { milliliters ->
                         addingCustomAmount = false

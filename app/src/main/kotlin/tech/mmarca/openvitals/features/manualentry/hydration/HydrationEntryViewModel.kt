@@ -97,6 +97,7 @@ data class HydrationEntryUiState(
     val selectedBeverage: HydrationBeverage = HydrationBeverage.WATER,
     val containerOptions: List<HydrationContainerOption> = HydrationContainerOption.Defaults,
     val selectedContainer: HydrationContainerOption = HydrationContainerOption.Defaults.first(),
+    val lastCustomAmountMilliliters: Double? = null,
     val editRecordId: String? = null,
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
@@ -255,6 +256,9 @@ class HydrationEntryViewModel @Inject constructor(
             )
             return
         }
+        _uiState.value = _uiState.value.copy(
+            lastCustomAmountMilliliters = milliliters,
+        )
         saveHydrationEntry(milliliters / MillilitersPerLiter)
     }
 

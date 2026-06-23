@@ -222,7 +222,22 @@ class HydrationEntryViewModelTest {
             })
         }
         assertEquals(0.35, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertEquals(350.0, vm.uiState.value.lastCustomAmountMilliliters ?: 0.0, 0.0001)
         assertTrue(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `invalid custom hydration entry keeps last custom amount`() = runTest {
+        val repo = entryRepo()
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.addCustomHydrationEntry(425.0)
+        advanceUntilIdle()
+        vm.addCustomHydrationEntry(0.0)
+        advanceUntilIdle()
+
+        assertEquals(425.0, vm.uiState.value.lastCustomAmountMilliliters ?: 0.0, 0.0001)
+        assertEquals(HydrationEntryError.INVALID_AMOUNT, vm.uiState.value.entryError)
     }
 
     @Test fun `invalid custom hydration entry is rejected`() = runTest {
