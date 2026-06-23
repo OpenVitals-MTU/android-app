@@ -187,6 +187,7 @@ internal class HealthConnectPermissionService(
         add(HealthPermission.getWritePermission(WheelchairPushesRecord::class))
         add(HealthPermission.getWritePermission(HeartRateRecord::class))
         add(HealthPermission.getWritePermission(RestingHeartRateRecord::class))
+        add(HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class))
         add(HealthPermission.getWritePermission(WeightRecord::class))
         add(HealthPermission.getWritePermission(HeightRecord::class))
         add(HealthPermission.getWritePermission(BodyFatRecord::class))

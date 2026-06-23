@@ -218,12 +218,12 @@ class OnboardingViewModelTest {
         assertEquals(setOf("write"), categories.single { it.id == "manual_entry_write" }.permissions)
         assertEquals(setOf("import_write"), categories.single { it.id == "data_import_write" }.permissions)
         assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
-        assertFalse(categories.drop(1).any { it.required })
+        assertTrue(categories.all { it.required })
         assertEquals("cycle_tracking", categories.last().id)
         assertTrue(categories.all { it.descriptionRes != 0 })
     }
 
-    @Test fun `permissionCategories filters empty optional permission groups`() = runTest {
+    @Test fun `permissionCategories filters empty permission groups`() = runTest {
         val vm = OnboardingViewModel(
             repository = repo(
                 grantedPermissions = emptySet(),
@@ -262,6 +262,7 @@ class OnboardingViewModelTest {
 
         val mindfulness = vm.permissionCategories.single { it.id == "mindfulness" }
         assertFalse(mindfulness.available)
+        assertFalse(mindfulness.required)
         assertEquals(R.string.onboarding_category_mindfulness_unavailable, mindfulness.unavailableReasonRes)
         assertEquals(setOf("mindfulness"), mindfulness.permissions)
         assertFalse(vm.uiState.value.phase2Granted)

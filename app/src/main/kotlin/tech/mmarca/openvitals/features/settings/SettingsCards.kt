@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -1120,6 +1121,16 @@ internal fun PermissionCategoryCard(
         isManualGrant -> stringResource(R.string.onboarding_status_manual)
         else -> stringResource(R.string.onboarding_status_optional)
     }
+    val description = if (!category.available && unavailableReasonRes != null) {
+        stringResource(unavailableReasonRes)
+    } else if (category.manualPermissions.isNotEmpty() && missingManualCount > 0) {
+        stringResource(
+            R.string.onboarding_category_additional_data_access_manual_note,
+            stringResource(category.descriptionRes),
+        )
+    } else {
+        stringResource(category.descriptionRes)
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -1130,56 +1141,55 @@ internal fun PermissionCategoryCard(
                 MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(category.titleRes),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (granted)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = if (!category.available && unavailableReasonRes != null) {
-                        stringResource(unavailableReasonRes)
-                    } else if (category.manualPermissions.isNotEmpty() && missingManualCount > 0) {
-                        stringResource(
-                            R.string.onboarding_category_additional_data_access_manual_note,
-                            stringResource(category.descriptionRes),
-                        )
-                    } else {
-                        stringResource(category.descriptionRes)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(category.titleRes),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (granted)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (granted) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = stringResource(R.string.onboarding_status_granted),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                } else if (!category.available) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = stringResource(R.string.onboarding_status_not_supported),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                }
             }
-            if (granted) {
-                Icon(
-                    imageVector = Icons.Outlined.CheckCircle,
-                    contentDescription = stringResource(R.string.onboarding_status_granted),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            } else if (!category.available) {
-                Icon(
-                    imageVector = Icons.Outlined.Lock,
-                    contentDescription = stringResource(R.string.onboarding_status_not_supported),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!granted && category.available) {
                 FilledTonalButton(
                     onClick = onGrant,
                     enabled = availability == HealthConnectAvailability.AVAILABLE,
-                    modifier = Modifier.padding(start = 12.dp),
+                    modifier = Modifier.align(Alignment.End),
                 ) {
                     Text(
                         when {

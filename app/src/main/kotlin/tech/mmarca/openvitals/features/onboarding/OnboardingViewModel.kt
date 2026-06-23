@@ -72,36 +72,42 @@ class OnboardingViewModel @Inject constructor(
                 titleRes = R.string.onboarding_category_heart_recovery,
                 descriptionRes = R.string.onboarding_category_heart_recovery_desc,
                 permissions = repository.heartPermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "body",
                 titleRes = R.string.onboarding_category_body,
                 descriptionRes = R.string.onboarding_category_body_desc,
                 permissions = repository.bodyPermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "activity_extras",
                 titleRes = R.string.onboarding_category_activity_extras,
                 descriptionRes = R.string.onboarding_category_activity_extras_desc,
                 permissions = repository.activityExtrasPermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "nutrition_hydration",
                 titleRes = R.string.onboarding_category_nutrition_hydration,
                 descriptionRes = R.string.onboarding_category_nutrition_hydration_desc,
                 permissions = repository.nutritionHydrationPermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "manual_entry_write",
                 titleRes = R.string.onboarding_category_manual_entry_write,
                 descriptionRes = R.string.onboarding_category_manual_entry_write_desc,
                 permissions = repository.requestableWritePermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "data_import_write",
                 titleRes = R.string.onboarding_category_data_import_write,
                 descriptionRes = R.string.onboarding_category_data_import_write_desc,
                 permissions = repository.dataImportWritePermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "mindfulness",
@@ -110,6 +116,7 @@ class OnboardingViewModel @Inject constructor(
                 permissions = repository.mindfulnessPermissions,
                 available = _uiState.value.mindfulnessAvailable,
                 unavailableReasonRes = R.string.onboarding_category_mindfulness_unavailable,
+                required = _uiState.value.mindfulnessAvailable,
             ),
             OnboardingPermissionCategory(
                 id = "additional_data_access",
@@ -117,18 +124,21 @@ class OnboardingViewModel @Inject constructor(
                 descriptionRes = R.string.onboarding_category_additional_data_access_desc,
                 permissions = repository.additionalDataAccessPermissions + repository.routePermissions,
                 manualPermissions = repository.routePermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "vitals",
                 titleRes = R.string.onboarding_category_vitals,
                 descriptionRes = R.string.onboarding_category_vitals_desc,
                 permissions = repository.vitalsPermissions,
+                required = true,
             ),
             OnboardingPermissionCategory(
                 id = "cycle_tracking",
                 titleRes = R.string.onboarding_category_cycle_tracking,
                 descriptionRes = R.string.onboarding_category_cycle_tracking_desc,
                 permissions = repository.cyclePermissions,
+                required = true,
             ),
         ).filter { it.permissions.isNotEmpty() }
 

@@ -63,9 +63,17 @@ fun OnboardingScreen(
     val context = LocalContext.current
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val permissionCategories = viewModel.permissionCategories
-    val requiredCategory = permissionCategories.firstOrNull { it.required }
-    val missingCorePermissions = requiredCategory?.permissions.orEmpty() - state.grantedPermissions
-    val missingOnboardingPermissions = viewModel.onboardingPermissions - state.grantedPermissions
+    val availablePermissionCategories = permissionCategories.filter { it.available }
+    val requiredPermissions = availablePermissionCategories
+        .flatMap { it.permissions }
+        .toSet()
+    val manualPermissions = availablePermissionCategories
+        .flatMap { it.manualPermissions }
+        .toSet()
+    val missingRequiredPermissions = requiredPermissions - state.grantedPermissions
+    val missingRequestablePermissions = missingRequiredPermissions - manualPermissions
+    val missingManualPermissions = missingRequiredPermissions.intersect(manualPermissions)
+    val allRequiredPermissionsGranted = missingRequiredPermissions.isEmpty()
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -200,40 +208,31 @@ fun OnboardingScreen(
 
         Button(
             onClick = {
-                if (state.phase1Granted) {
+                if (allRequiredPermissionsGranted) {
                     onOnboardingComplete()
-                } else if (missingOnboardingPermissions.isNotEmpty()) {
-                    requestPermissions.launch(missingOnboardingPermissions)
-                } else if (missingCorePermissions.isNotEmpty()) {
-                    requestPermissions.launch(missingCorePermissions)
+                } else if (missingRequestablePermissions.isNotEmpty()) {
+                    requestPermissions.launch(missingRequestablePermissions)
+                } else if (missingManualPermissions.isNotEmpty()) {
+                    openManualPermissionSettings()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = state.phase1Granted ||
-                missingOnboardingPermissions.isNotEmpty() ||
-                missingCorePermissions.isNotEmpty(),
+            enabled = allRequiredPermissionsGranted ||
+                missingRequestablePermissions.isNotEmpty() ||
+                missingManualPermissions.isNotEmpty(),
         ) {
             Text(
-                if (state.phase1Granted) {
-                    stringResource(R.string.action_get_started)
-                } else {
-                    stringResource(R.string.onboarding_grant_all)
+                when {
+                    allRequiredPermissionsGranted -> stringResource(R.string.action_get_started)
+                    missingRequestablePermissions.isNotEmpty() -> stringResource(R.string.onboarding_grant_all)
+                    else -> stringResource(R.string.onboarding_open_required_permissions)
                 }
             )
         }
 
-        if (!state.phase1Granted && missingCorePermissions.isNotEmpty()) {
+        if (missingRequestablePermissions.isNotEmpty()) {
             FilledTonalButton(
-                onClick = { requestPermissions.launch(missingCorePermissions) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            ) {
-                Text(stringResource(R.string.onboarding_grant_core))
-            }
-        } else if (state.phase1Granted && missingOnboardingPermissions.isNotEmpty()) {
-            FilledTonalButton(
-                onClick = { requestPermissions.launch(missingOnboardingPermissions) },
+                onClick = { requestPermissions.launch(missingRequestablePermissions) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -242,7 +241,7 @@ fun OnboardingScreen(
             }
         }
 
-        if (!state.phase1Granted) {
+        if (!allRequiredPermissionsGranted) {
             Text(
                 text = stringResource(R.string.onboarding_core_required),
                 style = MaterialTheme.typography.bodySmall,
@@ -340,6 +339,16 @@ private fun PermissionCategoryRow(
         else -> stringResource(R.string.onboarding_status_optional)
     }
     val categoryTitle = stringResource(category.titleRes)
+    val description = if (!category.available && unavailableReasonRes != null) {
+        stringResource(unavailableReasonRes)
+    } else if (category.manualPermissions.isNotEmpty() && missingManualCount > 0) {
+        stringResource(
+            R.string.onboarding_category_additional_data_access_manual_note,
+            stringResource(category.descriptionRes),
+        )
+    } else {
+        stringResource(category.descriptionRes)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -350,58 +359,55 @@ private fun PermissionCategoryRow(
                 MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (category.required) {
-                        stringResource(R.string.onboarding_required_suffix, categoryTitle)
-                    } else {
-                        categoryTitle
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (granted)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = if (!category.available && unavailableReasonRes != null) {
-                        stringResource(unavailableReasonRes)
-                    } else if (category.manualPermissions.isNotEmpty() && missingManualCount > 0) {
-                        stringResource(
-                            R.string.onboarding_category_additional_data_access_manual_note,
-                            stringResource(category.descriptionRes),
-                        )
-                    } else {
-                        stringResource(category.descriptionRes)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = categoryTitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (granted)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (granted) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = stringResource(R.string.onboarding_status_granted),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                } else if (!category.available) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = stringResource(R.string.onboarding_status_not_supported),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                }
             }
-            if (granted) {
-                Icon(
-                    imageVector = Icons.Outlined.CheckCircle,
-                    contentDescription = stringResource(R.string.onboarding_status_granted),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            } else if (!category.available) {
-                Icon(
-                    imageVector = Icons.Outlined.Lock,
-                    contentDescription = stringResource(R.string.onboarding_status_not_supported),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                FilledTonalButton(onClick = onGrant) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!granted && category.available) {
+                FilledTonalButton(
+                    onClick = onGrant,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
                     Text(
                         when {
                             isManualGrant -> stringResource(R.string.action_open)
