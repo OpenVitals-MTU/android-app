@@ -105,7 +105,7 @@
     <string name="activity_entry_repetitions_label">Wdh.</string>
     <string name="activity_entry_steps_label">Schritte</string>
     <string name="activity_entry_set_repetitions_label">Satz %1$d Wdh.</string>
-    <string name="activity_entry_set_rest_label">Pause danach Sek.</string>
+    <string name="activity_entry_set_rest_label">Pausenzeit</string>
     <string name="activity_entry_add_set">Satz hinzufügen</string>
     <string name="activity_entry_distance_label">Distanz %1$s optional</string>
     <string name="activity_entry_elevation_label">Höhe %1$s optional</string>

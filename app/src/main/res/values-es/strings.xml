@@ -105,7 +105,7 @@
     <string name="activity_entry_repetitions_label">Reps</string>
     <string name="activity_entry_steps_label">Pasos</string>
     <string name="activity_entry_set_repetitions_label">Serie %1$d repeticiones</string>
-    <string name="activity_entry_set_rest_label">Descanso posterior seg</string>
+    <string name="activity_entry_set_rest_label">Tiempo de descanso</string>
     <string name="activity_entry_add_set">Añadir serie</string>
     <string name="activity_entry_distance_label">Distancia %1$s opcional</string>
     <string name="activity_entry_elevation_label">Elevación %1$s opcional</string>
