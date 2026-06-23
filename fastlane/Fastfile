@@ -6,8 +6,8 @@ OPENVITALS_PACKAGE_NAME = "tech.mmarca.openvitals"
 OPENVITALS_METADATA_PATH = "fastlane/metadata/android"
 
 platform :android do
-  desc "Upload the signed Android App Bundle to Google Play internal testing with store metadata"
-  lane :internal do |options|
+  desc "Upload the signed Android App Bundle directly to Google Play production with store metadata"
+  lane :production do |options|
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
     aab = options[:aab] || ENV["OPENVITALS_RELEASE_AAB"]
     version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
@@ -16,16 +16,14 @@ platform :android do
     UI.user_error!("aab is required") if aab.to_s.empty?
 
     if version_code.to_s.length > 0
-      existing_codes = ["internal", "production"].flat_map do |track|
-        google_play_track_version_codes(
-          package_name: OPENVITALS_PACKAGE_NAME,
-          json_key: json_key,
-          track: track
-        )
-      end.map(&:to_i)
+      existing_codes = google_play_track_version_codes(
+        package_name: OPENVITALS_PACKAGE_NAME,
+        json_key: json_key,
+        track: "production"
+      ).map(&:to_i)
 
       if existing_codes.include?(version_code.to_i)
-        UI.message("Version code #{version_code} is already on Google Play; skipping internal testing upload.")
+        UI.message("Version code #{version_code} is already on Google Play production; skipping production upload.")
         next
       end
     end
@@ -34,36 +32,10 @@ platform :android do
       package_name: OPENVITALS_PACKAGE_NAME,
       json_key: json_key,
       aab: aab,
-      track: "internal",
+      track: "production",
       release_status: "completed",
       metadata_path: OPENVITALS_METADATA_PATH,
       sync_image_upload: true,
-      changes_not_sent_for_review: ENV["OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW"] == "true",
-      timeout: 600
-    )
-  end
-
-  desc "Promote the accepted Google Play internal testing release to production"
-  lane :promote_production do |options|
-    json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
-    version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
-
-    UI.user_error!("json_key is required") if json_key.to_s.empty?
-    UI.user_error!("version_code is required") if version_code.to_s.empty?
-
-    supply(
-      package_name: OPENVITALS_PACKAGE_NAME,
-      json_key: json_key,
-      track: "internal",
-      track_promote_to: "production",
-      track_promote_release_status: "completed",
-      version_code: version_code,
-      skip_upload_apk: true,
-      skip_upload_aab: true,
-      skip_upload_metadata: true,
-      skip_upload_changelogs: true,
-      skip_upload_images: true,
-      skip_upload_screenshots: true,
       changes_not_sent_for_review: ENV["OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW"] == "true",
       timeout: 600
     )

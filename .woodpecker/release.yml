@@ -20,7 +20,7 @@ steps:
             *)
               release_tag="$$(git tag --points-at "$${CI_COMMIT_SHA}" | grep -E '^v' | tail -n 1 || true)"
               if [ -z "$${release_tag}" ]; then
-                echo "Production promotion must be started from the successful v* tag pipeline." >&2
+                echo "Stable release deployment must be started from the successful v* tag pipeline." >&2
                 exit 1
               fi
               ;;
@@ -28,7 +28,7 @@ steps:
         fi
         if [ "$${CI_PIPELINE_EVENT}" = "deployment" ]; then
           case "$${release_tag}" in
-            *-alpha*|*-beta*|*-rc*) echo "Prerelease-suffixed tags are beta-only; use a vX.Y.Z tag for production promotion." >&2; exit 1 ;;
+            *-alpha*|*-beta*|*-rc*) echo "Prerelease-suffixed tags cannot be marked stable; use a vX.Y.Z tag." >&2; exit 1 ;;
           esac
         fi
         printf '%s\n' "$${release_tag}" > .woodpecker/tmp/release-tag.txt
@@ -47,7 +47,7 @@ steps:
             "Distribution flow:" \
             "- Codeberg prerelease with signed APK and signed Android App Bundle assets" \
             "- Codeberg stable release after approved Woodpecker deployment" \
-            "- Google Play internal testing on tag and production promotion after approved Woodpecker deployment" \
+            "- Google Play production upload after approved Woodpecker deployment" \
             "" \
             "Assets:" \
             "- Signed release APK" \
@@ -76,6 +76,8 @@ steps:
       - git diff --check
     when:
       - event: tag
+      - event: deployment
+        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
   - name: build-release-artifacts
     depends_on:
@@ -119,8 +121,10 @@ steps:
       - cp "$${aab_path}" "$${release_aab}"
     when:
       - event: tag
+      - event: deployment
+        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
-  - name: publish-play-internal
+  - name: publish-play-production
     depends_on:
       - build-release-artifacts
     image: ruby:3.3
@@ -142,12 +146,13 @@ steps:
       - version_code="$$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
       - test -n "$${version_code}"
       - |
-        bundle exec fastlane android internal \
+        bundle exec fastlane android production \
           json_key:"$${play_key_path}" \
           aab:".woodpecker/tmp/OpenVitals-$${release_tag}.aab" \
           version_code:"$${version_code}"
     when:
-      - event: tag
+      - event: deployment
+        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
   - name: publish-codeberg-beta
     image: woodpeckerci/plugin-release
@@ -171,36 +176,9 @@ steps:
     when:
       - event: tag
 
-  - name: promote-play-production
-    depends_on:
-      - resolve-release-context
-    image: ruby:3.3
-    environment:
-      FASTLANE_DISABLE_COLORS: "1"
-      FASTLANE_OPT_OUT_USAGE: "1"
-      FASTLANE_SKIP_UPDATE_CHECK: "1"
-      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
-        from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
-    commands:
-      - set -eu
-      - test -n "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}"
-      - bundle install --jobs 4 --retry 3
-      - play_key_path="$${CI_WORKSPACE}/.woodpecker/tmp/google-play-service-account.json"
-      - printf '%s' "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}" | base64 -d > "$${play_key_path}"
-      - test -s "$${play_key_path}"
-      - version_code="$$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
-      - test -n "$${version_code}"
-      - |
-        bundle exec fastlane android promote_production \
-          json_key:"$${play_key_path}" \
-          version_code:"$${version_code}"
-    when:
-      - event: deployment
-        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
-
   - name: publish-codeberg-stable
     depends_on:
-      - resolve-release-context
+      - publish-play-production
     image: alpine:3.20
     environment:
       CODEBERG_RELEASE_API_KEY:
