@@ -76,23 +76,28 @@ internal class AppleHealthImportConverter(
     private val diagnosticLimit: Int = 200,
 ) {
     private val diagnostics = mutableListOf<AppleHealthImportDiagnostic>()
+    private val diagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
     internal val typeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
     private val consumedRecordFingerprints = mutableSetOf<String>()
     private val workoutOverlapCandidates = mutableListOf<AppleWorkoutOverlapCandidate>()
+    private var workoutOverlapCandidatesLimitReached = false
 
     fun convert(export: AppleParsedExport): AppleHealthConversionResult {
         export.parsedTypeCounts.forEach { (type, count) ->
             typeStats.getOrPut(type) { MutableAppleImportTypeStats() }.parsed += count
         }
 
-        val workoutOverlaps = export.records.mapNotNull { it.toWorkoutOverlapCandidate() }
+        val workoutOverlaps = export.records.toBoundedWorkoutOverlapCandidates()
+        if (workoutOverlaps.limitReached) {
+            workoutOverlapCandidatesLimitReached = true
+        }
 
         val converted = buildList {
             addAll(convertBloodPressureCorrelations(export.correlations))
             addAll(convertStandaloneBloodPressure(export.records))
             addAll(convertSleep(export.records))
             addAll(convertNutrition(export.records))
-            addAll(convertWorkouts(export.workouts, workoutOverlaps))
+            addAll(convertWorkouts(export.workouts, workoutOverlaps.candidates, workoutOverlapCandidatesLimitReached))
             export.records.forEach { record ->
                 if (record.sourceFingerprint in consumedRecordFingerprints) return@forEach
                 convertSingleRecord(record)?.let(::add)
@@ -128,6 +133,9 @@ internal class AppleHealthImportConverter(
 
     fun diagnosticsSnapshot(): List<AppleHealthImportDiagnostic> = diagnostics.toList()
 
+    fun diagnosticSummariesSnapshot(): List<AppleHealthImportDiagnosticSummary> =
+        diagnosticSummaries.values.map { it.toSummary() }
+
     fun shouldBufferRecord(record: AppleRecord): Boolean =
         record.type == AppleBloodPressureSystolic ||
             record.type == AppleBloodPressureDiastolic ||
@@ -135,7 +143,13 @@ internal class AppleHealthImportConverter(
             (record.type in AppleNutritionTypes && record.type != AppleDietaryWater)
 
     fun noteWorkoutOverlap(record: AppleRecord) {
-        record.toWorkoutOverlapCandidate()?.let(workoutOverlapCandidates::add)
+        record.toWorkoutOverlapCandidate()?.let { candidate ->
+            if (workoutOverlapCandidates.size < MaxWorkoutOverlapCandidates) {
+                workoutOverlapCandidates += candidate
+            } else {
+                workoutOverlapCandidatesLimitReached = true
+            }
+        }
     }
 
     fun convertStreamingRecord(record: AppleRecord): ConvertedAppleRecord? =
@@ -150,9 +164,9 @@ internal class AppleHealthImportConverter(
         buildList {
             addAll(convertBloodPressureCorrelations(correlations))
             addAll(convertStandaloneBloodPressure(records))
-            addAll(convertSleep(records))
-            addAll(convertNutrition(records))
-            addAll(convertWorkouts(workouts, workoutOverlapCandidates))
+            addAll(convertSleep(records, trackConsumedRecords = false))
+            addAll(convertNutrition(records, trackConsumedRecords = false))
+            addAll(convertWorkouts(workouts, workoutOverlapCandidates, workoutOverlapCandidatesLimitReached))
             correlations
                 .filterNot { it.type == AppleBloodPressureCorrelation }
                 .forEach { correlation ->
@@ -811,10 +825,15 @@ internal class AppleHealthImportConverter(
         )
     }
 
-    private fun convertSleep(records: List<AppleRecord>): List<ConvertedAppleRecord> {
+    private fun convertSleep(
+        records: List<AppleRecord>,
+        trackConsumedRecords: Boolean = true,
+    ): List<ConvertedAppleRecord> {
         val sleepRecords = records.filter { it.type == AppleSleepAnalysis }
         if (sleepRecords.isEmpty()) return emptyList()
-        sleepRecords.forEach { consumedRecordFingerprints += it.sourceFingerprint }
+        if (trackConsumedRecords) {
+            sleepRecords.forEach { consumedRecordFingerprints += it.sourceFingerprint }
+        }
 
         val groups = sleepRecords
             .mapNotNull { record ->
@@ -888,7 +907,10 @@ internal class AppleHealthImportConverter(
         }
     }
 
-    private fun convertNutrition(records: List<AppleRecord>): List<ConvertedAppleRecord> {
+    private fun convertNutrition(
+        records: List<AppleRecord>,
+        trackConsumedRecords: Boolean = true,
+    ): List<ConvertedAppleRecord> {
         val nutritionRecords = records.filter { it.type in AppleNutritionTypes && it.type != AppleDietaryWater }
         if (nutritionRecords.isEmpty()) return emptyList()
 
@@ -914,7 +936,9 @@ internal class AppleHealthImportConverter(
                 val value = record.numericValue
                 val applied = value != null && nutrients.apply(record.type, value, record.unit)
                 if (applied) {
-                    consumedRecordFingerprints += record.sourceFingerprint
+                    if (trackConsumedRecords) {
+                        consumedRecordFingerprints += record.sourceFingerprint
+                    }
                 } else {
                     invalid(record, "Nutrition value is missing or has an unsupported unit.")
                 }
@@ -985,6 +1009,7 @@ internal class AppleHealthImportConverter(
     private fun convertWorkouts(
         workouts: List<AppleWorkout>,
         overlapCandidates: List<AppleWorkoutOverlapCandidate>,
+        overlapCandidateLimitReached: Boolean = false,
     ): List<ConvertedAppleRecord> =
         workouts.flatMap { workout ->
             val start = workout.startDate ?: return@flatMap emptyList<ConvertedAppleRecord>().also {
@@ -1017,7 +1042,7 @@ internal class AppleHealthImportConverter(
             markConverted(workout.workoutActivityType)
             buildList {
                 add(convertedSession)
-                if (!overlapCandidates.hasOverlapping(workout, AppleDistanceTypes)) {
+                if (!overlapCandidateLimitReached && !overlapCandidates.hasOverlapping(workout, AppleDistanceTypes)) {
                     workout.totalDistance
                         ?.toMeters(workout.totalDistanceUnit)
                         ?.takeIf { it > 0.0 }
@@ -1044,7 +1069,7 @@ internal class AppleHealthImportConverter(
                             )
                         }
                 }
-                if (!overlapCandidates.hasOverlapping(workout, setOf(AppleActiveEnergyBurned))) {
+                if (!overlapCandidateLimitReached && !overlapCandidates.hasOverlapping(workout, setOf(AppleActiveEnergyBurned))) {
                     workout.totalEnergyBurned
                         ?.toKilocalories(workout.totalEnergyBurnedUnit)
                         ?.takeIf { it > 0.0 }
@@ -1125,6 +1150,7 @@ internal class AppleHealthImportConverter(
     }
 
     private fun addDiagnostic(diagnostic: AppleHealthImportDiagnostic) {
+        diagnosticSummaries.add(diagnostic)
         if (diagnostics.size < diagnosticLimit) {
             diagnostics += diagnostic
         }
@@ -1159,6 +1185,11 @@ private data class AppleWorkoutOverlapCandidate(
     val sourceName: String?,
     val startDate: AppleDateTime?,
     val endDate: AppleDateTime?,
+)
+
+private data class BoundedWorkoutOverlapCandidates(
+    val candidates: List<AppleWorkoutOverlapCandidate>,
+    val limitReached: Boolean,
 )
 
 private fun List<SleepStageCandidate>.splitSleepSessions(): List<List<SleepStageCandidate>> {
@@ -1356,6 +1387,21 @@ private fun AppleRecord.toWorkoutOverlapCandidate(): AppleWorkoutOverlapCandidat
     } else {
         null
     }
+
+private fun List<AppleRecord>.toBoundedWorkoutOverlapCandidates(): BoundedWorkoutOverlapCandidates {
+    val candidates = ArrayList<AppleWorkoutOverlapCandidate>(minOf(size, MaxWorkoutOverlapCandidates))
+    var limitReached = false
+    for (record in this) {
+        val candidate = record.toWorkoutOverlapCandidate() ?: continue
+        if (candidates.size < MaxWorkoutOverlapCandidates) {
+            candidates += candidate
+        } else {
+            limitReached = true
+            break
+        }
+    }
+    return BoundedWorkoutOverlapCandidates(candidates, limitReached)
+}
 
 private fun List<AppleWorkoutOverlapCandidate>.hasOverlapping(workout: AppleWorkout, types: Set<String>): Boolean {
     val workoutStart = workout.startDate?.instant ?: return false
@@ -1663,3 +1709,5 @@ private val AppleCycleCategoryTypes =
         AppleIntermenstrualBleeding,
         AppleSexualActivity,
     )
+
+private const val MaxWorkoutOverlapCandidates = 10_000

@@ -51,6 +51,7 @@ class AppleHealthImportService
                 importState.flushConverted()
                 val summaries = converter.typeStats.toTypeSummaries()
                 val diagnostics = importState.diagnostics()
+                val diagnosticSummaries = importState.diagnosticSummaries()
                 AppleHealthImportResult(
                     parsedRecords = parsed.parsedRecords,
                     parsedWorkouts = parsed.parsedWorkouts,
@@ -69,6 +70,7 @@ class AppleHealthImportService
                         imported = importState.importedRecords,
                         summaries = summaries,
                         diagnostics = diagnostics,
+                        diagnosticSummaries = diagnosticSummaries,
                     ),
                 )
             }
@@ -82,6 +84,7 @@ class AppleHealthImportService
             private val bufferedCorrelations = mutableListOf<AppleCorrelation>()
             private val convertedBatch = mutableListOf<ConvertedAppleRecord>()
             private val serviceDiagnostics = mutableListOf<AppleHealthImportDiagnostic>()
+            private val serviceDiagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
             private var parsedRecords = 0
             private var parsedWorkouts = 0
             private var parsedCorrelations = 0
@@ -101,6 +104,9 @@ class AppleHealthImportService
                 converter.noteWorkoutOverlap(record)
                 if (converter.shouldBufferRecord(record)) {
                     bufferedRecords += record
+                    if (bufferedRecords.size >= BufferedRecordBatchSize) {
+                        flushBufferedRecords()
+                    }
                 } else {
                     converter.convertStreamingRecord(record)?.let(::acceptConverted)
                 }
@@ -125,8 +131,9 @@ class AppleHealthImportService
             }
 
             fun finishBufferedGroups() {
+                flushBufferedRecords()
                 converter.convertBufferedGroups(
-                    records = bufferedRecords,
+                    records = emptyList(),
                     workouts = bufferedWorkouts,
                     correlations = bufferedCorrelations,
                     parsedActivitySummaries = parsedActivitySummaries,
@@ -136,10 +143,25 @@ class AppleHealthImportService
                 bufferedCorrelations.clear()
             }
 
+            private fun flushBufferedRecords() {
+                if (bufferedRecords.isEmpty()) return
+                converter.convertBufferedGroups(
+                    records = bufferedRecords,
+                    workouts = emptyList(),
+                    correlations = emptyList(),
+                    parsedActivitySummaries = 0,
+                ).forEach(::acceptConverted)
+                bufferedRecords.clear()
+            }
+
             fun flushConverted() {
                 if (convertedBatch.isEmpty()) return
                 val typeStats = converter.typeStats
-                val uniqueConverted = convertedBatch.deduplicateWithinImport(serviceDiagnostics, typeStats)
+                val uniqueConverted = convertedBatch.deduplicateWithinImport(
+                    diagnostics = serviceDiagnostics,
+                    diagnosticSummaries = serviceDiagnosticSummaries,
+                    typeStats = typeStats,
+                )
                 val existingClientRecordIds = runBlocking { findExistingClientRecordIds(uniqueConverted) }
                 val toInsert = uniqueConverted.filterNot { converted ->
                     val clientRecordId = converted.clientRecordId
@@ -150,6 +172,7 @@ class AppleHealthImportService
                                 "duplicate_existing",
                                 "A matching Health Connect clientRecordId already exists.",
                             ),
+                            serviceDiagnosticSummaries,
                         )
                         typeStats.getOrPut(converted.appleType) { MutableAppleImportTypeStats() }.duplicateSkipped += 1
                     }
@@ -157,7 +180,7 @@ class AppleHealthImportService
                 }
 
                 val insertionResult = runBlocking {
-                    insertConvertedRecords(toInsert, serviceDiagnostics, typeStats)
+                    insertConvertedRecords(toInsert, serviceDiagnostics, serviceDiagnosticSummaries, typeStats)
                 }
                 importedRecords += insertionResult.imported
                 convertedBatch.clear()
@@ -166,6 +189,10 @@ class AppleHealthImportService
 
             fun diagnostics(): List<AppleHealthImportDiagnostic> =
                 (converter.diagnosticsSnapshot() + serviceDiagnostics).take(DiagnosticReportLimit)
+
+            fun diagnosticSummaries(): List<AppleHealthImportDiagnosticSummary> =
+                (converter.diagnosticSummariesSnapshot() + serviceDiagnosticSummaries.values.map { it.toSummary() })
+                    .mergeDiagnosticSummaries()
 
             fun progressSnapshot(phase: AppleHealthImportPhase): AppleHealthImportProgress =
                 AppleHealthImportProgress(
@@ -218,6 +245,7 @@ class AppleHealthImportService
         private suspend fun insertConvertedRecords(
             records: List<ConvertedAppleRecord>,
             diagnostics: MutableList<AppleHealthImportDiagnostic>,
+            diagnosticSummaries: MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>,
             typeStats: MutableMap<String, MutableAppleImportTypeStats>,
         ): AppleHealthInsertionResult {
             if (records.isEmpty()) return AppleHealthInsertionResult()
@@ -243,13 +271,19 @@ class AppleHealthImportService
                             val stats = typeStats.getOrPut(converted.appleType) { MutableAppleImportTypeStats() }
                             if (duplicate) {
                                 stats.duplicateSkipped += 1
-                                diagnostics += converted.diagnostic("duplicate_rejected", "Health Connect rejected this as an existing clientRecordId.")
+                                diagnostics.addDiagnostic(
+                                    converted.diagnostic("duplicate_rejected", "Health Connect rejected this as an existing clientRecordId."),
+                                    diagnosticSummaries,
+                                )
                                 result.copy(duplicates = result.duplicates + 1)
                             } else {
                                 stats.failed += 1
-                                diagnostics += converted.diagnostic(
-                                    reasonCode = "insert_failed",
-                                    detail = error.localizedMessage ?: error::class.simpleName.orEmpty().ifBlank { "Health Connect insert failed." },
+                                diagnostics.addDiagnostic(
+                                    converted.diagnostic(
+                                        reasonCode = "insert_failed",
+                                        detail = error.localizedMessage ?: error::class.simpleName.orEmpty().ifBlank { "Health Connect insert failed." },
+                                    ),
+                                    diagnosticSummaries,
                                 )
                                 result.copy(failed = result.failed + 1)
                             }
@@ -270,6 +304,7 @@ private val ConvertedAppleRecord.clientRecordId: String?
 
 private fun List<ConvertedAppleRecord>.deduplicateWithinImport(
     diagnostics: MutableList<AppleHealthImportDiagnostic>,
+    diagnosticSummaries: MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>,
     typeStats: MutableMap<String, MutableAppleImportTypeStats>,
 ): List<ConvertedAppleRecord> {
     val seen = mutableSetOf<String>()
@@ -281,6 +316,7 @@ private fun List<ConvertedAppleRecord>.deduplicateWithinImport(
                     "duplicate_in_file",
                     "The export contained another object with the same deterministic import fingerprint.",
                 ),
+                diagnosticSummaries,
             )
             typeStats.getOrPut(converted.appleType) { MutableAppleImportTypeStats() }.duplicateSkipped += 1
             false
@@ -291,10 +327,43 @@ private fun List<ConvertedAppleRecord>.deduplicateWithinImport(
     }
 }
 
-private fun MutableList<AppleHealthImportDiagnostic>.addDiagnostic(diagnostic: AppleHealthImportDiagnostic) {
+private fun MutableList<AppleHealthImportDiagnostic>.addDiagnostic(
+    diagnostic: AppleHealthImportDiagnostic,
+    diagnosticSummaries: MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>,
+) {
+    diagnosticSummaries.add(diagnostic)
     if (size < DiagnosticReportLimit) {
         add(diagnostic)
     }
+}
+
+private fun List<AppleHealthImportDiagnosticSummary>.mergeDiagnosticSummaries(): List<AppleHealthImportDiagnosticSummary> {
+    val merged = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
+    forEach { summary ->
+        val diagnostic = AppleHealthImportDiagnostic(
+            appleType = summary.appleType,
+            targetType = summary.targetType,
+            reasonCode = summary.reasonCode,
+            timeRange = summary.exampleTimeRange,
+            unit = summary.exampleUnit,
+            value = summary.exampleValue,
+            detail = summary.detail,
+        )
+        val key = AppleHealthDiagnosticSummaryKey(
+            appleType = summary.appleType,
+            targetType = summary.targetType,
+            reasonCode = summary.reasonCode,
+            detail = summary.detail,
+        )
+        val existing = merged[key]
+        if (existing != null) {
+            existing.count += summary.count
+        } else {
+            merged.add(diagnostic)
+            merged[key]?.count = summary.count
+        }
+    }
+    return merged.values.map { it.toSummary() }
 }
 
 private fun ConvertedAppleRecord.diagnostic(reasonCode: String, detail: String): AppleHealthImportDiagnostic =
@@ -339,6 +408,7 @@ private fun buildReportText(
     imported: Int,
     summaries: List<AppleHealthImportTypeSummary>,
     diagnostics: List<AppleHealthImportDiagnostic>,
+    diagnosticSummaries: List<AppleHealthImportDiagnosticSummary>,
 ): String = buildString {
     appendLine("OpenVitals Apple Health Import Report")
     appendLine("Generated: ${Instant.now()}")
@@ -367,22 +437,41 @@ private fun buildReportText(
     }
     appendLine()
     appendLine("Diagnostics")
-    if (diagnostics.isEmpty()) {
+    if (diagnosticSummaries.isEmpty()) {
         appendLine("No failures, skips, duplicates, or unsupported entries were recorded.")
     } else {
-        diagnostics.forEachIndexed { index, diagnostic ->
-            appendLine(
-                "${index + 1}. reason=${diagnostic.reasonCode}; appleType=${diagnostic.appleType}; " +
-                    "target=${diagnostic.targetType ?: "none"}; time=${diagnostic.timeRange ?: "unknown"}; " +
-                    "unit=${diagnostic.unit ?: "none"}; value=${diagnostic.value ?: "none"}; detail=${diagnostic.detail}",
+        val reasonSummaries = diagnosticSummaries.groupBy { it.reasonCode }
+            .mapValues { (_, grouped) -> grouped.sumOf { it.count } }
+            .toSortedMap()
+        appendLine(
+            "Grouped diagnostic types: ${diagnosticSummaries.size}; " +
+                reasonSummaries.entries.joinToString(", ") { (reason, count) -> "$reason=$count" },
+        )
+        diagnosticSummaries
+            .sortedWith(
+                compareByDescending<AppleHealthImportDiagnosticSummary> { it.count }
+                    .thenBy { it.reasonCode }
+                    .thenBy { it.appleType },
             )
-        }
+            .forEachIndexed { index, diagnostic ->
+                val exampleParts = listOfNotNull(
+                    diagnostic.exampleTimeRange?.let { "exampleTime=$it" },
+                    diagnostic.exampleUnit?.let { "unit=$it" },
+                    diagnostic.exampleValue?.let { "value=$it" },
+                )
+                val exampleText = if (exampleParts.isEmpty()) "" else exampleParts.joinToString(prefix = "; ", separator = "; ")
+                appendLine(
+                    "${index + 1}. count=${diagnostic.count}; reason=${diagnostic.reasonCode}; appleType=${diagnostic.appleType}; " +
+                        "target=${diagnostic.targetType ?: "none"}; detail=${diagnostic.detail}$exampleText",
+                )
+            }
         if (diagnostics.size == DiagnosticReportLimit) {
-            appendLine("Diagnostics were truncated at $DiagnosticReportLimit entries.")
+            appendLine("Diagnostic examples were capped at $DiagnosticReportLimit rows; grouped counts include all recorded diagnostics.")
         }
     }
 }
 
 private const val DiagnosticReportLimit = 200
 private const val ConvertedBatchSize = 300
+private const val BufferedRecordBatchSize = 2_000
 private const val ProgressReportElementInterval = 500

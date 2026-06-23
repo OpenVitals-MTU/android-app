@@ -81,6 +81,73 @@ data class AppleHealthImportDiagnostic(
     val detail: String,
 )
 
+internal data class AppleHealthImportDiagnosticSummary(
+    val appleType: String,
+    val targetType: String?,
+    val reasonCode: String,
+    val detail: String,
+    val count: Int,
+    val exampleTimeRange: String?,
+    val exampleUnit: String?,
+    val exampleValue: String?,
+)
+
+internal data class AppleHealthDiagnosticSummaryKey(
+    val appleType: String,
+    val targetType: String?,
+    val reasonCode: String,
+    val detail: String,
+)
+
+internal data class MutableAppleHealthImportDiagnosticSummary(
+    val appleType: String,
+    val targetType: String?,
+    val reasonCode: String,
+    val detail: String,
+    var count: Int,
+    val exampleTimeRange: String?,
+    val exampleUnit: String?,
+    val exampleValue: String?,
+) {
+    fun toSummary(): AppleHealthImportDiagnosticSummary =
+        AppleHealthImportDiagnosticSummary(
+            appleType = appleType,
+            targetType = targetType,
+            reasonCode = reasonCode,
+            detail = detail,
+            count = count,
+            exampleTimeRange = exampleTimeRange,
+            exampleUnit = exampleUnit,
+            exampleValue = exampleValue,
+        )
+}
+
+internal fun MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>.add(
+    diagnostic: AppleHealthImportDiagnostic,
+) {
+    val key = AppleHealthDiagnosticSummaryKey(
+        appleType = diagnostic.appleType,
+        targetType = diagnostic.targetType,
+        reasonCode = diagnostic.reasonCode,
+        detail = diagnostic.detail,
+    )
+    val existing = this[key]
+    if (existing != null) {
+        existing.count += 1
+    } else {
+        this[key] = MutableAppleHealthImportDiagnosticSummary(
+            appleType = diagnostic.appleType,
+            targetType = diagnostic.targetType,
+            reasonCode = diagnostic.reasonCode,
+            detail = diagnostic.detail,
+            count = 1,
+            exampleTimeRange = diagnostic.timeRange,
+            exampleUnit = diagnostic.unit,
+            exampleValue = diagnostic.value,
+        )
+    }
+}
+
 internal data class AppleParsedExport(
     val records: List<AppleRecord>,
     val workouts: List<AppleWorkout>,

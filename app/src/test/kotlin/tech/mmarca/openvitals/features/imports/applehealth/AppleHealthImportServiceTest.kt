@@ -20,6 +20,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.HealthRepository
@@ -178,6 +179,44 @@ class AppleHealthImportServiceTest {
         assertEquals(1, insertedRecords.captured.size)
         assertTrue(insertedRecords.captured.single() is StepsRecord)
         coVerify(exactly = 1) { repository.insertImportedRecords(any()) }
+    }
+
+    @Test
+    fun `service report aggregates repeated diagnostics and keeps later distinct groups`() = runTest {
+        val xml = buildString {
+            appendLine("<HealthData>")
+            repeat(205) { index ->
+                val day = (1 + index / 60).toString().padStart(2, '0')
+                val minute = (index % 60).toString().padStart(2, '0')
+                appendLine(
+                    """<Record type="HKQuantityTypeIdentifierUnsupportedA" sourceName="Phone" """ +
+                        """startDate="2026-01-$day 08:$minute:00 +0000" """ +
+                        """endDate="2026-01-$day 08:$minute:01 +0000" unit="count" value="1" />""",
+                )
+            }
+            appendLine(
+                """<Record type="HKQuantityTypeIdentifierUnsupportedB" sourceName="Phone" """ +
+                    """startDate="2026-01-01 09:00:00 +0000" endDate="2026-01-01 09:00:01 +0000" """ +
+                    """unit="count" value="1" />""",
+            )
+            appendLine("</HealthData>")
+        }
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<HealthRepository>()
+
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
+        every { repository.isMindfulnessAvailable() } returns true
+
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(uri)
+
+        assertEquals(206, result.unsupportedElements)
+        assertTrue(result.shareableReportText.contains("Grouped diagnostic types: 2; unsupported=206"))
+        assertTrue(result.shareableReportText.contains("count=205; reason=unsupported; appleType=HKQuantityTypeIdentifierUnsupportedA"))
+        assertTrue(result.shareableReportText.contains("count=1; reason=unsupported; appleType=HKQuantityTypeIdentifierUnsupportedB"))
+        assertFalse(result.shareableReportText.contains("Diagnostics were truncated at 200 entries."))
     }
 
     private fun parseXml(xml: String): AppleParsedExport =
