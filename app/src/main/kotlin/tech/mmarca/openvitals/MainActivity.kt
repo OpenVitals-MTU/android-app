@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -27,6 +28,7 @@ import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.ExternalRouteImportRequest
+import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.util.Locale
@@ -41,11 +43,13 @@ class MainActivity : AppCompatActivity() {
 
     private var nextRouteImportRequestId = 0L
     private var routeImportRequest by mutableStateOf<ExternalRouteImportRequest?>(null)
+    private var externalNavigationRoute by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         updateRouteImportRequest(intent)
+        updateExternalNavigationRoute(intent)
 
         setContent {
             val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
@@ -91,10 +95,14 @@ class MainActivity : AppCompatActivity() {
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     startDestination = startDestination,
                     routeImportRequest = routeImportRequest,
+                    externalNavigationRoute = externalNavigationRoute,
                     onRouteImportRequestHandled = { requestId ->
                         if (routeImportRequest?.id == requestId) {
                             routeImportRequest = null
                         }
+                    },
+                    onExternalNavigationHandled = {
+                        externalNavigationRoute = null
                     },
                     onOnboardingComplete = {
                         preferencesRepository.onboardingDone = true
@@ -109,6 +117,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         updateRouteImportRequest(intent)
+        updateExternalNavigationRoute(intent)
     }
 
     private fun updateRouteImportRequest(intent: Intent?) {
@@ -118,6 +127,23 @@ class MainActivity : AppCompatActivity() {
             uri = uri,
         )
     }
+
+    private fun updateExternalNavigationRoute(intent: Intent?) {
+        externalNavigationRoute = intent?.openVitalsRoute()
+    }
+}
+
+private fun Intent.openVitalsRoute(): String? =
+    getStringExtra(EXTRA_OPENVITALS_ROUTE)?.takeIf(::isSupportedOpenVitalsRoute)
+
+private fun isSupportedOpenVitalsRoute(route: String): Boolean {
+    if (route == Screen.Dashboard.route) return true
+    if (route == Screen.DailyReadiness.route) return true
+    if (route.startsWith("daily_readiness/body_energy/")) return true
+    val metricPrefix = "metric/"
+    if (!route.startsWith(metricPrefix)) return false
+    val metricId = Uri.decode(route.removePrefix(metricPrefix))
+    return runCatching { DashboardWidgetId.valueOf(metricId) }.isSuccess
 }
 
 private fun Intent.routeImportUri(): Uri? {

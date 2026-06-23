@@ -223,6 +223,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".features.homewidgets.HomeMetricWidgetConfigurationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".features.manualentry.activity.recording.ActivityRecordingService"
             android:exported="false"
@@ -257,6 +266,50 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeMetricWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_metric_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeDailyReadinessWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_daily_readiness_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeBodyEnergyWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_body_energy_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeTodayVitalsWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_today_vitals_widget_info" />
         </receiver>
 
         <provider

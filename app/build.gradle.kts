@@ -122,6 +122,9 @@ dependencies {
     // Background work
     implementation(libs.androidx.work.runtime.ktx)
 
+    // Home screen widgets
+    implementation(libs.androidx.glance.appwidget)
+
     // Health Connect
     implementation(libs.health.connect.client)
 

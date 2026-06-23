@@ -132,7 +132,9 @@ fun AppNavigation(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     startDestination: String,
     routeImportRequest: ExternalRouteImportRequest? = null,
+    externalNavigationRoute: String? = null,
     onRouteImportRequestHandled: (Long) -> Unit = {},
+    onExternalNavigationHandled: () -> Unit = {},
     onOnboardingComplete: () -> Unit = {},
 ) {
     val navController = rememberNavController()
@@ -261,6 +263,19 @@ fun AppNavigation(
             navController.navigate(Screen.ActivityEntry.route) {
                 launchSingleTop = true
             }
+        }
+    }
+
+    LaunchedEffect(externalNavigationRoute, currentRoute) {
+        if (
+            externalNavigationRoute != null &&
+            currentRoute != null &&
+            currentRoute != Screen.Onboarding.route
+        ) {
+            navController.navigate(externalNavigationRoute) {
+                launchSingleTop = true
+            }
+            onExternalNavigationHandled()
         }
     }
 
