@@ -218,6 +218,16 @@ class MindfulnessEntryViewModel @Inject constructor(
         )
     }
 
+    fun updateEntryStartTime(time: Instant) {
+        val minutes = _uiState.value.manualMinutesText.toPositiveIntOrNull()
+        _uiState.value = _uiState.value.copy(
+            editStartTime = time.coerceAtLatestSessionStart(minutes),
+            saveCompleted = false,
+            entryError = null,
+            writeErrorMessage = null,
+        )
+    }
+
     fun startTimer() {
         val config = currentTimerConfigOrNull()
         if (config == null) {
@@ -355,7 +365,8 @@ class MindfulnessEntryViewModel @Inject constructor(
             )
             return
         }
-        val start = current.editStartTime ?: Instant.now().minus(Duration.ofMinutes(minutes.toLong()))
+        val start = (current.editStartTime ?: Instant.now().minus(Duration.ofMinutes(minutes.toLong())))
+            .coerceAtLatestSessionStart(minutes)
         val end = start.plus(Duration.ofMinutes(minutes.toLong()))
         writeSession(
             title = currentSessionTitle(),
@@ -481,7 +492,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     .coerceAtMost(MaxSessionMinutes.toLong())
                 _uiState.value = _uiState.value.copy(
                     manualMinutesText = minutes.toString(),
-                    editStartTime = session.startTime,
+                    editStartTime = session.startTime.coerceAtLatestSessionStart(minutes.toInt()),
                     entryError = null,
                     writeErrorMessage = null,
                 )
@@ -552,6 +563,13 @@ class MindfulnessEntryViewModel @Inject constructor(
     private fun canUpdateTimerFields(): Boolean {
         val state = _uiState.value
         return !state.isEditMode && !state.isTimerRunning && !state.isTimerPaused && !state.timerCompleted
+    }
+
+    private fun Instant.coerceAtLatestSessionStart(minutes: Int?): Instant {
+        val durationMinutes = minutes
+            ?.takeIf { it in MinSessionMinutes..MaxSessionMinutes }
+            ?: MinSessionMinutes
+        return coerceAtMost(Instant.now().minus(Duration.ofMinutes(durationMinutes.toLong())))
     }
 }
 

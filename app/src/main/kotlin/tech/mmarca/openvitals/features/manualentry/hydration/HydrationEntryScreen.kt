@@ -113,6 +113,7 @@ fun HydrationEntryScreen(
                 onAddContainerEntry = viewModel::addContainerHydrationEntry,
                 onAddSelectedEntry = viewModel::addSelectedHydrationEntry,
                 onAddCustomEntry = viewModel::addCustomHydrationEntry,
+                onEntryTimeChanged = viewModel::updateEntryTime,
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.hydrationWritePermissions)
                 },
@@ -132,6 +133,7 @@ private fun HydrationTrackerCard(
     onAddContainerEntry: (HydrationContainerOption) -> Unit,
     onAddSelectedEntry: () -> Unit,
     onAddCustomEntry: (Double) -> Unit,
+    onEntryTimeChanged: (java.time.Instant) -> Unit,
     onRequestWritePermission: () -> Unit,
     onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
     modifier: Modifier = Modifier,
@@ -214,6 +216,13 @@ private fun HydrationTrackerCard(
             )
 
             if (state.isEditMode) {
+                ManualEntryTimestampFields(
+                    timestamp = state.editTime,
+                    enabled = !state.isSavingEntry,
+                    onTimestampChanged = onEntryTimeChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
                 Button(
                     onClick = onAddSelectedEntry,
                     enabled = enabled,

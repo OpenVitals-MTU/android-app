@@ -138,6 +138,7 @@ fun MindfulnessEntryScreen(
             MindfulnessManualEntryCard(
                 state = state,
                 onMinutesChanged = viewModel::updateManualMinutes,
+                onEntryStartTimeChanged = viewModel::updateEntryStartTime,
                 onAddEntry = viewModel::addManualEntry,
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.writePermissions)
@@ -598,6 +599,7 @@ private fun TimerActions(
 private fun MindfulnessManualEntryCard(
     state: MindfulnessEntryUiState,
     onMinutesChanged: (String) -> Unit,
+    onEntryStartTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
@@ -632,6 +634,14 @@ private fun MindfulnessManualEntryCard(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (state.isEditMode) {
+                ManualEntryTimestampFields(
+                    timestamp = state.editStartTime,
+                    enabled = !state.isSavingEntry,
+                    onTimestampChanged = onEntryStartTimeChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Button(
                 onClick = onAddEntry,
                 enabled = enabled,

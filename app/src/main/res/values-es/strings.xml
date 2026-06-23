@@ -77,6 +77,9 @@
     <string name="bottom_nav_dashboard">Resumen</string>
     <string name="manual_entry_hydration_title">Hidratación</string>
     <string name="manual_entry_activity_title">Actividad</string>
+    <string name="manual_entry_date_label">Fecha de entrada</string>
+    <string name="manual_entry_time_label">Hora de entrada</string>
+    <string name="manual_entry_select_time">Seleccionar hora de entrada</string>
     <string name="manual_entry_add_widgets">Añadir widgets de entrada</string>
     <string name="manual_entry_all_widgets_added">Todos los widgets de entrada ya están visibles.</string>
     <string name="manual_entry_write_permission_title">Permiso de escritura de hidratación</string>

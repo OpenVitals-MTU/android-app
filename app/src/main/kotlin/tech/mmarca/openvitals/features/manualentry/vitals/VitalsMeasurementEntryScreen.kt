@@ -97,6 +97,7 @@ fun VitalsMeasurementEntryScreen(
                 unitFormatter = unitFormatter,
                 onInputChanged = viewModel::updateInput,
                 onSecondaryInputChanged = viewModel::updateSecondaryInput,
+                onEntryTimeChanged = viewModel::updateEntryTime,
                 onAddEntry = {
                     viewModel.addEntry(
                         value = canonicalVitalsValue(
@@ -126,6 +127,7 @@ private fun VitalsMeasurementEntryCard(
     unitFormatter: UnitFormatter,
     onInputChanged: (String) -> Unit,
     onSecondaryInputChanged: (String) -> Unit,
+    onEntryTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
@@ -206,6 +208,15 @@ private fun VitalsMeasurementEntryCard(
                     onValueChange = onInputChanged,
                     enabled = !state.isSavingEntry,
                     label = stringResource(R.string.vitals_entry_value_label, title, unitLabel),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (state.isEditMode) {
+                ManualEntryTimestampFields(
+                    timestamp = state.editTime,
+                    enabled = !state.isSavingEntry,
+                    onTimestampChanged = onEntryTimeChanged,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

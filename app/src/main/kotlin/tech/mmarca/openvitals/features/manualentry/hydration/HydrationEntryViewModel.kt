@@ -196,6 +196,15 @@ class HydrationEntryViewModel @Inject constructor(
         )
     }
 
+    fun updateEntryTime(time: Instant) {
+        _uiState.value = _uiState.value.copy(
+            editTime = time.coerceAtMost(Instant.now()),
+            saveCompleted = false,
+            entryError = null,
+            writeErrorMessage = null,
+        )
+    }
+
     fun updateContainerSize(container: HydrationContainerOption, milliliters: Double) {
         if (!isValidHydrationContainerMilliliters(milliliters)) {
             _uiState.value = _uiState.value.copy(
@@ -276,7 +285,7 @@ class HydrationEntryViewModel @Inject constructor(
                     selectedBeverage = HydrationBeverage.WATER,
                     containerOptions = options,
                     selectedContainer = option,
-                    editTime = entry.startTime,
+                    editTime = entry.startTime.coerceAtMost(Instant.now()),
                     entryError = null,
                     writeErrorMessage = null,
                 )
@@ -317,7 +326,7 @@ class HydrationEntryViewModel @Inject constructor(
             )
             runCatching {
                 val request = HydrationWriteRequest(
-                    time = current.editTime ?: Instant.now(),
+                    time = current.editTime?.coerceAtMost(Instant.now()) ?: Instant.now(),
                     volumeLiters = effectiveLiters,
                 )
                 if (current.editRecordId == null) {

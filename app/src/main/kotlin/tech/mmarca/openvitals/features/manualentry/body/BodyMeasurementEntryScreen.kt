@@ -92,6 +92,7 @@ fun BodyMeasurementEntryScreen(
                 state = state,
                 unitFormatter = unitFormatter,
                 onInputChanged = viewModel::updateInput,
+                onEntryTimeChanged = viewModel::updateEntryTime,
                 onAddEntry = {
                     viewModel.addEntry(
                         canonicalBodyMeasurementValue(
@@ -115,6 +116,7 @@ private fun BodyMeasurementEntryCard(
     state: BodyMeasurementEntryUiState,
     unitFormatter: UnitFormatter,
     onInputChanged: (String) -> Unit,
+    onEntryTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
@@ -186,6 +188,15 @@ private fun BodyMeasurementEntryCard(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (state.isEditMode) {
+                ManualEntryTimestampFields(
+                    timestamp = state.editTime,
+                    enabled = !state.isSavingEntry,
+                    onTimestampChanged = onEntryTimeChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Button(
                 onClick = onAddEntry,

@@ -77,6 +77,9 @@
     <string name="bottom_nav_dashboard">Übersicht</string>
     <string name="manual_entry_hydration_title">Hydrierung</string>
     <string name="manual_entry_activity_title">Aktivität</string>
+    <string name="manual_entry_date_label">Eintragsdatum</string>
+    <string name="manual_entry_time_label">Eintragszeit</string>
+    <string name="manual_entry_select_time">Eintragszeit auswählen</string>
     <string name="manual_entry_add_widgets">Eintrags-Widgets hinzufügen</string>
     <string name="manual_entry_all_widgets_added">Alle Eintrags-Widgets werden bereits angezeigt.</string>
     <string name="manual_entry_write_permission_title">Schreibberechtigung für Hydrierung</string>

@@ -121,6 +121,15 @@ class BodyMeasurementEntryViewModel @Inject constructor(
         )
     }
 
+    fun updateEntryTime(time: Instant) {
+        _uiState.value = _uiState.value.copy(
+            editTime = time.coerceAtMost(Instant.now()),
+            saveCompleted = false,
+            entryError = null,
+            writeErrorMessage = null,
+        )
+    }
+
     fun addEntry(canonicalValue: Double?) {
         val current = _uiState.value
         if (!current.canWrite) {
@@ -147,7 +156,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
             runCatching {
                 val request = BodyMeasurementWriteRequest(
                     type = current.type,
-                    time = current.editTime ?: Instant.now(),
+                    time = current.editTime?.coerceAtMost(Instant.now()) ?: Instant.now(),
                     value = canonicalValue,
                 )
                 if (current.editRecordId == null) {
@@ -192,7 +201,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                 }
                 _uiState.value = _uiState.value.copy(
                     inputText = entry.value.toDisplayInput(type, unitSystem),
-                    editTime = entry.time,
+                    editTime = entry.time.coerceAtMost(Instant.now()),
                     entryError = null,
                     writeErrorMessage = null,
                 )

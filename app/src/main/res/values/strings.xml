@@ -96,6 +96,9 @@
     <string name="bottom_nav_dashboard">Summary</string>
     <string name="manual_entry_hydration_title">Hydration</string>
     <string name="manual_entry_activity_title">Activity</string>
+    <string name="manual_entry_date_label">Entry date</string>
+    <string name="manual_entry_time_label">Entry time</string>
+    <string name="manual_entry_select_time">Select entry time</string>
     <string name="manual_entry_add_widgets">Add entry widgets</string>
     <string name="manual_entry_all_widgets_added">All entry widgets are already shown.</string>
     <string name="manual_entry_write_permission_title">Hydration write permission</string>
