@@ -12,11 +12,9 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -64,7 +62,6 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
-import tech.mmarca.openvitals.features.activity.RoutePreview
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
@@ -413,38 +410,6 @@ private fun RecordingStatsTab(
     val averageMovingSpeed = unitFormatter.averageSpeed(state.distanceMeters, movingTime.toMillis())
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (state.points.isNotEmpty()) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                RoutePreview(
-                    points = state.points,
-                    routeBreakIndexes = state.routeBreakIndexes,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                )
-            }
-        } else {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.activity_entry_recording_waiting_for_gps),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
