@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.settings
 
+import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,20 +47,22 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
@@ -119,7 +122,8 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val reportCopied = stringResource(R.string.settings_apple_health_import_report_copied)
     val reportSaved = stringResource(R.string.settings_apple_health_import_report_saved)
@@ -327,8 +331,12 @@ fun SettingsScreen(
                                 appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
                             },
                             onCopyReport = { reportText ->
-                                clipboardManager.setText(AnnotatedString(reportText))
-                                Toast.makeText(context, reportCopied, Toast.LENGTH_SHORT).show()
+                                coroutineScope.launch {
+                                    clipboard.setClipEntry(
+                                        ClipData.newPlainText("OpenVitals", reportText).toClipEntry()
+                                    )
+                                    Toast.makeText(context, reportCopied, Toast.LENGTH_SHORT).show()
+                                }
                             },
                             onSaveReport = {
                                 appleHealthReportSaver.launch("openvitals-apple-health-import-report.txt")

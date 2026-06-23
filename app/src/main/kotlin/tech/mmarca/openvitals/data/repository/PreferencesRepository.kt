@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.data.repository
 
 import android.content.Context
+import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -49,40 +50,40 @@ class PreferencesRepository @Inject constructor(
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
-        set(value) { prefs.edit().putBoolean(KEY_ONBOARDING_DONE, value).apply() }
+        set(value) { prefs.edit { putBoolean(KEY_ONBOARDING_DONE, value) } }
 
     var unitSystem: UnitSystem
         get() = _unitSystem.value
         set(value) {
-            prefs.edit().putString(KEY_UNIT_SYSTEM, value.name).apply()
+            prefs.edit { putString(KEY_UNIT_SYSTEM, value.name) }
             _unitSystem.value = value
         }
 
     var appLanguage: AppLanguage
         get() = _appLanguage.value
         set(value) {
-            prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
+            prefs.edit { putString(KEY_APP_LANGUAGE, value.name) }
             _appLanguage.value = value
         }
 
     var appThemeMode: AppThemeMode
         get() = _appThemeMode.value
         set(value) {
-            prefs.edit().putString(KEY_APP_THEME_MODE, value.name).apply()
+            prefs.edit { putString(KEY_APP_THEME_MODE, value.name) }
             _appThemeMode.value = value
         }
 
     var sleepRangeMode: SleepRangeMode
         get() = _sleepRangeMode.value
         set(value) {
-            prefs.edit().putString(KEY_SLEEP_RANGE_MODE, value.name).apply()
+            prefs.edit { putString(KEY_SLEEP_RANGE_MODE, value.name) }
             _sleepRangeMode.value = value
         }
 
     var activityWeekMode: ActivityWeekMode
         get() = _activityWeekMode.value
         set(value) {
-            prefs.edit().putString(KEY_ACTIVITY_WEEK_MODE, value.name).apply()
+            prefs.edit { putString(KEY_ACTIVITY_WEEK_MODE, value.name) }
             _activityWeekMode.value = value
         }
 
@@ -92,7 +93,7 @@ class PreferencesRepository @Inject constructor(
     var showOpenVitalsCalculatedCalories: Boolean
         get() = _showOpenVitalsCalculatedCalories.value
         set(value) {
-            prefs.edit().putBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, value).apply()
+            prefs.edit { putBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, value) }
             _showOpenVitalsCalculatedCalories.value = value
         }
 
@@ -100,26 +101,26 @@ class PreferencesRepository @Inject constructor(
         get() = prefs.getInt(KEY_LAST_ACTIVITY_EXERCISE_TYPE, MISSING_EXERCISE_TYPE)
             .takeIf { it != MISSING_EXERCISE_TYPE }
         set(value) {
-            prefs.edit().apply {
+            prefs.edit {
                 if (value == null) {
                     remove(KEY_LAST_ACTIVITY_EXERCISE_TYPE)
                 } else {
                     putInt(KEY_LAST_ACTIVITY_EXERCISE_TYPE, value)
                 }
-            }.apply()
+            }
         }
 
     var favoriteActivityExerciseType: Int?
         get() = prefs.getInt(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE, MISSING_EXERCISE_TYPE)
             .takeIf { it != MISSING_EXERCISE_TYPE }
         set(value) {
-            prefs.edit().apply {
+            prefs.edit {
                 if (value == null) {
                     remove(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE)
                 } else {
                     putInt(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE, value)
                 }
-            }.apply()
+            }
         }
 
     var hydrationDailyGoalLiters: Double
@@ -128,12 +129,12 @@ class PreferencesRepository @Inject constructor(
             DEFAULT_HYDRATION_DAILY_GOAL_LITERS.toFloat(),
         ).toDouble()
         set(value) {
-            prefs.edit()
-                .putFloat(
+            prefs.edit {
+                putFloat(
                     KEY_HYDRATION_DAILY_GOAL_LITERS,
                     value.coerceIn(MIN_HYDRATION_DAILY_GOAL_LITERS, MAX_HYDRATION_DAILY_GOAL_LITERS).toFloat(),
                 )
-                .apply()
+            }
         }
 
     var highHeartRateThresholdBpm: Int
@@ -142,12 +143,12 @@ class PreferencesRepository @Inject constructor(
             DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
         ).coerceIn(MIN_HIGH_HEART_RATE_THRESHOLD_BPM, MAX_HIGH_HEART_RATE_THRESHOLD_BPM)
         set(value) {
-            prefs.edit()
-                .putInt(
+            prefs.edit {
+                putInt(
                     KEY_HIGH_HEART_RATE_THRESHOLD_BPM,
                     value.coerceIn(MIN_HIGH_HEART_RATE_THRESHOLD_BPM, MAX_HIGH_HEART_RATE_THRESHOLD_BPM),
                 )
-                .apply()
+            }
         }
 
     var lowHeartRateThresholdBpm: Int
@@ -156,12 +157,12 @@ class PreferencesRepository @Inject constructor(
             DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
         ).coerceIn(MIN_LOW_HEART_RATE_THRESHOLD_BPM, MAX_LOW_HEART_RATE_THRESHOLD_BPM)
         set(value) {
-            prefs.edit()
-                .putInt(
+            prefs.edit {
+                putInt(
                     KEY_LOW_HEART_RATE_THRESHOLD_BPM,
                     value.coerceIn(MIN_LOW_HEART_RATE_THRESHOLD_BPM, MAX_LOW_HEART_RATE_THRESHOLD_BPM),
                 )
-                .apply()
+            }
         }
 
     fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
@@ -170,7 +171,7 @@ class PreferencesRepository @Inject constructor(
             ?: key.defaultRange
 
     fun setTimeRangeFor(key: PeriodRangePreferenceKey, range: TimeRange) {
-        prefs.edit().putString(key.storageKey, range.name).apply()
+        prefs.edit { putString(key.storageKey, range.name) }
     }
 
     fun activityRecordingPreferences(): ActivityRecordingPreferences =
@@ -227,29 +228,29 @@ class PreferencesRepository @Inject constructor(
 
     fun setActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
         val normalized = preferences.normalized()
-        prefs.edit()
-            .putBoolean(KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED, normalized.autoIdleEnabled)
-            .putInt(KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS, normalized.autoIdleTimeoutSeconds)
-            .putInt(KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS, normalized.requiredGpsAccuracyMeters)
-            .putInt(KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS, normalized.routeGapMeters ?: ROUTE_GAP_OFF)
-            .putBoolean(KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED, normalized.barometerClimbEnabled)
-            .putInt(
+        prefs.edit {
+            putBoolean(KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED, normalized.autoIdleEnabled)
+            putInt(KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS, normalized.autoIdleTimeoutSeconds)
+            putInt(KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS, normalized.requiredGpsAccuracyMeters)
+            putInt(KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS, normalized.routeGapMeters ?: ROUTE_GAP_OFF)
+            putBoolean(KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED, normalized.barometerClimbEnabled)
+            putInt(
                 KEY_ACTIVITY_RECORDING_DISTANCE_INTERVAL_METERS,
                 normalized.recordingDistanceIntervalMeters ?: RECORDING_INTERVAL_OFF,
             )
-            .putInt(KEY_ACTIVITY_RECORDING_TIME_INTERVAL_MILLIS, normalized.recordingTimeIntervalMillis)
-            .putBoolean(KEY_ACTIVITY_RECORDING_VOICE_ENABLED, normalized.voiceAnnouncementsEnabled)
-            .putInt(
+            putInt(KEY_ACTIVITY_RECORDING_TIME_INTERVAL_MILLIS, normalized.recordingTimeIntervalMillis)
+            putBoolean(KEY_ACTIVITY_RECORDING_VOICE_ENABLED, normalized.voiceAnnouncementsEnabled)
+            putInt(
                 KEY_ACTIVITY_RECORDING_VOICE_TIME_INTERVAL_MINUTES,
                 normalized.voiceAnnouncementTimeIntervalMinutes ?: RECORDING_INTERVAL_OFF,
             )
-            .putInt(
+            putInt(
                 KEY_ACTIVITY_RECORDING_VOICE_DISTANCE_INTERVAL_METERS,
                 normalized.voiceAnnouncementDistanceIntervalMeters ?: RECORDING_INTERVAL_OFF,
             )
-            .putBoolean(KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED, normalized.voiceIdleAnnouncementsEnabled)
-            .putBoolean(KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED, normalized.voiceLapAnnouncementsEnabled)
-            .apply()
+            putBoolean(KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED, normalized.voiceIdleAnnouncementsEnabled)
+            putBoolean(KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED, normalized.voiceLapAnnouncementsEnabled)
+        }
     }
 
     fun dailyGoalFor(key: MetricDailyGoalKey): Double =
@@ -257,9 +258,9 @@ class PreferencesRepository @Inject constructor(
             .let(key::normalize)
 
     fun setDailyGoalFor(key: MetricDailyGoalKey, value: Double) {
-        prefs.edit()
-            .putFloat(key.storageKey, key.normalize(value).toFloat())
-            .apply()
+        prefs.edit {
+            putFloat(key.storageKey, key.normalize(value).toFloat())
+        }
     }
 
     fun hydrationReminderConfig(): HydrationReminderConfig =
@@ -277,12 +278,12 @@ class PreferencesRepository @Inject constructor(
 
     fun setHydrationReminderConfig(config: HydrationReminderConfig) {
         val normalized = config.normalized()
-        prefs.edit()
-            .putBoolean(KEY_HYDRATION_REMINDERS_ENABLED, normalized.enabled)
-            .putInt(KEY_HYDRATION_REMINDER_INTERVAL_MINUTES, normalized.intervalMinutes)
-            .putString(KEY_HYDRATION_REMINDER_ACTIVE_START_TIME, normalized.activeStartTime.toString())
-            .putString(KEY_HYDRATION_REMINDER_ACTIVE_END_TIME, normalized.activeEndTime.toString())
-            .apply()
+        prefs.edit {
+            putBoolean(KEY_HYDRATION_REMINDERS_ENABLED, normalized.enabled)
+            putInt(KEY_HYDRATION_REMINDER_INTERVAL_MINUTES, normalized.intervalMinutes)
+            putString(KEY_HYDRATION_REMINDER_ACTIVE_START_TIME, normalized.activeStartTime.toString())
+            putString(KEY_HYDRATION_REMINDER_ACTIVE_END_TIME, normalized.activeEndTime.toString())
+        }
     }
 
     fun hydrationContainerVolumeMilliliters(): Map<String, Double> =
@@ -305,14 +306,14 @@ class PreferencesRepository @Inject constructor(
 
         val values = hydrationContainerVolumeMilliliters().toMutableMap()
         values[containerId] = milliliters
-        prefs.edit()
-            .putStringSet(
+        prefs.edit {
+            putStringSet(
                 KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS,
                 values.mapTo(mutableSetOf()) { (key, value) ->
                     "$key$KEY_VALUE_PAIR_SEPARATOR$value"
                 },
             )
-            .apply()
+        }
     }
 
     fun mindfulnessReminderConfig(): MindfulnessReminderConfig =
@@ -324,10 +325,10 @@ class PreferencesRepository @Inject constructor(
 
     fun setMindfulnessReminderConfig(config: MindfulnessReminderConfig) {
         val normalized = config.normalized()
-        prefs.edit()
-            .putBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, normalized.enabled)
-            .putString(KEY_MINDFULNESS_REMINDER_TIME, normalized.reminderTime.toString())
-            .apply()
+        prefs.edit {
+            putBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, normalized.enabled)
+            putString(KEY_MINDFULNESS_REMINDER_TIME, normalized.reminderTime.toString())
+        }
     }
 
     fun dashboardWidgetOrder(): List<String>? =
@@ -336,9 +337,9 @@ class PreferencesRepository @Inject constructor(
             ?.filter { it.isNotBlank() }
 
     fun setDashboardWidgetOrder(widgetIds: List<String>) {
-        prefs.edit()
-            .putString(KEY_DASHBOARD_WIDGET_ORDER, widgetIds.joinToString(KEY_VALUE_SEPARATOR))
-            .apply()
+        prefs.edit {
+            putString(KEY_DASHBOARD_WIDGET_ORDER, widgetIds.joinToString(KEY_VALUE_SEPARATOR))
+        }
     }
 
     fun manualEntryWidgetOrder(): List<String>? =
@@ -347,18 +348,18 @@ class PreferencesRepository @Inject constructor(
             ?.filter { it.isNotBlank() }
 
     fun setManualEntryWidgetOrder(widgetIds: List<String>) {
-        prefs.edit()
-            .putString(KEY_MANUAL_ENTRY_WIDGET_ORDER, widgetIds.joinToString(KEY_VALUE_SEPARATOR))
-            .apply()
+        prefs.edit {
+            putString(KEY_MANUAL_ENTRY_WIDGET_ORDER, widgetIds.joinToString(KEY_VALUE_SEPARATOR))
+        }
     }
 
     fun acknowledgedPermissions(): Set<String> =
         prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()
 
     fun acknowledgePermissions(permissions: Set<String>) {
-        prefs.edit()
-            .putStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, acknowledgedPermissions() + permissions)
-            .apply()
+        prefs.edit {
+            putStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, acknowledgedPermissions() + permissions)
+        }
     }
 
     fun mindfulnessTimerConfig(): MindfulnessTimerConfig =
@@ -388,12 +389,12 @@ class PreferencesRepository @Inject constructor(
         val interval = config.intervalMinutes
             ?.coerceIn(MIN_MINDFULNESS_TIMER_MINUTES, (duration - 1).coerceAtLeast(MIN_MINDFULNESS_TIMER_MINUTES))
             ?.takeIf { duration > MIN_MINDFULNESS_TIMER_MINUTES }
-        prefs.edit()
-            .putInt(KEY_MINDFULNESS_TIMER_DURATION_MINUTES, duration)
-            .putInt(KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES, interval ?: 0)
-            .putString(KEY_MINDFULNESS_TIMER_BELL_SOUND, config.bellSound.name)
-            .putString(KEY_MINDFULNESS_TIMER_BACKGROUND_SOUND, config.backgroundSound.name)
-            .apply()
+        prefs.edit {
+            putInt(KEY_MINDFULNESS_TIMER_DURATION_MINUTES, duration)
+            putInt(KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES, interval ?: 0)
+            putString(KEY_MINDFULNESS_TIMER_BELL_SOUND, config.bellSound.name)
+            putString(KEY_MINDFULNESS_TIMER_BACKGROUND_SOUND, config.backgroundSound.name)
+        }
     }
 
     private fun readUnitSystem(): UnitSystem =

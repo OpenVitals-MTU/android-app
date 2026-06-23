@@ -45,6 +45,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -291,10 +293,10 @@ private fun GpsRecordingTabs(
     onDeleteMarker: (String) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
-    var timeSplitMinutes by rememberSaveable { mutableStateOf(DefaultTimeSplitMinutes) }
+    var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
     val unitSystem = unitFormatter.unitSystem()
     var distanceSplitMeters by rememberSaveable(unitSystem) {
-        mutableStateOf(defaultDistanceSplitMeters(unitSystem))
+        mutableDoubleStateOf(defaultDistanceSplitMeters(unitSystem))
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

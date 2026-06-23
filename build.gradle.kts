@@ -18,6 +18,10 @@ val openVitalsArtifactVersion = providers.gradleProperty("openVitalsArtifactVers
 allprojects {
     group = openVitalsGroup.get()
     version = openVitalsArtifactVersion.get()
+
+    dependencyLocking {
+        lockAllConfigurations()
+    }
 }
 
 tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {

@@ -455,7 +455,6 @@ class ActivityRecordingService : Service() {
         )
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             ChannelId,
             getString(R.string.activity_recording_notification_channel),

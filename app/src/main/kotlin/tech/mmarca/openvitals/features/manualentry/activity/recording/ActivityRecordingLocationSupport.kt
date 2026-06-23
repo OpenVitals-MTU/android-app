@@ -16,7 +16,7 @@ internal fun Location.toRoutePoint(timeOverride: Instant? = null): ExerciseRoute
         altitudeMeters = mslAltitudeMetersOrNull() ?: if (hasAltitude()) altitude else null,
         horizontalAccuracyMeters = if (hasAccuracy()) accuracy.toDouble() else null,
         verticalAccuracyMeters = mslAltitudeAccuracyMetersOrNull()
-            ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && hasVerticalAccuracy()) {
+            ?: if (hasVerticalAccuracy()) {
                 verticalAccuracyMeters.toDouble()
             } else {
                 null
@@ -64,7 +64,7 @@ fun Location.activityGpsFixQuality(
 }
 
 private fun Location.locationAgeMillis(): Long =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && elapsedRealtimeNanos > 0L) {
+    if (elapsedRealtimeNanos > 0L) {
         ((SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos) / 1_000_000L)
             .coerceAtLeast(0L)
     } else {

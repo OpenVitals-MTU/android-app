@@ -123,7 +123,6 @@ class ActivityEntryViewModel(
     }
 
     override fun onCleared() {
-        super.onCleared()
         recordingDraftStore?.store(_uiState.value)
     }
 

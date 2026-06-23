@@ -1,9 +1,9 @@
 package tech.mmarca.openvitals.features.onboarding
 
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.core.net.toUri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -160,7 +160,7 @@ fun OnboardingScreen(
                 NeedsUpdateMessage(
                     onInstall = {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(PLAY_STORE_URL))
+                            Intent(Intent.ACTION_VIEW, PLAY_STORE_URL.toUri())
                         )
                     }
                 )

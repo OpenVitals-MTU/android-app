@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -157,19 +158,20 @@ class HomeMetricWidgetSelection(private val context: Context) {
         return optionMetricId ?: sharedMetricId ?: pendingMetricId
     }
 
+    @SuppressLint("ApplySharedPref")
     fun setMetric(appWidgetId: Int, metricId: DashboardWidgetId) {
-        preferences.edit()
-            .putString(metricKey(appWidgetId), metricId.name)
-            .putString(PendingMetricIdKey, metricId.name)
-            .putLong(PendingMetricTimestampKey, System.currentTimeMillis())
-            .commit()
+        preferences.edit(commit = true) {
+            putString(metricKey(appWidgetId), metricId.name)
+            putString(PendingMetricIdKey, metricId.name)
+            putLong(PendingMetricTimestampKey, System.currentTimeMillis())
+        }
     }
 
     fun clearMetric(glanceId: GlanceId) {
         val appWidgetId = glanceId.appWidgetIdOrNull() ?: return
-        preferences.edit()
-            .remove(metricKey(appWidgetId))
-            .apply()
+        preferences.edit {
+            remove(metricKey(appWidgetId))
+        }
         val options = Bundle(appWidgetManager.getAppWidgetOptions(appWidgetId))
         options.remove(HomeMetricWidgetState.metricIdOptionKey)
         appWidgetManager.updateAppWidgetOptions(appWidgetId, options)
@@ -182,9 +184,9 @@ class HomeMetricWidgetSelection(private val context: Context) {
         if (System.currentTimeMillis() - timestamp > PendingMetricTtlMillis) return null
         val metricId = preferences.getString(PendingMetricIdKey, null).toDashboardWidgetIdOrNull() ?: return null
 
-        preferences.edit()
-            .putString(metricKey(appWidgetId), metricId.name)
-            .apply()
+        preferences.edit {
+            putString(metricKey(appWidgetId), metricId.name)
+        }
         updateMetricOptions(appWidgetId, metricId)
 
         return metricId

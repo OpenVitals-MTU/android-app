@@ -23,6 +23,7 @@ import android.location.altitude.AltitudeConverter
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -844,7 +845,9 @@ class ActivityRecordingStore @Inject constructor(
         } else {
             routePointsFile.writeText(points.encodeRoutePoints())
         }
-        preferences.edit().putString(KeyPoints, points.encodeRoutePoints()).apply()
+        preferences.edit {
+            putString(KeyPoints, points.encodeRoutePoints())
+        }
     }
 
     fun appendRoutePoint(point: ExerciseRoutePoint) {
@@ -853,7 +856,9 @@ class ActivityRecordingStore @Inject constructor(
     }
 
     fun clear() {
-        preferences.edit().clear().apply()
+        preferences.edit {
+            clear()
+        }
         routePointsFile.delete()
     }
 }

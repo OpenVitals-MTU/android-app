@@ -7,7 +7,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -86,7 +85,6 @@ class MindfulnessReminderNotificationService @Inject constructor(
         )
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             ChannelId,
             context.getString(R.string.mindfulness_reminder_notification_channel),

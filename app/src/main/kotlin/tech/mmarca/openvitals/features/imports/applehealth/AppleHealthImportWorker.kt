@@ -107,7 +107,6 @@ class AppleHealthImportWorker(
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             ChannelId,
             applicationContext.getString(R.string.settings_apple_health_import_notification_channel),

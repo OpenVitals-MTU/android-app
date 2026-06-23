@@ -557,7 +557,6 @@ class MindfulnessEntryViewModel @Inject constructor(
 
     override fun onCleared() {
         timerJob?.cancel()
-        super.onCleared()
     }
 
     private fun canUpdateTimerFields(): Boolean {

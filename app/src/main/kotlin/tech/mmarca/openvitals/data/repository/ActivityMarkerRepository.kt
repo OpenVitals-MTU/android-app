@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -25,18 +26,20 @@ class ActivityMarkerRepository @Inject constructor(
             .sortedBy { it.time }
 
     fun setMarkersForActivity(activityId: String, markers: List<ActivityRecordingMarker>) {
-        preferences.edit().apply {
+        preferences.edit {
             if (activityId.isBlank() || markers.isEmpty()) {
                 remove(activityId.key())
             } else {
                 putString(activityId.key(), markers.encodeMarkers())
             }
-        }.apply()
+        }
     }
 
     fun deleteMarkersForActivity(activityId: String) {
         if (activityId.isBlank()) return
-        preferences.edit().remove(activityId.key()).apply()
+        preferences.edit {
+            remove(activityId.key())
+        }
     }
 
     private fun String.key(): String = "activity_markers_$this"
