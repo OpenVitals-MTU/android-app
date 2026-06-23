@@ -169,6 +169,16 @@ class BodyViewModel(
         load()
     }
 
+    fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
+        val selection = periodDriver.resumeCurrentPeriod()
+        if (selection == null) {
+            if (refreshCurrent) load()
+            return
+        }
+        applyPeriodSelection(selection)
+        load()
+    }
+
     fun deleteBodyMeasurementEntry(type: BodyMeasurementType, entryId: String) {
         if (entryId.isBlank()) return
         val entryIsOpenVitals = when (type) {

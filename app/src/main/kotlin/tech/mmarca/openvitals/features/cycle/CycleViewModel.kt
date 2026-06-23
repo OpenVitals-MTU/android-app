@@ -111,6 +111,16 @@ class CycleViewModel(
         load()
     }
 
+    fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
+        val selection = periodDriver.resumeCurrentPeriod()
+        if (selection == null) {
+            if (refreshCurrent) load()
+            return
+        }
+        applyPeriodSelection(selection)
+        load()
+    }
+
     fun onCyclePermissionsResult(granted: Set<String>) {
         load()
     }

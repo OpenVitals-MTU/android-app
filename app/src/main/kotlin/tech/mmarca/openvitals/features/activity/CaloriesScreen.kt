@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -60,6 +62,10 @@ fun CaloriesScreen(
         selectedDate = state.selectedDate,
         key = "calories",
     )
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentPeriod()
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,

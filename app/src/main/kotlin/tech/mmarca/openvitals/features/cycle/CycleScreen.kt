@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.DataValueKind
 import tech.mmarca.openvitals.domain.insights.dataConfidence
@@ -49,6 +51,10 @@ fun CycleScreen(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
         viewModel.onCyclePermissionsResult(granted)
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentPeriod()
     }
 
     MetricDetailScaffold(

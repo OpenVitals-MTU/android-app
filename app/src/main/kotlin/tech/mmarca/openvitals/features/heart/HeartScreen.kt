@@ -39,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.BloodPressureCategory
@@ -270,6 +272,10 @@ private fun HeartMetricScreen(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
         viewModel.onVitalsPermissionsResult(granted)
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentPeriod()
     }
 
     MetricDetailScaffold(

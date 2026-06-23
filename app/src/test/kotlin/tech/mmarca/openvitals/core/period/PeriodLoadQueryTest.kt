@@ -75,4 +75,33 @@ class PeriodLoadQueryTest {
 
         assertEquals(null, currentDriver.nextPeriod())
     }
+
+    @Test fun `selection driver advances unpinned stale day to today on resume`() {
+        val startDate = LocalDate.now()
+        val driver = PeriodSelectionDriver(
+            initialRange = TimeRange.DAY,
+            initialDate = startDate,
+        )
+        val tomorrow = startDate.plusDays(1)
+
+        val updated = driver.resumeCurrentPeriod(tomorrow)
+
+        assertEquals(tomorrow, updated?.selectedDate)
+        assertEquals(tomorrow, driver.selection.selectedDate)
+    }
+
+    @Test fun `selection driver keeps user pinned past day on resume`() {
+        val startDate = LocalDate.now()
+        val driver = PeriodSelectionDriver(
+            initialRange = TimeRange.DAY,
+            initialDate = startDate,
+        )
+        val yesterday = startDate.minusDays(1)
+
+        driver.previousPeriod()
+        val updated = driver.resumeCurrentPeriod(startDate.plusDays(1))
+
+        assertEquals(null, updated)
+        assertEquals(yesterday, driver.selection.selectedDate)
+    }
 }

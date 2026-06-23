@@ -132,7 +132,7 @@ fun ActivitiesScreen(
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.load()
+        viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
     MetricDetailScaffold(

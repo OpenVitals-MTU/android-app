@@ -134,7 +134,7 @@ fun DashboardScreen(
     var showDatePicker by remember { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refreshPreferences()
+        viewModel.resumeCurrentDay()
     }
     LaunchedEffect(refreshRequest) {
         if (refreshRequest > 0) {

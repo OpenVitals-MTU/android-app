@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.BmiCategory
@@ -93,6 +95,10 @@ fun BodyScreen(
         selectedDate = state.selectedDate,
         key = "body",
     )
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentPeriod()
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,

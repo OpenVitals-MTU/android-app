@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -61,6 +63,10 @@ fun HeartVitalsOverviewScreen(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) { granted ->
         viewModel.onVitalsPermissionsResult(granted)
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentPeriod()
     }
 
     MetricDetailScaffold(

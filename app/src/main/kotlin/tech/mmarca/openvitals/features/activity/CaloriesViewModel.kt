@@ -139,6 +139,16 @@ class CaloriesViewModel(
         load()
     }
 
+    fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
+        val selection = periodDriver.resumeCurrentPeriod()
+        if (selection == null) {
+            if (refreshCurrent) load()
+            return
+        }
+        applyPeriodSelection(selection)
+        load()
+    }
+
     fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(

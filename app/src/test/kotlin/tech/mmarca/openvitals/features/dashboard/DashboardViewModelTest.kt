@@ -158,6 +158,29 @@ class DashboardViewModelTest {
         assertEquals(today, vm.uiState.value.selectedDate)
     }
 
+    @Test fun `resumeCurrentDay advances unpinned past date to today`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs())
+        vm.load(yesterday)
+        vm.resumeCurrentDay()
+
+        assertEquals(today, vm.uiState.value.selectedDate)
+        coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today }) }
+    }
+
+    @Test fun `resumeCurrentDay keeps user selected past date pinned`() = runTest {
+        val repo = mockk<HealthRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+
+        val vm = DashboardViewModel(repo, prefs())
+        vm.selectDate(yesterday)
+        vm.resumeCurrentDay()
+
+        assertEquals(yesterday, vm.uiState.value.selectedDate)
+    }
+
     // ─── A3: floorsClimbed + elevationGainedMeters in DashboardData ──────────
 
     @Test fun `floorsClimbed is exposed through state when present`() = runTest {

@@ -222,6 +222,16 @@ class HeartViewModel(
         load()
     }
 
+    fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
+        val selection = periodDriver.resumeCurrentPeriod()
+        if (selection == null) {
+            if (refreshCurrent) load()
+            return
+        }
+        applyPeriodSelection(selection)
+        load()
+    }
+
     fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, entryId: String) {
         if (entryId.isBlank()) return
         val entryIsOpenVitals = when (type) {

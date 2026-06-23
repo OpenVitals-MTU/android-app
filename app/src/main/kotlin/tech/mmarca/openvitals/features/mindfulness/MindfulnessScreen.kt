@@ -134,7 +134,7 @@ fun MindfulnessScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         hasNotificationPermission = MindfulnessReminderController.hasNotificationPermission(context)
-        viewModel.load()
+        viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
     MetricDetailScaffold(

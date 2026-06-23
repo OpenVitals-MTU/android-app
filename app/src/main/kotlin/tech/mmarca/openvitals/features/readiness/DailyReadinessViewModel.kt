@@ -49,6 +49,7 @@ class DailyReadinessViewModel @Inject constructor(
     )
     val uiState: StateFlow<DailyReadinessUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
+    private var userPinnedPastDay = false
 
     init {
         load(_uiState.value.selectedDate)
@@ -83,20 +84,34 @@ class DailyReadinessViewModel @Inject constructor(
         }
     }
 
+    fun resumeCurrentDay() {
+        refreshPreferences()
+        val today = LocalDate.now()
+        if (!userPinnedPastDay && _uiState.value.selectedDate.isBefore(today)) {
+            load(today)
+        }
+    }
+
     fun previousDay() {
-        load(_uiState.value.selectedDate.minusDays(1))
+        val date = _uiState.value.selectedDate.minusDays(1)
+        userPinnedPastDay = date.isBefore(LocalDate.now())
+        load(date)
     }
 
     fun nextDay() {
         val today = LocalDate.now()
         val next = _uiState.value.selectedDate.plusDays(1)
         if (!next.isAfter(today)) {
+            userPinnedPastDay = next.isBefore(today)
             load(next)
         }
     }
 
     fun selectDate(date: LocalDate) {
-        load(date)
+        val today = LocalDate.now()
+        val clampedDate = date.coerceAtMost(today)
+        userPinnedPastDay = clampedDate.isBefore(today)
+        load(clampedDate)
     }
 
     fun acknowledgePermissionsCallout() {

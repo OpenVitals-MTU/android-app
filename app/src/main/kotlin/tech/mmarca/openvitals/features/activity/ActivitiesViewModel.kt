@@ -142,6 +142,16 @@ class ActivitiesViewModel(
         load()
     }
 
+    fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
+        val selection = periodDriver.resumeCurrentPeriod()
+        if (selection == null) {
+            if (refreshCurrent) load()
+            return
+        }
+        applyPeriodSelection(selection)
+        load()
+    }
+
     fun increaseDailyGoal() {
         setDailyGoalMinutes(_uiState.value.dailyGoalMinutes + goalKey.step)
     }

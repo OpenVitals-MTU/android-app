@@ -139,7 +139,7 @@ fun HydrationScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         hasNotificationPermission = HydrationReminderController.hasNotificationPermission(context)
-        viewModel.load()
+        viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
     MetricDetailScaffold(

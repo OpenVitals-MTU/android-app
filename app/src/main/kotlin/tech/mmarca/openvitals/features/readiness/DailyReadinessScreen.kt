@@ -77,7 +77,7 @@ fun DailyReadinessScreen(
     var showDatePicker by remember { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refreshPreferences()
+        viewModel.resumeCurrentDay()
     }
 
     PullToRefreshBox(
