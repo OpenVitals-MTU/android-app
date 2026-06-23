@@ -35,7 +35,7 @@ internal const val RunningKcalPerKgKm = 1.0
 internal const val WalkingKcalPerKgKm = 0.55
 internal const val MaxActivityRepetitions = 100_000
 internal const val MaxActivityRepetitionSets = 99
-internal const val MaxActivityRestMinutes = 24 * 60L
+internal const val MaxActivityRestSeconds = 24 * 60 * 60L
 internal const val MaxActivityStepCount = 1_000_000L
 
 internal fun buildWriteRequest(
@@ -260,12 +260,12 @@ internal fun buildSetExerciseSegments(
         ?.map { input ->
             ParsedRepetitionSet(
                 repetitions = input.repetitionsText.toPositiveIntOrNull(MaxActivityRepetitions) ?: return null,
-                restMinutes = input.restMinutesText.toOptionalNonNegativeLongOrNull(MaxActivityRestMinutes) ?: return null,
+                restSeconds = input.restMinutesText.toOptionalNonNegativeLongOrNull(MaxActivityRestSeconds) ?: return null,
             )
         }
         ?: return null
     val durationSeconds = Duration.between(start, end).seconds.coerceAtLeast(1L)
-    val restSeconds = sets.dropLast(1).sumOf { it.restMinutes * 60L }
+    val restSeconds = sets.sumOf { it.restSeconds }
     val activeSeconds = durationSeconds - restSeconds
     if (activeSeconds < sets.size) return null
 
@@ -286,9 +286,9 @@ internal fun buildSetExerciseSegments(
                     setIndex = index,
                 )
             )
-            val restMinutes = set.restMinutes.takeIf { index < sets.lastIndex && it > 0L } ?: 0L
-            if (restMinutes > 0L) {
-                val restEnd = activeEnd.plusSeconds(restMinutes * 60L)
+            val restSeconds = set.restSeconds
+            if (restSeconds > 0L) {
+                val restEnd = activeEnd.plusSeconds(restSeconds)
                 add(
                     ActivityExerciseSegmentWrite(
                         startTime = activeEnd,
@@ -313,7 +313,7 @@ internal fun ActivityEntryUiState.hasValidRepetitionInput(start: Instant, end: I
 
 internal data class ParsedRepetitionSet(
     val repetitions: Int,
-    val restMinutes: Long,
+    val restSeconds: Long,
 )
 
 internal fun initialActivityEntryState(

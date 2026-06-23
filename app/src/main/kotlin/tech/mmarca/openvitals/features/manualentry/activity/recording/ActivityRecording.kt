@@ -35,9 +35,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +56,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 enum class ActivityRecordingStatus {
     IDLE,
     RECORDING,
+    RESTING,
     PAUSED,
 }
 
@@ -100,14 +103,28 @@ data class ActivityRecordingState(
     val lastMovementAt: Instant? = null,
     val totalIdleMillis: Long = 0L,
     val repetitionCount: Long = 0L,
+    val currentSetRepetitionCount: Long = 0L,
+    val repetitionSets: List<ActivityRecordedRepetitionSet> = emptyList(),
+    val repetitionRestSeconds: Long = 0L,
+    val currentSetStartedAt: Instant? = null,
+    val restStartedAt: Instant? = null,
+    val accumulatedRestMillis: Long = 0L,
     val lastAccuracyMeters: Double? = null,
     val lastLocationTime: Instant? = null,
     val droppedPointCount: Int = 0,
     val errorMessage: String? = null,
 ) {
     val isActive: Boolean
-        get() = status == ActivityRecordingStatus.RECORDING || status == ActivityRecordingStatus.PAUSED
+        get() = status == ActivityRecordingStatus.RECORDING ||
+            status == ActivityRecordingStatus.RESTING ||
+            status == ActivityRecordingStatus.PAUSED
 }
+
+data class ActivityRecordedRepetitionSet(
+    val repetitions: Long,
+    val restSeconds: Long,
+    val activeMillis: Long,
+)
 
 data class ActivityRecordingSnapshot(
     val exerciseType: Int,
@@ -123,6 +140,7 @@ data class ActivityRecordingSnapshot(
     val distanceMeters: Double,
     val elevationGainedMeters: Double,
     val repetitionCount: Long = 0L,
+    val repetitionSets: List<ActivityRecordedRepetitionSet> = emptyList(),
 )
 
 @Singleton
@@ -141,13 +159,25 @@ class ActivityRecordingController @Inject constructor(
     }
     private val _state = MutableStateFlow(recordingStore.restore())
     private var recordingGeneration = 0L
+    private var restCompletionJob: Job? = null
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
+    init {
+        scheduleRestCompletion(_state.value)
+    }
+
     fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
+        startRecording(activityType, initialFix, repetitionRestSeconds = 0L)
+
+    fun startRecording(
+        activityType: ActivityEntryType,
+        initialFix: Location?,
+        repetitionRestSeconds: Long,
+    ): Boolean =
         if (activityType.supportsGpsRoute) {
             startGpsRecording(activityType, initialFix)
         } else if (activityType.isRepetitionLike) {
-            startRepetitionRecording(activityType)
+            startRepetitionRecording(activityType, repetitionRestSeconds)
         } else {
             updateAndPersist(
                 _state.value.copy(
@@ -223,7 +253,10 @@ class ActivityRecordingController @Inject constructor(
         return true
     }
 
-    private fun startRepetitionRecording(activityType: ActivityEntryType): Boolean {
+    private fun startRepetitionRecording(
+        activityType: ActivityEntryType,
+        repetitionRestSeconds: Long,
+    ): Boolean {
         if (!hasNotificationPermission(context)) {
             updateAndPersist(
                 _state.value.copy(
@@ -244,6 +277,8 @@ class ActivityRecordingController @Inject constructor(
                 activityTypeId = activityType.id,
                 exerciseType = activityType.exerciseType,
                 startTime = now,
+                currentSetStartedAt = now,
+                repetitionRestSeconds = repetitionRestSeconds.coerceAtLeast(0L),
             ),
             replaceRoutePoints = true,
         )
@@ -371,6 +406,7 @@ class ActivityRecordingController @Inject constructor(
         val pauseIntervals = current.pauseIntervals +
             listOfNotNull(current.pausedStartedAt?.toPauseInterval(end))
         val manualLaps = current.closedManualLaps(end)
+        val repetitionSets = current.recordedRepetitionSets(end)
         val snapshot = ActivityRecordingSnapshot(
             exerciseType = exerciseType,
             recordingKind = current.recordingKind,
@@ -385,6 +421,7 @@ class ActivityRecordingController @Inject constructor(
             distanceMeters = current.distanceMeters,
             elevationGainedMeters = current.elevationGainedMeters,
             repetitionCount = current.repetitionCount,
+            repetitionSets = repetitionSets,
         )
         clearRecording()
         stopRecordingService()
@@ -521,13 +558,67 @@ class ActivityRecordingController @Inject constructor(
 
     fun adjustRepetitionCount(delta: Long) {
         val current = _state.value
-        if (!current.isActive || current.recordingKind != ActivityRecordingKind.REPETITION) return
+        if (current.status != ActivityRecordingStatus.RECORDING ||
+            current.recordingKind != ActivityRecordingKind.REPETITION
+        ) {
+            return
+        }
+        val nextCurrentSetCount = (current.currentSetRepetitionCount + delta).coerceAtLeast(0L)
+        val completedCount = current.repetitionSets.sumOf { it.repetitions }
         updateAndPersist(
             current.copy(
-                repetitionCount = (current.repetitionCount + delta).coerceAtLeast(0L),
+                currentSetRepetitionCount = nextCurrentSetCount,
+                repetitionCount = completedCount + nextCurrentSetCount,
                 errorMessage = null,
             )
         )
+    }
+
+    fun endRepetitionSet() {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RECORDING ||
+            current.recordingKind != ActivityRecordingKind.REPETITION ||
+            current.currentSetRepetitionCount <= 0L
+        ) {
+            return
+        }
+        val now = Instant.now()
+        val activeMillis = Duration.between(current.currentSetStartedAt ?: current.startTime ?: now, now)
+            .toMillis()
+            .coerceAtLeast(1L)
+        val completedSet = ActivityRecordedRepetitionSet(
+            repetitions = current.currentSetRepetitionCount,
+            restSeconds = current.repetitionRestSeconds,
+            activeMillis = activeMillis,
+        )
+        val nextState = if (current.repetitionRestSeconds > 0L) {
+            current.copy(
+                status = ActivityRecordingStatus.RESTING,
+                repetitionSets = current.repetitionSets + completedSet,
+                currentSetRepetitionCount = 0L,
+                restStartedAt = now,
+                currentSetStartedAt = null,
+                errorMessage = null,
+            )
+        } else {
+            current.copy(
+                repetitionSets = current.repetitionSets + completedSet,
+                currentSetRepetitionCount = 0L,
+                currentSetStartedAt = now,
+                errorMessage = null,
+            )
+        }
+        updateAndPersist(nextState)
+    }
+
+    fun startNextRepetitionSet() {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RESTING ||
+            current.recordingKind != ActivityRecordingKind.REPETITION
+        ) {
+            return
+        }
+        startNextRepetitionSet(current, Instant.now())
     }
 
     fun reportRecordingError(message: String) {
@@ -613,6 +704,7 @@ class ActivityRecordingController @Inject constructor(
 
     private fun clearRecording() {
         persistenceScope.coroutineContext.cancelChildren()
+        restCompletionJob?.cancel()
         recordingGeneration += 1
         _state.value = ActivityRecordingState()
         recordingStore.clear()
@@ -625,6 +717,7 @@ class ActivityRecordingController @Inject constructor(
     ) {
         _state.value = state
         recordingStore.storeMetadata(state)
+        scheduleRestCompletion(state)
         if (replaceRoutePoints) {
             persistenceScope.launch {
                 recordingStore.replaceRoutePoints(state.points)
@@ -635,6 +728,36 @@ class ActivityRecordingController @Inject constructor(
                 recordingStore.appendRoutePoint(point)
             }
         }
+    }
+
+    private fun scheduleRestCompletion(state: ActivityRecordingState) {
+        restCompletionJob?.cancel()
+        val restEnd = state.restEndTime() ?: return
+        val now = Instant.now()
+        val delayMillis = Duration.between(now, restEnd).toMillis().coerceAtLeast(0L)
+        restCompletionJob = persistenceScope.launch {
+            delay(delayMillis)
+            val current = _state.value
+            if (current.status == ActivityRecordingStatus.RESTING &&
+                current.restStartedAt == state.restStartedAt
+            ) {
+                startNextRepetitionSet(current, Instant.now())
+            }
+        }
+    }
+
+    private fun startNextRepetitionSet(state: ActivityRecordingState, now: Instant) {
+        val actualRestMillis = state.openRestMillis(now)
+        val updatedSets = state.repetitionSets.withLastRestSeconds((actualRestMillis / 1_000L).coerceAtLeast(0L))
+        val nextState = state.copy(
+            status = ActivityRecordingStatus.RECORDING,
+            repetitionSets = updatedSets,
+            accumulatedRestMillis = state.accumulatedRestMillis + actualRestMillis,
+            restStartedAt = null,
+            currentSetStartedAt = now,
+            errorMessage = null,
+        )
+        updateAndPersist(nextState)
     }
 
     private fun stopRecordingService() {
@@ -738,6 +861,9 @@ fun ActivityRecordingState.elapsedDuration(now: Instant = Instant.now()): Durati
     return Duration.ofMillis((effectiveEnd.toEpochMilli() - start.toEpochMilli()).coerceAtLeast(0L))
 }
 
+fun ActivityRecordingState.restDuration(now: Instant = Instant.now()): Duration =
+    Duration.ofMillis((accumulatedRestMillis + openRestMillis(now)).coerceAtLeast(0L))
+
 fun ActivityRecordingState.movingDuration(now: Instant = Instant.now()): Duration {
     val elapsedMillis = elapsedDuration(now).toMillis()
     val openPauseMillis = pausedStartedAt
@@ -746,8 +872,51 @@ fun ActivityRecordingState.movingDuration(now: Instant = Instant.now()): Duratio
         ?: 0L
     val pausedMillis = totalPausedMillis + openPauseMillis
     val idleMillis = totalIdleMillis + openIdleMillis(now)
-    return Duration.ofMillis((elapsedMillis - pausedMillis - idleMillis).coerceAtLeast(0L))
+    val restMillis = restDuration(now).toMillis().takeIf {
+        recordingKind == ActivityRecordingKind.REPETITION
+    } ?: 0L
+    return Duration.ofMillis((elapsedMillis - pausedMillis - idleMillis - restMillis).coerceAtLeast(0L))
 }
+
+fun ActivityRecordingState.restRemainingDuration(now: Instant = Instant.now()): Duration {
+    val restEnd = restEndTime() ?: return Duration.ZERO
+    return Duration.ofMillis(Duration.between(now, restEnd).toMillis().coerceAtLeast(0L))
+}
+
+private fun ActivityRecordingState.restEndTime(): Instant? =
+    restStartedAt
+        ?.takeIf { status == ActivityRecordingStatus.RESTING && repetitionRestSeconds > 0L }
+        ?.plusSeconds(repetitionRestSeconds)
+
+private fun ActivityRecordingState.openRestMillis(now: Instant): Long =
+    restStartedAt
+        ?.takeIf { status == ActivityRecordingStatus.RESTING }
+        ?.let { Duration.between(it, now).toMillis().coerceAtLeast(0L) }
+        ?: 0L
+
+private fun ActivityRecordingState.recordedRepetitionSets(end: Instant): List<ActivityRecordedRepetitionSet> {
+    val sets = if (status == ActivityRecordingStatus.RESTING) {
+        repetitionSets.withLastRestSeconds((openRestMillis(end) / 1_000L).coerceAtLeast(0L))
+    } else {
+        repetitionSets
+    }
+    if (status != ActivityRecordingStatus.RECORDING || currentSetRepetitionCount <= 0L) return sets
+    val activeMillis = Duration.between(currentSetStartedAt ?: startTime ?: end, end)
+        .toMillis()
+        .coerceAtLeast(1L)
+    return sets + ActivityRecordedRepetitionSet(
+        repetitions = currentSetRepetitionCount,
+        restSeconds = 0L,
+        activeMillis = activeMillis,
+    )
+}
+
+private fun List<ActivityRecordedRepetitionSet>.withLastRestSeconds(restSeconds: Long): List<ActivityRecordedRepetitionSet> =
+    if (isEmpty()) {
+        this
+    } else {
+        dropLast(1) + last().copy(restSeconds = restSeconds.coerceAtLeast(0L))
+    }
 
 fun ActivityRecordingState.displayElevationGainedMeters(): Double =
     if (hasBarometerElevation) barometerElevationGainedMeters else elevationGainedMeters
@@ -991,6 +1160,12 @@ private fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         lastMovementAt = getLong(KeyLastMovementAt, MissingLong).toInstantOrNull(),
         totalIdleMillis = getLong(KeyTotalIdleMillis, 0L),
         repetitionCount = getLong(KeyRepetitionCount, 0L),
+        currentSetRepetitionCount = getLong(KeyCurrentSetRepetitionCount, 0L),
+        repetitionSets = getString(KeyRepetitionSets, null).orEmpty().decodeRecordedRepetitionSets(),
+        repetitionRestSeconds = getLong(KeyRepetitionRestSeconds, 0L),
+        currentSetStartedAt = getLong(KeyCurrentSetStartedAt, MissingLong).toInstantOrNull(),
+        restStartedAt = getLong(KeyRestStartedAt, MissingLong).toInstantOrNull(),
+        accumulatedRestMillis = getLong(KeyAccumulatedRestMillis, 0L),
         lastAccuracyMeters = getFloat(KeyLastAccuracyMeters, MissingFloat)
             .takeIf { it != MissingFloat }
             ?.toDouble(),
@@ -1029,6 +1204,12 @@ private fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSta
         .putLong(KeyLastMovementAt, state.lastMovementAt?.toEpochMilli() ?: MissingLong)
         .putLong(KeyTotalIdleMillis, state.totalIdleMillis)
         .putLong(KeyRepetitionCount, state.repetitionCount)
+        .putLong(KeyCurrentSetRepetitionCount, state.currentSetRepetitionCount)
+        .putString(KeyRepetitionSets, state.repetitionSets.encodeRecordedRepetitionSets())
+        .putLong(KeyRepetitionRestSeconds, state.repetitionRestSeconds)
+        .putLong(KeyCurrentSetStartedAt, state.currentSetStartedAt?.toEpochMilli() ?: MissingLong)
+        .putLong(KeyRestStartedAt, state.restStartedAt?.toEpochMilli() ?: MissingLong)
+        .putLong(KeyAccumulatedRestMillis, state.accumulatedRestMillis)
         .putFloat(KeyLastAccuracyMeters, state.lastAccuracyMeters?.toFloat() ?: MissingFloat)
         .putLong(KeyLastLocationTime, state.lastLocationTime?.toEpochMilli() ?: MissingLong)
         .putInt(KeyDroppedPointCount, state.droppedPointCount)
@@ -1055,6 +1236,28 @@ private fun String.decodePauseIntervals(): List<ActivityPauseInterval> =
             val endTime = parts[1].toLongOrNull()?.let(Instant::ofEpochMilli) ?: return@mapNotNull null
             ActivityPauseInterval(startTime = startTime, endTime = endTime)
                 .takeIf { it.startTime.isBefore(it.endTime) }
+        }
+        .toList()
+
+private fun List<ActivityRecordedRepetitionSet>.encodeRecordedRepetitionSets(): String =
+    joinToString(separator = "\n") { set ->
+        listOf(
+            set.repetitions.toString(),
+            set.restSeconds.toString(),
+            set.activeMillis.toString(),
+        ).joinToString(separator = ",")
+    }
+
+private fun String.decodeRecordedRepetitionSets(): List<ActivityRecordedRepetitionSet> =
+    lineSequence()
+        .mapNotNull { line ->
+            val parts = line.split(',')
+            if (parts.size < 3) return@mapNotNull null
+            ActivityRecordedRepetitionSet(
+                repetitions = parts[0].toLongOrNull()?.coerceAtLeast(0L) ?: return@mapNotNull null,
+                restSeconds = parts[1].toLongOrNull()?.coerceAtLeast(0L) ?: return@mapNotNull null,
+                activeMillis = parts[2].toLongOrNull()?.coerceAtLeast(1L) ?: return@mapNotNull null,
+            )
         }
         .toList()
 
@@ -1206,6 +1409,12 @@ private const val KeyAutoIdleTimeoutMillis = "auto_idle_timeout_millis"
 private const val KeyLastMovementAt = "last_movement_at"
 private const val KeyTotalIdleMillis = "total_idle_millis"
 private const val KeyRepetitionCount = "repetition_count"
+private const val KeyCurrentSetRepetitionCount = "current_set_repetition_count"
+private const val KeyRepetitionSets = "repetition_sets"
+private const val KeyRepetitionRestSeconds = "repetition_rest_seconds"
+private const val KeyCurrentSetStartedAt = "current_set_started_at"
+private const val KeyRestStartedAt = "rest_started_at"
+private const val KeyAccumulatedRestMillis = "accumulated_rest_millis"
 private const val KeyLastAccuracyMeters = "last_accuracy_meters"
 private const val KeyLastLocationTime = "last_location_time"
 private const val KeyDroppedPointCount = "dropped_point_count"

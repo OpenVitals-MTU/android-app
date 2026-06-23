@@ -76,6 +76,8 @@ internal fun ActivityRecordingScreen(
     onUpdateMarker: (ActivityRecordingMarker) -> Unit,
     onDeleteMarker: (String) -> Unit,
     onAdjustRepetitionCount: (Long) -> Unit,
+    onEndRepetitionSet: () -> Unit,
+    onStartNextRepetitionSet: () -> Unit,
     onFinishRecording: () -> Unit,
     onDiscardRecording: () -> Unit,
     modifier: Modifier = Modifier,
@@ -88,8 +90,12 @@ internal fun ActivityRecordingScreen(
         }
     }
 
-    val totalTime = state.elapsedDuration(now)
     val movingTime = state.movingDuration(now)
+    val totalTime = if (state.recordingKind == ActivityRecordingKind.REPETITION) {
+        movingTime.plus(state.restDuration(now))
+    } else {
+        state.elapsedDuration(now)
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -125,6 +131,10 @@ internal fun ActivityRecordingScreen(
                 movingTime = movingTime,
                 unitFormatter = unitFormatter,
                 onAdjustRepetitionCount = onAdjustRepetitionCount,
+                onEndRepetitionSet = onEndRepetitionSet,
+                onStartNextRepetitionSet = onStartNextRepetitionSet,
+                onFinishRecording = onFinishRecording,
+                onDiscardRecording = onDiscardRecording,
             )
         } else {
             GpsRecordingTabs(
@@ -146,15 +156,16 @@ internal fun ActivityRecordingScreen(
             )
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            shape = MaterialTheme.shapes.large,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+        if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth(),
             ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                 Text(
                     text = stringResource(R.string.activity_entry_recording_finish_hint),
                     style = MaterialTheme.typography.bodySmall,
@@ -213,7 +224,6 @@ internal fun ActivityRecordingScreen(
                     }
                 }
 
-                if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -249,7 +259,6 @@ internal fun ActivityRecordingScreen(
                             )
                         }
                     }
-                }
 
                 OutlinedButton(
                     onClick = onDiscardRecording,
@@ -264,6 +273,7 @@ internal fun ActivityRecordingScreen(
                         text = stringResource(R.string.action_discard),
                         modifier = Modifier.padding(start = 6.dp),
                     )
+                }
                 }
             }
         }
@@ -737,6 +747,10 @@ internal fun RepetitionRecordingStats(
     movingTime: Duration,
     unitFormatter: UnitFormatter,
     onAdjustRepetitionCount: (Long) -> Unit,
+    onEndRepetitionSet: () -> Unit,
+    onStartNextRepetitionSet: () -> Unit,
+    onFinishRecording: () -> Unit,
+    onDiscardRecording: () -> Unit,
 ) {
     val activityType = activityEntryTypeById(state.activityTypeId)
     val countLabel = stringResource(
@@ -763,7 +777,7 @@ internal fun RepetitionRecordingStats(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = unitFormatter.count(state.repetitionCount),
+                text = unitFormatter.count(state.currentSetRepetitionCount),
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -773,7 +787,8 @@ internal fun RepetitionRecordingStats(
             ) {
                 OutlinedButton(
                     onClick = { onAdjustRepetitionCount(-1) },
-                    enabled = state.repetitionCount > 0,
+                    enabled = state.status == ActivityRecordingStatus.RECORDING &&
+                        state.currentSetRepetitionCount > 0L,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(
@@ -784,6 +799,7 @@ internal fun RepetitionRecordingStats(
                 }
                 OutlinedButton(
                     onClick = { onAdjustRepetitionCount(1) },
+                    enabled = state.status == ActivityRecordingStatus.RECORDING,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(
@@ -798,6 +814,46 @@ internal fun RepetitionRecordingStats(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (state.status == ActivityRecordingStatus.RESTING) {
+                Text(
+                    text = stringResource(
+                        R.string.activity_entry_recording_rest_remaining,
+                        formatRecordingElapsed(state.restRemainingDuration()),
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Button(
+                    onClick = onStartNextRepetitionSet,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.activity_entry_recording_start_next_set),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            } else {
+                Button(
+                    onClick = onEndRepetitionSet,
+                    enabled = state.currentSetRepetitionCount > 0L,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Stop,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.activity_entry_recording_end_set),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            }
         }
     }
 
@@ -815,6 +871,45 @@ internal fun RepetitionRecordingStats(
             label = stringResource(R.string.activity_entry_recording_moving_time),
             modifier = Modifier.weight(1f),
         )
+        RecordingStat(
+            value = DisplayValue(formatRecordingElapsed(state.restDuration()), ""),
+            label = stringResource(R.string.activity_entry_recording_rest_time),
+            modifier = Modifier.weight(1f),
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Button(
+            onClick = onFinishRecording,
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Stop,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(R.string.activity_entry_recording_end_session),
+                modifier = Modifier.padding(start = 6.dp),
+            )
+        }
+        OutlinedButton(
+            onClick = onDiscardRecording,
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(R.string.action_discard),
+                modifier = Modifier.padding(start = 6.dp),
+            )
+        }
     }
 }
 
@@ -927,6 +1022,7 @@ private fun splitDistanceDecimals(value: Double): Int =
 private fun ActivityRecordingState.recordingStatusLabelRes(now: Instant): Int =
     when {
         status == ActivityRecordingStatus.PAUSED -> R.string.activity_entry_recording_paused
+        status == ActivityRecordingStatus.RESTING -> R.string.activity_entry_recording_resting
         recordingKind != ActivityRecordingKind.GPS_ROUTE -> R.string.activity_entry_recording_active
         isAutoIdle(now) -> R.string.activity_entry_recording_idle
         gpsStatus == ActivityGpsStatus.FIX -> R.string.activity_entry_recording_gps_fix

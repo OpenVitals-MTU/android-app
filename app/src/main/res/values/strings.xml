@@ -105,7 +105,7 @@
     <string name="activity_entry_repetitions_label">Reps</string>
     <string name="activity_entry_steps_label">Steps</string>
     <string name="activity_entry_set_repetitions_label">Set %1$d reps</string>
-    <string name="activity_entry_set_rest_label">Rest after min</string>
+    <string name="activity_entry_set_rest_label">Rest after sec</string>
     <string name="activity_entry_add_set">Add set</string>
     <string name="activity_entry_distance_label">Distance %1$s optional</string>
     <string name="activity_entry_elevation_label">Elevation %1$s optional</string>
@@ -117,6 +117,7 @@
     <string name="activity_entry_recording_active">Recording</string>
     <string name="activity_entry_recording_paused">Paused</string>
     <string name="activity_entry_recording_idle">Idle</string>
+    <string name="activity_entry_recording_resting">Resting</string>
     <string name="activity_entry_recording_gps_fix">GPS ready</string>
     <string name="activity_entry_recording_gps_poor">Weak GPS</string>
     <string name="activity_entry_recording_gps_lost">GPS lost</string>
@@ -150,12 +151,18 @@
     <string name="activity_entry_recording_distance">Distance</string>
     <string name="activity_entry_recording_total_time">Total time</string>
     <string name="activity_entry_recording_moving_time">Moving time</string>
+    <string name="activity_entry_recording_rest_time">Rest time</string>
     <string name="activity_entry_recording_speed">Speed</string>
     <string name="activity_entry_recording_max_speed">Max speed</string>
     <string name="activity_entry_recording_average_speed">Avg speed</string>
     <string name="activity_entry_recording_average_moving_speed">Avg moving speed</string>
     <string name="activity_entry_recording_elevation_gain">Climb</string>
     <string name="activity_entry_recording_points">Points</string>
+    <string name="activity_entry_recording_rest_seconds_label">Rest seconds</string>
+    <string name="activity_entry_recording_end_set">End set</string>
+    <string name="activity_entry_recording_start_next_set">Start next set</string>
+    <string name="activity_entry_recording_end_session">End session</string>
+    <string name="activity_entry_recording_rest_remaining">Rest %1$s</string>
     <string name="activity_entry_recording_finish_hint">Finish opens the activity details form so you can add title, notes, calories, or adjust values before saving.</string>
     <string name="activity_entry_recording_repetition_correction_hint">Use + or - if the sensor misses or adds a rep.</string>
     <string name="activity_entry_recording_accuracy">Last accuracy %1$s</string>
@@ -202,6 +209,7 @@
     <string name="activity_recording_notification_paused">Paused • %1$s total • %2$s moving • %3$s • %4$s</string>
     <string name="activity_recording_notification_repetition_recording">Recording • %1$s total • %2$s %3$s</string>
     <string name="activity_recording_notification_repetition_paused">Paused • %1$s total • %2$s %3$s</string>
+    <string name="activity_recording_notification_repetition_resting">Resting • %1$s total • %2$s left</string>
     <string name="activity_recording_error_service">Could not start activity recording service.</string>
     <string name="activity_recording_error_precise_location_permission">Precise location permission is required for reliable GPS tracks.</string>
     <string name="activity_recording_error_notification_permission">Notification permission is required to show the ongoing recording notification.</string>

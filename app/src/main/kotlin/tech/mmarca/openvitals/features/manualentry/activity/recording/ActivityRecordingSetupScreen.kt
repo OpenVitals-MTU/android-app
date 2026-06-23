@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -37,6 +38,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,11 +47,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import java.time.Instant
@@ -63,7 +67,7 @@ internal fun ActivityRecordingSetupScreen(
     state: ActivityEntryUiState,
     unitFormatter: UnitFormatter,
     onSelectActivityType: (ActivityEntryType) -> Unit,
-    onStartRecording: (Location?) -> Unit,
+    onStartRecording: (Location?, Long) -> Unit,
     onRequestLocationPermission: () -> Unit,
     onRequestActivityRecognitionPermission: () -> Unit,
     onChooseSource: () -> Unit,
@@ -71,6 +75,7 @@ internal fun ActivityRecordingSetupScreen(
     modifier: Modifier = Modifier,
 ) {
     val selectedType = state.selectedActivityType
+    var restSecondsText by rememberSaveable(selectedType.id) { mutableStateOf("") }
     val gpsFixState = rememberPreRecordingGpsFixState(
         enabled = selectedType.supportsGpsRoute &&
             state.canWrite &&
@@ -126,6 +131,16 @@ internal fun ActivityRecordingSetupScreen(
                     state = gpsFixState,
                     unitFormatter = unitFormatter,
                 )
+            } else if (selectedType.isRepetitionLike) {
+                OutlinedTextField(
+                    value = restSecondsText,
+                    onValueChange = { restSecondsText = it },
+                    enabled = baseEnabled,
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.activity_entry_recording_rest_seconds_label)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             Button(
@@ -137,7 +152,10 @@ internal fun ActivityRecordingSetupScreen(
                     } else if (selectedType.supportsGpsRoute && !gpsFixState.hasPrecisePermission) {
                         onRequestLocationPermission()
                     } else {
-                        onStartRecording(if (selectedType.supportsGpsRoute) latestPreciseFix else null)
+                        onStartRecording(
+                            if (selectedType.supportsGpsRoute) latestPreciseFix else null,
+                            restSecondsText.toLongOrNull()?.coerceAtLeast(0L) ?: 0L,
+                        )
                     }
                 },
                 enabled = enabled,

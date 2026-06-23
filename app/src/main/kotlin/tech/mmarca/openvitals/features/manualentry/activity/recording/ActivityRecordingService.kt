@@ -415,6 +415,11 @@ class ActivityRecordingService : Service() {
                     unitFormatter.count(state.repetitionCount),
                     unit,
                 )
+                ActivityRecordingStatus.RESTING -> getString(
+                    R.string.activity_recording_notification_repetition_resting,
+                    totalTime,
+                    formatNotificationElapsed(state.restRemainingDuration()),
+                )
                 ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
             }
         }
@@ -436,6 +441,7 @@ class ActivityRecordingService : Service() {
                 distance,
                 getString(R.string.activity_entry_recording_paused),
             )
+            ActivityRecordingStatus.RESTING -> getString(R.string.activity_recording_notification_title)
             ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
         }
     }

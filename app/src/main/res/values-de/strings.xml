@@ -105,7 +105,7 @@
     <string name="activity_entry_repetitions_label">Wdh.</string>
     <string name="activity_entry_steps_label">Schritte</string>
     <string name="activity_entry_set_repetitions_label">Satz %1$d Wdh.</string>
-    <string name="activity_entry_set_rest_label">Pause danach min</string>
+    <string name="activity_entry_set_rest_label">Pause danach Sek.</string>
     <string name="activity_entry_add_set">Satz hinzufügen</string>
     <string name="activity_entry_distance_label">Distanz %1$s optional</string>
     <string name="activity_entry_elevation_label">Höhe %1$s optional</string>
@@ -117,6 +117,7 @@
     <string name="activity_entry_recording_active">Aufzeichnung läuft</string>
     <string name="activity_entry_recording_paused">Pausiert</string>
     <string name="activity_entry_recording_idle">Leerlauf</string>
+    <string name="activity_entry_recording_resting">Pause</string>
     <string name="activity_entry_recording_gps_fix">GPS bereit</string>
     <string name="activity_entry_recording_gps_poor">Schwaches GPS</string>
     <string name="activity_entry_recording_gps_lost">GPS verloren</string>
@@ -150,12 +151,18 @@
     <string name="activity_entry_recording_distance">Distanz</string>
     <string name="activity_entry_recording_total_time">Gesamtzeit</string>
     <string name="activity_entry_recording_moving_time">Zeit in Bewegung</string>
+    <string name="activity_entry_recording_rest_time">Pausenzeit</string>
     <string name="activity_entry_recording_speed">Geschwindigkeit</string>
     <string name="activity_entry_recording_max_speed">Max. Geschwindigkeit</string>
     <string name="activity_entry_recording_average_speed">Ø Geschwindigkeit</string>
     <string name="activity_entry_recording_average_moving_speed">Ø Geschwindigkeit in Bewegung</string>
     <string name="activity_entry_recording_elevation_gain">Anstieg</string>
     <string name="activity_entry_recording_points">Punkte</string>
+    <string name="activity_entry_recording_rest_seconds_label">Pausensekunden</string>
+    <string name="activity_entry_recording_end_set">Satz beenden</string>
+    <string name="activity_entry_recording_start_next_set">Nächsten Satz starten</string>
+    <string name="activity_entry_recording_end_session">Sitzung beenden</string>
+    <string name="activity_entry_recording_rest_remaining">Pause %1$s</string>
     <string name="activity_entry_recording_finish_hint">Beenden öffnet das Formular mit Aktivitätsdetails, damit du vor dem Speichern Titel, Notizen, Kalorien ergänzen oder Werte anpassen kannst.</string>
     <string name="activity_entry_recording_repetition_correction_hint">Nutze + oder -, wenn der Sensor eine Wiederholung auslässt oder hinzufügt.</string>
     <string name="activity_entry_recording_accuracy">Letzte Genauigkeit %1$s</string>
@@ -202,6 +209,7 @@
     <string name="activity_recording_notification_paused">Pausiert • %1$s gesamt • %2$s in Bewegung • %3$s • %4$s</string>
     <string name="activity_recording_notification_repetition_recording">Aufzeichnung läuft • %1$s gesamt • %2$s %3$s</string>
     <string name="activity_recording_notification_repetition_paused">Pausiert • %1$s gesamt • %2$s %3$s</string>
+    <string name="activity_recording_notification_repetition_resting">Pause • %1$s gesamt • %2$s verbleibend</string>
     <string name="activity_recording_error_service">Aktivitätsaufzeichnungsdienst konnte nicht gestartet werden.</string>
     <string name="activity_recording_error_precise_location_permission">Der genaue Standort ist für zuverlässige GPS-Tracks erforderlich.</string>
     <string name="activity_recording_error_notification_permission">Die Benachrichtigungsberechtigung ist erforderlich, um die laufende Aufzeichnungsbenachrichtigung anzuzeigen.</string>

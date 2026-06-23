@@ -405,7 +405,10 @@ class ActivityEntryViewModel(
         refreshPermission()
     }
 
-    fun startGpsRecording(initialFix: Location? = null) {
+    fun startGpsRecording(
+        initialFix: Location? = null,
+        repetitionRestSeconds: Long = 0L,
+    ) {
         val recorder = activityRecorder
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
@@ -443,7 +446,7 @@ class ActivityEntryViewModel(
             detailMessage = null,
             validationErrors = emptySet(),
         )
-        if (!recorder.startRecording(currentState.selectedActivityType, initialFix)) {
+        if (!recorder.startRecording(currentState.selectedActivityType, initialFix, repetitionRestSeconds)) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
                 detailMessage = recorder.state.value.errorMessage,
@@ -478,6 +481,14 @@ class ActivityEntryViewModel(
 
     fun adjustRepetitionRecording(delta: Long) {
         activityRecorder?.adjustRepetitionCount(delta)
+    }
+
+    fun endRepetitionSet() {
+        activityRecorder?.endRepetitionSet()
+    }
+
+    fun startNextRepetitionSet() {
+        activityRecorder?.startNextRepetitionSet()
     }
 
     fun discardGpsRecording() {
@@ -761,6 +772,12 @@ class ActivityEntryViewModel(
         ).takeIf {
             currentState.activeCaloriesText.isBlank() && currentState.totalCaloriesText.isBlank()
         }
+        val recordedSets = snapshot.repetitionSets.map { set ->
+            ActivityRepetitionSetInput(
+                repetitionsText = set.repetitions.toString(),
+                restMinutesText = set.restSeconds.takeIf { it > 0L }?.toString().orEmpty(),
+            )
+        }
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             selectedActivityType = selectedActivityType,
@@ -776,11 +793,15 @@ class ActivityEntryViewModel(
             elevationText = "",
             activeCaloriesText = calorieEstimate?.activeCaloriesText ?: currentState.activeCaloriesText,
             totalCaloriesText = calorieEstimate?.totalCaloriesText ?: currentState.totalCaloriesText,
-            repetitionMode = ActivityRepetitionEntryMode.TOTAL,
+            repetitionMode = if (recordedSets.isNotEmpty()) {
+                ActivityRepetitionEntryMode.SETS
+            } else {
+                ActivityRepetitionEntryMode.TOTAL
+            },
             repetitionTotalText = snapshot.repetitionCount.takeIf {
-                selectedActivityType.isRepetitionLike && it > 0L
+                selectedActivityType.isRepetitionLike && it > 0L && recordedSets.isEmpty()
             }?.toString().orEmpty(),
-            repetitionSets = listOf(ActivityRepetitionSetInput()),
+            repetitionSets = recordedSets.takeIf { it.isNotEmpty() } ?: listOf(ActivityRepetitionSetInput()),
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),

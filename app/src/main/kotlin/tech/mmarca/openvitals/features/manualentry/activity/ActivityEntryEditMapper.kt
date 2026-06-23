@@ -136,22 +136,21 @@ internal fun ExerciseData.toRepetitionEditState(type: ActivityEntryType): Repeti
 
     val sortedSegments = segments.sortedBy { it.startTime }
     val sets = activeSegments.mapIndexed { index, segment ->
-        val restMinutes = sortedSegments
+        val restSeconds = sortedSegments
             .firstOrNull {
                 it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST &&
                     !it.startTime.isBefore(segment.endTime) &&
-                    activeSegments.getOrNull(index + 1)?.let { next -> !it.endTime.isAfter(next.startTime) } == true
+                    activeSegments.getOrNull(index + 1)?.let { next -> !it.endTime.isAfter(next.startTime) } != false
             }
             ?.let { rest ->
-                ceil(Duration.between(rest.startTime, rest.endTime).seconds / 60.0)
-                    .toLong()
+                Duration.between(rest.startTime, rest.endTime).seconds
                     .takeIf { it > 0L }
                     ?.toString()
             }
             .orEmpty()
         ActivityRepetitionSetInput(
             repetitionsText = segment.repetitions.toString(),
-            restMinutesText = restMinutes,
+            restMinutesText = restSeconds,
         )
     }
     return RepetitionEditState(
