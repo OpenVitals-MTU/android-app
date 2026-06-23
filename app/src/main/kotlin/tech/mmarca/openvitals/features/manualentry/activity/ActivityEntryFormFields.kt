@@ -333,47 +333,55 @@ internal fun ActivityMetricInputs(
     val elevationError = state.validationErrorText(ActivityEntryField.ELEVATION)
     val activeCaloriesError = state.validationErrorText(ActivityEntryField.ACTIVE_CALORIES)
     val totalCaloriesError = state.validationErrorText(ActivityEntryField.TOTAL_CALORIES)
+    val supportsDistance = state.selectedActivityType.supportsDistance
+    val supportsElevation = state.selectedActivityType.supportsElevation
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedTextField(
-            value = state.distanceText,
-            onValueChange = onDistanceChanged,
-            enabled = enabled && !state.isSavingEntry && state.selectedActivityType.supportsDistance,
-            singleLine = true,
-            label = {
-                Text(
-                    stringResource(
-                        R.string.activity_entry_distance_label,
-                        if (unitSystem == UnitSystem.IMPERIAL) "mi" else "km",
-                    )
+    if (supportsDistance || supportsElevation) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (supportsDistance) {
+                OutlinedTextField(
+                    value = state.distanceText,
+                    onValueChange = onDistanceChanged,
+                    enabled = enabled && !state.isSavingEntry,
+                    singleLine = true,
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string.activity_entry_distance_label,
+                                if (unitSystem == UnitSystem.IMPERIAL) "mi" else "km",
+                            )
+                        )
+                    },
+                    isError = distanceError != null,
+                    supportingText = distanceError?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
                 )
-            },
-            isError = distanceError != null,
-            supportingText = distanceError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.weight(1f),
-        )
-        OutlinedTextField(
-            value = state.elevationText,
-            onValueChange = onElevationChanged,
-            enabled = enabled && !state.isSavingEntry && state.selectedActivityType.supportsElevation,
-            singleLine = true,
-            label = {
-                Text(
-                    stringResource(
-                        R.string.activity_entry_elevation_label,
-                        if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m",
-                    )
+            }
+            if (supportsElevation) {
+                OutlinedTextField(
+                    value = state.elevationText,
+                    onValueChange = onElevationChanged,
+                    enabled = enabled && !state.isSavingEntry,
+                    singleLine = true,
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string.activity_entry_elevation_label,
+                                if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m",
+                            )
+                        )
+                    },
+                    isError = elevationError != null,
+                    supportingText = elevationError?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
                 )
-            },
-            isError = elevationError != null,
-            supportingText = elevationError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.weight(1f),
-        )
+            }
+        }
     }
 
     Row(

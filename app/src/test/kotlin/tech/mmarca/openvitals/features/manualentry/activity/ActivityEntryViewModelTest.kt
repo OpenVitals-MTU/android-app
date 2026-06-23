@@ -78,6 +78,24 @@ class ActivityEntryViewModelTest {
         assertTrue(request.startTime.isBefore(request.endTime))
     }
 
+    @Test fun `buildWriteRequest ignores hidden unsupported metric values`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "push_ups" },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "30",
+            distanceText = "10.5",
+            elevationText = "120",
+            repetitionTotalText = "25",
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertNull(request.distanceMeters)
+        assertNull(request.elevationGainedMeters)
+    }
+
     @Test fun `buildWriteRequest rejects total calories below active calories`() {
         val state = ActivityEntryUiState(
             startDateText = "2026-05-26",
@@ -128,6 +146,24 @@ class ActivityEntryViewModelTest {
         assertTrue(ActivityEntryValidationError.DURATION_INVALID in vm.uiState.value.validationErrors)
         assertTrue(ActivityEntryValidationError.DISTANCE_INVALID in vm.uiState.value.validationErrors)
         coVerify(exactly = 0) { repo.writeActivityEntry(any()) }
+    }
+
+    @Test fun `selecting activity clears metric fields that activity does not use`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startManualEntry()
+        vm.updateDistance("10.5")
+        vm.updateElevation("120")
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "push_ups" })
+        advanceUntilIdle()
+
+        assertEquals("", vm.uiState.value.distanceText)
+        assertEquals("", vm.uiState.value.elevationText)
     }
 
     @Test fun `buildWriteRequest uses imported route distance and adjusts end after last point`() {

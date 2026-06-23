@@ -69,8 +69,11 @@ internal fun buildWriteRequest(
             }
         }
     }
+    val supportsDistance = state.selectedActivityType.supportsDistance
+    val supportsElevation = state.selectedActivityType.supportsElevation
 
     val distanceMeters = when {
+        !supportsDistance -> null
         state.distanceText.isNotBlank() && importedRoute != null &&
             state.distanceText.trim() == routeDistanceInputText(importedRoute, unitSystem) -> {
             importedRoute.distanceMeters.takeIf { it > 0.0 }
@@ -80,6 +83,7 @@ internal fun buildWriteRequest(
         else -> null
     }
     val elevationMeters = when {
+        !supportsElevation -> null
         state.elevationText.isNotBlank() && importedRoute != null &&
             state.elevationText.trim() == routeElevationInputText(importedRoute, unitSystem) -> {
             importedRoute.elevationGainedMeters.takeIf { it > 0.0 }
@@ -168,11 +172,8 @@ internal fun validateActivityEntry(
         }
     }
 
-    if (state.distanceText.isNotBlank()) {
+    if (state.distanceText.isNotBlank() && state.selectedActivityType.supportsDistance) {
         when {
-            !state.selectedActivityType.supportsDistance -> {
-                errors += ActivityEntryValidationError.DISTANCE_UNSUPPORTED
-            }
             importedRoute != null &&
                 state.distanceText.trim() == routeDistanceInputText(importedRoute, unitSystem) -> Unit
             parseDistanceMeters(state.distanceText, unitSystem) == null -> {
@@ -181,11 +182,8 @@ internal fun validateActivityEntry(
         }
     }
 
-    if (state.elevationText.isNotBlank()) {
+    if (state.elevationText.isNotBlank() && state.selectedActivityType.supportsElevation) {
         when {
-            !state.selectedActivityType.supportsElevation -> {
-                errors += ActivityEntryValidationError.ELEVATION_UNSUPPORTED
-            }
             importedRoute != null &&
                 state.elevationText.trim() == routeElevationInputText(importedRoute, unitSystem) -> Unit
             parseElevationMeters(state.elevationText, unitSystem) == null -> {

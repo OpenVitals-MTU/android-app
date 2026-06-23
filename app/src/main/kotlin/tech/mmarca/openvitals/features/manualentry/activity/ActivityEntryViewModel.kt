@@ -156,20 +156,23 @@ class ActivityEntryViewModel(
     }
 
     fun selectActivityType(type: ActivityEntryType) {
-        val retainedRoute = _uiState.value.importedRoute?.takeIf { type.supportsGpsRoute }
-        _uiState.value = _uiState.value.copy(
+        val currentState = _uiState.value
+        val retainedRoute = currentState.importedRoute?.takeIf { type.supportsGpsRoute }
+        _uiState.value = currentState.copy(
             selectedActivityType = type,
             plannedWorkouts = emptyList(),
             selectedPlannedWorkoutId = null,
             selectedPlannedWorkoutActivityTypeId = null,
+            distanceText = currentState.distanceText.takeIf { type.supportsDistance }.orEmpty(),
+            elevationText = currentState.elevationText.takeIf { type.supportsElevation }.orEmpty(),
             importedRoute = retainedRoute,
-            recordedPauseIntervals = if (retainedRoute == null) emptyList() else _uiState.value.recordedPauseIntervals,
-            recordedLaps = if (retainedRoute == null) emptyList() else _uiState.value.recordedLaps,
-            recordedMarkers = if (retainedRoute == null) emptyList() else _uiState.value.recordedMarkers,
-            mode = if (retainedRoute == null && _uiState.value.mode == ActivityEntryMode.ROUTE_IMPORT) {
+            recordedPauseIntervals = if (retainedRoute == null) emptyList() else currentState.recordedPauseIntervals,
+            recordedLaps = if (retainedRoute == null) emptyList() else currentState.recordedLaps,
+            recordedMarkers = if (retainedRoute == null) emptyList() else currentState.recordedMarkers,
+            mode = if (retainedRoute == null && currentState.mode == ActivityEntryMode.ROUTE_IMPORT) {
                 ActivityEntryMode.MANUAL
             } else {
-                _uiState.value.mode
+                currentState.mode
             },
             entryError = null,
             detailMessage = null,
