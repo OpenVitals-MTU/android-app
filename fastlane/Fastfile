@@ -6,8 +6,8 @@ OPENVITALS_PACKAGE_NAME = "tech.mmarca.openvitals"
 OPENVITALS_METADATA_PATH = "fastlane/metadata/android"
 
 platform :android do
-  desc "Upload the signed Android App Bundle to Google Play open testing with store metadata"
-  lane :open_testing do |options|
+  desc "Upload the signed Android App Bundle to Google Play internal testing with store metadata"
+  lane :internal do |options|
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
     aab = options[:aab] || ENV["OPENVITALS_RELEASE_AAB"]
     version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
@@ -16,7 +16,7 @@ platform :android do
     UI.user_error!("aab is required") if aab.to_s.empty?
 
     if version_code.to_s.length > 0
-      existing_codes = ["beta", "production"].flat_map do |track|
+      existing_codes = ["internal", "production"].flat_map do |track|
         google_play_track_version_codes(
           package_name: OPENVITALS_PACKAGE_NAME,
           json_key: json_key,
@@ -25,7 +25,7 @@ platform :android do
       end.map(&:to_i)
 
       if existing_codes.include?(version_code.to_i)
-        UI.message("Version code #{version_code} is already on Google Play; skipping open testing upload.")
+        UI.message("Version code #{version_code} is already on Google Play; skipping internal testing upload.")
         next
       end
     end
@@ -34,7 +34,7 @@ platform :android do
       package_name: OPENVITALS_PACKAGE_NAME,
       json_key: json_key,
       aab: aab,
-      track: "beta",
+      track: "internal",
       release_status: "completed",
       metadata_path: OPENVITALS_METADATA_PATH,
       sync_image_upload: true,
@@ -43,7 +43,7 @@ platform :android do
     )
   end
 
-  desc "Promote the accepted Google Play open testing release to production"
+  desc "Promote the accepted Google Play internal testing release to production"
   lane :promote_production do |options|
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
     version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
@@ -54,7 +54,7 @@ platform :android do
     supply(
       package_name: OPENVITALS_PACKAGE_NAME,
       json_key: json_key,
-      track: "beta",
+      track: "internal",
       track_promote_to: "production",
       track_promote_release_status: "completed",
       version_code: version_code,

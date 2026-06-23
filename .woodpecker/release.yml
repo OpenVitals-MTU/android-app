@@ -47,7 +47,7 @@ steps:
             "Distribution flow:" \
             "- Codeberg prerelease with signed APK and signed Android App Bundle assets" \
             "- Codeberg stable release after approved Woodpecker deployment" \
-            "- Google Play open testing and production promotion are temporarily skipped" \
+            "- Google Play internal testing on tag and production promotion after approved Woodpecker deployment" \
             "" \
             "Assets:" \
             "- Signed release APK" \
@@ -120,7 +120,7 @@ steps:
     when:
       - event: tag
 
-  - name: publish-play-open-testing
+  - name: publish-play-internal
     depends_on:
       - build-release-artifacts
     image: ruby:3.3
@@ -142,12 +142,12 @@ steps:
       - version_code="$$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
       - test -n "$${version_code}"
       - |
-        bundle exec fastlane android open_testing \
+        bundle exec fastlane android internal \
           json_key:"$${play_key_path}" \
           aab:".woodpecker/tmp/OpenVitals-$${release_tag}.aab" \
           version_code:"$${version_code}"
     when:
-      - evaluate: 'false'
+      - event: tag
 
   - name: publish-codeberg-beta
     image: woodpeckerci/plugin-release
@@ -195,7 +195,8 @@ steps:
           json_key:"$${play_key_path}" \
           version_code:"$${version_code}"
     when:
-      - evaluate: 'false'
+      - event: deployment
+        evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
   - name: publish-codeberg-stable
     depends_on:

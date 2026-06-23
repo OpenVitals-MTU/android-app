@@ -1,0 +1,1 @@
+Añade widgets de inicio, grabación GPS/actividad con parciales, temporizadores por series y planes de Health Connect, edición de fecha/hora, lecturas más rápidas con caché, importaciones grandes de Apple Health más seguras y release Play interno-a-producción restaurado.

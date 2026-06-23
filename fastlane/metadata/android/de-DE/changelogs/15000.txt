@@ -1,0 +1,1 @@
+Ergänzt Startbildschirm-Widgets, bessere GPS-/Aktivitätsaufzeichnung mit Splits, satzbasierte Timer und Health-Connect-Trainingspläne, bearbeitbare Datum/Uhrzeit, schnellere gecachte Metriken, robustere Apple-Health-Importe und Play-Release-Automation.

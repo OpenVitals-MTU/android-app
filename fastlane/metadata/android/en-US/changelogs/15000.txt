@@ -1,0 +1,1 @@
+Adds home screen widgets, richer GPS/activity recording with splits, set timers and Health Connect training plans, editable entry timestamps, faster cached metric reads, safer large Apple Health imports, and restored Play internal-to-production release automation.

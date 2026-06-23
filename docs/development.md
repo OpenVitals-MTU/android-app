@@ -47,20 +47,20 @@ git diff --check
 
 Release CI also uses the wrapper for local app test/lint and release artifact builds.
 
-Release CI is beta-first. A `v*` tag publishes signed APK and Android App Bundle
+Release CI is internal-first. A `v*` tag publishes signed APK and Android App Bundle
 assets to Codeberg as a prerelease, and publishes the signed App Bundle to the
-Google Play open testing track with the Fastlane `android open_testing` lane. The
-beta upload also uploads Play metadata and screenshots from
+Google Play internal testing track with the Fastlane `android internal` lane. The
+internal upload also uploads Play metadata and screenshots from
 `fastlane/metadata/android`. Codeberg prerelease publishing depends only on the
 signed artifact build, so a Play Console permission failure should not block the
 Codeberg beta assets. If a tag pipeline is rerun after Google Play already has
-the release version code in open testing or production, the Fastlane
-`android open_testing` lane skips the duplicate AAB upload.
+the release version code in internal testing or production, the Fastlane
+`android internal` lane skips the duplicate AAB upload.
 
-Production is an approved promotion, not a second upload. After the beta build is
+Production is an approved promotion, not a second upload. After the internal build is
 accepted, start a Woodpecker deployment from the successful tag pipeline with the
 deploy target set to `production`. The deployment pipeline promotes the existing
-Google Play `beta` track version to `production` with the Fastlane
+Google Play `internal` track version to `production` with the Fastlane
 `android promote_production` lane, then marks the existing Codeberg release as
 stable through the Forgejo API.
 Prerelease-suffixed tags such as `-alpha`, `-beta`, and `-rc` are beta-only and
@@ -83,9 +83,8 @@ release will then need to be sent for review manually in Play Console.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
 edit repository releases. In Woodpecker project settings, enable deployments so a
-successful beta pipeline can be promoted with the `production` deploy target. In
-Google Play Console, keep open testing configured for the app's countries and
-tester enrollment so beta users can opt in from Play.
+successful tag pipeline can be promoted with the `production` deploy target. In
+Google Play Console, keep internal testing configured for the app's tester list.
 
 After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
 `git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
@@ -107,14 +106,14 @@ For a stable release:
 git diff --check
 ```
 
-6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag message, and push both the branch and tag. The tag pipeline publishes the beta release to Codeberg and Google Play open testing.
-7. After beta approval, start a Woodpecker deployment from the successful tag pipeline with deploy target `production`. The deployment promotes the Play release to production and marks the Codeberg release stable.
+6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag message, and push both the branch and tag. The tag pipeline publishes the Codeberg prerelease and Google Play internal testing release.
+7. After internal testing approval, start a Woodpecker deployment from the successful tag pipeline with deploy target `production`. The deployment promotes the Play release to production and marks the Codeberg release stable.
 
 Use the exact `versionName` for release notes, changelog references, and tags.
 For a final release, that means file name, `versionName`, and tag such as
 `1.0.0` / `v1.0.0`; for beta-only prereleases, include the suffix everywhere,
 such as `1.0.0-beta.1` / `v1.0.0-beta.1`. Keep the Play `versionCode` unique
 and increasing, and add matching Fastlane changelog files for that exact code.
-The tag pipeline publishes beta tags to Codeberg prerelease and Google Play open
+The tag pipeline publishes beta tags to Codeberg prerelease and Google Play internal
 testing, while the production deployment path rejects `-alpha`, `-beta`, and
 `-rc` tags.

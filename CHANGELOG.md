@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.5.0 - 2026-06-24
+
+### English
+
+- Add configurable Android home screen widgets for Daily Readiness, Body Energy, Today Vitals, and selected metric summaries.
+- Improve GPS activity recording with split analysis, voice announcements, marker preferences, and cleaner non-GPS activity validation.
+- Add set-based training timers and Health Connect training-plan support for activity entries and recordings.
+- Let OpenVitals-owned hydration, body, vitals, and mindfulness entries edit their date and time as well as values.
+- Add a cached metric summary layer and background warmup to make dashboard and period detail loads faster.
+- Make large Apple Health imports safer with streaming conversions, narrower import repository boundaries, and clearer worker dependency handling.
+- Restore Google Play internal testing uploads on tag builds and production promotion from the approved Woodpecker deployment.
+- Refresh Health Connect permission guidance, remember the last custom hydration amount, update runtime/test dependencies with Gradle locks, add `Gemfile.lock`, and split large feature files.
+
+### Español
+
+- Añade widgets configurables de pantalla de inicio de Android para Preparación diaria, Energía corporal, Constantes de hoy y resúmenes de métricas seleccionadas.
+- Mejora la grabación GPS de actividades con análisis de parciales, avisos de voz, preferencias de marcadores y validación más clara para actividades sin GPS.
+- Añade temporizadores de entrenamiento por series y soporte de planes de entrenamiento de Health Connect para entradas y grabaciones de actividad.
+- Permite editar la fecha y hora de entradas propias de OpenVitals de hidratación, cuerpo, constantes y mindfulness, además de sus valores.
+- Añade una caché de resúmenes de métricas y calentamiento en segundo plano para acelerar el panel y detalles por periodo.
+- Hace más seguras las importaciones grandes de Apple Health con conversiones en streaming, límites de repositorio más claros y mejor manejo de dependencias del worker.
+- Restaura las subidas a pruebas internas de Google Play en builds etiquetadas y la promoción a producción desde el despliegue aprobado de Woodpecker.
+- Renueva las indicaciones de permisos de Health Connect, recuerda el último valor personalizado de hidratación, actualiza dependencias con bloqueos de Gradle, añade `Gemfile.lock` y divide archivos grandes.
+
+### Deutsch
+
+- Ergänzt konfigurierbare Android-Startbildschirm-Widgets für Daily Readiness, Body Energy, heutige Vitalwerte und ausgewählte Metrikzusammenfassungen.
+- Verbessert GPS-Aktivitätsaufzeichnungen mit Split-Analyse, Sprachansagen, Marker-Einstellungen und klarerer Validierung für Aktivitäten ohne GPS.
+- Fügt satzbasierte Trainingstimer und Unterstützung für Health-Connect-Trainingspläne in Aktivitätseinträgen und Aufzeichnungen hinzu.
+- Erlaubt bei OpenVitals-eigenen Einträgen für Hydration, Körper, Vitalwerte und Mindfulness das Bearbeiten von Datum und Uhrzeit sowie der Werte.
+- Fügt einen Cache für Metrikzusammenfassungen und Hintergrund-Warmup hinzu, damit Dashboard und Periodendetails schneller laden.
+- Macht große Apple-Health-Importe robuster durch Streaming-Konvertierungen, klarere Import-Repository-Grenzen und besseres Worker-Abhängigkeits-Handling.
+- Aktiviert Google-Play-Uploads in den internen Testtrack für Tag-Builds und Produktions-Promotion aus dem freigegebenen Woodpecker-Deployment wieder.
+- Aktualisiert Health-Connect-Berechtigungshinweise, merkt sich den letzten benutzerdefinierten Hydrationswert, aktualisiert Abhängigkeiten mit Gradle-Locks, ergänzt `Gemfile.lock` und teilt große Feature-Dateien auf.
+
 ## 1.4.1 - 2026-06-13
 
 ### English
