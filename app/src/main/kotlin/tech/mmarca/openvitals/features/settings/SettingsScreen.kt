@@ -264,6 +264,14 @@ fun SettingsScreen(
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
+                    item { SettingsCardSpacer() }
+                    item {
+                        ActivityRecordingPreferencesCard(
+                            preferences = state.activityRecordingPreferences,
+                            onChange = viewModel::updateActivityRecordingPreferences,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
                 }
                 SettingsSection.CALORIES -> {
                     item { SectionHeader(stringResource(section.titleRes)) }

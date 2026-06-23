@@ -18,27 +18,38 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.location.altitude.AltitudeConverter
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.Instant
+import java.util.Base64
+import java.util.UUID
+import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
+import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
+import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.ActivityRecordingMarkerType
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
 enum class ActivityRecordingStatus {
     IDLE,
@@ -49,6 +60,14 @@ enum class ActivityRecordingStatus {
 enum class ActivityRecordingKind {
     GPS_ROUTE,
     REPETITION,
+}
+
+enum class ActivityGpsStatus {
+    WAITING_FOR_FIX,
+    FIX,
+    POOR_ACCURACY,
+    LOST,
+    DISABLED,
 }
 
 data class ActivityRecordingState(
@@ -62,8 +81,24 @@ data class ActivityRecordingState(
     val totalPausedMillis: Long = 0L,
     val pauseIntervals: List<ActivityPauseInterval> = emptyList(),
     val points: List<ExerciseRoutePoint> = emptyList(),
+    val routeBreakIndexes: List<Int> = emptyList(),
+    val manualLaps: List<ActivityRecordingLap> = emptyList(),
+    val markers: List<ActivityRecordingMarker> = emptyList(),
+    val latestUiPoint: ExerciseRoutePoint? = null,
     val distanceMeters: Double = 0.0,
     val elevationGainedMeters: Double = 0.0,
+    val elevationLostMeters: Double = 0.0,
+    val barometerElevationGainedMeters: Double = 0.0,
+    val barometerElevationLostMeters: Double = 0.0,
+    val hasBarometerElevation: Boolean = false,
+    val lastBarometerAltitudeMeters: Double? = null,
+    val currentSpeedMetersPerSecond: Double = 0.0,
+    val maxSpeedMetersPerSecond: Double = 0.0,
+    val gpsStatus: ActivityGpsStatus = ActivityGpsStatus.WAITING_FOR_FIX,
+    val autoIdleEnabled: Boolean = ActivityRecordingPreferences.DefaultAutoIdleEnabled,
+    val autoIdleTimeoutMillis: Long = ActivityRecordingPreferences.DefaultAutoIdleTimeoutSeconds * 1_000L,
+    val lastMovementAt: Instant? = null,
+    val totalIdleMillis: Long = 0L,
     val repetitionCount: Long = 0L,
     val lastAccuracyMeters: Double? = null,
     val lastLocationTime: Instant? = null,
@@ -82,6 +117,9 @@ data class ActivityRecordingSnapshot(
     val endTime: Instant,
     val points: List<ExerciseRoutePoint>,
     val pauseIntervals: List<ActivityPauseInterval>,
+    val routeBreakIndexes: List<Int> = emptyList(),
+    val manualLaps: List<ActivityRecordingLap> = emptyList(),
+    val markers: List<ActivityRecordingMarker> = emptyList(),
     val distanceMeters: Double,
     val elevationGainedMeters: Double,
     val repetitionCount: Long = 0L,
@@ -90,10 +128,19 @@ data class ActivityRecordingSnapshot(
 @Singleton
 class ActivityRecordingController @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val preferencesRepository: PreferencesRepository,
     private val recordingStore: ActivityRecordingStore = ActivityRecordingStore(context),
 ) {
     private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val locationProcessingDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val locationProcessingScope = CoroutineScope(SupervisorJob() + locationProcessingDispatcher)
+    private val altitudeConverter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        AltitudeConverter()
+    } else {
+        null
+    }
     private val _state = MutableStateFlow(recordingStore.restore())
+    private var recordingGeneration = 0L
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
 
     fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
@@ -117,6 +164,7 @@ class ActivityRecordingController @Inject constructor(
     }
 
     private fun startGpsRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean {
+        val recordingPreferences = preferencesRepository.activityRecordingPreferences()
         if (!hasPreciseLocationPermission(context)) {
             updateAndPersist(
                 _state.value.copy(
@@ -135,7 +183,10 @@ class ActivityRecordingController @Inject constructor(
         }
         val now = Instant.now()
         val lockedFix = initialFix
-        val initialFixQuality = lockedFix?.activityGpsFixQuality(now = now)
+        val initialFixQuality = lockedFix?.activityGpsFixQuality(
+            now = now,
+            requiredAccuracyMeters = recordingPreferences.requiredGpsAccuracyMeters.toDouble(),
+        )
         if (lockedFix == null || initialFixQuality?.isPrecise != true) {
             updateAndPersist(
                 _state.value.copy(
@@ -145,9 +196,9 @@ class ActivityRecordingController @Inject constructor(
             return false
         }
 
-        val initialPoint = lockedFix.toRoutePoint(timeOverride = now)
         persistenceScope.coroutineContext.cancelChildren()
         recordingStore.clear()
+        recordingGeneration += 1
         updateAndPersist(
             ActivityRecordingState(
                 status = ActivityRecordingStatus.RECORDING,
@@ -155,12 +206,16 @@ class ActivityRecordingController @Inject constructor(
                 activityTypeId = activityType.id,
                 exerciseType = activityType.exerciseType,
                 startTime = now,
-                points = listOf(initialPoint),
+                gpsStatus = ActivityGpsStatus.FIX,
+                autoIdleEnabled = recordingPreferences.autoIdleEnabled,
+                autoIdleTimeoutMillis = recordingPreferences.autoIdleTimeoutSeconds * 1_000L,
+                lastMovementAt = now,
                 lastAccuracyMeters = initialFixQuality.accuracyMeters,
-                lastLocationTime = initialPoint.time,
+                lastLocationTime = now,
             ),
             replaceRoutePoints = true,
         )
+        acceptLocation(Location(lockedFix).apply { time = now.toEpochMilli() })
         ContextCompat.startForegroundService(
             context,
             ActivityRecordingService.intent(context, ActivityRecordingService.ActionStart),
@@ -181,6 +236,7 @@ class ActivityRecordingController @Inject constructor(
         val now = Instant.now()
         persistenceScope.coroutineContext.cancelChildren()
         recordingStore.clear()
+        recordingGeneration += 1
         updateAndPersist(
             ActivityRecordingState(
                 status = ActivityRecordingStatus.RECORDING,
@@ -229,6 +285,77 @@ class ActivityRecordingController @Inject constructor(
         )
     }
 
+    fun addManualLap() {
+        val current = _state.value
+        if (!current.isActive || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        val start = current.manualLaps.maxByOrNull { it.endTime }?.endTime
+            ?: current.startTime
+            ?: return
+        val end = Instant.now()
+        if (!start.isBefore(end)) return
+        val distanceMeters = activityRecordingRouteDistanceMeters(
+            points = current.points,
+            routeBreakIndexes = current.routeBreakIndexes,
+            startTime = start,
+            endTime = end,
+        ).takeIf { it > 0.0 }
+        updateAndPersist(
+            current.copy(
+                manualLaps = current.manualLaps + ActivityRecordingLap(
+                    startTime = start,
+                    endTime = end,
+                    distanceMeters = distanceMeters,
+                ),
+                errorMessage = null,
+            )
+        )
+    }
+
+    fun addMarker() {
+        val current = _state.value
+        if (!current.isActive || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        val point = current.latestUiPoint ?: current.points.lastOrNull() ?: return
+        val markerNumber = current.markers.size + 1
+        updateAndPersist(
+            current.copy(
+                markers = current.markers + ActivityRecordingMarker(
+                    id = UUID.randomUUID().toString(),
+                    time = point.time,
+                    latitude = point.latitude,
+                    longitude = point.longitude,
+                    altitudeMeters = point.altitudeMeters,
+                    name = context.getString(R.string.activity_entry_recording_marker_default_name, markerNumber),
+                    type = ActivityRecordingMarkerType.Generic.value,
+                ),
+                errorMessage = null,
+            )
+        )
+    }
+
+    fun updateMarker(marker: ActivityRecordingMarker) {
+        val current = _state.value
+        if (!current.isActive || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        updateAndPersist(
+            current.copy(
+                markers = current.markers.map { existing ->
+                    if (existing.id == marker.id) marker else existing
+                },
+                errorMessage = null,
+            )
+        )
+    }
+
+    fun deleteMarker(markerId: String) {
+        val current = _state.value
+        if (!current.isActive || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        updateAndPersist(
+            current.copy(
+                markers = current.markers.filterNot { it.id == markerId },
+                errorMessage = null,
+            )
+        )
+    }
+
     fun discardRecording() {
         clearRecording()
         stopRecordingService()
@@ -243,6 +370,7 @@ class ActivityRecordingController @Inject constructor(
         val end = Instant.now().takeIf { it.isAfter(start) } ?: start.plusSeconds(1)
         val pauseIntervals = current.pauseIntervals +
             listOfNotNull(current.pausedStartedAt?.toPauseInterval(end))
+        val manualLaps = current.closedManualLaps(end)
         val snapshot = ActivityRecordingSnapshot(
             exerciseType = exerciseType,
             recordingKind = current.recordingKind,
@@ -251,6 +379,9 @@ class ActivityRecordingController @Inject constructor(
             endTime = end,
             points = current.points,
             pauseIntervals = pauseIntervals,
+            routeBreakIndexes = current.routeBreakIndexes,
+            manualLaps = manualLaps,
+            markers = current.markers,
             distanceMeters = current.distanceMeters,
             elevationGainedMeters = current.elevationGainedMeters,
             repetitionCount = current.repetitionCount,
@@ -261,29 +392,59 @@ class ActivityRecordingController @Inject constructor(
     }
 
     fun acceptLocation(location: Location) {
+        val generation = recordingGeneration
+        updateGpsStatus(location)
+        locationProcessingScope.launch {
+            acceptConvertedLocation(
+                location = location.withMslAltitude(),
+                generation = generation,
+                recordingPreferences = preferencesRepository.activityRecordingPreferences(),
+            )
+        }
+    }
+
+    private fun acceptConvertedLocation(
+        location: Location,
+        generation: Long,
+        recordingPreferences: ActivityRecordingPreferences,
+    ) {
+        if (generation != recordingGeneration) return
         val current = _state.value
         if (current.status != ActivityRecordingStatus.RECORDING) return
         if (current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
 
-        val fixQuality = location.activityGpsFixQuality(startTime = current.startTime)
+        val fixQuality = location.activityGpsFixQuality(
+            startTime = current.startTime,
+            requiredAccuracyMeters = recordingPreferences.requiredGpsAccuracyMeters.toDouble(),
+        )
+        val point = location.toRoutePoint(fixQuality.locationTime)
         if (!fixQuality.isPrecise) {
             updateAndPersist(
                 current.withDroppedLocation(
                     fixQuality.accuracyMeters,
                     fixQuality.locationTime,
-                )
+                    gpsStatus = if (fixQuality.accuracyMeters == null) {
+                        ActivityGpsStatus.WAITING_FOR_FIX
+                    } else {
+                        ActivityGpsStatus.POOR_ACCURACY
+                    },
+                ).copy(latestUiPoint = point)
             )
             return
         }
         val accuracy = fixQuality.accuracyMeters ?: return
-        val point = location.toRoutePoint()
 
         val lastPoint = current.points.lastOrNull()
         var distanceIncrement = 0.0
         var elevationIncrement = 0.0
+        var elevationLossIncrement = 0.0
+        var currentSpeedMetersPerSecond = 0.0
+        var routeBreakIndexes = current.routeBreakIndexes
+        var lastMovementAt = current.lastMovementAt ?: current.startTime ?: point.time
+        var totalIdleMillis = current.totalIdleMillis
         if (lastPoint != null) {
             if (!point.time.isAfter(lastPoint.time)) {
-                updateAndPersist(current.withDroppedLocation(accuracy, point.time))
+                updateAndPersist(current.withDroppedLocation(accuracy, point.time, ActivityGpsStatus.FIX))
                 return
             }
 
@@ -292,26 +453,60 @@ class ActivityRecordingController @Inject constructor(
                 .coerceAtLeast(0L)
             val distanceMeters = lastPoint.distanceMetersTo(point)
             if (
-                distanceMeters < current.minimumSampleDistanceMeters() ||
-                elapsedMillis < MinSampleIntervalMillis
+                distanceMeters < current.minimumSampleDistanceMeters(recordingPreferences) ||
+                elapsedMillis < recordingPreferences.recordingTimeIntervalMillis.toLong()
             ) {
-                updateAndPersist(current.withLocationMetadata(accuracy, point.time))
+                updateAndPersist(
+                    current.withLocationMetadata(
+                        accuracyMeters = accuracy,
+                        locationTime = point.time,
+                        gpsStatus = ActivityGpsStatus.FIX,
+                        recordingPreferences = recordingPreferences,
+                    ).copy(latestUiPoint = point)
+                )
                 return
             }
-            if (isImplausibleJump(lastPoint, point, distanceMeters, elapsedMillis, accuracy)) {
-                updateAndPersist(current.withDroppedLocation(accuracy, point.time))
-                return
+            val startsNewRouteSegment = recordingPreferences.routeGapMeters
+                ?.let { distanceMeters > it.toDouble() }
+                ?: false
+            if (startsNewRouteSegment) {
+                routeBreakIndexes = routeBreakIndexes + current.points.size
+            } else {
+                if (isImplausibleJump(lastPoint, point, distanceMeters, elapsedMillis, accuracy)) {
+                    updateAndPersist(current.withDroppedLocation(accuracy, point.time, ActivityGpsStatus.FIX))
+                    return
+                }
+                distanceIncrement = distanceMeters
+                elevationIncrement = lastPoint.elevationGainMetersTo(point)
+                elevationLossIncrement = lastPoint.elevationLossMetersTo(point)
+                currentSpeedMetersPerSecond = distanceMeters / (elapsedMillis / 1_000.0)
+                if (current.autoIdleEnabled) {
+                    val idleStartedAt = lastMovementAt.plusMillis(current.autoIdleTimeoutMillis)
+                    if (point.time.isAfter(idleStartedAt)) {
+                        totalIdleMillis += Duration.between(idleStartedAt, point.time)
+                            .toMillis()
+                            .coerceAtLeast(0L)
+                    }
+                }
+                lastMovementAt = point.time
             }
-
-            distanceIncrement = distanceMeters
-            elevationIncrement = lastPoint.elevationGainMetersTo(point)
         }
 
         updateAndPersist(
             current.copy(
                 points = current.points + point,
+                routeBreakIndexes = routeBreakIndexes,
+                latestUiPoint = point,
                 distanceMeters = current.distanceMeters + distanceIncrement,
                 elevationGainedMeters = current.elevationGainedMeters + elevationIncrement,
+                elevationLostMeters = current.elevationLostMeters + elevationLossIncrement,
+                currentSpeedMetersPerSecond = currentSpeedMetersPerSecond,
+                maxSpeedMetersPerSecond = maxOf(current.maxSpeedMetersPerSecond, currentSpeedMetersPerSecond),
+                gpsStatus = ActivityGpsStatus.FIX,
+                autoIdleEnabled = recordingPreferences.autoIdleEnabled,
+                autoIdleTimeoutMillis = recordingPreferences.autoIdleTimeoutSeconds * 1_000L,
+                lastMovementAt = lastMovementAt,
+                totalIdleMillis = totalIdleMillis,
                 lastAccuracyMeters = accuracy,
                 lastLocationTime = point.time,
                 errorMessage = null,
@@ -339,8 +534,86 @@ class ActivityRecordingController @Inject constructor(
         updateAndPersist(_state.value.copy(errorMessage = message))
     }
 
+    fun reportGpsDisabled() {
+        val current = _state.value
+        if (!current.isActive || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        updateAndPersist(current.copy(gpsStatus = ActivityGpsStatus.DISABLED))
+    }
+
+    fun reportGpsLost() {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RECORDING || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        updateAndPersist(current.copy(gpsStatus = ActivityGpsStatus.LOST))
+    }
+
+    fun acceptBarometerPressure(pressureHpa: Float) {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RECORDING || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        if (!preferencesRepository.activityRecordingPreferences().barometerClimbEnabled) return
+
+        val altitudeMeters = android.hardware.SensorManager.getAltitude(
+            android.hardware.SensorManager.PRESSURE_STANDARD_ATMOSPHERE,
+            pressureHpa,
+        ).toDouble()
+        val smoothedAltitude = current.lastBarometerAltitudeMeters?.let { previous ->
+            previous + ((altitudeMeters - previous) * BarometerSmoothingAlpha)
+        } ?: altitudeMeters
+        val previousAltitude = current.lastBarometerAltitudeMeters
+        if (previousAltitude == null) {
+            updateAndPersist(
+                current.copy(
+                    hasBarometerElevation = true,
+                    lastBarometerAltitudeMeters = smoothedAltitude,
+                )
+            )
+            return
+        }
+
+        val delta = smoothedAltitude - previousAltitude
+        val gainedMeters = if (delta >= MinBarometerElevationStepMeters) delta else 0.0
+        val lostMeters = if (delta <= -MinBarometerElevationStepMeters) -delta else 0.0
+        updateAndPersist(
+            current.copy(
+                hasBarometerElevation = true,
+                barometerElevationGainedMeters = current.barometerElevationGainedMeters + gainedMeters,
+                barometerElevationLostMeters = current.barometerElevationLostMeters + lostMeters,
+                lastBarometerAltitudeMeters = if (gainedMeters > 0.0 || lostMeters > 0.0) {
+                    smoothedAltitude
+                } else {
+                    previousAltitude
+                },
+            )
+        )
+    }
+
+    private fun updateGpsStatus(location: Location) {
+        val current = _state.value
+        if (current.status != ActivityRecordingStatus.RECORDING || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
+        val recordingPreferences = preferencesRepository.activityRecordingPreferences()
+        val fixQuality = location.activityGpsFixQuality(
+            startTime = current.startTime,
+            requiredAccuracyMeters = recordingPreferences.requiredGpsAccuracyMeters.toDouble(),
+        )
+        val gpsStatus = when {
+            fixQuality.isPrecise -> ActivityGpsStatus.FIX
+            fixQuality.accuracyMeters == null -> ActivityGpsStatus.WAITING_FOR_FIX
+            else -> ActivityGpsStatus.POOR_ACCURACY
+        }
+        updateAndPersist(
+            current.copy(
+                gpsStatus = gpsStatus,
+                latestUiPoint = fixQuality.locationTime?.let { location.toRoutePoint(it) } ?: current.latestUiPoint,
+                autoIdleEnabled = recordingPreferences.autoIdleEnabled,
+                autoIdleTimeoutMillis = recordingPreferences.autoIdleTimeoutSeconds * 1_000L,
+                lastAccuracyMeters = fixQuality.accuracyMeters ?: current.lastAccuracyMeters,
+                lastLocationTime = fixQuality.locationTime ?: current.lastLocationTime,
+            )
+        )
+    }
+
     private fun clearRecording() {
         persistenceScope.coroutineContext.cancelChildren()
+        recordingGeneration += 1
         _state.value = ActivityRecordingState()
         recordingStore.clear()
     }
@@ -366,6 +639,16 @@ class ActivityRecordingController @Inject constructor(
 
     private fun stopRecordingService() {
         context.stopService(Intent(context, ActivityRecordingService::class.java))
+    }
+
+    private fun Location.withMslAltitude(): Location {
+        val converted = Location(this)
+        val converter = altitudeConverter ?: return converted
+        if (!converted.hasAltitude()) return converted
+        runCatching {
+            converter.addMslAltitudeToLocation(context, converted)
+        }
+        return converted
     }
 
     companion object {
@@ -462,7 +745,60 @@ fun ActivityRecordingState.movingDuration(now: Instant = Instant.now()): Duratio
         ?.let { Duration.between(it, now).toMillis().coerceAtLeast(0L) }
         ?: 0L
     val pausedMillis = totalPausedMillis + openPauseMillis
-    return Duration.ofMillis((elapsedMillis - pausedMillis).coerceAtLeast(0L))
+    val idleMillis = totalIdleMillis + openIdleMillis(now)
+    return Duration.ofMillis((elapsedMillis - pausedMillis - idleMillis).coerceAtLeast(0L))
+}
+
+fun ActivityRecordingState.displayElevationGainedMeters(): Double =
+    if (hasBarometerElevation) barometerElevationGainedMeters else elevationGainedMeters
+
+fun ActivityRecordingState.closedManualLaps(endTime: Instant): List<ActivityRecordingLap> {
+    if (manualLaps.isEmpty()) return emptyList()
+    val openStart = manualLaps.maxByOrNull { it.endTime }?.endTime ?: startTime ?: return manualLaps
+    val finalLap = if (openStart.isBefore(endTime)) {
+        ActivityRecordingLap(
+            startTime = openStart,
+            endTime = endTime,
+            distanceMeters = activityRecordingRouteDistanceMeters(
+                points = points,
+                routeBreakIndexes = routeBreakIndexes,
+                startTime = openStart,
+                endTime = endTime,
+            ).takeIf { it > 0.0 },
+        )
+    } else {
+        null
+    }
+    return manualLaps + listOfNotNull(finalLap)
+}
+
+fun ActivityRecordingState.effectiveCurrentSpeedMetersPerSecond(now: Instant = Instant.now()): Double =
+    if (
+        status != ActivityRecordingStatus.RECORDING ||
+        isAutoIdle(now) ||
+        gpsStatus == ActivityGpsStatus.POOR_ACCURACY ||
+        gpsStatus == ActivityGpsStatus.LOST ||
+        gpsStatus == ActivityGpsStatus.DISABLED
+    ) {
+        0.0
+    } else {
+        currentSpeedMetersPerSecond
+    }
+
+fun ActivityRecordingState.isAutoIdle(now: Instant = Instant.now()): Boolean =
+    status == ActivityRecordingStatus.RECORDING &&
+        autoIdleEnabled &&
+        lastMovementAt?.plusMillis(autoIdleTimeoutMillis)?.let { !now.isBefore(it) } == true
+
+private fun ActivityRecordingState.openIdleMillis(now: Instant): Long {
+    if (status != ActivityRecordingStatus.RECORDING || !autoIdleEnabled) return 0L
+    val movementAt = lastMovementAt ?: return 0L
+    val idleStartedAt = movementAt.plusMillis(autoIdleTimeoutMillis)
+    return if (now.isAfter(idleStartedAt)) {
+        Duration.between(idleStartedAt, now).toMillis().coerceAtLeast(0L)
+    } else {
+        0L
+    }
 }
 
 private fun Location.toRoutePoint(timeOverride: Instant? = null): ExerciseRoutePoint =
@@ -470,14 +806,29 @@ private fun Location.toRoutePoint(timeOverride: Instant? = null): ExerciseRouteP
         time = timeOverride ?: Instant.ofEpochMilli(time.takeIf { it > 0L } ?: System.currentTimeMillis()),
         latitude = latitude,
         longitude = longitude,
-        altitudeMeters = if (hasAltitude()) altitude else null,
+        altitudeMeters = mslAltitudeMetersOrNull() ?: if (hasAltitude()) altitude else null,
         horizontalAccuracyMeters = if (hasAccuracy()) accuracy.toDouble() else null,
-        verticalAccuracyMeters = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && hasVerticalAccuracy()) {
-            verticalAccuracyMeters.toDouble()
-        } else {
-            null
-        },
+        verticalAccuracyMeters = mslAltitudeAccuracyMetersOrNull()
+            ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && hasVerticalAccuracy()) {
+                verticalAccuracyMeters.toDouble()
+            } else {
+                null
+            },
     )
+
+private fun Location.mslAltitudeMetersOrNull(): Double? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && hasMslAltitude()) {
+        mslAltitudeMeters
+    } else {
+        null
+    }
+
+private fun Location.mslAltitudeAccuracyMetersOrNull(): Double? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && hasMslAltitudeAccuracy()) {
+        mslAltitudeAccuracyMeters.toDouble()
+    } else {
+        null
+    }
 
 data class ActivityGpsFixQuality(
     val isPrecise: Boolean,
@@ -488,12 +839,13 @@ data class ActivityGpsFixQuality(
 fun Location.activityGpsFixQuality(
     startTime: Instant? = null,
     now: Instant = Instant.now(),
+    requiredAccuracyMeters: Double = ActivityRecordingPreferences.DefaultRequiredGpsAccuracyMeters.toDouble(),
 ): ActivityGpsFixQuality {
     val accuracy = if (hasAccuracy()) accuracy.toDouble() else null
     val locationTime = Instant.ofEpochMilli(time.takeIf { it > 0L } ?: System.currentTimeMillis())
     val isPrecise = provider == LocationManager.GPS_PROVIDER &&
         accuracy != null &&
-        accuracy <= MaxAcceptedAccuracyMeters &&
+        accuracy <= requiredAccuracyMeters &&
         locationAgeMillis() <= MaxLocationAgeMillis &&
         startTime?.let { locationTime.isAfter(it) } != false &&
         !locationTime.isAfter(now.plusSeconds(MaxLocationFutureSkewSeconds))
@@ -515,8 +867,10 @@ private fun Location.locationAgeMillis(): Long =
 private fun ActivityRecordingState.withDroppedLocation(
     accuracyMeters: Double?,
     locationTime: Instant? = null,
+    gpsStatus: ActivityGpsStatus = this.gpsStatus,
 ): ActivityRecordingState =
     copy(
+        gpsStatus = gpsStatus,
         lastAccuracyMeters = accuracyMeters ?: lastAccuracyMeters,
         lastLocationTime = locationTime ?: lastLocationTime,
         droppedPointCount = droppedPointCount + 1,
@@ -525,8 +879,13 @@ private fun ActivityRecordingState.withDroppedLocation(
 private fun ActivityRecordingState.withLocationMetadata(
     accuracyMeters: Double?,
     locationTime: Instant,
+    gpsStatus: ActivityGpsStatus = this.gpsStatus,
+    recordingPreferences: ActivityRecordingPreferences? = null,
 ): ActivityRecordingState =
     copy(
+        gpsStatus = gpsStatus,
+        autoIdleEnabled = recordingPreferences?.autoIdleEnabled ?: autoIdleEnabled,
+        autoIdleTimeoutMillis = recordingPreferences?.autoIdleTimeoutSeconds?.times(1_000L) ?: autoIdleTimeoutMillis,
         lastAccuracyMeters = accuracyMeters ?: lastAccuracyMeters,
         lastLocationTime = locationTime,
         errorMessage = null,
@@ -546,8 +905,18 @@ private fun ExerciseRoutePoint.elevationGainMetersTo(other: ExerciseRoutePoint):
         ?: 0.0
 }
 
-private fun ActivityRecordingState.minimumSampleDistanceMeters(): Double =
-    when (exerciseType) {
+private fun ExerciseRoutePoint.elevationLossMetersTo(other: ExerciseRoutePoint): Double {
+    val startAltitude = altitudeMeters ?: return 0.0
+    val endAltitude = other.altitudeMeters ?: return 0.0
+    return (startAltitude - endAltitude)
+        .takeIf { it >= MinElevationGainIncrementMeters }
+        ?: 0.0
+}
+
+private fun ActivityRecordingState.minimumSampleDistanceMeters(
+    recordingPreferences: ActivityRecordingPreferences,
+): Double =
+    recordingPreferences.recordingDistanceIntervalMeters?.toDouble() ?: when (exerciseType) {
         ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
         ExerciseSessionRecord.EXERCISE_TYPE_SKIING,
         ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING,
@@ -594,8 +963,33 @@ private fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         totalPausedMillis = getLong(KeyTotalPausedMillis, 0L),
         pauseIntervals = getString(KeyPauseIntervals, null).orEmpty().decodePauseIntervals(),
         points = getString(KeyPoints, null).orEmpty().decodeRoutePoints(),
+        routeBreakIndexes = getString(KeyRouteBreakIndexes, null).orEmpty().decodeIntList(),
+        manualLaps = getString(KeyManualLaps, null).orEmpty().decodeRecordingLaps(),
+        markers = getString(KeyMarkers, null).orEmpty().decodeRecordingMarkers(),
         distanceMeters = getFloat(KeyDistanceMeters, 0f).toDouble(),
         elevationGainedMeters = getFloat(KeyElevationMeters, 0f).toDouble(),
+        elevationLostMeters = getFloat(KeyElevationLostMeters, 0f).toDouble(),
+        barometerElevationGainedMeters = getFloat(KeyBarometerElevationGainedMeters, 0f).toDouble(),
+        barometerElevationLostMeters = getFloat(KeyBarometerElevationLostMeters, 0f).toDouble(),
+        hasBarometerElevation = getBoolean(KeyHasBarometerElevation, false),
+        lastBarometerAltitudeMeters = getFloat(KeyLastBarometerAltitudeMeters, MissingFloat)
+            .takeIf { it != MissingFloat }
+            ?.toDouble(),
+        currentSpeedMetersPerSecond = getFloat(KeyCurrentSpeedMetersPerSecond, 0f).toDouble(),
+        maxSpeedMetersPerSecond = getFloat(KeyMaxSpeedMetersPerSecond, 0f).toDouble(),
+        gpsStatus = getString(KeyGpsStatus, null)
+            ?.let { runCatching { ActivityGpsStatus.valueOf(it) }.getOrNull() }
+            ?: ActivityGpsStatus.WAITING_FOR_FIX,
+        autoIdleEnabled = getBoolean(
+            KeyAutoIdleEnabled,
+            ActivityRecordingPreferences.DefaultAutoIdleEnabled,
+        ),
+        autoIdleTimeoutMillis = getLong(
+            KeyAutoIdleTimeoutMillis,
+            ActivityRecordingPreferences.DefaultAutoIdleTimeoutSeconds * 1_000L,
+        ),
+        lastMovementAt = getLong(KeyLastMovementAt, MissingLong).toInstantOrNull(),
+        totalIdleMillis = getLong(KeyTotalIdleMillis, 0L),
         repetitionCount = getLong(KeyRepetitionCount, 0L),
         lastAccuracyMeters = getFloat(KeyLastAccuracyMeters, MissingFloat)
             .takeIf { it != MissingFloat }
@@ -617,8 +1011,23 @@ private fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSta
         .putLong(KeyPausedStartedAt, state.pausedStartedAt?.toEpochMilli() ?: MissingLong)
         .putLong(KeyTotalPausedMillis, state.totalPausedMillis)
         .putString(KeyPauseIntervals, state.pauseIntervals.encodePauseIntervals())
+        .putString(KeyRouteBreakIndexes, state.routeBreakIndexes.encodeIntList())
+        .putString(KeyManualLaps, state.manualLaps.encodeRecordingLaps())
+        .putString(KeyMarkers, state.markers.encodeRecordingMarkers())
         .putFloat(KeyDistanceMeters, state.distanceMeters.toFloat())
         .putFloat(KeyElevationMeters, state.elevationGainedMeters.toFloat())
+        .putFloat(KeyElevationLostMeters, state.elevationLostMeters.toFloat())
+        .putFloat(KeyBarometerElevationGainedMeters, state.barometerElevationGainedMeters.toFloat())
+        .putFloat(KeyBarometerElevationLostMeters, state.barometerElevationLostMeters.toFloat())
+        .putBoolean(KeyHasBarometerElevation, state.hasBarometerElevation)
+        .putFloat(KeyLastBarometerAltitudeMeters, state.lastBarometerAltitudeMeters?.toFloat() ?: MissingFloat)
+        .putFloat(KeyCurrentSpeedMetersPerSecond, state.currentSpeedMetersPerSecond.toFloat())
+        .putFloat(KeyMaxSpeedMetersPerSecond, state.maxSpeedMetersPerSecond.toFloat())
+        .putString(KeyGpsStatus, state.gpsStatus.name)
+        .putBoolean(KeyAutoIdleEnabled, state.autoIdleEnabled)
+        .putLong(KeyAutoIdleTimeoutMillis, state.autoIdleTimeoutMillis)
+        .putLong(KeyLastMovementAt, state.lastMovementAt?.toEpochMilli() ?: MissingLong)
+        .putLong(KeyTotalIdleMillis, state.totalIdleMillis)
         .putLong(KeyRepetitionCount, state.repetitionCount)
         .putFloat(KeyLastAccuracyMeters, state.lastAccuracyMeters?.toFloat() ?: MissingFloat)
         .putLong(KeyLastLocationTime, state.lastLocationTime?.toEpochMilli() ?: MissingLong)
@@ -648,6 +1057,79 @@ private fun String.decodePauseIntervals(): List<ActivityPauseInterval> =
                 .takeIf { it.startTime.isBefore(it.endTime) }
         }
         .toList()
+
+private fun List<ActivityRecordingLap>.encodeRecordingLaps(): String =
+    joinToString(separator = "\n") { lap ->
+        listOf(
+            lap.startTime.toEpochMilli().toString(),
+            lap.endTime.toEpochMilli().toString(),
+            lap.distanceMeters?.toString().orEmpty(),
+        ).joinToString(separator = ",")
+    }
+
+private fun String.decodeRecordingLaps(): List<ActivityRecordingLap> =
+    lineSequence()
+        .mapNotNull { line ->
+            val parts = line.split(',')
+            if (parts.size < 3) return@mapNotNull null
+            val startTime = parts[0].toLongOrNull()?.let(Instant::ofEpochMilli) ?: return@mapNotNull null
+            val endTime = parts[1].toLongOrNull()?.let(Instant::ofEpochMilli) ?: return@mapNotNull null
+            ActivityRecordingLap(
+                startTime = startTime,
+                endTime = endTime,
+                distanceMeters = parts[2].toDoubleOrNull(),
+            ).takeIf { it.startTime.isBefore(it.endTime) }
+        }
+        .toList()
+
+private fun List<ActivityRecordingMarker>.encodeRecordingMarkers(): String =
+    joinToString(separator = "\n") { marker ->
+        listOf(
+            marker.id,
+            marker.time.toEpochMilli().toString(),
+            marker.latitude.toString(),
+            marker.longitude.toString(),
+            marker.altitudeMeters?.toString().orEmpty(),
+            marker.name.encodeCompactText(),
+            marker.note.encodeCompactText(),
+            marker.type.encodeCompactText(),
+        ).joinToString(separator = ",")
+    }
+
+private fun String.decodeRecordingMarkers(): List<ActivityRecordingMarker> =
+    lineSequence()
+        .mapNotNull { line ->
+            val parts = line.split(',')
+            if (parts.size < 8) return@mapNotNull null
+            ActivityRecordingMarker(
+                id = parts[0].takeIf { it.isNotBlank() } ?: return@mapNotNull null,
+                time = parts[1].toLongOrNull()?.let(Instant::ofEpochMilli) ?: return@mapNotNull null,
+                latitude = parts[2].toDoubleOrNull() ?: return@mapNotNull null,
+                longitude = parts[3].toDoubleOrNull() ?: return@mapNotNull null,
+                altitudeMeters = parts[4].toDoubleOrNull(),
+                name = parts[5].decodeCompactText().ifBlank { "Marker" },
+                note = parts[6].decodeCompactText(),
+                type = parts[7].decodeCompactText().ifBlank { ActivityRecordingMarkerType.Generic.value },
+            )
+        }
+        .toList()
+
+private fun String.encodeCompactText(): String =
+    Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(toByteArray(StandardCharsets.UTF_8))
+
+private fun String.decodeCompactText(): String =
+    runCatching {
+        String(Base64.getUrlDecoder().decode(this), StandardCharsets.UTF_8)
+    }.getOrDefault("")
+
+private fun List<Int>.encodeIntList(): String =
+    joinToString(separator = ",")
+
+private fun String.decodeIntList(): List<Int> =
+    split(',')
+        .mapNotNull { value -> value.toIntOrNull()?.takeIf { it > 0 } }
 
 private fun List<ExerciseRoutePoint>.encodeRoutePoints(): String =
     joinToString(separator = "\n") { point -> point.encodeRoutePoint() }
@@ -686,12 +1168,13 @@ private fun Long.toInstantOrNull(): Instant? =
 
 private const val RecordingPreferencesName = "activity_recording"
 private const val RecordingRoutePointsFileName = "activity_recording_points.csv"
-private const val MaxAcceptedAccuracyMeters = 30.0
 private const val MaxLocationAgeMillis = 10_000L
 private const val MaxLocationFutureSkewSeconds = 5L
 private const val MaxPlausibleSpeedMetersPerSecond = 55.0
 private const val MinSampleIntervalMillis = 500L
 private const val MinElevationGainIncrementMeters = 1.0
+private const val BarometerSmoothingAlpha = 0.3
+private const val MinBarometerElevationStepMeters = 3.0
 private const val MissingInt = Int.MIN_VALUE
 private const val MissingLong = Long.MIN_VALUE
 private const val MissingFloat = -1f
@@ -705,8 +1188,23 @@ private const val KeyPausedStartedAt = "paused_started_at"
 private const val KeyTotalPausedMillis = "total_paused_millis"
 private const val KeyPauseIntervals = "pause_intervals"
 private const val KeyPoints = "points"
+private const val KeyRouteBreakIndexes = "route_break_indexes"
+private const val KeyManualLaps = "manual_laps"
+private const val KeyMarkers = "markers"
 private const val KeyDistanceMeters = "distance_meters"
 private const val KeyElevationMeters = "elevation_meters"
+private const val KeyElevationLostMeters = "elevation_lost_meters"
+private const val KeyBarometerElevationGainedMeters = "barometer_elevation_gained_meters"
+private const val KeyBarometerElevationLostMeters = "barometer_elevation_lost_meters"
+private const val KeyHasBarometerElevation = "has_barometer_elevation"
+private const val KeyLastBarometerAltitudeMeters = "last_barometer_altitude_meters"
+private const val KeyCurrentSpeedMetersPerSecond = "current_speed_meters_per_second"
+private const val KeyMaxSpeedMetersPerSecond = "max_speed_meters_per_second"
+private const val KeyGpsStatus = "gps_status"
+private const val KeyAutoIdleEnabled = "auto_idle_enabled"
+private const val KeyAutoIdleTimeoutMillis = "auto_idle_timeout_millis"
+private const val KeyLastMovementAt = "last_movement_at"
+private const val KeyTotalIdleMillis = "total_idle_millis"
 private const val KeyRepetitionCount = "repetition_count"
 private const val KeyLastAccuracyMeters = "last_accuracy_meters"
 private const val KeyLastLocationTime = "last_location_time"

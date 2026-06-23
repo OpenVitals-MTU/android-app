@@ -69,6 +69,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -418,6 +419,316 @@ internal fun FavoriteActivityDropdown(
                     onClick = {
                         expanded = false
                         onSelect(activityType.exerciseType)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ActivityRecordingPreferencesCard(
+    preferences: ActivityRecordingPreferences,
+    onChange: (ActivityRecordingPreferences) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_activity_recording_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.settings_activity_recording_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_auto_idle_title),
+                body = stringResource(R.string.settings_activity_recording_auto_idle_body),
+                checked = preferences.autoIdleEnabled,
+                onCheckedChange = { enabled -> onChange(preferences.copy(autoIdleEnabled = enabled)) },
+            )
+
+            ActivityRecordingSegmentedChoice(
+                title = stringResource(R.string.settings_activity_recording_idle_timeout_title),
+                options = listOf(5, 10, 30, 60),
+                selected = preferences.autoIdleTimeoutSeconds,
+                enabled = preferences.autoIdleEnabled,
+                label = { seconds -> stringResource(R.string.settings_activity_recording_seconds, seconds) },
+                onSelect = { seconds -> onChange(preferences.copy(autoIdleTimeoutSeconds = seconds)) },
+            )
+
+            ActivityRecordingSegmentedChoice(
+                title = stringResource(R.string.settings_activity_recording_accuracy_title),
+                options = ActivityRecordingPreferences.AllowedGpsAccuracyMeters,
+                selected = preferences.requiredGpsAccuracyMeters,
+                label = { meters -> stringResource(R.string.settings_activity_recording_meters, meters) },
+                onSelect = { meters -> onChange(preferences.copy(requiredGpsAccuracyMeters = meters)) },
+            )
+
+            ActivityRecordingRouteGapChoice(
+                selected = preferences.routeGapMeters,
+                onSelect = { meters -> onChange(preferences.copy(routeGapMeters = meters)) },
+            )
+
+            ActivityRecordingTimeIntervalChoice(
+                selected = preferences.recordingTimeIntervalMillis,
+                onSelect = { millis -> onChange(preferences.copy(recordingTimeIntervalMillis = millis)) },
+            )
+
+            ActivityRecordingDistanceIntervalChoice(
+                selected = preferences.recordingDistanceIntervalMeters,
+                onSelect = { meters -> onChange(preferences.copy(recordingDistanceIntervalMeters = meters)) },
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_barometer_title),
+                body = stringResource(R.string.settings_activity_recording_barometer_body),
+                checked = preferences.barometerClimbEnabled,
+                onCheckedChange = { enabled -> onChange(preferences.copy(barometerClimbEnabled = enabled)) },
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_voice_title),
+                body = stringResource(R.string.settings_activity_recording_voice_body),
+                checked = preferences.voiceAnnouncementsEnabled,
+                onCheckedChange = { enabled -> onChange(preferences.copy(voiceAnnouncementsEnabled = enabled)) },
+            )
+
+            ActivityRecordingNullableChoice(
+                title = stringResource(R.string.settings_activity_recording_voice_time_title),
+                options = ActivityRecordingPreferences.AllowedVoiceAnnouncementTimeIntervalMinutes,
+                selected = preferences.voiceAnnouncementTimeIntervalMinutes,
+                enabled = preferences.voiceAnnouncementsEnabled,
+                label = { minutes -> stringResource(R.string.activity_entry_recording_split_minutes, minutes) },
+                onSelect = { minutes -> onChange(preferences.copy(voiceAnnouncementTimeIntervalMinutes = minutes)) },
+            )
+
+            ActivityRecordingNullableChoice(
+                title = stringResource(R.string.settings_activity_recording_voice_distance_title),
+                options = ActivityRecordingPreferences.AllowedVoiceAnnouncementDistanceIntervalMeters,
+                selected = preferences.voiceAnnouncementDistanceIntervalMeters,
+                enabled = preferences.voiceAnnouncementsEnabled,
+                label = { meters -> stringResource(R.string.settings_activity_recording_meters, meters) },
+                onSelect = { meters -> onChange(preferences.copy(voiceAnnouncementDistanceIntervalMeters = meters)) },
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_voice_idle_title),
+                body = stringResource(R.string.settings_activity_recording_voice_idle_body),
+                checked = preferences.voiceIdleAnnouncementsEnabled,
+                onCheckedChange = { enabled -> onChange(preferences.copy(voiceIdleAnnouncementsEnabled = enabled)) },
+                modifier = Modifier.padding(start = 8.dp),
+            )
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_voice_lap_title),
+                body = stringResource(R.string.settings_activity_recording_voice_lap_body),
+                checked = preferences.voiceLapAnnouncementsEnabled,
+                onCheckedChange = { enabled -> onChange(preferences.copy(voiceLapAnnouncementsEnabled = enabled)) },
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    title: String,
+    body: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.padding(start = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun ActivityRecordingSegmentedChoice(
+    title: String,
+    options: List<Int>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    label: @Composable (Int) -> String,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        ) {
+            options.forEachIndexed { index, value ->
+                SegmentedButton(
+                    selected = selected == value,
+                    enabled = enabled,
+                    onClick = { onSelect(value) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = options.size,
+                    ),
+                    label = { Text(label(value)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityRecordingRouteGapChoice(
+    selected: Int?,
+    onSelect: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val options = listOf<Int?>(100, 200, 500, null)
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.settings_activity_recording_route_gap_title),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        ) {
+            options.forEachIndexed { index, value ->
+                SegmentedButton(
+                    selected = selected == value,
+                    onClick = { onSelect(value) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = options.size,
+                    ),
+                    label = {
+                        Text(
+                            if (value == null) {
+                                stringResource(R.string.settings_activity_recording_off)
+                            } else {
+                                stringResource(R.string.settings_activity_recording_meters, value)
+                            }
+                        )
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityRecordingTimeIntervalChoice(
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ActivityRecordingSegmentedChoice(
+        title = stringResource(R.string.settings_activity_recording_time_interval_title),
+        options = ActivityRecordingPreferences.AllowedRecordingTimeIntervalMillis,
+        selected = selected,
+        onSelect = onSelect,
+        modifier = modifier,
+        label = { millis ->
+            if (millis == 500) {
+                stringResource(R.string.settings_activity_recording_half_second)
+            } else {
+                stringResource(R.string.settings_activity_recording_seconds, millis / 1_000)
+            }
+        },
+    )
+}
+
+@Composable
+private fun ActivityRecordingDistanceIntervalChoice(
+    selected: Int?,
+    onSelect: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ActivityRecordingNullableChoice(
+        title = stringResource(R.string.settings_activity_recording_distance_interval_title),
+        options = ActivityRecordingPreferences.AllowedRecordingDistanceIntervalMeters,
+        selected = selected,
+        onSelect = onSelect,
+        modifier = modifier,
+        label = { meters -> stringResource(R.string.settings_activity_recording_meters, meters) },
+        offLabel = stringResource(R.string.settings_activity_recording_auto),
+    )
+}
+
+@Composable
+private fun ActivityRecordingNullableChoice(
+    title: String,
+    options: List<Int>,
+    selected: Int?,
+    onSelect: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    offLabel: String = stringResource(R.string.settings_activity_recording_off),
+    label: @Composable (Int) -> String,
+) {
+    val allOptions = options.map<Int, Int?> { it } + null
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        ) {
+            allOptions.forEachIndexed { index, value ->
+                SegmentedButton(
+                    selected = selected == value,
+                    enabled = enabled,
+                    onClick = { onSelect(value) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = allOptions.size,
+                    ),
+                    label = {
+                        Text(if (value == null) offLabel else label(value))
                     },
                 )
             }

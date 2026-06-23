@@ -15,9 +15,12 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 @Composable
 internal fun RoutePreview(
     points: List<ExerciseRoutePoint>,
+    routeBreakIndexes: List<Int> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
-    val routeGeometry = remember(points) { points.toRoutePreviewGeometry() }
+    val routeGeometry = remember(points, routeBreakIndexes) {
+        points.toRoutePreviewGeometry(routeBreakIndexes)
+    }
     val routeColor = WorkoutColor
     val startColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     val endColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
@@ -42,20 +45,26 @@ internal fun RoutePreview(
             return Offset(x, y)
         }
 
-        val projected = routeGeometry.points.map(::project)
-        projected.zipWithNext().forEach { (start, end) ->
-            drawLine(
-                color = routeColor,
-                start = start,
-                end = end,
-                strokeWidth = 4.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
+        val projectedSegments = routeGeometry.segments.map { segment -> segment.map(::project) }
+        projectedSegments.forEach { projected ->
+            projected.zipWithNext().forEach { (start, end) ->
+                drawLine(
+                    color = routeColor,
+                    start = start,
+                    end = end,
+                    strokeWidth = 4.dp.toPx(),
+                    cap = StrokeCap.Round,
+                )
+            }
         }
 
         val markerRadius = 6.dp.toPx()
-        drawCircle(color = startColor, radius = markerRadius, center = projected.first())
-        drawCircle(color = endColor, radius = markerRadius, center = projected.last())
+        projectedSegments.firstOrNull()?.firstOrNull()?.let { start ->
+            drawCircle(color = startColor, radius = markerRadius, center = start)
+        }
+        projectedSegments.lastOrNull()?.lastOrNull()?.let { end ->
+            drawCircle(color = endColor, radius = markerRadius, center = end)
+        }
         drawRoundRect(
             color = borderColor,
             style = Stroke(width = 1.dp.toPx()),
@@ -66,17 +75,19 @@ internal fun RoutePreview(
 
 private data class RoutePreviewGeometry(
     val points: List<ExerciseRoutePoint>,
+    val segments: List<List<ExerciseRoutePoint>>,
     val maxLatitude: Double,
     val minLongitude: Double,
     val longitudeSpan: Double,
     val latitudeSpan: Double,
 )
 
-private fun List<ExerciseRoutePoint>.toRoutePreviewGeometry(): RoutePreviewGeometry {
+private fun List<ExerciseRoutePoint>.toRoutePreviewGeometry(routeBreakIndexes: List<Int>): RoutePreviewGeometry {
     val orderedPoints = sortedBy { it.time }
     if (orderedPoints.isEmpty()) {
         return RoutePreviewGeometry(
             points = emptyList(),
+            segments = emptyList(),
             maxLatitude = 0.0,
             minLongitude = 0.0,
             longitudeSpan = 1.0,
@@ -91,9 +102,26 @@ private fun List<ExerciseRoutePoint>.toRoutePreviewGeometry(): RoutePreviewGeome
     val latitudeSpan = (maxLatitude - minLatitude).takeIf { it > 0.0 } ?: 0.00001
     return RoutePreviewGeometry(
         points = orderedPoints,
+        segments = orderedPoints.toRouteSegments(routeBreakIndexes),
         maxLatitude = if (maxLatitude == minLatitude) maxLatitude + latitudeSpan / 2.0 else maxLatitude,
         minLongitude = if (maxLongitude == minLongitude) minLongitude - longitudeSpan / 2.0 else minLongitude,
         longitudeSpan = longitudeSpan,
         latitudeSpan = latitudeSpan,
     )
+}
+
+private fun List<ExerciseRoutePoint>.toRouteSegments(routeBreakIndexes: List<Int>): List<List<ExerciseRoutePoint>> {
+    if (isEmpty()) return emptyList()
+    val breakIndexes = routeBreakIndexes
+        .filter { it in 1 until size }
+        .toSet()
+    val segments = mutableListOf<MutableList<ExerciseRoutePoint>>()
+    forEachIndexed { index, point ->
+        if (index == 0 || index in breakIndexes) {
+            segments += mutableListOf(point)
+        } else {
+            segments.lastOrNull()?.add(point)
+        }
+    }
+    return segments
 }

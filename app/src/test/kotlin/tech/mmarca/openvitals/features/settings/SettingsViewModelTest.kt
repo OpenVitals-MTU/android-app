@@ -29,6 +29,7 @@ import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.util.MainDispatcherRule
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
 class SettingsViewModelTest {
 
@@ -134,6 +135,27 @@ class SettingsViewModelTest {
         assertEquals(ActivityWeekMode.LAST_7_DAYS, vm.uiState.value.activityWeekMode)
     }
 
+    @Test fun `updateActivityRecordingPreferences persists preference and updates ui state`() = runTest {
+        val prefs = prefs()
+        val vm = SettingsViewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+            appleHealthImportWorkController = importController(),
+        )
+        val recordingPreferences = ActivityRecordingPreferences(
+            autoIdleEnabled = false,
+            autoIdleTimeoutSeconds = 30,
+            requiredGpsAccuracyMeters = 50,
+            routeGapMeters = null,
+            barometerClimbEnabled = false,
+        )
+
+        vm.updateActivityRecordingPreferences(recordingPreferences)
+
+        verify { prefs.setActivityRecordingPreferences(recordingPreferences) }
+        assertEquals(recordingPreferences, vm.uiState.value.activityRecordingPreferences)
+    }
+
     @Test fun `setShowOpenVitalsCalculatedCalories persists preference and updates ui state`() = runTest {
         val prefs = prefs()
         val vm = SettingsViewModel(
@@ -207,12 +229,14 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
+            every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
             every { prefs.showOpenVitalsCalculatedCalories } returns false
             every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.appLanguage = any() } just runs
             every { prefs.appThemeMode = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
             every { prefs.activityWeekMode = any() } just runs
+            every { prefs.setActivityRecordingPreferences(any()) } just runs
             every { prefs.showOpenVitalsCalculatedCalories = any() } just runs
             every { prefs.favoriteActivityExerciseType = any() } just runs
         }

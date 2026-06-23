@@ -145,6 +145,10 @@ fun ActivityEntryScreen(
                     unitFormatter = unitFormatter,
                     onPauseRecording = viewModel::pauseGpsRecording,
                     onResumeRecording = viewModel::resumeGpsRecording,
+                    onAddLap = viewModel::addRecordingLap,
+                    onAddMarker = viewModel::addRecordingMarker,
+                    onUpdateMarker = viewModel::updateRecordingMarker,
+                    onDeleteMarker = viewModel::deleteRecordingMarker,
                     onAdjustRepetitionCount = viewModel::adjustRepetitionRecording,
                     onFinishRecording = {
                         viewModel.finishGpsRecording(unitFormatter.unitSystem())

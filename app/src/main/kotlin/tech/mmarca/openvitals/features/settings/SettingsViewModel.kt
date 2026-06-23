@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -44,6 +45,7 @@ data class SettingsUiState(
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
+    val activityRecordingPreferences: ActivityRecordingPreferences = ActivityRecordingPreferences(),
     val showOpenVitalsCalculatedCalories: Boolean = false,
     val favoriteActivityExerciseType: Int? = null,
 ) {
@@ -110,6 +112,7 @@ class SettingsViewModel @Inject constructor(
                 appThemeMode = preferencesRepository.appThemeMode,
                 sleepRangeMode = preferencesRepository.sleepRangeMode,
                 activityWeekMode = preferencesRepository.activityWeekMode,
+                activityRecordingPreferences = preferencesRepository.activityRecordingPreferences(),
                 showOpenVitalsCalculatedCalories = preferencesRepository.showOpenVitalsCalculatedCalories,
                 favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
             )
@@ -215,6 +218,12 @@ class SettingsViewModel @Inject constructor(
     fun selectActivityWeekMode(activityWeekMode: ActivityWeekMode) {
         preferencesRepository.activityWeekMode = activityWeekMode
         _uiState.value = _uiState.value.copy(activityWeekMode = activityWeekMode)
+    }
+
+    fun updateActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
+        val normalized = preferences.normalized()
+        preferencesRepository.setActivityRecordingPreferences(normalized)
+        _uiState.value = _uiState.value.copy(activityRecordingPreferences = normalized)
     }
 
     fun setShowOpenVitalsCalculatedCalories(enabled: Boolean) {

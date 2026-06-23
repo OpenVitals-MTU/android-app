@@ -69,6 +69,29 @@ data class ExerciseLapData(
     val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
 }
 
+data class ActivityRecordingLap(
+    val startTime: Instant,
+    val endTime: Instant,
+    val distanceMeters: Double?,
+) {
+    val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
+}
+
+data class ActivityRecordingMarker(
+    val id: String,
+    val time: Instant,
+    val latitude: Double,
+    val longitude: Double,
+    val altitudeMeters: Double?,
+    val name: String,
+    val note: String = "",
+    val type: String = ActivityRecordingMarkerType.Generic.value,
+)
+
+enum class ActivityRecordingMarkerType(val value: String) {
+    Generic("generic"),
+}
+
 data class ExerciseRouteData(
     val status: ExerciseRouteStatus = ExerciseRouteStatus.NO_DATA,
     val points: List<ExerciseRoutePoint> = emptyList(),
@@ -110,6 +133,7 @@ data class ActivityWriteRequest(
     val notes: String? = null,
     val routePoints: List<ExerciseRoutePoint> = emptyList(),
     val pauseIntervals: List<ActivityPauseInterval> = emptyList(),
+    val laps: List<ExerciseLapData> = emptyList(),
     val exerciseSegments: List<ActivityExerciseSegmentWrite> = emptyList(),
     val stepsCount: Long? = null,
     val distanceMeters: Double? = null,

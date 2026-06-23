@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseLap
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -571,6 +572,7 @@ internal class ActivityHealthReader(
             device = Device(type = Device.TYPE_PHONE),
         )
         val exerciseSegments = request.toExerciseSegments()
+        val exerciseLaps = request.toExerciseLaps()
         val session = request.toExerciseSessionRecord(sessionMetadata, exerciseSegments, zone)
         val extraRecords = request.toManualActivityMetricRecords(zone)
 
@@ -578,10 +580,14 @@ internal class ActivityHealthReader(
             TAG,
             "Writing activity entry type=${request.exerciseType} " +
                 "hasRoute=${request.routePoints.isNotEmpty()} pauses=${request.pauseIntervals.size} " +
-                "segments=${exerciseSegments.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
+                "segments=${exerciseSegments.size} laps=${exerciseLaps.size} " +
+                "extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
-        support.client().insertRecords(listOf(session) + extraRecords)
-        sessionClientRecordId
+        support.client()
+            .insertRecords(listOf(session) + extraRecords)
+            .recordIdsList
+            .firstOrNull()
+            ?: sessionClientRecordId
     }
 
     suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) = withContext(Dispatchers.IO) {
@@ -592,6 +598,7 @@ internal class ActivityHealthReader(
 
         val zone = ZoneId.systemDefault()
         val exerciseSegments = request.toExerciseSegments()
+        val exerciseLaps = request.toExerciseLaps()
         val session = request.toExerciseSessionRecord(
             metadata = Metadata.manualEntryWithId(
                 id = id,
@@ -606,7 +613,8 @@ internal class ActivityHealthReader(
             TAG,
             "Updating activity entry type=${request.exerciseType} " +
                 "hasRoute=${request.routePoints.isNotEmpty()} pauses=${request.pauseIntervals.size} " +
-                "segments=${exerciseSegments.size} extras=${extraRecords.size} ${support.diagnosticsSummary()}",
+                "segments=${exerciseSegments.size} laps=${exerciseLaps.size} " +
+                "extras=${extraRecords.size} ${support.diagnosticsSummary()}",
         )
         support.client().updateRecords(listOf(session))
         deleteManualActivityMetricRecords(existing.startTime, existing.endTime)
@@ -643,6 +651,7 @@ internal class ActivityHealthReader(
             title = title?.trim()?.takeIf { it.isNotBlank() },
             notes = notes?.trim()?.takeIf { it.isNotBlank() },
             segments = exerciseSegments,
+            laps = toExerciseLaps(),
             exerciseRoute = routePoints.toExerciseRouteOrNull(),
         )
 
@@ -788,6 +797,19 @@ internal class ActivityHealthReader(
         sortedSegments.zipWithNext { previous, next ->
             require(!previous.endTime.isAfter(next.startTime)) { "Exercise segments must not overlap." }
         }
+        val sortedLaps = request.laps.sortedBy { it.startTime }
+        sortedLaps.forEach { lap ->
+            require(lap.startTime.isBefore(lap.endTime)) { "Lap start must be before lap end." }
+            require(!lap.startTime.isBefore(request.startTime) && !lap.endTime.isAfter(request.endTime)) {
+                "Exercise laps must be inside the activity time range."
+            }
+            lap.lengthMeters?.let { meters ->
+                require(meters >= 0.0 && meters <= MaxActivityDistanceMeters) { "Lap length is out of range." }
+            }
+        }
+        sortedLaps.zipWithNext { previous, next ->
+            require(!previous.endTime.isAfter(next.startTime)) { "Exercise laps must not overlap." }
+        }
     }
 
     private fun List<ExerciseRoutePoint>.toExerciseRouteOrNull(): ExerciseRoute? {
@@ -875,6 +897,17 @@ internal fun ActivityWriteRequest.toExerciseSegments(): List<ExerciseSegment> {
         }
     }
 }
+
+internal fun ActivityWriteRequest.toExerciseLaps(): List<ExerciseLap> =
+    laps
+        .sortedBy { it.startTime }
+        .map { lap ->
+            ExerciseLap(
+                startTime = lap.startTime,
+                endTime = lap.endTime,
+                length = lap.lengthMeters?.meters,
+            )
+        }
 
 private fun ActivityExerciseSegmentWrite.toExerciseSegment(): ExerciseSegment =
     ExerciseSegment(

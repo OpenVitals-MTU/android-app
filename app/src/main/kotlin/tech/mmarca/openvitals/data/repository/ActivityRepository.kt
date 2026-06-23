@@ -39,6 +39,7 @@ class ActivityRepository @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
+    private val markerRepository: ActivityMarkerRepository? = null,
 ) {
 
     companion object {
@@ -430,6 +431,7 @@ class ActivityRepository @Inject constructor(
             throw SecurityException("Missing Health Connect activity write permission.")
         }
         hc.deleteActivityEntry(id)
+        markerRepository?.deleteMarkersForActivity(id)
         queryCache.invalidateOperations("dashboard")
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
@@ -103,6 +104,7 @@ fun ActivityDetailScreen(
         error != null -> ErrorMessage(message = error)
         workout != null -> ActivityDetailContent(
             workout = workout,
+            markers = state.markers,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditActivity = onEditActivity,
@@ -125,6 +127,7 @@ fun ActivityDetailScreen(
 @Composable
 private fun ActivityDetailContent(
     workout: ExerciseData,
+    markers: List<ActivityRecordingMarker>,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditActivity: (String) -> Unit,
@@ -209,6 +212,17 @@ private fun ActivityDetailContent(
                 onOpenRouteInMap = onOpenRouteInMap,
                 onSaveRouteAsGpx = onSaveRouteAsGpx,
                 onSaveRouteAsKmz = onSaveRouteAsKmz,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        item {
+            ActivityRouteAnalysisCard(
+                workout = workout,
+                markers = markers,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),

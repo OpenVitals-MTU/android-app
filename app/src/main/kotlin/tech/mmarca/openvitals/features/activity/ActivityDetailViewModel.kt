@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.navigation.ACTIVITY_DETAIL_ID_ARG
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class ActivityDetailUiState(
     val isLoading: Boolean = true,
     val workout: ExerciseData? = null,
+    val markers: List<ActivityRecordingMarker> = emptyList(),
     val error: String? = null,
 )
 
@@ -23,15 +26,18 @@ data class ActivityDetailUiState(
 class ActivityDetailViewModel(
     private val repository: ActivityRepository,
     private val activityId: String,
+    private val markerRepository: ActivityMarkerRepository? = null,
 ) : ViewModel() {
 
     @Inject
     constructor(
         repository: ActivityRepository,
+        markerRepository: ActivityMarkerRepository,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
         activityId = savedStateHandle[ACTIVITY_DETAIL_ID_ARG] ?: "",
+        markerRepository = markerRepository,
     )
 
     private val _uiState = MutableStateFlow(ActivityDetailUiState())
@@ -59,6 +65,14 @@ class ActivityDetailViewModel(
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
                         workout = workout,
+                        markers = workout?.let { loadedWorkout ->
+                            markerRepository?.markersForActivity(loadedWorkout.id).orEmpty()
+                                .ifEmpty {
+                                    loadedWorkout.clientRecordId
+                                        ?.let { markerRepository?.markersForActivity(it) }
+                                        .orEmpty()
+                                }
+                        }.orEmpty(),
                         error = if (workout == null) "Activity not found." else null,
                     )
                 }

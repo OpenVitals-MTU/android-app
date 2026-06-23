@@ -7,6 +7,7 @@ import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
@@ -170,6 +171,85 @@ class PreferencesRepository @Inject constructor(
 
     fun setTimeRangeFor(key: PeriodRangePreferenceKey, range: TimeRange) {
         prefs.edit().putString(key.storageKey, range.name).apply()
+    }
+
+    fun activityRecordingPreferences(): ActivityRecordingPreferences =
+        ActivityRecordingPreferences(
+            autoIdleEnabled = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED,
+                ActivityRecordingPreferences.DefaultAutoIdleEnabled,
+            ),
+            autoIdleTimeoutSeconds = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS,
+                ActivityRecordingPreferences.DefaultAutoIdleTimeoutSeconds,
+            ),
+            requiredGpsAccuracyMeters = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS,
+                ActivityRecordingPreferences.DefaultRequiredGpsAccuracyMeters,
+            ),
+            routeGapMeters = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS,
+                ActivityRecordingPreferences.DefaultRouteGapMeters ?: ROUTE_GAP_OFF,
+            ).takeIf { it != ROUTE_GAP_OFF },
+            barometerClimbEnabled = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED,
+                ActivityRecordingPreferences.DefaultBarometerClimbEnabled,
+            ),
+            recordingDistanceIntervalMeters = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_DISTANCE_INTERVAL_METERS,
+                ActivityRecordingPreferences.DefaultRecordingDistanceIntervalMeters ?: RECORDING_INTERVAL_OFF,
+            ).takeIf { it != RECORDING_INTERVAL_OFF },
+            recordingTimeIntervalMillis = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_TIME_INTERVAL_MILLIS,
+                ActivityRecordingPreferences.DefaultRecordingTimeIntervalMillis,
+            ),
+            voiceAnnouncementsEnabled = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_VOICE_ENABLED,
+                ActivityRecordingPreferences.DefaultVoiceAnnouncementsEnabled,
+            ),
+            voiceAnnouncementTimeIntervalMinutes = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_VOICE_TIME_INTERVAL_MINUTES,
+                ActivityRecordingPreferences.DefaultVoiceAnnouncementTimeIntervalMinutes ?: RECORDING_INTERVAL_OFF,
+            ).takeIf { it != RECORDING_INTERVAL_OFF },
+            voiceAnnouncementDistanceIntervalMeters = prefs.getInt(
+                KEY_ACTIVITY_RECORDING_VOICE_DISTANCE_INTERVAL_METERS,
+                ActivityRecordingPreferences.DefaultVoiceAnnouncementDistanceIntervalMeters ?: RECORDING_INTERVAL_OFF,
+            ).takeIf { it != RECORDING_INTERVAL_OFF },
+            voiceIdleAnnouncementsEnabled = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED,
+                ActivityRecordingPreferences.DefaultVoiceIdleAnnouncementsEnabled,
+            ),
+            voiceLapAnnouncementsEnabled = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED,
+                ActivityRecordingPreferences.DefaultVoiceLapAnnouncementsEnabled,
+            ),
+        ).normalized()
+
+    fun setActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
+        val normalized = preferences.normalized()
+        prefs.edit()
+            .putBoolean(KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED, normalized.autoIdleEnabled)
+            .putInt(KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS, normalized.autoIdleTimeoutSeconds)
+            .putInt(KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS, normalized.requiredGpsAccuracyMeters)
+            .putInt(KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS, normalized.routeGapMeters ?: ROUTE_GAP_OFF)
+            .putBoolean(KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED, normalized.barometerClimbEnabled)
+            .putInt(
+                KEY_ACTIVITY_RECORDING_DISTANCE_INTERVAL_METERS,
+                normalized.recordingDistanceIntervalMeters ?: RECORDING_INTERVAL_OFF,
+            )
+            .putInt(KEY_ACTIVITY_RECORDING_TIME_INTERVAL_MILLIS, normalized.recordingTimeIntervalMillis)
+            .putBoolean(KEY_ACTIVITY_RECORDING_VOICE_ENABLED, normalized.voiceAnnouncementsEnabled)
+            .putInt(
+                KEY_ACTIVITY_RECORDING_VOICE_TIME_INTERVAL_MINUTES,
+                normalized.voiceAnnouncementTimeIntervalMinutes ?: RECORDING_INTERVAL_OFF,
+            )
+            .putInt(
+                KEY_ACTIVITY_RECORDING_VOICE_DISTANCE_INTERVAL_METERS,
+                normalized.voiceAnnouncementDistanceIntervalMeters ?: RECORDING_INTERVAL_OFF,
+            )
+            .putBoolean(KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED, normalized.voiceIdleAnnouncementsEnabled)
+            .putBoolean(KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED, normalized.voiceLapAnnouncementsEnabled)
+            .apply()
     }
 
     fun dailyGoalFor(key: MetricDailyGoalKey): Double =
@@ -371,6 +451,18 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
+        private const val KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED = "activity_recording_auto_idle_enabled"
+        private const val KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS = "activity_recording_auto_idle_timeout_seconds"
+        private const val KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS = "activity_recording_required_gps_accuracy_meters"
+        private const val KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS = "activity_recording_route_gap_meters"
+        private const val KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED = "activity_recording_barometer_climb_enabled"
+        private const val KEY_ACTIVITY_RECORDING_DISTANCE_INTERVAL_METERS = "activity_recording_distance_interval_meters"
+        private const val KEY_ACTIVITY_RECORDING_TIME_INTERVAL_MILLIS = "activity_recording_time_interval_millis"
+        private const val KEY_ACTIVITY_RECORDING_VOICE_ENABLED = "activity_recording_voice_enabled"
+        private const val KEY_ACTIVITY_RECORDING_VOICE_TIME_INTERVAL_MINUTES = "activity_recording_voice_time_interval_minutes"
+        private const val KEY_ACTIVITY_RECORDING_VOICE_DISTANCE_INTERVAL_METERS = "activity_recording_voice_distance_interval_meters"
+        private const val KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED = "activity_recording_voice_idle_enabled"
+        private const val KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED = "activity_recording_voice_lap_enabled"
         private const val KEY_SHOW_OPENVITALS_CALCULATED_CALORIES = "show_openvitals_calculated_calories"
         private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
@@ -405,6 +497,8 @@ class PreferencesRepository @Inject constructor(
         private const val MIN_MINDFULNESS_TIMER_MINUTES = 1
         private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60
         private const val MISSING_EXERCISE_TYPE = Int.MIN_VALUE
+        private const val ROUTE_GAP_OFF = 0
+        private const val RECORDING_INTERVAL_OFF = 0
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")
     }
 }

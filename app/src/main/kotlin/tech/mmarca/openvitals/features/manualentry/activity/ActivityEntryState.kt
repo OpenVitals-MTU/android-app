@@ -12,6 +12,8 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
+import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 enum class ActivityEntryError {
@@ -90,6 +92,8 @@ data class ActivityEntryUiState(
     val repetitionSets: List<ActivityRepetitionSetInput> = listOf(ActivityRepetitionSetInput()),
     val importedRoute: RouteFileImport? = null,
     val recordedPauseIntervals: List<ActivityPauseInterval> = emptyList(),
+    val recordedLaps: List<ExerciseLapData> = emptyList(),
+    val recordedMarkers: List<ActivityRecordingMarker> = emptyList(),
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
     val isCheckingPermission: Boolean = true,

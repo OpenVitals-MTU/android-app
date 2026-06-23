@@ -22,6 +22,7 @@ import kotlin.math.roundToInt
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -74,6 +75,7 @@ internal fun ExerciseData.toEditState(
         recordedPauseIntervals = segments
             .filter { it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE }
             .map { ActivityPauseInterval(startTime = it.startTime, endTime = it.endTime) },
+        recordedLaps = laps,
         writePermissions = repository.activityWritePermissions(),
         canWrite = canWrite,
         isCheckingPermission = isCheckingPermission,
@@ -339,6 +341,17 @@ internal fun List<ActivityPauseInterval>.insideActivityRange(
             !interval.startTime.isBefore(start) &&
                 interval.startTime.isBefore(interval.endTime) &&
                 !interval.endTime.isAfter(end)
+        }
+
+internal fun List<ExerciseLapData>.insideLapActivityRange(
+    start: java.time.Instant,
+    end: java.time.Instant,
+): List<ExerciseLapData> =
+    sortedBy { it.startTime }
+        .filter { lap ->
+            !lap.startTime.isBefore(start) &&
+                lap.startTime.isBefore(lap.endTime) &&
+                !lap.endTime.isAfter(end)
         }
 
 internal fun Double.toInputText(maxFractionDigits: Int): String =

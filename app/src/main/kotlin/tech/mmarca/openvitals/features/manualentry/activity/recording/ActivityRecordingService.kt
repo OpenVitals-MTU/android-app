@@ -28,6 +28,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
@@ -46,11 +47,13 @@ import kotlinx.coroutines.flow.onEach
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
 @AndroidEntryPoint
 class ActivityRecordingService : Service() {
     @Inject lateinit var controller: ActivityRecordingController
     @Inject lateinit var unitFormatter: UnitFormatter
+    @Inject lateinit var preferencesRepository: PreferencesRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val locationManager: LocationManager by lazy {
@@ -61,16 +64,30 @@ class ActivityRecordingService : Service() {
     }
     private var locationUpdatesStarted = false
     private var sensorUpdatesStarted = false
+    private var pressureUpdatesStarted = false
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var pushUpRecognizer: PushUpProximityRecognizer? = null
     private var stepRecognizer: StepDetectorRepetitionRecognizer? = null
     private var jumpRecognizer: JumpRepetitionRecognizer? = null
     private var pullUpRecognizer: PullUpRepetitionRecognizer? = null
     private var foregroundStarted = false
+    private var voiceAnnouncer: ActivityRecordingVoiceAnnouncer? = null
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            scheduleGpsLostTimeout()
             controller.acceptLocation(location)
         }
+
+        override fun onProviderDisabled(provider: String) {
+            if (provider == LocationManager.GPS_PROVIDER) {
+                controller.reportGpsDisabled()
+            }
+        }
+    }
+
+    private val gpsLostRunnable = Runnable {
+        controller.reportGpsLost()
     }
 
     private val sensorListener = object : SensorEventListener {
@@ -90,6 +107,16 @@ class ActivityRecordingService : Service() {
             }
             if (recognized != null) {
                 controller.acceptRecognizedRepetition()
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    }
+
+    private val pressureSensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if (event.sensor.type == Sensor.TYPE_PRESSURE) {
+                event.values.firstOrNull()?.let(controller::acceptBarometerPressure)
             }
         }
 
@@ -128,6 +155,9 @@ class ActivityRecordingService : Service() {
     override fun onDestroy() {
         stopLocationUpdates()
         stopSensorUpdates()
+        stopPressureUpdates()
+        voiceAnnouncer?.shutdown()
+        voiceAnnouncer = null
         serviceScope.cancel()
         foregroundStarted = false
         super.onDestroy()
@@ -139,6 +169,7 @@ class ActivityRecordingService : Service() {
                 if (!state.isActive) {
                     stopLocationUpdates()
                     stopSensorUpdates()
+                    stopPressureUpdates()
                     if (foregroundStarted) {
                         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
                     }
@@ -150,17 +181,30 @@ class ActivityRecordingService : Service() {
                 if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
                     stopSensorUpdates()
                     startLocationUpdates()
+                    startPressureUpdates()
                 } else if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.REPETITION) {
                     stopLocationUpdates()
+                    stopPressureUpdates()
                     startSensorUpdates(state)
                 } else {
                     stopLocationUpdates()
                     stopSensorUpdates()
+                    stopPressureUpdates()
                 }
                 updateNotification(state)
+                voiceAnnouncer()
+                    .onRecordingState(
+                        state = state,
+                        preferences = preferencesRepository.activityRecordingPreferences(),
+                    )
             }
             .launchIn(serviceScope)
     }
+
+    private fun voiceAnnouncer(): ActivityRecordingVoiceAnnouncer =
+        voiceAnnouncer ?: ActivityRecordingVoiceAnnouncer(this, unitFormatter).also {
+            voiceAnnouncer = it
+        }
 
     private fun ensureForeground(state: ActivityRecordingState) {
         if (foregroundStarted) return
@@ -235,6 +279,21 @@ class ActivityRecordingService : Service() {
         pullUpRecognizer = null
     }
 
+    private fun startPressureUpdates() {
+        if (pressureUpdatesStarted) return
+        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE) ?: return
+        sensorManager.registerListener(pressureSensorListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        pressureUpdatesStarted = true
+    }
+
+    private fun stopPressureUpdates() {
+        if (!pressureUpdatesStarted) return
+        runCatching {
+            sensorManager.unregisterListener(pressureSensorListener)
+        }
+        pressureUpdatesStarted = false
+    }
+
     @SuppressLint("MissingPermission")
     private fun updateNotification(state: ActivityRecordingState) {
         if (!foregroundStarted) return
@@ -250,6 +309,7 @@ class ActivityRecordingService : Service() {
         }
 
         if (!locationManager.isEnabled(LocationManager.GPS_PROVIDER)) {
+            controller.reportGpsDisabled()
             controller.reportRecordingError(getString(R.string.activity_recording_error_provider))
             return
         }
@@ -263,6 +323,7 @@ class ActivityRecordingService : Service() {
                 Looper.getMainLooper(),
             )
             locationUpdatesStarted = true
+            scheduleGpsLostTimeout()
             locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                 ?.let(controller::acceptLocation)
         }.onFailure { error ->
@@ -275,7 +336,13 @@ class ActivityRecordingService : Service() {
         runCatching {
             locationManager.removeUpdates(locationListener)
         }
+        mainHandler.removeCallbacks(gpsLostRunnable)
         locationUpdatesStarted = false
+    }
+
+    private fun scheduleGpsLostTimeout() {
+        mainHandler.removeCallbacks(gpsLostRunnable)
+        mainHandler.postDelayed(gpsLostRunnable, GpsLostTimeoutMillis)
     }
 
     private fun buildNotification(state: ActivityRecordingState): Notification {
@@ -353,20 +420,21 @@ class ActivityRecordingService : Service() {
         }
         val movingTime = formatNotificationElapsed(state.movingDuration(now))
         val distance = unitFormatter.distance(state.distanceMeters).text
+        val gpsStatus = getString(state.gpsStatusLabelRes(now))
         return when (state.status) {
             ActivityRecordingStatus.RECORDING -> getString(
                 R.string.activity_recording_notification_recording,
                 totalTime,
                 movingTime,
                 distance,
-                state.points.size,
+                gpsStatus,
             )
             ActivityRecordingStatus.PAUSED -> getString(
                 R.string.activity_recording_notification_paused,
                 totalTime,
                 movingTime,
                 distance,
-                state.points.size,
+                getString(R.string.activity_entry_recording_paused),
             )
             ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
         }
@@ -417,6 +485,18 @@ private fun formatNotificationElapsed(duration: Duration): String {
     }
 }
 
+private fun ActivityRecordingState.gpsStatusLabelRes(now: Instant): Int =
+    when {
+        status == ActivityRecordingStatus.PAUSED -> R.string.activity_entry_recording_paused
+        isAutoIdle(now) -> R.string.activity_entry_recording_idle
+        gpsStatus == ActivityGpsStatus.FIX -> R.string.activity_entry_recording_gps_fix
+        gpsStatus == ActivityGpsStatus.POOR_ACCURACY -> R.string.activity_entry_recording_gps_poor
+        gpsStatus == ActivityGpsStatus.LOST -> R.string.activity_entry_recording_gps_lost
+        gpsStatus == ActivityGpsStatus.DISABLED -> R.string.activity_entry_recording_gps_off
+        ActivityGpsStatus.WAITING_FOR_FIX == gpsStatus -> R.string.activity_entry_recording_waiting_for_gps
+        else -> R.string.activity_entry_recording_active
+    }
+
 private fun ActivityRecordingSensor.toAndroidSensorType(): Int? =
     when (this) {
         ActivityRecordingSensor.PROXIMITY -> Sensor.TYPE_PROXIMITY
@@ -439,6 +519,7 @@ private const val ChannelId = "activity_recording"
 private const val NotificationId = 4027
 private const val LocationSamplingIntervalMillis = 1_000L
 private const val LocationSamplingDistanceMeters = 0f
+private const val GpsLostTimeoutMillis = 30_000L
 private const val RequestOpenApp = 10
 private const val RequestPause = 11
 private const val RequestResume = 12

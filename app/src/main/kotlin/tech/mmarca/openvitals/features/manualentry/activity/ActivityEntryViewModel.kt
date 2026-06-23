@@ -31,8 +31,12 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
+import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
 
 @HiltViewModel
@@ -42,6 +46,7 @@ class ActivityEntryViewModel(
     private val activityRecorder: ActivityRecordingController? = null,
     private val recordingDraftStore: ActivityRecordingDraftStore? = null,
     private val preferencesRepository: PreferencesRepository? = null,
+    private val markerRepository: ActivityMarkerRepository? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val editActivityId: String? = null,
 ) : ViewModel() {
@@ -53,6 +58,7 @@ class ActivityEntryViewModel(
         activityRecorder: ActivityRecordingController,
         recordingDraftStore: ActivityRecordingDraftStore,
         preferencesRepository: PreferencesRepository,
+        markerRepository: ActivityMarkerRepository,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
@@ -60,6 +66,7 @@ class ActivityEntryViewModel(
         activityRecorder = activityRecorder,
         recordingDraftStore = recordingDraftStore,
         preferencesRepository = preferencesRepository,
+        markerRepository = markerRepository,
         clock = Clock.systemDefaultZone(),
         editActivityId = savedStateHandle[ACTIVITY_ENTRY_ID_ARG],
     )
@@ -146,6 +153,8 @@ class ActivityEntryViewModel(
             selectedActivityType = type,
             importedRoute = retainedRoute,
             recordedPauseIntervals = if (retainedRoute == null) emptyList() else _uiState.value.recordedPauseIntervals,
+            recordedLaps = if (retainedRoute == null) emptyList() else _uiState.value.recordedLaps,
+            recordedMarkers = if (retainedRoute == null) emptyList() else _uiState.value.recordedMarkers,
             mode = if (retainedRoute == null && _uiState.value.mode == ActivityEntryMode.ROUTE_IMPORT) {
                 ActivityEntryMode.MANUAL
             } else {
@@ -164,6 +173,8 @@ class ActivityEntryViewModel(
             mode = ActivityEntryMode.MANUAL,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
             isRecordingDraft = false,
             entryError = null,
             detailMessage = null,
@@ -340,6 +351,8 @@ class ActivityEntryViewModel(
             mode = ActivityEntryMode.MANUAL,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),
@@ -380,6 +393,8 @@ class ActivityEntryViewModel(
             selectedActivityType = preferredActivityType(requireLiveRecording = true),
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
             isRecordingDraft = false,
             distanceText = "",
             elevationText = "",
@@ -416,6 +431,8 @@ class ActivityEntryViewModel(
             mode = ActivityEntryMode.RECORDING,
             importedRoute = null,
             recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
             isRecordingDraft = false,
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(now),
             startTimeText = TimeFormatter.format(now.toLocalTime()),
@@ -441,6 +458,22 @@ class ActivityEntryViewModel(
 
     fun resumeGpsRecording() {
         activityRecorder?.resumeRecording()
+    }
+
+    fun addRecordingLap() {
+        activityRecorder?.addManualLap()
+    }
+
+    fun addRecordingMarker() {
+        activityRecorder?.addMarker()
+    }
+
+    fun updateRecordingMarker(marker: ActivityRecordingMarker) {
+        activityRecorder?.updateMarker(marker)
+    }
+
+    fun deleteRecordingMarker(markerId: String) {
+        activityRecorder?.deleteMarker(markerId)
     }
 
     fun adjustRepetitionRecording(delta: Long) {
@@ -488,6 +521,8 @@ class ActivityEntryViewModel(
             )
             _uiState.value = _uiState.value.copy(
                 recordedPauseIntervals = snapshot.pauseIntervals,
+                recordedLaps = snapshot.manualLaps.map { it.toExerciseLapData() },
+                recordedMarkers = snapshot.markers,
                 isRecordingDraft = true,
             )
         } else {
@@ -519,6 +554,13 @@ class ActivityEntryViewModel(
                     repository = repository,
                     canWrite = current.canWrite,
                     isCheckingPermission = current.isCheckingPermission,
+                ).copy(
+                    recordedMarkers = markerRepository?.markersForActivity(recordId).orEmpty()
+                        .ifEmpty {
+                            workout.clientRecordId
+                                ?.let { markerRepository?.markersForActivity(it) }
+                                .orEmpty()
+                        },
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -561,6 +603,7 @@ class ActivityEntryViewModel(
         }
         val editRecordId = _uiState.value.editRecordId
         val wasRecordingDraft = _uiState.value.isRecordingDraft
+        val markersToSave = _uiState.value.recordedMarkers
         val requestPermissions = repository.activityWritePermissions(request)
 
         viewModelScope.launch {
@@ -588,8 +631,10 @@ class ActivityEntryViewModel(
                     repository.writeActivityEntry(request)
                 } else {
                     repository.updateActivityEntry(editRecordId, request)
+                    editRecordId
                 }
-            }.onSuccess {
+            }.onSuccess { savedActivityId ->
+                markerRepository?.setMarkersForActivity(savedActivityId, markersToSave)
                 recordingDraftStore?.clear()
                 if (wasRecordingDraft) {
                     rememberLastActivityType(request.exerciseType)
@@ -653,6 +698,8 @@ class ActivityEntryViewModel(
             totalCaloriesText = calorieEstimate?.totalCaloriesText ?: currentState.totalCaloriesText,
             importedRoute = routeImport,
             recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
             isRecordingDraft = false,
             startDateText = if (routeImport.hasImportedTimeRange) {
                 DateTimeFormatter.ISO_LOCAL_DATE.format(start)
@@ -717,6 +764,8 @@ class ActivityEntryViewModel(
             selectedActivityType = selectedActivityType,
             importedRoute = null,
             recordedPauseIntervals = snapshot.pauseIntervals,
+            recordedLaps = snapshot.manualLaps.map { it.toExerciseLapData() },
+            recordedMarkers = snapshot.markers,
             isRecordingDraft = true,
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
             startTimeText = TimeFormatter.format(start.toLocalTime()),
@@ -775,3 +824,10 @@ class ActivityEntryViewModel(
         preferencesRepository?.lastActivityExerciseType = exerciseType
     }
 }
+
+private fun ActivityRecordingLap.toExerciseLapData(): ExerciseLapData =
+    ExerciseLapData(
+        startTime = startTime,
+        endTime = endTime,
+        lengthMeters = distanceMeters,
+    )

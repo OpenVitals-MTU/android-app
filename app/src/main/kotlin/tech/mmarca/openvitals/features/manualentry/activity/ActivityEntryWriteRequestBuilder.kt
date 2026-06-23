@@ -110,6 +110,11 @@ internal fun buildWriteRequest(
     } else {
         emptyList()
     }
+    val laps = if (exerciseSegments.isEmpty()) {
+        state.recordedLaps.insideLapActivityRange(start, end)
+    } else {
+        emptyList()
+    }
 
     return ActivityWriteRequest(
         exerciseType = state.selectedActivityType.exerciseType,
@@ -119,6 +124,7 @@ internal fun buildWriteRequest(
         notes = state.notesText.trim().takeIf { it.isNotBlank() },
         routePoints = routePoints,
         pauseIntervals = pauseIntervals,
+        laps = laps,
         exerciseSegments = exerciseSegments,
         stepsCount = stepsCount,
         distanceMeters = distanceMeters,
