@@ -477,6 +477,7 @@ class ActivityEntryViewModelTest {
         vm.applyPlannedWorkout("planned-id")
 
         assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
+        assertFalse(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
         assertEquals("Pull-up ladder", vm.uiState.value.titleText)
         assertEquals(ActivityRepetitionEntryMode.SETS, vm.uiState.value.repetitionMode)
         assertEquals(
@@ -486,6 +487,10 @@ class ActivityEntryViewModelTest {
             ),
             vm.uiState.value.repetitionSets,
         )
+
+        vm.updateTitle("Pull-up ladder plus")
+
+        assertTrue(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
     }
 
     @Test fun `start from existing plan loads Health Connect plans`() = runTest {
@@ -632,6 +637,33 @@ class ActivityEntryViewModelTest {
             })
         }
         assertEquals("saved-plan-id", vm.uiState.value.selectedPlannedWorkoutId)
+    }
+
+    @Test fun `updating selected plan clears changed highlight baseline`() = runTest {
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
+        vm.startManualEntry()
+        advanceUntilIdle()
+        vm.applyPlannedWorkout("planned-id")
+        vm.updateTitle("Pull-up ladder plus")
+
+        assertTrue(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
+
+        vm.saveCurrentAsPlannedWorkout(UnitSystem.METRIC, updateSelected = true)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writePlannedWorkout(match<PlannedExerciseWriteRequest> { request ->
+                request.id == "planned-id" && request.title == "Pull-up ladder plus"
+            })
+        }
+        assertFalse(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
     }
 
     @Test fun `saving current structure requires a training plan title`() = runTest {

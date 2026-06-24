@@ -75,6 +75,19 @@ enum class ActivityRepetitionEntryMode {
     SETS,
 }
 
+data class ActivityPlannedWorkoutBaseline(
+    val planId: String,
+    val activityTypeId: String,
+    val titleText: String,
+    val notesText: String,
+    val startDateText: String,
+    val startTimeText: String,
+    val durationMinutesText: String,
+    val repetitionMode: ActivityRepetitionEntryMode,
+    val repetitionTotalText: String,
+    val repetitionSets: List<ActivityRepetitionSetInput>,
+)
+
 enum class ActivityEntryFeeling(
     val emoji: String,
     val labelRes: Int,
@@ -126,6 +139,7 @@ data class ActivityEntryUiState(
     val repetitionSets: List<ActivityRepetitionSetInput> = listOf(ActivityRepetitionSetInput()),
     val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
     val selectedPlannedWorkoutId: String? = null,
+    val selectedPlannedWorkoutBaseline: ActivityPlannedWorkoutBaseline? = null,
     val selectedPlannedWorkoutActivityTypeId: String? = null,
     val isLoadingPlannedWorkouts: Boolean = false,
     val isSavingPlannedWorkout: Boolean = false,
@@ -150,4 +164,30 @@ data class ActivityEntryUiState(
 
     val isEditMode: Boolean
         get() = editRecordId != null
+
+    val hasSelectedPlannedWorkoutChanges: Boolean
+        get() {
+            val planId = selectedPlannedWorkoutId ?: return false
+            val baseline = selectedPlannedWorkoutBaseline?.takeIf { it.planId == planId } ?: return false
+            return plannedWorkoutBaseline(planId) != baseline
+        }
 }
+
+internal fun ActivityEntryUiState.plannedWorkoutBaseline(planId: String): ActivityPlannedWorkoutBaseline =
+    ActivityPlannedWorkoutBaseline(
+        planId = planId,
+        activityTypeId = selectedActivityType.id,
+        titleText = titleText.trim(),
+        notesText = activitySaveNotes().orEmpty(),
+        startDateText = startDateText.trim(),
+        startTimeText = startTimeText.trim(),
+        durationMinutesText = durationMinutesText.trim(),
+        repetitionMode = repetitionMode,
+        repetitionTotalText = repetitionTotalText.trim(),
+        repetitionSets = repetitionSets.map { set ->
+            set.copy(
+                repetitionsText = set.repetitionsText.trim(),
+                restMinutesText = set.restMinutesText.trim(),
+            )
+        },
+    )

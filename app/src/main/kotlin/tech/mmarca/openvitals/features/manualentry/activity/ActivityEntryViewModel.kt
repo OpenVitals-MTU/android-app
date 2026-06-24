@@ -471,16 +471,26 @@ class ActivityEntryViewModel(
         if (sets.isEmpty()) return
         val activityType = plan.toActivityEntryType() ?: _uiState.value.selectedActivityType
         val planStart = plan.startTime.atZone(clock.zone)
+        val startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(planStart)
+        val startTimeText = TimeFormatter.format(planStart.toLocalTime())
+        val durationMinutesText = plan.durationMinutesText()
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             selectedActivityType = activityType,
             selectedPlannedWorkoutId = plan.id,
+            selectedPlannedWorkoutBaseline = plan.toBaseline(
+                activityType = activityType,
+                startDateText = startDateText,
+                startTimeText = startTimeText,
+                durationMinutesText = durationMinutesText,
+                sets = sets,
+            ),
             selectedPlannedWorkoutActivityTypeId = activityType.id,
             titleText = plan.title.orEmpty(),
             notesText = plan.notes.orEmpty(),
-            startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(planStart),
-            startTimeText = TimeFormatter.format(planStart.toLocalTime()),
-            durationMinutesText = plan.durationMinutesText(),
+            startDateText = startDateText,
+            startTimeText = startTimeText,
+            durationMinutesText = durationMinutesText,
             repetitionMode = ActivityRepetitionEntryMode.SETS,
             repetitionTotalText = "",
             repetitionSets = sets,
@@ -494,6 +504,7 @@ class ActivityEntryViewModel(
         val current = _uiState.value
         _uiState.value = current.copy(
             selectedPlannedWorkoutId = null,
+            selectedPlannedWorkoutBaseline = null,
             selectedPlannedWorkoutActivityTypeId = current.selectedActivityType.id,
             titleText = "",
             notesText = "",
@@ -532,8 +543,10 @@ class ActivityEntryViewModel(
             runCatching {
                 repository.writePlannedWorkout(request)
             }.onSuccess { savedPlanId ->
-                _uiState.value = _uiState.value.copy(
+                val savedState = _uiState.value
+                _uiState.value = savedState.copy(
                     selectedPlannedWorkoutId = savedPlanId,
+                    selectedPlannedWorkoutBaseline = savedState.plannedWorkoutBaseline(savedPlanId),
                     isSavingPlannedWorkout = false,
                     detailMessage = null,
                 )
@@ -1184,3 +1197,28 @@ private fun PlannedExerciseData.durationMinutesText(): String {
     val minutes = Duration.ofMillis(durationMs).toMinutes().coerceAtLeast(1L)
     return minutes.coerceIn(1, MaxActivityDurationMinutes).toString()
 }
+
+private fun PlannedExerciseData.toBaseline(
+    activityType: ActivityEntryType,
+    startDateText: String,
+    startTimeText: String,
+    durationMinutesText: String,
+    sets: List<ActivityRepetitionSetInput>,
+): ActivityPlannedWorkoutBaseline =
+    ActivityPlannedWorkoutBaseline(
+        planId = id,
+        activityTypeId = activityType.id,
+        titleText = title.orEmpty().trim(),
+        notesText = notes.orEmpty(),
+        startDateText = startDateText,
+        startTimeText = startTimeText,
+        durationMinutesText = durationMinutesText,
+        repetitionMode = ActivityRepetitionEntryMode.SETS,
+        repetitionTotalText = "",
+        repetitionSets = sets.map { set ->
+            set.copy(
+                repetitionsText = set.repetitionsText.trim(),
+                restMinutesText = set.restMinutesText.trim(),
+            )
+        },
+    )

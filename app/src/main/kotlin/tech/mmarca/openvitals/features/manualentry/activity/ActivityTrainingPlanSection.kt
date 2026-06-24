@@ -139,10 +139,18 @@ internal fun ActivityTrainingPlanActions(
                 modifier = Modifier.padding(start = 6.dp),
             )
         }
-    } else {
+    } else if (state.hasSelectedPlannedWorkoutChanges) {
         Button(
             onClick = onUpdatePlannedWorkout,
             enabled = enabled,
+            modifier = modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.activity_entry_update_training_plan))
+        }
+    } else {
+        OutlinedButton(
+            onClick = onUpdatePlannedWorkout,
+            enabled = false,
             modifier = modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.activity_entry_update_training_plan))
