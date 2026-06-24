@@ -78,6 +78,22 @@ class ActivityEntryViewModelTest {
         assertTrue(request.startTime.isBefore(request.endTime))
     }
 
+    @Test fun `buildWriteRequest combines selected feeling and notes`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first(),
+            selectedFeeling = ActivityEntryFeeling.GOOD,
+            notesText = "  Kept the last mile steady.  ",
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "45",
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals("Felt good.\n\nKept the last mile steady.", request.notes)
+    }
+
     @Test fun `buildWriteRequest ignores hidden unsupported metric values`() {
         val state = ActivityEntryUiState(
             selectedActivityType = DefaultActivityEntryTypes.first { it.id == "push_ups" },

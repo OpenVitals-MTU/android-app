@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.R
 
 enum class ActivityEntryError {
     INVALID_VALUE,
@@ -74,6 +75,33 @@ enum class ActivityRepetitionEntryMode {
     SETS,
 }
 
+enum class ActivityEntryFeeling(
+    val emoji: String,
+    val labelRes: Int,
+    val noteText: String,
+) {
+    GREAT(
+        emoji = "😀",
+        labelRes = R.string.activity_entry_feeling_great,
+        noteText = "Felt great.",
+    ),
+    GOOD(
+        emoji = "🙂",
+        labelRes = R.string.activity_entry_feeling_good,
+        noteText = "Felt good.",
+    ),
+    HARD(
+        emoji = "😓",
+        labelRes = R.string.activity_entry_feeling_hard,
+        noteText = "Felt hard.",
+    ),
+    ROUGH(
+        emoji = "😖",
+        labelRes = R.string.activity_entry_feeling_rough,
+        noteText = "Felt rough.",
+    ),
+}
+
 data class ActivityRepetitionSetInput(
     val repetitionsText: String = "",
     val restMinutesText: String = "",
@@ -84,6 +112,7 @@ data class ActivityEntryUiState(
     val activityTypes: List<ActivityEntryType> = DefaultActivityEntryTypes,
     val selectedActivityType: ActivityEntryType = DefaultActivityEntryTypes.first(),
     val titleText: String = "",
+    val selectedFeeling: ActivityEntryFeeling? = null,
     val notesText: String = "",
     val startDateText: String = "",
     val startTimeText: String = "",

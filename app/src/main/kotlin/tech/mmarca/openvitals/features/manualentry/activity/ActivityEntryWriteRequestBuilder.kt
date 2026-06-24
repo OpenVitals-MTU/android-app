@@ -125,7 +125,7 @@ internal fun buildWriteRequest(
         startTime = start,
         endTime = end,
         title = state.titleText.trim().takeIf { it.isNotBlank() } ?: state.selectedActivityType.defaultTitle,
-        notes = state.notesText.trim().takeIf { it.isNotBlank() },
+        notes = state.activitySaveNotes(),
         plannedExerciseSessionId = state.selectedPlannedWorkoutId,
         routePoints = routePoints,
         pauseIntervals = pauseIntervals,
@@ -137,6 +137,14 @@ internal fun buildWriteRequest(
         activeCaloriesKcal = activeCalories,
         totalCaloriesKcal = totalCalories,
     )
+}
+
+internal fun ActivityEntryUiState.activitySaveNotes(): String? {
+    val feelingText = selectedFeeling?.noteText
+    val noteText = notesText.trim().takeIf { it.isNotBlank() }
+    return listOfNotNull(feelingText, noteText)
+        .joinToString(separator = "\n\n")
+        .takeIf { it.isNotBlank() }
 }
 
 internal fun validateActivityEntry(

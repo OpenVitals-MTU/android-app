@@ -19,16 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Remove
-import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -145,8 +143,6 @@ internal fun ActivityRecordingScreen(
                 movingTime = movingTime,
                 now = now,
                 unitFormatter = unitFormatter,
-                onUpdateMarker = onUpdateMarker,
-                onDeleteMarker = onDeleteMarker,
             )
         }
 
@@ -193,6 +189,21 @@ internal fun ActivityRecordingScreen(
                                 modifier = Modifier.padding(start = 6.dp),
                             )
                         }
+
+                        OutlinedButton(
+                            onClick = onFinishRecording,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.action_finish),
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
                     } else {
                         OutlinedButton(
                             onClick = onPauseRecording,
@@ -208,21 +219,6 @@ internal fun ActivityRecordingScreen(
                                 modifier = Modifier.padding(start = 6.dp),
                             )
                         }
-                    }
-
-                    Button(
-                        onClick = onFinishRecording,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Stop,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.action_finish),
-                            modifier = Modifier.padding(start = 6.dp),
-                        )
                     }
                 }
 
@@ -261,23 +257,15 @@ internal fun ActivityRecordingScreen(
                             )
                         }
                     }
-
-                OutlinedButton(
-                    onClick = onDiscardRecording,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.action_discard),
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
-                }
                 }
             }
+
+            RecordingMarkersList(
+                markers = state.markers,
+                unitFormatter = unitFormatter,
+                onUpdateMarker = onUpdateMarker,
+                onDeleteMarker = onDeleteMarker,
+            )
         }
     }
 }
@@ -289,8 +277,6 @@ private fun GpsRecordingTabs(
     movingTime: Duration,
     now: Instant,
     unitFormatter: UnitFormatter,
-    onUpdateMarker: (ActivityRecordingMarker) -> Unit,
-    onDeleteMarker: (String) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
@@ -312,8 +298,6 @@ private fun GpsRecordingTabs(
                 movingTime = movingTime,
                 now = now,
                 unitFormatter = unitFormatter,
-                onUpdateMarker = onUpdateMarker,
-                onDeleteMarker = onDeleteMarker,
             )
             ActivityRecordingTab.INTERVALS -> RecordingSplitsTab(
                 splits = if (state.manualLaps.isNotEmpty()) {
@@ -411,8 +395,6 @@ private fun RecordingStatsTab(
     movingTime: Duration,
     now: Instant,
     unitFormatter: UnitFormatter,
-    onUpdateMarker: (ActivityRecordingMarker) -> Unit,
-    onDeleteMarker: (String) -> Unit,
 ) {
     val distance = unitFormatter.distance(state.distanceMeters)
     val elevation = unitFormatter.elevation(state.displayElevationGainedMeters())
@@ -496,12 +478,6 @@ private fun RecordingStatsTab(
             )
         }
 
-        RecordingMarkersList(
-            markers = state.markers,
-            unitFormatter = unitFormatter,
-            onUpdateMarker = onUpdateMarker,
-            onDeleteMarker = onDeleteMarker,
-        )
     }
 }
 

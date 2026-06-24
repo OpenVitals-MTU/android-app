@@ -217,6 +217,7 @@ fun ActivityEntryScreen(
                     unitFormatter = unitFormatter,
                     onSelectActivityType = viewModel::selectActivityType,
                     onTitleChanged = viewModel::updateTitle,
+                    onFeelingChanged = viewModel::updateFeeling,
                     onNotesChanged = viewModel::updateNotes,
                     onStartDateChanged = viewModel::updateStartDate,
                     onStartTimeChanged = viewModel::updateStartTime,

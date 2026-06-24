@@ -279,6 +279,10 @@ class ActivityEntryViewModel(
         updateState { copy(notesText = text, entryError = null, detailMessage = null) }
     }
 
+    fun updateFeeling(feeling: ActivityEntryFeeling?) {
+        updateState { copy(selectedFeeling = feeling, entryError = null, detailMessage = null) }
+    }
+
     fun updateStartDate(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.START_DATE, ActivityEntryField.START_TIME)) {
             copy(startDateText = text, selectedPlannedWorkoutId = null, entryError = null, detailMessage = null)

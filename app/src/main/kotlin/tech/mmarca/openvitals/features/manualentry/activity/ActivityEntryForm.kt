@@ -13,9 +13,12 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
@@ -23,6 +26,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +46,7 @@ internal fun ActivityEntryCard(
     unitFormatter: UnitFormatter,
     onSelectActivityType: (ActivityEntryType) -> Unit,
     onTitleChanged: (String) -> Unit,
+    onFeelingChanged: (ActivityEntryFeeling?) -> Unit,
     onNotesChanged: (String) -> Unit,
     onStartDateChanged: (String) -> Unit,
     onStartTimeChanged: (String) -> Unit,
@@ -161,13 +166,12 @@ internal fun ActivityEntryCard(
                 onTotalCaloriesChanged = onTotalCaloriesChanged,
             )
 
-            OutlinedTextField(
-                value = state.notesText,
-                onValueChange = onNotesChanged,
+            ActivityFeelingNotesSection(
+                selectedFeeling = state.selectedFeeling,
+                notesText = state.notesText,
                 enabled = !state.isSavingEntry,
-                minLines = 2,
-                label = { Text(stringResource(R.string.activity_entry_notes_label)) },
-                modifier = Modifier.fillMaxWidth(),
+                onFeelingChanged = onFeelingChanged,
+                onNotesChanged = onNotesChanged,
             )
 
             ImportedActivityRouteSection(
@@ -225,5 +229,52 @@ internal fun ActivityEntryCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ActivityFeelingNotesSection(
+    selectedFeeling: ActivityEntryFeeling?,
+    notesText: String,
+    enabled: Boolean,
+    onFeelingChanged: (ActivityEntryFeeling?) -> Unit,
+    onNotesChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.activity_entry_feeling_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 2.dp, end = 24.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            items(ActivityEntryFeeling.entries, key = { it.name }) { feeling ->
+                FilterChip(
+                    selected = selectedFeeling == feeling,
+                    onClick = {
+                        onFeelingChanged(feeling.takeUnless { it == selectedFeeling })
+                    },
+                    enabled = enabled,
+                    label = {
+                        Text("${feeling.emoji} ${stringResource(feeling.labelRes)}")
+                    },
+                )
+            }
+        }
+        OutlinedTextField(
+            value = notesText,
+            onValueChange = onNotesChanged,
+            enabled = enabled,
+            minLines = 2,
+            label = { Text(stringResource(R.string.activity_entry_notes_label)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
