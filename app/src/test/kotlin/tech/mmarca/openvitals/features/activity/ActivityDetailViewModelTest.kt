@@ -64,7 +64,35 @@ class ActivityDetailViewModelTest {
         assertEquals("timeout", vm.uiState.value.error)
     }
 
-    private fun workout(id: String) = ExerciseData(
+    @Test fun `deleteActivity deletes OpenVitals activity and reports completion`() = runTest {
+        val workout = workout(id = "activity-1", isOpenVitalsEntry = true)
+        val repo = mockk<ActivityRepository>()
+        coEvery { repo.loadWorkout("activity-1") } returns workout
+        coEvery { repo.deleteActivityEntry("activity-1") } returns Unit
+        val vm = ActivityDetailViewModel(repo, "activity-1")
+        var deleted = false
+
+        vm.deleteActivity { deleted = true }
+
+        assertFalse(vm.uiState.value.isDeleting)
+        assertNull(vm.uiState.value.workout)
+        assertEquals(true, deleted)
+        coVerify(exactly = 1) { repo.deleteActivityEntry("activity-1") }
+    }
+
+    @Test fun `deleteActivity ignores workout not created by OpenVitals`() = runTest {
+        val workout = workout(id = "activity-1", isOpenVitalsEntry = false)
+        val repo = mockk<ActivityRepository>(relaxed = true)
+        coEvery { repo.loadWorkout("activity-1") } returns workout
+        val vm = ActivityDetailViewModel(repo, "activity-1")
+
+        vm.deleteActivity()
+
+        assertEquals(workout, vm.uiState.value.workout)
+        coVerify(exactly = 0) { repo.deleteActivityEntry(any()) }
+    }
+
+    private fun workout(id: String, isOpenVitalsEntry: Boolean = false) = ExerciseData(
         id = id,
         title = "Morning run",
         exerciseType = 56,
@@ -72,5 +100,6 @@ class ActivityDetailViewModelTest {
         endTime = Instant.EPOCH.plusSeconds(3_600),
         durationMs = 3_600_000,
         source = "test",
+        isOpenVitalsEntry = isOpenVitalsEntry,
     )
 }

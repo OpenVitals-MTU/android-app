@@ -7,6 +7,8 @@ import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -14,6 +16,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
@@ -669,4 +672,32 @@ class DashboardViewModelTest {
             vm.uiState.value.dashboardWidgets,
         )
     }
+
+    @Test fun `deleteActivityEntry deletes OpenVitals dashboard activity and refreshes`() = runTest {
+        val workout = dashboardWorkout(id = "activity-1", isOpenVitalsEntry = true)
+        val repo = mockk<HealthRepository>()
+        val activityRepo = mockk<ActivityRepository>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(
+            date = today,
+            workouts = listOf(workout),
+        )
+        coEvery { activityRepo.deleteActivityEntry("activity-1") } returns Unit
+        val vm = DashboardViewModel(repo, prefs(), activityRepo)
+
+        vm.deleteActivityEntry("activity-1")
+
+        coVerify(exactly = 1) { activityRepo.deleteActivityEntry("activity-1") }
+        coVerify(exactly = 2) { repo.loadDashboard(any<DashboardQuery>()) }
+    }
+
+    private fun dashboardWorkout(id: String, isOpenVitalsEntry: Boolean) = ExerciseData(
+        id = id,
+        title = "Workout",
+        exerciseType = 56,
+        startTime = Instant.EPOCH,
+        endTime = Instant.EPOCH.plusSeconds(60),
+        durationMs = 60_000,
+        source = "test",
+        isOpenVitalsEntry = isOpenVitalsEntry,
+    )
 }

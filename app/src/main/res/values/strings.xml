@@ -806,6 +806,8 @@
     <string name="dashboard_all_widgets_added">All widgets are already on the summary.</string>
     <string name="dashboard_action_log">Log</string>
     <string name="dashboard_activities_today">Activities</string>
+    <string name="dashboard_delete_activity_title">Delete activity?</string>
+    <string name="dashboard_delete_activity_message">Delete this %1$s activity from OpenVitals?</string>
     <string name="dashboard_readiness_title">Daily Readiness</string>
     <string name="dashboard_readiness_score">Readiness</string>
     <string name="dashboard_readiness_body_energy">Body Energy</string>

@@ -38,16 +38,23 @@ import androidx.compose.material.icons.automirrored.outlined.Accessible
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -58,9 +65,12 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -86,6 +96,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -126,6 +137,7 @@ fun DashboardScreen(
     onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
+    onEditActivity: (String) -> Unit = {},
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
 ) {
@@ -175,6 +187,8 @@ fun DashboardScreen(
                 onOpenMetric = onOpenMetric,
                 onOpenActivities = onOpenActivities,
                 onOpenActivity = onOpenActivity,
+                onEditActivity = onEditActivity,
+                onDeleteActivity = viewModel::deleteActivityEntry,
                 onOpenLog = onOpenLog,
                 onStartActivity = onStartActivity,
                 onToggleDashboardEdit = viewModel::toggleDashboardEdit,
@@ -217,6 +231,8 @@ private fun DashboardContent(
     onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
+    onEditActivity: (String) -> Unit,
+    onDeleteActivity: (String) -> Unit,
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
     onToggleDashboardEdit: () -> Unit,
@@ -250,6 +266,7 @@ private fun DashboardContent(
     }
     val widgetBounds = remember { mutableStateMapOf<DashboardWidgetId, Rect>() }
     var draggingWidgetId by remember { mutableStateOf<DashboardWidgetId?>(null) }
+    var activityPendingDelete by remember { mutableStateOf<ExerciseData?>(null) }
 
     LaunchedEffect(visibleIds) {
         val visibleSet = visibleIds.toSet()
@@ -339,9 +356,22 @@ private fun DashboardContent(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenActivities = onOpenActivities,
                 onOpenActivity = onOpenActivity,
+                onEditActivity = onEditActivity,
+                onRequestDeleteActivity = { workout -> activityPendingDelete = workout },
             )
 
             item { Spacer(Modifier.height(16.dp)) }
+        }
+
+        activityPendingDelete?.let { workout ->
+            DeleteActivityConfirmationDialog(
+                workout = workout,
+                onDismiss = { activityPendingDelete = null },
+                onConfirm = {
+                    activityPendingDelete = null
+                    onDeleteActivity(workout.id)
+                },
+            )
         }
     }
 }
@@ -420,6 +450,8 @@ private fun LazyListScope.dashboardActivitiesToday(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
+    onEditActivity: (String) -> Unit,
+    onRequestDeleteActivity: (ExerciseData) -> Unit,
 ) {
     item {
         DashboardActivitiesSectionHeader(onClick = onOpenActivities)
@@ -430,16 +462,36 @@ private fun LazyListScope.dashboardActivitiesToday(
             key = { index -> workouts[index].id.ifBlank { "workout_$index" } },
         ) { index ->
             val workout = workouts[index]
-            WorkoutCard(
-                workout = workout,
-                zone = zone,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                onClick = workout.id.takeIf { it.isNotBlank() }?.let { activityId ->
-                    { onOpenActivity(activityId) }
-                },
-            )
+            val editable = workout.isOpenVitalsEntry && workout.id.isNotBlank()
+            val openAction = workout.id.takeIf { it.isNotBlank() }?.let { activityId ->
+                { onOpenActivity(activityId) }
+            }
+            val editAction = if (editable) {
+                { onEditActivity(workout.id) }
+            } else {
+                null
+            }
+            val cardContent: @Composable (Modifier) -> Unit = { cardModifier ->
+                WorkoutCard(
+                    workout = workout,
+                    zone = zone,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = cardModifier,
+                    onClick = openAction,
+                    onEdit = editAction,
+                )
+            }
+            if (editable) {
+                DashboardSwipeToDeleteActivityCard(
+                    onDelete = { onRequestDeleteActivity(workout) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                ) {
+                    cardContent(Modifier)
+                }
+            } else {
+                cardContent(Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+            }
         }
     } else {
         item {
@@ -454,6 +506,81 @@ private fun LazyListScope.dashboardActivitiesToday(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DashboardSwipeToDeleteActivityCard(
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val scope = rememberCoroutineScope()
+    val dismissState = rememberSwipeToDismissBoxState()
+    val shape = CardDefaults.shape
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true,
+        onDismiss = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                currentOnDelete()
+            }
+            scope.launch {
+                dismissState.reset()
+            }
+        },
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.errorContainer, shape)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.cd_delete_entry),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        },
+        modifier = modifier.clip(shape),
+        content = { content() },
+    )
+}
+
+@Composable
+private fun DeleteActivityConfirmationDialog(
+    workout: ExerciseData,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dashboard_delete_activity_title)) },
+        text = {
+            Text(
+                stringResource(
+                    R.string.dashboard_delete_activity_message,
+                    exerciseTypeLabel(workout.exerciseType),
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.action_delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
 }
 
 @Composable

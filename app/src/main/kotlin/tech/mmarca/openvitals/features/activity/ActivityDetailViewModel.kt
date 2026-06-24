@@ -6,17 +6,19 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
-import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.navigation.ACTIVITY_DETAIL_ID_ARG
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class ActivityDetailUiState(
     val isLoading: Boolean = true,
+    val isDeleting: Boolean = false,
     val workout: ExerciseData? = null,
     val markers: List<ActivityRecordingMarker> = emptyList(),
     val error: String? = null,
@@ -83,6 +85,26 @@ class ActivityDetailViewModel(
                         error = it.message ?: "Unable to load activity.",
                     )
                 }
+        }
+    }
+
+    fun deleteActivity(onDeleted: () -> Unit = {}) {
+        val workout = _uiState.value.workout ?: return
+        if (!workout.isOpenVitalsEntry || workout.id.isBlank()) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isDeleting = true, error = null)
+            runCatching {
+                repository.deleteActivityEntry(workout.id)
+            }.onSuccess {
+                _uiState.value = _uiState.value.copy(isDeleting = false, workout = null)
+                onDeleted()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isDeleting = false,
+                    error = error.message ?: "Unable to delete activity.",
+                )
+            }
         }
     }
 }

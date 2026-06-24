@@ -782,6 +782,7 @@ internal fun WorkoutCard(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null,
 ) {
     val start = workout.startTime.atZone(zone)
     Card(
@@ -810,7 +811,21 @@ internal fun WorkoutCard(
                     text = stringResource(R.string.metric_workout),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
                 )
+                if (onEdit != null) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = stringResource(R.string.cd_edit_entry),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
             }
             Spacer(Modifier.weight(1f))
             Text(

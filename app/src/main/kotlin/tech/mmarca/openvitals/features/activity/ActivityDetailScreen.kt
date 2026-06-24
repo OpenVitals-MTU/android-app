@@ -3,17 +3,23 @@ package tech.mmarca.openvitals.features.activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +43,7 @@ fun ActivityDetailScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditActivity: (String) -> Unit = {},
+    onDeleteActivity: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -105,9 +112,11 @@ fun ActivityDetailScreen(
         workout != null -> ActivityDetailContent(
             workout = workout,
             markers = state.markers,
+            isDeleting = state.isDeleting,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditActivity = onEditActivity,
+            onDeleteActivity = { viewModel.deleteActivity(onDeleteActivity) },
             onOpenRouteInMap = {
                 context.openActivityRouteInMap(workout)
                     .onFailure {
@@ -128,34 +137,16 @@ fun ActivityDetailScreen(
 private fun ActivityDetailContent(
     workout: ExerciseData,
     markers: List<ActivityRecordingMarker>,
+    isDeleting: Boolean,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditActivity: (String) -> Unit,
+    onDeleteActivity: () -> Unit,
     onOpenRouteInMap: () -> Unit,
     onSaveRouteAsGpx: () -> Unit,
     onSaveRouteAsKmz: () -> Unit,
 ) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
-        if (workout.isOpenVitalsEntry && workout.id.isNotBlank()) {
-            item {
-                Button(
-                    onClick = { onEditActivity(workout.id) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.cd_edit_entry),
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
-                }
-            }
-        }
         item {
             WorkoutSummaryCard(
                 workout = workout,
@@ -227,6 +218,50 @@ private fun ActivityDetailContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             )
+        }
+        if (workout.isOpenVitalsEntry && workout.id.isNotBlank()) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(
+                        onClick = { onEditActivity(workout.id) },
+                        enabled = !isDeleting,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.cd_edit_entry),
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = onDeleteActivity,
+                        enabled = !isDeleting,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.action_delete),
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
+            }
         }
         item { Spacer(Modifier.height(16.dp)) }
     }

@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.mergeLoaded
+import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
@@ -19,6 +20,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val selectedDate: LocalDate = LocalDate.now(),
@@ -56,6 +58,7 @@ data class DashboardDailyGoals(
 class DashboardViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val prefs: PreferencesRepository,
+    private val activityRepository: ActivityRepository? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -77,6 +80,28 @@ class DashboardViewModel @Inject constructor(
 
     fun refresh() {
         load(_uiState.value.selectedDate, RefreshMode.FORCE)
+    }
+
+    fun deleteActivityEntry(entryId: String) {
+        if (entryId.isBlank()) return
+        val activityRepository = activityRepository ?: return
+        val entry = _uiState.value.data?.workouts.orEmpty()
+            .plus(_uiState.value.data?.workout)
+            .filterNotNull()
+            .firstOrNull { it.id == entryId } ?: return
+        if (!entry.isOpenVitalsEntry) return
+
+        viewModelScope.launch {
+            runCatching {
+                activityRepository.deleteActivityEntry(entryId)
+            }.onSuccess {
+                refresh()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.message ?: "Unable to delete activity.",
+                )
+            }
+        }
     }
 
     fun refreshPreferences() {

@@ -427,6 +427,9 @@ fun AppNavigation(
                     onOpenActivity = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
                     },
+                    onEditActivity = { activityId ->
+                        navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
                     onOpenLog = { navController.navigate(Screen.ManualEntry.route) },
                     onStartActivity = {
                         navController.navigate(Screen.ActivityEntry.route)
@@ -687,6 +690,10 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     onEditActivity = { activityId ->
                         navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
+                    onDeleteActivity = {
+                        markDashboardDirty()
+                        navController.popBackStack()
                     },
                 )
             }
