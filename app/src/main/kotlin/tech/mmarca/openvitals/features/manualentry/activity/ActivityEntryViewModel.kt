@@ -470,9 +470,9 @@ class ActivityEntryViewModel(
         val sets = plan.toRepetitionSetInputs()
         if (sets.isEmpty()) return
         val activityType = plan.toActivityEntryType() ?: _uiState.value.selectedActivityType
-        val planStart = plan.startTime.atZone(clock.zone)
-        val startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(planStart)
-        val startTimeText = TimeFormatter.format(planStart.toLocalTime())
+        val selectedAt = LocalDateTime.now(clock).withSecond(0).withNano(0)
+        val startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(selectedAt)
+        val startTimeText = TimeFormatter.format(selectedAt.toLocalTime())
         val durationMinutesText = plan.durationMinutesText()
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,

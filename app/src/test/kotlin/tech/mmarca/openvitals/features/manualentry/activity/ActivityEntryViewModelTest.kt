@@ -514,7 +514,7 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
         val vm = ActivityEntryViewModel(
             repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
 
@@ -526,7 +526,8 @@ class ActivityEntryViewModelTest {
         assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
         assertEquals("pull_ups", vm.uiState.value.selectedActivityType.id)
         assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
-        assertEquals("2026-05-26", vm.uiState.value.startDateText)
+        assertEquals("2026-05-27", vm.uiState.value.startDateText)
+        assertEquals("9:45", vm.uiState.value.startTimeText)
     }
 
     @Test fun `edit entry loads matching planned workouts without selecting a plan`() = runTest {
