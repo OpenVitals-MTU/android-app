@@ -423,8 +423,8 @@ private suspend fun loadBodyEnergySnapshot(context: Context): HomeMetricWidgetSn
 }
 
 private suspend fun loadTodayVitalsSnapshot(context: Context): HomeMetricWidgetSnapshot {
-    val dashboardResult = loadTodayVitalsResult(context) ?: return todayVitalsFallbackSnapshot(context)
-    val readinessInsight = dashboardResult.readinessInsight
+    val dashboardResult = loadDashboardResult(context, TodayVitalsMetrics) ?: return todayVitalsFallbackSnapshot(context)
+    val readinessInsight = loadReadinessInsight(context)
     val rows = buildList {
         if (readinessInsight != null && readinessInsight.state != ReadinessState.UNKNOWN) {
             add(readinessRow(context, readinessInsight))
@@ -496,33 +496,6 @@ private suspend fun loadDashboardResult(
         HomeDashboardWidgetResult(
             data = data,
             unitFormatter = entryPoint.unitFormatter(),
-        )
-    }.getOrNull()
-
-private suspend fun loadTodayVitalsResult(context: Context): HomeDashboardWidgetResult? =
-    runCatching {
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            HomeMetricWidgetEntryPoint::class.java,
-        )
-        val preferences = entryPoint.preferencesRepository()
-        val data = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
-            entryPoint.healthRepository().loadDashboard(
-                DashboardQuery(
-                    date = LocalDate.now(),
-                    sleepRangeMode = preferences.sleepRangeMode,
-                    activityWeekMode = preferences.activityWeekMode,
-                    visibleMetrics = TodayVitalsDashboardMetrics,
-                    refreshMode = RefreshMode.FORCE,
-                    includeHistoricalBaselines = false,
-                    includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in TodayVitalsDashboardMetrics,
-                )
-            )
-        } ?: return@runCatching null
-        HomeDashboardWidgetResult(
-            data = data,
-            unitFormatter = entryPoint.unitFormatter(),
-            readinessInsight = calculateDailyReadiness(data, preferences.homeReadinessGoals()),
         )
     }.getOrNull()
 
@@ -641,7 +614,6 @@ private fun PreferencesRepository.homeReadinessGoals(): DailyReadinessGoalInputs
 private data class HomeDashboardWidgetResult(
     val data: DashboardData,
     val unitFormatter: UnitFormatter,
-    val readinessInsight: DailyReadinessInsight? = null,
 )
 
 private val ReadinessWidgetMetrics = setOf(
@@ -671,8 +643,6 @@ private val TodayVitalsMetrics = setOf(
     DashboardMetric.WEEKLY_CARDIO_LOAD,
     DashboardMetric.HYDRATION,
 )
-
-private val TodayVitalsDashboardMetrics = TodayVitalsMetrics
 
 private val BodyEnergyWidgetFactorKinds = setOf(
     ReadinessFactorKind.SLEEP_BELOW_BASELINE,
