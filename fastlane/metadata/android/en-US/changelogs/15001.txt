@@ -1,0 +1,1 @@
+Adds persistent derived metric storage for faster dashboard/widgets, fixes readiness and metric widget refreshes, adds swipe-to-delete for OpenVitals-owned activities in summaries, improves activity plan/recording flows, fixes repetitive activity crashes, and keeps hydration custom amounts and Play production uploads reliable.

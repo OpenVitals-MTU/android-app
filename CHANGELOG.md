@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.5.1 - 2026-06-24
+
+### English
+
+- Add persistent derived metric storage for dashboard and home widget summaries so calculated metrics can be reused across refreshes.
+- Fix Daily Readiness and metric home widgets so cached and freshly calculated values load more reliably.
+- Let OpenVitals-owned activities be deleted directly from the activity summary flow with swipe-to-delete handling.
+- Improve activity entry and recording flows with safer training-plan updates, corrected planned start times, clearer repetition stats, and a fix for repetitive activity recording crashes.
+- Persist the last custom hydration amount more reliably and keep release automation aligned with the restored direct Google Play production upload path.
+
+### Español
+
+- Añade almacenamiento persistente de métricas derivadas para el panel y widgets de inicio, de modo que los cálculos puedan reutilizarse entre actualizaciones.
+- Corrige los widgets de Preparación diaria y métricas para cargar con más fiabilidad valores en caché y recién calculados.
+- Permite borrar actividades propias de OpenVitals directamente desde el flujo de resumen de actividad con deslizar para borrar.
+- Mejora las entradas y grabaciones de actividad con actualizaciones de planes de entrenamiento más seguras, horas de inicio planificadas corregidas, estadísticas de repeticiones más claras y una corrección de cierres en actividades repetitivas.
+- Persiste con más fiabilidad la última cantidad personalizada de hidratación y alinea la automatización de release con la ruta restaurada de subida directa a producción de Google Play.
+
+### Deutsch
+
+- Ergänzt persistente Speicherung abgeleiteter Metriken für Dashboard- und Startbildschirm-Widgets, damit berechnete Werte über Aktualisierungen hinweg wiederverwendet werden können.
+- Korrigiert Daily-Readiness- und Metrik-Widgets, sodass gecachte und frisch berechnete Werte zuverlässiger geladen werden.
+- Ermöglicht das Löschen OpenVitals-eigener Aktivitäten direkt im Aktivitätszusammenfassungsfluss per Wischgeste.
+- Verbessert Aktivitätseinträge und -aufzeichnungen mit sichereren Trainingsplan-Updates, korrigierten geplanten Startzeiten, klareren Wiederholungsstatistiken und einem Fix für Abstürze bei repetitiven Aktivitäten.
+- Speichert die letzte benutzerdefinierte Hydrationsmenge zuverlässiger und richtet die Release-Automation auf den wiederhergestellten direkten Google-Play-Produktionsupload aus.
+
 ## 1.5.0 - 2026-06-24
 
 ### English

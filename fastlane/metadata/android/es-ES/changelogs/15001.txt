@@ -1,0 +1,1 @@
+Añade métricas derivadas persistentes para panel/widgets más rápidos, corrige widgets de preparación y métricas, añade borrar actividades propias con deslizamiento, mejora planes/grabaciones de actividad, corrige cierres en actividades repetitivas y refuerza hidratación personalizada y subidas Play a producción.

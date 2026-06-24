@@ -152,6 +152,11 @@
     <string name="activity_entry_distance_label">Distanz %1$s optional</string>
     <string name="activity_entry_elevation_label">Höhe %1$s optional</string>
     <string name="activity_entry_notes_label">Notizen optional</string>
+    <string name="activity_entry_feeling_label">Wie hat es sich angefühlt?</string>
+    <string name="activity_entry_feeling_great">Großartig</string>
+    <string name="activity_entry_feeling_good">Gut</string>
+    <string name="activity_entry_feeling_hard">Anstrengend</string>
+    <string name="activity_entry_feeling_rough">Sehr hart</string>
     <string name="activity_entry_import_route_file">GPX/KML/KMZ/FIT importieren</string>
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
@@ -801,6 +806,8 @@
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
     <string name="dashboard_action_log">Eintragen</string>
     <string name="dashboard_activities_today">Aktivitäten</string>
+    <string name="dashboard_delete_activity_title">Aktivität löschen?</string>
+    <string name="dashboard_delete_activity_message">Diese %1$s-Aktivität aus OpenVitals löschen?</string>
     <string name="dashboard_readiness_title">Tägliche Bereitschaft</string>
     <string name="dashboard_readiness_score">Bereitschaft</string>
     <string name="dashboard_readiness_body_energy">Körperenergie</string>

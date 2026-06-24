@@ -1,0 +1,1 @@
+Ergänzt persistente abgeleitete Metriken für schnelleres Dashboard/Widgets, korrigiert Readiness- und Metrik-Widgets, erlaubt Wisch-Löschen eigener Aktivitäten, verbessert Aktivitätspläne/-aufzeichnungen, behebt Abstürze bei repetitiven Aktivitäten und stärkt Hydration sowie Play-Produktionsuploads.
