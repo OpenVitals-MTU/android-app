@@ -2,8 +2,10 @@ package tech.mmarca.openvitals.data.cache
 
 import android.content.Context
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.hilt.EntryPoint
@@ -62,6 +64,7 @@ class MetricSummaryWarmupWorker(
 
             val ninetyDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(90)
             entryPoint.metricSummaryCacheStore().prune(ninetyDaysAgo)
+            entryPoint.derivedMetricStore().prune(ninetyDaysAgo)
         }.fold(
             onSuccess = { Result.success() },
             onFailure = { Result.retry() },
@@ -70,15 +73,26 @@ class MetricSummaryWarmupWorker(
 
     companion object {
         private const val WorkName = "metric-summary-warmup"
+        private const val PeriodicWorkName = "metric-summary-warmup-periodic"
 
         fun enqueue(context: Context) {
             val request = OneTimeWorkRequestBuilder<MetricSummaryWarmupWorker>()
                 .setInitialDelay(5, TimeUnit.SECONDS)
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(
+            val workManager = WorkManager.getInstance(context)
+            workManager.enqueueUniqueWork(
                 WorkName,
                 ExistingWorkPolicy.KEEP,
                 request,
+            )
+            val periodicRequest = PeriodicWorkRequestBuilder<MetricSummaryWarmupWorker>(
+                1,
+                TimeUnit.HOURS,
+            ).build()
+            workManager.enqueueUniquePeriodicWork(
+                PeriodicWorkName,
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicRequest,
             )
         }
     }
@@ -122,6 +136,7 @@ interface MetricSummaryWarmupEntryPoint {
     fun healthRepository(): HealthRepository
     fun preferencesRepository(): PreferencesRepository
     fun metricSummaryCacheStore(): MetricSummaryCacheStore
+    fun derivedMetricStore(): DerivedMetricStore
     fun activityRepository(): ActivityRepository
     fun sleepRepository(): SleepRepository
     fun heartRepository(): HeartRepository

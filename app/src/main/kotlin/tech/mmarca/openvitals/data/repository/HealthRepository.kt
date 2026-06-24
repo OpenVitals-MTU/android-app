@@ -55,6 +55,8 @@ import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.data.cache.CachedSummaryFreshness
 import tech.mmarca.openvitals.data.cache.CachedSummaryKey
 import tech.mmarca.openvitals.data.cache.DashboardDataSummaryCodec
+import tech.mmarca.openvitals.data.cache.DerivedMetricCacheKey
+import tech.mmarca.openvitals.data.cache.DerivedMetricStore
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
@@ -68,7 +70,9 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyIntensityMinutes
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.DerivedMetricKey
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
 import tech.mmarca.openvitals.domain.model.sleepRangeWindowFor
@@ -82,6 +86,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Collections
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -98,6 +103,7 @@ class HealthRepository @Inject constructor(
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    private val derivedMetricStore: DerivedMetricStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) {
 
@@ -138,6 +144,7 @@ class HealthRepository @Inject constructor(
     private val readMenstruationPeriodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     private val readOvulationTestPermission = HealthPermission.getReadPermission(OvulationTestRecord::class)
     private val readBasalBodyTemperaturePermission = HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
+    private val inFlightDerivedRefreshes = Collections.synchronizedSet(mutableSetOf<String>())
 
     // ─── Availability + permissions ───────────────────────────────────────────
 
@@ -199,57 +206,99 @@ class HealthRepository @Inject constructor(
             val granted = grantedPermissionsIfAvailable()
             val loadMetrics = query.visibleMetrics
             val showOpenVitalsCalculatedCalories = preferencesRepository?.showOpenVitalsCalculatedCalories == true
+            val derivedConfig = DerivedDashboardConfig(
+                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+            )
+            val derivedKeys = if (derivedMetricStore != null) {
+                derivedMetricKeysFor(query, loadMetrics, derivedConfig)
+            } else {
+                emptySet()
+            }
             val healthConnectCacheKey = dashboardHealthConnectCacheKey(
                 query = query,
                 loadMetrics = loadMetrics,
                 granted = granted,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
             )
-            val summaryCacheKey = dashboardSummaryCacheKey(
-                query = query,
-                loadMetrics = loadMetrics,
-                granted = granted,
-                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
-            )
-
-            val cached = metricSummaryCacheStore?.read(
-                key = summaryCacheKey,
-                referenceDate = query.date,
-                refreshMode = query.refreshMode,
-            )
-            if (cached?.isUsable == true) {
-                runCatching { DashboardDataSummaryCodec.decode(checkNotNull(cached.entry).payloadJson) }
-                    .onSuccess { cachedData ->
-                        if (cached.freshness == CachedSummaryFreshness.STALE) {
-                            refreshDashboardSummaryInBackground(
-                                query = query,
-                                loadMetrics = loadMetrics,
-                                granted = granted,
-                                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
-                                healthConnectCacheKey = healthConnectCacheKey,
-                                summaryCacheKey = summaryCacheKey,
-                            )
-                        }
-                        Log.d(
-                            TAG,
-                            "loadDashboard cacheHit freshness=${cached.freshness} date=${query.date} metrics=${loadMetrics.size}",
-                        )
-                        return@withContext cachedData
-                    }
-                    .onFailure {
-                        metricSummaryCacheStore?.invalidate(summaryCacheKey)
-                    }
+            val summaryCacheKey = if (derivedKeys.isEmpty()) {
+                dashboardSummaryCacheKey(
+                    query = query,
+                    loadMetrics = loadMetrics,
+                    granted = granted,
+                    showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                )
+            } else {
+                null
             }
 
-            val data = loadDashboardFromHealthConnect(
+            if (summaryCacheKey != null) {
+                val cached = metricSummaryCacheStore?.read(
+                    key = summaryCacheKey,
+                    referenceDate = query.date,
+                    refreshMode = query.refreshMode,
+                )
+                if (cached?.isUsable == true) {
+                    runCatching { DashboardDataSummaryCodec.decode(checkNotNull(cached.entry).payloadJson) }
+                        .onSuccess { cachedData ->
+                            if (cached.freshness == CachedSummaryFreshness.STALE) {
+                                refreshDashboardSummaryInBackground(
+                                    query = query,
+                                    loadMetrics = loadMetrics,
+                                    granted = granted,
+                                    showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                                    healthConnectCacheKey = healthConnectCacheKey,
+                                    summaryCacheKey = summaryCacheKey,
+                                )
+                            }
+                            Log.d(
+                                TAG,
+                                "loadDashboard cacheHit freshness=${cached.freshness} date=${query.date} metrics=${loadMetrics.size}",
+                            )
+                            return@withContext cachedData
+                        }
+                        .onFailure {
+                            metricSummaryCacheStore?.invalidate(summaryCacheKey)
+                        }
+                }
+            }
+
+            val directData = loadDashboardFromHealthConnect(
                 query = query,
                 loadMetrics = loadMetrics,
                 granted = granted,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 healthConnectCacheKey = healthConnectCacheKey,
                 refreshMode = query.refreshMode,
+                calculateDerivedMetrics = derivedKeys.isEmpty(),
             )
-            metricSummaryCacheStore?.write(summaryCacheKey, DashboardDataSummaryCodec.encode(data))
+            val data = if (derivedKeys.isNotEmpty()) {
+                val derived = readDerivedDashboardMetrics(
+                    query = query,
+                    metrics = loadMetrics,
+                    granted = granted,
+                    config = derivedConfig,
+                )
+                if (derived.refreshKeys.isNotEmpty()) {
+                    refreshDerivedDashboardMetrics(
+                        query = query,
+                        keys = derived.refreshKeys,
+                        granted = granted,
+                        config = derivedConfig,
+                        reason = if (query.refreshMode == RefreshMode.FORCE) {
+                            "dashboard_force"
+                        } else {
+                            "dashboard_load"
+                        },
+                    )
+                }
+                directData
+                    .mergeDerivedDashboardProjection(derived.data)
+            } else {
+                directData
+            }
+            if (summaryCacheKey != null) {
+                metricSummaryCacheStore?.write(summaryCacheKey, DashboardDataSummaryCodec.encode(data))
+            }
             Log.d(
                 TAG,
                 "loadDashboard completed date=${query.date} metrics=${loadMetrics.size} " +
@@ -265,6 +314,7 @@ class HealthRepository @Inject constructor(
         showOpenVitalsCalculatedCalories: Boolean,
         healthConnectCacheKey: HealthConnectQueryKey,
         refreshMode: tech.mmarca.openvitals.domain.model.RefreshMode,
+        calculateDerivedMetrics: Boolean = true,
     ): DashboardData =
         queryCache.getOrPut(
             key = healthConnectCacheKey,
@@ -277,10 +327,178 @@ class HealthRepository @Inject constructor(
                     "date" to query.date,
                     "metrics" to loadMetrics.size,
                 ),
-            ) {
-                loadDashboardUncached(query, loadMetrics, granted, showOpenVitalsCalculatedCalories)
+                ) {
+                loadDashboardUncached(
+                    query = query,
+                    metrics = loadMetrics,
+                    granted = granted,
+                    showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                    calculateDerivedMetrics = calculateDerivedMetrics,
+                )
             }
         }
+
+    suspend fun readDerivedDashboardMetrics(
+        query: DashboardQuery,
+        metrics: Set<DashboardMetric>,
+        granted: Set<String>,
+        config: DerivedDashboardConfig,
+    ): DerivedDashboardMetrics {
+        val store = derivedMetricStore ?: return DerivedDashboardMetrics(
+            data = DashboardData(date = query.date),
+            refreshKeys = emptySet(),
+        )
+        val keys = derivedMetricKeysFor(query, metrics, config)
+            .map { key -> derivedMetricCacheKey(query, key, granted, config) }
+        val cacheReadMode = if (query.refreshMode == RefreshMode.FORCE) {
+            RefreshMode.NORMAL
+        } else {
+            query.refreshMode
+        }
+        val reads = keys.associateWith { key -> store.read(key, refreshMode = cacheReadMode) }
+        var data = DashboardData(date = query.date)
+        val refreshKeys = mutableSetOf<DerivedMetricCacheKey>()
+        reads.forEach { (key, read) ->
+            if ((read.isUsable || query.refreshMode == RefreshMode.FORCE) && read.entry != null) {
+                runCatching { DashboardDataSummaryCodec.decode(read.entry.payloadJson) }
+                    .onSuccess { projection ->
+                        data = data.mergeDerivedDashboardProjection(projection)
+                        if (
+                            query.refreshMode == RefreshMode.FORCE ||
+                            read.freshness == CachedSummaryFreshness.STALE
+                        ) {
+                            refreshKeys += key
+                        }
+                    }
+                    .onFailure {
+                        refreshKeys += key
+                    }
+            } else {
+                refreshKeys += key
+            }
+        }
+        return DerivedDashboardMetrics(data = data, refreshKeys = refreshKeys)
+    }
+
+    fun refreshDerivedDashboardMetrics(
+        query: DashboardQuery,
+        keys: Set<DerivedMetricCacheKey>,
+        granted: Set<String>,
+        config: DerivedDashboardConfig,
+        reason: String,
+    ) {
+        val store = derivedMetricStore ?: return
+        val scope = appScope ?: return
+        keys.forEach { key ->
+            val refreshId = listOf(
+                key.metricKey.name,
+                key.date,
+                key.periodStart,
+                key.periodEnd,
+                key.permissionFingerprint,
+                key.configHash,
+            ).joinToString(separator = "|")
+            if (!inFlightDerivedRefreshes.add(refreshId)) return@forEach
+            scope.launch(dispatchers.io) {
+                try {
+                    val projection = projectDerivedDashboardMetric(
+                        query = query,
+                        key = key.metricKey,
+                        granted = granted,
+                        config = config,
+                    )
+                    store.write(
+                        key = key,
+                        payloadJson = DashboardDataSummaryCodec.encode(projection),
+                        sourceSummary = reason,
+                    )
+                } catch (error: Throwable) {
+                    Log.w(TAG, "Background derived metric refresh failed key=${key.metricKey} reason=$reason", error)
+                } finally {
+                    inFlightDerivedRefreshes.remove(refreshId)
+                }
+            }
+        }
+    }
+
+    private suspend fun projectDerivedDashboardMetric(
+        query: DashboardQuery,
+        key: DerivedMetricKey,
+        granted: Set<String>,
+        config: DerivedDashboardConfig,
+    ): DashboardData {
+        val metrics = when (key) {
+            DerivedMetricKey.BMI -> setOf(DashboardMetric.BMI)
+            DerivedMetricKey.CALORIES_OUT -> setOf(DashboardMetric.CALORIES_OUT)
+            DerivedMetricKey.SLEEP_SCORE -> setOf(DashboardMetric.SLEEP)
+            DerivedMetricKey.RESTING_HEART_RATE_BASELINE -> setOf(DashboardMetric.RESTING_HEART_RATE)
+            DerivedMetricKey.HRV_DAILY -> setOf(DashboardMetric.HRV)
+            DerivedMetricKey.WEEKLY_CARDIO_LOAD -> setOf(DashboardMetric.WEEKLY_CARDIO_LOAD)
+            DerivedMetricKey.INTENSITY_MINUTES -> setOf(DashboardMetric.INTENSITY_MINUTES)
+        }
+        return loadDashboardUncached(
+            query = query.copy(visibleMetrics = metrics),
+            metrics = metrics,
+            granted = granted,
+            showOpenVitalsCalculatedCalories = config.showOpenVitalsCalculatedCalories,
+            calculateDerivedMetrics = true,
+        )
+    }
+
+    private fun derivedMetricKeysFor(
+        query: DashboardQuery,
+        metrics: Set<DashboardMetric>,
+        config: DerivedDashboardConfig,
+    ): Set<DerivedMetricKey> = buildSet {
+        if (DashboardMetric.BMI in metrics) add(DerivedMetricKey.BMI)
+        if (DashboardMetric.CALORIES_OUT in metrics && config.showOpenVitalsCalculatedCalories) {
+            add(DerivedMetricKey.CALORIES_OUT)
+        }
+        if (DashboardMetric.SLEEP in metrics) add(DerivedMetricKey.SLEEP_SCORE)
+        if (DashboardMetric.RESTING_HEART_RATE in metrics && query.includeHistoricalBaselines) {
+            add(DerivedMetricKey.RESTING_HEART_RATE_BASELINE)
+        }
+        if (DashboardMetric.HRV in metrics) add(DerivedMetricKey.HRV_DAILY)
+        if (DashboardMetric.WEEKLY_CARDIO_LOAD in metrics && query.includeWeeklyTrainingSignals) {
+            add(DerivedMetricKey.WEEKLY_CARDIO_LOAD)
+        }
+        if (DashboardMetric.INTENSITY_MINUTES in metrics && query.includeWeeklyTrainingSignals) {
+            add(DerivedMetricKey.INTENSITY_MINUTES)
+        }
+    }
+
+    private fun derivedMetricCacheKey(
+        query: DashboardQuery,
+        metricKey: DerivedMetricKey,
+        granted: Set<String>,
+        config: DerivedDashboardConfig,
+    ): DerivedMetricCacheKey {
+        val period = when (metricKey) {
+            DerivedMetricKey.WEEKLY_CARDIO_LOAD,
+            DerivedMetricKey.INTENSITY_MINUTES -> dashboardCardioLoadPeriod(query.date, query.activityWeekMode)
+            else -> DatePeriod(query.date, query.date)
+        }
+        return DerivedMetricCacheKey(
+            metricKey = metricKey,
+            date = query.date,
+            periodStart = period.start,
+            periodEnd = period.end,
+            permissionFingerprint = granted.permissionFingerprint(),
+            configHash = derivedMetricConfigHash(query, config),
+        )
+    }
+
+    private fun derivedMetricConfigHash(
+        query: DashboardQuery,
+        config: DerivedDashboardConfig,
+    ): String =
+        listOf(
+            query.sleepRangeMode.name,
+            query.activityWeekMode.name,
+            config.showOpenVitalsCalculatedCalories.toString(),
+            query.includeHistoricalBaselines.toString(),
+            query.includeWeeklyTrainingSignals.toString(),
+        ).joinToString(separator = "|")
 
     private fun refreshDashboardSummaryInBackground(
         query: DashboardQuery,
@@ -337,6 +555,8 @@ class HealthRepository @Inject constructor(
                 query.sleepRangeMode.name,
                 query.activityWeekMode.name,
                 showOpenVitalsCalculatedCalories.toString(),
+                query.includeHistoricalBaselines.toString(),
+                query.includeWeeklyTrainingSignals.toString(),
             ).joinToString(separator = "|"),
             schemaVersion = DashboardDataSummaryCodec.SchemaVersion,
         )
@@ -351,6 +571,8 @@ class HealthRepository @Inject constructor(
             query.sleepRangeMode.name,
             query.activityWeekMode.name,
             showOpenVitalsCalculatedCalories.toString(),
+            query.includeHistoricalBaselines.toString(),
+            query.includeWeeklyTrainingSignals.toString(),
             loadMetrics.sortedBy { it.name }.joinToString(separator = ",") { it.name },
         )
 
@@ -359,6 +581,7 @@ class HealthRepository @Inject constructor(
         metrics: Set<DashboardMetric>,
         granted: Set<String>,
         showOpenVitalsCalculatedCalories: Boolean,
+        calculateDerivedMetrics: Boolean = true,
     ): DashboardData = coroutineScope {
         val date = query.date
         val sleepRangeMode = query.sleepRangeMode
@@ -404,12 +627,14 @@ class HealthRepository @Inject constructor(
             readDashboardSleep(
                 date = date,
                 sleepRangeMode = sleepRangeMode,
+                calculateSleepScore = calculateDerivedMetrics,
             )
         }
         val calories = readIfNeeded(wants(DashboardMetric.CALORIES_OUT), readCaloriesPermission, "calories") {
             hc.readCaloriesBurned(
                 date = date,
-                includeEstimatedCalories = canEstimateTotalCalories(granted, showOpenVitalsCalculatedCalories),
+                includeEstimatedCalories = calculateDerivedMetrics &&
+                    canEstimateTotalCalories(granted, showOpenVitalsCalculatedCalories),
             )
         }
         val activeCalories = if (
@@ -492,7 +717,7 @@ class HealthRepository @Inject constructor(
             hc.readRestingHeartRate(date)
         }
         val restingHRBaseline = readIfNeeded(
-            wants(DashboardMetric.RESTING_HEART_RATE),
+            calculateDerivedMetrics && query.includeHistoricalBaselines && wants(DashboardMetric.RESTING_HEART_RATE),
             readRestingHRPermission,
             "resting heart rate baseline",
         ) {
@@ -504,7 +729,11 @@ class HealthRepository @Inject constructor(
         val hrvSamples = readIfNeeded(wants(DashboardMetric.HRV), readHrvPermission, "HRV samples") {
             hc.readHrvSamples(dayStart, effectiveDayEnd)
         }
-        val hrvBaseline = readIfNeeded(wants(DashboardMetric.HRV), readHrvPermission, "HRV baseline") {
+        val hrvBaseline = readIfNeeded(
+            calculateDerivedMetrics && query.includeHistoricalBaselines && wants(DashboardMetric.HRV),
+            readHrvPermission,
+            "HRV baseline",
+        ) {
             hc.readDailyHRV(date.minusDays(28), date.minusDays(1))
                 .map { it.rmssdMs }
                 .filter { it > 0.0 }
@@ -560,7 +789,11 @@ class HealthRepository @Inject constructor(
                 .maxByOrNull { it.time }
                 ?.averageDeltaCelsius
         }
-        val weeklyTrainingSignals = if (wantsAny(DashboardMetric.WEEKLY_CARDIO_LOAD, DashboardMetric.INTENSITY_MINUTES)) {
+        val weeklyTrainingSignals = if (
+            calculateDerivedMetrics &&
+            query.includeWeeklyTrainingSignals &&
+            wantsAny(DashboardMetric.WEEKLY_CARDIO_LOAD, DashboardMetric.INTENSITY_MINUTES)
+        ) {
             async {
                 dashboardMetric("weekly training signals") {
                     readDashboardWeeklyTrainingSignals(
@@ -652,10 +885,14 @@ class HealthRepository @Inject constructor(
             weightTime = latestWeight?.time,
             heightCm = latestHeight?.heightCm,
             heightTime = latestHeight?.time,
-            bmi = latestWeight?.weightKg?.let { weightKg ->
-                latestHeight?.heightCm
-                    ?.takeIf { it > 0.0 }
-                    ?.let { heightCm -> weightKg / ((heightCm / 100.0) * (heightCm / 100.0)) }
+            bmi = if (calculateDerivedMetrics) {
+                latestWeight?.weightKg?.let { weightKg ->
+                    latestHeight?.heightCm
+                        ?.takeIf { it > 0.0 }
+                        ?.let { heightCm -> weightKg / ((heightCm / 100.0) * (heightCm / 100.0)) }
+                }
+            } else {
+                null
             },
             bodyFatPercent = bodyFat?.await() ?: 0.0,
             leanMassKg = leanMass?.await(),
@@ -668,7 +905,7 @@ class HealthRepository @Inject constructor(
             heartRateSampleEndTime = dayHeartRateSamples.lastOrNull()?.time,
             restingHeartRateBpm = restingHR?.await() ?: 0,
             restingHeartRateBaselineBpm = restingHRBaseline?.await(),
-            hrvRmssdMs = dayHrvRmssd,
+            hrvRmssdMs = if (calculateDerivedMetrics) dayHrvRmssd else null,
             hrvBaselineRmssdMs = hrvBaseline?.await(),
             hrvSampleCount = dayHrvSamples.size,
             hrvSampleStartTime = dayHrvSamples.firstOrNull()?.time,
@@ -712,6 +949,7 @@ class HealthRepository @Inject constructor(
     private suspend fun readDashboardSleep(
         date: LocalDate,
         sleepRangeMode: SleepRangeMode,
+        calculateSleepScore: Boolean = true,
     ): DashboardSleepData {
         val zone = ZoneId.systemDefault()
         val selectedWindow = sleepRangeWindowFor(date, sleepRangeMode, zone)
@@ -727,12 +965,16 @@ class HealthRepository @Inject constructor(
         )
         return DashboardSleepData(
             sleep = sleep,
-            sleepScore = calculateSleepScoreForDate(
-                selectedDate = date,
-                sessions = sessions,
-                sleepRangeMode = sleepRangeMode,
-                zone = zone,
-            ),
+            sleepScore = if (calculateSleepScore) {
+                calculateSleepScoreForDate(
+                    selectedDate = date,
+                    sessions = sessions,
+                    sleepRangeMode = sleepRangeMode,
+                    zone = zone,
+                )
+            } else {
+                SleepScoreEstimate.NoData
+            },
         )
     }
 
@@ -1091,6 +1333,57 @@ private fun List<Double>.medianDoubleValuesOrNull(): Double? {
         sorted[middle]
     }
 }
+
+data class DerivedDashboardConfig(
+    val showOpenVitalsCalculatedCalories: Boolean,
+)
+
+data class DerivedDashboardMetrics(
+    val data: DashboardData,
+    val refreshKeys: Set<DerivedMetricCacheKey>,
+)
+
+private fun DashboardData.mergeDerivedDashboardProjection(projection: DashboardData): DashboardData =
+    copy(
+        caloriesKcal = if (DashboardMetric.CALORIES_OUT in projection.loadedMetrics &&
+            projection.caloriesKcalSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR
+        ) {
+            projection.caloriesKcal
+        } else {
+            caloriesKcal
+        },
+        caloriesKcalSource = if (DashboardMetric.CALORIES_OUT in projection.loadedMetrics &&
+            projection.caloriesKcalSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR
+        ) {
+            projection.caloriesKcalSource
+        } else {
+            caloriesKcalSource
+        },
+        bmi = if (DashboardMetric.BMI in projection.loadedMetrics) projection.bmi else bmi,
+        sleepScore = if (DashboardMetric.SLEEP in projection.loadedMetrics) projection.sleepScore else sleepScore,
+        restingHeartRateBaselineBpm = if (DashboardMetric.RESTING_HEART_RATE in projection.loadedMetrics) {
+            projection.restingHeartRateBaselineBpm
+        } else {
+            restingHeartRateBaselineBpm
+        },
+        hrvRmssdMs = if (DashboardMetric.HRV in projection.loadedMetrics) projection.hrvRmssdMs else hrvRmssdMs,
+        hrvBaselineRmssdMs = if (DashboardMetric.HRV in projection.loadedMetrics) {
+            projection.hrvBaselineRmssdMs
+        } else {
+            hrvBaselineRmssdMs
+        },
+        weeklyCardioLoad = if (DashboardMetric.WEEKLY_CARDIO_LOAD in projection.loadedMetrics) {
+            projection.weeklyCardioLoad
+        } else {
+            weeklyCardioLoad
+        },
+        weeklyIntensityMinutes = if (DashboardMetric.INTENSITY_MINUTES in projection.loadedMetrics) {
+            projection.weeklyIntensityMinutes
+        } else {
+            weeklyIntensityMinutes
+        },
+        loadedMetrics = loadedMetrics + projection.loadedMetrics,
+    )
 
 private fun Double.roundCardioTarget(): Int =
     ((this / 5.0).roundToInt() * 5).coerceAtLeast(5)

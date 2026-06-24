@@ -18,6 +18,8 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheDao
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.data.cache.OpenVitalsDatabase
+import tech.mmarca.openvitals.data.cache.DerivedMetricDao
+import tech.mmarca.openvitals.data.cache.DerivedMetricStore
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 
@@ -48,7 +50,8 @@ object AppModule {
             context,
             OpenVitalsDatabase::class.java,
             "openvitals.db",
-        ).build()
+        ).addMigrations(OpenVitalsDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     @Singleton
@@ -57,11 +60,27 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideDerivedMetricDao(database: OpenVitalsDatabase): DerivedMetricDao =
+        database.derivedMetricDao()
+
+    @Provides
+    @Singleton
     fun provideMetricSummaryCacheStore(
         dao: MetricSummaryCacheDao,
         dispatcherProvider: DispatcherProvider,
     ): MetricSummaryCacheStore =
         MetricSummaryCacheStore(
+            dao = dao,
+            dispatchers = dispatcherProvider,
+        )
+
+    @Provides
+    @Singleton
+    fun provideDerivedMetricStore(
+        dao: DerivedMetricDao,
+        dispatcherProvider: DispatcherProvider,
+    ): DerivedMetricStore =
+        DerivedMetricStore(
             dao = dao,
             dispatchers = dispatcherProvider,
         )

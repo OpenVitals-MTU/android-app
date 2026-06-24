@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -51,6 +52,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
@@ -59,6 +61,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
@@ -108,11 +111,24 @@ class HomeMetricWidgetReceiver : GlanceAppWidgetReceiver() {
     ) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         val pendingResult = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+        suspend fun refreshWidgets() {
             try {
                 appWidgetIds.forEach { appWidgetId ->
                     refreshHomeMetricWidget(context, appWidgetId)
                 }
+            } catch (throwable: Throwable) {
+                Log.e(HomeWidgetLogTag, "Home metric widget update failed", throwable)
+            }
+        }
+        if (pendingResult == null) {
+            runBlocking(Dispatchers.Default) {
+                refreshWidgets()
+            }
+            return
+        }
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            try {
+                refreshWidgets()
             } finally {
                 pendingResult.finish()
             }
@@ -404,7 +420,9 @@ internal suspend fun loadSnapshot(
                         sleepRangeMode = entryPoint.preferencesRepository().sleepRangeMode,
                         activityWeekMode = entryPoint.preferencesRepository().activityWeekMode,
                         visibleMetrics = setOf(metric),
-                        refreshMode = RefreshMode.NORMAL,
+                        refreshMode = RefreshMode.FORCE,
+                        includeHistoricalBaselines = false,
+                        includeWeeklyTrainingSignals = metric == DashboardMetric.WEEKLY_CARDIO_LOAD,
                     )
                 )
             } ?: return@runCatching HomeMetricWidgetSnapshot(
@@ -607,6 +625,7 @@ internal val WidgetBackground = Color(0xFF101820)
 internal val WidgetPrimaryText = Color(0xFFF7FAFC)
 internal val WidgetMutedText = Color(0xFFC9D7DD)
 internal const val WidgetLoadTimeoutMillis = 8_000L
+internal const val HomeWidgetLogTag = "HomeWidget"
 private const val MaxHomeWidgetRows = 12
 
 private fun homeWidgetRowLabelKey(index: Int) = stringPreferencesKey("row_${index}_label")

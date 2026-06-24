@@ -155,9 +155,11 @@ class DashboardViewModel @Inject constructor(
                         ?: false
                 }
                 .toSet()
-            _uiState.value = _uiState.value.copy(
+            val current = _uiState.value
+            val keepCurrentDataVisible = refreshMode == RefreshMode.FORCE && current.data != null
+            _uiState.value = current.copy(
                 selectedDate = clampedDate,
-                isLoading = true,
+                isLoading = !keepCurrentDataVisible,
                 errorMessage = null,
                 sleepRangeMode = sleepRangeMode,
                 activityWeekMode = activityWeekMode,

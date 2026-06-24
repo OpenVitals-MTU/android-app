@@ -24,6 +24,10 @@ import io.mockk.unmockkStatic
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -31,26 +35,38 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.data.cache.DashboardDataSummaryCodec
+import tech.mmarca.openvitals.data.cache.DerivedMetricCacheKey
 import tech.mmarca.openvitals.data.cache.FakeMetricSummaryCacheDao
+import tech.mmarca.openvitals.data.cache.FakeDerivedMetricDao
+import tech.mmarca.openvitals.data.cache.DerivedMetricStore
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
+import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.DailySteps
+import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
+import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoadTargetSource
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
+import tech.mmarca.openvitals.domain.model.DerivedMetricKey
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
+import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 
 class HealthRepositoryDashboardTest {
 
@@ -458,6 +474,96 @@ class HealthRepositoryDashboardTest {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun `force refresh returns previous weekly cardio projection while refreshing in background`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns (0..6).map { offset ->
+            DailySteps(
+                date = date.minusDays(offset.toLong()),
+                steps = 3_000L,
+                distanceMeters = 0.0,
+            )
+        }
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dispatchers = object : DispatcherProvider {
+            override val main: CoroutineContext = testDispatcher
+            override val io: CoroutineContext = testDispatcher
+            override val default: CoroutineContext = testDispatcher
+        }
+        val derivedStore = DerivedMetricStore(
+            dao = FakeDerivedMetricDao(),
+            dispatchers = dispatchers,
+            today = { date },
+        )
+        val cacheKey = DerivedMetricCacheKey(
+            metricKey = DerivedMetricKey.WEEKLY_CARDIO_LOAD,
+            date = date,
+            periodStart = date.minusDays(6),
+            periodEnd = date,
+            permissionFingerprint = setOf(stepsPermission, distancePermission).permissionFingerprint(),
+            configHash = "EVENING_18H|LAST_7_DAYS|false|true|true",
+        )
+        derivedStore.write(
+            key = cacheKey,
+            payloadJson = DashboardDataSummaryCodec.encode(
+                DashboardData(
+                    date = date,
+                    weeklyCardioLoad = DashboardWeeklyCardioLoad(
+                        currentScore = 42,
+                        targetScore = 70,
+                        todayScore = 6,
+                        confidence = CardioLoadConfidence.LOW,
+                        targetSource = DashboardWeeklyCardioLoadTargetSource.CURRENT_PACE,
+                    ),
+                    loadedMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+                )
+            ),
+        )
+        val repository = HealthRepository(
+            hc = hc,
+            dispatchers = dispatchers,
+            derivedMetricStore = derivedStore,
+            appScope = this,
+        )
+
+        val data = repository.loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+                refreshMode = RefreshMode.FORCE,
+            )
+        )
+
+        assertEquals(42, data.weeklyCardioLoad?.currentScore)
+        assertEquals(6, data.weeklyCardioLoad?.todayScore)
+
+        advanceUntilIdle()
+        val refreshed = repository.loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+            )
+        )
+
+        assertEquals(7, refreshed.weeklyCardioLoad?.currentScore)
+        assertEquals(1, refreshed.weeklyCardioLoad?.todayScore)
+    }
+
     @Test fun `weekly intensity minutes use heart rate reserve when available`() = runTest {
         val date = LocalDate.of(2026, 6, 2)
         val start = Instant.parse("2026-06-02T10:00:00Z")
@@ -569,6 +675,61 @@ class HealthRepositoryDashboardTest {
         assertEquals(2, data.hrvSampleCount)
         assertEquals(Instant.parse("2026-06-10T05:00:00Z"), data.hrvSampleStartTime)
         assertEquals(Instant.parse("2026-06-10T06:00:00Z"), data.hrvSampleEndTime)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun `loadDashboard reads missing derived BMI from room after background projection`() = runTest {
+        val date = LocalDate.of(2026, 6, 23)
+        val time = Instant.parse("2026-06-23T08:00:00Z")
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(weightPermission, heightPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(weightPermission, heightPermission)
+        coEvery { hc.readLatestWeight() } returns WeightEntry(
+            time = time,
+            weightKg = 80.0,
+            source = "scale",
+        )
+        coEvery { hc.readLatestHeightEntry() } returns HeightEntry(
+            time = time,
+            heightCm = 200.0,
+            source = "manual",
+        )
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dispatchers = object : DispatcherProvider {
+            override val main: CoroutineContext = testDispatcher
+            override val io: CoroutineContext = testDispatcher
+            override val default: CoroutineContext = testDispatcher
+        }
+        val derivedStore = DerivedMetricStore(
+            dao = FakeDerivedMetricDao(),
+            dispatchers = dispatchers,
+            today = { date },
+        )
+        val coldRepository = HealthRepository(
+            hc = hc,
+            dispatchers = dispatchers,
+            derivedMetricStore = derivedStore,
+        )
+        val warmingRepository = HealthRepository(
+            hc = hc,
+            dispatchers = dispatchers,
+            derivedMetricStore = derivedStore,
+            appScope = this,
+        )
+        val query = DashboardQuery(
+            date = date,
+            visibleMetrics = setOf(DashboardMetric.BMI),
+        )
+
+        val first = coldRepository.loadDashboard(query)
+        assertNull(first.bmi)
+
+        warmingRepository.loadDashboard(query)
+        advanceUntilIdle()
+        val second = coldRepository.loadDashboard(query)
+
+        assertEquals(20.0, second.bmi ?: 0.0, 0.01)
     }
 
     private fun sleep(

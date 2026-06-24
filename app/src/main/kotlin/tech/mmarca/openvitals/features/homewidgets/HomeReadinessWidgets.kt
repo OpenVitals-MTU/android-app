@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.homewidgets
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
@@ -39,6 +40,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -123,12 +125,25 @@ abstract class UpdatingHomeWidgetReceiver : GlanceAppWidgetReceiver() {
     ) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         val pendingResult = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+        suspend fun refreshWidgets() {
             try {
                 appWidgetIds.forEach { appWidgetId ->
                     if (!hasAppWidgetInfo(context, appWidgetId)) return@forEach
                     refreshWidget(context, appWidgetId)
                 }
+            } catch (throwable: Throwable) {
+                Log.e(HomeWidgetLogTag, "Home status widget update failed", throwable)
+            }
+        }
+        if (pendingResult == null) {
+            runBlocking(Dispatchers.Default) {
+                refreshWidgets()
+            }
+            return
+        }
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            try {
+                refreshWidgets()
             } finally {
                 pendingResult.finish()
             }
@@ -183,13 +198,7 @@ private fun HomeTodayVitalsContentFromState() {
     val context = LocalContext.current
     val preferences = currentState<Preferences>()
     val snapshot = preferences.toWidgetSnapshot(context)
-        ?: HomeMetricWidgetSnapshot(
-            title = context.getString(R.string.home_widget_today_title),
-            value = "--",
-            unit = "",
-            subtitle = context.getString(R.string.home_metric_widget_open_for_details),
-            route = Screen.Dashboard.route,
-        )
+        ?: todayVitalsFallbackSnapshot(context)
     HomeTodayVitalsContent(snapshot = snapshot)
 }
 
@@ -414,36 +423,22 @@ private suspend fun loadBodyEnergySnapshot(context: Context): HomeMetricWidgetSn
 }
 
 private suspend fun loadTodayVitalsSnapshot(context: Context): HomeMetricWidgetSnapshot {
-    val dashboardResult = loadTodayVitalsResult(context)
-    val readinessInsight = dashboardResult?.readinessInsight
+    val dashboardResult = loadTodayVitalsResult(context) ?: return todayVitalsFallbackSnapshot(context)
+    val readinessInsight = dashboardResult.readinessInsight
     val rows = buildList {
-        add(readinessRow(context, readinessInsight))
-        add(bodyEnergyRow(context, readinessInsight))
-        dashboardResult?.let { result ->
-            add(result.row(context, DashboardWidgetId.SLEEP))
-            add(result.row(context, DashboardWidgetId.STEPS))
-            add(result.row(context, DashboardWidgetId.DISTANCE))
-            add(result.row(context, DashboardWidgetId.ACTIVE_CALORIES))
-            add(result.row(context, DashboardWidgetId.RESTING_HEART_RATE))
-            add(result.row(context, DashboardWidgetId.HRV, label = context.getString(R.string.home_widget_hrv_short)))
-            add(result.row(context, DashboardWidgetId.WEEKLY_CARDIO_LOAD))
-            add(result.row(context, DashboardWidgetId.HYDRATION))
-            add(result.row(context, DashboardWidgetId.CALORIES_IN))
-        } ?: run {
-            addAll(
-                listOf(
-                    fallbackRow(context, context.getString(R.string.metric_sleep)),
-                    fallbackRow(context, context.getString(R.string.metric_steps)),
-                    fallbackRow(context, context.getString(R.string.metric_distance)),
-                    fallbackRow(context, context.getString(R.string.metric_active_calories)),
-                    fallbackRow(context, context.getString(R.string.metric_resting_heart_rate)),
-                    fallbackRow(context, context.getString(R.string.home_widget_hrv_short)),
-                    fallbackRow(context, context.getString(R.string.metric_weekly_cardio_load)),
-                    fallbackRow(context, context.getString(R.string.metric_hydration)),
-                    fallbackRow(context, context.getString(R.string.metric_calories_in)),
-                )
-            )
+        if (readinessInsight != null && readinessInsight.state != ReadinessState.UNKNOWN) {
+            add(readinessRow(context, readinessInsight))
+            add(bodyEnergyRow(context, readinessInsight))
         }
+        add(dashboardResult.row(context, DashboardWidgetId.SLEEP))
+        add(dashboardResult.row(context, DashboardWidgetId.STEPS))
+        add(dashboardResult.row(context, DashboardWidgetId.DISTANCE))
+        add(dashboardResult.row(context, DashboardWidgetId.ACTIVE_CALORIES))
+        add(dashboardResult.row(context, DashboardWidgetId.RESTING_HEART_RATE))
+        add(dashboardResult.row(context, DashboardWidgetId.HRV, label = context.getString(R.string.home_widget_hrv_short)))
+        add(dashboardResult.row(context, DashboardWidgetId.WEEKLY_CARDIO_LOAD))
+        add(dashboardResult.row(context, DashboardWidgetId.HYDRATION))
+        add(dashboardResult.row(context, DashboardWidgetId.CALORIES_IN))
     }
     return HomeMetricWidgetSnapshot(
         title = context.getString(R.string.home_widget_today_title),
@@ -493,7 +488,10 @@ private suspend fun loadDashboardResult(
                     sleepRangeMode = preferences.sleepRangeMode,
                     activityWeekMode = preferences.activityWeekMode,
                     visibleMetrics = metrics,
-                    refreshMode = RefreshMode.NORMAL,
+                    refreshMode = RefreshMode.FORCE,
+                    includeHistoricalBaselines = false,
+                    includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in metrics ||
+                        DashboardMetric.INTENSITY_MINUTES in metrics,
                 )
             )
         } ?: return@runCatching null
@@ -517,7 +515,9 @@ private suspend fun loadTodayVitalsResult(context: Context): HomeDashboardWidget
                     sleepRangeMode = preferences.sleepRangeMode,
                     activityWeekMode = preferences.activityWeekMode,
                     visibleMetrics = TodayVitalsDashboardMetrics,
-                    refreshMode = RefreshMode.NORMAL,
+                    refreshMode = RefreshMode.FORCE,
+                    includeHistoricalBaselines = false,
+                    includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in TodayVitalsDashboardMetrics,
                 )
             )
         } ?: return@runCatching null
@@ -589,6 +589,32 @@ private fun fallbackRow(context: Context, label: String): HomeMetricWidgetRow =
         subtitle = context.getString(R.string.no_data),
     )
 
+private fun todayVitalsFallbackSnapshot(context: Context): HomeMetricWidgetSnapshot =
+    HomeMetricWidgetSnapshot(
+        title = context.getString(R.string.home_widget_today_title),
+        value = "",
+        unit = "",
+        subtitle = context.getString(R.string.home_metric_widget_open_for_details),
+        route = Screen.Dashboard.route,
+        rows = listOf(
+            fallbackRow(context, context.getString(R.string.screen_daily_readiness)),
+            fallbackRow(context, context.getString(R.string.screen_body_energy)),
+        ) + todayVitalsFallbackRows(context),
+    )
+
+private fun todayVitalsFallbackRows(context: Context): List<HomeMetricWidgetRow> =
+    listOf(
+        fallbackRow(context, context.getString(R.string.metric_sleep)),
+        fallbackRow(context, context.getString(R.string.metric_steps)),
+        fallbackRow(context, context.getString(R.string.metric_distance)),
+        fallbackRow(context, context.getString(R.string.metric_active_calories)),
+        fallbackRow(context, context.getString(R.string.metric_resting_heart_rate)),
+        fallbackRow(context, context.getString(R.string.home_widget_hrv_short)),
+        fallbackRow(context, context.getString(R.string.metric_weekly_cardio_load)),
+        fallbackRow(context, context.getString(R.string.metric_hydration)),
+        fallbackRow(context, context.getString(R.string.metric_calories_in)),
+    )
+
 private fun HomeMetricWidgetSnapshot.displayValue(): String =
     if (unit.isBlank()) {
         value
@@ -652,7 +678,7 @@ private val TodayVitalsMetrics = setOf(
     DashboardMetric.CALORIES_IN,
 )
 
-private val TodayVitalsDashboardMetrics = ReadinessWidgetMetrics + TodayVitalsMetrics
+private val TodayVitalsDashboardMetrics = TodayVitalsMetrics
 
 private val BodyEnergyWidgetFactorKinds = setOf(
     ReadinessFactorKind.SLEEP_BELOW_BASELINE,

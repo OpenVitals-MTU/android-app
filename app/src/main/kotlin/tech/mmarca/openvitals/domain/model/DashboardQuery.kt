@@ -11,6 +11,8 @@ data class DashboardQuery(
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val visibleMetrics: Set<DashboardMetric> = DashboardMetric.entries.toSet(),
     val refreshMode: RefreshMode = RefreshMode.NORMAL,
+    val includeHistoricalBaselines: Boolean = true,
+    val includeWeeklyTrainingSignals: Boolean = true,
 )
 
 enum class DashboardMetric {
