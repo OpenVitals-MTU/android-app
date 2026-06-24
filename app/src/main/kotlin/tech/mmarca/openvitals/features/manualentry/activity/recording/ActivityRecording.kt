@@ -734,6 +734,7 @@ class ActivityRecordingController @Inject constructor(
 
     private fun scheduleRestCompletion(state: ActivityRecordingState) {
         restCompletionJob?.cancel()
+        restCompletionJob = null
         val restEnd = state.restEndTime() ?: return
         val now = Instant.now()
         val delayMillis = Duration.between(now, restEnd).toMillis().coerceAtLeast(0L)
@@ -743,6 +744,7 @@ class ActivityRecordingController @Inject constructor(
             if (current.status == ActivityRecordingStatus.RESTING &&
                 current.restStartedAt == state.restStartedAt
             ) {
+                restCompletionJob = null
                 startNextRepetitionSet(current, Instant.now())
             }
         }
