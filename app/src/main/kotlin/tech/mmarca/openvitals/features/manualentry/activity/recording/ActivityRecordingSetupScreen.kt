@@ -145,7 +145,7 @@ internal fun ActivityRecordingSetupScreen(
 
             Button(
                 onClick = {
-                    if (selectedType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR &&
+                    if (selectedType.supportsStepCounting &&
                         !sensorReadiness.hasActivityRecognitionPermission
                     ) {
                         onRequestActivityRecognitionPermission()
@@ -207,7 +207,11 @@ internal fun rememberRecordingSensorReadiness(activityType: ActivityEntryType): 
         ActivityRecordingSensor.ACCELEROMETER -> sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
         ActivityRecordingSensor.STEP_DETECTOR -> sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null
         ActivityRecordingSensor.GPS,
-        ActivityRecordingSensor.NONE -> true
+        ActivityRecordingSensor.NONE -> if (activityType.supportsStepCounting) {
+            sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null
+        } else {
+            true
+        }
     }
     return RecordingSensorReadiness(
         hasRequiredSensor = hasSensor,
@@ -233,7 +237,7 @@ internal fun RecordingGuidancePanel(
     } ?: return
     val statusText = when {
         !sensorReadiness.hasRequiredSensor -> stringResource(R.string.activity_recording_sensor_unavailable_manual)
-        activityType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR &&
+        activityType.supportsStepCounting &&
             !sensorReadiness.hasActivityRecognitionPermission -> {
             stringResource(R.string.activity_recording_activity_recognition_missing)
         }
@@ -241,7 +245,7 @@ internal fun RecordingGuidancePanel(
     }
     val statusColor = when {
         !sensorReadiness.hasRequiredSensor -> MaterialTheme.colorScheme.error
-        activityType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR &&
+        activityType.supportsStepCounting &&
             !sensorReadiness.hasActivityRecognitionPermission -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.primary
     }

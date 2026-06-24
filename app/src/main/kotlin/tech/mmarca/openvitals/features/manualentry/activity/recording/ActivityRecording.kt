@@ -560,11 +560,23 @@ class ActivityRecordingController @Inject constructor(
 
     fun adjustRepetitionCount(delta: Long) {
         val current = _state.value
-        if (current.status != ActivityRecordingStatus.RECORDING ||
-            current.recordingKind != ActivityRecordingKind.REPETITION
-        ) {
+        if (current.status != ActivityRecordingStatus.RECORDING) {
             return
         }
+        if (current.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
+            if (activityEntryTypeById(current.activityTypeId)?.supportsStepCounting != true) return
+            val nextCount = (current.repetitionCount + delta).coerceAtLeast(0L)
+            updateAndPersist(
+                current.copy(
+                    currentSetRepetitionCount = nextCount,
+                    repetitionCount = nextCount,
+                    errorMessage = null,
+                )
+            )
+            return
+        }
+        if (current.recordingKind != ActivityRecordingKind.REPETITION) return
+
         val nextCurrentSetCount = (current.currentSetRepetitionCount + delta).coerceAtLeast(0L)
         val completedCount = current.repetitionSets.sumOf { it.repetitions }
         updateAndPersist(

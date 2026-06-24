@@ -55,6 +55,9 @@ val ActivityEntryType.supportsSetRepetitions: Boolean
 val ActivityEntryType.isRepetitionLike: Boolean
     get() = repetitionUnit != null
 
+val ActivityEntryType.supportsStepCounting: Boolean
+    get() = repetitionUnit == ActivityRepetitionUnit.STEPS
+
 fun activityEntryTypeById(id: String?): ActivityEntryType? =
     id?.let { typeId -> DefaultActivityEntryTypes.firstOrNull { it.id == typeId } }
 
@@ -73,6 +76,7 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
         labelRes = R.string.exercise_type_walking,
         supportsElevation = true,
+        repetitionUnit = ActivityRepetitionUnit.STEPS,
     ),
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_HIKING,

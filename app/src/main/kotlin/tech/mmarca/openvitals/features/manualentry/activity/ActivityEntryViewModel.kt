@@ -755,6 +755,10 @@ class ActivityEntryViewModel(
                 recordedPauseIntervals = snapshot.pauseIntervals,
                 recordedLaps = snapshot.manualLaps.map { it.toExerciseLapData() },
                 recordedMarkers = snapshot.markers,
+                repetitionMode = ActivityRepetitionEntryMode.TOTAL,
+                repetitionTotalText = snapshot.repetitionCount.takeIf {
+                    activityEntryTypeById(snapshot.activityTypeId)?.supportsStepCounting == true && it > 0L
+                }?.toString().orEmpty(),
                 isRecordingDraft = true,
             )
         } else {

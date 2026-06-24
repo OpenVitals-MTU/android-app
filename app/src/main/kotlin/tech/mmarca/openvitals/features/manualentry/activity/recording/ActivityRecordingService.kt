@@ -179,9 +179,13 @@ class ActivityRecordingService : Service() {
 
                 ensureForeground(state)
                 if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
-                    stopSensorUpdates()
                     startLocationUpdates()
                     startPressureUpdates()
+                    if (activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true) {
+                        startSensorUpdates(state)
+                    } else {
+                        stopSensorUpdates()
+                    }
                 } else if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.REPETITION) {
                     stopLocationUpdates()
                     stopPressureUpdates()
@@ -213,16 +217,7 @@ class ActivityRecordingService : Service() {
                 this,
                 NotificationId,
                 buildNotification(state),
-                if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-                } else if (
-                    state.recordingKind == ActivityRecordingKind.REPETITION &&
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-                ) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
-                } else {
-                    0
-                },
+                state.foregroundServiceType(),
             )
             foregroundStarted = true
         }.onFailure { error ->
@@ -231,28 +226,54 @@ class ActivityRecordingService : Service() {
         }
     }
 
+    private fun ActivityRecordingState.foregroundServiceType(): Int {
+        if (recordingKind == ActivityRecordingKind.GPS_ROUTE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            if (
+                activityEntryTypeById(activityTypeId)?.supportsStepCounting == true &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            ) {
+                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+            }
+            return type
+        }
+        return if (
+            recordingKind == ActivityRecordingKind.REPETITION &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+        } else {
+            0
+        }
+    }
+
     private fun startSensorUpdates(state: ActivityRecordingState) {
         if (sensorUpdatesStarted) return
         val activityType = activityEntryTypeById(state.activityTypeId) ?: return
+        val sensorKind = if (activityType.supportsStepCounting) {
+            ActivityRecordingSensor.STEP_DETECTOR
+        } else {
+            activityType.recordingSensor
+        }
         if (
-            activityType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR &&
+            sensorKind == ActivityRecordingSensor.STEP_DETECTOR &&
             !ActivityRecordingController.hasActivityRecognitionPermission(this)
         ) {
             controller.reportRecordingError(getString(R.string.activity_recording_error_activity_recognition_permission))
             return
         }
-        val sensorType = activityType.recordingSensor.toAndroidSensorType() ?: return
+        val sensorType = sensorKind.toAndroidSensorType() ?: return
         val sensor = sensorManager.getDefaultSensor(sensorType)
         if (sensor == null) {
-            controller.reportRecordingError(recordingSensorUnavailableMessage(activityType.recordingSensor))
+            controller.reportRecordingError(recordingSensorUnavailableMessage(sensorKind))
             return
         }
-        pushUpRecognizer = if (activityType.recordingSensor == ActivityRecordingSensor.PROXIMITY) {
+        pushUpRecognizer = if (sensorKind == ActivityRecordingSensor.PROXIMITY) {
             PushUpProximityRecognizer()
         } else {
             null
         }
-        stepRecognizer = if (activityType.recordingSensor == ActivityRecordingSensor.STEP_DETECTOR) {
+        stepRecognizer = if (sensorKind == ActivityRecordingSensor.STEP_DETECTOR) {
             StepDetectorRepetitionRecognizer()
         } else {
             null

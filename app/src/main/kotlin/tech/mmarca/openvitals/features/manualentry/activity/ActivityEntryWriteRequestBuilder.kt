@@ -104,8 +104,12 @@ internal fun buildWriteRequest(
     }
     if (activeCalories != null && totalCalories != null && totalCalories < activeCalories) return null
     val exerciseSegments = buildActivityExerciseSegments(state, start, end) ?: return null
-    val stepsCount = if (state.selectedActivityType.repetitionUnit == ActivityRepetitionUnit.STEPS) {
-        state.repetitionTotalText.toPositiveLongOrNull(max = MaxActivityStepCount) ?: return null
+    val stepsCount = if (state.selectedActivityType.supportsStepCounting) {
+        if (state.repetitionTotalText.isBlank()) {
+            null
+        } else {
+            state.repetitionTotalText.toPositiveLongOrNull(max = MaxActivityStepCount) ?: return null
+        }
     } else {
         null
     }
@@ -314,7 +318,8 @@ internal fun buildSetExerciseSegments(
 internal fun ActivityEntryUiState.hasValidRepetitionInput(start: Instant, end: Instant): Boolean =
     when (selectedActivityType.repetitionUnit) {
         null -> true
-        ActivityRepetitionUnit.STEPS -> repetitionTotalText.toPositiveLongOrNull(MaxActivityStepCount) != null
+        ActivityRepetitionUnit.STEPS -> repetitionTotalText.isBlank() ||
+            repetitionTotalText.toPositiveLongOrNull(MaxActivityStepCount) != null
         ActivityRepetitionUnit.REPETITIONS -> buildActivityExerciseSegments(this, start, end) != null
     }
 

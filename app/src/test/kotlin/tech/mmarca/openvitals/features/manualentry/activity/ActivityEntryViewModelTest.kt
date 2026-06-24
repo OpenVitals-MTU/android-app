@@ -420,6 +420,44 @@ class ActivityEntryViewModelTest {
         assertEquals(2400L, request.stepsCount)
     }
 
+    @Test fun `buildWriteRequest writes walking steps as steps count`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first {
+                it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_WALKING
+            },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "20",
+            distanceText = "1.6",
+            repetitionTotalText = "2100",
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_WALKING, request.exerciseType)
+        assertEquals(2100L, request.stepsCount)
+        assertEquals(1_600.0, request.distanceMeters ?: 0.0, 0.001)
+    }
+
+    @Test fun `buildWriteRequest allows walking without steps`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first {
+                it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_WALKING
+            },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "20",
+            distanceText = "1.6",
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_WALKING, request.exerciseType)
+        assertNull(request.stepsCount)
+    }
+
     @Test fun `missing activity write permission prevents write`() = runTest {
         val repo = activityRepo(canWrite = false)
         val vm = ActivityEntryViewModel(
@@ -860,6 +898,44 @@ class ActivityEntryViewModelTest {
         assertEquals("1.2", restoredVm.uiState.value.distanceText)
         assertEquals("12", restoredVm.uiState.value.elevationText)
         assertTrue(restoredVm.uiState.value.isRecordingDraft)
+    }
+
+    @Test fun `finished walking route recording keeps recorded steps`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val recorder = mockk<ActivityRecordingController>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+            activityTypeId = DefaultActivityEntryTypes.first {
+                it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_WALKING
+            }.id,
+            startTime = start,
+            endTime = start.plusSeconds(30 * 60),
+            points = listOf(routePoint(start), routePoint(start.plusSeconds(30 * 60), latitude = 59.01)),
+            pauseIntervals = emptyList(),
+            distanceMeters = 1200.0,
+            elevationGainedMeters = 12.0,
+            repetitionCount = 1800L,
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+        vm.selectActivityType(
+            DefaultActivityEntryTypes.first { it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_WALKING }
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.ROUTE_IMPORT, vm.uiState.value.mode)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_WALKING, vm.uiState.value.selectedActivityType.exerciseType)
+        assertEquals("1800", vm.uiState.value.repetitionTotalText)
+        assertEquals("1.2", vm.uiState.value.distanceText)
     }
 
     @Test fun `saving a restored recording draft clears it`() = runTest {

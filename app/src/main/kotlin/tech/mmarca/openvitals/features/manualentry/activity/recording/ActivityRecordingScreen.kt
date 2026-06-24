@@ -410,6 +410,7 @@ private fun RecordingStatsTab(
     val maxSpeed = unitFormatter.speed(state.maxSpeedMetersPerSecond)
     val averageSpeed = unitFormatter.averageSpeed(state.distanceMeters, totalTime.toMillis())
     val averageMovingSpeed = unitFormatter.averageSpeed(state.distanceMeters, movingTime.toMillis())
+    val showSteps = activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -427,6 +428,23 @@ private fun RecordingStatsTab(
                     label = stringResource(R.string.activity_entry_recording_total_time),
                     modifier = Modifier.weight(1f),
                 )
+            }
+            if (showSteps) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    RecordingStat(
+                        value = DisplayValue(unitFormatter.count(state.repetitionCount), ""),
+                        label = stringResource(R.string.activity_entry_steps_title),
+                        modifier = Modifier.weight(1f),
+                    )
+                    RecordingStat(
+                        value = elevation,
+                        label = stringResource(R.string.activity_entry_recording_elevation_gain),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -458,20 +476,28 @@ private fun RecordingStatsTab(
                     modifier = Modifier.weight(1f),
                 )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                RecordingStat(
-                    value = elevation,
-                    label = stringResource(R.string.activity_entry_recording_elevation_gain),
-                    modifier = Modifier.weight(1f),
-                )
+            if (showSteps) {
                 RecordingStat(
                     value = maxSpeed,
                     label = stringResource(R.string.activity_entry_recording_max_speed),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    RecordingStat(
+                        value = elevation,
+                        label = stringResource(R.string.activity_entry_recording_elevation_gain),
+                        modifier = Modifier.weight(1f),
+                    )
+                    RecordingStat(
+                        value = maxSpeed,
+                        label = stringResource(R.string.activity_entry_recording_max_speed),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
 

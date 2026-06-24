@@ -63,6 +63,12 @@ steps:
     image: ghcr.io/cirruslabs/android-sdk:tools
     commands:
       - set -eu
+      - |
+        if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
+          echo "Skipping prerelease test suite for production deployment."
+          git diff --check
+          exit 0
+        fi
       - sdk_root="$${ANDROID_HOME:-$${ANDROID_SDK_ROOT:-}}"
       - test -n "$${sdk_root}"
       - yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
