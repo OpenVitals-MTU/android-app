@@ -57,7 +57,7 @@ fun CrossMetricInsightCard(
         else -> stringResource(R.string.cross_metric_weak_link)
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier
             .fillMaxWidth()
             .border(
@@ -66,7 +66,7 @@ fun CrossMetricInsightCard(
                 shape = shape,
             ),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

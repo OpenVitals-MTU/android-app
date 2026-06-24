@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.heart
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,11 +57,9 @@ internal fun HeartRateTimelineCard(
     val timeFormatter = dateTimeFormatterProvider.shortTime()
     val chartHeight = 180.dp
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -130,11 +130,9 @@ internal fun HeartRateTimelineCard(
 
 @Composable
 internal fun HeartRateEmptyDayCard(modifier: Modifier = Modifier) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -162,11 +160,9 @@ internal fun HeartRateDayRow(
     hrvMs: Double? = null,
 ) {
     val dayFormatter = dateTimeFormatterProvider.chartDay()
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -214,9 +210,9 @@ internal fun RestingHRDayCard(
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -246,9 +242,9 @@ internal fun HRVDayCard(
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

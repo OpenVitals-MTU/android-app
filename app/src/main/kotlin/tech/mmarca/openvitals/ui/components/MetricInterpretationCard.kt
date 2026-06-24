@@ -42,7 +42,7 @@ fun MetricInterpretationCard(
         InterpretationSeverity.ALERT -> MaterialTheme.colorScheme.error
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier
             .fillMaxWidth()
             .border(
@@ -51,7 +51,7 @@ fun MetricInterpretationCard(
                 shape = shape,
             ),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

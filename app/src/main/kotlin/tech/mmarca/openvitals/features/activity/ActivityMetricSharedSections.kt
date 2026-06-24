@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -257,9 +259,9 @@ internal fun ActivityDailyEntryRow(
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Row(
             modifier = Modifier

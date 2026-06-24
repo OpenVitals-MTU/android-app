@@ -42,9 +42,9 @@ fun DailyGoalCard(
     onIncreaseGoal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

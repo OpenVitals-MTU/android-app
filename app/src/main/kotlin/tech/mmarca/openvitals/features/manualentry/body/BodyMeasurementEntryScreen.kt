@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.body
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -124,9 +126,9 @@ private fun BodyMeasurementEntryCard(
     val title = stringResource(state.type.titleRes())
     val unitLabel = state.type.inputUnitLabel(unitFormatter.unitSystem())
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

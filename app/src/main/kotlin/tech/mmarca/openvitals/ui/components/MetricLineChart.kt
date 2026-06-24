@@ -226,9 +226,9 @@ fun MetricLineChart(
         Modifier
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)

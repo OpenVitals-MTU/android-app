@@ -84,6 +84,7 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.MetricSparklineChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
@@ -520,11 +521,10 @@ private fun SleepOverviewTopCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier
-            .height(SleepOverviewTopCardHeight)
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            .height(SleepOverviewTopCardHeight),
+        onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(8.dp),
     ) {
@@ -595,12 +595,11 @@ private fun SleepOverviewMetricCard(
         )
     },
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier
             .fillMaxWidth()
-            .height(SleepOverviewMetricCardHeight)
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            .height(SleepOverviewMetricCardHeight),
+        onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(8.dp),
     ) {

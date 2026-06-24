@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.onboarding
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -281,11 +283,9 @@ fun OnboardingScreen(
 
 @Composable
 private fun FeatureCard(icon: ImageVector, title: String, body: String) {
-    Card(
+    OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

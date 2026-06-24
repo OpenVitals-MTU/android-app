@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,9 +39,9 @@ internal fun ActivityPlanActivityPickerCard(
         .distinctBy { it.id }
         .sortedBy { it.id }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -118,9 +120,9 @@ internal fun ActivityPlanPickerCard(
         .filter { plan -> plan.toActivityEntryType()?.id == selectedTypeId }
         .sortedBy { it.startTime }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

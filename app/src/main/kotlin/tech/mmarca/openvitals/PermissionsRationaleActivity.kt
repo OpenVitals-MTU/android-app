@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,11 +36,9 @@ class PermissionsRationaleActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Card(
+                    OpenVitalsCard(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
+
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(

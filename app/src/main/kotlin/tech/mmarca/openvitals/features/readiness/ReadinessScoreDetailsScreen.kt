@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.readiness
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -238,12 +240,10 @@ private fun ReadinessScoreCard(
     spec: ReadinessDetailSpec,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier
@@ -305,12 +305,10 @@ private fun ReadinessExplanationCard(
     scale: String,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -350,12 +348,10 @@ private fun ReadinessListCard(
     items: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

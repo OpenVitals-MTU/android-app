@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.mindfulness
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import android.Manifest
 import android.os.Build
 import android.text.format.DateFormat
@@ -382,9 +384,9 @@ private fun MindfulnessReminderCard(
         else -> stringResource(R.string.mindfulness_reminders_summary_off)
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -763,11 +765,9 @@ private fun MindfulnessSessionRowContent(
     val dateFormatter = dateTimeFormatterProvider.mediumDate()
     val timeFormatter = dateTimeFormatterProvider.shortTime()
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

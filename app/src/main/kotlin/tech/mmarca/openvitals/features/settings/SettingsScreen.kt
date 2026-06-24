@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.settings
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -371,11 +373,9 @@ fun SettingsScreen(
 
                     if (state.permissionCategories.isEmpty()) {
                         item {
-                            Card(
+                            OpenVitalsCard(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                ),
+
                             ) {
                                 Text(
                                     text = stringResource(R.string.settings_all_requestable_granted),

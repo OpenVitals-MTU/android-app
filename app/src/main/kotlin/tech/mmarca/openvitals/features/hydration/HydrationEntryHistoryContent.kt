@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.hydration
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -110,9 +112,9 @@ private fun HydrationEntryRowContent(
     val zone = ZoneId.systemDefault()
     val start = entry.startTime.atZone(zone)
     val end = entry.endTime.atZone(zone)
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Row(
             modifier = Modifier

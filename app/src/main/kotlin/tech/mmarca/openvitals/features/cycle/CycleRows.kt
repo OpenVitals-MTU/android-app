@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.cycle
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,9 +33,9 @@ internal fun CycleObservationRow(
     val zone = ZoneId.systemDefault()
     val time = observation.time.atZone(zone)
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.achievements
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -172,9 +174,9 @@ private fun AchievementSummaryCard(
         state.unlockedCount,
         state.totalCount,
     )
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -275,9 +277,9 @@ private fun AchievementStatCard(
     label: String,
     value: String,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = Modifier.width(156.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -464,9 +466,9 @@ private fun MessageCard(
     body: String?,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

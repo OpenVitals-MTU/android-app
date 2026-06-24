@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.settings
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -117,12 +119,10 @@ internal fun SettingsCategoryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -184,11 +184,9 @@ internal fun CalorieDataSourceCard(
     onEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -227,11 +225,9 @@ internal fun LanguageCard(
     onSelect: (AppLanguage) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.settings_language_title), style = MaterialTheme.typography.titleSmall)
@@ -256,11 +252,9 @@ internal fun ThemeModeCard(
     onSelect: (AppThemeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.settings_theme_title), style = MaterialTheme.typography.titleSmall)
@@ -306,11 +300,9 @@ internal fun ActivityWeekModeCard(
     onSelect: (ActivityWeekMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.settings_activity_week_title), style = MaterialTheme.typography.titleSmall)
@@ -358,11 +350,9 @@ internal fun FavoriteActivityCard(
     onSelect: (Int?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.settings_favorite_activity_title), style = MaterialTheme.typography.titleSmall)
@@ -433,11 +423,9 @@ internal fun ActivityRecordingPreferencesCard(
     onChange: (ActivityRecordingPreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -743,11 +731,9 @@ internal fun SleepRangeModeCard(
     onSelect: (SleepRangeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.settings_sleep_range_title), style = MaterialTheme.typography.titleSmall)
@@ -796,11 +782,9 @@ internal fun UnitSystemCard(
     onSelect: (UnitSystem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = stringResource(R.string.settings_units_title), style = MaterialTheme.typography.titleSmall)
@@ -849,11 +833,9 @@ internal fun CyclePermissionsCard(
     val grantedCount = cyclePermissions.count { it in grantedPermissions }
     val missingPermissions = cyclePermissions - grantedPermissions
     val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -916,11 +898,9 @@ internal fun AppleHealthImportCard(
     val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
     val canImport = healthConnectAvailable && missingPermissions.isEmpty() && !isImporting
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -1206,11 +1186,9 @@ internal fun PermissionCategoryCard(
 
 @Composable
 internal fun PrivacyInfoCard(modifier: Modifier = Modifier) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             listOf(

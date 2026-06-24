@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,20 +37,10 @@ fun MetricCard(
     contentAtBottom: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                }
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            .fillMaxWidth(),
+        onClick = onClick,
     ) {
         Column(
             modifier = if (contentAtBottom) {
@@ -112,20 +99,10 @@ fun MetricCardPlaceholder(
     showHeader: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                }
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            .fillMaxWidth(),
+        onClick = onClick,
     ) {
         Column(
             modifier = if (contentAtBottom) {

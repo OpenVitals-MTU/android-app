@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.cycle
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -37,9 +39,9 @@ internal fun BasalTemperatureTrendCard(
     val dayFormatter = dateTimeFormatterProvider.chartDay()
     val chartHeight = 110.dp
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (sorted.size >= 2) {

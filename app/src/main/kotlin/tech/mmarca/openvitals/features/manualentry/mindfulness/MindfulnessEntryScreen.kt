@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.mindfulness
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -166,9 +168,9 @@ private fun MindfulnessTimerCard(
     modifier: Modifier = Modifier,
 ) {
     val canEditTimer = !state.isTimerRunning && !state.isTimerPaused && !state.timerCompleted && !state.isSavingEntry
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -605,9 +607,9 @@ private fun MindfulnessManualEntryCard(
     modifier: Modifier = Modifier,
 ) {
     val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

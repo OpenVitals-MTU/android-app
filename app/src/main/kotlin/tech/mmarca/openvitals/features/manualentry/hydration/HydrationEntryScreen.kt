@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.hydration
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -140,9 +142,9 @@ private fun HydrationTrackerCard(
 ) {
     val enabled = state.canWriteHydration && !state.isSavingEntry && !state.isCheckingPermission
     var addingCustomAmount by remember { mutableStateOf(false) }
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

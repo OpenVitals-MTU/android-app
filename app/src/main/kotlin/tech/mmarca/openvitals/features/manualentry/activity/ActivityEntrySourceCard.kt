@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -50,9 +52,9 @@ internal fun ActivityEntrySourceCard(
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

@@ -64,7 +64,7 @@ private fun InsightStatCard(
     modifier: Modifier = Modifier,
 ) {
     val cardShape = MaterialTheme.shapes.medium
-    Card(
+    OpenVitalsCard(
         modifier = modifier
             .fillMaxWidth()
             .border(
@@ -73,9 +73,7 @@ private fun InsightStatCard(
                 shape = cardShape,
             ),
         shape = cardShape,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(

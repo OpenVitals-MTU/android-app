@@ -118,9 +118,9 @@ fun PeriodMonthHeatmap(
         }
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             PeriodHeatmapHeader(title, summaryText)
@@ -205,9 +205,9 @@ fun PeriodYearHeatmap(
     val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
     val maxValue = cells.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             PeriodHeatmapHeader(title, summaryText)

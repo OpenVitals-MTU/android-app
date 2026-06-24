@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.heart
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -599,9 +601,9 @@ private fun HeartRateThresholdCheckCard(
     onIncreaseThreshold: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(14.dp),

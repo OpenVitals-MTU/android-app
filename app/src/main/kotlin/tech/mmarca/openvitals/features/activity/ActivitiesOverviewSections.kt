@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -143,9 +145,9 @@ internal fun ActivityOverviewPeriodCard(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(text = activityPeriodTitle(selectedRange, activityWeekMode, period))
-        Card(
+        OpenVitalsCard(
             modifier = metricModifier(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = RoundedCornerShape(8.dp),
         ) {
@@ -181,9 +183,9 @@ internal fun ActivityWorkoutListCard(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(text = stringResource(R.string.section_activities))
-        Card(
+        OpenVitalsCard(
             modifier = metricModifier(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = RoundedCornerShape(8.dp),
         ) {
@@ -194,7 +196,7 @@ internal fun ActivityWorkoutListCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
-                return@Card
+                return@OpenVitalsCard
             }
 
             Text(
@@ -260,9 +262,9 @@ internal fun PlannedWorkoutListCard(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(text = stringResource(R.string.section_planned_workouts))
-        Card(
+        OpenVitalsCard(
             modifier = metricModifier(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = RoundedCornerShape(8.dp),
         ) {
@@ -559,11 +561,10 @@ internal fun ActivityMetricCard(
     subtitleColor: Color? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier
-            .fillMaxWidth()
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            .fillMaxWidth(),
+        onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(8.dp),
     ) {

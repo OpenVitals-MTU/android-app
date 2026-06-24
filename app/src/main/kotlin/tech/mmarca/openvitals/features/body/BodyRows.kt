@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.body
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -100,11 +102,9 @@ private fun BodyReadingRowContent(
     modifier: Modifier = Modifier,
 ) {
     val localTime = time.atZone(ZoneId.systemDefault())
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Row(
             modifier = Modifier

@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.readiness
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -189,12 +191,10 @@ private fun DailyReadinessPanel(
     modifier: Modifier = Modifier,
 ) {
     val accentColor = readinessAccentColor(insight.state)
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier

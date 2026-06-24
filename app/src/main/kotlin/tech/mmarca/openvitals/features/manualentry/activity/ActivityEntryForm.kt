@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -77,9 +79,9 @@ internal fun ActivityEntryCard(
     val titleError = state.validationErrorText(ActivityEntryField.TITLE)
     val durationError = state.validationErrorText(ActivityEntryField.DURATION)
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

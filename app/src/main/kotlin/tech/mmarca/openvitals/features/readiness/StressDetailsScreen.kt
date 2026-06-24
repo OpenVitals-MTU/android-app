@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.readiness
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -199,12 +201,10 @@ private fun StressScoreCard(
     modifier: Modifier = Modifier,
 ) {
     val accent = stressColor(stress.level)
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier
@@ -265,12 +265,10 @@ private fun StressExplanationCard(
     stress: PhysiologicalStressEstimate,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -342,12 +340,10 @@ private fun StressListCard(
     items: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

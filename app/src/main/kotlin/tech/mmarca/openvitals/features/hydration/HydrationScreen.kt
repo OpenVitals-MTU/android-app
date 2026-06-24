@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.hydration
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import android.Manifest
 import android.os.Build
 import android.text.format.DateFormat
@@ -468,9 +470,9 @@ private fun HydrationGoalCard(
     modifier: Modifier = Modifier,
 ) {
     val goal = unitFormatter.hydration(state.dailyGoalLiters)
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -561,9 +563,9 @@ private fun HydrationReminderCard(
         else -> stringResource(R.string.hydration_reminders_summary_off)
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -823,9 +825,9 @@ private fun HydrationDayGoalProgress(
         Stroke(width = strokeWidth, cap = StrokeCap.Round)
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

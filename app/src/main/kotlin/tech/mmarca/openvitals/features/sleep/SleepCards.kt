@@ -2,7 +2,6 @@ package tech.mmarca.openvitals.features.sleep
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -31,6 +29,9 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.ui.components.DetailRow
+import tech.mmarca.openvitals.ui.components.DetailSectionCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
@@ -57,12 +58,10 @@ internal fun SleepSessionTimelineCard(
     val timeFormatter = dateTimeFormatterProvider.shortTime()
 
     if (onClick != null) {
-        Card(
+        OpenVitalsCard(
             onClick = onClick,
             modifier = modifier,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            ),
+
         ) {
             SleepSessionTimelineCardContent(
                 session = session,
@@ -77,11 +76,9 @@ internal fun SleepSessionTimelineCard(
             )
         }
     } else {
-        Card(
+        OpenVitalsCard(
             modifier = modifier,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            ),
+
         ) {
             SleepSessionTimelineCardContent(
                 session = session,
@@ -218,12 +215,10 @@ internal fun SleepSessionItem(
     val dateFormatter = dateTimeFormatterProvider.mediumDate()
     val timeFormatter = dateTimeFormatterProvider.shortTime()
 
-    Card(
+    OpenVitalsCard(
         onClick = onClick,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -282,9 +277,9 @@ internal fun SleepSummaryCard(
     val start = session.startTime.atZone(zone)
     val end = session.endTime.atZone(zone)
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -434,9 +429,9 @@ internal fun SleepStageEventRow(
     val start = stage.startTime.atZone(zone)
     val end = stage.endTime.atZone(zone)
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -449,52 +444,6 @@ internal fun SleepStageEventRow(
             DetailRow(stringResource(R.string.detail_time), formatTimeRange(start, end, dateTimeFormatterProvider))
             DetailRow(stringResource(R.string.detail_duration), unitFormatter.duration(stage.durationMs))
         }
-    }
-}
-
-@Composable
-internal fun DetailSectionCard(
-    title: String,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            content()
-        }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.42f),
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(0.58f),
-        )
     }
 }
 

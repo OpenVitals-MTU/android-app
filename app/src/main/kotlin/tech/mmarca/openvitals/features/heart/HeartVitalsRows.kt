@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.heart
 
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,9 +64,9 @@ internal fun RespiratoryRateDayRow(
     modifier: Modifier = Modifier,
 ) {
     val dayFormatter = dateTimeFormatterProvider.chartDay()
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -116,9 +118,9 @@ internal fun <T> SimpleVitalsList(
     }
     val boundedVisibleCount = visibleCount.coerceAtMost(sortedEntries.size)
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+
     ) {
         Column(modifier = Modifier.padding(vertical = 8.dp)) {
             Text(
