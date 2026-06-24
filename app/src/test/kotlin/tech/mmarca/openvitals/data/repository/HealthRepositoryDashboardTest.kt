@@ -564,6 +564,49 @@ class HealthRepositoryDashboardTest {
         assertEquals(1, refreshed.weeklyCardioLoad?.todayScore)
     }
 
+    @Test fun `force refresh computes missing weekly cardio projection immediately`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns (0..6).map { offset ->
+            DailySteps(
+                date = date.minusDays(offset.toLong()),
+                steps = 3_000L,
+                distanceMeters = 0.0,
+            )
+        }
+        val repository = HealthRepository(
+            hc = hc,
+            derivedMetricStore = DerivedMetricStore(
+                dao = FakeDerivedMetricDao(),
+                today = { date },
+            ),
+        )
+
+        val data = repository.loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+                refreshMode = RefreshMode.FORCE,
+            )
+        )
+
+        assertEquals(7, data.weeklyCardioLoad?.currentScore)
+        assertEquals(1, data.weeklyCardioLoad?.todayScore)
+    }
+
     @Test fun `weekly intensity minutes use heart rate reserve when available`() = runTest {
         val date = LocalDate.of(2026, 6, 2)
         val start = Instant.parse("2026-06-02T10:00:00Z")

@@ -433,12 +433,10 @@ private suspend fun loadTodayVitalsSnapshot(context: Context): HomeMetricWidgetS
         add(dashboardResult.row(context, DashboardWidgetId.SLEEP))
         add(dashboardResult.row(context, DashboardWidgetId.STEPS))
         add(dashboardResult.row(context, DashboardWidgetId.DISTANCE))
-        add(dashboardResult.row(context, DashboardWidgetId.ACTIVE_CALORIES))
         add(dashboardResult.row(context, DashboardWidgetId.RESTING_HEART_RATE))
         add(dashboardResult.row(context, DashboardWidgetId.HRV, label = context.getString(R.string.home_widget_hrv_short)))
         add(dashboardResult.row(context, DashboardWidgetId.WEEKLY_CARDIO_LOAD))
         add(dashboardResult.row(context, DashboardWidgetId.HYDRATION))
-        add(dashboardResult.row(context, DashboardWidgetId.CALORIES_IN))
     }
     return HomeMetricWidgetSnapshot(
         title = context.getString(R.string.home_widget_today_title),
@@ -607,12 +605,10 @@ private fun todayVitalsFallbackRows(context: Context): List<HomeMetricWidgetRow>
         fallbackRow(context, context.getString(R.string.metric_sleep)),
         fallbackRow(context, context.getString(R.string.metric_steps)),
         fallbackRow(context, context.getString(R.string.metric_distance)),
-        fallbackRow(context, context.getString(R.string.metric_active_calories)),
         fallbackRow(context, context.getString(R.string.metric_resting_heart_rate)),
         fallbackRow(context, context.getString(R.string.home_widget_hrv_short)),
         fallbackRow(context, context.getString(R.string.metric_weekly_cardio_load)),
         fallbackRow(context, context.getString(R.string.metric_hydration)),
-        fallbackRow(context, context.getString(R.string.metric_calories_in)),
     )
 
 private fun HomeMetricWidgetSnapshot.displayValue(): String =
@@ -670,12 +666,10 @@ private val TodayVitalsMetrics = setOf(
     DashboardMetric.SLEEP,
     DashboardMetric.STEPS,
     DashboardMetric.DISTANCE,
-    DashboardMetric.ACTIVE_CALORIES,
     DashboardMetric.RESTING_HEART_RATE,
     DashboardMetric.HRV,
     DashboardMetric.WEEKLY_CARDIO_LOAD,
     DashboardMetric.HYDRATION,
-    DashboardMetric.CALORIES_IN,
 )
 
 private val TodayVitalsDashboardMetrics = TodayVitalsMetrics

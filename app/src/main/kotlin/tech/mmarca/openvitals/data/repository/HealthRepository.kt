@@ -278,10 +278,29 @@ class HealthRepository @Inject constructor(
                     granted = granted,
                     config = derivedConfig,
                 )
+                val refreshedMissingDerived = if (
+                    query.refreshMode == RefreshMode.FORCE &&
+                    derived.missingKeys.isNotEmpty()
+                ) {
+                    refreshDerivedDashboardMetricsNow(
+                        query = query,
+                        keys = derived.missingKeys,
+                        granted = granted,
+                        config = derivedConfig,
+                        reason = "dashboard_force_missing",
+                    )
+                } else {
+                    DashboardData(date = query.date)
+                }
                 if (derived.refreshKeys.isNotEmpty()) {
+                    val backgroundRefreshKeys = if (query.refreshMode == RefreshMode.FORCE) {
+                        derived.refreshKeys - derived.missingKeys
+                    } else {
+                        derived.refreshKeys
+                    }
                     refreshDerivedDashboardMetrics(
                         query = query,
-                        keys = derived.refreshKeys,
+                        keys = backgroundRefreshKeys,
                         granted = granted,
                         config = derivedConfig,
                         reason = if (query.refreshMode == RefreshMode.FORCE) {
@@ -293,6 +312,7 @@ class HealthRepository @Inject constructor(
                 }
                 directData
                     .mergeDerivedDashboardProjection(derived.data)
+                    .mergeDerivedDashboardProjection(refreshedMissingDerived)
             } else {
                 directData
             }
@@ -358,6 +378,7 @@ class HealthRepository @Inject constructor(
         val reads = keys.associateWith { key -> store.read(key, refreshMode = cacheReadMode) }
         var data = DashboardData(date = query.date)
         val refreshKeys = mutableSetOf<DerivedMetricCacheKey>()
+        val missingKeys = mutableSetOf<DerivedMetricCacheKey>()
         reads.forEach { (key, read) ->
             if ((read.isUsable || query.refreshMode == RefreshMode.FORCE) && read.entry != null) {
                 runCatching { DashboardDataSummaryCodec.decode(read.entry.payloadJson) }
@@ -372,12 +393,18 @@ class HealthRepository @Inject constructor(
                     }
                     .onFailure {
                         refreshKeys += key
+                        missingKeys += key
                     }
             } else {
                 refreshKeys += key
+                missingKeys += key
             }
         }
-        return DerivedDashboardMetrics(data = data, refreshKeys = refreshKeys)
+        return DerivedDashboardMetrics(
+            data = data,
+            refreshKeys = refreshKeys,
+            missingKeys = missingKeys,
+        )
     }
 
     fun refreshDerivedDashboardMetrics(
@@ -419,6 +446,32 @@ class HealthRepository @Inject constructor(
                 }
             }
         }
+    }
+
+    private suspend fun refreshDerivedDashboardMetricsNow(
+        query: DashboardQuery,
+        keys: Set<DerivedMetricCacheKey>,
+        granted: Set<String>,
+        config: DerivedDashboardConfig,
+        reason: String,
+    ): DashboardData {
+        val store = derivedMetricStore ?: return DashboardData(date = query.date)
+        var data = DashboardData(date = query.date)
+        keys.forEach { key ->
+            val projection = projectDerivedDashboardMetric(
+                query = query,
+                key = key.metricKey,
+                granted = granted,
+                config = config,
+            )
+            store.write(
+                key = key,
+                payloadJson = DashboardDataSummaryCodec.encode(projection),
+                sourceSummary = reason,
+            )
+            data = data.mergeDerivedDashboardProjection(projection)
+        }
+        return data
     }
 
     private suspend fun projectDerivedDashboardMetric(
@@ -1341,6 +1394,7 @@ data class DerivedDashboardConfig(
 data class DerivedDashboardMetrics(
     val data: DashboardData,
     val refreshKeys: Set<DerivedMetricCacheKey>,
+    val missingKeys: Set<DerivedMetricCacheKey> = emptySet(),
 )
 
 private fun DashboardData.mergeDerivedDashboardProjection(projection: DashboardData): DashboardData =
