@@ -316,6 +316,24 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    fun lastCustomHydrationAmountMilliliters(): Double? {
+        val milliliters = prefs.getFloat(
+            KEY_LAST_CUSTOM_HYDRATION_AMOUNT_MILLILITERS,
+            MISSING_HYDRATION_AMOUNT_MILLILITERS,
+        )
+        return milliliters
+            .takeIf { it != MISSING_HYDRATION_AMOUNT_MILLILITERS && it > 0.0f && it.isFinite() }
+            ?.toDouble()
+    }
+
+    fun setLastCustomHydrationAmountMilliliters(milliliters: Double) {
+        if (milliliters <= 0.0 || !milliliters.isFinite()) return
+
+        prefs.edit {
+            putFloat(KEY_LAST_CUSTOM_HYDRATION_AMOUNT_MILLILITERS, milliliters.toFloat())
+        }
+    }
+
     fun mindfulnessReminderConfig(): MindfulnessReminderConfig =
         MindfulnessReminderConfig(
             enabled = prefs.getBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, false),
@@ -471,6 +489,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
         private const val KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS = "hydration_container_volume_milliliters"
+        private const val KEY_LAST_CUSTOM_HYDRATION_AMOUNT_MILLILITERS =
+            "last_custom_hydration_amount_milliliters"
         private const val KEY_HYDRATION_REMINDERS_ENABLED = "hydration_reminders_enabled"
         private const val KEY_HYDRATION_REMINDER_INTERVAL_MINUTES = "hydration_reminder_interval_minutes"
         private const val KEY_HYDRATION_REMINDER_ACTIVE_START_TIME = "hydration_reminder_active_start_time"
@@ -498,6 +518,7 @@ class PreferencesRepository @Inject constructor(
         private const val MIN_MINDFULNESS_TIMER_MINUTES = 1
         private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60
         private const val MISSING_EXERCISE_TYPE = Int.MIN_VALUE
+        private const val MISSING_HYDRATION_AMOUNT_MILLILITERS = -1.0f
         private const val ROUTE_GAP_OFF = 0
         private const val RECORDING_INTERVAL_OFF = 0
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")

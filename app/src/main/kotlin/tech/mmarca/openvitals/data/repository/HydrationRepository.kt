@@ -50,6 +50,13 @@ class HydrationRepository @Inject constructor(
         preferencesRepository?.setHydrationContainerVolumeMilliliters(containerId, milliliters)
     }
 
+    fun lastCustomHydrationAmountMilliliters(): Double? =
+        preferencesRepository?.lastCustomHydrationAmountMilliliters()
+
+    fun setLastCustomHydrationAmountMilliliters(milliliters: Double) {
+        preferencesRepository?.setLastCustomHydrationAmountMilliliters(milliliters)
+    }
+
     fun hydrationDailyGoalLiters(): Double =
         preferencesRepository?.hydrationDailyGoalLiters
             ?.takeIf { it > 0.0 && it.isFinite() }

@@ -43,11 +43,14 @@ class HydrationEntryViewModelTest {
         dailyHydration: List<DailyHydration> = emptyList(),
         dailyGoalLiters: Double = 2.0,
         containerVolumeMilliliters: Map<String, Double> = emptyMap(),
+        lastCustomAmountMilliliters: Double? = null,
     ) = mockk<HydrationRepository>().also { repo ->
         every { repo.hydrationWritePermissions } returns setOf("write_hydration")
         every { repo.hydrationContainerVolumeMilliliters() } returns containerVolumeMilliliters
+        every { repo.lastCustomHydrationAmountMilliliters() } returns lastCustomAmountMilliliters
         every { repo.hydrationDailyGoalLiters() } returns dailyGoalLiters
         every { repo.setHydrationContainerVolumeMilliliters(any(), any()) } returns Unit
+        every { repo.setLastCustomHydrationAmountMilliliters(any()) } returns Unit
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
         coEvery { repo.loadDailyHydration(any(), any()) } returns dailyHydration
@@ -97,6 +100,20 @@ class HydrationEntryViewModelTest {
         )
         assertEquals("coffee_cup", vm.uiState.value.selectedContainer.id)
         assertEquals(125.0, vm.uiState.value.selectedContainer.volumeMilliliters, 0.0001)
+    }
+
+    @Test fun `initial state uses persisted custom hydration amount`() = runTest {
+        val vm = HydrationEntryViewModel(entryRepo(lastCustomAmountMilliliters = 425.0))
+        advanceUntilIdle()
+
+        assertEquals(425.0, vm.uiState.value.lastCustomAmountMilliliters ?: 0.0, 0.0001)
+    }
+
+    @Test fun `initial state ignores invalid persisted custom hydration amount`() = runTest {
+        val vm = HydrationEntryViewModel(entryRepo(lastCustomAmountMilliliters = 0.0))
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.lastCustomAmountMilliliters)
     }
 
     @Test fun `container size update changes and selects preset option`() = runTest {
@@ -223,6 +240,7 @@ class HydrationEntryViewModelTest {
         }
         assertEquals(0.35, vm.uiState.value.todayHydrationLiters, 0.0001)
         assertEquals(350.0, vm.uiState.value.lastCustomAmountMilliliters ?: 0.0, 0.0001)
+        verify { repo.setLastCustomHydrationAmountMilliliters(350.0) }
         assertTrue(vm.uiState.value.saveCompleted)
     }
 
@@ -238,6 +256,7 @@ class HydrationEntryViewModelTest {
 
         assertEquals(425.0, vm.uiState.value.lastCustomAmountMilliliters ?: 0.0, 0.0001)
         assertEquals(HydrationEntryError.INVALID_AMOUNT, vm.uiState.value.entryError)
+        verify(exactly = 0) { repo.setLastCustomHydrationAmountMilliliters(0.0) }
     }
 
     @Test fun `invalid custom hydration entry is rejected`() = runTest {

@@ -259,6 +259,7 @@ class HydrationEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             lastCustomAmountMilliliters = milliliters,
         )
+        repository.setLastCustomHydrationAmountMilliliters(milliliters)
         saveHydrationEntry(milliliters / MillilitersPerLiter)
     }
 
@@ -370,6 +371,8 @@ private fun initialHydrationEntryState(
         containerOptions = options,
         selectedContainer = options.first(),
         dailyGoalLiters = repository.hydrationDailyGoalLiters(),
+        lastCustomAmountMilliliters = repository.lastCustomHydrationAmountMilliliters()
+            ?.takeIf(::isValidHydrationContainerMilliliters),
         editRecordId = editRecordId,
     )
 }
