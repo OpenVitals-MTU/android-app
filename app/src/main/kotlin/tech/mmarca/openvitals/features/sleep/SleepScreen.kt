@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.sleep
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,9 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -84,9 +81,13 @@ import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.MetricSparklineChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
+import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
+import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
@@ -291,19 +292,26 @@ fun SleepScreen(
 
             state.selectedRange != TimeRange.DAY && state.sessions.isNotEmpty() -> {
                 item {
-                    SleepDurationChart(
-                        sessions = state.sessions,
+                    val nightsWithSleep = durationPoints.filter { it.hours > 0.0 }
+                    val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
+                    MetricBarChart(
+                        title = stringResource(R.string.metric_sleep),
+                        values = durationPoints.map { PeriodChartValue(date = it.date, value = it.hours) },
                         selectedRange = state.selectedRange,
                         period = period,
-                        sleepRangeMode = state.sleepRangeMode,
-                        unitFormatter = unitFormatter,
+                        accentColor = SleepColor,
+                        accentAlpha = 0.75f,
+                        summaryValue = "${
+                            stringResource(R.string.summary_avg_value, "${unitFormatter.decimal(averageHours, 1)}h")
+                        } · ${stringResource(R.string.summary_nights, unitFormatter.count(nightsWithSleep.size))}",
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        durationPoints = durationPoints,
+                        yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
                         selectedDate = chartDaySelection.selectedDate,
                         onDateSelected = chartDaySelection.onDateSelected,
+                        valueFormatter = { "${unitFormatter.decimal(it, 1)}h" },
                     )
                 }
                 chartDaySelection.selectedDate?.let { selectedDate ->
@@ -646,43 +654,13 @@ private fun SleepOverviewSparkline(
     val labelDates = sleepOverviewLabelDates(dates, selectedRange)
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Canvas(
+        MetricSparklineChart(
+            values = values,
+            accentColor = accentColor,
             modifier = Modifier
                 .width(SleepOverviewChartWidth)
                 .height(SleepOverviewChartHeight),
-        ) {
-            val maxValue = values.maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
-            val stepX = if (values.size > 1) size.width / (values.size - 1) else size.width / 2f
-            val points = values.mapIndexed { index, value ->
-                val yFraction = (value / maxValue).toFloat().coerceIn(0f, 1f)
-                Offset(
-                    x = if (values.size > 1) index * stepX else stepX,
-                    y = size.height - (yFraction * (size.height * 0.72f)) - (size.height * 0.14f),
-                )
-            }
-            drawLine(
-                color = accentColor.copy(alpha = 0.22f),
-                start = Offset(0f, size.height * 0.75f),
-                end = Offset(size.width, size.height * 0.75f),
-                strokeWidth = 2.dp.toPx(),
-            )
-            points.zipWithNext().forEach { (start, end) ->
-                drawLine(
-                    color = accentColor,
-                    start = start,
-                    end = end,
-                    strokeWidth = 4.dp.toPx(),
-                    cap = StrokeCap.Round,
-                )
-            }
-            points.forEach { point ->
-                drawCircle(
-                    color = accentColor,
-                    radius = 3.dp.toPx(),
-                    center = point,
-                )
-            }
-        }
+        )
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.width(SleepOverviewChartWidth),
@@ -933,6 +911,33 @@ private fun sleepOverviewSparklineLabel(
     TimeRange.DAY,
     TimeRange.WEEK -> date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).take(1)
 }
+
+internal fun sleepDurationPoints(
+    sessions: List<SleepData>,
+    period: DatePeriod,
+    sleepRangeMode: SleepRangeMode,
+): List<SleepDurationPoint> {
+    val zone = ZoneId.systemDefault()
+
+    return generateSequence(period.start) { current ->
+        current.plusDays(1).takeUnless { it.isAfter(period.end) }
+    }.map { date ->
+        SleepDurationPoint(
+            date = date,
+            hours = dailySleepSummary(
+                sessions = sessions,
+                selectedDate = date,
+                sleepRangeMode = sleepRangeMode,
+                zone = zone,
+            )?.durationHours ?: 0.0,
+        )
+    }.toList()
+}
+
+internal data class SleepDurationPoint(
+    val date: LocalDate,
+    val hours: Double,
+)
 
 private data class SleepOverviewDay(
     val date: LocalDate,

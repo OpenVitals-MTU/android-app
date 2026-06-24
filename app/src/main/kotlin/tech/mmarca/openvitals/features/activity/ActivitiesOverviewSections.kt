@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.activity
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,10 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -89,9 +85,10 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.MetricSparklineChart
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.components.entryListTitle
@@ -644,7 +641,24 @@ internal fun ActivityMetricSparkline(
 ) {
     val locale = LocalConfiguration.current.locales[0]
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        ActivityMiniLineChart(values, accentColor)
+        val maxValue = values.maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
+        val minValue = values.minOrNull()?.takeIf { it < maxValue } ?: 0.0
+        MetricSparklineChart(
+            values = values,
+            accentColor = accentColor,
+            modifier = Modifier
+                .width(ActivityOverviewChartWidth)
+                .height(ActivityOverviewChartHeight),
+            minValue = minValue,
+            baselineFraction = 0.72f,
+            baselineAlpha = 0.55f,
+            verticalScaleFraction = 0.78f,
+            topPaddingFraction = 0.1f,
+            pointRadius = 5.dp,
+            pointStrokeWidth = 2.dp,
+            pointFillRadius = 2.5.dp,
+            singlePointLine = true,
+        )
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.width(ActivityOverviewChartWidth),
@@ -659,66 +673,6 @@ internal fun ActivityMetricSparkline(
                     overflow = TextOverflow.Clip,
                 )
             }
-        }
-    }
-}
-
-@Composable
-internal fun ActivityMiniLineChart(values: List<Double>, accentColor: Color) {
-    Canvas(
-        modifier = Modifier
-            .width(ActivityOverviewChartWidth)
-            .height(ActivityOverviewChartHeight),
-    ) {
-        val maxValue = values.maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
-        val minValue = values.minOrNull()?.takeIf { it < maxValue } ?: 0.0
-        val range = (maxValue - minValue).takeIf { it > 0.0 } ?: 1.0
-        val stepX = if (values.size > 1) size.width / (values.size - 1) else size.width / 2f
-        val points = values.mapIndexed { index, value ->
-            val yFraction = ((value - minValue) / range).toFloat().coerceIn(0f, 1f)
-            Offset(
-                x = if (values.size > 1) index * stepX else stepX,
-                y = size.height - (yFraction * (size.height * 0.78f)) - (size.height * 0.1f),
-            )
-        }
-        drawLine(
-            color = accentColor.copy(alpha = 0.55f),
-            start = Offset(0f, size.height * 0.72f),
-            end = Offset(size.width, size.height * 0.72f),
-            strokeWidth = 2.dp.toPx(),
-        )
-        val lineStrokeWidth = 4.dp.toPx()
-        points.singleOrNull()?.let { point ->
-            drawLine(
-                color = accentColor,
-                start = Offset(lineStrokeWidth / 2f, point.y),
-                end = Offset(size.width - lineStrokeWidth / 2f, point.y),
-                strokeWidth = lineStrokeWidth,
-                cap = StrokeCap.Round,
-            )
-            return@Canvas
-        }
-        points.zipWithNext().forEach { (start, end) ->
-            drawLine(
-                color = accentColor,
-                start = start,
-                end = end,
-                strokeWidth = lineStrokeWidth,
-                cap = StrokeCap.Round,
-            )
-        }
-        points.forEach { point ->
-            drawCircle(
-                color = accentColor,
-                radius = 5.dp.toPx(),
-                center = point,
-                style = Stroke(width = 2.dp.toPx()),
-            )
-            drawCircle(
-                color = accentColor,
-                radius = 2.5.dp.toPx(),
-                center = point,
-            )
         }
     }
 }
@@ -944,43 +898,6 @@ internal fun LazyListScope.workoutGuidelineContext(
 internal fun DatePeriod.weekCount(): Double {
     val days = ChronoUnit.DAYS.between(start, end).toDouble() + 1.0
     return (days / 7.0).coerceAtLeast(1.0 / 7.0)
-}
-
-@Composable
-internal fun WorkoutHistoryChart(
-    workouts: List<ExerciseData>,
-    selectedRange: TimeRange,
-    period: DatePeriod,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    modifier: Modifier = Modifier,
-    selectedDate: LocalDate? = null,
-    onDateSelected: ((LocalDate) -> Unit)? = null,
-) {
-    val zone = ZoneId.systemDefault()
-    val values = workouts
-        .groupBy { it.startTime.atZone(zone).toLocalDate() }
-        .map { (date, dayWorkouts) ->
-            PeriodChartValue(
-                date = date,
-                value = dayWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
-            )
-        }
-    val totalMs = workouts.sumOf { it.durationMs.coerceAtLeast(0L) }
-
-    PeriodHistoryChart(
-        title = stringResource(R.string.metric_workout),
-        values = values,
-        selectedRange = selectedRange,
-        period = period,
-        accentColor = WorkoutColor.copy(alpha = 0.85f),
-        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.duration(totalMs)}",
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        modifier = modifier.fillMaxWidth(),
-        selectedDate = selectedDate,
-        onDateSelected = onDateSelected,
-        valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
-    )
 }
 
 internal fun LazyListScope.workoutGoal(

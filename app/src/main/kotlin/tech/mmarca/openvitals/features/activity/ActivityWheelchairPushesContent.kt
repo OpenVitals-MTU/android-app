@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.DailyGoalValue
 import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.theme.WheelchairPushesColor
 import kotlin.math.roundToLong
 
@@ -44,15 +45,21 @@ internal fun LazyListScope.wheelchairPushesContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                WheelchairPushesBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_wheelchair_pushes),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = "${unitFormatter.count(state.dailySteps.sumOf { it.wheelchairPushes ?: 0L })} ${stringResource(R.string.unit_pushes)}",
+                    accentColor = WheelchairPushesColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { (it.wheelchairPushes ?: 0L).toDouble() },
+                    valueFormatter = { unitFormatter.count(it.roundToLong()) },
                 )
             }
         }

@@ -54,10 +54,8 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
-import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
@@ -358,6 +356,7 @@ internal fun LazyListScope.bmiEntries(
     heightCm: Double?,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    titleDate: LocalDate? = null,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
     onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
@@ -371,6 +370,7 @@ internal fun LazyListScope.bmiEntries(
         time = { it.time },
         accentColor = WeightColor,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        titleDate = titleDate,
         editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
         onEdit = { onEditBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },
         onDelete = { onDeleteBodyMeasurement(BodyMeasurementType.WEIGHT, it.id) },

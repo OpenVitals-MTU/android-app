@@ -44,14 +44,13 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
-import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
@@ -344,13 +343,13 @@ private fun LazyListScope.nutritionMetricTrend(
     onDateSelected: (LocalDate) -> Unit,
 ) {
     item {
-        PeriodHistoryChart(
+        MetricBarChart(
             title = stringResource(metricData.titleRes),
             values = metricData.values,
             selectedRange = state.selectedRange,
             period = period,
-            accentColor = metricData.color.copy(alpha = 0.85f),
-            summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${metricData.total.text}",
+            accentColor = metricData.color,
+            summaryValue = metricData.total.text,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = metricModifier(),
             selectedDate = selectedDate,
@@ -427,13 +426,13 @@ private fun LazyListScope.nutritionMetricContent(
             )
         }
         item {
-            PeriodHistoryChart(
+            MetricBarChart(
                 title = stringResource(metricData.titleRes),
                 values = metricData.values,
                 selectedRange = state.selectedRange,
                 period = period,
-                accentColor = metricData.color.copy(alpha = 0.85f),
-                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${metricData.total.text}",
+                accentColor = metricData.color,
+                summaryValue = metricData.total.text,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
                 selectedDate = chartDaySelection.selectedDate,

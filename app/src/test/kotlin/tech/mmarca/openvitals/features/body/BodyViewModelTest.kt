@@ -228,7 +228,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadHeightEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo, selectedMetric = BodyMetric.HEIGHT)
+        val vm = BodyViewModel(repo)
 
         assertEquals(178.0, vm.uiState.value.heightCm!!, 0.01)
         assertEquals(entries, vm.uiState.value.heightEntries)
@@ -239,7 +239,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadBodyFatEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo, selectedMetric = BodyMetric.BODY_FAT)
+        val vm = BodyViewModel(repo)
 
         assertEquals(entries, vm.uiState.value.bodyFatEntries)
     }
@@ -249,7 +249,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadLeanBodyMassEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo, selectedMetric = BodyMetric.LEAN_MASS)
+        val vm = BodyViewModel(repo)
 
         assertEquals(58.3, vm.uiState.value.leanMassKg!!, 0.01)
         assertEquals(entries, vm.uiState.value.leanMassEntries)
@@ -260,7 +260,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadBmrEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo, selectedMetric = BodyMetric.BMR)
+        val vm = BodyViewModel(repo)
 
         assertEquals(1_750.0, vm.uiState.value.bmrKcal!!, 0.01)
         assertEquals(entries, vm.uiState.value.bmrEntries)
@@ -271,7 +271,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadBoneMassEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo, selectedMetric = BodyMetric.BONE_MASS)
+        val vm = BodyViewModel(repo)
 
         assertEquals(3.2, vm.uiState.value.boneMassKg!!, 0.001)
         assertEquals(entries, vm.uiState.value.boneMassEntries)

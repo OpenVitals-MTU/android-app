@@ -89,16 +89,15 @@ import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedDayTitle
-import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
@@ -188,15 +187,28 @@ fun ActivitiesScreen(
         )
         if (state.workouts.isNotEmpty()) {
             item {
-                WorkoutHistoryChart(
-                    workouts = state.workouts,
+                val values = state.workouts
+                    .groupBy { it.startTime.atZone(ZoneId.systemDefault()).toLocalDate() }
+                    .map { (date, dayWorkouts) ->
+                        PeriodChartValue(
+                            date = date,
+                            value = dayWorkouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
+                        )
+                    }
+                MetricBarChart(
+                    title = stringResource(R.string.metric_workout),
+                    values = values,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = WorkoutColor,
+                    summaryValue = unitFormatter.duration(state.workouts.sumOf { it.durationMs.coerceAtLeast(0L) }),
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
                 )
             }
             chartDaySelection.selectedDate?.let { selectedDate ->

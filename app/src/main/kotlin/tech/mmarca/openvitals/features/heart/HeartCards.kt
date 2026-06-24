@@ -15,8 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -25,9 +23,8 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
-import tech.mmarca.openvitals.ui.components.YAxisChart
-import tech.mmarca.openvitals.ui.components.chartYAxisLabels
-import tech.mmarca.openvitals.ui.components.drawYAxisGuides
+import tech.mmarca.openvitals.ui.components.MetricLinePlot
+import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import java.time.Duration
 import java.time.LocalDate
@@ -50,7 +47,6 @@ internal fun HeartRateTimelineCard(
     val avgBpm = sorted.map { it.beatsPerMinute }.average().roundToInt()
     val paddedMin = (minBpm - 5L).coerceAtLeast(30L)
     val paddedMax = maxBpm + 5L
-    val range = (paddedMax - paddedMin).coerceAtLeast(1L)
     val dayStart = date.atStartOfDay(zone).toInstant()
     val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
     val dayDurationMillis = Duration.between(dayStart, dayEnd).toMillis().coerceAtLeast(1L)
@@ -58,8 +54,6 @@ internal fun HeartRateTimelineCard(
     val lastSample = sorted.last().time.atZone(zone)
     val timeFormatter = dateTimeFormatterProvider.shortTime()
     val chartHeight = 180.dp
-    val gridColor = HeartColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -89,47 +83,22 @@ internal fun HeartRateTimelineCard(
                 )
             }
             Spacer(Modifier.height(16.dp))
-            YAxisChart(
-                labels = chartYAxisLabels(
-                    minValue = paddedMin.toDouble(),
-                    maxValue = paddedMax.toDouble(),
-                    valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
-                ),
-                chartHeight = chartHeight,
-            ) {
-                drawYAxisGuides(
-                    gridColor = gridColor,
-                    axisColor = axisColor,
-                    strokeWidth = 1.dp.toPx(),
-                )
-
-                val points = sorted.map { sample ->
+            MetricLinePlot(
+                points = sorted.map { sample ->
                     val elapsed = Duration.between(dayStart, sample.time).toMillis()
                         .coerceIn(0L, dayDurationMillis)
-                    val x = size.width * elapsed.toFloat() / dayDurationMillis
-                    val y = size.height * (
-                        1f - (sample.beatsPerMinute - paddedMin).toFloat() / range.toFloat()
+                    MetricLinePlotPoint(
+                        xFraction = elapsed.toFloat() / dayDurationMillis.toFloat(),
+                        value = sample.beatsPerMinute.toDouble(),
                     )
-                    Offset(x, y)
-                }
-
-                for (index in 0 until points.size - 1) {
-                    drawLine(
-                        color = HeartColor,
-                        start = points[index],
-                        end = points[index + 1],
-                        strokeWidth = 2.dp.toPx(),
-                        cap = StrokeCap.Round,
-                    )
-                }
-                points.forEach { point ->
-                    drawCircle(
-                        color = HeartColor,
-                        radius = 3.dp.toPx(),
-                        center = point,
-                    )
-                }
-            }
+                },
+                minValue = paddedMin.toDouble(),
+                maxValue = paddedMax.toDouble(),
+                accentColor = HeartColor,
+                chartHeight = chartHeight,
+                valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+                pointRadius = 3.dp,
+            )
             Spacer(Modifier.height(8.dp))
             ChartXAxisWithYAxis {
                 Row(

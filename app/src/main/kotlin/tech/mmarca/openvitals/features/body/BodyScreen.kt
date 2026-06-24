@@ -38,13 +38,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.model.BodyFatEntry
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
-import tech.mmarca.openvitals.domain.model.BodyWaterMassEntry
-import tech.mmarca.openvitals.domain.model.BmrEntry
-import tech.mmarca.openvitals.domain.model.BoneMassEntry
-import tech.mmarca.openvitals.domain.model.HeightEntry
-import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
@@ -52,14 +46,12 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
-import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
-import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
@@ -131,10 +123,11 @@ fun WeightScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.WEIGHT,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -146,10 +139,11 @@ fun HeightScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.HEIGHT,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -161,10 +155,11 @@ fun BmiScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BMI,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -176,10 +171,11 @@ fun BodyFatScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BODY_FAT,
         onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
@@ -190,10 +186,11 @@ fun LeanMassScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.LEAN_MASS,
     )
 }
 
@@ -203,10 +200,11 @@ fun BmrScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BMR,
     )
 }
 
@@ -216,10 +214,11 @@ fun BoneMassScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BONE_MASS,
     )
 }
 
@@ -229,10 +228,11 @@ fun BodyWaterMassScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    BodyScreen(
+    BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.BODY_WATER_MASS,
     )
 }
 
@@ -247,6 +247,10 @@ private fun BodyMetricScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentPeriod()
+    }
 
     MetricDetailScaffold(
         isLoading = state.isLoading,
@@ -270,76 +274,132 @@ private fun BodyMetricScreen(
                 onEditBodyMeasurement,
                 viewModel::deleteBodyMeasurementEntry,
             )
-            BodyMetric.HEIGHT -> singleBodyMetricContent(
-                state = state,
-                period = period,
-                titleRes = R.string.metric_height,
-                value = state.latestHeightCm?.let(unitFormatter::height),
-                comparison = state.previousLatestHeightCm?.let { previous ->
-                    periodComparison(currentValue = state.latestHeightCm ?: 0.0, previousValue = previous)
-                },
-                comparisonValueFormatter = { unitFormatter.height(it) },
-                icon = Icons.Outlined.Straighten,
-                accentColor = WeightColor,
-                unitFormatter = unitFormatter,
-                selectedRange = state.selectedRange,
-                entryCount = state.heightEntries.size,
-                baselineCurrentValue = state.latestHeightCm,
-                baselineValues = state.baselineHeightEntries.map { it.heightBaselineValue() },
-                contextContent = {
-                    bodyEntryDataConfidence(
-                        period = period,
-                        entries = state.heightEntries,
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                    )
-                },
-                entriesContent = {
-                    bodyReadingEntries(
-                        entries = state.heightEntries,
-                        value = { unitFormatter.height(it.heightCm).text },
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
-                        onEdit = { onEditBodyMeasurement(BodyMeasurementType.HEIGHT, it.id) },
-                        onDelete = { viewModel.deleteBodyMeasurementEntry(BodyMeasurementType.HEIGHT, it.id) },
-                    )
-                },
-            )
-            BodyMetric.BMI -> singleBodyMetricContent(
-                state = state,
-                period = period,
-                titleRes = R.string.metric_bmi,
-                value = state.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
-                comparison = state.previousBmi?.let { previous ->
-                    periodComparison(currentValue = state.bmi ?: 0.0, previousValue = previous)
-                },
-                comparisonValueFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
-                icon = Icons.Outlined.MonitorWeight,
-                accentColor = WeightColor,
-                unitFormatter = unitFormatter,
-                selectedRange = state.selectedRange,
-                baselineCurrentValue = state.bmi,
-                baselineValues = bmiBaselineValues(state.baselineWeightEntries, state.heightCm),
-                entryCount = state.weightEntries.size,
-                contextContent = {
-                    bmiDataConfidence(state, period)
-                    bmiContextCard(state.bmi)
-                },
-                entriesContent = {
-                    bmiEntries(
-                        entries = state.weightEntries,
-                        heightCm = state.heightCm,
-                        unitFormatter = unitFormatter,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        onEditBodyMeasurement = onEditBodyMeasurement,
-                        onDeleteBodyMeasurement = viewModel::deleteBodyMeasurementEntry,
-                    )
-                },
-            )
+            BodyMetric.HEIGHT -> {
+                val metricData = state.metricDataFor(BodyMetric.HEIGHT, unitFormatter)
+                singleBodyMetricContent(
+                    state = state,
+                    period = period,
+                    titleRes = R.string.metric_height,
+                    value = state.latestHeightCm?.let(unitFormatter::height),
+                    comparison = state.previousLatestHeightCm?.let { previous ->
+                        periodComparison(currentValue = state.latestHeightCm ?: 0.0, previousValue = previous)
+                    },
+                    comparisonValueFormatter = { unitFormatter.height(it) },
+                    icon = Icons.Outlined.Straighten,
+                    accentColor = WeightColor,
+                    unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
+                    entryCount = state.heightEntries.size,
+                    baselineCurrentValue = state.latestHeightCm,
+                    baselineValues = state.baselineHeightEntries.map { it.heightBaselineValue() },
+                    contextContent = {
+                        if (metricData.hasTrackedValues) {
+                            item {
+                                MetricBarChart(
+                                    title = stringResource(metricData.titleRes),
+                                    values = metricData.values,
+                                    selectedRange = state.selectedRange,
+                                    period = period,
+                                    accentColor = metricData.color,
+                                    summaryValue = metricData.latest?.text
+                                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = metricModifier(),
+                                    selectedDate = chartDaySelection.selectedDate,
+                                    onDateSelected = chartDaySelection.onDateSelected,
+                                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                                )
+                            }
+                        }
+                        bodyEntryDataConfidence(
+                            period = period,
+                            entries = state.heightEntries,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                        )
+                    },
+                    entriesContent = {
+                        bodyMetricReadingEntries(
+                            entries = state.heightEntries,
+                            selectedDate = chartDaySelection.selectedDate,
+                            value = { unitFormatter.height(it.heightCm).text },
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
+                            onEdit = { onEditBodyMeasurement(BodyMeasurementType.HEIGHT, it.id) },
+                            onDelete = { viewModel.deleteBodyMeasurementEntry(BodyMeasurementType.HEIGHT, it.id) },
+                        )
+                    },
+                )
+            }
+            BodyMetric.BMI -> {
+                val metricData = state.metricDataFor(BodyMetric.BMI, unitFormatter)
+                singleBodyMetricContent(
+                    state = state,
+                    period = period,
+                    titleRes = R.string.metric_bmi,
+                    value = state.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
+                    comparison = state.previousBmi?.let { previous ->
+                        periodComparison(currentValue = state.bmi ?: 0.0, previousValue = previous)
+                    },
+                    comparisonValueFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
+                    icon = Icons.Outlined.MonitorWeight,
+                    accentColor = WeightColor,
+                    unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
+                    baselineCurrentValue = state.bmi,
+                    baselineValues = bmiBaselineValues(state.baselineWeightEntries, state.heightCm),
+                    entryCount = state.weightEntries.size,
+                    contextContent = {
+                        if (metricData.hasTrackedValues) {
+                            item {
+                                MetricBarChart(
+                                    title = stringResource(metricData.titleRes),
+                                    values = metricData.values,
+                                    selectedRange = state.selectedRange,
+                                    period = period,
+                                    accentColor = metricData.color,
+                                    summaryValue = metricData.latest?.text
+                                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = metricModifier(),
+                                    selectedDate = chartDaySelection.selectedDate,
+                                    onDateSelected = chartDaySelection.onDateSelected,
+                                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                                )
+                            }
+                        }
+                        bmiDataConfidence(state, period)
+                        bmiContextCard(state.bmi)
+                    },
+                    entriesContent = {
+                        chartDaySelection.selectedDate?.let { selectedDate ->
+                            bmiEntries(
+                                entries = state.weightEntries.filter {
+                                    it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
+                                },
+                                heightCm = state.heightCm,
+                                unitFormatter = unitFormatter,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                titleDate = selectedDate,
+                                onEditBodyMeasurement = onEditBodyMeasurement,
+                                onDeleteBodyMeasurement = viewModel::deleteBodyMeasurementEntry,
+                            )
+                        }
+                        bmiEntries(
+                            entries = state.weightEntries,
+                            heightCm = state.heightCm,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            onEditBodyMeasurement = onEditBodyMeasurement,
+                            onDeleteBodyMeasurement = viewModel::deleteBodyMeasurementEntry,
+                        )
+                    },
+                )
+            }
             BodyMetric.BODY_FAT -> bodyFatContent(
                 state,
                 period,
@@ -349,150 +409,238 @@ private fun BodyMetricScreen(
                 onEditBodyMeasurement,
                 viewModel::deleteBodyMeasurementEntry,
             )
-            BodyMetric.LEAN_MASS -> singleBodyMetricContent(
-                state = state,
-                period = period,
-                titleRes = R.string.metric_lean_mass,
-                value = state.latestLeanMassKg?.let(unitFormatter::bodyMass),
-                comparison = state.previousLatestLeanMassKg?.let { previous ->
-                    periodComparison(currentValue = state.latestLeanMassKg ?: 0.0, previousValue = previous)
-                },
-                comparisonValueFormatter = { unitFormatter.bodyMass(it) },
-                icon = Icons.Outlined.MonitorWeight,
-                accentColor = WeightColor,
-                unitFormatter = unitFormatter,
-                selectedRange = state.selectedRange,
-                entryCount = state.leanMassEntries.size,
-                baselineCurrentValue = state.latestLeanMassKg,
-                baselineValues = state.baselineLeanMassEntries.map { it.leanMassBaselineValue() },
-                contextContent = {
-                    bodyEntryDataConfidence(
-                        period = period,
-                        entries = state.leanMassEntries,
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                    )
-                },
-                entriesContent = {
-                    bodyReadingEntries(
-                        entries = state.leanMassEntries,
-                        value = { unitFormatter.bodyMass(it.massKg).text },
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    )
-                },
-            )
-            BodyMetric.BMR -> singleBodyMetricContent(
-                state = state,
-                period = period,
-                titleRes = R.string.metric_bmr,
-                value = state.latestBmrKcal?.let(unitFormatter::energy),
-                comparison = state.previousLatestBmrKcal?.let { previous ->
-                    periodComparison(currentValue = state.latestBmrKcal ?: 0.0, previousValue = previous)
-                },
-                comparisonValueFormatter = { unitFormatter.energy(it) },
-                icon = Icons.Outlined.LocalFireDepartment,
-                accentColor = CaloriesColor,
-                unitFormatter = unitFormatter,
-                selectedRange = state.selectedRange,
-                entryCount = state.bmrEntries.size,
-                baselineCurrentValue = state.latestBmrKcal,
-                baselineValues = state.baselineBmrEntries.map { it.bmrBaselineValue() },
-                contextContent = {
-                    bodyEntryDataConfidence(
-                        period = period,
-                        entries = state.bmrEntries,
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = CaloriesColor,
-                    )
-                },
-                entriesContent = {
-                    bodyReadingEntries(
-                        entries = state.bmrEntries,
-                        value = { unitFormatter.energy(it.kcalPerDay).text },
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = CaloriesColor,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    )
-                },
-            )
-            BodyMetric.BONE_MASS -> singleBodyMetricContent(
-                state = state,
-                period = period,
-                titleRes = R.string.metric_bone_mass,
-                value = state.latestBoneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
-                comparison = state.previousLatestBoneMassKg?.let { previous ->
-                    periodComparison(currentValue = state.latestBoneMassKg ?: 0.0, previousValue = previous)
-                },
-                comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
-                icon = Icons.Outlined.MonitorWeight,
-                accentColor = WeightColor,
-                unitFormatter = unitFormatter,
-                selectedRange = state.selectedRange,
-                entryCount = state.boneMassEntries.size,
-                baselineCurrentValue = state.latestBoneMassKg,
-                baselineValues = state.baselineBoneMassEntries.map { it.boneMassBaselineValue() },
-                contextContent = {
-                    bodyEntryDataConfidence(
-                        period = period,
-                        entries = state.boneMassEntries,
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                    )
-                },
-                entriesContent = {
-                    bodyReadingEntries(
-                        entries = state.boneMassEntries,
-                        value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    )
-                },
-            )
-            BodyMetric.BODY_WATER_MASS -> singleBodyMetricContent(
-                state = state,
-                period = period,
-                titleRes = R.string.metric_body_water_mass,
-                value = state.latestBodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
-                comparison = state.previousLatestBodyWaterMassKg?.let { previous ->
-                    periodComparison(currentValue = state.latestBodyWaterMassKg ?: 0.0, previousValue = previous)
-                },
-                comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
-                icon = Icons.Outlined.MonitorWeight,
-                accentColor = WeightColor,
-                unitFormatter = unitFormatter,
-                selectedRange = state.selectedRange,
-                entryCount = state.bodyWaterMassEntries.size,
-                baselineCurrentValue = state.latestBodyWaterMassKg,
-                baselineValues = state.baselineBodyWaterMassEntries.map { it.bodyWaterMassBaselineValue() },
-                contextContent = {
-                    bodyEntryDataConfidence(
-                        period = period,
-                        entries = state.bodyWaterMassEntries,
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                    )
-                },
-                entriesContent = {
-                    bodyReadingEntries(
-                        entries = state.bodyWaterMassEntries,
-                        value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
-                        source = { it.source },
-                        time = { it.time },
-                        accentColor = WeightColor,
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    )
-                },
-            )
+            BodyMetric.LEAN_MASS -> {
+                val metricData = state.metricDataFor(BodyMetric.LEAN_MASS, unitFormatter)
+                singleBodyMetricContent(
+                    state = state,
+                    period = period,
+                    titleRes = R.string.metric_lean_mass,
+                    value = state.latestLeanMassKg?.let(unitFormatter::bodyMass),
+                    comparison = state.previousLatestLeanMassKg?.let { previous ->
+                        periodComparison(currentValue = state.latestLeanMassKg ?: 0.0, previousValue = previous)
+                    },
+                    comparisonValueFormatter = { unitFormatter.bodyMass(it) },
+                    icon = Icons.Outlined.MonitorWeight,
+                    accentColor = WeightColor,
+                    unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
+                    entryCount = state.leanMassEntries.size,
+                    baselineCurrentValue = state.latestLeanMassKg,
+                    baselineValues = state.baselineLeanMassEntries.map { it.leanMassBaselineValue() },
+                    contextContent = {
+                        if (metricData.hasTrackedValues) {
+                            item {
+                                MetricBarChart(
+                                    title = stringResource(metricData.titleRes),
+                                    values = metricData.values,
+                                    selectedRange = state.selectedRange,
+                                    period = period,
+                                    accentColor = metricData.color,
+                                    summaryValue = metricData.latest?.text
+                                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = metricModifier(),
+                                    selectedDate = chartDaySelection.selectedDate,
+                                    onDateSelected = chartDaySelection.onDateSelected,
+                                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                                )
+                            }
+                        }
+                        bodyEntryDataConfidence(
+                            period = period,
+                            entries = state.leanMassEntries,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                        )
+                    },
+                    entriesContent = {
+                        bodyMetricReadingEntries(
+                            entries = state.leanMassEntries,
+                            selectedDate = chartDaySelection.selectedDate,
+                            value = { unitFormatter.bodyMass(it.massKg).text },
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        )
+                    },
+                )
+            }
+            BodyMetric.BMR -> {
+                val metricData = state.metricDataFor(BodyMetric.BMR, unitFormatter)
+                singleBodyMetricContent(
+                    state = state,
+                    period = period,
+                    titleRes = R.string.metric_bmr,
+                    value = state.latestBmrKcal?.let(unitFormatter::energy),
+                    comparison = state.previousLatestBmrKcal?.let { previous ->
+                        periodComparison(currentValue = state.latestBmrKcal ?: 0.0, previousValue = previous)
+                    },
+                    comparisonValueFormatter = { unitFormatter.energy(it) },
+                    icon = Icons.Outlined.LocalFireDepartment,
+                    accentColor = CaloriesColor,
+                    unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
+                    entryCount = state.bmrEntries.size,
+                    baselineCurrentValue = state.latestBmrKcal,
+                    baselineValues = state.baselineBmrEntries.map { it.bmrBaselineValue() },
+                    contextContent = {
+                        if (metricData.hasTrackedValues) {
+                            item {
+                                MetricBarChart(
+                                    title = stringResource(metricData.titleRes),
+                                    values = metricData.values,
+                                    selectedRange = state.selectedRange,
+                                    period = period,
+                                    accentColor = metricData.color,
+                                    summaryValue = metricData.latest?.text
+                                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = metricModifier(),
+                                    selectedDate = chartDaySelection.selectedDate,
+                                    onDateSelected = chartDaySelection.onDateSelected,
+                                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                                )
+                            }
+                        }
+                        bodyEntryDataConfidence(
+                            period = period,
+                            entries = state.bmrEntries,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = CaloriesColor,
+                        )
+                    },
+                    entriesContent = {
+                        bodyMetricReadingEntries(
+                            entries = state.bmrEntries,
+                            selectedDate = chartDaySelection.selectedDate,
+                            value = { unitFormatter.energy(it.kcalPerDay).text },
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = CaloriesColor,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        )
+                    },
+                )
+            }
+            BodyMetric.BONE_MASS -> {
+                val metricData = state.metricDataFor(BodyMetric.BONE_MASS, unitFormatter)
+                singleBodyMetricContent(
+                    state = state,
+                    period = period,
+                    titleRes = R.string.metric_bone_mass,
+                    value = state.latestBoneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
+                    comparison = state.previousLatestBoneMassKg?.let { previous ->
+                        periodComparison(currentValue = state.latestBoneMassKg ?: 0.0, previousValue = previous)
+                    },
+                    comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
+                    icon = Icons.Outlined.MonitorWeight,
+                    accentColor = WeightColor,
+                    unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
+                    entryCount = state.boneMassEntries.size,
+                    baselineCurrentValue = state.latestBoneMassKg,
+                    baselineValues = state.baselineBoneMassEntries.map { it.boneMassBaselineValue() },
+                    contextContent = {
+                        if (metricData.hasTrackedValues) {
+                            item {
+                                MetricBarChart(
+                                    title = stringResource(metricData.titleRes),
+                                    values = metricData.values,
+                                    selectedRange = state.selectedRange,
+                                    period = period,
+                                    accentColor = metricData.color,
+                                    summaryValue = metricData.latest?.text
+                                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = metricModifier(),
+                                    selectedDate = chartDaySelection.selectedDate,
+                                    onDateSelected = chartDaySelection.onDateSelected,
+                                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                                )
+                            }
+                        }
+                        bodyEntryDataConfidence(
+                            period = period,
+                            entries = state.boneMassEntries,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                        )
+                    },
+                    entriesContent = {
+                        bodyMetricReadingEntries(
+                            entries = state.boneMassEntries,
+                            selectedDate = chartDaySelection.selectedDate,
+                            value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        )
+                    },
+                )
+            }
+            BodyMetric.BODY_WATER_MASS -> {
+                val metricData = state.metricDataFor(BodyMetric.BODY_WATER_MASS, unitFormatter)
+                singleBodyMetricContent(
+                    state = state,
+                    period = period,
+                    titleRes = R.string.metric_body_water_mass,
+                    value = state.latestBodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
+                    comparison = state.previousLatestBodyWaterMassKg?.let { previous ->
+                        periodComparison(currentValue = state.latestBodyWaterMassKg ?: 0.0, previousValue = previous)
+                    },
+                    comparisonValueFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
+                    icon = Icons.Outlined.MonitorWeight,
+                    accentColor = WeightColor,
+                    unitFormatter = unitFormatter,
+                    selectedRange = state.selectedRange,
+                    entryCount = state.bodyWaterMassEntries.size,
+                    baselineCurrentValue = state.latestBodyWaterMassKg,
+                    baselineValues = state.baselineBodyWaterMassEntries.map { it.bodyWaterMassBaselineValue() },
+                    contextContent = {
+                        if (metricData.hasTrackedValues) {
+                            item {
+                                MetricBarChart(
+                                    title = stringResource(metricData.titleRes),
+                                    values = metricData.values,
+                                    selectedRange = state.selectedRange,
+                                    period = period,
+                                    accentColor = metricData.color,
+                                    summaryValue = metricData.latest?.text
+                                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                    modifier = metricModifier(),
+                                    selectedDate = chartDaySelection.selectedDate,
+                                    onDateSelected = chartDaySelection.onDateSelected,
+                                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                                )
+                            }
+                        }
+                        bodyEntryDataConfidence(
+                            period = period,
+                            entries = state.bodyWaterMassEntries,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                        )
+                    },
+                    entriesContent = {
+                        bodyMetricReadingEntries(
+                            entries = state.bodyWaterMassEntries,
+                            selectedDate = chartDaySelection.selectedDate,
+                            value = { unitFormatter.bodyMass(it.massKg, decimals = 2).text },
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = WeightColor,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        )
+                    },
+                )
+            }
         }
     }
 }
@@ -535,14 +683,22 @@ private fun LazyListScope.bodyContent(
     if (trackedMetricsData.isNotEmpty()) {
         item { SectionHeader(stringResource(R.string.section_body_trends)) }
         trackedMetricsData.forEach { metricData ->
-            bodyMetricTrend(
-                metricData = metricData,
-                state = state,
-                period = period,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-            )
+            item {
+                MetricBarChart(
+                    title = stringResource(metricData.titleRes),
+                    values = metricData.values,
+                    selectedRange = state.selectedRange,
+                    period = period,
+                    accentColor = metricData.color,
+                    summaryValue = metricData.latest?.text
+                        ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { metricData.valueDisplayFormatter(it).text },
+                )
+            }
         }
     }
 
@@ -591,31 +747,49 @@ private fun LazyListScope.bodyOverviewStatistics(
     }
 }
 
-private fun LazyListScope.bodyMetricTrend(
-    metricData: BodyMetricData,
-    state: BodyUiState,
-    period: DatePeriod,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
+private fun BodyUiState.metricDataFor(
+    metric: BodyMetric,
+    unitFormatter: UnitFormatter,
+): BodyMetricData =
+    bodyMetricData(this, unitFormatter).first { it.metric == metric }
+
+private fun <T> LazyListScope.bodyMetricReadingEntries(
+    entries: List<T>,
     selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
+    value: (T) -> String,
+    source: (T) -> String,
+    time: (T) -> Instant,
+    accentColor: Color,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    editable: (T) -> Boolean = { false },
+    onEdit: ((T) -> Unit)? = null,
+    onDelete: ((T) -> Unit)? = null,
 ) {
-    item {
-        val summary = metricData.latest?.text
-            ?: stringResource(R.string.summary_entries, metricData.values.size.toString())
-        PeriodHistoryChart(
-            title = stringResource(metricData.titleRes),
-            values = metricData.values,
-            selectedRange = state.selectedRange,
-            period = period,
-            accentColor = metricData.color.copy(alpha = 0.85f),
-            summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · $summary",
+    selectedDate?.let { date ->
+        bodyReadingEntries(
+            entries = entries.filter { time(it).atZone(ZoneId.systemDefault()).toLocalDate() == date },
+            value = value,
+            source = source,
+            time = time,
+            accentColor = accentColor,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = metricModifier(),
-            selectedDate = selectedDate,
-            onDateSelected = onDateSelected,
-            valueFormatter = { metricData.valueDisplayFormatter(it).text },
+            titleDate = date,
+            editable = editable,
+            onEdit = onEdit,
+            onDelete = onDelete,
         )
     }
+    bodyReadingEntries(
+        entries = entries,
+        value = value,
+        source = source,
+        time = time,
+        accentColor = accentColor,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        editable = editable,
+        onEdit = onEdit,
+        onDelete = onDelete,
+    )
 }
 
 private fun LazyListScope.selectedDateBodyEntries(
@@ -751,6 +925,7 @@ private fun LazyListScope.weightContent(
     onDeleteBodyMeasurement: (BodyMeasurementType, String) -> Unit,
 ) {
     if (state.weightEntries.isNotEmpty()) {
+        val metricData = state.metricDataFor(BodyMetric.WEIGHT, unitFormatter)
         item { SectionHeader(stringResource(R.string.section_weight)) }
         item {
             WeightSummaryCard(
@@ -762,15 +937,19 @@ private fun LazyListScope.weightContent(
         }
         item { Spacer(Modifier.height(12.dp)) }
         item {
-            WeightLineChart(
-                entries = state.weightEntries,
+            MetricBarChart(
+                title = stringResource(metricData.titleRes),
+                values = metricData.values,
                 selectedRange = state.selectedRange,
                 period = period,
-                unitFormatter = unitFormatter,
+                accentColor = metricData.color,
+                summaryValue = metricData.latest?.text
+                    ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
                 selectedDate = chartDaySelection.selectedDate,
                 onDateSelected = chartDaySelection.onDateSelected,
+                valueFormatter = { metricData.valueDisplayFormatter(it).text },
             )
         }
         chartDaySelection.selectedDate?.let { selectedDate ->
@@ -844,6 +1023,7 @@ private fun LazyListScope.bodyFatContent(
 ) {
     val latest = state.latestBodyFatPercent
     if (latest != null) {
+        val metricData = state.metricDataFor(BodyMetric.BODY_FAT, unitFormatter)
         item {
             val value = unitFormatter.percent(latest)
             MetricCard(
@@ -855,35 +1035,21 @@ private fun LazyListScope.bodyFatContent(
                 modifier = metricModifier(),
             )
         }
-        if (state.bodyFatEntries.size >= 2) {
-            item {
-                BodyFatLineChart(
-                    entries = state.bodyFatEntries,
-                    selectedRange = state.selectedRange,
-                    period = period,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
-                    selectedDate = chartDaySelection.selectedDate,
-                    onDateSelected = chartDaySelection.onDateSelected,
-                )
-            }
-            chartDaySelection.selectedDate?.let { selectedDate ->
-                bodyReadingEntries(
-                    entries = state.bodyFatEntries.filter {
-                        it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
-                    },
-                    value = { unitFormatter.percent(it.percent).text },
-                    source = { it.source },
-                    time = { it.time },
-                    accentColor = BodyFatColor,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    titleDate = selectedDate,
-                    editable = { it.isOpenVitalsEntry && it.id.isNotBlank() },
-                    onEdit = { onEditBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
-                    onDelete = { onDeleteBodyMeasurement(BodyMeasurementType.BODY_FAT, it.id) },
-                )
-            }
+        item {
+            MetricBarChart(
+                title = stringResource(metricData.titleRes),
+                values = metricData.values,
+                selectedRange = state.selectedRange,
+                period = period,
+                accentColor = metricData.color,
+                summaryValue = metricData.latest?.text
+                    ?: stringResource(R.string.summary_entries, metricData.values.size.toString()),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+                valueFormatter = { metricData.valueDisplayFormatter(it).text },
+            )
         }
         bodyEntryDataConfidence(
             period = period,
@@ -900,8 +1066,9 @@ private fun LazyListScope.bodyFatContent(
             selectedRange = state.selectedRange,
             unitFormatter = unitFormatter,
         )
-        bodyReadingEntries(
+        bodyMetricReadingEntries(
             entries = state.bodyFatEntries,
+            selectedDate = chartDaySelection.selectedDate,
             value = { unitFormatter.percent(it.percent).text },
             source = { it.source },
             time = { it.time },

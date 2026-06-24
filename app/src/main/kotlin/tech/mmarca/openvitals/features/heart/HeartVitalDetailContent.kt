@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricCard
+import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import java.time.ZoneId
@@ -32,20 +33,18 @@ internal fun LazyListScope.spO2Content(
     if (state.spO2.isNotEmpty()) {
         val sorted = state.spO2.sortedBy { it.time }
         item {
-            VitalsLineChart(
+            MetricLineChart(
                 title = stringResource(R.string.metric_oxygen_saturation),
-                points = rawVitalsPoints(
-                    entries = sorted,
-                    time = { it.time },
-                    value = { it.percent },
-                ),
+                entries = sorted,
                 selectedRange = state.selectedRange,
                 period = period,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 accentColor = oxygenColor,
-                summary = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
                     stringResource(R.string.summary_value_avg, unitFormatter.percent(state.spO2.map { it.percent }.average()).text)
                 }",
+                time = { it.time },
+                value = { it.percent },
                 valueFormatter = { unitFormatter.percent(it).text },
                 modifier = metricModifier(),
                 selectedDate = chartDaySelection.selectedDate,
@@ -110,14 +109,22 @@ internal fun LazyListScope.vo2MaxContent(
     val latest = state.latestVo2Max
     if (latest != null) {
         if (state.vo2Max.size > 1) {
+            val sorted = state.vo2Max.sortedBy { it.time }
             item {
-                Vo2MaxChart(
-                    entries = state.vo2Max,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_vo2_max),
+                    entries = sorted,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    accentColor = vo2Color,
+                    summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                        stringResource(R.string.summary_readings, unitFormatter.count(sorted.size))
+                    }",
                     modifier = metricModifier(),
+                    time = { it.time },
+                    value = { it.vo2MaxMlPerKgPerMin },
+                    valueFormatter = { unitFormatter.vo2Max(it).text },
                 )
             }
         }
@@ -176,15 +183,32 @@ internal fun LazyListScope.respiratoryRateContent(
 ) {
     if (state.respiratoryRate.isNotEmpty()) {
         item {
-            RespiratoryRateChart(
-                entries = state.respiratoryRate,
+            MetricLineChart(
+                title = stringResource(R.string.metric_respiratory_rate),
+                series = respiratoryRateSeries(
+                    entries = state.respiratoryRate,
+                    selectedRange = state.selectedRange,
+                    metricLabel = stringResource(R.string.metric_respiratory_rate),
+                    averageLabel = stringResource(R.string.summary_average),
+                    lowestLabel = stringResource(R.string.stat_lowest),
+                    highestLabel = stringResource(R.string.stat_highest),
+                ),
                 selectedRange = state.selectedRange,
                 period = period,
-                unitFormatter = unitFormatter,
+                accentColor = respiratoryColor,
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                    stringResource(
+                        R.string.summary_value_avg,
+                        unitFormatter.respiratoryRate(
+                            respiratoryRateAverage(respiratoryRateBuckets(state.respiratoryRate, state.selectedRange, period)),
+                        ).text,
+                    )
+                }",
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
                 selectedDate = chartDaySelection.selectedDate,
                 onDateSelected = chartDaySelection.onDateSelected,
+                valueFormatter = { unitFormatter.respiratoryRate(it).text },
             )
         }
         if (state.selectedRange == TimeRange.DAY) {
@@ -278,14 +302,22 @@ internal fun LazyListScope.bodyTemperatureContent(
     onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.bodyTemperature.isNotEmpty()) {
+        val sorted = state.bodyTemperature.sortedBy { it.time }
         item {
-            BodyTemperatureChart(
-                entries = state.bodyTemperature,
+            MetricLineChart(
+                title = stringResource(R.string.metric_body_temp),
+                entries = sorted,
                 selectedRange = state.selectedRange,
                 period = period,
-                unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = temperatureColor,
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                    stringResource(R.string.summary_readings, unitFormatter.count(sorted.size))
+                }",
                 modifier = metricModifier(),
+                time = { it.time },
+                value = { it.temperatureCelsius },
+                valueFormatter = { unitFormatter.temperature(it).text },
             )
         }
         item {
@@ -346,16 +378,27 @@ internal fun LazyListScope.bloodGlucoseContent(
     chartDaySelection: ChartDaySelection,
 ) {
     if (state.bloodGlucose.isNotEmpty()) {
+        val sorted = state.bloodGlucose.sortedBy { it.time }
         item {
-            BloodGlucoseChart(
-                entries = state.bloodGlucose,
+            MetricLineChart(
+                title = stringResource(R.string.metric_blood_glucose),
+                entries = sorted,
                 selectedRange = state.selectedRange,
                 period = period,
-                unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                accentColor = glucoseColor,
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                    stringResource(
+                        R.string.summary_value_avg,
+                        unitFormatter.bloodGlucose(sorted.map { it.millimolesPerLiter }.average()).text,
+                    )
+                }",
                 modifier = metricModifier(),
                 selectedDate = chartDaySelection.selectedDate,
                 onDateSelected = chartDaySelection.onDateSelected,
+                time = { it.time },
+                value = { it.millimolesPerLiter },
+                valueFormatter = { unitFormatter.bloodGlucose(it).text },
             )
         }
         chartDaySelection.selectedDate?.let { selectedDate ->
@@ -410,17 +453,32 @@ internal fun LazyListScope.skinTemperatureContent(
     chartDaySelection: ChartDaySelection,
 ) {
     if (state.skinTemperature.isNotEmpty()) {
+        val chartEntries = state.skinTemperature
+            .filter { it.averageDeltaCelsius != null }
+            .sortedBy { it.time }
         item {
-            SkinTemperatureChart(
-                entries = state.skinTemperature,
-                selectedRange = state.selectedRange,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = metricModifier(),
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-            )
+            if (chartEntries.isNotEmpty()) {
+                MetricLineChart(
+                    title = stringResource(R.string.metric_skin_temperature),
+                    entries = chartEntries,
+                    selectedRange = state.selectedRange,
+                    period = period,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    accentColor = temperatureColor,
+                    summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                        stringResource(
+                            R.string.summary_value_avg,
+                            unitFormatter.temperatureDelta(chartEntries.mapNotNull { it.averageDeltaCelsius }.average()).text,
+                        )
+                    }",
+                    modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                    time = { it.time },
+                    value = { it.averageDeltaCelsius ?: 0.0 },
+                    valueFormatter = { unitFormatter.temperatureDelta(it).text },
+                )
+            }
         }
         chartDaySelection.selectedDate?.let { selectedDate ->
             heartEntryRows(

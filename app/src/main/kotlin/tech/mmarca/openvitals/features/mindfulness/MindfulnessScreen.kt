@@ -79,10 +79,10 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
@@ -184,15 +184,30 @@ fun MindfulnessScreen(
                 )
             }
             item {
-                MindfulnessHistoryChart(
-                    sessions = state.sessions,
+                val zone = ZoneId.systemDefault()
+                val values = state.sessions
+                    .groupBy { it.startTime.atZone(zone).toLocalDate() }
+                    .map { (date, daySessions) ->
+                        PeriodChartValue(
+                            date = date,
+                            value = daySessions.sumOf { it.durationMs }.toDouble() / 60_000.0,
+                        )
+                    }
+                val totalMinutes = state.sessions.sumOf { it.durationMinutes }
+                MetricBarChart(
+                    title = stringResource(R.string.metric_mindfulness),
+                    values = values,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = MindfulnessColor,
+                    summaryValue = unitFormatter.minutes(totalMinutes).text,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
                 )
             }
             chartDaySelection.selectedDate?.let { selectedDate ->
@@ -286,43 +301,6 @@ private fun LazyListScope.mindfulnessDataConfidence(
             modifier = metricModifier(),
         )
     }
-}
-
-@Composable
-private fun MindfulnessHistoryChart(
-    sessions: List<MindfulnessSession>,
-    selectedRange: TimeRange,
-    period: DatePeriod,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    modifier: Modifier = Modifier,
-    selectedDate: LocalDate? = null,
-    onDateSelected: ((LocalDate) -> Unit)? = null,
-) {
-    val zone = ZoneId.systemDefault()
-    val values = sessions
-        .groupBy { it.startTime.atZone(zone).toLocalDate() }
-        .map { (date, daySessions) ->
-            PeriodChartValue(
-                date = date,
-                value = daySessions.sumOf { it.durationMs }.toDouble() / 60_000.0,
-            )
-        }
-    val totalMinutes = sessions.sumOf { it.durationMinutes }
-
-    PeriodHistoryChart(
-        title = stringResource(R.string.metric_mindfulness),
-        values = values,
-        selectedRange = selectedRange,
-        period = period,
-        accentColor = MindfulnessColor.copy(alpha = 0.85f),
-        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${unitFormatter.minutes(totalMinutes).text}",
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        modifier = modifier.fillMaxWidth(),
-        selectedDate = selectedDate,
-        onDateSelected = onDateSelected,
-        valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
-    )
 }
 
 private fun LazyListScope.mindfulnessGoalAndReminderItems(

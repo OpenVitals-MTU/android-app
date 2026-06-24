@@ -35,14 +35,13 @@ import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
-import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
@@ -248,15 +247,21 @@ private fun androidx.compose.foundation.lazy.LazyListScope.totalCaloriesTrend(
                     modifier = metricModifier(),
                 )
             } else {
-                CaloriesBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_calories_burned),
                     data = state.nutrition,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = unitFormatter.energy(state.nutrition.sumOf { it.caloriesBurnedKcal }).text,
+                    accentColor = CaloriesColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
                     selectedDate = selectedDate,
                     onDateSelected = onDateSelected,
+                    date = { it.date },
+                    value = { it.caloriesBurnedKcal },
+                    valueFormatter = { unitFormatter.energy(it).text },
                 )
             }
         }
@@ -292,15 +297,21 @@ private fun androidx.compose.foundation.lazy.LazyListScope.activeCaloriesTrend(
                     modifier = metricModifier(),
                 )
             } else {
-                ActiveCaloriesBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_active_calories),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = unitFormatter.energy(state.dailySteps.sumOf { it.activeCaloriesKcal ?: 0.0 }).text,
+                    accentColor = ActiveCaloriesColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
                     selectedDate = selectedDate,
                     onDateSelected = onDateSelected,
+                    date = { it.date },
+                    value = { it.activeCaloriesKcal ?: 0.0 },
+                    valueFormatter = { unitFormatter.energy(it).text },
                 )
             }
         }
@@ -320,21 +331,19 @@ private fun androidx.compose.foundation.lazy.LazyListScope.bmrTrend(
 
     item {
         val latest = entries.maxByOrNull { it.time }?.kcalPerDay
-        PeriodHistoryChart(
+        MetricBarChart(
             title = stringResource(R.string.metric_bmr),
             values = bmrHistoryValues(entries),
             selectedRange = selectedRange,
             period = period,
-            accentColor = WeightColor.copy(alpha = 0.85f),
-            summaryText = buildString {
-                append(localizedPeriodTitle(selectedRange, period))
+            accentColor = WeightColor,
+            summaryValue = buildString {
                 if (latest != null) {
-                    append(" · ")
                     append(stringResource(R.string.metric_latest))
                     append(" ")
                     append(unitFormatter.energy(latest).text)
+                    append(" · ")
                 }
-                append(" · ")
                 append(stringResource(R.string.summary_readings, unitFormatter.count(entries.size)))
             },
             dateTimeFormatterProvider = dateTimeFormatterProvider,

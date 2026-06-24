@@ -72,10 +72,13 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
+import tech.mmarca.openvitals.ui.components.MetricLineChart
+import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
@@ -83,6 +86,7 @@ import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.LocalDate
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 enum class HeartMetric {
     AVERAGE_HEART_RATE,
@@ -453,16 +457,35 @@ private fun LazyListScope.averageHeartRateContent(
             item { HeartRateEmptyDayCard(modifier = metricModifier()) }
         }
         state.dailySummaries.isNotEmpty() -> {
+            val sorted = state.dailySummaries.sortedBy { it.date }
+            val rangeSummary = heartRateRangeSummary(sorted)
             item {
-                HeartRateChart(
-                    summaries = state.dailySummaries,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_average_heart_rate),
+                    series = heartRateSeries(
+                        summaries = sorted,
+                        averageLabel = stringResource(R.string.summary_average),
+                        lowestLabel = stringResource(R.string.stat_lowest),
+                        highestLabel = stringResource(R.string.stat_highest),
+                    ),
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = HeartColor,
+                    summaryText = rangeSummary?.let {
+                        "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                            stringResource(
+                                R.string.summary_avg_value_range,
+                                unitFormatter.heartRate(it.average).text,
+                                unitFormatter.heartRate(it.min).text,
+                                unitFormatter.heartRate(it.max).text,
+                            )
+                        }"
+                    } ?: localizedPeriodTitle(state.selectedRange, period),
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
                 )
             }
             heartRateThresholdChecks(
@@ -711,16 +734,28 @@ private fun LazyListScope.restingHeartRateContent(
             )
         }
         state.selectedRange != TimeRange.DAY && state.dailyRestingHR.isNotEmpty() -> {
+            val sorted = state.dailyRestingHR.sortedBy { it.date }
+            val rangeSummary = restingHeartRateRangeSummary(sorted)
             item {
-                RestingHRChart(
-                    entries = state.dailyRestingHR,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_resting_heart_rate),
+                    points = sorted.map { MetricLinePoint(date = it.date, value = it.bpm.toDouble()) },
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = HeartColor,
+                    summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                        stringResource(
+                            R.string.summary_avg_value_range,
+                            unitFormatter.heartRate(rangeSummary.average).text,
+                            unitFormatter.heartRate(rangeSummary.min).text,
+                            unitFormatter.heartRate(rangeSummary.max).text,
+                        )
+                    }",
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
                 )
             }
             chartDaySelection.selectedDate?.let { selectedDate ->
@@ -815,16 +850,28 @@ private fun LazyListScope.hrvContent(
             )
         }
         state.selectedRange != TimeRange.DAY && state.dailyHrv.isNotEmpty() -> {
+            val sorted = state.dailyHrv.sortedBy { it.date }
+            val rangeSummary = hrvRangeSummary(sorted)
             item {
-                HRVChart(
-                    entries = state.dailyHrv,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_hrv),
+                    points = sorted.map { MetricLinePoint(date = it.date, value = it.rmssdMs) },
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = HeartColor.copy(alpha = 0.85f),
+                    summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                        stringResource(
+                            R.string.summary_avg_value_range,
+                            unitFormatter.hrv(rangeSummary.average).text,
+                            unitFormatter.hrv(rangeSummary.min).text,
+                            unitFormatter.hrv(rangeSummary.max).text,
+                        )
+                    }",
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = metricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { unitFormatter.hrv(it).text },
                 )
             }
             chartDaySelection.selectedDate?.let { selectedDate ->
@@ -896,14 +943,25 @@ private fun LazyListScope.bloodPressureContent(
     onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
     if (state.bloodPressure.isNotEmpty()) {
+        val sortedBloodPressure = state.bloodPressure.sortedBy { it.time }
         item {
-            BloodPressureChart(
-                entries = state.bloodPressure,
+            MetricLineChart(
+                title = stringResource(R.string.metric_blood_pressure),
+                series = bloodPressureSeries(
+                    entries = sortedBloodPressure,
+                    selectedRange = state.selectedRange,
+                    systolicLabel = stringResource(R.string.vitals_entry_systolic_label),
+                    diastolicLabel = stringResource(R.string.vitals_entry_diastolic_label),
+                ),
                 selectedRange = state.selectedRange,
                 period = period,
-                unitFormatter = unitFormatter,
+                accentColor = VitalsColor,
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                    stringResource(R.string.summary_readings, unitFormatter.count(sortedBloodPressure.size))
+                }",
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = metricModifier(),
+                valueFormatter = { "${it.roundToInt()} mmHg" },
             )
         }
         heartRawDataConfidence(

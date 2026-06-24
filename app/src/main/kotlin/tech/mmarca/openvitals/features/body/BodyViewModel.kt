@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.body
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +23,6 @@ import tech.mmarca.openvitals.data.repository.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,7 +94,6 @@ class BodyViewModel(
     private val repository: BodyRepository,
     initialRange: TimeRange = TimeRange.MONTH,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val selectedMetric: BodyMetric = BodyMetric.WEIGHT,
     private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
@@ -105,12 +102,10 @@ class BodyViewModel(
     constructor(
         repository: BodyRepository,
         preferencesRepository: PreferencesRepository,
-        savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        selectedMetric = bodyMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
         weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
         onRangeSelected = { range ->
             preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.BODY, range)
@@ -325,21 +320,6 @@ private fun BodyUiState.withDeletedBodyMeasurementEntry(
             error = null,
         )
     }
-
-private fun BodyMetric.toPeriodMetric(): BodyPeriodMetric =
-    when (this) {
-        BodyMetric.WEIGHT -> BodyPeriodMetric.WEIGHT
-        BodyMetric.HEIGHT -> BodyPeriodMetric.HEIGHT
-        BodyMetric.BMI -> BodyPeriodMetric.BMI
-        BodyMetric.BODY_FAT -> BodyPeriodMetric.BODY_FAT
-        BodyMetric.LEAN_MASS -> BodyPeriodMetric.LEAN_MASS
-        BodyMetric.BMR -> BodyPeriodMetric.BMR
-        BodyMetric.BONE_MASS -> BodyPeriodMetric.BONE_MASS
-        BodyMetric.BODY_WATER_MASS -> BodyPeriodMetric.BODY_WATER_MASS
-    }
-
-private fun bodyMetricFromRoute(metricId: String?): BodyMetric =
-    runCatching { metricId?.let(BodyMetric::valueOf) }.getOrNull() ?: BodyMetric.WEIGHT
 
 private data class BodySummary(
     val latestWeightKg: Double?,

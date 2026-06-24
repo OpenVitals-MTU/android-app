@@ -61,8 +61,11 @@ internal fun WeightSummaryCard(
                     Text(
                         text = "$sign${change.text}",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = if (changeKg < 0) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.error,
+                        color = if (changeKg < 0) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
                     )
                 }
             }

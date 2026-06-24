@@ -80,9 +80,8 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
-import tech.mmarca.openvitals.ui.components.PeriodChartValue
-import tech.mmarca.openvitals.ui.components.PeriodHistoryChart
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
@@ -181,19 +180,36 @@ fun HydrationScreen(
                 )
             }
             item {
-                HydrationHistoryChart(
-                    data = state.dailyHydration,
-                    selectedRange = state.selectedRange,
-                    period = period,
-                    dailyGoalLiters = state.dailyGoalLiters,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    selectedDate = chartDaySelection.selectedDate,
-                    onDateSelected = chartDaySelection.onDateSelected,
-                )
+                val modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                if (state.selectedRange == TimeRange.DAY) {
+                    HydrationDayGoalProgress(
+                        liters = state.dailyHydration.sumOf { it.liters },
+                        dailyGoalLiters = state.dailyGoalLiters,
+                        period = period,
+                        unitFormatter = unitFormatter,
+                        modifier = modifier,
+                    )
+                } else {
+                    val useWeekAccent = state.selectedRange == TimeRange.WEEK
+                    MetricBarChart(
+                        title = stringResource(R.string.metric_hydration_trend),
+                        data = state.dailyHydration,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        accentColor = if (useWeekAccent) HydrationWeekChartColor else HydrationColor,
+                        accentAlpha = if (useWeekAccent) 1f else 0.85f,
+                        summaryValue = unitFormatter.hydration(state.dailyHydration.sumOf { it.liters }).text,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        date = { it.date },
+                        value = { it.liters },
+                        modifier = modifier,
+                        selectedDate = chartDaySelection.selectedDate,
+                        onDateSelected = chartDaySelection.onDateSelected,
+                        valueFormatter = { unitFormatter.hydration(it).text },
+                    )
+                }
             }
             chartDaySelection.selectedDate?.let { selectedDate ->
                 hydrationEntries(
@@ -779,53 +795,6 @@ private fun HydrationReminderTimePickerDialog(
 private enum class HydrationReminderTimeField {
     START,
     END,
-}
-
-@Composable
-private fun HydrationHistoryChart(
-    data: List<DailyHydration>,
-    selectedRange: TimeRange,
-    period: DatePeriod,
-    dailyGoalLiters: Double,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    modifier: Modifier = Modifier,
-    selectedDate: LocalDate? = null,
-    onDateSelected: ((LocalDate) -> Unit)? = null,
-) {
-    if (selectedRange == TimeRange.DAY) {
-        HydrationDayGoalProgress(
-            liters = data.sumOf { it.liters },
-            dailyGoalLiters = dailyGoalLiters,
-            period = period,
-            unitFormatter = unitFormatter,
-            modifier = modifier,
-        )
-        return
-    }
-
-    val values = data.map { PeriodChartValue(date = it.date, value = it.liters) }
-    val summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
-        unitFormatter.hydration(data.sumOf { it.liters }).text
-    }"
-
-    PeriodHistoryChart(
-        title = stringResource(R.string.metric_hydration_trend),
-        values = values,
-        selectedRange = selectedRange,
-        period = period,
-        accentColor = if (selectedRange == TimeRange.WEEK) {
-            HydrationWeekChartColor
-        } else {
-            HydrationColor.copy(alpha = 0.85f)
-        },
-        summaryText = summaryText,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        modifier = modifier,
-        selectedDate = selectedDate,
-        onDateSelected = onDateSelected,
-        valueFormatter = { unitFormatter.hydration(it).text },
-    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

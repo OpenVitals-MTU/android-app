@@ -17,12 +17,14 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import java.time.ZoneId
+import kotlin.math.roundToInt
 
 fun LazyListScope.HeartVitalsContent(
     state: HeartUiState,
@@ -74,36 +76,45 @@ fun LazyListScope.HeartVitalsContent(
             )
         }
         if (state.bloodPressure.isNotEmpty()) {
+            val sortedBloodPressure = state.bloodPressure.sortedBy { it.time }
             item {
-                BloodPressureChart(
-                    entries = state.bloodPressure,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_blood_pressure),
+                    series = bloodPressureSeries(
+                        entries = sortedBloodPressure,
+                        selectedRange = selectedRange,
+                        systolicLabel = stringResource(R.string.vitals_entry_systolic_label),
+                        diastolicLabel = stringResource(R.string.vitals_entry_diastolic_label),
+                    ),
                     selectedRange = selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = VitalsColor,
+                    summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
+                        stringResource(R.string.summary_readings, unitFormatter.count(sortedBloodPressure.size))
+                    }",
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+                    valueFormatter = { "${it.roundToInt()} mmHg" },
                 )
             }
         }
         if (state.spO2.isNotEmpty()) {
             val sortedSpO2 = state.spO2.sortedBy { it.time }
             item {
-                VitalsLineChart(
+                MetricLineChart(
                     title = stringResource(R.string.metric_oxygen_saturation),
-                    points = rawVitalsPoints(
-                        entries = sortedSpO2,
-                        time = { it.time },
-                        value = { it.percent },
-                    ),
+                    entries = sortedSpO2,
                     selectedRange = selectedRange,
                     period = period,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     accentColor = oxygenColor,
-                    summary = "${localizedPeriodTitle(selectedRange, period)} · ${
+                    summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
                         stringResource(R.string.summary_value_avg, unitFormatter.percent(state.spO2.map { it.percent }.average()).text)
                     }",
+                    time = { it.time },
+                    value = { it.percent },
                     valueFormatter = { unitFormatter.percent(it).text },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -114,16 +125,24 @@ fun LazyListScope.HeartVitalsContent(
         state.latestVo2Max?.let { latest ->
             val vo2Max = unitFormatter.vo2Max(latest.vo2MaxMlPerKgPerMin)
             if (state.vo2Max.size > 1) {
+                val sortedVo2Max = state.vo2Max.sortedBy { it.time }
                 item {
-                    Vo2MaxChart(
-                        entries = state.vo2Max,
+                    MetricLineChart(
+                        title = stringResource(R.string.metric_vo2_max),
+                        entries = sortedVo2Max,
                         selectedRange = selectedRange,
                         period = period,
-                        unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        accentColor = vo2Color,
+                        summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
+                            stringResource(R.string.summary_readings, unitFormatter.count(sortedVo2Max.size))
+                        }",
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
+                        time = { it.time },
+                        value = { it.vo2MaxMlPerKgPerMin },
+                        valueFormatter = { unitFormatter.vo2Max(it).text },
                     )
                 }
             }
@@ -160,13 +179,30 @@ fun LazyListScope.HeartVitalsContent(
         }
         if (state.respiratoryRate.isNotEmpty()) {
             item {
-                RespiratoryRateChart(
-                    entries = state.respiratoryRate,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_respiratory_rate),
+                    series = respiratoryRateSeries(
+                        entries = state.respiratoryRate,
+                        selectedRange = selectedRange,
+                        metricLabel = stringResource(R.string.metric_respiratory_rate),
+                        averageLabel = stringResource(R.string.summary_average),
+                        lowestLabel = stringResource(R.string.stat_lowest),
+                        highestLabel = stringResource(R.string.stat_highest),
+                    ),
                     selectedRange = selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = respiratoryColor,
+                    summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
+                        stringResource(
+                            R.string.summary_value_avg,
+                            unitFormatter.respiratoryRate(
+                                respiratoryRateAverage(respiratoryRateBuckets(state.respiratoryRate, selectedRange, period)),
+                            ).text,
+                        )
+                    }",
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    valueFormatter = { unitFormatter.respiratoryRate(it).text },
                 )
             }
             if (selectedRange == TimeRange.DAY) {
@@ -199,14 +235,22 @@ fun LazyListScope.HeartVitalsContent(
             }
         }
         if (state.bodyTemperature.isNotEmpty()) {
+            val sortedBodyTemperature = state.bodyTemperature.sortedBy { it.time }
             item {
-                BodyTemperatureChart(
-                    entries = state.bodyTemperature,
+                MetricLineChart(
+                    title = stringResource(R.string.metric_body_temp),
+                    entries = sortedBodyTemperature,
                     selectedRange = selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    accentColor = temperatureColor,
+                    summaryText = "${localizedPeriodTitle(selectedRange, period)} · ${
+                        stringResource(R.string.summary_readings, unitFormatter.count(sortedBodyTemperature.size))
+                    }",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    time = { it.time },
+                    value = { it.temperatureCelsius },
+                    valueFormatter = { unitFormatter.temperature(it).text },
                 )
             }
             item {

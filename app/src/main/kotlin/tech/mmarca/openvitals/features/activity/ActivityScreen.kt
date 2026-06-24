@@ -53,6 +53,7 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
@@ -298,15 +299,20 @@ private fun LazyListScope.stepsContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                StepsBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_steps),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    accentColor = StepsColor,
+                    summaryValue = "${unitFormatter.count(state.dailySteps.sumOf { it.steps })} ${stringResource(R.string.unit_steps)}",
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { it.steps.toDouble() },
+                    valueFormatter = { unitFormatter.count(it.roundToLong()) },
                 )
             }
         }
@@ -417,15 +423,21 @@ private fun LazyListScope.distanceContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                DistanceBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_distance),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = unitFormatter.distance(state.dailySteps.sumOf { it.distanceMeters }).text,
+                    accentColor = DistanceColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { it.distanceMeters },
+                    valueFormatter = { unitFormatter.distance(it).text },
                 )
             }
         }
@@ -520,15 +532,21 @@ private fun LazyListScope.caloriesContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                CaloriesBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_calories_burned),
                     data = state.nutrition,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = unitFormatter.energy(state.nutrition.sumOf { it.caloriesBurnedKcal }).text,
+                    accentColor = CaloriesColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { it.caloriesBurnedKcal },
+                    valueFormatter = { unitFormatter.energy(it).text },
                 )
             }
         }
@@ -623,15 +641,21 @@ private fun LazyListScope.activeCaloriesContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                ActiveCaloriesBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_active_calories),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = unitFormatter.energy(state.dailySteps.sumOf { it.activeCaloriesKcal ?: 0.0 }).text,
+                    accentColor = ActiveCaloriesColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { it.activeCaloriesKcal ?: 0.0 },
+                    valueFormatter = { unitFormatter.energy(it).text },
                 )
             }
         }
@@ -731,15 +755,21 @@ private fun LazyListScope.floorsContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                FloorsBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_floors_climbed),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = "${unitFormatter.count(state.dailySteps.sumOf { it.floorsClimbed ?: 0 })} ${stringResource(R.string.unit_floors)}",
+                    accentColor = FloorsColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { it.floorsClimbed?.toDouble() ?: 0.0 },
+                    valueFormatter = { unitFormatter.count(it.roundToLong()) },
                 )
             }
         }
@@ -847,15 +877,21 @@ private fun LazyListScope.elevationContent(
                     modifier = activityMetricModifier(),
                 )
             } else {
-                ElevationBarChart(
+                MetricBarChart(
+                    title = stringResource(R.string.metric_elevation_gained),
                     data = state.dailySteps,
                     selectedRange = state.selectedRange,
                     period = period,
-                    unitFormatter = unitFormatter,
+                    summaryValue = unitFormatter.elevation(state.dailySteps.sumOf { it.elevationGainedMeters ?: 0.0 }).text,
+                    accentColor = ElevationColor,
+                    accentAlpha = 0.8f,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     modifier = activityMetricModifier(),
                     selectedDate = chartDaySelection.selectedDate,
                     onDateSelected = chartDaySelection.onDateSelected,
+                    date = { it.date },
+                    value = { it.elevationGainedMeters ?: 0.0 },
+                    valueFormatter = { unitFormatter.elevation(it).text },
                 )
             }
         }

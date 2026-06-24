@@ -12,6 +12,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.ui.components.dailyAverageLinePoints
+import tech.mmarca.openvitals.ui.components.mapLinePoints
 
 class HeartVitalsSummariesTest {
 
@@ -96,12 +98,11 @@ class HeartVitalsSummariesTest {
         assertEquals(2, summaries[0].readings)
     }
 
-    @Test fun `raw vitals points keep sample times sorted`() {
-        val points = rawVitalsPoints(
-            entries = listOf(
-                reading("2026-04-20T18:00:00Z", 18.0),
-                reading("2026-04-20T12:00:00Z", 12.0),
-            ),
+    @Test fun `metric line points keep sample times sorted`() {
+        val points = listOf(
+            reading("2026-04-20T18:00:00Z", 18.0),
+            reading("2026-04-20T12:00:00Z", 12.0),
+        ).mapLinePoints(
             time = { it.time },
             value = { it.breathsPerMinute },
         )
@@ -111,14 +112,13 @@ class HeartVitalsSummariesTest {
         assertEquals(Instant.parse("2026-04-20T18:00:00Z"), points[1].time)
     }
 
-    @Test fun `dailyAverageVitalsPoints averages points per date`() {
-        val points = dailyAverageVitalsPoints(
-            rawVitalsPoints(
-                entries = listOf(
-                    reading("2026-04-20T12:00:00Z", 12.0),
-                    reading("2026-04-20T18:00:00Z", 18.0),
-                    reading("2026-04-21T12:00:00Z", 21.0),
-                ),
+    @Test fun `dailyAverageLinePoints averages points per date`() {
+        val points = dailyAverageLinePoints(
+            listOf(
+                reading("2026-04-20T12:00:00Z", 12.0),
+                reading("2026-04-20T18:00:00Z", 18.0),
+                reading("2026-04-21T12:00:00Z", 21.0),
+            ).mapLinePoints(
                 time = { it.time },
                 value = { it.breathsPerMinute },
             )

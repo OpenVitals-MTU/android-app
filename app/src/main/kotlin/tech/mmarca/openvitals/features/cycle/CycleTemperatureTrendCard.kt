@@ -10,16 +10,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
-import tech.mmarca.openvitals.ui.components.YAxisChart
-import tech.mmarca.openvitals.ui.components.chartYAxisLabels
-import tech.mmarca.openvitals.ui.components.drawYAxisGuides
+import tech.mmarca.openvitals.ui.components.MetricLinePlot
+import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import java.time.ZoneId
 
@@ -34,11 +32,10 @@ internal fun BasalTemperatureTrendCard(
     val minC = sorted.minOfOrNull { it.temperatureCelsius } ?: 35.0
     val maxC = sorted.maxOfOrNull { it.temperatureCelsius } ?: 38.0
     val range = (maxC - minC).coerceAtLeast(0.2)
+    val axisMaxC = minC + range
     val zone = ZoneId.systemDefault()
     val dayFormatter = dateTimeFormatterProvider.chartDay()
     val chartHeight = 110.dp
-    val gridColor = CycleColor.copy(alpha = 0.12f)
-    val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
     Card(
         modifier = modifier,
@@ -46,38 +43,21 @@ internal fun BasalTemperatureTrendCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (sorted.size >= 2) {
-                YAxisChart(
-                    labels = chartYAxisLabels(
-                        minValue = minC,
-                        maxValue = maxC,
-                        valueFormatter = { unitFormatter.temperature(it).text },
-                    ),
+                val stepX = 1f / (sorted.size - 1).coerceAtLeast(1)
+                MetricLinePlot(
+                    points = sorted.mapIndexed { index, entry ->
+                        MetricLinePlotPoint(
+                            xFraction = index * stepX,
+                            value = entry.temperatureCelsius,
+                        )
+                    },
+                    minValue = minC,
+                    maxValue = axisMaxC,
+                    accentColor = CycleColor,
                     chartHeight = chartHeight,
-                ) {
-                    drawYAxisGuides(
-                        gridColor = gridColor,
-                        axisColor = axisColor,
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                    val stepX = size.width / (sorted.size - 1)
-                    val points = sorted.mapIndexed { index, entry ->
-                        Offset(
-                            x = index * stepX,
-                            y = size.height * (1f - ((entry.temperatureCelsius - minC) / range).toFloat()),
-                        )
-                    }
-                    for (index in 0 until points.lastIndex) {
-                        drawLine(
-                            color = CycleColor,
-                            start = points[index],
-                            end = points[index + 1],
-                            strokeWidth = 2.dp.toPx(),
-                        )
-                    }
-                    points.forEach { point ->
-                        drawCircle(color = CycleColor, radius = 4.dp.toPx(), center = point)
-                    }
-                }
+                    valueFormatter = { unitFormatter.temperature(it).text },
+                    pointRadius = 4.dp,
+                )
                 Spacer(Modifier.height(8.dp))
             }
             val latest = sorted.last()
