@@ -16,6 +16,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
@@ -138,120 +139,123 @@ fun ActivityEntryScreen(
         }
     }
 
-    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
-        item {
-            if (recordingState.isActive) {
-                ActivityRecordingScreen(
-                    state = recordingState,
-                    unitFormatter = unitFormatter,
-                    onPauseRecording = viewModel::pauseGpsRecording,
-                    onResumeRecording = viewModel::resumeGpsRecording,
-                    onAddLap = viewModel::addRecordingLap,
-                    onAddMarker = viewModel::addRecordingMarker,
-                    onUpdateMarker = viewModel::updateRecordingMarker,
-                    onDeleteMarker = viewModel::deleteRecordingMarker,
-                    onAdjustRepetitionCount = viewModel::adjustRepetitionRecording,
-                    onEndRepetitionSet = viewModel::endRepetitionSet,
-                    onStartNextRepetitionSet = viewModel::startNextRepetitionSet,
-                    onFinishRecording = {
-                        viewModel.finishGpsRecording(unitFormatter.unitSystem())
-                    },
-                    onDiscardRecording = viewModel::discardGpsRecording,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            } else if (state.mode == ActivityEntryMode.RECORDING) {
-                ActivityRecordingSetupScreen(
-                    state = state,
-                    unitFormatter = unitFormatter,
-                    onSelectActivityType = viewModel::selectActivityType,
-                    onStartRecording = viewModel::startGpsRecording,
-                    onRequestLocationPermission = {
-                        requestGpsLocationPermissions.launch(activityRecordingLocationPermissions())
-                    },
-                    onRequestActivityRecognitionPermission = {
-                        requestActivityRecognitionPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                    },
-                    onChooseSource = viewModel::chooseSource,
-                    onRequestWritePermission = {
-                        requestWritePermissions.launch(state.writePermissions)
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            } else if (state.mode == ActivityEntryMode.CHOOSE_SOURCE) {
-                ActivityEntrySourceCard(
-                    state = state,
-                    onStartManualEntry = {
-                        performSourceActionAfterPermission(ActivityEntrySourceAction.MANUAL)
-                    },
-                    onCreateFromExistingPlan = {
-                        performSourceActionAfterPermission(ActivityEntrySourceAction.EXISTING_PLAN)
-                    },
-                    onImportRouteFile = {
-                        performSourceActionAfterPermission(ActivityEntrySourceAction.IMPORT_ROUTE_FILE)
-                    },
-                    onRecordGpsActivity = {
-                        performSourceActionAfterPermission(ActivityEntrySourceAction.RECORD_GPS)
-                    },
-                    onRequestWritePermission = {
-                        requestWritePermissions.launch(state.writePermissions)
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            } else if (state.mode == ActivityEntryMode.PLAN_ACTIVITY_PICKER) {
-                ActivityPlanActivityPickerCard(
-                    state = state,
-                    onSelectActivity = viewModel::selectPlannedWorkoutActivity,
-                    onChooseSource = viewModel::chooseSource,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            } else if (state.mode == ActivityEntryMode.PLAN_PICKER) {
-                ActivityPlanPickerCard(
-                    state = state,
-                    onSelectPlan = viewModel::applyPlannedWorkout,
-                    onChooseActivity = viewModel::choosePlannedWorkoutActivity,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            } else {
-                ActivityEntryCard(
-                    state = state,
-                    unitFormatter = unitFormatter,
-                    onSelectActivityType = viewModel::selectActivityType,
-                    onTitleChanged = viewModel::updateTitle,
-                    onFeelingChanged = viewModel::updateFeeling,
-                    onNotesChanged = viewModel::updateNotes,
-                    onStartDateChanged = viewModel::updateStartDate,
-                    onStartTimeChanged = viewModel::updateStartTime,
-                    onDurationChanged = viewModel::updateDurationMinutes,
-                    onRepetitionModeChanged = viewModel::updateRepetitionMode,
-                    onRepetitionTotalChanged = viewModel::updateRepetitionTotal,
-                    onRepetitionSetRepetitionsChanged = viewModel::updateRepetitionSetRepetitions,
-                    onRepetitionSetRestChanged = viewModel::updateRepetitionSetRest,
-                    onAddRepetitionSet = viewModel::addRepetitionSet,
-                    onRemoveRepetitionSet = viewModel::removeRepetitionSet,
-                    onCreateNewPlannedWorkout = viewModel::createNewPlannedWorkout,
-                    onApplyPlannedWorkout = viewModel::applyPlannedWorkout,
-                    onSavePlannedWorkout = {
-                        viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem())
-                    },
-                    onUpdatePlannedWorkout = {
-                        viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem(), updateSelected = true)
-                    },
-                    onDistanceChanged = viewModel::updateDistance,
-                    onElevationChanged = viewModel::updateElevation,
-                    onActiveCaloriesChanged = viewModel::updateActiveCalories,
-                    onTotalCaloriesChanged = viewModel::updateTotalCalories,
-                    onClearRoute = viewModel::clearImportedRoute,
-                    onChooseSource = viewModel::chooseSource,
-                    onRequestWritePermission = {
-                        requestWritePermissions.launch(state.writePermissions)
-                    },
-                    onAddEntry = {
-                        viewModel.addEntry(unitFormatter.unitSystem())
-                    },
-                    onDiscardRecordingDraft = viewModel::discardRecordingDraft,
-                    isEditMode = state.isEditMode,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+    if (recordingState.isActive) {
+        ActivityRecordingScreen(
+            state = recordingState,
+            unitFormatter = unitFormatter,
+            onPauseRecording = viewModel::pauseGpsRecording,
+            onResumeRecording = viewModel::resumeGpsRecording,
+            onAddLap = viewModel::addRecordingLap,
+            onAddMarker = viewModel::addRecordingMarker,
+            onUpdateMarker = viewModel::updateRecordingMarker,
+            onDeleteMarker = viewModel::deleteRecordingMarker,
+            onAdjustRepetitionCount = viewModel::adjustRepetitionRecording,
+            onEndRepetitionSet = viewModel::endRepetitionSet,
+            onStartNextRepetitionSet = viewModel::startNextRepetitionSet,
+            onFinishRecording = {
+                viewModel.finishGpsRecording(unitFormatter.unitSystem())
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        )
+    } else {
+        LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
+            item {
+                if (state.mode == ActivityEntryMode.RECORDING) {
+                    ActivityRecordingSetupScreen(
+                        state = state,
+                        unitFormatter = unitFormatter,
+                        onSelectActivityType = viewModel::selectActivityType,
+                        onStartRecording = viewModel::startGpsRecording,
+                        onRequestLocationPermission = {
+                            requestGpsLocationPermissions.launch(activityRecordingLocationPermissions())
+                        },
+                        onRequestActivityRecognitionPermission = {
+                            requestActivityRecognitionPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                        },
+                        onChooseSource = viewModel::chooseSource,
+                        onRequestWritePermission = {
+                            requestWritePermissions.launch(state.writePermissions)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                } else if (state.mode == ActivityEntryMode.CHOOSE_SOURCE) {
+                    ActivityEntrySourceCard(
+                        state = state,
+                        onStartManualEntry = {
+                            performSourceActionAfterPermission(ActivityEntrySourceAction.MANUAL)
+                        },
+                        onCreateFromExistingPlan = {
+                            performSourceActionAfterPermission(ActivityEntrySourceAction.EXISTING_PLAN)
+                        },
+                        onImportRouteFile = {
+                            performSourceActionAfterPermission(ActivityEntrySourceAction.IMPORT_ROUTE_FILE)
+                        },
+                        onRecordGpsActivity = {
+                            performSourceActionAfterPermission(ActivityEntrySourceAction.RECORD_GPS)
+                        },
+                        onRequestWritePermission = {
+                            requestWritePermissions.launch(state.writePermissions)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                } else if (state.mode == ActivityEntryMode.PLAN_ACTIVITY_PICKER) {
+                    ActivityPlanActivityPickerCard(
+                        state = state,
+                        onSelectActivity = viewModel::selectPlannedWorkoutActivity,
+                        onChooseSource = viewModel::chooseSource,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                } else if (state.mode == ActivityEntryMode.PLAN_PICKER) {
+                    ActivityPlanPickerCard(
+                        state = state,
+                        onSelectPlan = viewModel::applyPlannedWorkout,
+                        onChooseActivity = viewModel::choosePlannedWorkoutActivity,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                } else {
+                    ActivityEntryCard(
+                        state = state,
+                        unitFormatter = unitFormatter,
+                        onSelectActivityType = viewModel::selectActivityType,
+                        onTitleChanged = viewModel::updateTitle,
+                        onFeelingChanged = viewModel::updateFeeling,
+                        onNotesChanged = viewModel::updateNotes,
+                        onStartDateChanged = viewModel::updateStartDate,
+                        onStartTimeChanged = viewModel::updateStartTime,
+                        onDurationChanged = viewModel::updateDurationMinutes,
+                        onRepetitionModeChanged = viewModel::updateRepetitionMode,
+                        onRepetitionTotalChanged = viewModel::updateRepetitionTotal,
+                        onRepetitionSetRepetitionsChanged = viewModel::updateRepetitionSetRepetitions,
+                        onRepetitionSetRestChanged = viewModel::updateRepetitionSetRest,
+                        onAddRepetitionSet = viewModel::addRepetitionSet,
+                        onRemoveRepetitionSet = viewModel::removeRepetitionSet,
+                        onCreateNewPlannedWorkout = viewModel::createNewPlannedWorkout,
+                        onApplyPlannedWorkout = viewModel::applyPlannedWorkout,
+                        onSavePlannedWorkout = {
+                            viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem())
+                        },
+                        onUpdatePlannedWorkout = {
+                            viewModel.saveCurrentAsPlannedWorkout(unitFormatter.unitSystem(), updateSelected = true)
+                        },
+                        onDistanceChanged = viewModel::updateDistance,
+                        onElevationChanged = viewModel::updateElevation,
+                        onActiveCaloriesChanged = viewModel::updateActiveCalories,
+                        onTotalCaloriesChanged = viewModel::updateTotalCalories,
+                        onClearRoute = viewModel::clearImportedRoute,
+                        onChooseSource = viewModel::chooseSource,
+                        onRequestWritePermission = {
+                            requestWritePermissions.launch(state.writePermissions)
+                        },
+                        onAddEntry = {
+                            viewModel.addEntry(unitFormatter.unitSystem())
+                        },
+                        onDiscardRecordingDraft = viewModel::discardRecordingDraft,
+                        isEditMode = state.isEditMode,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
             }
         }
     }

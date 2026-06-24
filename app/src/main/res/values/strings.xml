@@ -208,7 +208,7 @@
     <string name="activity_entry_recording_rest_seconds_label">Rest seconds</string>
     <string name="activity_entry_recording_end_set">End set</string>
     <string name="activity_entry_recording_start_next_set">Start next set</string>
-    <string name="activity_entry_recording_end_session">End session</string>
+    <string name="activity_entry_recording_end_session">Finish session</string>
     <string name="activity_entry_recording_rest_remaining">Rest %1$s</string>
     <string name="activity_entry_recording_finish_hint">Finish opens the activity details form so you can add title, notes, calories, or adjust values before saving.</string>
     <string name="activity_entry_recording_repetition_correction_hint">Use + or - if the sensor misses or adds a rep.</string>

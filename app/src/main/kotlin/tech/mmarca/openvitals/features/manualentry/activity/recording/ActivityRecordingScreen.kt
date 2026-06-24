@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -79,7 +80,6 @@ internal fun ActivityRecordingScreen(
     onEndRepetitionSet: () -> Unit,
     onStartNextRepetitionSet: () -> Unit,
     onFinishRecording: () -> Unit,
-    onDiscardRecording: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
@@ -98,7 +98,15 @@ internal fun ActivityRecordingScreen(
     }
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (state.recordingKind == ActivityRecordingKind.REPETITION) {
+                    Modifier.fillMaxHeight()
+                } else {
+                    Modifier
+                }
+            ),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(
@@ -134,7 +142,7 @@ internal fun ActivityRecordingScreen(
                 onEndRepetitionSet = onEndRepetitionSet,
                 onStartNextRepetitionSet = onStartNextRepetitionSet,
                 onFinishRecording = onFinishRecording,
-                onDiscardRecording = onDiscardRecording,
+                modifier = Modifier.weight(1f),
             )
         } else {
             GpsRecordingTabs(

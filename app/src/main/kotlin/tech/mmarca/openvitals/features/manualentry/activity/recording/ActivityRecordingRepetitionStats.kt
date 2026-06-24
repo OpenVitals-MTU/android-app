@@ -14,12 +14,14 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Pause
@@ -74,7 +76,7 @@ internal fun RepetitionRecordingStats(
     onEndRepetitionSet: () -> Unit,
     onStartNextRepetitionSet: () -> Unit,
     onFinishRecording: () -> Unit,
-    onDiscardRecording: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val activityType = activityEntryTypeById(state.activityTypeId)
     val countLabel = stringResource(
@@ -85,71 +87,111 @@ internal fun RepetitionRecordingStats(
         }
     )
 
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth(),
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = countLabel,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = unitFormatter.count(state.currentSetRepetitionCount),
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                OutlinedButton(
-                    onClick = { onAdjustRepetitionCount(-1) },
-                    enabled = state.status == ActivityRecordingStatus.RECORDING &&
-                        state.currentSetRepetitionCount > 0L,
-                    modifier = Modifier.weight(1f),
+                Text(
+                    text = countLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = unitFormatter.count(state.currentSetRepetitionCount),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Remove,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    OutlinedButton(
+                        onClick = { onAdjustRepetitionCount(-1) },
+                        enabled = state.status == ActivityRecordingStatus.RECORDING &&
+                            state.currentSetRepetitionCount > 0L,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Remove,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { onAdjustRepetitionCount(1) },
+                        enabled = state.status == ActivityRecordingStatus.RECORDING,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
-                OutlinedButton(
-                    onClick = { onAdjustRepetitionCount(1) },
-                    enabled = state.status == ActivityRecordingStatus.RECORDING,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                Text(
+                    text = stringResource(R.string.activity_entry_recording_repetition_correction_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (state.status == ActivityRecordingStatus.RESTING) {
+                    Text(
+                        text = stringResource(
+                            R.string.activity_entry_recording_rest_remaining,
+                            formatRecordingElapsed(state.restRemainingDuration()),
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
-            Text(
-                text = stringResource(R.string.activity_entry_recording_repetition_correction_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            RecordingStat(
+                value = DisplayValue(formatRecordingElapsed(totalTime), ""),
+                label = stringResource(R.string.activity_entry_recording_total_time),
+                modifier = Modifier.weight(1f),
             )
+            RecordingStat(
+                value = DisplayValue(formatRecordingElapsed(movingTime), ""),
+                label = stringResource(R.string.activity_entry_recording_moving_time),
+                modifier = Modifier.weight(1f),
+            )
+            RecordingStat(
+                value = DisplayValue(formatRecordingElapsed(state.restDuration()), ""),
+                label = stringResource(R.string.activity_entry_recording_rest_time),
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             if (state.status == ActivityRecordingStatus.RESTING) {
-                Text(
-                    text = stringResource(
-                        R.string.activity_entry_recording_rest_remaining,
-                        formatRecordingElapsed(state.restRemainingDuration()),
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
                 Button(
                     onClick = onStartNextRepetitionSet,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.PlayArrow,
@@ -165,7 +207,9 @@ internal fun RepetitionRecordingStats(
                 Button(
                     onClick = onEndRepetitionSet,
                     enabled = state.currentSetRepetitionCount > 0L,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Stop,
@@ -178,61 +222,22 @@ internal fun RepetitionRecordingStats(
                     )
                 }
             }
-        }
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        RecordingStat(
-            value = DisplayValue(formatRecordingElapsed(totalTime), ""),
-            label = stringResource(R.string.activity_entry_recording_total_time),
-            modifier = Modifier.weight(1f),
-        )
-        RecordingStat(
-            value = DisplayValue(formatRecordingElapsed(movingTime), ""),
-            label = stringResource(R.string.activity_entry_recording_moving_time),
-            modifier = Modifier.weight(1f),
-        )
-        RecordingStat(
-            value = DisplayValue(formatRecordingElapsed(state.restDuration()), ""),
-            label = stringResource(R.string.activity_entry_recording_rest_time),
-            modifier = Modifier.weight(1f),
-        )
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Button(
-            onClick = onFinishRecording,
-            modifier = Modifier.weight(1f),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Stop,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = stringResource(R.string.activity_entry_recording_end_session),
-                modifier = Modifier.padding(start = 6.dp),
-            )
-        }
-        OutlinedButton(
-            onClick = onDiscardRecording,
-            modifier = Modifier.weight(1f),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Close,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = stringResource(R.string.action_discard),
-                modifier = Modifier.padding(start = 6.dp),
-            )
+            Button(
+                onClick = onFinishRecording,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.activity_entry_recording_end_session),
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
         }
     }
 }
