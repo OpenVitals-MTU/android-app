@@ -29,8 +29,6 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.WorkspacePremium
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -346,9 +344,9 @@ private fun AchievementBadgeCard(
         MaterialTheme.colorScheme.surfaceContainer
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        containerColor = containerColor,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

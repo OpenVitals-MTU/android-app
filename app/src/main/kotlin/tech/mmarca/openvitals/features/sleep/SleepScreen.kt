@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -24,8 +23,6 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -525,8 +522,6 @@ private fun SleepOverviewTopCard(
         modifier = modifier
             .height(SleepOverviewTopCardHeight),
         onClick = onClick,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(8.dp),
     ) {
         Row(
             modifier = Modifier
@@ -600,8 +595,6 @@ private fun SleepOverviewMetricCard(
             .fillMaxWidth()
             .height(SleepOverviewMetricCardHeight),
         onClick = onClick,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(8.dp),
     ) {
         Row(
             modifier = Modifier
@@ -980,5 +973,4 @@ private enum class SleepOverviewValueEmphasis {
     Medium,
     Small,
 }
-
 

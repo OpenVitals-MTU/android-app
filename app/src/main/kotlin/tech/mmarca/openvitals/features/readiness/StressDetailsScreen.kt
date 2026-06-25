@@ -17,13 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.SelfImprovement
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -203,8 +200,6 @@ private fun StressScoreCard(
     val accent = stressColor(stress.level)
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-
     ) {
         Column(
             modifier = Modifier
@@ -267,8 +262,6 @@ private fun StressExplanationCard(
 ) {
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -342,8 +335,6 @@ private fun StressListCard(
 ) {
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

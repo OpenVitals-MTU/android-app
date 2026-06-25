@@ -1,7 +1,5 @@
 package tech.mmarca.openvitals.features.dashboard
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -32,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Accessible
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
@@ -43,13 +40,15 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -125,6 +124,11 @@ import kotlin.math.roundToInt
 
 private const val DashboardCarouselEdgeScrollDelayMillis = 450L
 private val DashboardCarouselEdgeScrollThreshold = 56.dp
+private val DashboardScreenPadding = 14.dp
+private val DashboardSectionSeparatorSpacing = 4.dp
+private val DashboardQuickActionHeight = 44.dp
+private val DashboardActionsSpacing = 10.dp
+private val DashboardQuickActionIconSize = 20.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -294,7 +298,10 @@ private fun DashboardContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 1080.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
+            contentPadding = PaddingValues(
+                top = 4.dp,
+                bottom = 12.dp,
+            ),
         ) {
             item {
                 DayNavigator(
@@ -303,7 +310,10 @@ private fun DashboardContent(
                     onPreviousDay = onPreviousDay,
                     onNextDay = onNextDay,
                     onOpenCalendar = onOpenCalendar,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(
+                        horizontal = DashboardScreenPadding,
+                        vertical = 4.dp,
+                    ),
                 )
             }
 
@@ -314,7 +324,10 @@ private fun DashboardContent(
                         body = stringResource(R.string.message_missing_permissions_body),
                         onGrant = onGrantPermissions,
                         onDismiss = onDismissPermissionsCallout,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(
+                            horizontal = DashboardScreenPadding,
+                            vertical = 4.dp,
+                        ),
                     )
                 }
             }
@@ -335,7 +348,10 @@ private fun DashboardContent(
                             onOpenLog = onOpenLog,
                             onStartActivity = onStartActivity,
                             onToggleDashboardEdit = onToggleDashboardEdit,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(
+                                horizontal = DashboardScreenPadding,
+                                vertical = DashboardSectionSeparatorSpacing,
+                            ),
                         )
                     },
                     hiddenContent = {
@@ -360,7 +376,7 @@ private fun DashboardContent(
                 onRequestDeleteActivity = { workout -> activityPendingDelete = workout },
             )
 
-            item { Spacer(Modifier.height(16.dp)) }
+            item { Spacer(Modifier.height(10.dp)) }
         }
 
         activityPendingDelete?.let { workout ->
@@ -383,46 +399,51 @@ private fun DashboardQuickActions(
     onStartActivity: () -> Unit,
     onToggleDashboardEdit: () -> Unit,
     modifier: Modifier = Modifier,
-) {
+    ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(DashboardActionsSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Button(
+        FilledTonalButton(
             onClick = onOpenLog,
             modifier = Modifier
                 .weight(1f)
-                .height(52.dp),
-            shape = RoundedCornerShape(28.dp),
+                .height(DashboardQuickActionHeight),
         ) {
             Icon(Icons.Outlined.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.dashboard_action_log))
         }
         Button(
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
             onClick = onStartActivity,
             modifier = Modifier
                 .weight(1f)
-                .height(52.dp),
-            shape = RoundedCornerShape(28.dp),
+                .height(DashboardQuickActionHeight),
         ) {
-            Icon(Icons.AutoMirrored.Outlined.DirectionsRun, contentDescription = null)
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.DirectionsRun,
+                contentDescription = null,
+                modifier = Modifier.size(DashboardQuickActionIconSize),
+            )
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.action_start))
         }
         IconButton(
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = if (isEditingDashboard) {
+                    MaterialTheme.colorScheme.surfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
             onClick = onToggleDashboardEdit,
             modifier = Modifier
-                .size(52.dp)
-                .background(
-                    color = if (isEditingDashboard) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    },
-                    shape = CircleShape,
-                ),
+                .size(44.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Edit,
@@ -433,11 +454,7 @@ private fun DashboardQuickActions(
                         R.string.cd_edit_dashboard
                     }
                 ),
-                tint = if (isEditingDashboard) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -485,12 +502,20 @@ private fun LazyListScope.dashboardActivitiesToday(
             if (editable) {
                 DashboardSwipeToDeleteActivityCard(
                     onDelete = { onRequestDeleteActivity(workout) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(
+                        horizontal = DashboardScreenPadding,
+                        vertical = 6.dp,
+                    ),
                 ) {
                     cardContent(Modifier)
                 }
             } else {
-                cardContent(Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                cardContent(
+                    Modifier.padding(
+                        horizontal = DashboardScreenPadding,
+                        vertical = 6.dp,
+                    )
+                )
             }
         }
     } else {
@@ -500,7 +525,10 @@ private fun LazyListScope.dashboardActivitiesToday(
                 icon = Icons.AutoMirrored.Outlined.DirectionsRun,
                 accentColor = WorkoutColor,
                 message = stringResource(R.string.message_no_workouts_day),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                modifier = Modifier.padding(
+                    horizontal = DashboardScreenPadding,
+                    vertical = 6.dp,
+                ),
                 showHeader = false,
                 onClick = onOpenActivities,
             )
@@ -591,7 +619,10 @@ private fun DashboardActivitiesSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(
+                horizontal = DashboardScreenPadding,
+                vertical = 6.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -722,7 +753,10 @@ private fun DashboardWidgetSections(
 
             if (carouselPages.isNotEmpty()) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(
+                        horizontal = DashboardScreenPadding,
+                        vertical = DashboardSectionSeparatorSpacing,
+                    ),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                 )
                 HorizontalPager(
@@ -755,7 +789,10 @@ private fun DashboardWidgetSections(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp, bottom = 8.dp),
+                            .padding(
+                                top = 6.dp,
+                                bottom = 6.dp,
+                            ),
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         carouselPages.forEachIndexed { page, _ ->

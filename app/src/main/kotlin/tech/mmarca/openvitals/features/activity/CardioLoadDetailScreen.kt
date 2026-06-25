@@ -16,12 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,6 +46,9 @@ import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.OpenVitalsCardHorizontalPadding
+import tech.mmarca.openvitals.ui.components.OpenVitalsSectionSpacing
+import tech.mmarca.openvitals.ui.components.SharedMetricTile
 import tech.mmarca.openvitals.ui.components.localizedDayTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import kotlin.math.roundToLong
@@ -376,41 +376,11 @@ private fun DetailMetricTile(
     metric: DetailMetric,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    SharedMetricTile(
+        title = metric.title,
+        value = metric.value,
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(8.dp),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            AutoResizeText(
-                text = metric.title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                AutoResizeText(
-                    text = metric.value.value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
-                if (metric.value.unit.isNotBlank()) {
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = metric.value.unit,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 2.dp),
-                    )
-                }
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -420,12 +390,9 @@ private fun DetailCard(
 ) {
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
-
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(8.dp),
-    ) {
+        ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(OpenVitalsCardHorizontalPadding),
             content = content,
         )
     }
@@ -437,7 +404,7 @@ private data class DetailMetric(
 )
 
 private fun detailCardModifier(): Modifier =
-    Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+    Modifier.padding(horizontal = OpenVitalsCardHorizontalPadding, vertical = OpenVitalsSectionSpacing)
 
 @Composable
 private fun cardioLoadDisplayValue(day: ActivityOverviewDay, unitFormatter: UnitFormatter): DisplayValue =

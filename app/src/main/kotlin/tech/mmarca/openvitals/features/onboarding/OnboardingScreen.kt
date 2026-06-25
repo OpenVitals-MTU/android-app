@@ -25,8 +25,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -350,14 +348,13 @@ private fun PermissionCategoryRow(
         stringResource(category.descriptionRes)
     }
 
-    Card(
+    OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (granted)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-            else
-                MaterialTheme.colorScheme.surfaceContainer,
-        ),
+        containerColor = if (granted) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -423,11 +420,9 @@ private fun PermissionCategoryRow(
 
 @Composable
 private fun UnavailableMessage() {
-    Card(
+    OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+        containerColor = MaterialTheme.colorScheme.errorContainer,
     ) {
         Text(
             text = stringResource(R.string.onboarding_health_connect_not_supported),
@@ -439,11 +434,9 @@ private fun UnavailableMessage() {
 
 @Composable
 private fun NeedsPlayStoreMessage() {
-    Card(
+    OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+        containerColor = MaterialTheme.colorScheme.errorContainer,
     ) {
         Text(
             text = stringResource(R.string.onboarding_health_connect_needs_play_store),
@@ -456,11 +449,9 @@ private fun NeedsPlayStoreMessage() {
 @Composable
 private fun NeedsUpdateMessage(onInstall: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Card(
+        OpenVitalsCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            ),
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
         ) {
             Text(
                 text = stringResource(R.string.onboarding_health_connect_update),

@@ -46,8 +46,6 @@ import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -84,11 +82,12 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.AutoResizeText
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
-import tech.mmarca.openvitals.ui.theme.accentSurfaceContainerColor
 
 private const val ManualEntryGridColumns = 3
 private const val ManualEntryDragLongPressMillis = 500L
@@ -739,7 +738,7 @@ private fun ManualEntryMetricTile(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
+    OpenVitalsCard(
         modifier = modifier
             .fillMaxWidth()
             .then(
@@ -749,10 +748,8 @@ private fun ManualEntryMetricTile(
                     Modifier
                 }
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = accentSurfaceContainerColor(accentColor, amoledAlpha = 0.09f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        style = OpenVitalsCardStyle.Accent,
+        accentColor = accentColor,
     ) {
         Column(
             modifier = Modifier

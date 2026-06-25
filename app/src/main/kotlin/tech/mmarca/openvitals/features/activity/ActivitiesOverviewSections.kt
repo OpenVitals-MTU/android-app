@@ -29,8 +29,6 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Straighten
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -147,9 +145,6 @@ internal fun ActivityOverviewPeriodCard(
         SectionHeader(text = activityPeriodTitle(selectedRange, activityWeekMode, period))
         OpenVitalsCard(
             modifier = metricModifier(),
-
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(8.dp),
         ) {
             Column {
                 ActivityOverviewStrip(
@@ -185,9 +180,6 @@ internal fun ActivityWorkoutListCard(
         SectionHeader(text = stringResource(R.string.section_activities))
         OpenVitalsCard(
             modifier = metricModifier(),
-
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(8.dp),
         ) {
             if (workouts.isEmpty()) {
                 Text(
@@ -264,9 +256,6 @@ internal fun PlannedWorkoutListCard(
         SectionHeader(text = stringResource(R.string.section_planned_workouts))
         OpenVitalsCard(
             modifier = metricModifier(),
-
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(8.dp),
         ) {
             plannedWorkouts.sortedBy { it.startTime }.forEachIndexed { index, plannedWorkout ->
                 PlannedWorkoutRow(
@@ -565,8 +554,6 @@ internal fun ActivityMetricCard(
         modifier = modifier
             .fillMaxWidth(),
         onClick = onClick,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(8.dp),
     ) {
         Row(
             modifier = Modifier

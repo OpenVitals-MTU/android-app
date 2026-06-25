@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Accessible
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
@@ -55,8 +54,6 @@ import androidx.compose.material.icons.outlined.Stairs
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material.icons.outlined.Terrain
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -121,6 +118,7 @@ import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
@@ -152,6 +150,41 @@ private const val DashboardDragLongPressMillis = 500L
 private const val DashboardEditWiggleDegrees = 0.45f
 private val DashboardCompactWidgetHeight = 82.dp
 private val DashboardWidgetGridSpacing = 12.dp
+private val DashboardWidgetHorizontalPadding = 14.dp
+private val DashboardWidgetSectionPadding = 8.dp
+private val DashboardCardHeightWeight = 12.dp
+private val DashboardPillIconSize = 36.dp
+private val DashboardPillIconCircle = 20.dp
+private val DashboardPillProgressHeight = 4.dp
+private val DashboardCircleWidgetStroke = 12.dp
+
+@Composable
+private fun dashboardContainerColor(hasProgress: Boolean): Color =
+    if (hasProgress) {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+
+@Composable
+private fun dashboardIconContainerColor(accentColor: Color): Color =
+    accentSurfaceContainerColor(
+        accentColor = accentColor,
+        amoledAlpha = 0.2f,
+        fallback = MaterialTheme.colorScheme.surfaceContainerHighest,
+    )
+
+@Composable
+private fun dashboardAccentTrackColor(accentColor: Color): Color =
+    accentSurfaceContainerColor(
+        accentColor = accentColor,
+        amoledAlpha = 0.24f,
+        fallback = MaterialTheme.colorScheme.outlineVariant,
+    )
+
+@Composable
+private fun dashboardProgressFillColor(accentColor: Color): Color =
+    accentColor.copy(alpha = 0.62f)
 
 @Composable
 internal fun DashboardWidgetGrid(
@@ -181,7 +214,7 @@ internal fun DashboardWidgetGrid(
     Layout(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = DashboardWidgetHorizontalPadding, vertical = DashboardWidgetSectionPadding)
             .animateContentSize(),
         content = {
             placements.forEach { placement ->
@@ -548,51 +581,30 @@ internal fun DashboardPillWidget(
     showTitle: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(28.dp)
-    val containerColor = accentSurfaceContainerColor(
-        accentColor = accentColor,
-        amoledAlpha = if (progress != null) 0.12f else 0.09f,
-        fallback = if (progress != null) {
-            accentColor.copy(alpha = 0.24f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        },
-    )
-    val iconContainerColor = accentSurfaceContainerColor(
-        accentColor = accentColor,
-        amoledAlpha = 0.18f,
-        fallback = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
-    )
-    Card(
+    val shape = MaterialTheme.shapes.medium
+    val containerColor = dashboardContainerColor(progress != null)
+    val iconContainerColor = dashboardIconContainerColor(accentColor)
+    val progressFillColor = dashboardProgressFillColor(accentColor)
+    OpenVitalsCard(
         modifier = modifier
-            .fillMaxWidth()
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-        shape = shape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            .fillMaxWidth(),
+        onClick = onClick,
+        containerColor = containerColor,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(shape),
         ) {
-            progress?.let { goal ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(goal.fraction)
-                        .background(accentColor.copy(alpha = 0.62f)),
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = DashboardCardHeightWeight),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(DashboardPillIconSize)
                         .background(
                             color = iconContainerColor,
                             shape = CircleShape,
@@ -603,7 +615,7 @@ internal fun DashboardPillWidget(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(DashboardPillIconCircle),
                     )
                 }
                 Spacer(Modifier.width(10.dp))
@@ -614,9 +626,9 @@ internal fun DashboardPillWidget(
                     if (showTitle) {
                         AutoResizeText(
                             text = title,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                         )
                     }
@@ -646,6 +658,15 @@ internal fun DashboardPillWidget(
                     }
                 }
             }
+            if (progress != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .height(DashboardPillProgressHeight)
+                        .fillMaxWidth(progress.fraction)
+                        .background(progressFillColor),
+                )
+            }
         }
     }
 }
@@ -660,13 +681,14 @@ internal fun DashboardCircleWidget(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val containerColor = accentSurfaceContainerColor(accentColor, amoledAlpha = 0.09f)
-    Card(
-        modifier = modifier
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-        shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val iconContainerColor = dashboardIconContainerColor(accentColor)
+    val progressTrackColor = dashboardAccentTrackColor(accentColor)
+    val progressFillColor = dashboardProgressFillColor(accentColor)
+    OpenVitalsCard(
+        modifier = modifier,
+        onClick = onClick,
+        containerColor = containerColor,
     ) {
         Box(
             modifier = Modifier
@@ -674,13 +696,8 @@ internal fun DashboardCircleWidget(
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val trackColor = accentSurfaceContainerColor(
-                accentColor = accentColor,
-                amoledAlpha = 0.24f,
-                fallback = MaterialTheme.colorScheme.surfaceContainerHighest,
-            )
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeWidth = 16.dp.toPx()
+                val strokeWidth = DashboardCircleWidgetStroke.toPx()
                 val diameter = size.minDimension - strokeWidth
                 val topLeft = Offset(
                     x = (size.width - diameter) / 2f,
@@ -688,7 +705,7 @@ internal fun DashboardCircleWidget(
                 )
                 val arcSize = Size(diameter, diameter)
                 drawArc(
-                    color = trackColor,
+                    color = progressTrackColor,
                     startAngle = 130f,
                     sweepAngle = 280f,
                     useCenter = false,
@@ -697,7 +714,7 @@ internal fun DashboardCircleWidget(
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
                 )
                 drawArc(
-                    color = accentColor,
+                    color = progressFillColor,
                     startAngle = 130f,
                     sweepAngle = 280f * progress.fraction,
                     useCenter = false,
@@ -710,12 +727,19 @@ internal fun DashboardCircleWidget(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(18.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(iconContainerColor, shape = CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 AutoResizeText(
                     text = title,
@@ -726,15 +750,15 @@ internal fun DashboardCircleWidget(
                 )
                 AutoResizeText(
                     text = value.value,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                 )
                 AutoResizeText(
                     text = progress.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -785,27 +809,33 @@ internal fun WorkoutCard(
     onEdit: (() -> Unit)? = null,
 ) {
     val start = workout.startTime.atZone(zone)
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-        colors = CardDefaults.cardColors(
-            containerColor = accentSurfaceContainerColor(WorkoutColor, amoledAlpha = 0.09f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = exerciseTypeIcon(workout.exerciseType),
-                    contentDescription = null,
-                    tint = WorkoutColor,
-                    modifier = Modifier.size(20.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(
+                            color = dashboardIconContainerColor(WorkoutColor),
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = exerciseTypeIcon(workout.exerciseType),
+                        contentDescription = null,
+                        tint = WorkoutColor,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.metric_workout),
