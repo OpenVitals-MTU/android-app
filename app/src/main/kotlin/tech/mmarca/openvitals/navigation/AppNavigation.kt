@@ -10,7 +10,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -70,6 +69,7 @@ import tech.mmarca.openvitals.features.sleep.SleepViewModel
 import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 
 internal const val CardioLoadDetailRoute = "activity/cardio_load"
 internal const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
@@ -299,7 +299,7 @@ fun AppNavigation(
                 else -> null
             }
             if (topBarEditState != null) {
-                IconButton(onClick = topBarEditState.onToggleEdit) {
+                OpenVitalsIconButton(onClick = topBarEditState.onToggleEdit) {
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = stringResource(
@@ -325,7 +325,7 @@ fun AppNavigation(
                 !isSettingsRoute &&
                 currentRoute != Screen.DailyReadiness.route
             ) {
-                IconButton(
+                OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.DailyReadiness.route) {
                             launchSingleTop = true
@@ -339,7 +339,7 @@ fun AppNavigation(
                 }
             }
             if (showTopBar && !isTaskRoute && currentRoute != Screen.Achievements.route) {
-                IconButton(
+                OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.Achievements.route) {
                             launchSingleTop = true
@@ -353,7 +353,7 @@ fun AppNavigation(
                 }
             }
             if (showTopBar && !isTaskRoute && !isSettingsRoute) {
-                IconButton(
+                OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.Settings.route) {
                             launchSingleTop = true

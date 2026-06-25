@@ -14,10 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DeviceThermostat
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -31,6 +28,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.ui.components.MetricCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import java.time.ZoneId
 
@@ -161,13 +159,14 @@ private fun CycleDayCell(day: CycleDay, modifier: Modifier = Modifier) {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
 
-    Surface(
+    OpenVitalsSurface(
         modifier = modifier,
-        color = if (day.inSelectedPeriod) {
+        containerColor = if (day.inSelectedPeriod) {
             containerColor
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
         },
+        contentColor = contentColor,
         shape = MaterialTheme.shapes.small,
     ) {
         Column(

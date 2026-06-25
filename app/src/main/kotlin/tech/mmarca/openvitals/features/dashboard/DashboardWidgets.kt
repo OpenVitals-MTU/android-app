@@ -123,6 +123,9 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.BodyFatColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
@@ -326,7 +329,7 @@ internal fun DashboardHiddenWidgets(
         )
     } else {
         hiddenSpecs.forEach { spec ->
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = { onAddWidget(spec.id) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -844,10 +847,10 @@ internal fun WorkoutCard(
                     modifier = Modifier.weight(1f),
                 )
                 if (onEdit != null) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(36.dp),
-                    ) {
+                OpenVitalsIconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(36.dp),
+                ) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = stringResource(R.string.cd_edit_entry),

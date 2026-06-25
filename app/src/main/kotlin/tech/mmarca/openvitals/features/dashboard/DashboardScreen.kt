@@ -39,20 +39,13 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -116,6 +109,10 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.Instant
 import java.time.LocalDate
@@ -405,7 +402,7 @@ private fun DashboardQuickActions(
         horizontalArrangement = Arrangement.spacedBy(DashboardActionsSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilledTonalButton(
+        OpenVitalsTonalButton(
             onClick = onOpenLog,
             modifier = Modifier
                 .weight(1f)
@@ -415,10 +412,7 @@ private fun DashboardQuickActions(
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.dashboard_action_log))
         }
-        Button(
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
+        OpenVitalsButton(
             onClick = onStartActivity,
             modifier = Modifier
                 .weight(1f)
@@ -432,15 +426,7 @@ private fun DashboardQuickActions(
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.action_start))
         }
-        IconButton(
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (isEditingDashboard) {
-                    MaterialTheme.colorScheme.surfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHigh
-                },
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
+        OpenVitalsIconButton(
             onClick = onToggleDashboardEdit,
             modifier = Modifier
                 .size(44.dp),
@@ -546,7 +532,7 @@ private fun DashboardSwipeToDeleteActivityCard(
     val currentOnDelete by rememberUpdatedState(onDelete)
     val scope = rememberCoroutineScope()
     val dismissState = rememberSwipeToDismissBoxState()
-    val shape = CardDefaults.shape
+    val shape = MaterialTheme.shapes.medium
 
     SwipeToDismissBox(
         state = dismissState,
@@ -599,12 +585,12 @@ private fun DeleteActivityConfirmationDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            OpenVitalsTextButton(onClick = onConfirm) {
                 Text(stringResource(R.string.action_delete))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OpenVitalsTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

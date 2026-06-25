@@ -45,12 +45,9 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -84,6 +81,9 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
@@ -273,12 +273,12 @@ private fun HydrationWritePermissionPrompt(
         title = { Text(stringResource(R.string.manual_entry_write_permission_title)) },
         text = { Text(stringResource(R.string.hydration_tracker_permission_needed)) },
         confirmButton = {
-            Button(onClick = onGrant) {
+            OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
             }
         },
         dismissButton = {
-            TextButton(onClick = onOpenEntry) {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
                 Text(stringResource(R.string.action_open))
             }
         },
@@ -296,12 +296,12 @@ private fun MindfulnessWritePermissionPrompt(
         title = { Text(stringResource(R.string.manual_entry_mindfulness_write_permission_title)) },
         text = { Text(stringResource(R.string.mindfulness_entry_permission_needed)) },
         confirmButton = {
-            Button(onClick = onGrant) {
+            OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
             }
         },
         dismissButton = {
-            TextButton(onClick = onOpenEntry) {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
                 Text(stringResource(R.string.action_open))
             }
         },
@@ -319,12 +319,12 @@ private fun ActivityWritePermissionPrompt(
         title = { Text(stringResource(R.string.manual_entry_activity_write_permission_title)) },
         text = { Text(stringResource(R.string.activity_entry_permission_needed)) },
         confirmButton = {
-            Button(onClick = onGrant) {
+            OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
             }
         },
         dismissButton = {
-            TextButton(onClick = onOpenEntry) {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
                 Text(stringResource(R.string.action_open))
             }
         },
@@ -344,12 +344,12 @@ private fun BodyWritePermissionPrompt(
         title = { Text(stringResource(R.string.manual_entry_body_write_permission_title, title)) },
         text = { Text(stringResource(R.string.body_entry_permission_needed, title)) },
         confirmButton = {
-            Button(onClick = onGrant) {
+            OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
             }
         },
         dismissButton = {
-            TextButton(onClick = onOpenEntry) {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
                 Text(stringResource(R.string.action_open))
             }
         },
@@ -369,12 +369,12 @@ private fun VitalsWritePermissionPrompt(
         title = { Text(stringResource(R.string.manual_entry_vitals_write_permission_title, title)) },
         text = { Text(stringResource(R.string.vitals_entry_permission_needed, title)) },
         confirmButton = {
-            Button(onClick = onGrant) {
+            OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
             }
         },
         dismissButton = {
-            TextButton(onClick = onOpenEntry) {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
                 Text(stringResource(R.string.action_open))
             }
         },
@@ -571,7 +571,7 @@ private fun LazyListScope.hiddenManualEntryWidgets(
         }
     } else {
         items(hiddenSpecs, key = { "add_${it.id.name}" }) { spec ->
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = { onAddWidget(spec.id) },
                 modifier = Modifier
                     .fillMaxWidth()

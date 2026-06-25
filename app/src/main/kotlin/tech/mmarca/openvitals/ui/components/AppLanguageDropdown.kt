@@ -8,7 +8,6 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +29,7 @@ fun AppLanguageDropdown(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        OutlinedButton(onClick = { expanded = true }) {
+        OpenVitalsOutlinedButton(onClick = { expanded = true }) {
             Text(selected.label())
             Spacer(Modifier.width(4.dp))
             Icon(

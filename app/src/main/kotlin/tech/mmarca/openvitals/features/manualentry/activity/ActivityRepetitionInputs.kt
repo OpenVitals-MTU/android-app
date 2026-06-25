@@ -22,13 +22,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,6 +33,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 
 @Composable
 internal fun ActivityRepetitionInputs(
@@ -54,13 +54,13 @@ internal fun ActivityRepetitionInputs(
     if (!type.isRepetitionLike) return
 
     val errorText = state.validationErrorText(ActivityEntryField.REPETITIONS)
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    OpenVitalsSurface(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
         shape = MaterialTheme.shapes.medium,
         modifier = modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
@@ -130,7 +130,7 @@ internal fun ActivityRepetitionInputs(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                             )
-                            IconButton(
+                            OpenVitalsIconButton(
                                 onClick = { onRemoveSet(index) },
                                 enabled = enabled && state.repetitionSets.size > 1,
                             ) {
@@ -141,7 +141,7 @@ internal fun ActivityRepetitionInputs(
                             }
                         }
                     }
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = onAddSet,
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
@@ -181,14 +181,14 @@ private fun RepetitionModeButtons(
             Text(stringResource(R.string.activity_entry_repetition_mode_sets))
         }
         if (selectedMode == ActivityRepetitionEntryMode.TOTAL) {
-            Button(
+            OpenVitalsButton(
                 onClick = { onModeChanged(ActivityRepetitionEntryMode.TOTAL) },
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
                 content = totalButton,
             )
         } else {
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = { onModeChanged(ActivityRepetitionEntryMode.TOTAL) },
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
@@ -196,14 +196,14 @@ private fun RepetitionModeButtons(
             )
         }
         if (selectedMode == ActivityRepetitionEntryMode.SETS) {
-            Button(
+            OpenVitalsButton(
                 onClick = { onModeChanged(ActivityRepetitionEntryMode.SETS) },
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
                 content = setsButton,
             )
         } else {
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = { onModeChanged(ActivityRepetitionEntryMode.SETS) },
                 enabled = enabled,
                 modifier = Modifier.weight(1f),

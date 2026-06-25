@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -33,10 +32,8 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
@@ -57,8 +54,10 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 @Composable
@@ -98,7 +97,7 @@ internal fun ActivityEntryHeader(
             )
         }
         if (!state.canWrite && !state.isCheckingPermission) {
-            OutlinedButton(onClick = onRequestWritePermission) {
+            OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
                 Text(stringResource(R.string.action_grant))
             }
         }
@@ -241,14 +240,14 @@ internal fun ActivityPickerField(
     modifier: Modifier = Modifier,
 ) {
     val contentColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-    OutlinedButton(
+    OpenVitalsOutlinedButton(
         onClick = onClick,
         enabled = enabled,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         border = BorderStroke(
             width = 1.dp,
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
         ),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
@@ -301,14 +300,14 @@ internal fun ActivityTimePickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.activity_entry_select_time)) },
         confirmButton = {
-            TextButton(
+            OpenVitalsTextButton(
                 onClick = { onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute)) },
             ) {
                 Text(stringResource(R.string.action_select))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OpenVitalsTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

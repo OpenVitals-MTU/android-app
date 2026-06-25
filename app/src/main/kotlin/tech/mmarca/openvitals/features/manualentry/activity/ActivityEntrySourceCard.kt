@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
@@ -22,12 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MyLocation
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -71,7 +69,7 @@ internal fun ActivityEntrySourceCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Button(
+            OpenVitalsButton(
                 onClick = onStartManualEntry,
                 enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -87,7 +85,7 @@ internal fun ActivityEntrySourceCard(
                 )
             }
 
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onCreateFromExistingPlan,
                 enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -103,7 +101,7 @@ internal fun ActivityEntrySourceCard(
                 )
             }
 
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onRecordGpsActivity,
                 enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -119,7 +117,7 @@ internal fun ActivityEntrySourceCard(
                 )
             }
 
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onImportRouteFile,
                 enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),

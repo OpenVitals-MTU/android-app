@@ -21,10 +21,8 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,6 +76,7 @@ import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PermissionCallout
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
@@ -642,7 +641,7 @@ private fun HeartRateThresholdCheckCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                IconButton(
+                OpenVitalsIconButton(
                     onClick = onDecreaseThreshold,
                     modifier = Modifier.size(36.dp),
                 ) {
@@ -652,7 +651,7 @@ private fun HeartRateThresholdCheckCard(
                         modifier = Modifier.size(18.dp),
                     )
                 }
-                IconButton(
+                OpenVitalsIconButton(
                     onClick = onIncreaseThreshold,
                     modifier = Modifier.size(36.dp),
                 ) {
@@ -1001,5 +1000,3 @@ private fun LazyListScope.bloodPressureContent(
         )
     }
 }
-
-

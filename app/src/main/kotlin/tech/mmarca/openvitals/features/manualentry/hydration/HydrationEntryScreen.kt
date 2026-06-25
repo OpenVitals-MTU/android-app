@@ -40,19 +40,13 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -79,6 +73,10 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 
 private val HydrationContainerIconSlotSize = 30.dp
 
@@ -182,7 +180,7 @@ private fun HydrationTrackerCard(
                     )
                 }
                 if (!state.canWriteHydration && !state.isCheckingPermission) {
-                    OutlinedButton(onClick = onRequestWritePermission) {
+                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
                         Text(stringResource(R.string.action_grant))
                     }
                 }
@@ -225,7 +223,7 @@ private fun HydrationTrackerCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Button(
+                OpenVitalsButton(
                     onClick = onAddSelectedEntry,
                     enabled = enabled,
                     modifier = Modifier.fillMaxWidth(),
@@ -241,7 +239,7 @@ private fun HydrationTrackerCard(
                     )
                 }
             } else {
-                Button(
+                OpenVitalsButton(
                     onClick = { addingCustomAmount = true },
                     enabled = enabled,
                     modifier = Modifier.fillMaxWidth(),
@@ -312,16 +310,14 @@ private fun HydrationTodayCounter(
     val progressStroke = remember(strokeWidth) {
         Stroke(width = strokeWidth, cap = StrokeCap.Round)
     }
-    Surface(
+    OpenVitalsSurface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -466,7 +462,7 @@ private fun HydrationContainerOptionItem(
         MaterialTheme.colorScheme.outlineVariant
     }
 
-    Surface(
+    OpenVitalsSurface(
         modifier = modifier
             .width(132.dp)
             .height(132.dp)
@@ -477,7 +473,7 @@ private fun HydrationContainerOptionItem(
                 onLongClick = onEdit,
             ),
         shape = MaterialTheme.shapes.medium,
-        color = containerColor,
+        containerColor = containerColor,
         contentColor = contentColor,
         border = BorderStroke(1.dp, borderColor),
     ) {
@@ -578,7 +574,7 @@ private fun HydrationAmountDialog(
             )
         },
         confirmButton = {
-            TextButton(
+            OpenVitalsTextButton(
                 onClick = {
                     amount?.takeIf(::isValidHydrationContainerMilliliters)?.let(onSave)
                 },
@@ -588,7 +584,7 @@ private fun HydrationAmountDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OpenVitalsTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
@@ -604,14 +600,15 @@ private fun HydrationWriteInfo(
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        TextButton(onClick = { expanded = !expanded }) {
+        OpenVitalsTextButton(onClick = { expanded = !expanded }) {
             Text(stringResource(if (expanded) R.string.action_close else R.string.action_details))
         }
         AnimatedVisibility(visible = expanded) {
-            Surface(
+            OpenVitalsSurface(
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                contentPadding = PaddingValues(12.dp),
             ) {
                 Text(
                     text = stringResource(

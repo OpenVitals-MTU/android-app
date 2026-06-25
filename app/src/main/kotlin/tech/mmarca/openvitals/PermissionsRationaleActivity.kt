@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,9 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
@@ -63,7 +61,7 @@ class PermissionsRationaleActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 8.dp),
                             )
-                            Button(
+                            OpenVitalsButton(
                                 onClick = ::finish,
                                 modifier = Modifier.padding(top = 20.dp),
                             ) {

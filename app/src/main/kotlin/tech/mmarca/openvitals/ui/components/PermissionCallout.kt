@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,18 +48,18 @@ fun PermissionCallout(
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-            )
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = onGrant) {
+                OpenVitalsTonalButton(onClick = onGrant) {
                     Text(actionLabel ?: stringResource(R.string.action_grant_permission))
                 }
                 if (onDismiss != null) {
-                    TextButton(onClick = onDismiss) {
+                    OpenVitalsTextButton(onClick = onDismiss) {
                         Text(stringResource(R.string.action_not_now))
                     }
                 }

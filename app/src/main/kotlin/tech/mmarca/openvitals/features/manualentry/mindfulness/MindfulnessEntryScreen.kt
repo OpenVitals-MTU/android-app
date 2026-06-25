@@ -43,14 +43,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.SelfImprovement
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,6 +77,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 
 @Composable
@@ -266,7 +264,7 @@ private fun MindfulnessEntryHeader(
             )
         }
         if (!state.canWrite && state.mindfulnessAvailable && !state.isCheckingPermission) {
-            OutlinedButton(onClick = onRequestWritePermission) {
+            OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
                 Text(stringResource(R.string.action_grant))
             }
         }
@@ -532,7 +530,7 @@ private fun TimerActions(
 ) {
     when {
         state.isTimerRunning -> {
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onStopTimer,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -540,21 +538,21 @@ private fun TimerActions(
             }
         }
         state.isTimerPaused -> {
-            Button(
+            OpenVitalsButton(
                 onClick = onResumeTimer,
                 enabled = !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.mindfulness_entry_resume_timer))
             }
-            Button(
+            OpenVitalsButton(
                 onClick = onSaveTimerSession,
                 enabled = state.canWrite && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.mindfulness_entry_save_session))
             }
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onDiscardTimer,
                 enabled = !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -570,14 +568,14 @@ private fun TimerActions(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
-            Button(
+            OpenVitalsButton(
                 onClick = onSaveTimerSession,
                 enabled = state.canWrite && !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.mindfulness_entry_save_session))
             }
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onDiscardTimer,
                 enabled = !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -586,7 +584,7 @@ private fun TimerActions(
             }
         }
         else -> {
-            Button(
+            OpenVitalsButton(
                 onClick = onStartTimer,
                 enabled = !state.isSavingEntry,
                 modifier = Modifier.fillMaxWidth(),
@@ -620,7 +618,7 @@ private fun MindfulnessManualEntryCard(
                 style = MaterialTheme.typography.titleSmall,
             )
             if (!state.canWrite && state.mindfulnessAvailable && !state.isCheckingPermission) {
-                OutlinedButton(
+                OpenVitalsOutlinedButton(
                     onClick = onRequestWritePermission,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -644,7 +642,7 @@ private fun MindfulnessManualEntryCard(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            Button(
+            OpenVitalsButton(
                 onClick = onAddEntry,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),

@@ -11,11 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,6 +33,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
 import tech.mmarca.openvitals.ui.components.DetailRow
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
@@ -268,7 +266,7 @@ internal fun RouteCard(
                             .height(180.dp),
                     )
                     if (onOpenRouteInMap != null) {
-                        OutlinedButton(
+                        OpenVitalsOutlinedButton(
                             onClick = onOpenRouteInMap,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -288,7 +286,7 @@ internal fun RouteCard(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            OutlinedButton(
+                            OpenVitalsOutlinedButton(
                                 onClick = onSaveRouteAsGpx,
                                 modifier = Modifier.weight(1f),
                             ) {
@@ -302,7 +300,7 @@ internal fun RouteCard(
                                     modifier = Modifier.padding(start = 6.dp),
                                 )
                             }
-                            OutlinedButton(
+                            OpenVitalsOutlinedButton(
                                 onClick = onSaveRouteAsKmz,
                                 modifier = Modifier.weight(1f),
                             ) {

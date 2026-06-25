@@ -1,6 +1,10 @@
 package tech.mmarca.openvitals.features.hydration
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 
 import android.Manifest
 import android.os.Build
@@ -28,18 +32,13 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
@@ -504,13 +503,13 @@ private fun HydrationGoalCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onDecreaseGoal) {
+                OpenVitalsIconButton(onClick = onDecreaseGoal) {
                     Icon(
                         imageVector = Icons.Outlined.Remove,
                         contentDescription = stringResource(R.string.cd_decrease_hydration_goal),
                     )
                 }
-                IconButton(onClick = onIncreaseGoal) {
+                OpenVitalsIconButton(onClick = onIncreaseGoal) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
                         contentDescription = stringResource(R.string.cd_increase_hydration_goal),
@@ -609,7 +608,7 @@ private fun HydrationReminderCard(
             }
 
             if (normalized.enabled && !hasNotificationPermission) {
-                OutlinedButton(onClick = onRequestNotificationPermission) {
+                OpenVitalsOutlinedButton(onClick = onRequestNotificationPermission) {
                     Text(stringResource(R.string.action_grant_permission))
                 }
             }
@@ -695,7 +694,7 @@ private fun HydrationReminderIntervalRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        IconButton(
+        OpenVitalsIconButton(
             onClick = onDecreaseInterval,
             enabled = intervalMinutes > HydrationReminderConfig.MinIntervalMinutes,
         ) {
@@ -704,7 +703,7 @@ private fun HydrationReminderIntervalRow(
                 contentDescription = stringResource(R.string.cd_decrease_hydration_reminder_interval),
             )
         }
-        IconButton(
+        OpenVitalsIconButton(
             onClick = onIncreaseInterval,
             enabled = intervalMinutes < HydrationReminderConfig.MaxIntervalMinutes,
         ) {
@@ -748,7 +747,7 @@ private fun HydrationReminderTimeRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        TextButton(onClick = onClick) {
+        OpenVitalsTextButton(onClick = onClick) {
             Text(stringResource(R.string.action_select))
         }
     }
@@ -773,7 +772,7 @@ private fun HydrationReminderTimePickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         confirmButton = {
-            TextButton(
+            OpenVitalsTextButton(
                 onClick = {
                     onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute))
                 },
@@ -782,7 +781,7 @@ private fun HydrationReminderTimePickerDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OpenVitalsTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

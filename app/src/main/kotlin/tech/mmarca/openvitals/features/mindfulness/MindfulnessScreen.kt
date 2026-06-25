@@ -26,15 +26,11 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
@@ -79,6 +75,9 @@ import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricBarChart
@@ -430,7 +429,7 @@ private fun MindfulnessReminderCard(
             }
 
             if (normalized.enabled && !hasNotificationPermission) {
-                OutlinedButton(onClick = onRequestNotificationPermission) {
+                OpenVitalsOutlinedButton(onClick = onRequestNotificationPermission) {
                     Text(stringResource(R.string.action_grant_permission))
                 }
             }
@@ -495,7 +494,7 @@ private fun MindfulnessReminderTimeRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        TextButton(onClick = onClick) {
+        OpenVitalsTextButton(onClick = onClick) {
             Text(stringResource(R.string.action_select))
         }
     }
@@ -520,7 +519,7 @@ private fun MindfulnessReminderTimePickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         confirmButton = {
-            TextButton(
+            OpenVitalsTextButton(
                 onClick = {
                     onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute))
                 },
@@ -529,7 +528,7 @@ private fun MindfulnessReminderTimePickerDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OpenVitalsTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
@@ -800,7 +799,7 @@ private fun MindfulnessSessionRowContent(
             }
             if (onEdit != null) {
                 Spacer(Modifier.width(8.dp))
-                IconButton(onClick = onEdit) {
+                OpenVitalsIconButton(onClick = onEdit) {
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = stringResource(R.string.cd_edit_entry),

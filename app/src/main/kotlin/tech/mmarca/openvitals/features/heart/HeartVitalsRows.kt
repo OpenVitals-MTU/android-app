@@ -12,12 +12,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +29,8 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import java.time.Instant
@@ -144,10 +142,10 @@ internal fun <T> SimpleVitalsList(
                 )
             }
             if (boundedVisibleCount < sortedEntries.size) {
-                OutlinedButton(
-                    onClick = {
-                        visibleCount = (boundedVisibleCount + VitalsEntryPageSize).coerceAtMost(sortedEntries.size)
-                    },
+                    OpenVitalsOutlinedButton(
+                        onClick = {
+                            visibleCount = (boundedVisibleCount + VitalsEntryPageSize).coerceAtMost(sortedEntries.size)
+                        },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -219,7 +217,7 @@ private fun VitalsReadingRowContent(
         SourceChip(source = source)
         if (onEdit != null) {
             Spacer(Modifier.width(4.dp))
-            IconButton(onClick = onEdit) {
+            OpenVitalsIconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Outlined.Edit,
                     contentDescription = stringResource(R.string.cd_edit_entry),

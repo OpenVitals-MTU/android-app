@@ -12,9 +12,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
@@ -39,6 +37,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 
 @Composable
 internal fun ManualEntryTimestampFields(
@@ -113,7 +113,7 @@ private fun ManualEntryPickerButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedButton(
+    OpenVitalsOutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
@@ -163,14 +163,14 @@ private fun ManualEntryTimePickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_select_time)) },
         confirmButton = {
-            TextButton(
+            OpenVitalsTextButton(
                 onClick = { onConfirm(LocalTime.of(timePickerState.hour, timePickerState.minute)) },
             ) {
                 Text(stringResource(R.string.action_select))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OpenVitalsTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

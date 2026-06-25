@@ -36,11 +36,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -86,6 +84,8 @@ import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
 @Composable
@@ -383,7 +383,7 @@ internal fun FavoriteActivityDropdown(
         ?: stringResource(R.string.settings_favorite_activity_latest)
 
     Box(modifier = modifier) {
-        OutlinedButton(onClick = { expanded = true }) {
+        OpenVitalsOutlinedButton(onClick = { expanded = true }) {
             Text(selectedLabel)
             Spacer(Modifier.widthIn(min = 4.dp))
             Icon(
@@ -865,7 +865,7 @@ internal fun CyclePermissionsCard(
                     tint = MaterialTheme.colorScheme.primary,
                 )
             } else {
-                FilledTonalButton(
+                OpenVitalsTonalButton(
                     onClick = onGrantPermissions,
                     enabled = healthConnectAvailable,
                 ) {
@@ -959,7 +959,7 @@ internal fun AppleHealthImportCard(
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                 ) {
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = { onCopyReport(importResult.shareableReportText) },
                         modifier = Modifier.weight(1f),
                     ) {
@@ -971,7 +971,7 @@ internal fun AppleHealthImportCard(
                         Spacer(Modifier.widthIn(min = 6.dp))
                         Text(stringResource(R.string.settings_apple_health_import_copy_report))
                     }
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = onSaveReport,
                         modifier = Modifier
                             .padding(start = 8.dp)
@@ -1024,7 +1024,7 @@ internal fun AppleHealthImportCard(
             }
 
             if (missingPermissions.isNotEmpty()) {
-                FilledTonalButton(
+                OpenVitalsTonalButton(
                     onClick = onGrantPermissions,
                     enabled = healthConnectAvailable && !isImporting,
                     modifier = Modifier
@@ -1035,7 +1035,7 @@ internal fun AppleHealthImportCard(
                 }
             }
 
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onImport,
                 enabled = canImport,
                 modifier = Modifier
@@ -1162,7 +1162,7 @@ internal fun PermissionCategoryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (!granted && category.available) {
-                FilledTonalButton(
+                OpenVitalsTonalButton(
                     onClick = onGrant,
                     enabled = availability == HealthConnectAvailability.AVAILABLE,
                     modifier = Modifier.align(Alignment.End),

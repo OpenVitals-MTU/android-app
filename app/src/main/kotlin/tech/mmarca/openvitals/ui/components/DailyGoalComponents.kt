@@ -14,10 +14,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,13 +73,13 @@ fun DailyGoalCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onDecreaseGoal) {
+                OpenVitalsIconButton(onClick = onDecreaseGoal) {
                     Icon(
                         imageVector = Icons.Outlined.Remove,
                         contentDescription = stringResource(R.string.cd_decrease_daily_goal),
                     )
                 }
-                IconButton(onClick = onIncreaseGoal) {
+                OpenVitalsIconButton(onClick = onIncreaseGoal) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
                         contentDescription = stringResource(R.string.cd_increase_daily_goal),

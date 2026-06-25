@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.body
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,10 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -128,7 +126,7 @@ private fun BodyReadingRowContent(
                 )
                 if (onEdit != null) {
                     androidx.compose.foundation.layout.Spacer(Modifier.width(4.dp))
-                    IconButton(onClick = onEdit) {
+                    OpenVitalsIconButton(onClick = onEdit) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = stringResource(R.string.cd_edit_entry),

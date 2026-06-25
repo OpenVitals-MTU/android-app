@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -28,6 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +129,7 @@ internal fun ActivityTrainingPlanActions(
     if (!state.selectedActivityType.supportsSetRepetitions) return
 
     if (state.selectedPlannedWorkoutId == null) {
-        OutlinedButton(
+        OpenVitalsOutlinedButton(
             onClick = onSavePlannedWorkout,
             enabled = enabled,
             modifier = modifier.fillMaxWidth(),
@@ -139,8 +140,8 @@ internal fun ActivityTrainingPlanActions(
                 modifier = Modifier.padding(start = 6.dp),
             )
         }
-    } else if (state.hasSelectedPlannedWorkoutChanges) {
-        Button(
+        } else if (state.hasSelectedPlannedWorkoutChanges) {
+        OpenVitalsButton(
             onClick = onUpdatePlannedWorkout,
             enabled = enabled,
             modifier = modifier.fillMaxWidth(),
@@ -148,7 +149,7 @@ internal fun ActivityTrainingPlanActions(
             Text(stringResource(R.string.activity_entry_update_training_plan))
         }
     } else {
-        OutlinedButton(
+        OpenVitalsOutlinedButton(
             onClick = onUpdatePlannedWorkout,
             enabled = false,
             modifier = modifier.fillMaxWidth(),

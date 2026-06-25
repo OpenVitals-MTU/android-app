@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.ui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,18 +60,8 @@ private fun InsightStatCard(
     stat: InsightStat,
     modifier: Modifier = Modifier,
 ) {
-    val cardShape = MaterialTheme.shapes.medium
     OpenVitalsCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                shape = cardShape,
-            ),
-        shape = cardShape,
-
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier

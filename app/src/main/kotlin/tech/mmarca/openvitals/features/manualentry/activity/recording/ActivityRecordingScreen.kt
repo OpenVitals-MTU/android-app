@@ -30,15 +30,12 @@ import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +62,9 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 
 @Composable
 internal fun ActivityRecordingScreen(
@@ -163,15 +163,13 @@ internal fun ActivityRecordingScreen(
         }
 
         if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
+            OpenVitalsSurface(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = stringResource(R.string.activity_entry_recording_finish_hint),
                     style = MaterialTheme.typography.bodySmall,
@@ -183,7 +181,7 @@ internal fun ActivityRecordingScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (state.status == ActivityRecordingStatus.PAUSED) {
-                        OutlinedButton(
+                        OpenVitalsOutlinedButton(
                             onClick = onResumeRecording,
                             modifier = Modifier.weight(1f),
                         ) {
@@ -198,7 +196,7 @@ internal fun ActivityRecordingScreen(
                             )
                         }
 
-                        OutlinedButton(
+                        OpenVitalsOutlinedButton(
                             onClick = onFinishRecording,
                             modifier = Modifier.weight(1f),
                         ) {
@@ -213,7 +211,7 @@ internal fun ActivityRecordingScreen(
                             )
                         }
                     } else {
-                        OutlinedButton(
+                        OpenVitalsOutlinedButton(
                             onClick = onPauseRecording,
                             modifier = Modifier.weight(1f),
                         ) {
@@ -234,7 +232,7 @@ internal fun ActivityRecordingScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        OutlinedButton(
+                        OpenVitalsOutlinedButton(
                             onClick = onAddLap,
                             enabled = state.points.size >= 2,
                             modifier = Modifier.weight(1f),
@@ -249,7 +247,7 @@ internal fun ActivityRecordingScreen(
                                 modifier = Modifier.padding(start = 6.dp),
                             )
                         }
-                        OutlinedButton(
+                        OpenVitalsOutlinedButton(
                             onClick = onAddMarker,
                             enabled = state.latestUiPoint != null || state.points.isNotEmpty(),
                             modifier = Modifier.weight(1f),
@@ -583,7 +581,7 @@ private fun RecordingMarkersList(
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { onDeleteMarker(marker.id) }) {
+                    OpenVitalsIconButton(onClick = { onDeleteMarker(marker.id) }) {
                         Icon(
                             imageVector = Icons.Outlined.Delete,
                             contentDescription = stringResource(R.string.action_delete),

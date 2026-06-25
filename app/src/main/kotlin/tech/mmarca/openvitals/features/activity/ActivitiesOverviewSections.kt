@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.features.activity
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
@@ -31,9 +32,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -214,7 +213,7 @@ internal fun ActivityWorkoutListCard(
                 }
             }
             if (boundedVisibleCount < workouts.size) {
-                OutlinedButton(
+                OpenVitalsOutlinedButton(
                     onClick = {
                         visibleCount = (boundedVisibleCount + ActivityWorkoutListPageSize)
                             .coerceAtMost(workouts.size)
@@ -433,7 +432,7 @@ internal fun ActivityOverviewWorkoutRow(
         SwipeToDeleteEntryRow(
             onDelete = onDelete,
             modifier = modifier,
-            shape = RoundedCornerShape(8.dp),
+            shape = MaterialTheme.shapes.medium,
         ) {
             ActivityOverviewWorkoutRowContent(
                 workout = workout,
@@ -468,7 +467,7 @@ internal fun ActivityOverviewWorkoutRowContent(
 ) {
     val zone = ZoneId.systemDefault()
     val start = workout.startTime.atZone(zone)
-    val rowShape = RoundedCornerShape(8.dp)
+    val rowShape = MaterialTheme.shapes.medium
     val rowModifier = if (opaqueBackground) {
         modifier.background(MaterialTheme.colorScheme.surfaceContainer, rowShape)
     } else {
@@ -525,7 +524,7 @@ internal fun ActivityOverviewWorkoutRowContent(
         }
         if (onEdit != null) {
             Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onEdit) {
+            OpenVitalsIconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Outlined.Edit,
                     contentDescription = stringResource(R.string.cd_edit_entry),

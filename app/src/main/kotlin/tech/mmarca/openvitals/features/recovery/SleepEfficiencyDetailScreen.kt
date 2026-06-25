@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.recovery
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -214,7 +214,7 @@ private fun SleepEfficiencyExplanationCard(
             )
         }
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = onToggleExpanded) {
+        OpenVitalsOutlinedButton(onClick = onToggleExpanded) {
             Text(
                 text = stringResource(
                     if (expanded) {
@@ -300,7 +300,7 @@ private fun EfficiencyReferenceButton(
     url: String,
 ) {
     val uriHandler = LocalUriHandler.current
-    OutlinedButton(
+    OpenVitalsOutlinedButton(
         onClick = { uriHandler.openUri(url) },
         modifier = Modifier
             .fillMaxWidth()
@@ -329,7 +329,7 @@ private fun EfficiencyDetailMetricGrid(
                 rowItems.forEach { item ->
                     EfficiencyDetailMetricTile(
                         metric = item,
-                        modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f),
                     )
                 }
                 if (rowItems.size == 1) {

@@ -1,19 +1,17 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -63,10 +61,9 @@ internal fun ActivityPlanActivityPickerCard(
                 )
             } else {
                 activityTypes.forEach { type ->
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = { onSelectActivity(type.id) },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.FitnessCenter,
@@ -80,10 +77,9 @@ internal fun ActivityPlanActivityPickerCard(
                     }
                 }
             }
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onChooseSource,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
@@ -144,10 +140,9 @@ internal fun ActivityPlanPickerCard(
                     )
                 }
             }
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onChooseActivity,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
@@ -177,11 +172,9 @@ private fun PlannedWorkoutButton(
         else -> stringResource(R.string.activity_entry_plan_summary, sets.size, totalReps)
     }
 
-    OutlinedButton(
+    OpenVitalsOutlinedButton(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

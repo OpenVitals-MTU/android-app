@@ -22,8 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,6 +33,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.features.activity.RoutePreview
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 
 @Composable
 internal fun ImportedActivityRouteSection(
@@ -61,7 +61,7 @@ internal fun ImportedActivityRouteSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = onClearRoute,
                 enabled = !state.isSavingEntry,
             ) {
@@ -73,15 +73,13 @@ internal fun ImportedActivityRouteSection(
             }
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        OpenVitalsSurface(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 RoutePreview(
                     points = route.points,
                     modifier = Modifier

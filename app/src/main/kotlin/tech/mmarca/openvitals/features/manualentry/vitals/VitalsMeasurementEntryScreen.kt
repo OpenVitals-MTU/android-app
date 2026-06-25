@@ -31,12 +31,8 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,6 +53,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 
 private const val FahrenheitFreezingPoint = 32.0
@@ -178,7 +176,7 @@ private fun VitalsMeasurementEntryCard(
                     )
                 }
                 if (!state.canWrite && !state.isCheckingPermission) {
-                    OutlinedButton(onClick = onRequestWritePermission) {
+                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
                         Text(stringResource(R.string.action_grant))
                     }
                 }
@@ -223,7 +221,7 @@ private fun VitalsMeasurementEntryCard(
                 )
             }
 
-            Button(
+            OpenVitalsButton(
                 onClick = onAddEntry,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),

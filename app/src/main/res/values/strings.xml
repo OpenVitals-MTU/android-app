@@ -19,6 +19,7 @@
     <string name="cd_next_day">Next day</string>
     <string name="cd_previous_period">Previous period</string>
     <string name="cd_next_period">Next period</string>
+    <string name="cd_open_calendar">Open calendar</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
     <string name="action_add_custom">Add custom</string>

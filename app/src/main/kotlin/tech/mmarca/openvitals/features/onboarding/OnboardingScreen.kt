@@ -24,8 +24,6 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +47,8 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 
 private const val HC_PACKAGE = "com.google.android.apps.healthdata"
@@ -206,7 +206,7 @@ fun OnboardingScreen(
                 .padding(bottom = 8.dp),
         )
 
-        Button(
+        OpenVitalsButton(
             onClick = {
                 if (allRequiredPermissionsGranted) {
                     onOnboardingComplete()
@@ -231,7 +231,7 @@ fun OnboardingScreen(
         }
 
         if (missingRequestablePermissions.isNotEmpty()) {
-            FilledTonalButton(
+            OpenVitalsTonalButton(
                 onClick = { requestPermissions.launch(missingRequestablePermissions) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -281,7 +281,7 @@ fun OnboardingScreen(
 
 @Composable
 private fun FeatureCard(icon: ImageVector, title: String, body: String) {
-    OpenVitalsCard(
+                OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
 
     ) {
@@ -401,7 +401,7 @@ private fun PermissionCategoryRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (!granted && category.available) {
-                FilledTonalButton(
+                OpenVitalsTonalButton(
                     onClick = onGrant,
                     modifier = Modifier.align(Alignment.End),
                 ) {
@@ -460,7 +460,7 @@ private fun NeedsUpdateMessage(onInstall: () -> Unit) {
             )
         }
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onInstall, modifier = Modifier.fillMaxWidth()) {
+        OpenVitalsButton(onClick = onInstall, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.onboarding_install_health_connect))
         }
     }

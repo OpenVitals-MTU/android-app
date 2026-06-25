@@ -35,13 +35,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +63,9 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.AutoResizeText
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 
 @Composable
 internal fun RepetitionRecordingStats(
@@ -91,13 +92,13 @@ internal fun RepetitionRecordingStats(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        OpenVitalsSurface(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -115,7 +116,7 @@ internal fun RepetitionRecordingStats(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = { onAdjustRepetitionCount(-1) },
                         enabled = state.status == ActivityRecordingStatus.RECORDING &&
                             state.currentSetRepetitionCount > 0L,
@@ -127,7 +128,7 @@ internal fun RepetitionRecordingStats(
                             modifier = Modifier.size(18.dp),
                         )
                     }
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = { onAdjustRepetitionCount(1) },
                         enabled = state.status == ActivityRecordingStatus.RECORDING,
                         modifier = Modifier.weight(1f),
@@ -187,7 +188,7 @@ internal fun RepetitionRecordingStats(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (state.status == ActivityRecordingStatus.RESTING) {
-                Button(
+                OpenVitalsButton(
                     onClick = onStartNextRepetitionSet,
                     modifier = Modifier
                         .weight(1f)
@@ -204,7 +205,7 @@ internal fun RepetitionRecordingStats(
                     )
                 }
             } else {
-                Button(
+                OpenVitalsButton(
                     onClick = onEndRepetitionSet,
                     enabled = state.currentSetRepetitionCount > 0L,
                     modifier = Modifier
@@ -222,7 +223,7 @@ internal fun RepetitionRecordingStats(
                     )
                 }
             }
-            Button(
+            OpenVitalsButton(
                 onClick = onFinishRecording,
                 modifier = Modifier
                     .weight(1f)

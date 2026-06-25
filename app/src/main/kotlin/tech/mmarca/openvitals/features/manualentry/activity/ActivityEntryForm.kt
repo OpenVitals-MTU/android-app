@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
@@ -25,13 +27,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,7 +88,7 @@ internal fun ActivityEntryCard(
             ActivityEntryHeader(state = state, onRequestWritePermission = onRequestWritePermission)
 
             if (!isEditMode) {
-                OutlinedButton(
+                OpenVitalsOutlinedButton(
                     onClick = onChooseSource,
                     enabled = !state.isSavingEntry && !state.isImportingRoute,
                     modifier = Modifier.fillMaxWidth(),
@@ -189,7 +187,7 @@ internal fun ActivityEntryCard(
                 onUpdatePlannedWorkout = onUpdatePlannedWorkout,
             )
 
-            Button(
+            OpenVitalsButton(
                 onClick = onAddEntry,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
@@ -206,7 +204,7 @@ internal fun ActivityEntryCard(
             }
 
             if (state.isRecordingDraft && !isEditMode) {
-                OutlinedButton(
+                OpenVitalsOutlinedButton(
                     onClick = onDiscardRecordingDraft,
                     enabled = !state.isSavingEntry && !state.isImportingRoute,
                     modifier = Modifier.fillMaxWidth(),

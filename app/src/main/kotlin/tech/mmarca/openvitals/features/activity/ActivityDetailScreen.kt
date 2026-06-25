@@ -15,11 +15,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,6 +34,8 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 @Composable
 fun ActivityDetailScreen(
@@ -227,7 +227,7 @@ private fun ActivityDetailContent(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Button(
+                    OpenVitalsButton(
                         onClick = { onEditActivity(workout.id) },
                         enabled = !isDeleting,
                         modifier = Modifier.fillMaxWidth(),
@@ -242,10 +242,10 @@ private fun ActivityDetailContent(
                             modifier = Modifier.padding(start = 6.dp),
                         )
                     }
-                    OutlinedButton(
+                    OpenVitalsOutlinedButton(
                         onClick = onDeleteActivity,
                         enabled = !isDeleting,
-                        colors = ButtonDefaults.outlinedButtonColors(
+                        buttonColors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error,
                         ),
                         modifier = Modifier.fillMaxWidth(),

@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,7 +49,7 @@ fun <T> PaginatedEntryList(
             }
         }
         if (boundedVisibleCount < entries.size) {
-            OutlinedButton(
+            OpenVitalsOutlinedButton(
                 onClick = {
                     visibleCount = (boundedVisibleCount + effectivePageSize).coerceAtMost(entries.size)
                 },

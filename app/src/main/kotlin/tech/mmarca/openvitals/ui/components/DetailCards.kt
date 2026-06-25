@@ -1,13 +1,18 @@
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,8 +23,16 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,12 +52,30 @@ val OpenVitalsCardHorizontalPadding: Dp = 16.dp
 val OpenVitalsSectionSpacing: Dp = 8.dp
 val OpenVitalsMetricTilePadding: Dp = 12.dp
 val OpenVitalsMetricTileSpacing: Dp = 8.dp
+val OpenVitalsActionRowHeight: Dp = 40.dp
+val OpenVitalsSurfacePadding: PaddingValues = PaddingValues(12.dp)
+val OpenVitalsStandardRowSpacing: Dp = 8.dp
 
 enum class OpenVitalsCardStyle {
     Neutral,
     Metric,
     Accent,
     Error,
+}
+
+enum class OpenVitalsSurfaceStyle {
+    Neutral,
+    Metric,
+    Accent,
+    Error,
+    Warning,
+}
+
+enum class OpenVitalsButtonStyle {
+    Filled,
+    Tonal,
+    Outlined,
+    Text,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,6 +124,59 @@ fun OpenVitalsCard(
 }
 
 @Composable
+fun OpenVitalsSurface(
+    modifier: Modifier = Modifier,
+    style: OpenVitalsSurfaceStyle = OpenVitalsSurfaceStyle.Neutral,
+    containerColor: Color = Color.Unspecified,
+    contentColor: Color = Color.Unspecified,
+    shape: Shape = MaterialTheme.shapes.medium,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    border: BorderStroke? = null,
+    content: @Composable () -> Unit,
+) {
+    val resolvedContainerColor = when {
+        containerColor != Color.Unspecified -> containerColor
+        style == OpenVitalsSurfaceStyle.Metric -> MaterialTheme.colorScheme.surfaceContainerHighest
+        style == OpenVitalsSurfaceStyle.Accent && contentColor != Color.Unspecified ->
+            accentSurfaceContainerColor(
+                accentColor = contentColor,
+                amoledAlpha = 0.09f,
+            )
+        style == OpenVitalsSurfaceStyle.Warning ->
+            accentSurfaceContainerColor(
+                accentColor = MaterialTheme.colorScheme.error,
+                amoledAlpha = 0.12f,
+            )
+        style == OpenVitalsSurfaceStyle.Error -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.surfaceContainer
+    }
+
+    val resolvedContentColor = when {
+        contentColor != Color.Unspecified -> contentColor
+        style == OpenVitalsSurfaceStyle.Error -> MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = resolvedContainerColor,
+        contentColor = resolvedContentColor,
+        border = border,
+    ) {
+        if (contentPadding != PaddingValues(0.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(contentPadding),
+                content = { content() },
+            )
+        } else {
+            content()
+        }
+    }
+}
+
+@Composable
 fun DetailSectionCard(
     title: String,
     modifier: Modifier = Modifier,
@@ -108,6 +192,193 @@ fun DetailSectionCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
+            content()
+        }
+    }
+}
+
+@Composable
+fun OpenVitalsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors? = null,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    border: BorderStroke? = null,
+    style: OpenVitalsButtonStyle = OpenVitalsButtonStyle.Filled,
+    content: @Composable RowScope.() -> Unit,
+) {
+    when (style) {
+        OpenVitalsButtonStyle.Filled -> Button(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors ?: ButtonDefaults.buttonColors(),
+            contentPadding = contentPadding,
+        ) {
+            content()
+        }
+        OpenVitalsButtonStyle.Tonal -> FilledTonalButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors ?: ButtonDefaults.filledTonalButtonColors(),
+            contentPadding = contentPadding,
+        ) {
+            content()
+        }
+        OpenVitalsButtonStyle.Outlined -> OutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors ?: ButtonDefaults.outlinedButtonColors(),
+            border = border,
+            contentPadding = contentPadding,
+        ) {
+            content()
+        }
+        OpenVitalsButtonStyle.Text -> TextButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            colors = colors ?: ButtonDefaults.textButtonColors(),
+            contentPadding = contentPadding,
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun OpenVitalsFilledButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    buttonColors: ButtonColors? = null,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    border: BorderStroke? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    OpenVitalsButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = buttonColors,
+        contentPadding = contentPadding,
+        border = border,
+        style = OpenVitalsButtonStyle.Filled,
+        content = content,
+    )
+}
+
+@Composable
+fun OpenVitalsTonalButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    buttonColors: ButtonColors? = null,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    border: BorderStroke? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    OpenVitalsButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = buttonColors,
+        contentPadding = contentPadding,
+        border = border,
+        style = OpenVitalsButtonStyle.Tonal,
+        content = content,
+    )
+}
+
+@Composable
+fun OpenVitalsOutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    buttonColors: ButtonColors? = null,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    border: BorderStroke? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    OpenVitalsButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = buttonColors,
+        contentPadding = contentPadding,
+        border = border,
+        style = OpenVitalsButtonStyle.Outlined,
+        content = content,
+    )
+}
+
+@Composable
+fun OpenVitalsTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    buttonColors: ButtonColors? = null,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    border: BorderStroke? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    OpenVitalsButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = buttonColors,
+        contentPadding = contentPadding,
+        border = border,
+        style = OpenVitalsButtonStyle.Text,
+        content = content,
+    )
+}
+
+@Composable
+fun OpenVitalsIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    IconButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+        content()
+    }
+}
+
+@Composable
+fun OpenVitalsIconSurfaceButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    content: @Composable () -> Unit,
+) {
+    OpenVitalsSurface(
+        modifier = modifier
+            .size(52.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        containerColor = if (enabled) {
+            containerColor
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.55f)
+        },
+        contentColor = if (enabled) {
+            contentColor
+        } else {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        },
+        shape = CircleShape,
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
             content()
         }
     }
@@ -150,6 +421,43 @@ fun CompactHeadingText(
         fontWeight = FontWeight.SemiBold,
         modifier = modifier,
     )
+}
+
+@Composable
+fun OpenVitalsTitleValueRow(
+    title: String,
+    value: String,
+    unit: String,
+    modifier: Modifier = Modifier,
+    titleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = titleColor,
+        )
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+            )
+            if (unit.isNotBlank()) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = titleColor,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable
