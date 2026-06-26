@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
 
 internal const val MillilitersPerLiter = 1000.0
@@ -115,8 +116,13 @@ data class HydrationEntryUiState(
 class HydrationEntryViewModel @Inject constructor(
     private val repository: HydrationRepository,
     savedStateHandle: SavedStateHandle,
+    private val reminderController: HydrationReminderController? = null,
 ) : ViewModel() {
-    constructor(repository: HydrationRepository) : this(repository, SavedStateHandle())
+    constructor(repository: HydrationRepository) : this(repository, SavedStateHandle(), null)
+    constructor(
+        repository: HydrationRepository,
+        reminderController: HydrationReminderController,
+    ) : this(repository, SavedStateHandle(), reminderController)
 
     private val editRecordId: String? = savedStateHandle[HYDRATION_ENTRY_ID_ARG]
 
@@ -351,6 +357,7 @@ class HydrationEntryViewModel @Inject constructor(
                     entryError = null,
                     writeErrorMessage = null,
                 )
+                runCatching { reminderController?.hideReminderNotification() }
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,

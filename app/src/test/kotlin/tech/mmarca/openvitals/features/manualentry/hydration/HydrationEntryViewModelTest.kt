@@ -30,6 +30,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.repository.HydrationRepository
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -187,6 +188,18 @@ class HydrationEntryViewModelTest {
 
         vm.onSaveCompletedHandled()
         assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `successful hydration entry hides reminder notification`() = runTest {
+        val repo = entryRepo()
+        val reminderController = mockk<HydrationReminderController>(relaxed = true)
+        val vm = HydrationEntryViewModel(repo, reminderController)
+        advanceUntilIdle()
+
+        vm.addSelectedHydrationEntry()
+        advanceUntilIdle()
+
+        verify { reminderController.hideReminderNotification() }
     }
 
     @Test fun `container tap writes tapped container volume`() = runTest {

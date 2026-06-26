@@ -70,6 +70,10 @@ class HydrationReminderController @Inject constructor(
         }
     }
 
+    fun hideReminderNotification() {
+        notificationService.cancelReminderNotification()
+    }
+
     private suspend fun applyConfigNow(config: HydrationReminderConfig) {
         val normalized = config.normalized()
         if (!normalized.enabled || !hasNotificationPermission(context)) {
