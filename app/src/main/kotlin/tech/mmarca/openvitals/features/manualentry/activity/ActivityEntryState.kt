@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.R
 
@@ -160,6 +161,7 @@ data class ActivityEntryUiState(
     val isRecordingDraft: Boolean = false,
     val saveCompleted: Boolean = false,
     val recordedBleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
+    val sessionHeartRateSamples: List<HeartRateSample> = emptyList(),
 ) {
     val routePoints: List<ExerciseRoutePoint>
         get() = importedRoute?.points.orEmpty()

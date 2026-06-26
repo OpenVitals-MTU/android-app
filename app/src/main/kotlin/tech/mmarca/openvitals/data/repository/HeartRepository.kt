@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -198,6 +199,23 @@ class HeartRepository @Inject constructor(
     suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample> {
         val granted = grantedPermissionsIfAvailable()
         return loadHeartRateSamples(start, end, granted)
+    }
+
+    suspend fun loadHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadHeartRateSamples(start, end, granted)
+    }
+
+    private suspend fun loadHeartRateSamples(
+        start: Instant,
+        end: Instant,
+        granted: Set<String>,
+    ): List<HeartRateSample> {
+        if (readHeartRatePermission !in granted) {
+            Log.w(TAG, "Skipping loadHeartRateSamples missingCount=1")
+            return emptyList()
+        }
+        return hc.readHeartRateSamples(start, end)
     }
 
     private suspend fun loadHeartRateSamples(

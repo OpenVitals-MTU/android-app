@@ -180,9 +180,13 @@ internal fun ActivityEntryCard(
                 onClearRoute = onClearRoute,
             )
 
+            val sessionRange = activityEntrySessionRange(state)
             ActivityRecordedSensorSummary(
                 samples = state.recordedBleSamples,
                 unitFormatter = unitFormatter,
+                sessionStart = sessionRange?.first,
+                sessionEnd = sessionRange?.second,
+                savedHeartRateSamples = state.sessionHeartRateSamples,
             )
 
             ActivityTrainingPlanActions(

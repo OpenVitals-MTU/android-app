@@ -44,16 +44,9 @@ internal fun buildWriteRequest(
 ): ActivityWriteRequest? {
     if (validateActivityEntry(state, unitSystem).isNotEmpty()) return null
 
-    val startDate = state.startDateText.trim().let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        ?: return null
-    val startTime = state.startTimeText.trim().let { runCatching { LocalTime.parse(it, TimeFormatter) }.getOrNull() }
-        ?: return null
-    val durationMinutes = state.durationMinutesText.trim().toLongOrNull()
-        ?.takeIf { it in 1..MaxActivityDurationMinutes }
-        ?: return null
-    val zone = ZoneId.systemDefault()
-    val start = LocalDateTime.of(startDate, startTime).atZone(zone).toInstant()
-    var end = start.plus(Duration.ofMinutes(durationMinutes))
+    val sessionRange = activityEntrySessionRange(state) ?: return null
+    val start = sessionRange.first
+    var end = sessionRange.second
     val importedRoute = state.importedRoute
     var routePoints = importedRoute?.points.orEmpty()
     if (routePoints.isNotEmpty()) {
@@ -328,6 +321,20 @@ internal data class ParsedRepetitionSet(
     val repetitions: Int,
     val restSeconds: Long,
 )
+
+internal fun activityEntrySessionRange(state: ActivityEntryUiState): Pair<Instant, Instant>? {
+    val startDate = state.startDateText.trim().let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        ?: return null
+    val startTime = state.startTimeText.trim().let { runCatching { LocalTime.parse(it, TimeFormatter) }.getOrNull() }
+        ?: return null
+    val durationMinutes = state.durationMinutesText.trim().toLongOrNull()
+        ?.takeIf { it in 1..MaxActivityDurationMinutes }
+        ?: return null
+    val zone = ZoneId.systemDefault()
+    val start = LocalDateTime.of(startDate, startTime).atZone(zone).toInstant()
+    val end = start.plus(Duration.ofMinutes(durationMinutes))
+    return start to end
+}
 
 internal fun initialActivityEntryState(
     clock: Clock,

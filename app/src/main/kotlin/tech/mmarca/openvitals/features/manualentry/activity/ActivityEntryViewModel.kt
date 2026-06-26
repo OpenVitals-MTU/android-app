@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
@@ -50,6 +51,7 @@ import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
 @HiltViewModel
 class ActivityEntryViewModel(
     private val repository: ActivityRepository,
+    private val heartRepository: HeartRepository? = null,
     private val routeFileImporter: RouteFileImporter? = null,
     private val activityRecorder: ActivityRecordingController? = null,
     private val recordingDraftStore: ActivityRecordingDraftStore? = null,
@@ -62,6 +64,7 @@ class ActivityEntryViewModel(
     @Inject
     constructor(
         repository: ActivityRepository,
+        heartRepository: HeartRepository,
         routeFileImporter: RouteFileImporter,
         activityRecorder: ActivityRecordingController,
         recordingDraftStore: ActivityRecordingDraftStore,
@@ -70,6 +73,7 @@ class ActivityEntryViewModel(
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
+        heartRepository = heartRepository,
         routeFileImporter = routeFileImporter,
         activityRecorder = activityRecorder,
         recordingDraftStore = recordingDraftStore,
@@ -787,6 +791,8 @@ class ActivityEntryViewModel(
                     )
                     return@onSuccess
                 }
+                val heartRateSamples = heartRepository?.loadHeartRateSamples(workout.startTime, workout.endTime)
+                    .orEmpty()
                 val current = _uiState.value
                 _uiState.value = workout.toEditState(
                     unitSystem = unitSystem,
@@ -795,6 +801,7 @@ class ActivityEntryViewModel(
                     canWrite = current.canWrite,
                     isCheckingPermission = current.isCheckingPermission,
                 ).copy(
+                    sessionHeartRateSamples = heartRateSamples,
                     recordedMarkers = markerRepository?.markersForActivity(recordId).orEmpty()
                         .ifEmpty {
                             workout.clientRecordId

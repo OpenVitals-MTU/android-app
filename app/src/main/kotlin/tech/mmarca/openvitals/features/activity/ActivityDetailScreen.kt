@@ -32,6 +32,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -112,6 +113,7 @@ fun ActivityDetailScreen(
         error != null -> ErrorMessage(message = error)
         workout != null -> ActivityDetailContent(
             workout = workout,
+            heartRateSamples = state.heartRateSamples,
             markers = state.markers,
             isDeleting = state.isDeleting,
             unitFormatter = unitFormatter,
@@ -137,6 +139,7 @@ fun ActivityDetailScreen(
 @Composable
 private fun ActivityDetailContent(
     workout: ExerciseData,
+    heartRateSamples: List<HeartRateSample>,
     markers: List<ActivityRecordingMarker>,
     isDeleting: Boolean,
     unitFormatter: UnitFormatter,
@@ -168,6 +171,19 @@ private fun ActivityDetailContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             )
+        }
+        if (heartRateSamples.isNotEmpty()) {
+            item {
+                ActivityHeartRateChartCard(
+                    samples = heartRateSamples,
+                    sessionStart = workout.startTime,
+                    sessionEnd = workout.endTime,
+                    unitFormatter = unitFormatter,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         }
         item {
             SessionDetailsCard(

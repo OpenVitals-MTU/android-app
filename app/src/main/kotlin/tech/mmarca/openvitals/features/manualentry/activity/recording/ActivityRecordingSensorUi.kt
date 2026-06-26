@@ -25,6 +25,8 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
+import tech.mmarca.openvitals.features.activity.ActivityHeartRateChartCard
+import tech.mmarca.openvitals.features.activity.toHeartRateSamples
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -227,46 +229,68 @@ private fun statusColor(status: BleConnectionStatus) =
 internal fun ActivityRecordedSensorSummary(
     samples: tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer,
     unitFormatter: UnitFormatter,
+    sessionStart: java.time.Instant? = null,
+    sessionEnd: java.time.Instant? = null,
+    savedHeartRateSamples: List<tech.mmarca.openvitals.domain.model.HeartRateSample> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
-    if (samples.isEmpty()) return
+    val heartRateSamples = samples.toHeartRateSamples().ifEmpty { savedHeartRateSamples }
+    val hasOtherSamples = samples.powerSamples.isNotEmpty() ||
+        samples.cyclingCadenceSamples.isNotEmpty() ||
+        samples.speedSamples.isNotEmpty() ||
+        samples.stepsCadenceSamples.isNotEmpty()
 
-    OpenVitalsSurface(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = MaterialTheme.shapes.medium,
+    if (heartRateSamples.isEmpty() && !hasOtherSamples) return
+
+    val chartStart = sessionStart ?: heartRateSamples.minOfOrNull { it.time }
+    val chartEnd = sessionEnd ?: heartRateSamples.maxOfOrNull { it.time }
+
+    Column(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(R.string.activity_recording_sensors_recorded_title),
-                style = MaterialTheme.typography.titleSmall,
+        if (heartRateSamples.isNotEmpty() && chartStart != null && chartEnd != null) {
+            ActivityHeartRateChartCard(
+                samples = heartRateSamples,
+                sessionStart = chartStart,
+                sessionEnd = chartEnd,
+                unitFormatter = unitFormatter,
             )
-            samples.averageHeartRateBpm()?.let { bpm ->
+        }
+
+        if (!hasOtherSamples) return
+
+        OpenVitalsSurface(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "${stringResource(R.string.metric_average_heart_rate)}: ${unitFormatter.heartRate(bpm).text}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringResource(R.string.activity_recording_sensors_recorded_title),
+                    style = MaterialTheme.typography.titleSmall,
                 )
-            }
-            samples.averagePowerWatts()?.let { watts ->
-                Text(
-                    text = "${stringResource(R.string.metric_average_power)}: ${unitFormatter.power(watts).text}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            if (samples.cyclingCadenceSamples.isNotEmpty()) {
-                val avgCadence = samples.cyclingCadenceSamples.map { it.rpm }.average().toLong()
-                Text(
-                    text = "${stringResource(R.string.metric_cycling_cadence)}: ${unitFormatter.cadence(avgCadence.toDouble()).text}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            if (samples.speedSamples.isNotEmpty()) {
-                val avgSpeed = samples.speedSamples.map { it.metersPerSecond }.average()
-                Text(
-                    text = "${stringResource(R.string.metric_average_speed)}: ${unitFormatter.speed(avgSpeed).text}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                samples.averagePowerWatts()?.let { watts ->
+                    Text(
+                        text = "${stringResource(R.string.metric_average_power)}: ${unitFormatter.power(watts).text}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (samples.cyclingCadenceSamples.isNotEmpty()) {
+                    val avgCadence = samples.cyclingCadenceSamples.map { it.rpm }.average().toLong()
+                    Text(
+                        text = "${stringResource(R.string.metric_cycling_cadence)}: ${unitFormatter.cadence(avgCadence.toDouble()).text}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (samples.speedSamples.isNotEmpty()) {
+                    val avgSpeed = samples.speedSamples.map { it.metersPerSecond }.average()
+                    Text(
+                        text = "${stringResource(R.string.metric_average_speed)}: ${unitFormatter.speed(avgSpeed).text}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         }
     }
