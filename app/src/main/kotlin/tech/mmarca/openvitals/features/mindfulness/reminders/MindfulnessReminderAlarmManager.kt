@@ -21,7 +21,7 @@ class MindfulnessReminderAlarmManager @Inject constructor(
         val triggerAtMillis = triggerAt.toInstant().toEpochMilli()
         val nowMillis = System.currentTimeMillis()
         if (triggerAtMillis <= nowMillis) {
-            Log.w(TAG, "Ignoring mindfulness reminder alarm in the past: $triggerAt")
+            Log.w(TAG, "Ignoring mindfulness reminder alarm in the past")
             return false
         }
 
@@ -31,7 +31,7 @@ class MindfulnessReminderAlarmManager @Inject constructor(
             triggerAtMillis,
             pendingIntent,
         )
-        Log.d(TAG, "Scheduled mindfulness reminder alarm for $triggerAt")
+        Log.d(TAG, "Scheduled mindfulness reminder alarm")
         return true
     }
 

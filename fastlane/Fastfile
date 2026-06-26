@@ -8,6 +8,8 @@ OPENVITALS_METADATA_PATH = "fastlane/metadata/android"
 platform :android do
   desc "Upload the signed Android App Bundle directly to Google Play production with store metadata"
   lane :production do |options|
+    gradle(task: ":app:assembleDebug")
+
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
     aab = options[:aab] || ENV["OPENVITALS_RELEASE_AAB"]
     version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]

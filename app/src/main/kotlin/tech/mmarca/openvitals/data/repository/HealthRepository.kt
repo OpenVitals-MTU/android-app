@@ -253,7 +253,7 @@ class HealthRepository @Inject constructor(
                             }
                             Log.d(
                                 TAG,
-                                "loadDashboard cacheHit freshness=${cached.freshness} date=${query.date} metrics=${loadMetrics.size}",
+                                "loadDashboard cacheHit freshness=${cached.freshness} metrics=${loadMetrics.size}",
                             )
                             return@withContext cachedData
                         }
@@ -322,7 +322,7 @@ class HealthRepository @Inject constructor(
             }
             Log.d(
                 TAG,
-                "loadDashboard completed date=${query.date} metrics=${loadMetrics.size} " +
+                "loadDashboard completed metrics=${loadMetrics.size} " +
                     "durationMs=${System.currentTimeMillis() - startedAt}",
             )
             data
@@ -578,7 +578,7 @@ class HealthRepository @Inject constructor(
                 )
                 cacheStore.write(summaryCacheKey, DashboardDataSummaryCodec.encode(refreshed))
             }.onFailure { error ->
-                Log.w(TAG, "Background dashboard summary refresh failed date=${query.date}", error)
+                Log.w(TAG, "Background dashboard summary refresh failed", error)
             }
         }
     }
@@ -644,7 +644,7 @@ class HealthRepository @Inject constructor(
         val activityWeekMode = query.activityWeekMode
         Log.d(
             TAG,
-            "loadDashboard date=$date metrics=${metrics.sortedBy { it.name }} grantedCount=${granted.size}",
+            "loadDashboard metrics=${metrics.sortedBy { it.name }} grantedCount=${granted.size}",
         )
 
         fun wants(metric: DashboardMetric): Boolean = metric in metrics

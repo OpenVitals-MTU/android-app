@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -170,6 +171,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
         SettingsSection.HEALTH_CONNECT -> Icons.Outlined.HealthAndSafety
         SettingsSection.PERMISSIONS -> Icons.Outlined.Lock
+        SettingsSection.DEBUG_DIAGNOSTICS -> Icons.Outlined.BugReport
     }
 
 internal val AppleHealthExportMimeTypes = arrayOf(
@@ -1283,6 +1285,57 @@ internal fun ClearCacheCard(
                 modifier = Modifier.align(Alignment.End),
             ) {
                 Text(stringResource(R.string.settings_clear_local_cache))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun DebugDiagnosticsCard(
+    onSaveLogs: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    imageVector = Icons.Outlined.BugReport,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(20.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_debug_logs_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_debug_logs_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+            OpenVitalsOutlinedButton(
+                onClick = onSaveLogs,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.widthIn(min = 6.dp))
+                Text(stringResource(R.string.settings_debug_logs_save))
             }
         }
     }

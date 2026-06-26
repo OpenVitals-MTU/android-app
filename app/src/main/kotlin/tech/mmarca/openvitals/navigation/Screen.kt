@@ -84,5 +84,6 @@ sealed class Screen(val route: String) {
     data object SettingsDataImport : Screen("settings/data_import")
     data object SettingsHealthConnect : Screen("settings/health_connect")
     data object SettingsPermissions : Screen("settings/permissions")
+    data object SettingsDebugDiagnostics : Screen("settings/debug_diagnostics")
     data object Achievements : Screen("achievements")
 }

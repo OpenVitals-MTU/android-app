@@ -140,7 +140,7 @@ class SettingsViewModel @Inject constructor(
 
             runCatching { appleHealthImportWorkController.enqueue(uri) }
                 .onFailure { error ->
-                    Log.e(TAG, "Apple Health import enqueue failed", error)
+                    Log.e(TAG, "Apple Health import enqueue failed type=${error::class.java.simpleName}")
                     _uiState.value = _uiState.value.copy(
                         isImportingAppleHealth = false,
                         appleHealthImportProgress = null,
@@ -171,7 +171,11 @@ class SettingsViewModel @Inject constructor(
                     }
                     WorkInfo.State.SUCCEEDED -> {
                         val result = appleHealthImportWorkController.resultFor(workInfo)
-                        Log.d(TAG, "Apple Health import completed result=$result")
+                        Log.d(
+                            TAG,
+                            "Apple Health import completed imported=${result?.importedRecords ?: 0} " +
+                                "failed=${result?.failedRecords ?: 0}",
+                        )
                         _uiState.value = _uiState.value.copy(
                             isImportingAppleHealth = false,
                             appleHealthImportProgress = null,
@@ -182,7 +186,7 @@ class SettingsViewModel @Inject constructor(
                     WorkInfo.State.FAILED -> {
                         val error = appleHealthImportWorkController.errorFor(workInfo)
                             ?: "Apple Health import failed."
-                        Log.e(TAG, "Apple Health import failed: $error")
+                        Log.e(TAG, "Apple Health import failed")
                         _uiState.value = _uiState.value.copy(
                             isImportingAppleHealth = false,
                             appleHealthImportProgress = null,

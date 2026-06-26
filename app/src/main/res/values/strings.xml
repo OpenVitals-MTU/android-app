@@ -1011,6 +1011,8 @@
     <string name="settings_permissions_group_body">Health data access and manual permission steps</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
     <string name="settings_health_connect_group_body">Sync, access, and data sources</string>
+    <string name="settings_debug_diagnostics_group_title">Debug diagnostics</string>
+    <string name="settings_debug_diagnostics_group_body">Save sanitized debug logs for troubleshooting</string>
     <string name="settings_health_connect_sync_title">Sync with Health Connect</string>
     <string name="settings_health_connect_sync_body">When on, OpenVitals reads and writes health data according to your permissions. When off, sync pauses without revoking access.</string>
     <string name="settings_health_connect_manage_access">Manage access</string>
@@ -1065,6 +1067,11 @@
     <string name="settings_clear_local_cache">Clear cached summaries</string>
     <string name="settings_clear_local_cache_body">Remove locally cached dashboard summaries. Health Connect data is not affected.</string>
     <string name="settings_clear_local_cache_done">Cached summaries cleared</string>
+    <string name="settings_debug_logs_title">Sanitized debug logs</string>
+    <string name="settings_debug_logs_body">Save OpenVitals debug log entries to a text file. The export drops or redacts identifiers, locations, dates, URIs, raw sensor payloads, and unrelated app logs before writing.</string>
+    <string name="settings_debug_logs_save">Save logs</string>
+    <string name="settings_debug_logs_saved">Debug logs saved</string>
+    <string name="settings_debug_logs_save_failed">Could not save debug logs</string>
     <string name="settings_privacy_policy_link">View privacy policy</string>
     <string name="settings_privacy_policy_url">https://github.com/mmarca-tech/OpenVitals/blob/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">App lock</string>

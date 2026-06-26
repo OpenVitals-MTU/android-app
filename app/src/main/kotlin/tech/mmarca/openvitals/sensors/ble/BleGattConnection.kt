@@ -148,7 +148,7 @@ internal class BleGattConnection(
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                Log.w(TAG, "$address: service discovery failed with status=$status")
+                Log.w(TAG, "Service discovery failed status=$status")
                 return
             }
             gatt.services.forEach { service ->
@@ -183,6 +183,7 @@ internal class BleGattConnection(
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun handleCharacteristicChanged(
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic,
@@ -207,7 +208,7 @@ internal class BleGattConnection(
                     }
                     else -> Log.d(
                         TAG,
-                        "$address: HR notify ${value.size} bytes unparsed: ${value.toHex()}",
+                        "Heart rate notification unparsed bytes=${value.size}",
                     )
                 }
             }
@@ -237,9 +238,6 @@ internal class BleGattConnection(
             }
         }
     }
-
-    private fun ByteArray.toHex(): String =
-        joinToString(separator = "") { byte -> "%02x".format(byte) }
 
     companion object {
         private const val TAG = "BleGattConnection"

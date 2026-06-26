@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -120,6 +121,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_permissions_group_title,
         summaryRes = R.string.settings_permissions_group_body,
     ),
+    DEBUG_DIAGNOSTICS(
+        titleRes = R.string.settings_debug_diagnostics_group_title,
+        summaryRes = R.string.settings_debug_diagnostics_group_body,
+    ),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,6 +142,8 @@ fun SettingsScreen(
     val reportCopied = stringResource(R.string.settings_apple_health_import_report_copied)
     val reportSaved = stringResource(R.string.settings_apple_health_import_report_saved)
     val reportSaveFailed = stringResource(R.string.settings_apple_health_import_report_save_failed)
+    val debugLogsSaved = stringResource(R.string.settings_debug_logs_saved)
+    val debugLogsSaveFailed = stringResource(R.string.settings_debug_logs_save_failed)
     val cacheClearedMessage = stringResource(R.string.settings_clear_local_cache_done)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
@@ -198,6 +205,27 @@ fun SettingsScreen(
         }
     }
 
+    val debugLogSaver = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        PrivacySafeDebugLogExporter.writeCurrentProcessLogcat(context, output)
+                    } ?: error("Unable to open destination.")
+                }.fold(
+                    onSuccess = {
+                        Toast.makeText(context, debugLogsSaved, Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = {
+                        Toast.makeText(context, debugLogsSaveFailed, Toast.LENGTH_SHORT).show()
+                    },
+                )
+            }
+        }
+    }
+
     if (state.isLoading) {
         FullScreenLoading()
         return
@@ -215,7 +243,9 @@ fun SettingsScreen(
         ) {
             when (section) {
                 null -> {
-                    SettingsSection.entries.forEach { settingsSection ->
+                    SettingsSection.entries
+                        .filter { BuildConfig.DEBUG || it != SettingsSection.DEBUG_DIAGNOSTICS }
+                        .forEach { settingsSection ->
                         item {
                             SettingsCategoryCard(
                                 section = settingsSection,
@@ -459,8 +489,20 @@ fun SettingsScreen(
                         }
                     }
                 }
+                SettingsSection.DEBUG_DIAGNOSTICS -> {
+                    if (BuildConfig.DEBUG) {
+                        item { SectionHeader(stringResource(section.titleRes)) }
+                        item {
+                            DebugDiagnosticsCard(
+                                onSaveLogs = {
+                                    debugLogSaver.launch("openvitals-debug-logs.txt")
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
-

@@ -180,11 +180,14 @@ fun AppNavigation(
             Screen.Settings.route,
             Screen.SettingsDisplay.route,
             Screen.SettingsActivities.route,
+            Screen.SettingsSensors.route,
             Screen.SettingsCalories.route,
             Screen.SettingsSleep.route,
             Screen.SettingsCycle.route,
             Screen.SettingsDataImport.route,
+            Screen.SettingsHealthConnect.route,
             Screen.SettingsPermissions.route,
+            Screen.SettingsDebugDiagnostics.route,
         )
     }
 
@@ -266,11 +269,14 @@ fun AppNavigation(
         Screen.Settings.route -> stringResource(R.string.screen_settings)
         Screen.SettingsDisplay.route -> stringResource(R.string.settings_display_group_title)
         Screen.SettingsActivities.route -> stringResource(R.string.settings_activities_group_title)
+        Screen.SettingsSensors.route -> stringResource(R.string.settings_sensors_group_title)
         Screen.SettingsCalories.route -> stringResource(R.string.settings_calories_group_title)
         Screen.SettingsSleep.route -> stringResource(R.string.settings_sleep_group_title)
         Screen.SettingsCycle.route -> stringResource(R.string.settings_cycle_group_title)
         Screen.SettingsDataImport.route -> stringResource(R.string.settings_data_import_group_title)
+        Screen.SettingsHealthConnect.route -> stringResource(R.string.settings_health_connect_group_title)
         Screen.SettingsPermissions.route -> stringResource(R.string.settings_permissions_group_title)
+        Screen.SettingsDebugDiagnostics.route -> stringResource(R.string.settings_debug_diagnostics_group_title)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
     }

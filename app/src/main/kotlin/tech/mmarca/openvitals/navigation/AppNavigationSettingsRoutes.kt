@@ -4,6 +4,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
+import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
@@ -99,6 +100,16 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
             section = SettingsSection.PERMISSIONS,
         )
     }
+
+    if (BuildConfig.DEBUG) {
+        composable(Screen.SettingsDebugDiagnostics.route) {
+            val settingsViewModel = hiltViewModel<SettingsViewModel>()
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                section = SettingsSection.DEBUG_DIAGNOSTICS,
+            )
+        }
+    }
 }
 
 private fun settingsSectionRoute(section: SettingsSection): String =
@@ -112,4 +123,5 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
         SettingsSection.HEALTH_CONNECT -> Screen.SettingsHealthConnect.route
         SettingsSection.PERMISSIONS -> Screen.SettingsPermissions.route
+        SettingsSection.DEBUG_DIAGNOSTICS -> Screen.SettingsDebugDiagnostics.route
     }

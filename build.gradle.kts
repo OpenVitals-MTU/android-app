@@ -44,7 +44,14 @@ tasks.register("verifyLocalReleaseChecks") {
     group = "verification"
     description = "Runs release preflight checks for the local internet-free OpenVitals app."
     dependsOn(
+        ":app:assembleDebug",
         ":app:testDebugUnitTest",
         ":app:lintDebug",
     )
+}
+
+project(":app").tasks.configureEach {
+    if (name == "testDebugUnitTest" || name == "lintDebug") {
+        mustRunAfter("assembleDebug")
+    }
 }
