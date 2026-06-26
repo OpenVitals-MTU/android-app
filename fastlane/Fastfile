@@ -8,14 +8,13 @@ OPENVITALS_METADATA_PATH = "fastlane/metadata/android"
 platform :android do
   desc "Upload the signed Android App Bundle directly to Google Play production with store metadata"
   lane :production do |options|
-    gradle(task: ":app:assembleDebug")
-
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
     aab = options[:aab] || ENV["OPENVITALS_RELEASE_AAB"]
     version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
 
     UI.user_error!("json_key is required") if json_key.to_s.empty?
     UI.user_error!("aab is required") if aab.to_s.empty?
+    UI.user_error!("aab does not exist: #{aab}") unless File.file?(aab)
 
     if version_code.to_s.length > 0
       existing_codes = google_play_track_version_codes(
