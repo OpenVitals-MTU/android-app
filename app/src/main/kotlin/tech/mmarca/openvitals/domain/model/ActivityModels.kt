@@ -21,6 +21,7 @@ data class ExerciseData(
     val averagePowerWatts: Double? = null,
     val averageStepsCadenceRate: Double? = null,
     val averageCyclingCadenceRpm: Double? = null,
+    val averageHeartRateBpm: Long? = null,
     val floorsClimbed: Int? = null,
     val elevationGainedMeters: Double? = null,
     val notes: String? = null,
@@ -141,6 +142,7 @@ data class ActivityWriteRequest(
     val elevationGainedMeters: Double? = null,
     val activeCaloriesKcal: Double? = null,
     val totalCaloriesKcal: Double? = null,
+    val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
 )
 
 data class PlannedExerciseData(

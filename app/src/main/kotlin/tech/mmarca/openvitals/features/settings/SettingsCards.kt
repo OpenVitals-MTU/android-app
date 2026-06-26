@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -162,6 +163,7 @@ internal val SettingsSection.icon: ImageVector
     get() = when (this) {
         SettingsSection.DISPLAY -> Icons.Outlined.Settings
         SettingsSection.ACTIVITIES -> Icons.AutoMirrored.Outlined.DirectionsRun
+        SettingsSection.SENSORS -> Icons.Outlined.Bluetooth
         SettingsSection.CALORIES -> Icons.Outlined.LocalFireDepartment
         SettingsSection.SLEEP -> Icons.Outlined.Bedtime
         SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth

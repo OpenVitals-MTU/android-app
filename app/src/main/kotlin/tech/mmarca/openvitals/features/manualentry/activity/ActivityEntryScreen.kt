@@ -165,6 +165,7 @@ fun ActivityEntryScreen(
                 if (state.mode == ActivityEntryMode.RECORDING) {
                     ActivityRecordingSetupScreen(
                         state = state,
+                        recordingState = recordingState,
                         unitFormatter = unitFormatter,
                         onSelectActivityType = viewModel::selectActivityType,
                         onStartRecording = viewModel::startGpsRecording,

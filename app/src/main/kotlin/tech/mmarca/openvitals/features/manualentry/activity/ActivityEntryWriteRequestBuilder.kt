@@ -140,6 +140,7 @@ internal fun buildWriteRequest(
         elevationGainedMeters = elevationMeters,
         activeCaloriesKcal = activeCalories,
         totalCaloriesKcal = totalCalories,
+        bleSamples = state.recordedBleSamples,
     )
 }
 

@@ -81,6 +81,11 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE,
+        HealthPermission.getWritePermission(HeartRateRecord::class),
+        HealthPermission.getWritePermission(PowerRecord::class),
+        HealthPermission.getWritePermission(SpeedRecord::class),
+        HealthPermission.getWritePermission(CyclingPedalingCadenceRecord::class),
+        HealthPermission.getWritePermission(StepsCadenceRecord::class),
     )
 
     val plannedExercisePermissions: Set<String>

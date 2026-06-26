@@ -261,6 +261,7 @@ class ActivityEntryViewModel(
     fun chooseSource() {
         if (_uiState.value.isEditMode) return
         recordingDraftStore?.clear()
+        activityRecorder?.stopBlePreview()
         _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
             canWrite = _uiState.value.canWrite,
             isCheckingPermission = _uiState.value.isCheckingPermission,
@@ -624,6 +625,7 @@ class ActivityEntryViewModel(
             validationErrors = emptySet(),
         )
         refreshPermission()
+        activityRecorder?.previewBleConnections()
     }
 
     fun startGpsRecording(
@@ -714,6 +716,7 @@ class ActivityEntryViewModel(
 
     fun discardGpsRecording() {
         activityRecorder?.discardRecording()
+        activityRecorder?.stopBlePreview()
         recordingDraftStore?.clear()
         chooseSource()
     }
@@ -760,6 +763,7 @@ class ActivityEntryViewModel(
                     activityEntryTypeById(snapshot.activityTypeId)?.supportsStepCounting == true && it > 0L
                 }?.toString().orEmpty(),
                 isRecordingDraft = true,
+                recordedBleSamples = snapshot.bleSamples,
             )
         } else {
             applyRecordingWithoutRoute(snapshot)
@@ -1028,6 +1032,7 @@ class ActivityEntryViewModel(
                 selectedActivityType.isRepetitionLike && it > 0L && recordedSets.isEmpty()
             }?.toString().orEmpty(),
             repetitionSets = recordedSets.takeIf { it.isNotEmpty() } ?: listOf(ActivityRepetitionSetInput()),
+            recordedBleSamples = snapshot.bleSamples,
             entryError = null,
             detailMessage = null,
             validationErrors = emptySet(),

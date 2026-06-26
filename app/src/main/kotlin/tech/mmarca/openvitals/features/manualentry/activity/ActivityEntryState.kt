@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
@@ -158,6 +159,7 @@ data class ActivityEntryUiState(
     val editRecordId: String? = null,
     val isRecordingDraft: Boolean = false,
     val saveCompleted: Boolean = false,
+    val recordedBleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
 ) {
     val routePoints: List<ExerciseRoutePoint>
         get() = importedRoute?.points.orEmpty()

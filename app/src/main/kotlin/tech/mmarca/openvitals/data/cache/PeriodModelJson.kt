@@ -124,6 +124,7 @@ internal fun ExerciseData.toJson(): JsonObject = buildJsonObject {
     putNullable("averagePowerWatts", averagePowerWatts)
     putNullable("averageStepsCadenceRate", averageStepsCadenceRate)
     putNullable("averageCyclingCadenceRpm", averageCyclingCadenceRpm)
+    putNullable("averageHeartRateBpm", averageHeartRateBpm)
     putNullable("floorsClimbed", floorsClimbed)
     putNullable("elevationGainedMeters", elevationGainedMeters)
     putNullable("notes", notes)
@@ -153,6 +154,7 @@ internal fun JsonObject.toExerciseData(): ExerciseData = ExerciseData(
     averagePowerWatts = doubleOrNull("averagePowerWatts"),
     averageStepsCadenceRate = doubleOrNull("averageStepsCadenceRate"),
     averageCyclingCadenceRpm = doubleOrNull("averageCyclingCadenceRpm"),
+    averageHeartRateBpm = longOrNull("averageHeartRateBpm"),
     floorsClimbed = intOrNull("floorsClimbed"),
     elevationGainedMeters = doubleOrNull("elevationGainedMeters"),
     notes = stringOrNull("notes"),

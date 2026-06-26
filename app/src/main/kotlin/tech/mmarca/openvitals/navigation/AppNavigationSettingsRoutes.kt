@@ -39,6 +39,14 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
         )
     }
 
+    composable(Screen.SettingsSensors.route) {
+        val settingsViewModel = hiltViewModel<SettingsViewModel>()
+        SettingsScreen(
+            viewModel = settingsViewModel,
+            section = SettingsSection.SENSORS,
+        )
+    }
+
     composable(Screen.SettingsCalories.route) {
         val settingsViewModel = hiltViewModel<SettingsViewModel>()
         SettingsScreen(
@@ -97,6 +105,7 @@ private fun settingsSectionRoute(section: SettingsSection): String =
     when (section) {
         SettingsSection.DISPLAY -> Screen.SettingsDisplay.route
         SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
+        SettingsSection.SENSORS -> Screen.SettingsSensors.route
         SettingsSection.CALORIES -> Screen.SettingsCalories.route
         SettingsSection.SLEEP -> Screen.SettingsSleep.route
         SettingsSection.CYCLE -> Screen.SettingsCycle.route

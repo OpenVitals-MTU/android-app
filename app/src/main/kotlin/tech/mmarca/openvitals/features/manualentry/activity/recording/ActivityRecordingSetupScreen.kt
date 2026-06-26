@@ -67,6 +67,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 @Composable
 internal fun ActivityRecordingSetupScreen(
     state: ActivityEntryUiState,
+    recordingState: ActivityRecordingState,
     unitFormatter: UnitFormatter,
     onSelectActivityType: (ActivityEntryType) -> Unit,
     onStartRecording: (Location?, Long) -> Unit,
@@ -131,6 +132,10 @@ internal fun ActivityRecordingSetupScreen(
             if (selectedType.supportsGpsRoute) {
                 PreRecordingGpsFixStatus(
                     state = gpsFixState,
+                    unitFormatter = unitFormatter,
+                )
+                ActivityRecordingLiveSensorStats(
+                    state = recordingState,
                     unitFormatter = unitFormatter,
                 )
             } else if (selectedType.isRepetitionLike) {

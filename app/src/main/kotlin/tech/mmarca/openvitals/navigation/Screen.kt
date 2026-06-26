@@ -77,6 +77,7 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object SettingsDisplay : Screen("settings/display")
     data object SettingsActivities : Screen("settings/activities")
+    data object SettingsSensors : Screen("settings/sensors")
     data object SettingsCalories : Screen("settings/calories")
     data object SettingsSleep : Screen("settings/sleep")
     data object SettingsCycle : Screen("settings/cycle")

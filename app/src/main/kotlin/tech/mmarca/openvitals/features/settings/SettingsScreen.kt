@@ -92,6 +92,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_activities_group_title,
         summaryRes = R.string.settings_activities_group_body,
     ),
+    SENSORS(
+        titleRes = R.string.settings_sensors_group_title,
+        summaryRes = R.string.settings_sensors_group_body,
+    ),
     CALORIES(
         titleRes = R.string.settings_calories_group_title,
         summaryRes = R.string.settings_calories_group_body,
@@ -295,6 +299,11 @@ fun SettingsScreen(
                             onChange = viewModel::updateActivityRecordingPreferences,
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
+                    }
+                }
+                SettingsSection.SENSORS -> {
+                    item {
+                        BleDevicesSettingsSection()
                     }
                 }
                 SettingsSection.CALORIES -> {

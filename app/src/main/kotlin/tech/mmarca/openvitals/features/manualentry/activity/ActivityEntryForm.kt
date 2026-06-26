@@ -180,6 +180,11 @@ internal fun ActivityEntryCard(
                 onClearRoute = onClearRoute,
             )
 
+            ActivityRecordedSensorSummary(
+                samples = state.recordedBleSamples,
+                unitFormatter = unitFormatter,
+            )
+
             ActivityTrainingPlanActions(
                 state = state,
                 enabled = !state.isSavingEntry && !state.isSavingPlannedWorkout,

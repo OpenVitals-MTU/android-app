@@ -227,6 +227,7 @@ class ActivityRecordingService : Service() {
     }
 
     private fun ActivityRecordingState.foregroundServiceType(): Int {
+        val hasBleDevices = bleDeviceStatuses.isNotEmpty()
         if (recordingKind == ActivityRecordingKind.GPS_ROUTE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             if (
@@ -235,13 +236,20 @@ class ActivityRecordingService : Service() {
             ) {
                 type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
             }
+            if (hasBleDevices && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            }
             return type
         }
         return if (
             recordingKind == ActivityRecordingKind.REPETITION &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         ) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+            if (hasBleDevices) {
+                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            }
+            type
         } else {
             0
         }
@@ -447,6 +455,9 @@ class ActivityRecordingService : Service() {
         val movingTime = formatNotificationElapsed(state.movingDuration(now))
         val distance = unitFormatter.distance(state.distanceMeters).text
         val gpsStatus = getString(state.gpsStatusLabelRes(now))
+        val heartRateSuffix = state.currentHeartRateBpm?.let { bpm ->
+            " · ${getString(R.string.activity_recording_notification_heart_rate, unitFormatter.count(bpm))}"
+        }.orEmpty()
         return when (state.status) {
             ActivityRecordingStatus.RECORDING -> getString(
                 R.string.activity_recording_notification_recording,
@@ -454,7 +465,7 @@ class ActivityRecordingService : Service() {
                 movingTime,
                 distance,
                 gpsStatus,
-            )
+            ) + heartRateSuffix
             ActivityRecordingStatus.PAUSED -> getString(
                 R.string.activity_recording_notification_paused,
                 totalTime,

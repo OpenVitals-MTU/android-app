@@ -74,9 +74,6 @@ internal fun RepetitionRecordingStats(
     movingTime: Duration,
     unitFormatter: UnitFormatter,
     onAdjustRepetitionCount: (Long) -> Unit,
-    onEndRepetitionSet: () -> Unit,
-    onStartNextRepetitionSet: () -> Unit,
-    onFinishRecording: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val activityType = activityEntryTypeById(state.activityTypeId)
@@ -179,12 +176,28 @@ internal fun RepetitionRecordingStats(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        if (state.bleDeviceStatuses.isNotEmpty()) {
+            ActivityRecordingSensorStatusCard(deviceStatuses = state.bleDeviceStatuses)
+        }
+    }
+}
 
+@Composable
+internal fun RepetitionRecordingControls(
+    state: ActivityRecordingState,
+    onEndRepetitionSet: () -> Unit,
+    onStartNextRepetitionSet: () -> Unit,
+    onFinishRecording: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsSurface(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+    ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (state.status == ActivityRecordingStatus.RESTING) {

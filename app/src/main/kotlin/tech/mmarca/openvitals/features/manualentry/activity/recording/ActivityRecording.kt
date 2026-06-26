@@ -45,6 +45,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -53,7 +55,11 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarkerType
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
+import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
+import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 
 enum class ActivityRecordingStatus {
     IDLE,
@@ -115,6 +121,13 @@ data class ActivityRecordingState(
     val lastLocationTime: Instant? = null,
     val droppedPointCount: Int = 0,
     val errorMessage: String? = null,
+    val currentHeartRateBpm: Long? = null,
+    val currentCyclingCadenceRpm: Long? = null,
+    val currentPowerWatts: Double? = null,
+    val currentSensorSpeedMetersPerSecond: Double? = null,
+    val currentRunningCadenceRpm: Long? = null,
+    val bleHeartRateNoSignal: Boolean = false,
+    val bleDeviceStatuses: List<BleDeviceConnectionStatus> = emptyList(),
 ) {
     val isActive: Boolean
         get() = status == ActivityRecordingStatus.RECORDING ||
@@ -143,15 +156,18 @@ data class ActivityRecordingSnapshot(
     val elevationGainedMeters: Double,
     val repetitionCount: Long = 0L,
     val repetitionSets: List<ActivityRecordedRepetitionSet> = emptyList(),
+    val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
 )
 
 @Singleton
 class ActivityRecordingController @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val preferencesRepository: PreferencesRepository,
+    private val bleSensorCoordinator: BleSensorCoordinator,
     private val recordingStore: ActivityRecordingStore = ActivityRecordingStore(context),
 ) {
     private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val bleMetricsScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val locationProcessingDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val locationProcessingScope = CoroutineScope(SupervisorJob() + locationProcessingDispatcher)
     private val altitudeConverter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -166,6 +182,9 @@ class ActivityRecordingController @Inject constructor(
 
     init {
         scheduleRestCompletion(_state.value)
+        bleSensorCoordinator.metrics
+            .onEach { metrics -> acceptBleMetrics(metrics) }
+            .launchIn(bleMetricsScope)
     }
 
     fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
@@ -248,6 +267,8 @@ class ActivityRecordingController @Inject constructor(
             replaceRoutePoints = true,
         )
         acceptLocation(Location(lockedFix).apply { time = now.toEpochMilli() })
+        bleSensorCoordinator.startRecording()
+        acceptBleMetrics(bleSensorCoordinator.metrics.value)
         ContextCompat.startForegroundService(
             context,
             ActivityRecordingService.intent(context, ActivityRecordingService.ActionStart),
@@ -284,11 +305,40 @@ class ActivityRecordingController @Inject constructor(
             ),
             replaceRoutePoints = true,
         )
+        bleSensorCoordinator.startRecording()
+        acceptBleMetrics(bleSensorCoordinator.metrics.value)
         ContextCompat.startForegroundService(
             context,
             ActivityRecordingService.intent(context, ActivityRecordingService.ActionStart),
         )
         return true
+    }
+
+    fun previewBleConnections() {
+        if (_state.value.isActive) return
+        bleSensorCoordinator.refreshConnections()
+        acceptBleMetrics(bleSensorCoordinator.metrics.value)
+    }
+
+    fun stopBlePreview() {
+        if (_state.value.isActive) return
+        bleSensorCoordinator.disconnectAll()
+    }
+
+    fun acceptBleMetrics(metrics: BleRecordingMetrics) {
+        val current = _state.value
+        updateAndPersist(
+            current.copy(
+                currentHeartRateBpm = metrics.heartRateBpm,
+                currentCyclingCadenceRpm = metrics.cyclingCadenceRpm,
+                currentPowerWatts = metrics.powerWatts,
+                currentSensorSpeedMetersPerSecond = metrics.cyclingSpeedMetersPerSecond
+                    ?: metrics.runningSpeedMetersPerSecond,
+                currentRunningCadenceRpm = metrics.runningCadenceRpm,
+                bleHeartRateNoSignal = metrics.heartRateNoSignal && metrics.heartRateBpm == null,
+                bleDeviceStatuses = metrics.deviceStatuses.ifEmpty { current.bleDeviceStatuses },
+            ),
+        )
     }
 
     fun pauseRecording() {
@@ -394,6 +444,7 @@ class ActivityRecordingController @Inject constructor(
     }
 
     fun discardRecording() {
+        bleSensorCoordinator.stopRecording()
         clearRecording()
         stopRecordingService()
     }
@@ -409,6 +460,7 @@ class ActivityRecordingController @Inject constructor(
             listOfNotNull(current.pausedStartedAt?.toPauseInterval(end))
         val manualLaps = current.closedManualLaps(end)
         val repetitionSets = current.recordedRepetitionSets(end)
+        val bleSamples = bleSensorCoordinator.stopRecording()
         val snapshot = ActivityRecordingSnapshot(
             exerciseType = exerciseType,
             recordingKind = current.recordingKind,
@@ -424,6 +476,7 @@ class ActivityRecordingController @Inject constructor(
             elevationGainedMeters = current.elevationGainedMeters,
             repetitionCount = current.repetitionCount,
             repetitionSets = repetitionSets,
+            bleSamples = bleSamples,
         )
         clearRecording()
         stopRecordingService()

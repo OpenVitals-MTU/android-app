@@ -35,6 +35,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     averagePowerWatts: Double? = null,
     averageStepsCadenceRate: Double? = null,
     averageCyclingCadenceRpm: Double? = null,
+    averageHeartRateBpm: Long? = null,
     appPackageName: String? = null,
 ) = ExerciseData(
     id = metadata.id,
@@ -54,6 +55,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     averagePowerWatts = averagePowerWatts,
     averageStepsCadenceRate = averageStepsCadenceRate,
     averageCyclingCadenceRpm = averageCyclingCadenceRpm,
+    averageHeartRateBpm = averageHeartRateBpm,
     floorsClimbed = floorsClimbed,
     elevationGainedMeters = elevationGainedMeters,
     notes = notes,

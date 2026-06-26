@@ -47,9 +47,13 @@
     <uses-permission android:name="android.permission.health.WRITE_WHEELCHAIR_PUSHES" />
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_SPEED" />
+    <uses-permission android:name="android.permission.health.WRITE_SPEED" />
     <uses-permission android:name="android.permission.health.READ_POWER" />
+    <uses-permission android:name="android.permission.health.WRITE_POWER" />
     <uses-permission android:name="android.permission.health.READ_STEPS_CADENCE" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS_CADENCE" />
     <uses-permission android:name="android.permission.health.READ_CYCLING_PEDALING_CADENCE" />
+    <uses-permission android:name="android.permission.health.WRITE_CYCLING_PEDALING_CADENCE" />
     <uses-permission android:name="android.permission.health.READ_PLANNED_EXERCISE" />
     <uses-permission android:name="android.permission.health.WRITE_PLANNED_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_HYDRATION" />
@@ -96,10 +100,16 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -115,6 +125,9 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.sensor.stepdetector"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
     <!-- Query for Health Connect package (needed on Android 11+) -->
@@ -235,7 +248,7 @@
         <service
             android:name=".features.manualentry.activity.recording.ActivityRecordingService"
             android:exported="false"
-            android:foregroundServiceType="location|health" />
+            android:foregroundServiceType="location|health|connectedDevice" />
 
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

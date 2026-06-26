@@ -292,6 +292,7 @@ class HealthConnectManager @Inject constructor(
         includePower: Boolean,
         includeStepsCadence: Boolean,
         includeCyclingCadence: Boolean,
+        includeHeartRate: Boolean = false,
     ): ExerciseData? =
         activityReader.readExerciseSession(
             id = id,
@@ -307,6 +308,7 @@ class HealthConnectManager @Inject constructor(
             includePower = includePower,
             includeStepsCadence = includeStepsCadence,
             includeCyclingCadence = includeCyclingCadence,
+            includeHeartRate = includeHeartRate,
         )
 
     suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =

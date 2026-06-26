@@ -127,6 +127,10 @@ internal fun MetricsCard(
             workout.averageSpeedMetersPerSecond?.let { unitFormatter.speed(it).text } ?: notAvailable,
         )
         DetailRow(
+            stringResource(R.string.metric_average_heart_rate),
+            workout.averageHeartRateBpm?.let { unitFormatter.heartRate(it).text } ?: notAvailable,
+        )
+        DetailRow(
             stringResource(R.string.metric_average_power),
             workout.averagePowerWatts?.let { unitFormatter.power(it).text } ?: notAvailable,
         )

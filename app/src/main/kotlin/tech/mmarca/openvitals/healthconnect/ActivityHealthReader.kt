@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseCompletionGoal
 import androidx.health.connect.client.records.ExerciseLap
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.PlannedExerciseBlock
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSegment
@@ -26,6 +27,8 @@ import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Power
+import androidx.health.connect.client.units.Velocity
 import androidx.health.connect.client.units.kilocalories
 import androidx.health.connect.client.units.meters
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +37,7 @@ import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.DailySteps
@@ -431,6 +435,7 @@ internal class ActivityHealthReader(
         includePower: Boolean,
         includeStepsCadence: Boolean,
         includeCyclingCadence: Boolean,
+        includeHeartRate: Boolean = false,
     ): ExerciseData? =
         support.withNullableLogging("readExerciseSession[$id]") {
             val record = support.client().readRecord(ExerciseSessionRecord::class, id).record
@@ -449,6 +454,7 @@ internal class ActivityHealthReader(
                 if (includePower) add(PowerRecord.POWER_AVG)
                 if (includeStepsCadence) add(StepsCadenceRecord.RATE_AVG)
                 if (includeCyclingCadence) add(CyclingPedalingCadenceRecord.RPM_AVG)
+                if (includeHeartRate) add(HeartRateRecord.BPM_AVG)
             }
             val aggregate = if (metrics.isEmpty()) {
                 null
@@ -539,6 +545,11 @@ internal class ActivityHealthReader(
                 },
                 averageCyclingCadenceRpm = if (includeCyclingCadence && aggregate != null) {
                     aggregate[CyclingPedalingCadenceRecord.RPM_AVG]
+                } else {
+                    null
+                },
+                averageHeartRateBpm = if (includeHeartRate && aggregate != null) {
+                    aggregate[HeartRateRecord.BPM_AVG]?.toLong()
                 } else {
                     null
                 },
@@ -758,8 +769,132 @@ internal class ActivityHealthReader(
                     )
                 )
             }
+            addAll(bleSamples.toManualActivitySensorRecords(startTime, endTime, zone))
         }
     }
+
+    private fun BleRecordingSampleBuffer.toManualActivitySensorRecords(
+        startTime: Instant,
+        endTime: Instant,
+        zone: ZoneId,
+    ): List<Record> {
+        if (isEmpty()) return emptyList()
+        val startOffset = zone.rules.getOffset(startTime)
+        val endOffset = zone.rules.getOffset(endTime)
+        return buildList {
+            if (heartRateSamples.isNotEmpty()) {
+                add(
+                    HeartRateRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        samples = heartRateSamples.map {
+                            HeartRateRecord.Sample(
+                                time = it.time.coerceInSession(startTime, endTime),
+                                beatsPerMinute = it.beatsPerMinute,
+                            )
+                        },
+                        metadata = manualActivityMetricMetadata("heart_rate", startTime),
+                    )
+                )
+            }
+            if (powerSamples.isNotEmpty()) {
+                add(
+                    PowerRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        samples = powerSamples.map { sample ->
+                            PowerRecord.Sample(
+                                time = sample.time.coerceInSession(startTime, endTime),
+                                power = Power.watts(sample.watts),
+                            )
+                        },
+                        metadata = manualActivityMetricMetadata("power", startTime),
+                    )
+                )
+            }
+            if (cyclingCadenceSamples.isNotEmpty()) {
+                add(
+                    CyclingPedalingCadenceRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        samples = cyclingCadenceSamples.map {
+                            CyclingPedalingCadenceRecord.Sample(
+                                time = it.time.coerceInSession(startTime, endTime),
+                                revolutionsPerMinute = it.rpm.toDouble(),
+                            )
+                        },
+                        metadata = manualActivityMetricMetadata("cycling_cadence", startTime),
+                    )
+                )
+            }
+            val cyclingSpeedSamples = speedSamples.filterNot { it.isRunning }
+            if (cyclingSpeedSamples.isNotEmpty()) {
+                add(
+                    SpeedRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        samples = cyclingSpeedSamples.map { sample ->
+                            SpeedRecord.Sample(
+                                time = sample.time.coerceInSession(startTime, endTime),
+                                speed = Velocity.metersPerSecond(sample.metersPerSecond),
+                            )
+                        },
+                        metadata = manualActivityMetricMetadata("speed", startTime),
+                    )
+                )
+            }
+            val runningSpeedSamples = speedSamples.filter { it.isRunning }
+            if (runningSpeedSamples.isNotEmpty()) {
+                add(
+                    SpeedRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        samples = runningSpeedSamples.map { sample ->
+                            SpeedRecord.Sample(
+                                time = sample.time.coerceInSession(startTime, endTime),
+                                speed = Velocity.metersPerSecond(sample.metersPerSecond),
+                            )
+                        },
+                        metadata = manualActivityMetricMetadata("running_speed", startTime),
+                    )
+                )
+            }
+            if (stepsCadenceSamples.isNotEmpty()) {
+                add(
+                    StepsCadenceRecord(
+                        startTime = startTime,
+                        startZoneOffset = startOffset,
+                        endTime = endTime,
+                        endZoneOffset = endOffset,
+                        samples = stepsCadenceSamples.map {
+                            StepsCadenceRecord.Sample(
+                                time = it.time.coerceInSession(startTime, endTime),
+                                rate = it.stepsPerMinute.toDouble(),
+                            )
+                        },
+                        metadata = manualActivityMetricMetadata("steps_cadence", startTime),
+                    )
+                )
+            }
+        }
+    }
+
+    private fun Instant.coerceInSession(startTime: Instant, endTime: Instant): Instant =
+        when {
+            isBefore(startTime) -> startTime
+            isAfter(endTime) -> endTime
+            else -> this
+        }
 
     private suspend fun deleteManualActivityMetricRecords(start: Instant, end: Instant) {
         deleteManualActivityMetricRecords(StepsRecord::class, "steps", start, end)
@@ -767,6 +902,12 @@ internal class ActivityHealthReader(
         deleteManualActivityMetricRecords(ElevationGainedRecord::class, "elevation", start, end)
         deleteManualActivityMetricRecords(ActiveCaloriesBurnedRecord::class, "active_calories", start, end)
         deleteManualActivityMetricRecords(TotalCaloriesBurnedRecord::class, "total_calories", start, end)
+        deleteManualActivityMetricRecords(HeartRateRecord::class, "heart_rate", start, end)
+        deleteManualActivityMetricRecords(PowerRecord::class, "power", start, end)
+        deleteManualActivityMetricRecords(CyclingPedalingCadenceRecord::class, "cycling_cadence", start, end)
+        deleteManualActivityMetricRecords(SpeedRecord::class, "speed", start, end)
+        deleteManualActivityMetricRecords(SpeedRecord::class, "running_speed", start, end)
+        deleteManualActivityMetricRecords(StepsCadenceRecord::class, "steps_cadence", start, end)
     }
 
     private suspend fun <T : Record> deleteManualActivityMetricRecords(

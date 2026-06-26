@@ -9,6 +9,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.SpeedRecord
@@ -17,6 +18,7 @@ import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
@@ -72,6 +74,7 @@ class ActivityRepository @Inject constructor(
     private val readPowerPermission = HealthPermission.getReadPermission(PowerRecord::class)
     private val readStepsCadencePermission = HealthPermission.getReadPermission(StepsCadenceRecord::class)
     private val readCyclingCadencePermission = HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)
+    private val readHeartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
     private val readPlannedExercisePermission = HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)
     private val writePlannedExercisePermission = HealthPermission.getWritePermission(PlannedExerciseSessionRecord::class)
     private val writeExercisePermission = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
@@ -80,6 +83,11 @@ class ActivityRepository @Inject constructor(
     private val writeActiveCaloriesPermission = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
     private val writeTotalCaloriesPermission = HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class)
     private val writeStepsPermission = HealthPermission.getWritePermission(StepsRecord::class)
+    private val writeHeartRatePermission = HealthPermission.getWritePermission(HeartRateRecord::class)
+    private val writePowerPermission = HealthPermission.getWritePermission(PowerRecord::class)
+    private val writeSpeedPermission = HealthPermission.getWritePermission(SpeedRecord::class)
+    private val writeStepsCadencePermission = HealthPermission.getWritePermission(StepsCadenceRecord::class)
+    private val writeCyclingCadencePermission = HealthPermission.getWritePermission(CyclingPedalingCadenceRecord::class)
     private val writeExerciseRoutePermission = HealthPermission.PERMISSION_WRITE_EXERCISE_ROUTE
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
@@ -344,7 +352,16 @@ class ActivityRepository @Inject constructor(
             includePower = readPowerPermission in granted,
             includeStepsCadence = readStepsCadencePermission in granted,
             includeCyclingCadence = readCyclingCadencePermission in granted,
+            includeHeartRate = readHeartRatePermission in granted,
         )
+    }
+
+    private fun BleRecordingSampleBuffer.writePermissions(): Set<String> = buildSet {
+        if (heartRateSamples.isNotEmpty()) add(writeHeartRatePermission)
+        if (powerSamples.isNotEmpty()) add(writePowerPermission)
+        if (speedSamples.isNotEmpty()) add(writeSpeedPermission)
+        if (cyclingCadenceSamples.isNotEmpty()) add(writeCyclingCadencePermission)
+        if (stepsCadenceSamples.isNotEmpty()) add(writeStepsCadencePermission)
     }
 
     suspend fun loadPlannedWorkouts(start: LocalDate, end: LocalDate): List<PlannedExerciseData> {
@@ -461,7 +478,7 @@ class ActivityRepository @Inject constructor(
             setOf(readPlannedExercisePermission)
         } else {
             emptySet()
-        }
+        } + request.bleSamples.writePermissions()
 
     fun plannedWorkoutWritePermissions(): Set<String> =
         if (hc.isPlannedExerciseAvailable()) {

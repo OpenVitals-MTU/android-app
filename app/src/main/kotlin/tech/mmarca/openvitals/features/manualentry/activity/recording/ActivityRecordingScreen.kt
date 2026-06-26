@@ -14,10 +14,14 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
@@ -59,6 +63,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
@@ -98,16 +103,8 @@ internal fun ActivityRecordingScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (state.recordingKind == ActivityRecordingKind.REPETITION) {
-                    Modifier.fillMaxHeight()
-                } else {
-                    Modifier
-                }
-            ),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -132,146 +129,175 @@ internal fun ActivityRecordingScreen(
             )
         }
 
-        if (state.recordingKind == ActivityRecordingKind.REPETITION) {
-            RepetitionRecordingStats(
-                state = state,
-                totalTime = totalTime,
-                movingTime = movingTime,
-                unitFormatter = unitFormatter,
-                onAdjustRepetitionCount = onAdjustRepetitionCount,
-                onEndRepetitionSet = onEndRepetitionSet,
-                onStartNextRepetitionSet = onStartNextRepetitionSet,
-                onFinishRecording = onFinishRecording,
-                modifier = Modifier.weight(1f),
-            )
-        } else {
-            GpsRecordingTabs(
-                state = state,
-                totalTime = totalTime,
-                movingTime = movingTime,
-                now = now,
-                unitFormatter = unitFormatter,
-            )
-        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (state.recordingKind == ActivityRecordingKind.REPETITION) {
+                RepetitionRecordingStats(
+                    state = state,
+                    totalTime = totalTime,
+                    movingTime = movingTime,
+                    unitFormatter = unitFormatter,
+                    onAdjustRepetitionCount = onAdjustRepetitionCount,
+                )
+            } else {
+                GpsRecordingTabs(
+                    state = state,
+                    totalTime = totalTime,
+                    movingTime = movingTime,
+                    now = now,
+                    unitFormatter = unitFormatter,
+                )
+                RecordingMarkersList(
+                    markers = state.markers,
+                    unitFormatter = unitFormatter,
+                    onUpdateMarker = onUpdateMarker,
+                    onDeleteMarker = onDeleteMarker,
+                )
+            }
 
-        state.errorMessage?.let { errorMessage ->
-            Text(
-                text = errorMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
+            state.errorMessage?.let { errorMessage ->
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
 
         if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
-            OpenVitalsSurface(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                shape = MaterialTheme.shapes.large,
+            GpsRecordingControls(
+                state = state,
+                onPauseRecording = onPauseRecording,
+                onResumeRecording = onResumeRecording,
+                onFinishRecording = onFinishRecording,
+                onAddLap = onAddLap,
+                onAddMarker = onAddMarker,
+            )
+        } else {
+            RepetitionRecordingControls(
+                state = state,
+                onEndRepetitionSet = onEndRepetitionSet,
+                onStartNextRepetitionSet = onStartNextRepetitionSet,
+                onFinishRecording = onFinishRecording,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GpsRecordingControls(
+    state: ActivityRecordingState,
+    onPauseRecording: () -> Unit,
+    onResumeRecording: () -> Unit,
+    onFinishRecording: () -> Unit,
+    onAddLap: () -> Unit,
+    onAddMarker: () -> Unit,
+) {
+    OpenVitalsSurface(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = stringResource(R.string.activity_entry_recording_finish_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(R.string.activity_entry_recording_finish_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (state.status == ActivityRecordingStatus.PAUSED) {
-                        OpenVitalsOutlinedButton(
-                            onClick = onResumeRecording,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = stringResource(R.string.action_resume),
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
-                        }
-
-                        OpenVitalsOutlinedButton(
-                            onClick = onFinishRecording,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = stringResource(R.string.action_finish),
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
-                        }
-                    } else {
-                        OpenVitalsOutlinedButton(
-                            onClick = onPauseRecording,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Pause,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = stringResource(R.string.action_pause),
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
-                        }
+                if (state.status == ActivityRecordingStatus.PAUSED) {
+                    OpenVitalsOutlinedButton(
+                        onClick = onResumeRecording,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.action_resume),
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                } else {
+                    OpenVitalsOutlinedButton(
+                        onClick = onPauseRecording,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.action_pause),
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
                     }
                 }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        OpenVitalsOutlinedButton(
-                            onClick = onAddLap,
-                            enabled = state.points.size >= 2,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Flag,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = stringResource(R.string.activity_entry_recording_lap),
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
-                        }
-                        OpenVitalsOutlinedButton(
-                            onClick = onAddMarker,
-                            enabled = state.latestUiPoint != null || state.points.isNotEmpty(),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Place,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = stringResource(R.string.activity_entry_recording_marker),
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
-                        }
-                    }
+                OpenVitalsOutlinedButton(
+                    onClick = onFinishRecording,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_finish),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
                 }
             }
 
-            RecordingMarkersList(
-                markers = state.markers,
-                unitFormatter = unitFormatter,
-                onUpdateMarker = onUpdateMarker,
-                onDeleteMarker = onDeleteMarker,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OpenVitalsOutlinedButton(
+                    onClick = onAddLap,
+                    enabled = state.points.size >= 2,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Flag,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.activity_entry_recording_lap),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+                OpenVitalsOutlinedButton(
+                    onClick = onAddMarker,
+                    enabled = state.latestUiPoint != null || state.points.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Place,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.activity_entry_recording_marker),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -409,93 +435,76 @@ private fun RecordingStatsTab(
     val averageSpeed = unitFormatter.averageSpeed(state.distanceMeters, totalTime.toMillis())
     val averageMovingSpeed = unitFormatter.averageSpeed(state.distanceMeters, movingTime.toMillis())
     val showSteps = activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true
+    val hasHeartRateSensor = state.bleDeviceStatuses.any {
+        BleSensorCapability.HEART_RATE in it.capabilities
+    }
+    val heartRateValue = state.currentHeartRateBpm?.let { unitFormatter.heartRate(it) }
+        ?: if (hasHeartRateSensor && state.bleHeartRateNoSignal) {
+            DisplayValue(stringResource(R.string.activity_recording_sensors_no_signal_short), "bpm")
+        } else if (hasHeartRateSensor) {
+            DisplayValue(stringResource(R.string.activity_recording_sensors_waiting_short), "bpm")
+        } else {
+            null
+        }
+
+    val statRows = buildList {
+        heartRateValue?.let { value ->
+            add(value to stringResource(R.string.activity_recording_live_heart_rate))
+        }
+        add(DisplayValue(formatRecordingElapsed(totalTime), "") to stringResource(R.string.activity_entry_recording_total_time))
+        add(distance to stringResource(R.string.activity_entry_recording_distance))
+        add(speed to stringResource(R.string.activity_entry_recording_speed))
+        add(DisplayValue(formatRecordingElapsed(movingTime), "") to stringResource(R.string.activity_entry_recording_moving_time))
+        add(averageSpeed to stringResource(R.string.activity_entry_recording_average_speed))
+        add(averageMovingSpeed to stringResource(R.string.activity_entry_recording_average_moving_speed))
+        add(maxSpeed to stringResource(R.string.activity_entry_recording_max_speed))
+        add(elevation to stringResource(R.string.activity_entry_recording_elevation_gain))
+        if (showSteps) {
+            add(DisplayValue(unitFormatter.count(state.repetitionCount), "") to stringResource(R.string.activity_entry_steps_title))
+        }
+        state.currentPowerWatts?.let { watts ->
+            add(unitFormatter.power(watts) to stringResource(R.string.activity_recording_live_power))
+        }
+        state.currentCyclingCadenceRpm?.let { cadence ->
+            add(unitFormatter.cadence(cadence.toDouble()) to stringResource(R.string.activity_recording_live_cadence))
+        }
+        state.currentRunningCadenceRpm?.let { cadence ->
+            add(unitFormatter.cadence(cadence.toDouble()) to stringResource(R.string.activity_recording_live_cadence))
+        }
+        state.currentSensorSpeedMetersPerSecond?.let { sensorSpeed ->
+            add(unitFormatter.speed(sensorSpeed) to stringResource(R.string.activity_recording_live_speed))
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                RecordingStat(
-                    value = distance,
-                    label = stringResource(R.string.activity_entry_recording_distance),
-                    modifier = Modifier.weight(1f),
-                )
-                RecordingStat(
-                    value = DisplayValue(formatRecordingElapsed(totalTime), ""),
-                    label = stringResource(R.string.activity_entry_recording_total_time),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            if (showSteps) {
+            statRows.chunked(2).forEach { rowStats ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    RecordingStat(
-                        value = DisplayValue(unitFormatter.count(state.repetitionCount), ""),
-                        label = stringResource(R.string.activity_entry_steps_title),
-                        modifier = Modifier.weight(1f),
-                    )
-                    RecordingStat(
-                        value = elevation,
-                        label = stringResource(R.string.activity_entry_recording_elevation_gain),
-                        modifier = Modifier.weight(1f),
-                    )
+                    rowStats.forEach { (value, label) ->
+                        RecordingStat(
+                            value = value,
+                            label = label,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (rowStats.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                RecordingStat(
-                    value = speed,
-                    label = stringResource(R.string.activity_entry_recording_speed),
-                    modifier = Modifier.weight(1f),
+        }
+
+        if (state.bleDeviceStatuses.isNotEmpty()) {
+            ActivityRecordingSensorStatusCard(deviceStatuses = state.bleDeviceStatuses)
+            if (state.bleHeartRateNoSignal && state.currentHeartRateBpm == null) {
+                Text(
+                    text = stringResource(R.string.activity_recording_sensors_garmin_broadcast_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                RecordingStat(
-                    value = DisplayValue(formatRecordingElapsed(movingTime), ""),
-                    label = stringResource(R.string.activity_entry_recording_moving_time),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                RecordingStat(
-                    value = averageSpeed,
-                    label = stringResource(R.string.activity_entry_recording_average_speed),
-                    modifier = Modifier.weight(1f),
-                )
-                RecordingStat(
-                    value = averageMovingSpeed,
-                    label = stringResource(R.string.activity_entry_recording_average_moving_speed),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            if (showSteps) {
-                RecordingStat(
-                    value = maxSpeed,
-                    label = stringResource(R.string.activity_entry_recording_max_speed),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    RecordingStat(
-                        value = elevation,
-                        label = stringResource(R.string.activity_entry_recording_elevation_gain),
-                        modifier = Modifier.weight(1f),
-                    )
-                    RecordingStat(
-                        value = maxSpeed,
-                        label = stringResource(R.string.activity_entry_recording_max_speed),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
             }
         }
 
@@ -756,16 +765,22 @@ internal fun RecordingStat(
     value: DisplayValue,
     label: String,
     modifier: Modifier = Modifier,
+    emphasized: Boolean = false,
 ) {
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = if (emphasized) Alignment.Start else Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = value.value,
-                style = MaterialTheme.typography.displaySmall,
+                style = if (emphasized) {
+                    MaterialTheme.typography.displayMedium
+                } else {
+                    MaterialTheme.typography.displaySmall
+                },
+                color = if (emphasized) WorkoutColor else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
             if (value.unit.isNotBlank()) {
