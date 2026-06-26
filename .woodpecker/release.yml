@@ -115,14 +115,18 @@ steps:
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - test -f gradle/wrapper/gradle-wrapper.jar
       - chmod +x gradlew
-      - ./gradlew --no-daemon --stacktrace :app:assembleRelease :app:bundleRelease
+      - ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease :app:bundleRelease
+      - debug_apk_path="$$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)"
       - apk_path="$$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)"
       - aab_path="$$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -n 1)"
+      - test -n "$${debug_apk_path}"
       - test -n "$${apk_path}"
       - test -n "$${aab_path}"
       - release_tag="$$(cat .woodpecker/tmp/release-tag.txt)"
+      - debug_apk=".woodpecker/tmp/OpenVitals-$${release_tag}-debug.apk"
       - release_apk=".woodpecker/tmp/OpenVitals-$${release_tag}.apk"
       - release_aab=".woodpecker/tmp/OpenVitals-$${release_tag}.aab"
+      - cp "$${debug_apk_path}" "$${debug_apk}"
       - cp "$${apk_path}" "$${release_apk}"
       - cp "$${aab_path}" "$${release_aab}"
     when:

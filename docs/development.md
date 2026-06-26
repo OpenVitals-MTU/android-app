@@ -47,12 +47,13 @@ git diff --check
 
 Release CI also uses the wrapper for local app test/lint and release artifact builds.
 The tag prerelease pipeline runs `verifyLocalReleaseChecks` before publishing
-signed APK and Android App Bundle assets to Codeberg as a prerelease. That
-preflight includes assembling the debug APK first, so every release has a debug
-build available for troubleshooting with the debug-only sanitized log export in
-Settings. Production deployments are approved from the successful tag pipeline
-and skip rerunning that full prerelease test suite; they still rebuild the
-signed release artifacts from the tagged commit before upload.
+the debug APK, signed release APK, and signed Android App Bundle assets to
+Codeberg as a prerelease. That preflight includes assembling the debug APK
+first, so every release has a debug build available for troubleshooting with the
+debug-only sanitized log export in Settings. Production deployments are approved
+from the successful tag pipeline and skip rerunning that full prerelease test
+suite; they still rebuild the release artifacts from the tagged commit before
+upload.
 
 A production deployment publishes the signed App Bundle directly to the Google
 Play production track with the Fastlane `android production` lane, including Play
