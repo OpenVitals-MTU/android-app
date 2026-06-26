@@ -1,0 +1,1 @@
+Ergänzt eine eigene Debug-Version für Diagnose, blendet Hydrations-Erinnerungen nach dem Erfassen automatisch aus, fügt den Fat-Free Mass Index (FFMI) hinzu, führt experimentelle Bluetooth-LE-Sensoren für Aktivitätsaufzeichnungen ein und erneuert die App-UI/UX.

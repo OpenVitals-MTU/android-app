@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.6.0 - 2026-06-27
+
+### English
+
+- Add a dedicated debug version that can be installed alongside production builds for safer troubleshooting.
+- Automatically hide hydration reminder notifications after a hydration entry is saved.
+- Add Fat-Free Mass Index (FFMI) to body composition insights when weight, height, and body fat data are available.
+- Add experimental Bluetooth LE sensor integration for activity recording.
+- Implement a refreshed UI/UX across the app with clearer navigation, metric screens, and entry flows.
+
+### Español
+
+- Añade una versión debug dedicada que puede instalarse junto a las versiones de producción para diagnósticos más seguros.
+- Oculta automáticamente las notificaciones de recordatorio de hidratación después de guardar una entrada de hidratación.
+- Añade el Índice de Masa Libre de Grasa (FFMI) a los análisis de composición corporal cuando hay peso, altura y grasa corporal disponibles.
+- Añade integración experimental con sensores Bluetooth LE para la grabación de actividades.
+- Implementa una UI/UX renovada en toda la app con navegación, pantallas de métricas y flujos de entrada más claros.
+
+### Deutsch
+
+- Fügt eine eigene Debug-Version hinzu, die für sicherere Fehlerdiagnosen neben Produktions-Builds installiert werden kann.
+- Blendet Hydrationserinnerungen automatisch aus, nachdem ein Hydrationseintrag gespeichert wurde.
+- Ergänzt den Fat-Free Mass Index (FFMI) in den Körperzusammensetzungs-Insights, wenn Gewicht, Größe und Körperfett verfügbar sind.
+- Fügt eine experimentelle Bluetooth-LE-Sensorintegration für Aktivitätsaufzeichnungen hinzu.
+- Implementiert eine überarbeitete UI/UX in der gesamten App mit klarerer Navigation, Metrikseiten und Eingabeflüssen.
+
 ## 1.5.1 - 2026-06-24
 
 ### English

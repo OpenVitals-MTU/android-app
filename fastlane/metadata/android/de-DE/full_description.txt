@@ -10,11 +10,13 @@ Was du tun kannst
 * Schritte, Distanz, Kalorien, Etagen, Höhenmeter und Trainings prüfen
 * Schlafsitzungen, Dauer und Schlafphasen prüfen
 * Herzfrequenz, Ruhepuls, HRV, Blutdruck, SpO2, Atemfrequenz, Körpertemperatur, VO2 max, Körperwerte, Flüssigkeit, Ernährung und Achtsamkeit prüfen, wenn Daten verfügbar sind
+* Den Fat-Free Mass Index (FFMI) prüfen, wenn Gewicht, Größe und Körperfett verfügbar sind
 * Von OpenVitals erstellte Einträge für Flüssigkeit, Körpermessungen, Vitalwerte, Achtsamkeit und Aktivitäten direkt in Health Connect hinzufügen und bearbeiten
 * Erfolgsabzeichen für Aktivität, Distanz, Etagen, Trainings, Flüssigkeit, Schlaf und Achtsamkeit verfolgen
 * GPX-, KML-, KMZ- und FIT-Routen importieren, vorab ansehen und routenbasierte Trainings speichern
 * Unterstützte Apple-Health-Exportdaten in Health Connect importieren
 * GPS-Aktivitäten mit Pause, Fortsetzen, Abschließen, Verwerfen, Routenvorschau, Distanz, Höhenmetern, Bewegungszeit und permanenter Benachrichtigung aufzeichnen
+* Experimentelle Bluetooth-LE-Sensoren für Herzfrequenz, Kadenz, Leistung und Footpod während der Aktivitätsaufzeichnung verbinden
 * Aktive und gesamte Kalorien für importierte oder aufgezeichnete Aktivitäten vor dem Speichern schätzen
 * Optionale Flüssigkeitserinnerungen mit aktiven Zeiten und Pause nach Erreichen des Tagesziels aktivieren
 * Für Aktivitäten eine feste Mo-So-Woche oder die letzten 7 Tage wählen

@@ -983,6 +983,7 @@ class ActivityEntryViewModelTest {
         val recorder = mockk<ActivityRecordingController>()
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.stopBlePreview() } returns Unit
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
             startTime = start,

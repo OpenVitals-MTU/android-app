@@ -973,7 +973,7 @@ class HealthRepository @Inject constructor(
             weightTime = latestWeight?.time,
             heightCm = latestHeight?.heightCm,
             heightTime = latestHeight?.time,
-            bmi = if (calculateDerivedMetrics || wants(DashboardMetric.BMI)) {
+            bmi = if (calculateDerivedMetrics && wants(DashboardMetric.BMI)) {
                 latestWeight?.weightKg?.let { weightKg ->
                     latestHeight?.heightCm
                         ?.takeIf { it > 0.0 }
@@ -982,7 +982,7 @@ class HealthRepository @Inject constructor(
             } else {
                 null
             },
-            ffmi = if (calculateDerivedMetrics || wants(DashboardMetric.FFMI)) {
+            ffmi = if (calculateDerivedMetrics && wants(DashboardMetric.FFMI)) {
                 calculateAdjustedFfmi(
                     weightKg = latestWeight?.weightKg,
                     heightCm = latestHeight?.heightCm,

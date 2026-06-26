@@ -1,0 +1,1 @@
+Anade una version debug dedicada para diagnostico, oculta automaticamente los recordatorios tras registrar hidratacion, anade el Indice de Masa Libre de Grasa (FFMI), introduce integracion experimental con sensores Bluetooth LE para actividades y renueva la UI/UX de la app.

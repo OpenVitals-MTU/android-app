@@ -40,7 +40,7 @@ internal object BleHeartRateParser {
             raw.size == 1 -> (raw[0].toInt() and 0xFF).toLong()
             else -> null
         }
-        return parsed?.takeIf { it in 1..299 }
+        return parsed?.takeIf { it > 0L }
     }
 
     fun isZeroSignal(raw: ByteArray): Boolean =

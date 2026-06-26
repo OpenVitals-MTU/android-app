@@ -31,6 +31,8 @@ fun AppLockGate(
     }
 
     val context = LocalContext.current
+    val appLockTitle = stringResource(R.string.settings_app_lock_title)
+    val appLockBody = stringResource(R.string.settings_app_lock_body)
     var unlocked by rememberSaveable { mutableStateOf(false) }
     val unlockLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -38,15 +40,15 @@ fun AppLockGate(
         unlocked = result.resultCode == Activity.RESULT_OK
     }
 
-    LaunchedEffect(enabled) {
+    LaunchedEffect(enabled, appLockTitle, appLockBody) {
         if (!unlocked) {
             val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
             if (!keyguardManager.isDeviceSecure) {
                 unlocked = true
             } else {
                 val intent = keyguardManager.createConfirmDeviceCredentialIntent(
-                    context.getString(R.string.settings_app_lock_title),
-                    context.getString(R.string.settings_app_lock_body),
+                    appLockTitle,
+                    appLockBody,
                 )
                 if (intent != null) {
                     unlockLauncher.launch(intent)

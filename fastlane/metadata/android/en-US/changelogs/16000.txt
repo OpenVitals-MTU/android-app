@@ -1,0 +1,1 @@
+Adds a dedicated debug version for troubleshooting, hides hydration reminders automatically after you log hydration, adds Fat-Free Mass Index (FFMI), introduces experimental Bluetooth LE sensor integration for activity recording, and refreshes the app UI/UX.

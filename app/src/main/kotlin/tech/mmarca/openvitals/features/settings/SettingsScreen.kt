@@ -145,6 +145,7 @@ fun SettingsScreen(
     val debugLogsSaved = stringResource(R.string.settings_debug_logs_saved)
     val debugLogsSaveFailed = stringResource(R.string.settings_debug_logs_save_failed)
     val cacheClearedMessage = stringResource(R.string.settings_clear_local_cache_done)
+    val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -265,7 +266,7 @@ fun SettingsScreen(
                                         android.content.Intent(
                                             android.content.Intent.ACTION_VIEW,
                                             android.net.Uri.parse(
-                                                context.getString(R.string.settings_privacy_policy_url),
+                                                privacyPolicyUrl,
                                             ),
                                         ),
                                     )

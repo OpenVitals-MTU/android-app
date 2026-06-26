@@ -10,11 +10,13 @@ What you can do
 * Review steps, distance, calories, floors, elevation, and workout sessions
 * Review sleep sessions, duration, and sleep stages
 * Review heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, VO2 max, body metrics, hydration, nutrition, and mindfulness data when available
+* Review Fat-Free Mass Index (FFMI) when weight, height, and body fat data are available
 * Add and edit OpenVitals-created hydration, body measurement, vitals, mindfulness, and activity entries directly in Health Connect
 * Track achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 * Import GPX, KML, KMZ, and FIT activity routes, preview them, and save route-backed workouts
 * Import supported Apple Health export records into Health Connect
 * Record GPS activities with pause, resume, finish, discard, route preview, distance, elevation, moving time, and a persistent recording notification
+* Connect experimental Bluetooth LE heart-rate, cadence, power, and footpod sensors during activity recording
 * Estimate active and total calories for imported and recorded activities before saving
 * Enable opt-in hydration reminders with active hours and daily-goal pause logic
 * Choose a fixed Mon-Sun activity week or a rolling last 7 days
