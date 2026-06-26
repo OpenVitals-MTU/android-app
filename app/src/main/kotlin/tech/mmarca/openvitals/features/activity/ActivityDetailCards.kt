@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.ui.components.DetailRow
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.DataSourceEducationLink
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
@@ -45,6 +46,7 @@ internal fun WorkoutSummaryCard(
     workout: ExerciseData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onManageDataSources: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
@@ -94,6 +96,10 @@ internal fun WorkoutSummaryCard(
                 text = "${formatDateTime(start, dateTimeFormatterProvider)} - ${formatDateTime(end, dateTimeFormatterProvider)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            DataSourceEducationLink(
+                onManageDataSources = onManageDataSources,
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
     }

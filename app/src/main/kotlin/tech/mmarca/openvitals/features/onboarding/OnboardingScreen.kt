@@ -64,16 +64,16 @@ fun OnboardingScreen(
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val permissionCategories = viewModel.permissionCategories
     val availablePermissionCategories = permissionCategories.filter { it.available }
-    val requiredPermissions = availablePermissionCategories
-        .flatMap { it.permissions }
-        .toSet()
+    val minimumOnboardingPermissions = viewModel.minimumOnboardingPermissions
+    val onboardingPermissions = viewModel.onboardingPermissions
     val manualPermissions = availablePermissionCategories
         .flatMap { it.manualPermissions }
         .toSet()
-    val missingRequiredPermissions = requiredPermissions - state.grantedPermissions
-    val missingRequestablePermissions = missingRequiredPermissions - manualPermissions
-    val missingManualPermissions = missingRequiredPermissions.intersect(manualPermissions)
-    val allRequiredPermissionsGranted = missingRequiredPermissions.isEmpty()
+    val missingMinimumPermissions = minimumOnboardingPermissions - state.grantedPermissions
+    val minimumPermissionsGranted = missingMinimumPermissions.isEmpty()
+    val missingOnboardingPermissions = onboardingPermissions - state.grantedPermissions
+    val missingRequestablePermissions = missingOnboardingPermissions - manualPermissions
+    val missingManualPermissions = missingOnboardingPermissions.intersect(manualPermissions)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -208,7 +208,8 @@ fun OnboardingScreen(
 
         OpenVitalsButton(
             onClick = {
-                if (allRequiredPermissionsGranted) {
+                if (minimumPermissionsGranted) {
+                    viewModel.completeOnboarding()
                     onOnboardingComplete()
                 } else if (missingRequestablePermissions.isNotEmpty()) {
                     requestPermissions.launch(missingRequestablePermissions)
@@ -217,20 +218,20 @@ fun OnboardingScreen(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = allRequiredPermissionsGranted ||
+            enabled = minimumPermissionsGranted ||
                 missingRequestablePermissions.isNotEmpty() ||
                 missingManualPermissions.isNotEmpty(),
         ) {
             Text(
                 when {
-                    allRequiredPermissionsGranted -> stringResource(R.string.action_get_started)
+                    minimumPermissionsGranted -> stringResource(R.string.action_get_started)
                     missingRequestablePermissions.isNotEmpty() -> stringResource(R.string.onboarding_grant_all)
                     else -> stringResource(R.string.onboarding_open_required_permissions)
                 }
             )
         }
 
-        if (missingRequestablePermissions.isNotEmpty()) {
+        if (missingRequestablePermissions.isNotEmpty() && !minimumPermissionsGranted) {
             OpenVitalsTonalButton(
                 onClick = { requestPermissions.launch(missingRequestablePermissions) },
                 modifier = Modifier
@@ -241,7 +242,7 @@ fun OnboardingScreen(
             }
         }
 
-        if (!allRequiredPermissionsGranted) {
+        if (!minimumPermissionsGranted) {
             Text(
                 text = stringResource(R.string.onboarding_core_required),
                 style = MaterialTheme.typography.bodySmall,

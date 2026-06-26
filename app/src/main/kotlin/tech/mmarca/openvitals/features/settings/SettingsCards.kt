@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
@@ -86,6 +87,7 @@ import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 
 @Composable
@@ -165,6 +167,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.SLEEP -> Icons.Outlined.Bedtime
         SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
         SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
+        SettingsSection.HEALTH_CONNECT -> Icons.Outlined.HealthAndSafety
         SettingsSection.PERMISSIONS -> Icons.Outlined.Lock
     }
 
@@ -1181,7 +1184,126 @@ internal fun PermissionCategoryCard(
 }
 
 @Composable
-internal fun PrivacyInfoCard(modifier: Modifier = Modifier) {
+internal fun HealthConnectSettingsCard(
+    syncEnabled: Boolean,
+    availability: HealthConnectAvailability,
+    matchmakingPossible: Boolean,
+    onSyncEnabledChange: (Boolean) -> Unit,
+    onManageAccess: () -> Unit,
+    onMatchmaking: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_health_connect_sync_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_health_connect_sync_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                Switch(
+                    checked = syncEnabled,
+                    onCheckedChange = onSyncEnabledChange,
+                    enabled = availability == HealthConnectAvailability.AVAILABLE,
+                )
+            }
+            OpenVitalsOutlinedButton(
+                onClick = onManageAccess,
+                enabled = availability == HealthConnectAvailability.AVAILABLE,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                Text(stringResource(R.string.settings_health_connect_manage_access))
+            }
+            if (matchmakingPossible) {
+                OpenVitalsTonalButton(
+                    onClick = onMatchmaking,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                ) {
+                    Text(stringResource(R.string.health_connect_matchmaking_action))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AppLockCard(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_app_lock_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.settings_app_lock_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Switch(checked = enabled, onCheckedChange = onEnabledChange)
+        }
+    }
+}
+
+@Composable
+internal fun ClearCacheCard(
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.settings_clear_local_cache),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.settings_clear_local_cache_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+            )
+            OpenVitalsOutlinedButton(
+                onClick = onClear,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(R.string.settings_clear_local_cache))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PrivacyInfoCard(
+    onOpenPrivacyPolicy: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
 
@@ -1220,6 +1342,14 @@ internal fun PrivacyInfoCard(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            if (onOpenPrivacyPolicy != null) {
+                OpenVitalsTextButton(
+                    onClick = onOpenPrivacyPolicy,
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    Text(stringResource(R.string.settings_privacy_policy_link))
+                }
+            }
         }
     }
 }

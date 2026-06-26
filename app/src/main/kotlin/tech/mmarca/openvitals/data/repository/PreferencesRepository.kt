@@ -40,6 +40,7 @@ class PreferencesRepository @Inject constructor(
     private val _sleepRangeMode = MutableStateFlow(readSleepRangeMode())
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     private val _showOpenVitalsCalculatedCalories = MutableStateFlow(readShowOpenVitalsCalculatedCalories())
+    private val _healthConnectSyncEnabled = MutableStateFlow(readHealthConnectSyncEnabled())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
@@ -47,6 +48,7 @@ class PreferencesRepository @Inject constructor(
     val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
     val weekPeriodModeFlow = activityWeekModeFlow.map { it.toWeekPeriodMode() }
     val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
+    val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -95,6 +97,43 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit { putBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, value) }
             _showOpenVitalsCalculatedCalories.value = value
+        }
+
+    var healthConnectSyncEnabled: Boolean
+        get() = _healthConnectSyncEnabled.value
+        set(value) {
+            prefs.edit { putBoolean(KEY_HEALTH_CONNECT_SYNC_ENABLED, value) }
+            _healthConnectSyncEnabled.value = value
+        }
+
+    var healthConnectPermissionCancelCount: Int
+        get() = prefs.getInt(KEY_HEALTH_CONNECT_PERMISSION_CANCEL_COUNT, 0)
+        set(value) {
+            prefs.edit { putInt(KEY_HEALTH_CONNECT_PERMISSION_CANCEL_COUNT, value.coerceAtLeast(0)) }
+        }
+
+    var acceptedPrivacyPolicyVersion: String?
+        get() = prefs.getString(KEY_ACCEPTED_PRIVACY_POLICY_VERSION, null)
+        set(value) {
+            prefs.edit {
+                if (value == null) {
+                    remove(KEY_ACCEPTED_PRIVACY_POLICY_VERSION)
+                } else {
+                    putString(KEY_ACCEPTED_PRIVACY_POLICY_VERSION, value)
+                }
+            }
+        }
+
+    var privacyPolicyAcceptedAtMillis: Long
+        get() = prefs.getLong(KEY_PRIVACY_POLICY_ACCEPTED_AT, 0L)
+        set(value) {
+            prefs.edit { putLong(KEY_PRIVACY_POLICY_ACCEPTED_AT, value) }
+        }
+
+    var appLockEnabled: Boolean
+        get() = prefs.getBoolean(KEY_APP_LOCK_ENABLED, false)
+        set(value) {
+            prefs.edit { putBoolean(KEY_APP_LOCK_ENABLED, value) }
         }
 
     var lastActivityExerciseType: Int?
@@ -443,6 +482,9 @@ class PreferencesRepository @Inject constructor(
     private fun readShowOpenVitalsCalculatedCalories(): Boolean =
         prefs.getBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, false)
 
+    private fun readHealthConnectSyncEnabled(): Boolean =
+        prefs.getBoolean(KEY_HEALTH_CONNECT_SYNC_ENABLED, true)
+
     private fun defaultUnitSystem(): UnitSystem {
         val country = Locale.getDefault().country.uppercase(Locale.US)
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
@@ -483,6 +525,12 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED = "activity_recording_voice_idle_enabled"
         private const val KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED = "activity_recording_voice_lap_enabled"
         private const val KEY_SHOW_OPENVITALS_CALCULATED_CALORIES = "show_openvitals_calculated_calories"
+        private const val KEY_HEALTH_CONNECT_SYNC_ENABLED = "health_connect_sync_enabled"
+        private const val KEY_HEALTH_CONNECT_PERMISSION_CANCEL_COUNT = "health_connect_permission_cancel_count"
+        private const val KEY_ACCEPTED_PRIVACY_POLICY_VERSION = "accepted_privacy_policy_version"
+        private const val KEY_PRIVACY_POLICY_ACCEPTED_AT = "privacy_policy_accepted_at"
+        private const val KEY_APP_LOCK_ENABLED = "app_lock_enabled"
+        const val CURRENT_PRIVACY_POLICY_VERSION = "1.0"
         private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"

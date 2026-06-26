@@ -69,6 +69,14 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
         )
     }
 
+    composable(Screen.SettingsHealthConnect.route) {
+        val settingsViewModel = hiltViewModel<SettingsViewModel>()
+        SettingsScreen(
+            viewModel = settingsViewModel,
+            section = SettingsSection.HEALTH_CONNECT,
+        )
+    }
+
     composable(Screen.SettingsPermissions.route) {
         val settingsViewModel = hiltViewModel<SettingsViewModel>()
         SettingsScreen(
@@ -86,5 +94,6 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.SLEEP -> Screen.SettingsSleep.route
         SettingsSection.CYCLE -> Screen.SettingsCycle.route
         SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
+        SettingsSection.HEALTH_CONNECT -> Screen.SettingsHealthConnect.route
         SettingsSection.PERMISSIONS -> Screen.SettingsPermissions.route
     }

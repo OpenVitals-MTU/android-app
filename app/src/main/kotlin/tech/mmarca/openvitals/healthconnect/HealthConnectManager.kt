@@ -74,6 +74,7 @@ import javax.inject.Singleton
 @Singleton
 class HealthConnectManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val syncGate: HealthConnectSyncGate,
 ) {
     private val diagnostics = HealthConnectDiagnostics(context)
     private val availabilityService = HealthConnectAvailabilityService(context, diagnostics)
@@ -92,6 +93,7 @@ class HealthConnectManager @Inject constructor(
                 retryAfterMinutes(retryAfterMillis),
             )
         },
+        syncEnabled = { syncGate.isEnabled },
     )
     private val activityReader = ActivityHealthReader(readerSupport, context.packageName)
     private val hydrationReader = HydrationHealthReader(readerSupport, context.packageName)
@@ -120,6 +122,7 @@ class HealthConnectManager @Inject constructor(
     val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val phase1Permissions: Set<String> get() = permissionService.phase1Permissions
+    val minimumOnboardingPermissions: Set<String> get() = permissionService.minimumOnboardingPermissions
     val phase2Permissions: Set<String> get() = permissionService.phase2Permissions
     val phase3Permissions: Set<String> get() = permissionService.phase3Permissions
     val phase4Permissions: Set<String> get() = permissionService.phase4Permissions
@@ -257,13 +260,13 @@ class HealthConnectManager @Inject constructor(
         hydrationReader.readHydrationEntry(id)
 
     suspend fun writeHydrationEntry(request: HydrationWriteRequest): String =
-        hydrationReader.writeHydrationEntry(request)
+        withSyncEnabled { hydrationReader.writeHydrationEntry(request) }
 
     suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) =
-        hydrationReader.updateHydrationEntry(id, request)
+        withSyncEnabled { hydrationReader.updateHydrationEntry(id, request) }
 
     suspend fun deleteHydrationEntry(id: String) =
-        hydrationReader.deleteHydrationEntry(id)
+        withSyncEnabled { hydrationReader.deleteHydrationEntry(id) }
 
     suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
         activityReader.readLatestWorkout(date)
@@ -309,16 +312,16 @@ class HealthConnectManager @Inject constructor(
         activityReader.readPlannedExerciseSessions(start, end)
 
     suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String =
-        activityReader.writePlannedExerciseSession(request)
+        withSyncEnabled { activityReader.writePlannedExerciseSession(request) }
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String =
-        activityReader.writeActivityEntry(request)
+        withSyncEnabled { activityReader.writeActivityEntry(request) }
 
     suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) =
-        activityReader.updateActivityEntry(id, request)
+        withSyncEnabled { activityReader.updateActivityEntry(id, request) }
 
     suspend fun deleteActivityEntry(id: String) =
-        activityReader.deleteActivityEntry(id)
+        withSyncEnabled { activityReader.deleteActivityEntry(id) }
 
     suspend fun readSleepSession(date: LocalDate): SleepData? =
         sleepReader.readSleepSession(date)
@@ -411,16 +414,16 @@ class HealthConnectManager @Inject constructor(
         bodyReader.readBodyWaterMassEntries(start, end)
 
     suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String =
-        bodyReader.writeBodyMeasurementEntry(request)
+        withSyncEnabled { bodyReader.writeBodyMeasurementEntry(request) }
 
     suspend fun readBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? =
         bodyReader.readBodyMeasurementEntry(type, id)
 
     suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) =
-        bodyReader.updateBodyMeasurementEntry(id, request)
+        withSyncEnabled { bodyReader.updateBodyMeasurementEntry(id, request) }
 
     suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) =
-        bodyReader.deleteBodyMeasurementEntry(type, id)
+        withSyncEnabled { bodyReader.deleteBodyMeasurementEntry(type, id) }
 
     suspend fun readDailyNutrition(
         startDate: LocalDate,
@@ -453,13 +456,13 @@ class HealthConnectManager @Inject constructor(
         mindfulnessReader.readMindfulnessMinutes(date)
 
     suspend fun writeMindfulnessSessionEntry(request: MindfulnessSessionWriteRequest): String =
-        mindfulnessReader.writeMindfulnessSessionEntry(request)
+        withSyncEnabled { mindfulnessReader.writeMindfulnessSessionEntry(request) }
 
     suspend fun updateMindfulnessSessionEntry(id: String, request: MindfulnessSessionWriteRequest) =
-        mindfulnessReader.updateMindfulnessSessionEntry(id, request)
+        withSyncEnabled { mindfulnessReader.updateMindfulnessSessionEntry(id, request) }
 
     suspend fun deleteMindfulnessSessionEntry(id: String) =
-        mindfulnessReader.deleteMindfulnessSessionEntry(id)
+        withSyncEnabled { mindfulnessReader.deleteMindfulnessSessionEntry(id) }
 
     suspend fun readMenstruationFlowEntries(start: Instant, end: Instant): List<MenstruationFlowEntry> =
         cycleReader.readMenstruationFlowEntries(start, end)
@@ -513,19 +516,19 @@ class HealthConnectManager @Inject constructor(
         vitalsReader.readSkinTemperatureEntries(start, end)
 
     suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String =
-        vitalsReader.writeVitalsMeasurementEntry(request)
+        withSyncEnabled { vitalsReader.writeVitalsMeasurementEntry(request) }
 
     suspend fun readVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? =
         vitalsReader.readVitalsMeasurementEntry(type, id)
 
     suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) =
-        vitalsReader.updateVitalsMeasurementEntry(id, request)
+        withSyncEnabled { vitalsReader.updateVitalsMeasurementEntry(id, request) }
 
     suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) =
-        vitalsReader.deleteVitalsMeasurementEntry(type, id)
+        withSyncEnabled { vitalsReader.deleteVitalsMeasurementEntry(type, id) }
 
     suspend fun insertImportedRecords(records: List<Record>) {
-        client().insertRecords(records)
+        withSyncEnabled { client().insertRecords(records) }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -552,6 +555,11 @@ class HealthConnectManager @Inject constructor(
             pageToken = response.pageToken
         } while (!pageToken.isNullOrBlank())
         return clientRecordIds
+    }
+
+    private suspend fun <T> withSyncEnabled(block: suspend () -> T): T {
+        syncGate.requireEnabled()
+        return block()
     }
 
     private fun client(): HealthConnectClient =

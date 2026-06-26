@@ -36,6 +36,7 @@ import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 
 @Composable
 fun ActivityDetailScreen(
@@ -146,12 +147,14 @@ private fun ActivityDetailContent(
     onSaveRouteAsGpx: () -> Unit,
     onSaveRouteAsKmz: () -> Unit,
 ) {
+    val context = LocalContext.current
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         item {
             WorkoutSummaryCard(
                 workout = workout,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onManageDataSources = { openHealthConnectPermissionSettings(context) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),

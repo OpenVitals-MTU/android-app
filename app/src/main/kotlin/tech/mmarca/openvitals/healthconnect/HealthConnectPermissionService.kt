@@ -225,6 +225,9 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(SexualActivityRecord::class),
     )
 
+    /** Minimum permissions to complete first-run onboarding */
+    val minimumOnboardingPermissions: Set<String> = corePermissions + heartPermissions
+
     /** Phase 1 - core metrics requested on first launch */
     val phase1Permissions: Set<String> = corePermissions
 

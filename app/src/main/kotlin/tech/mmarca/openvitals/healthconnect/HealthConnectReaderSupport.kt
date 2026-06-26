@@ -16,6 +16,7 @@ internal class HealthConnectReaderSupport(
     private val clientProvider: () -> HealthConnectClient,
     private val diagnostics: HealthConnectDiagnostics,
     private val rateLimitMessage: (Long) -> String,
+    private val syncEnabled: () -> Boolean = { true },
 ) {
     private val readSemaphore = Semaphore(MaxConcurrentReads)
 
@@ -44,6 +45,10 @@ internal class HealthConnectReaderSupport(
         var result: Result<T>? = null
 
         while (result == null) {
+            if (!syncEnabled()) {
+                Log.d(TAG, "Skipping $safeOperation - Health Connect sync paused")
+                return fallback
+            }
             waitForActiveRateLimit(safeOperation)
             Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
 

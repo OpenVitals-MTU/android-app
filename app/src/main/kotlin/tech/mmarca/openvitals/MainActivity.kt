@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.ui.components.AppLockGate
 import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.ExternalRouteImportRequest
 import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
@@ -44,10 +45,13 @@ class MainActivity : AppCompatActivity() {
     private var nextRouteImportRequestId = 0L
     private var routeImportRequest by mutableStateOf<ExternalRouteImportRequest?>(null)
     private var externalNavigationRoute by mutableStateOf<String?>(null)
+    private var forceOnboarding by mutableStateOf(false)
+    private var startDestination by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        forceOnboarding = intent.isHealthConnectOnboardingIntent()
         updateRouteImportRequest(intent)
         updateExternalNavigationRoute(intent)
 
@@ -71,17 +75,20 @@ class MainActivity : AppCompatActivity() {
             }
 
             OpenVitalsTheme(themeMode = appThemeMode) {
-                var startDestination by remember {
-                    mutableStateOf(
-                        if (
-                            preferencesRepository.onboardingDone &&
-                            healthRepository.availability() == HealthConnectAvailability.AVAILABLE
-                        ) {
-                            Screen.Dashboard.route
-                        } else {
-                            Screen.Onboarding.route
-                        }
-                    )
+                val resolvedStartDestination = startDestination ?: run {
+                    if (
+                        !forceOnboarding &&
+                        preferencesRepository.onboardingDone &&
+                        healthRepository.availability() == HealthConnectAvailability.AVAILABLE
+                    ) {
+                        Screen.Dashboard.route
+                    } else {
+                        Screen.Onboarding.route
+                    }
+                }.also { destination ->
+                    if (startDestination == null) {
+                        startDestination = destination
+                    }
                 }
                 val unitSystem by preferencesRepository.unitSystemFlow.collectAsStateWithLifecycle()
                 val appLanguage by preferencesRepository.appLanguageFlow.collectAsStateWithLifecycle()
@@ -90,25 +97,28 @@ class MainActivity : AppCompatActivity() {
                     AppCompatDelegate.setApplicationLocales(appLanguage.toLocaleListCompat())
                 }
 
-                AppNavigation(
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    startDestination = startDestination,
-                    routeImportRequest = routeImportRequest,
-                    externalNavigationRoute = externalNavigationRoute,
-                    onRouteImportRequestHandled = { requestId ->
-                        if (routeImportRequest?.id == requestId) {
-                            routeImportRequest = null
-                        }
-                    },
-                    onExternalNavigationHandled = {
-                        externalNavigationRoute = null
-                    },
-                    onOnboardingComplete = {
-                        preferencesRepository.onboardingDone = true
-                        startDestination = Screen.Dashboard.route
-                    },
-                )
+                AppLockGate(enabled = preferencesRepository.appLockEnabled) {
+                    AppNavigation(
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        startDestination = resolvedStartDestination,
+                        routeImportRequest = routeImportRequest,
+                        externalNavigationRoute = externalNavigationRoute,
+                        onRouteImportRequestHandled = { requestId ->
+                            if (routeImportRequest?.id == requestId) {
+                                routeImportRequest = null
+                            }
+                        },
+                        onExternalNavigationHandled = {
+                            externalNavigationRoute = null
+                        },
+                        onOnboardingComplete = {
+                            forceOnboarding = false
+                            preferencesRepository.onboardingDone = true
+                            startDestination = Screen.Dashboard.route
+                        },
+                    )
+                }
             }
         }
     }
@@ -116,6 +126,10 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.isHealthConnectOnboardingIntent()) {
+            forceOnboarding = true
+            startDestination = Screen.Onboarding.route
+        }
         updateRouteImportRequest(intent)
         updateExternalNavigationRoute(intent)
     }
@@ -131,6 +145,12 @@ class MainActivity : AppCompatActivity() {
     private fun updateExternalNavigationRoute(intent: Intent?) {
         externalNavigationRoute = intent?.openVitalsRoute()
     }
+}
+
+private fun Intent.isHealthConnectOnboardingIntent(): Boolean {
+    val action = action ?: return false
+    return action == "androidx.health.ACTION_SHOW_ONBOARDING" ||
+        action == "android.health.connect.action.SHOW_ONBOARDING"
 }
 
 private fun Intent.openVitalsRoute(): String? =

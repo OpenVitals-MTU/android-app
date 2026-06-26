@@ -41,6 +41,7 @@ fun MetricDetailScaffold(
     weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     periodOverride: (DatePeriod) -> DatePeriod = { it },
     periodTitle: @Composable ((DatePeriod) -> String)? = null,
+    syncPaused: Boolean = false,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
 ) {
@@ -64,6 +65,15 @@ fun MetricDetailScaffold(
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 headerItems()
+                if (syncPaused || isLoading) {
+                    item {
+                        HealthConnectSyncStatusBanner(
+                            syncPaused = syncPaused,
+                            syncInProgress = isLoading && !syncPaused,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
+                }
                 item {
                     TimeRangeSelector(
                         selected = selectedRange,

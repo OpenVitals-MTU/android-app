@@ -106,7 +106,14 @@ import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.HealthConnectAccessGate
+import tech.mmarca.openvitals.ui.components.HealthConnectSyncStatusBanner
 import tech.mmarca.openvitals.ui.components.PermissionCallout
+import tech.mmarca.openvitals.ui.components.resolveHealthConnectAccessGateMode
+import tech.mmarca.openvitals.ui.components.shouldShowDashboardHealthConnectPromo
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
+import androidx.compose.ui.platform.LocalContext
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -144,7 +151,20 @@ fun DashboardScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val dashboardData = state.data
+    val context = LocalContext.current
     var showDatePicker by remember { mutableStateOf(false) }
+    val accessGateMode = resolveHealthConnectAccessGateMode(
+        availability = state.healthConnectAvailability,
+        syncEnabled = state.healthConnectSyncEnabled,
+        requiredPermissions = viewModel.minimumOnboardingPermissions,
+        grantedPermissions = state.grantedPermissions,
+        showDoubleCancelRecovery = state.showDoubleCancelRecovery,
+    )
+    val showPromo = shouldShowDashboardHealthConnectPromo(
+        availability = state.healthConnectAvailability,
+        syncEnabled = state.healthConnectSyncEnabled,
+        minimumPermissionsGranted = state.minimumPermissionsGranted,
+    )
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentDay()
@@ -155,22 +175,31 @@ fun DashboardScreen(
         }
     }
 
-    PullToRefreshBox(
-        isRefreshing = state.isLoading && dashboardData != null,
-        onRefresh = viewModel::refresh,
-        modifier = Modifier.fillMaxSize(),
+    HealthConnectAccessGate(
+        mode = accessGateMode,
+        onGrant = onGrantPermissions,
+        onOpenHealthConnectSettings = { openHealthConnectPermissionSettings(context) },
     ) {
-        when {
-            state.isLoading && dashboardData == null -> FullScreenLoading()
-            state.errorMessage != null && dashboardData == null ->
-                ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
-            dashboardData != null -> DashboardContent(
-                data = dashboardData,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                canGoForward = state.selectedDate.isBefore(LocalDate.now()),
-                showPermissionsCallout = state.showPermissionsCallout,
-                dashboardWidgets = state.dashboardWidgets,
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && dashboardData != null,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when {
+                state.isLoading && dashboardData == null -> FullScreenLoading()
+                state.errorMessage != null && dashboardData == null ->
+                    ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
+                dashboardData != null -> DashboardContent(
+                    data = dashboardData,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    canGoForward = state.selectedDate.isBefore(LocalDate.now()),
+                    showPermissionsCallout = state.showPermissionsCallout,
+                    showHealthConnectPromo = showPromo,
+                    healthConnectAvailability = state.healthConnectAvailability,
+                    healthConnectSyncEnabled = state.healthConnectSyncEnabled,
+                    syncInProgress = state.isLoading,
+                    dashboardWidgets = state.dashboardWidgets,
                 pendingWidgets = state.pendingWidgets,
                 dailyGoals = state.dailyGoals,
                 isEditingDashboard = state.isEditingDashboard,
@@ -193,8 +222,10 @@ fun DashboardScreen(
                 onOpenLog = onOpenLog,
                 onStartActivity = onStartActivity,
                 onToggleDashboardEdit = viewModel::toggleDashboardEdit,
+                onHealthConnectPromoAction = onGrantPermissions,
             )
             else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
+        }
         }
     }
 
@@ -217,6 +248,10 @@ private fun DashboardContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     canGoForward: Boolean,
     showPermissionsCallout: Boolean,
+    showHealthConnectPromo: Boolean,
+    healthConnectAvailability: HealthConnectAvailability,
+    healthConnectSyncEnabled: Boolean,
+    syncInProgress: Boolean,
     dashboardWidgets: List<DashboardWidgetId>,
     pendingWidgets: Set<DashboardWidgetId>,
     dailyGoals: DashboardDailyGoals,
@@ -237,6 +272,7 @@ private fun DashboardContent(
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
     onToggleDashboardEdit: () -> Unit,
+    onHealthConnectPromoAction: () -> Unit,
 ) {
     val zone = ZoneId.systemDefault()
     val specWidgetIds = remember(dashboardWidgets, isEditingDashboard) {
@@ -312,6 +348,33 @@ private fun DashboardContent(
                         vertical = 4.dp,
                     ),
                 )
+            }
+
+            if (!healthConnectSyncEnabled || syncInProgress) {
+                item {
+                    HealthConnectSyncStatusBanner(
+                        syncPaused = !healthConnectSyncEnabled,
+                        syncInProgress = syncInProgress && healthConnectSyncEnabled,
+                        modifier = Modifier.padding(
+                            horizontal = DashboardScreenPadding,
+                            vertical = 4.dp,
+                        ),
+                    )
+                }
+            }
+
+            if (showHealthConnectPromo) {
+                item {
+                    DashboardHealthConnectPromoCard(
+                        availability = healthConnectAvailability,
+                        syncEnabled = healthConnectSyncEnabled,
+                        onPrimaryAction = onHealthConnectPromoAction,
+                        modifier = Modifier.padding(
+                            horizontal = DashboardScreenPadding,
+                            vertical = 4.dp,
+                        ),
+                    )
+                }
             }
 
             if (showPermissionsCallout) {

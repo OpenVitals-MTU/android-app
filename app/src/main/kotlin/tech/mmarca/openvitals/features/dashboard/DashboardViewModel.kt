@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
@@ -16,6 +17,7 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
+import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,11 @@ data class DashboardUiState(
     val dailyGoals: DashboardDailyGoals = DashboardDailyGoals(),
     val isEditingDashboard: Boolean = false,
     val pendingWidgets: Set<DashboardWidgetId> = emptySet(),
+    val healthConnectSyncEnabled: Boolean = true,
+    val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
+    val minimumPermissionsGranted: Boolean = true,
+    val showDoubleCancelRecovery: Boolean = false,
+    val grantedPermissions: Set<String> = emptySet(),
 )
 
 data class DashboardDailyGoals(
@@ -58,8 +65,11 @@ data class DashboardDailyGoals(
 class DashboardViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val prefs: PreferencesRepository,
+    private val permissionUxState: HealthConnectPermissionUxState,
     private val activityRepository: ActivityRepository? = null,
 ) : ViewModel() {
+
+    val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
 
     private val _uiState = MutableStateFlow(
         DashboardUiState(
@@ -156,6 +166,19 @@ class DashboardViewModel @Inject constructor(
                 }
                 .toSet()
             val current = _uiState.value
+            val availability = repository.availability()
+            val granted = if (availability == HealthConnectAvailability.AVAILABLE) {
+                repository.grantedPermissions()
+            } else {
+                emptySet()
+            }
+            val healthConnectFields = DashboardHealthConnectFields(
+                healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
+                healthConnectAvailability = availability,
+                minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
+                showDoubleCancelRecovery = permissionUxState.shouldShowDoubleCancelRecovery(),
+                grantedPermissions = granted,
+            )
             val keepCurrentDataVisible = refreshMode == RefreshMode.FORCE && current.data != null
             _uiState.value = current.copy(
                 selectedDate = clampedDate,
@@ -166,6 +189,11 @@ class DashboardViewModel @Inject constructor(
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
                 pendingWidgets = deferredWidgets,
+                healthConnectSyncEnabled = healthConnectFields.healthConnectSyncEnabled,
+                healthConnectAvailability = healthConnectFields.healthConnectAvailability,
+                minimumPermissionsGranted = healthConnectFields.minimumPermissionsGranted,
+                showDoubleCancelRecovery = healthConnectFields.showDoubleCancelRecovery,
+                grantedPermissions = healthConnectFields.grantedPermissions,
             )
             runCatching {
                 repository.loadDashboard(
@@ -361,6 +389,14 @@ class DashboardViewModel @Inject constructor(
         }
     }
 }
+
+private data class DashboardHealthConnectFields(
+    val healthConnectSyncEnabled: Boolean,
+    val healthConnectAvailability: HealthConnectAvailability,
+    val minimumPermissionsGranted: Boolean,
+    val showDoubleCancelRecovery: Boolean,
+    val grantedPermissions: Set<String>,
+)
 
 private val DashboardFastMetrics = setOf(
     DashboardMetric.STEPS,

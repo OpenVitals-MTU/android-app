@@ -130,4 +130,8 @@ internal class FakeMetricSummaryCacheDao : MetricSummaryCacheDao {
         entries.removeAll { it.writtenAtMillis < beforeMillis }
         return before - entries.size
     }
+
+    override suspend fun deleteAll() {
+        entries.clear()
+    }
 }

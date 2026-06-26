@@ -76,6 +76,10 @@ class MetricSummaryCacheStore(
     suspend fun prune(beforeMillis: Long): Int = withContext(dispatchers.io) {
         dao.deleteOlderThan(beforeMillis)
     }
+
+    suspend fun clearAll() = withContext(dispatchers.io) {
+        dao.deleteAll()
+    }
 }
 
 private fun CachedSummaryEntity.toModel(): CachedSummaryEntry =

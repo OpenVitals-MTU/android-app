@@ -148,27 +148,7 @@ fun MetricCardPlaceholder(
 
 @Composable
 fun SourceChip(source: String, modifier: Modifier = Modifier) {
-    val displayName = sourceDisplayName(source)
-    androidx.compose.material3.AssistChip(
-        onClick = {},
-        label = {
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.labelSmall,
-            )
-        },
-        modifier = modifier,
-    )
-}
-
-private fun sourceDisplayName(packageName: String): String = when {
-    packageName.contains("samsung") -> "Samsung Health"
-    packageName.contains("fitbit") -> "Fitbit"
-    packageName.contains("opentracks") -> "OpenTracks"
-    packageName.contains("strava") -> "Strava"
-    packageName.contains("polar") -> "Polar"
-    packageName.contains("google.android.apps.fitness") -> "Google Fit"
-    else -> packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }
+    DataSourceAttribution(packageName = source, modifier = modifier)
 }
 
 @Composable

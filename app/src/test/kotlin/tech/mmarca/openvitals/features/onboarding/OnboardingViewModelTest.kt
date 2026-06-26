@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
+import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -64,6 +65,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = setOf("steps", "vitals")),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -80,6 +82,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = allPermissions),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -96,7 +99,7 @@ class OnboardingViewModelTest {
             grantedPermissions = allPermissions,
         )
 
-        val vm = OnboardingViewModel(repository, prefs())
+        val vm = OnboardingViewModel(repository, prefs(), permissionUxState())
         advanceUntilIdle()
 
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, vm.uiState.value.availability)
@@ -112,7 +115,7 @@ class OnboardingViewModelTest {
             grantedPermissions = allPermissions,
         )
 
-        val vm = OnboardingViewModel(repository, prefs())
+        val vm = OnboardingViewModel(repository, prefs(), permissionUxState())
         advanceUntilIdle()
 
         assertEquals(HealthConnectAvailability.NEEDS_PROVIDER_UPDATE, vm.uiState.value.availability)
@@ -134,7 +137,7 @@ class OnboardingViewModelTest {
                 "vitals",
             ),
         )
-        val vm = OnboardingViewModel(repository, prefs())
+        val vm = OnboardingViewModel(repository, prefs(), permissionUxState())
         advanceUntilIdle()
 
         vm.onPermissionsResult(setOf("vitals"))
@@ -148,7 +151,7 @@ class OnboardingViewModelTest {
     @Test fun `onPermissionsResult re-queries granted permissions instead of trusting callback`() = runTest {
         val repository = repo(grantedPermissions = emptySet())
         coEvery { repository.grantedPermissions() } returnsMany listOf(emptySet(), setOf("steps"))
-        val vm = OnboardingViewModel(repository, prefs())
+        val vm = OnboardingViewModel(repository, prefs(), permissionUxState())
         advanceUntilIdle()
 
         vm.onPermissionsResult(emptySet())
@@ -162,6 +165,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -188,6 +192,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -218,7 +223,10 @@ class OnboardingViewModelTest {
         assertEquals(setOf("write"), categories.single { it.id == "manual_entry_write" }.permissions)
         assertEquals(setOf("import_write"), categories.single { it.id == "data_import_write" }.permissions)
         assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
-        assertTrue(categories.all { it.required })
+        assertEquals(
+            setOf("activity_sleep", "heart_recovery"),
+            categories.filter { it.required }.map { it.id }.toSet(),
+        )
         assertEquals("cycle_tracking", categories.last().id)
         assertTrue(categories.all { it.descriptionRes != 0 })
     }
@@ -231,6 +239,7 @@ class OnboardingViewModelTest {
                 mindfulnessPermissions = emptySet(),
             ),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -257,7 +266,7 @@ class OnboardingViewModelTest {
             phase2Permissions = setOf("heart", "body", "activity", "nutrition"),
             onboardingPermissions = setOf("steps", "heart", "body", "activity", "nutrition", "vitals", "cycle"),
         )
-        val vm = OnboardingViewModel(repository, prefs())
+        val vm = OnboardingViewModel(repository, prefs(), permissionUxState())
         advanceUntilIdle()
 
         val mindfulness = vm.permissionCategories.single { it.id == "mindfulness" }
@@ -273,6 +282,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet(), mindfulnessAvailable = true),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -286,6 +296,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -298,6 +309,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -310,6 +322,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -326,6 +339,7 @@ class OnboardingViewModelTest {
                 cyclePermissions = emptySet(),
             ),
             preferencesRepository = prefs(),
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -335,7 +349,7 @@ class OnboardingViewModelTest {
     @Test fun `onPermissionsResult refreshes phase 4 permission state`() = runTest {
         val repository = repo(grantedPermissions = emptySet())
         coEvery { repository.grantedPermissions() } returnsMany listOf(emptySet(), setOf("cycle"))
-        val vm = OnboardingViewModel(repository, prefs())
+        val vm = OnboardingViewModel(repository, prefs(), permissionUxState())
         advanceUntilIdle()
 
         vm.onPermissionsResult(setOf("cycle"))
@@ -350,6 +364,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(
             repository = repo(grantedPermissions = emptySet()),
             preferencesRepository = prefs,
+            permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
 
@@ -384,6 +399,7 @@ class OnboardingViewModelTest {
         mockk<HealthRepository>().also { repo ->
             every { repo.availability() } returns availability
             every { repo.phase1Permissions } returns setOf("steps")
+            every { repo.minimumOnboardingPermissions } returns setOf("steps", "heart")
             every { repo.phase2Permissions } returns phase2Permissions
             every { repo.phase3Permissions } returns setOf("vitals")
             every { repo.phase4Permissions } returns cyclePermissions
@@ -412,12 +428,18 @@ class OnboardingViewModelTest {
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 
+    private fun permissionUxState(): HealthConnectPermissionUxState =
+        mockk<HealthConnectPermissionUxState>(relaxed = true)
+
     private fun prefs(
         appLanguage: AppLanguage = AppLanguage.SYSTEM,
     ): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.appLanguage } returns appLanguage
             every { prefs.appLanguage = any() } just runs
+            every { prefs.acceptedPrivacyPolicyVersion = any() } just runs
+            every { prefs.privacyPolicyAcceptedAtMillis = any() } just runs
+            every { prefs.onboardingDone = any() } just runs
         }
 
     companion object {

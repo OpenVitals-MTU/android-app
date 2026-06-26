@@ -108,6 +108,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_data_import_group_title,
         summaryRes = R.string.settings_data_import_group_body,
     ),
+    HEALTH_CONNECT(
+        titleRes = R.string.settings_health_connect_group_title,
+        summaryRes = R.string.settings_health_connect_group_body,
+    ),
     PERMISSIONS(
         titleRes = R.string.settings_permissions_group_title,
         summaryRes = R.string.settings_permissions_group_body,
@@ -129,6 +133,7 @@ fun SettingsScreen(
     val reportCopied = stringResource(R.string.settings_apple_health_import_report_copied)
     val reportSaved = stringResource(R.string.settings_apple_health_import_report_saved)
     val reportSaveFailed = stringResource(R.string.settings_apple_health_import_report_save_failed)
+    val cacheClearedMessage = stringResource(R.string.settings_clear_local_cache_done)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -219,7 +224,21 @@ fun SettingsScreen(
                     item { SectionHeader(stringResource(R.string.section_privacy)) }
 
                     item {
-                        PrivacyInfoCard(modifier = Modifier.padding(horizontal = 16.dp))
+                        PrivacyInfoCard(
+                            onOpenPrivacyPolicy = {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(
+                                                context.getString(R.string.settings_privacy_policy_url),
+                                            ),
+                                        ),
+                                    )
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
                     }
 
                     item {
@@ -341,6 +360,48 @@ fun SettingsScreen(
                             },
                             onSaveReport = {
                                 appleHealthReportSaver.launch("openvitals-apple-health-import-report.txt")
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+                SettingsSection.HEALTH_CONNECT -> {
+                    item { SectionHeader(stringResource(section.titleRes)) }
+                    item {
+                        HealthConnectSettingsCard(
+                            syncEnabled = state.healthConnectSyncEnabled,
+                            availability = state.availability,
+                            matchmakingPossible = state.matchmakingPossible,
+                            onSyncEnabledChange = viewModel::setHealthConnectSyncEnabled,
+                            onManageAccess = openManualPermissionSettings,
+                            onMatchmaking = {
+                                runCatching {
+                                    context.startActivity(viewModel.createMatchmakingIntent())
+                                }.onFailure {
+                                    Toast.makeText(context, unableToOpenPermissions, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item { SettingsCardSpacer() }
+                    item {
+                        AppLockCard(
+                            enabled = state.appLockEnabled,
+                            onEnabledChange = viewModel::setAppLockEnabled,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item { SettingsCardSpacer() }
+                    item {
+                        ClearCacheCard(
+                            onClear = {
+                                viewModel.clearCachedSummaries()
+                                Toast.makeText(
+                                    context,
+                                    cacheClearedMessage,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             },
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )

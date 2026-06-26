@@ -153,6 +153,7 @@ class HealthRepository @Inject constructor(
     fun permissionContract() = hc.permissionContract()
 
     val phase1Permissions get() = hc.phase1Permissions
+    val minimumOnboardingPermissions get() = hc.minimumOnboardingPermissions
     val phase2Permissions get() = hc.phase2Permissions
     val phase3Permissions get() = hc.phase3Permissions
     val phase4Permissions get() = hc.phase4Permissions

@@ -84,4 +84,7 @@ interface MetricSummaryCacheDao {
 
     @Query("DELETE FROM metric_summary_cache WHERE writtenAtMillis < :beforeMillis")
     suspend fun deleteOlderThan(beforeMillis: Long): Int
+
+    @Query("DELETE FROM metric_summary_cache")
+    suspend fun deleteAll()
 }

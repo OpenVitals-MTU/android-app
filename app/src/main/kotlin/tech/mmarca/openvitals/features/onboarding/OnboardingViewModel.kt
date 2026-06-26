@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +46,7 @@ data class OnboardingPermissionCategory(
 class OnboardingViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val permissionUxState: HealthConnectPermissionUxState,
 ) : ViewModel() {
     companion object {
         private const val TAG = "OnboardingViewModel"
@@ -54,6 +56,7 @@ class OnboardingViewModel @Inject constructor(
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     val phase1Permissions get() = repository.phase1Permissions
+    val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
     val phase2Permissions get() = repository.phase2Permissions
     val phase3Permissions get() = repository.phase3Permissions
     val phase4Permissions get() = repository.phase4Permissions
@@ -79,35 +82,35 @@ class OnboardingViewModel @Inject constructor(
                 titleRes = R.string.onboarding_category_body,
                 descriptionRes = R.string.onboarding_category_body_desc,
                 permissions = repository.bodyPermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "activity_extras",
                 titleRes = R.string.onboarding_category_activity_extras,
                 descriptionRes = R.string.onboarding_category_activity_extras_desc,
                 permissions = repository.activityExtrasPermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "nutrition_hydration",
                 titleRes = R.string.onboarding_category_nutrition_hydration,
                 descriptionRes = R.string.onboarding_category_nutrition_hydration_desc,
                 permissions = repository.nutritionHydrationPermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "manual_entry_write",
                 titleRes = R.string.onboarding_category_manual_entry_write,
                 descriptionRes = R.string.onboarding_category_manual_entry_write_desc,
                 permissions = repository.requestableWritePermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "data_import_write",
                 titleRes = R.string.onboarding_category_data_import_write,
                 descriptionRes = R.string.onboarding_category_data_import_write_desc,
                 permissions = repository.dataImportWritePermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "mindfulness",
@@ -116,7 +119,7 @@ class OnboardingViewModel @Inject constructor(
                 permissions = repository.mindfulnessPermissions,
                 available = _uiState.value.mindfulnessAvailable,
                 unavailableReasonRes = R.string.onboarding_category_mindfulness_unavailable,
-                required = _uiState.value.mindfulnessAvailable,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "additional_data_access",
@@ -124,21 +127,21 @@ class OnboardingViewModel @Inject constructor(
                 descriptionRes = R.string.onboarding_category_additional_data_access_desc,
                 permissions = repository.additionalDataAccessPermissions + repository.routePermissions,
                 manualPermissions = repository.routePermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "vitals",
                 titleRes = R.string.onboarding_category_vitals,
                 descriptionRes = R.string.onboarding_category_vitals_desc,
                 permissions = repository.vitalsPermissions,
-                required = true,
+                required = false,
             ),
             OnboardingPermissionCategory(
                 id = "cycle_tracking",
                 titleRes = R.string.onboarding_category_cycle_tracking,
                 descriptionRes = R.string.onboarding_category_cycle_tracking_desc,
                 permissions = repository.cyclePermissions,
-                required = true,
+                required = false,
             ),
         ).filter { it.permissions.isNotEmpty() }
 
@@ -185,6 +188,11 @@ class OnboardingViewModel @Inject constructor(
     fun onPermissionsResult(granted: Set<String>) {
         viewModelScope.launch {
             Log.d(TAG, "onPermissionsResult callbackGrantedCount=${granted.size}")
+            if (granted.isEmpty()) {
+                permissionUxState.recordPermissionRequestCancelled()
+            } else {
+                permissionUxState.recordPermissionRequestGranted()
+            }
             val allGranted = repository.grantedPermissions()
             Log.d(TAG, "onPermissionsResult allGrantedCount=${allGranted.size}")
             _uiState.value = _uiState.value.copy(
@@ -201,4 +209,12 @@ class OnboardingViewModel @Inject constructor(
         preferencesRepository.appLanguage = appLanguage
         _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
     }
+
+    fun completeOnboarding() {
+        preferencesRepository.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
+        preferencesRepository.privacyPolicyAcceptedAtMillis = System.currentTimeMillis()
+        preferencesRepository.onboardingDone = true
+    }
+
+    fun shouldShowDoubleCancelRecovery(): Boolean = permissionUxState.shouldShowDoubleCancelRecovery()
 }

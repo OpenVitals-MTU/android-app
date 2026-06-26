@@ -20,6 +20,9 @@ import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhas
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
+import tech.mmarca.openvitals.healthconnect.HealthConnectMatchmaking
+import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
+import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +51,10 @@ data class SettingsUiState(
     val activityRecordingPreferences: ActivityRecordingPreferences = ActivityRecordingPreferences(),
     val showOpenVitalsCalculatedCalories: Boolean = false,
     val favoriteActivityExerciseType: Int? = null,
+    val healthConnectSyncEnabled: Boolean = true,
+    val matchmakingAvailable: Boolean = false,
+    val matchmakingPossible: Boolean = false,
+    val appLockEnabled: Boolean = false,
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet()
@@ -77,6 +84,9 @@ class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
+    private val matchmaking: HealthConnectMatchmaking,
+    private val permissionUxState: HealthConnectPermissionUxState,
+    private val metricSummaryCacheStore: MetricSummaryCacheStore,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -98,6 +108,17 @@ class SettingsViewModel @Inject constructor(
             } else emptySet()
             Log.d(TAG, "refresh availability=$avail grantedCount=${granted.size}")
 
+            val matchmakingAvailable = if (avail == HealthConnectAvailability.AVAILABLE) {
+                matchmaking.isFeatureAvailable()
+            } else {
+                false
+            }
+            val matchmakingPossible = if (matchmakingAvailable) {
+                matchmaking.isMatchmakingPossible()
+            } else {
+                false
+            }
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 availability = avail,
@@ -115,6 +136,10 @@ class SettingsViewModel @Inject constructor(
                 activityRecordingPreferences = preferencesRepository.activityRecordingPreferences(),
                 showOpenVitalsCalculatedCalories = preferencesRepository.showOpenVitalsCalculatedCalories,
                 favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
+                healthConnectSyncEnabled = preferencesRepository.healthConnectSyncEnabled,
+                matchmakingAvailable = matchmakingAvailable,
+                matchmakingPossible = matchmakingPossible,
+                appLockEnabled = preferencesRepository.appLockEnabled,
             )
         }
     }
@@ -238,8 +263,36 @@ class SettingsViewModel @Inject constructor(
 
     fun onPermissionsResult(granted: Set<String>) {
         Log.d(TAG, "onPermissionsResult callbackGrantedCount=${granted.size}")
+        if (granted.isNotEmpty()) {
+            permissionUxState.recordPermissionRequestGranted()
+        } else {
+            permissionUxState.recordPermissionRequestCancelled()
+        }
         refresh()
     }
+
+    fun setHealthConnectSyncEnabled(enabled: Boolean) {
+        preferencesRepository.healthConnectSyncEnabled = enabled
+        _uiState.value = _uiState.value.copy(healthConnectSyncEnabled = enabled)
+    }
+
+    fun setAppLockEnabled(enabled: Boolean) {
+        preferencesRepository.appLockEnabled = enabled
+        _uiState.value = _uiState.value.copy(appLockEnabled = enabled)
+    }
+
+    fun clearCachedSummaries() {
+        viewModelScope.launch {
+            metricSummaryCacheStore.clearAll()
+        }
+    }
+
+    fun acceptPrivacyPolicy() {
+        preferencesRepository.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
+        preferencesRepository.privacyPolicyAcceptedAtMillis = System.currentTimeMillis()
+    }
+
+    fun createMatchmakingIntent() = matchmaking.createMatchmakingIntent()
 
     private fun permissionCategories(availability: HealthConnectAvailability): List<SettingsPermissionCategory> {
         val mindfulnessAvailable = availability == HealthConnectAvailability.AVAILABLE &&
