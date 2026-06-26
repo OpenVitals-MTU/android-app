@@ -158,6 +158,8 @@ class BodyViewModelTest {
         assertNull(state.heightCm)
         assertTrue(state.heightEntries.isEmpty())
         assertTrue(state.bodyFatEntries.isEmpty())
+        assertNull(state.ffmi)
+        assertNull(state.adjustedFfmi)
         assertNull(state.leanMassKg)
         assertTrue(state.leanMassEntries.isEmpty())
         assertNull(state.bmrKcal)
@@ -244,6 +246,26 @@ class BodyViewModelTest {
         assertEquals(entries, vm.uiState.value.bodyFatEntries)
     }
 
+    @Test fun `load uses latest body values when selected period entries are empty`() = runTest {
+        val repo = mockk<BodyRepository>()
+        coEvery { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL) } returns BodyPeriodData(
+            latestWeightKg = 77.0,
+            heightCm = 186.0,
+            latestBodyFatPercent = 20.0,
+        )
+
+        val vm = BodyViewModel(repo)
+        val state = vm.uiState.value
+
+        assertTrue(state.weightEntries.isEmpty())
+        assertTrue(state.bodyFatEntries.isEmpty())
+        assertEquals(77.0, state.latestWeightKg!!, 0.01)
+        assertEquals(20.0, state.latestBodyFatPercent!!, 0.01)
+        assertEquals(22.26, state.bmi!!, 0.01)
+        assertEquals(17.81, state.ffmi!!, 0.01)
+        assertEquals(17.43, state.adjustedFfmi!!, 0.01)
+    }
+
     @Test fun `load success populates lean mass`() = runTest {
         val entries = listOf(leanMassAt(58.3, 1_000))
         val repo = emptyRepo()
@@ -322,6 +344,44 @@ class BodyViewModelTest {
         )
         // 76 / (1.80^2) ≈ 23.46
         assertEquals(23.46, state.bmi!!, 0.01)
+    }
+
+    // ─── BodyUiState.ffmi ────────────────────────────────────────────────────
+
+    @Test fun `ffmi is null when body fat is missing`() {
+        val state = BodyUiState(weightEntries = listOf(weightAt(75.0, 1_000)), heightCm = 178.0)
+        assertNull(state.ffmi)
+        assertNull(state.adjustedFfmi)
+    }
+
+    @Test fun `ffmi computed correctly from weight height and body fat`() {
+        val state = BodyUiState(
+            weightEntries = listOf(weightAt(75.0, 1_000)),
+            heightCm = 178.0,
+            bodyFatEntries = listOf(bodyFatAt(20.0, 1_000)),
+        )
+        // 60 kg fat-free mass / (1.78^2) ≈ 18.94; adjusted ≈ 19.06
+        assertEquals(18.94, state.ffmi!!, 0.01)
+        assertEquals(19.06, state.adjustedFfmi!!, 0.01)
+    }
+
+    @Test fun `ffmi uses most recent body fat entry`() {
+        val state = BodyUiState(
+            weightEntries = listOf(weightAt(75.0, 1_000)),
+            heightCm = 178.0,
+            bodyFatEntries = listOf(bodyFatAt(25.0, 1_000), bodyFatAt(20.0, 2_000)),
+        )
+        assertEquals(18.94, state.ffmi!!, 0.01)
+    }
+
+    @Test fun `ffmi is null for invalid body fat percent`() {
+        val state = BodyUiState(
+            weightEntries = listOf(weightAt(75.0, 1_000)),
+            heightCm = 178.0,
+            bodyFatEntries = listOf(bodyFatAt(100.0, 1_000)),
+        )
+        assertNull(state.ffmi)
+        assertNull(state.adjustedFfmi)
     }
 
     // ─── BodyUiState.latestWeightKg / firstWeightKg / weightChangKg ──────────

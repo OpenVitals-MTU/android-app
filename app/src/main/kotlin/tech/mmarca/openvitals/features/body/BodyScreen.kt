@@ -388,7 +388,7 @@ private fun BodyMetricScreen(
                             }
                         }
                         bmiDataConfidence(state, period)
-                        bmiContextCard(state.bmi)
+                        bmiContextCard(state.bmi, state.ffmi, state.adjustedFfmi, unitFormatter)
                     },
                     entriesContent = {
                         chartDaySelection.selectedDate?.let { selectedDate ->
@@ -737,9 +737,7 @@ private fun LazyListScope.bodyContent(
         onDeleteBodyMeasurement = onDeleteBodyMeasurement,
     )
 
-    if (state.bmi != null) {
-        bmiContextCard(state.bmi)
-    }
+    bmiContextCard(state.bmi, state.ffmi, state.adjustedFfmi, unitFormatter)
 }
 
 private fun LazyListScope.bodyOverviewStatistics(

@@ -114,12 +114,14 @@ class BodyRepository @Inject constructor(
             }
             BodyPeriodMetric.BMI -> {
                 val entries = async { loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) } }
+                val latestWeight = async { loadLatestWeight(granted) }
                 val height = async { loadLatestHeight(granted) }
                 val weightEntries = entries.await()
                 BodyPeriodData(
                     weightEntries = weightEntries.current,
                     previousWeightEntries = weightEntries.previous,
                     baselineWeightEntries = weightEntries.baseline,
+                    latestWeightKg = latestWeight.await(),
                     heightCm = height.await(),
                 )
             }
@@ -180,9 +182,11 @@ class BodyRepository @Inject constructor(
         granted: Set<String>,
     ): BodyPeriodData = coroutineScope {
         val weight = async { loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) } }
+        val latestWeight = async { loadLatestWeight(granted) }
         val height = async { loadPeriodTriplet(windows) { start, end -> loadHeightEntries(start, end, granted) } }
         val latestHeight = async { loadLatestHeight(granted) }
         val bodyFat = async { loadPeriodTriplet(windows) { start, end -> loadBodyFatEntries(start, end, granted) } }
+        val latestBodyFat = async { loadLatestBodyFat(granted) }
         val leanMass = async { loadPeriodTriplet(windows) { start, end -> loadLeanBodyMassEntries(start, end, granted) } }
         val bmr = async { loadPeriodTriplet(windows) { start, end -> loadBmrEntries(start, end, granted) } }
         val boneMass = async { loadPeriodTriplet(windows) { start, end -> loadBoneMassEntries(start, end, granted) } }
@@ -200,6 +204,7 @@ class BodyRepository @Inject constructor(
             weightEntries = weightEntries.current,
             previousWeightEntries = weightEntries.previous,
             baselineWeightEntries = weightEntries.baseline,
+            latestWeightKg = latestWeight.await(),
             heightCm = latestHeight.await(),
             heightEntries = heightEntries.current,
             previousHeightEntries = heightEntries.previous,
@@ -207,6 +212,7 @@ class BodyRepository @Inject constructor(
             bodyFatEntries = bodyFatEntries.current,
             previousBodyFatEntries = bodyFatEntries.previous,
             baselineBodyFatEntries = bodyFatEntries.baseline,
+            latestBodyFatPercent = latestBodyFat.await(),
             leanMassEntries = leanMassEntries.current,
             previousLeanMassEntries = leanMassEntries.previous,
             baselineLeanMassEntries = leanMassEntries.baseline,
@@ -239,6 +245,11 @@ class BodyRepository @Inject constructor(
     suspend fun loadWeightEntries(start: LocalDate, end: LocalDate): List<WeightEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadWeightEntries(start, end, granted)
+    }
+
+    private suspend fun loadLatestWeight(granted: Set<String>): Double? {
+        if (readWeightPermission !in granted) return null
+        return hc.readLatestWeight()?.weightKg
     }
 
     private suspend fun loadWeightEntries(
@@ -286,6 +297,11 @@ class BodyRepository @Inject constructor(
     suspend fun loadBodyFatEntries(start: LocalDate, end: LocalDate): List<BodyFatEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBodyFatEntries(start, end, granted)
+    }
+
+    private suspend fun loadLatestBodyFat(granted: Set<String>): Double? {
+        if (readBodyFatPermission !in granted) return null
+        return hc.readLatestBodyFat()
     }
 
     private suspend fun loadBodyFatEntries(
@@ -420,9 +436,7 @@ class BodyRepository @Inject constructor(
             Log.w(TAG, "Skipping writeBodyMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect body write permission.")
         }
-        return hc.writeBodyMeasurementEntry(request).also {
-            queryCache.invalidateOperations("dashboard")
-        }
+        return hc.writeBodyMeasurementEntry(request).also { invalidateBodyCaches() }
     }
 
     suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
@@ -446,7 +460,7 @@ class BodyRepository @Inject constructor(
             throw SecurityException("Missing Health Connect body write permission.")
         }
         hc.updateBodyMeasurementEntry(id, request)
-        queryCache.invalidateOperations("dashboard")
+        invalidateBodyCaches()
     }
 
     suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) {
@@ -456,7 +470,12 @@ class BodyRepository @Inject constructor(
             throw SecurityException("Missing Health Connect body write permission.")
         }
         hc.deleteBodyMeasurementEntry(type, id)
+        invalidateBodyCaches()
+    }
+
+    private suspend fun invalidateBodyCaches() {
         queryCache.invalidateOperations("dashboard")
+        metricSummaryCacheStore?.invalidateSurface(BodyPeriodDataCodec.Surface)
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()
@@ -484,6 +503,7 @@ data class BodyPeriodData(
     val weightEntries: List<WeightEntry> = emptyList(),
     val previousWeightEntries: List<WeightEntry> = emptyList(),
     val baselineWeightEntries: List<WeightEntry> = emptyList(),
+    val latestWeightKg: Double? = null,
     val heightCm: Double? = null,
     val heightEntries: List<HeightEntry> = emptyList(),
     val previousHeightEntries: List<HeightEntry> = emptyList(),
@@ -491,6 +511,7 @@ data class BodyPeriodData(
     val bodyFatEntries: List<BodyFatEntry> = emptyList(),
     val previousBodyFatEntries: List<BodyFatEntry> = emptyList(),
     val baselineBodyFatEntries: List<BodyFatEntry> = emptyList(),
+    val latestBodyFatPercent: Double? = null,
     val leanMassKg: Double? = null,
     val leanMassEntries: List<LeanBodyMassEntry> = emptyList(),
     val previousLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),

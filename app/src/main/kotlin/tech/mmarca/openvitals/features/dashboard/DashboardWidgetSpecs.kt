@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MonitorWeight
@@ -473,6 +474,17 @@ internal fun dashboardWidgetSpecs(
             accentColor = WeightColor,
             loadingMessage = loadingMessageFor(DashboardWidgetId.BMI),
             onClick = openMetric(DashboardWidgetId.BMI),
+        )
+    }
+    if (shouldBuild(DashboardWidgetId.FFMI)) {
+        addOptionalMetric(
+            id = DashboardWidgetId.FFMI,
+            title = stringResource(R.string.metric_ffmi),
+            value = data.ffmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
+            icon = Icons.Outlined.FitnessCenter,
+            accentColor = BodyFatColor,
+            loadingMessage = loadingMessageFor(DashboardWidgetId.FFMI),
+            onClick = openMetric(DashboardWidgetId.FFMI),
         )
     }
     if (shouldBuild(DashboardWidgetId.BODY_FAT)) {

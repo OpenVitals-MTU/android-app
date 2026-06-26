@@ -75,6 +75,8 @@ data class BodyUiState(
     val latestBodyFatPercent: Double? = bodyFatEntries.maxByOrNull { it.time }?.percent,
     val previousLatestBodyFatPercent: Double? = previousBodyFatEntries.maxByOrNull { it.time }?.percent,
     val bmi: Double? = latestWeightKg.bmiWith(heightCm),
+    val ffmi: Double? = latestWeightKg.ffmiWith(heightCm, latestBodyFatPercent),
+    val adjustedFfmi: Double? = ffmi.adjustedFfmiWith(heightCm),
     val latestHeightCm: Double? = heightEntries.maxByOrNull { it.time }?.heightCm ?: heightCm,
     val previousLatestHeightCm: Double? = previousHeightEntries.maxByOrNull { it.time }?.heightCm,
     val latestLeanMassKg: Double? = leanMassEntries.maxByOrNull { it.time }?.massKg ?: leanMassKg,
@@ -270,6 +272,8 @@ class BodyViewModel(
                         latestBodyFatPercent = summary.latestBodyFatPercent,
                         previousLatestBodyFatPercent = summary.previousLatestBodyFatPercent,
                         bmi = summary.bmi,
+                        ffmi = summary.ffmi,
+                        adjustedFfmi = summary.adjustedFfmi,
                         latestHeightCm = summary.latestHeightCm,
                         previousLatestHeightCm = summary.previousLatestHeightCm,
                         latestLeanMassKg = summary.latestLeanMassKg,
@@ -329,6 +333,8 @@ private data class BodySummary(
     val latestBodyFatPercent: Double?,
     val previousLatestBodyFatPercent: Double?,
     val bmi: Double?,
+    val ffmi: Double?,
+    val adjustedFfmi: Double?,
     val latestHeightCm: Double?,
     val previousLatestHeightCm: Double?,
     val latestLeanMassKg: Double?,
@@ -349,10 +355,12 @@ private fun BodyPeriodData.summary(
     boneMassKg: Double?,
     bodyWaterMassKg: Double?,
 ): BodySummary {
-    val latestWeightKg = weightEntries.maxByOrNull { it.time }?.weightKg
+    val latestWeightKg = weightEntries.maxByOrNull { it.time }?.weightKg ?: this.latestWeightKg
     val previousLatestWeightKg = previousWeightEntries.maxByOrNull { it.time }?.weightKg
     val firstWeightKg = weightEntries.minByOrNull { it.time }?.weightKg
     val latestHeightCm = heightEntries.maxByOrNull { it.time }?.heightCm ?: heightCm
+    val latestBodyFatPercent = bodyFatEntries.maxByOrNull { it.time }?.percent ?: this.latestBodyFatPercent
+    val ffmi = latestWeightKg.ffmiWith(heightCm, latestBodyFatPercent)
     return BodySummary(
         latestWeightKg = latestWeightKg,
         previousLatestWeightKg = previousLatestWeightKg,
@@ -362,9 +370,11 @@ private fun BodyPeriodData.summary(
         } else {
             null
         },
-        latestBodyFatPercent = bodyFatEntries.maxByOrNull { it.time }?.percent,
+        latestBodyFatPercent = latestBodyFatPercent,
         previousLatestBodyFatPercent = previousBodyFatEntries.maxByOrNull { it.time }?.percent,
         bmi = latestWeightKg.bmiWith(heightCm),
+        ffmi = ffmi,
+        adjustedFfmi = ffmi.adjustedFfmiWith(heightCm),
         latestHeightCm = latestHeightCm,
         previousLatestHeightCm = previousHeightEntries.maxByOrNull { it.time }?.heightCm,
         latestLeanMassKg = leanMassEntries.maxByOrNull { it.time }?.massKg ?: leanMassKg,
@@ -385,4 +395,22 @@ private fun Double?.bmiWith(heightCm: Double?): Double? {
     if (height <= 0.0) return null
     val heightMeters = height / 100.0
     return weight / (heightMeters * heightMeters)
+}
+
+private fun Double?.ffmiWith(heightCm: Double?, bodyFatPercent: Double?): Double? {
+    val weight = this ?: return null
+    val height = heightCm ?: return null
+    val bodyFat = bodyFatPercent ?: return null
+    if (weight <= 0.0 || height <= 0.0 || bodyFat < 0.0 || bodyFat >= 100.0) return null
+    val heightMeters = height / 100.0
+    val fatFreeMassKg = weight * (1.0 - bodyFat / 100.0)
+    return fatFreeMassKg / (heightMeters * heightMeters)
+}
+
+private fun Double?.adjustedFfmiWith(heightCm: Double?): Double? {
+    val ffmi = this ?: return null
+    val height = heightCm ?: return null
+    if (height <= 0.0) return null
+    val heightMeters = height / 100.0
+    return ffmi + (6.3 * (1.8 - heightMeters))
 }

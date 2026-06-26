@@ -407,6 +407,7 @@
     <string name="metric_weight">Peso</string>
     <string name="metric_height">Altura</string>
     <string name="metric_bmi">IMC</string>
+    <string name="metric_ffmi">FFMI</string>
     <string name="metric_lean_mass">Masa magra</string>
     <string name="metric_bmr">TMB</string>
     <string name="metric_bone_mass">Masa ósea</string>
@@ -677,6 +678,16 @@
     <string name="interpretation_bmi_obesity_3">Obesidad clase 3</string>
     <string name="interpretation_bmi_body">Categoría de cribado de IMC para adultos; el IMC no mide la composición corporal.</string>
     <string name="interpretation_bmi_source">Fuente: categorías de IMC en adultos de los CDC.</string>
+    <string name="interpretation_ffmi_title">Categoría de FFMI</string>
+    <string name="interpretation_ffmi_below_average">Por debajo del promedio</string>
+    <string name="interpretation_ffmi_average">Promedio</string>
+    <string name="interpretation_ffmi_above_average">Por encima del promedio</string>
+    <string name="interpretation_ffmi_excellent">Excelente</string>
+    <string name="interpretation_ffmi_superior">Superior</string>
+    <string name="interpretation_ffmi_exceptional">Excepcional</string>
+    <string name="interpretation_ffmi_elite">Élite</string>
+    <string name="interpretation_ffmi_body">FFMI %1$s; FFMI ajustado %2$s. Usa tu peso, grasa corporal y altura más recientes.</string>
+    <string name="interpretation_ffmi_source">Fuente: categorías indicativas de FFMI ajustado de ffmicalculators.com.</string>
     <string name="interpretation_sleep_title">Objetivo de sueño</string>
     <string name="interpretation_sleep_below">Por debajo del objetivo</string>
     <string name="interpretation_sleep_near">Cerca del objetivo</string>

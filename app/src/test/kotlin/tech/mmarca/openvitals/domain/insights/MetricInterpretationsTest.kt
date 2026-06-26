@@ -43,6 +43,17 @@ class MetricInterpretationsTest {
     }
 
     @Test
+    fun classifiesAdjustedFfmiBoundaries() {
+        assertEquals(FfmiCategory.BELOW_AVERAGE, ffmiInterpretation(17.9)?.category)
+        assertEquals(FfmiCategory.AVERAGE, ffmiInterpretation(18.0)?.category)
+        assertEquals(FfmiCategory.ABOVE_AVERAGE, ffmiInterpretation(20.0)?.category)
+        assertEquals(FfmiCategory.EXCELLENT, ffmiInterpretation(22.0)?.category)
+        assertEquals(FfmiCategory.SUPERIOR, ffmiInterpretation(24.0)?.category)
+        assertEquals(FfmiCategory.EXCEPTIONAL, ffmiInterpretation(26.0)?.category)
+        assertEquals(FfmiCategory.ELITE, ffmiInterpretation(28.0)?.category)
+    }
+
+    @Test
     fun interpretsSleepAgainstUserTarget() {
         assertEquals(
             SleepTargetStatus.BELOW_TARGET,
@@ -127,6 +138,7 @@ class MetricInterpretationsTest {
     fun returnsNullForInvalidInputs() {
         assertNull(bloodPressureInterpretation(0, 80))
         assertNull(bmiInterpretation(0.0))
+        assertNull(ffmiInterpretation(0.0))
         assertNull(sleepTargetInterpretation(0.0, 8.0))
         assertNull(macroSplitInterpretation(0.0, 0.0, 0.0))
         assertNull(workoutGuidelineProgress(10.0, 0.0))

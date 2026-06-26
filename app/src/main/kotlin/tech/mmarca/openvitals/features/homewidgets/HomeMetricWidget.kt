@@ -509,6 +509,7 @@ internal fun DashboardData.toSnapshot(
         DashboardWidgetId.WEIGHT -> snapshot(weightKg?.let(unitFormatter::weight))
         DashboardWidgetId.HEIGHT -> snapshot(heightCm?.let(unitFormatter::height))
         DashboardWidgetId.BMI -> snapshot(bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") })
+        DashboardWidgetId.FFMI -> snapshot(ffmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") })
         DashboardWidgetId.BODY_FAT -> snapshot(bodyFatPercent.takeIf { it > 0.0 }?.let { unitFormatter.percent(it) })
         DashboardWidgetId.LEAN_MASS -> snapshot(leanMassKg?.let(unitFormatter::bodyMass))
         DashboardWidgetId.BMR -> snapshot(bmrKcal?.let(unitFormatter::energy))
@@ -571,6 +572,7 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.WEIGHT -> R.string.metric_weight
     DashboardWidgetId.HEIGHT -> R.string.metric_height
     DashboardWidgetId.BMI -> R.string.metric_bmi
+    DashboardWidgetId.FFMI -> R.string.metric_ffmi
     DashboardWidgetId.BODY_FAT -> R.string.metric_body_fat
     DashboardWidgetId.LEAN_MASS -> R.string.metric_lean_mass
     DashboardWidgetId.BMR -> R.string.metric_bmr

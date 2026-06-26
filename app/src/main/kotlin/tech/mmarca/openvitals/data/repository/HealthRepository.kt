@@ -483,6 +483,7 @@ class HealthRepository @Inject constructor(
     ): DashboardData {
         val metrics = when (key) {
             DerivedMetricKey.BMI -> setOf(DashboardMetric.BMI)
+            DerivedMetricKey.FFMI -> setOf(DashboardMetric.FFMI)
             DerivedMetricKey.CALORIES_OUT -> setOf(DashboardMetric.CALORIES_OUT)
             DerivedMetricKey.SLEEP_SCORE -> setOf(DashboardMetric.SLEEP)
             DerivedMetricKey.RESTING_HEART_RATE_BASELINE -> setOf(DashboardMetric.RESTING_HEART_RATE)
@@ -505,6 +506,7 @@ class HealthRepository @Inject constructor(
         config: DerivedDashboardConfig,
     ): Set<DerivedMetricKey> = buildSet {
         if (DashboardMetric.BMI in metrics) add(DerivedMetricKey.BMI)
+        if (DashboardMetric.FFMI in metrics) add(DerivedMetricKey.FFMI)
         if (DashboardMetric.CALORIES_OUT in metrics && config.showOpenVitalsCalculatedCalories) {
             add(DerivedMetricKey.CALORIES_OUT)
         }
@@ -721,20 +723,24 @@ class HealthRepository @Inject constructor(
             hc.readHydrationLiters(date)
         }
         val weight = readIfNeeded(
-            wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI),
+            wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI, DashboardMetric.FFMI),
             readWeightPermission,
             "weight",
         ) {
             hc.readLatestWeight()
         }
         val height = readIfNeeded(
-            wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI),
+            wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI, DashboardMetric.FFMI),
             readHeightPermission,
             "height",
         ) {
             hc.readLatestHeightEntry()
         }
-        val bodyFat = readIfNeeded(wants(DashboardMetric.BODY_FAT), readBodyFatPermission, "body fat") {
+        val bodyFat = readIfNeeded(
+            wantsAny(DashboardMetric.BODY_FAT, DashboardMetric.FFMI),
+            readBodyFatPermission,
+            "body fat",
+        ) {
             hc.readLatestBodyFat()
         }
         val leanMass = readIfNeeded(wants(DashboardMetric.LEAN_MASS), readLeanMassPermission, "lean mass") {
@@ -918,6 +924,7 @@ class HealthRepository @Inject constructor(
             .takeIf { it.isNotEmpty() }
             ?.map { it.rmssdMs }
             ?.average()
+        val latestBodyFatPercent = bodyFat?.await()
 
         val metricSourcePackages = buildMap {
             fun putSource(metric: DashboardMetric, source: String?) {
@@ -926,10 +933,10 @@ class HealthRepository @Inject constructor(
             if (wants(DashboardMetric.SLEEP)) {
                 putSource(DashboardMetric.SLEEP, dashboardSleep?.sleep?.source)
             }
-            if (wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI)) {
+            if (wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI, DashboardMetric.FFMI)) {
                 putSource(DashboardMetric.WEIGHT, latestWeight?.source)
             }
-            if (wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI)) {
+            if (wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI, DashboardMetric.FFMI)) {
                 putSource(DashboardMetric.HEIGHT, latestHeight?.source)
             }
             if (wants(DashboardMetric.BLOOD_PRESSURE)) {
@@ -966,7 +973,7 @@ class HealthRepository @Inject constructor(
             weightTime = latestWeight?.time,
             heightCm = latestHeight?.heightCm,
             heightTime = latestHeight?.time,
-            bmi = if (calculateDerivedMetrics) {
+            bmi = if (calculateDerivedMetrics || wants(DashboardMetric.BMI)) {
                 latestWeight?.weightKg?.let { weightKg ->
                     latestHeight?.heightCm
                         ?.takeIf { it > 0.0 }
@@ -975,7 +982,16 @@ class HealthRepository @Inject constructor(
             } else {
                 null
             },
-            bodyFatPercent = bodyFat?.await() ?: 0.0,
+            ffmi = if (calculateDerivedMetrics || wants(DashboardMetric.FFMI)) {
+                calculateAdjustedFfmi(
+                    weightKg = latestWeight?.weightKg,
+                    heightCm = latestHeight?.heightCm,
+                    bodyFatPercent = latestBodyFatPercent,
+                )
+            } else {
+                null
+            },
+            bodyFatPercent = latestBodyFatPercent ?: 0.0,
             leanMassKg = leanMass?.await(),
             bmrKcal = bmr?.await(),
             boneMassKg = boneMass?.await(),
@@ -1026,6 +1042,22 @@ class HealthRepository @Inject constructor(
             loadedMetrics = metrics,
             metricSourcePackages = metricSourcePackages,
         )
+    }
+
+    private fun calculateAdjustedFfmi(
+        weightKg: Double?,
+        heightCm: Double?,
+        bodyFatPercent: Double?,
+    ): Double? {
+        val weight = weightKg?.takeIf { it > 0.0 } ?: return null
+        val heightMeters = heightCm?.takeIf { it > 0.0 }?.let { it / 100.0 } ?: return null
+        val bodyFatRatio = bodyFatPercent
+            ?.takeIf { it in 0.0..100.0 }
+            ?.let { it / 100.0 }
+            ?: return null
+        val fatFreeMassKg = weight * (1.0 - bodyFatRatio)
+        val ffmi = fatFreeMassKg / (heightMeters * heightMeters)
+        return ffmi + (6.3 * (1.8 - heightMeters))
     }
 
     private suspend fun readDashboardSleep(
@@ -1238,6 +1270,7 @@ class HealthRepository @Inject constructor(
                 DashboardMetric.WEIGHT -> setOf(readWeightPermission)
                 DashboardMetric.HEIGHT -> setOf(readHeightPermission)
                 DashboardMetric.BMI -> setOf(readWeightPermission, readHeightPermission)
+                DashboardMetric.FFMI -> setOf(readWeightPermission, readHeightPermission, readBodyFatPermission)
                 DashboardMetric.BODY_FAT -> setOf(readBodyFatPermission)
                 DashboardMetric.LEAN_MASS -> setOf(readLeanMassPermission)
                 DashboardMetric.BMR -> setOf(readBmrPermission)
@@ -1443,6 +1476,7 @@ private fun DashboardData.mergeDerivedDashboardProjection(projection: DashboardD
             caloriesKcalSource
         },
         bmi = if (DashboardMetric.BMI in projection.loadedMetrics) projection.bmi else bmi,
+        ffmi = if (DashboardMetric.FFMI in projection.loadedMetrics) projection.ffmi else ffmi,
         sleepScore = if (DashboardMetric.SLEEP in projection.loadedMetrics) projection.sleepScore else sleepScore,
         restingHeartRateBaselineBpm = if (DashboardMetric.RESTING_HEART_RATE in projection.loadedMetrics) {
             projection.restingHeartRateBaselineBpm

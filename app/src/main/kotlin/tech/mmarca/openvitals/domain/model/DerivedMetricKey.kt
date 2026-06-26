@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.domain.model
 
 enum class DerivedMetricKey {
     BMI,
+    FFMI,
     CALORIES_OUT,
     SLEEP_SCORE,
     RESTING_HEART_RATE_BASELINE,
@@ -9,4 +10,3 @@ enum class DerivedMetricKey {
     WEEKLY_CARDIO_LOAD,
     INTENSITY_MINUTES,
 }
-

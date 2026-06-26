@@ -130,12 +130,13 @@ object HeartPeriodDataCodec {
 
 object BodyPeriodDataCodec {
     const val Surface = "body-period"
-    const val SchemaVersion = 1
+    const val SchemaVersion = 2
 
     fun encode(data: BodyPeriodData): String = encodeObject {
         put("weightEntries", data.weightEntries.toJsonArray { it.toJson() })
         put("previousWeightEntries", data.previousWeightEntries.toJsonArray { it.toJson() })
         put("baselineWeightEntries", data.baselineWeightEntries.toJsonArray { it.toJson() })
+        putNullable("latestWeightKg", data.latestWeightKg)
         putNullable("heightCm", data.heightCm)
         put("heightEntries", data.heightEntries.toJsonArray { it.toJson() })
         put("previousHeightEntries", data.previousHeightEntries.toJsonArray { it.toJson() })
@@ -143,6 +144,7 @@ object BodyPeriodDataCodec {
         put("bodyFatEntries", data.bodyFatEntries.toJsonArray { it.toJson() })
         put("previousBodyFatEntries", data.previousBodyFatEntries.toJsonArray { it.toJson() })
         put("baselineBodyFatEntries", data.baselineBodyFatEntries.toJsonArray { it.toJson() })
+        putNullable("latestBodyFatPercent", data.latestBodyFatPercent)
         putNullable("leanMassKg", data.leanMassKg)
         put("leanMassEntries", data.leanMassEntries.toJsonArray { it.toJson() })
         put("previousLeanMassEntries", data.previousLeanMassEntries.toJsonArray { it.toJson() })
@@ -167,6 +169,7 @@ object BodyPeriodDataCodec {
             weightEntries = root.array("weightEntries").map { it.jsonObject.toWeightEntry() },
             previousWeightEntries = root.array("previousWeightEntries").map { it.jsonObject.toWeightEntry() },
             baselineWeightEntries = root.array("baselineWeightEntries").map { it.jsonObject.toWeightEntry() },
+            latestWeightKg = root.doubleOrNull("latestWeightKg"),
             heightCm = root.doubleOrNull("heightCm"),
             heightEntries = root.array("heightEntries").map { it.jsonObject.toHeightEntry() },
             previousHeightEntries = root.array("previousHeightEntries").map { it.jsonObject.toHeightEntry() },
@@ -174,6 +177,7 @@ object BodyPeriodDataCodec {
             bodyFatEntries = root.array("bodyFatEntries").map { it.jsonObject.toBodyFatEntry() },
             previousBodyFatEntries = root.array("previousBodyFatEntries").map { it.jsonObject.toBodyFatEntry() },
             baselineBodyFatEntries = root.array("baselineBodyFatEntries").map { it.jsonObject.toBodyFatEntry() },
+            latestBodyFatPercent = root.doubleOrNull("latestBodyFatPercent"),
             leanMassKg = root.doubleOrNull("leanMassKg"),
             leanMassEntries = root.array("leanMassEntries").map { it.jsonObject.toLeanBodyMassEntry() },
             previousLeanMassEntries = root.array("previousLeanMassEntries").map { it.jsonObject.toLeanBodyMassEntry() },

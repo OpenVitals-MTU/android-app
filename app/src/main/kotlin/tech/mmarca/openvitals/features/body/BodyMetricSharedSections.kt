@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.MonitorWeight
@@ -26,9 +27,11 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.BmiCategory
 import tech.mmarca.openvitals.domain.insights.DataValueKind
+import tech.mmarca.openvitals.domain.insights.FfmiCategory
 import tech.mmarca.openvitals.domain.insights.PeriodComparison
 import tech.mmarca.openvitals.domain.insights.bmiInterpretation
 import tech.mmarca.openvitals.domain.insights.dataConfidence
+import tech.mmarca.openvitals.domain.insights.ffmiInterpretation
 import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -66,28 +69,63 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-internal fun LazyListScope.bmiContextCard(bmi: Double?) {
-    val interpretation = bmi?.let { bmiInterpretation(it) } ?: return
+internal fun LazyListScope.bmiContextCard(
+    bmi: Double?,
+    ffmi: Double?,
+    adjustedFfmi: Double?,
+    unitFormatter: UnitFormatter,
+) {
+    val bmiInterpretation = bmi?.let { bmiInterpretation(it) }
+    val ffmiInterpretation = adjustedFfmi?.let { ffmiInterpretation(it) }
+    if (bmiInterpretation == null && ffmiInterpretation == null) return
 
     item { SectionHeader(stringResource(R.string.section_metric_context)) }
-    item {
-        MetricInterpretationCard(
-            title = stringResource(R.string.interpretation_bmi_title),
-            status = when (interpretation.category) {
-                BmiCategory.UNDERWEIGHT -> stringResource(R.string.interpretation_bmi_underweight)
-                BmiCategory.HEALTHY -> stringResource(R.string.interpretation_bmi_healthy)
-                BmiCategory.OVERWEIGHT -> stringResource(R.string.interpretation_bmi_overweight)
-                BmiCategory.OBESITY_CLASS_1 -> stringResource(R.string.interpretation_bmi_obesity_1)
-                BmiCategory.OBESITY_CLASS_2 -> stringResource(R.string.interpretation_bmi_obesity_2)
-                BmiCategory.OBESITY_CLASS_3 -> stringResource(R.string.interpretation_bmi_obesity_3)
-            },
-            body = stringResource(R.string.interpretation_bmi_body),
-            source = stringResource(R.string.interpretation_bmi_source),
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            severity = interpretation.severity,
-            modifier = metricModifier(),
-        )
+    if (bmiInterpretation != null) {
+        item {
+            MetricInterpretationCard(
+                title = stringResource(R.string.interpretation_bmi_title),
+                status = when (bmiInterpretation.category) {
+                    BmiCategory.UNDERWEIGHT -> stringResource(R.string.interpretation_bmi_underweight)
+                    BmiCategory.HEALTHY -> stringResource(R.string.interpretation_bmi_healthy)
+                    BmiCategory.OVERWEIGHT -> stringResource(R.string.interpretation_bmi_overweight)
+                    BmiCategory.OBESITY_CLASS_1 -> stringResource(R.string.interpretation_bmi_obesity_1)
+                    BmiCategory.OBESITY_CLASS_2 -> stringResource(R.string.interpretation_bmi_obesity_2)
+                    BmiCategory.OBESITY_CLASS_3 -> stringResource(R.string.interpretation_bmi_obesity_3)
+                },
+                body = stringResource(R.string.interpretation_bmi_body),
+                source = stringResource(R.string.interpretation_bmi_source),
+                icon = Icons.Outlined.MonitorWeight,
+                accentColor = WeightColor,
+                severity = bmiInterpretation.severity,
+                modifier = metricModifier(),
+            )
+        }
+    }
+    if (ffmiInterpretation != null && ffmi != null) {
+        item {
+            MetricInterpretationCard(
+                title = stringResource(R.string.interpretation_ffmi_title),
+                status = when (ffmiInterpretation.category) {
+                    FfmiCategory.BELOW_AVERAGE -> stringResource(R.string.interpretation_ffmi_below_average)
+                    FfmiCategory.AVERAGE -> stringResource(R.string.interpretation_ffmi_average)
+                    FfmiCategory.ABOVE_AVERAGE -> stringResource(R.string.interpretation_ffmi_above_average)
+                    FfmiCategory.EXCELLENT -> stringResource(R.string.interpretation_ffmi_excellent)
+                    FfmiCategory.SUPERIOR -> stringResource(R.string.interpretation_ffmi_superior)
+                    FfmiCategory.EXCEPTIONAL -> stringResource(R.string.interpretation_ffmi_exceptional)
+                    FfmiCategory.ELITE -> stringResource(R.string.interpretation_ffmi_elite)
+                },
+                body = stringResource(
+                    R.string.interpretation_ffmi_body,
+                    unitFormatter.decimal(ffmi, 1),
+                    unitFormatter.decimal(adjustedFfmi, 1),
+                ),
+                source = stringResource(R.string.interpretation_ffmi_source),
+                icon = Icons.Outlined.FitnessCenter,
+                accentColor = BodyFatColor,
+                severity = ffmiInterpretation.severity,
+                modifier = metricModifier(),
+            )
+        }
     }
 }
 
@@ -428,6 +466,15 @@ internal fun bodyMetricData(
             values = bmiHistoryValues(state.weightEntries, state.heightCm),
             color = WeightColor,
             icon = Icons.Outlined.MonitorWeight,
+            valueDisplayFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
+        ),
+        BodyMetricData(
+            metric = BodyMetric.BMI,
+            titleRes = R.string.metric_ffmi,
+            latest = state.adjustedFfmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
+            values = emptyList(),
+            color = BodyFatColor,
+            icon = Icons.Outlined.FitnessCenter,
             valueDisplayFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
         ),
         BodyMetricData(

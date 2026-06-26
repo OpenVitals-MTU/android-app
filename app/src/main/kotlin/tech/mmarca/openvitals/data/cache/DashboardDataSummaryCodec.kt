@@ -21,7 +21,7 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyIntensityMinutes
 
 object DashboardDataSummaryCodec {
     const val Surface = "dashboard"
-    const val SchemaVersion = 1
+    const val SchemaVersion = 2
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -47,6 +47,7 @@ object DashboardDataSummaryCodec {
                 putNullable("heightCm", data.heightCm)
                 putNullable("heightTime", data.heightTime?.toString())
                 putNullable("bmi", data.bmi)
+                putNullable("ffmi", data.ffmi)
                 put("avgHeartRateBpm", data.avgHeartRateBpm)
                 put("heartRateSampleCount", data.heartRateSampleCount)
                 putNullable("heartRateSampleStartTime", data.heartRateSampleStartTime?.toString())
@@ -108,6 +109,7 @@ object DashboardDataSummaryCodec {
             heightCm = root.doubleOrNull("heightCm"),
             heightTime = root.instantOrNull("heightTime"),
             bmi = root.doubleOrNull("bmi"),
+            ffmi = root.doubleOrNull("ffmi"),
             avgHeartRateBpm = root.long("avgHeartRateBpm"),
             heartRateSampleCount = root.int("heartRateSampleCount"),
             heartRateSampleStartTime = root.instantOrNull("heartRateSampleStartTime"),

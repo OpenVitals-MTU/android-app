@@ -31,8 +31,23 @@ enum class BmiCategory {
     OBESITY_CLASS_3,
 }
 
+enum class FfmiCategory {
+    BELOW_AVERAGE,
+    AVERAGE,
+    ABOVE_AVERAGE,
+    EXCELLENT,
+    SUPERIOR,
+    EXCEPTIONAL,
+    ELITE,
+}
+
 data class BmiInterpretation(
     val category: BmiCategory,
+    val severity: InterpretationSeverity,
+)
+
+data class FfmiInterpretation(
+    val category: FfmiCategory,
     val severity: InterpretationSeverity,
 )
 
@@ -143,6 +158,31 @@ fun bmiInterpretation(bmi: Double): BmiInterpretation? {
             BmiCategory.OBESITY_CLASS_1,
             BmiCategory.OBESITY_CLASS_2,
             BmiCategory.OBESITY_CLASS_3 -> InterpretationSeverity.CAUTION
+        },
+    )
+}
+
+fun ffmiInterpretation(adjustedFfmi: Double): FfmiInterpretation? {
+    if (adjustedFfmi <= 0.0) return null
+    val category = when {
+        adjustedFfmi < 18.0 -> FfmiCategory.BELOW_AVERAGE
+        adjustedFfmi < 20.0 -> FfmiCategory.AVERAGE
+        adjustedFfmi < 22.0 -> FfmiCategory.ABOVE_AVERAGE
+        adjustedFfmi < 24.0 -> FfmiCategory.EXCELLENT
+        adjustedFfmi < 26.0 -> FfmiCategory.SUPERIOR
+        adjustedFfmi < 28.0 -> FfmiCategory.EXCEPTIONAL
+        else -> FfmiCategory.ELITE
+    }
+    return FfmiInterpretation(
+        category = category,
+        severity = when (category) {
+            FfmiCategory.EXCELLENT,
+            FfmiCategory.SUPERIOR -> InterpretationSeverity.POSITIVE
+            FfmiCategory.EXCEPTIONAL,
+            FfmiCategory.ELITE -> InterpretationSeverity.CAUTION
+            FfmiCategory.BELOW_AVERAGE,
+            FfmiCategory.AVERAGE,
+            FfmiCategory.ABOVE_AVERAGE -> InterpretationSeverity.INFO
         },
     )
 }

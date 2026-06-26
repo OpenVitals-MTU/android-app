@@ -63,6 +63,8 @@ class DashboardDataSummaryCodecTest {
                 sleepStageCount = 1,
                 usesSleepStages = true,
             ),
+            bmi = 22.3,
+            ffmi = 17.4,
             weeklyCardioLoad = DashboardWeeklyCardioLoad(
                 currentScore = 250,
                 targetScore = 400,
@@ -79,7 +81,13 @@ class DashboardDataSummaryCodecTest {
                 confidence = IntensityMinutesConfidence.MEDIUM,
             ),
             missingPermissions = setOf("missing-a"),
-            loadedMetrics = setOf(DashboardMetric.STEPS, DashboardMetric.SLEEP, DashboardMetric.WORKOUT),
+            loadedMetrics = setOf(
+                DashboardMetric.STEPS,
+                DashboardMetric.SLEEP,
+                DashboardMetric.WORKOUT,
+                DashboardMetric.BMI,
+                DashboardMetric.FFMI,
+            ),
             caloriesKcalSource = CaloriesBurnedSource.RECORDED_TOTAL,
         )
 
@@ -91,6 +99,8 @@ class DashboardDataSummaryCodecTest {
         assertEquals(data.workouts.size, decoded.workouts.size)
         assertEquals(data.sleep?.stages?.size, decoded.sleep?.stages?.size)
         assertEquals(data.sleepScore.score, decoded.sleepScore.score)
+        assertEquals(data.bmi, decoded.bmi)
+        assertEquals(data.ffmi, decoded.ffmi)
         assertEquals(data.weeklyCardioLoad?.targetScore, decoded.weeklyCardioLoad?.targetScore)
         assertEquals(data.weeklyIntensityMinutes?.moderateEquivalentMinutes, decoded.weeklyIntensityMinutes?.moderateEquivalentMinutes)
         assertEquals(data.loadedMetrics, decoded.loadedMetrics)

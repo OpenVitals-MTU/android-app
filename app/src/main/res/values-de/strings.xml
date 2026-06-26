@@ -407,6 +407,7 @@
     <string name="metric_weight">Gewicht</string>
     <string name="metric_height">Größe</string>
     <string name="metric_bmi">BMI</string>
+    <string name="metric_ffmi">FFMI</string>
     <string name="metric_lean_mass">Fettfreie Masse</string>
     <string name="metric_bmr">BMR</string>
     <string name="metric_bone_mass">Knochenmasse</string>
@@ -677,6 +678,16 @@
     <string name="interpretation_bmi_obesity_3">Adipositas Grad 3</string>
     <string name="interpretation_bmi_body">Nur BMI-Screeningkategorie für Erwachsene; BMI misst nicht die Körperzusammensetzung.</string>
     <string name="interpretation_bmi_source">Quelle: BMI-Kategorien für Erwachsene der CDC.</string>
+    <string name="interpretation_ffmi_title">FFMI-Kategorie</string>
+    <string name="interpretation_ffmi_below_average">Unterdurchschnittlich</string>
+    <string name="interpretation_ffmi_average">Durchschnittlich</string>
+    <string name="interpretation_ffmi_above_average">Überdurchschnittlich</string>
+    <string name="interpretation_ffmi_excellent">Ausgezeichnet</string>
+    <string name="interpretation_ffmi_superior">Sehr hoch</string>
+    <string name="interpretation_ffmi_exceptional">Außergewöhnlich</string>
+    <string name="interpretation_ffmi_elite">Elite</string>
+    <string name="interpretation_ffmi_body">FFMI %1$s; angepasster FFMI %2$s. Verwendet dein neuestes Gewicht, Körperfett und deine Größe.</string>
+    <string name="interpretation_ffmi_source">Quelle: indikative angepasste FFMI-Kategorien von ffmicalculators.com.</string>
     <string name="interpretation_sleep_title">Schlafziel</string>
     <string name="interpretation_sleep_below">Unter Ziel</string>
     <string name="interpretation_sleep_near">Nahe am Ziel</string>

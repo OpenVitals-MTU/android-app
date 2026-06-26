@@ -408,6 +408,7 @@
     <string name="metric_weight">Weight</string>
     <string name="metric_height">Height</string>
     <string name="metric_bmi">BMI</string>
+    <string name="metric_ffmi">FFMI</string>
     <string name="metric_lean_mass">Lean mass</string>
     <string name="metric_bmr">BMR</string>
     <string name="metric_bone_mass">Bone mass</string>
@@ -678,6 +679,16 @@
     <string name="interpretation_bmi_obesity_3">Obesity class 3</string>
     <string name="interpretation_bmi_body">Adult BMI screening category only; BMI does not measure body composition.</string>
     <string name="interpretation_bmi_source">Source: CDC adult BMI categories.</string>
+    <string name="interpretation_ffmi_title">FFMI category</string>
+    <string name="interpretation_ffmi_below_average">Below average</string>
+    <string name="interpretation_ffmi_average">Average</string>
+    <string name="interpretation_ffmi_above_average">Above average</string>
+    <string name="interpretation_ffmi_excellent">Excellent</string>
+    <string name="interpretation_ffmi_superior">Superior</string>
+    <string name="interpretation_ffmi_exceptional">Exceptional</string>
+    <string name="interpretation_ffmi_elite">Elite</string>
+    <string name="interpretation_ffmi_body">FFMI %1$s; adjusted FFMI %2$s. Uses your latest weight, body fat, and height.</string>
+    <string name="interpretation_ffmi_source">Source: ffmicalculators.com indicative adjusted FFMI categories.</string>
     <string name="interpretation_sleep_title">Sleep target</string>
     <string name="interpretation_sleep_below">Below target</string>
     <string name="interpretation_sleep_near">Near target</string>

@@ -24,6 +24,7 @@ data class DashboardData(
     val heightCm: Double? = null,
     val heightTime: Instant? = null,
     val bmi: Double? = null,
+    val ffmi: Double? = null,
     val avgHeartRateBpm: Long = 0,
     val heartRateSampleCount: Int = 0,
     val heartRateSampleStartTime: Instant? = null,
@@ -87,27 +88,40 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         workouts = if (DashboardMetric.WORKOUT in other.loadedMetrics) other.workouts else workouts,
         sleep = if (DashboardMetric.SLEEP in other.loadedMetrics) other.sleep else sleep,
         sleepScore = if (DashboardMetric.SLEEP in other.loadedMetrics) other.sleepScore else sleepScore,
-        weightKg = if (DashboardMetric.WEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
+        weightKg = if (DashboardMetric.WEIGHT in other.loadedMetrics ||
+            DashboardMetric.BMI in other.loadedMetrics ||
+            DashboardMetric.FFMI in other.loadedMetrics
+        ) {
             other.weightKg
         } else {
             weightKg
         },
-        weightTime = if (DashboardMetric.WEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
+        weightTime = if (DashboardMetric.WEIGHT in other.loadedMetrics ||
+            DashboardMetric.BMI in other.loadedMetrics ||
+            DashboardMetric.FFMI in other.loadedMetrics
+        ) {
             other.weightTime
         } else {
             weightTime
         },
-        heightCm = if (DashboardMetric.HEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
+        heightCm = if (DashboardMetric.HEIGHT in other.loadedMetrics ||
+            DashboardMetric.BMI in other.loadedMetrics ||
+            DashboardMetric.FFMI in other.loadedMetrics
+        ) {
             other.heightCm
         } else {
             heightCm
         },
-        heightTime = if (DashboardMetric.HEIGHT in other.loadedMetrics || DashboardMetric.BMI in other.loadedMetrics) {
+        heightTime = if (DashboardMetric.HEIGHT in other.loadedMetrics ||
+            DashboardMetric.BMI in other.loadedMetrics ||
+            DashboardMetric.FFMI in other.loadedMetrics
+        ) {
             other.heightTime
         } else {
             heightTime
         },
         bmi = if (DashboardMetric.BMI in other.loadedMetrics) other.bmi else bmi,
+        ffmi = if (DashboardMetric.FFMI in other.loadedMetrics) other.ffmi else ffmi,
         avgHeartRateBpm = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) other.avgHeartRateBpm else avgHeartRateBpm,
         heartRateSampleCount = if (DashboardMetric.AVG_HEART_RATE in other.loadedMetrics) {
             other.heartRateSampleCount
@@ -147,7 +161,13 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         } else {
             hrvSampleEndTime
         },
-        bodyFatPercent = if (DashboardMetric.BODY_FAT in other.loadedMetrics) other.bodyFatPercent else bodyFatPercent,
+        bodyFatPercent = if (DashboardMetric.BODY_FAT in other.loadedMetrics ||
+            DashboardMetric.FFMI in other.loadedMetrics
+        ) {
+            other.bodyFatPercent
+        } else {
+            bodyFatPercent
+        },
         leanMassKg = if (DashboardMetric.LEAN_MASS in other.loadedMetrics) other.leanMassKg else leanMassKg,
         bmrKcal = if (DashboardMetric.BMR in other.loadedMetrics) other.bmrKcal else bmrKcal,
         boneMassKg = if (DashboardMetric.BONE_MASS in other.loadedMetrics) other.boneMassKg else boneMassKg,

@@ -407,6 +407,7 @@ fun AppNavigation(
                             DashboardWidgetId.WEIGHT,
                             DashboardWidgetId.HEIGHT,
                             DashboardWidgetId.BMI,
+                            DashboardWidgetId.FFMI,
                             DashboardWidgetId.BODY_FAT,
                             DashboardWidgetId.LEAN_MASS,
                             DashboardWidgetId.BONE_MASS,
@@ -573,6 +574,7 @@ fun AppNavigation(
                             DashboardWidgetId.WEIGHT,
                             DashboardWidgetId.HEIGHT,
                             DashboardWidgetId.BMI,
+                            DashboardWidgetId.FFMI,
                             DashboardWidgetId.BODY_FAT,
                             DashboardWidgetId.LEAN_MASS,
                             DashboardWidgetId.BONE_MASS,
@@ -796,6 +798,7 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.WEIGHT -> R.string.screen_body
         DashboardWidgetId.HEIGHT -> R.string.screen_body
         DashboardWidgetId.BMI -> R.string.screen_body
+        DashboardWidgetId.FFMI -> R.string.screen_body
         DashboardWidgetId.BODY_FAT -> R.string.screen_body
         DashboardWidgetId.LEAN_MASS -> R.string.screen_body
         DashboardWidgetId.BMR -> R.string.screen_calories

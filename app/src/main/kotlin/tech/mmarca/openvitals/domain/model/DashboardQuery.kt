@@ -33,6 +33,7 @@ enum class DashboardMetric {
     WEIGHT,
     HEIGHT,
     BMI,
+    FFMI,
     BODY_FAT,
     LEAN_MASS,
     BMR,

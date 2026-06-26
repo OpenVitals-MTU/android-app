@@ -171,9 +171,11 @@ class PeriodResultCodecsTest {
         assertRoundTrip(
             BodyPeriodData(
                 weightEntries = listOf(WeightEntry(start, weightKg = 70.5, source = "test", id = "w1", isOpenVitalsEntry = true)),
+                latestWeightKg = 71.0,
                 heightCm = null,
                 heightEntries = listOf(HeightEntry(start, heightCm = 180.0, source = "test")),
                 bodyFatEntries = listOf(BodyFatEntry(start, percent = 18.2, source = "test")),
+                latestBodyFatPercent = 19.0,
                 leanMassKg = 57.2,
                 leanMassEntries = listOf(LeanBodyMassEntry(start, massKg = 57.2, source = "test")),
                 bmrEntries = listOf(BmrEntry(start, kcalPerDay = 1600.0, source = "test")),

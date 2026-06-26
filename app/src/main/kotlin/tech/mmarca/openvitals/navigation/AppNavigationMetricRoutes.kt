@@ -314,9 +314,10 @@ private fun DashboardWidgetId.isNutritionDetailMetric(): Boolean =
         this == DashboardWidgetId.FAT
 
 private fun DashboardWidgetId.isBodyDetailMetric(): Boolean =
-    this == DashboardWidgetId.WEIGHT ||
+        this == DashboardWidgetId.WEIGHT ||
         this == DashboardWidgetId.HEIGHT ||
         this == DashboardWidgetId.BMI ||
+        this == DashboardWidgetId.FFMI ||
         this == DashboardWidgetId.BODY_FAT ||
         this == DashboardWidgetId.LEAN_MASS ||
         this == DashboardWidgetId.BONE_MASS ||
@@ -354,6 +355,7 @@ private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =
         DashboardWidgetId.WEIGHT -> BodyMetric.WEIGHT
         DashboardWidgetId.HEIGHT -> BodyMetric.HEIGHT
         DashboardWidgetId.BMI -> BodyMetric.BMI
+        DashboardWidgetId.FFMI -> BodyMetric.BMI
         DashboardWidgetId.BODY_FAT -> BodyMetric.BODY_FAT
         DashboardWidgetId.LEAN_MASS -> BodyMetric.LEAN_MASS
         DashboardWidgetId.BMR -> BodyMetric.BMR
