@@ -137,6 +137,16 @@ New detail screens should follow this mental model:
   - `Week / Month / Year` mode
   - optional list/breakdown
 
+### Health Connect screen shell
+
+Health Connect-backed destinations should use the shared shell instead of wiring access gates, sync banners, or permission callouts ad hoc:
+
+- `WithHealthConnectFeatureScreen` / `HealthConnectScreenShell` in `ui/components`
+- `HealthConnectFeature` + `HealthConnectScreenUxCoordinator` in `healthconnect`
+- `rememberHealthConnectPermissionLauncher` for permission requests
+
+Do not add per-screen `PermissionCallout`, inline `HealthConnectSyncStatusBanner`, or duplicate `HealthConnectAccessGate` wiring.
+
 ### Do not copy these patterns
 
 - local coroutine loading directly in screens for new feature work
@@ -144,6 +154,7 @@ New detail screens should follow this mental model:
 - new screen-specific period helper types if a shared one can be used
 - giant abstract base ViewModels
 - a universal chart abstraction that hides metric semantics
+- ad-hoc Health Connect permission UI outside the shared shell
 
 ## Before Starting A New Feature
 

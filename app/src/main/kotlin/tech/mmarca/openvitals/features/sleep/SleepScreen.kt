@@ -74,12 +74,15 @@ import tech.mmarca.openvitals.domain.model.sleepSessionsForRange
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
+import tech.mmarca.openvitals.ui.components.dataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricBarChart
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.MetricSparklineChart
@@ -191,18 +194,24 @@ fun SleepScreen(
         )
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.SLEEP,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
         if (!state.isLoading || state.sessions.isNotEmpty()) {
             sleepOverview(
                 days = overviewDays,
@@ -286,6 +295,7 @@ fun SleepScreen(
                         }
                     }
                 }
+                dataSourceEducationItem()
             }
 
             state.selectedRange != TimeRange.DAY && state.sessions.isNotEmpty() -> {
@@ -395,6 +405,7 @@ fun SleepScreen(
                 }
             }
         }
+    }
     }
 }
 

@@ -29,7 +29,6 @@ data class DailyReadinessUiState(
     val goals: DailyReadinessGoalInputs = DailyReadinessGoalInputs(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val showPermissionsCallout: Boolean = false,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
 )
@@ -114,12 +113,6 @@ class DailyReadinessViewModel @Inject constructor(
         load(clampedDate)
     }
 
-    fun acknowledgePermissionsCallout() {
-        val missing = _uiState.value.data?.missingPermissions ?: return
-        prefs.acknowledgePermissions(missing)
-        _uiState.value = _uiState.value.copy(showPermissionsCallout = false)
-    }
-
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         loadCoordinator.launch(viewModelScope) load@{
@@ -147,12 +140,10 @@ class DailyReadinessViewModel @Inject constructor(
             }
                 .onSuccess { data ->
                     if (!isCurrent) return@load
-                    val unacknowledged = data.missingPermissions - prefs.acknowledgedPermissions()
                     _uiState.value = _uiState.value.copy(
                         data = data,
                         insight = calculateDailyReadiness(data, goals),
                         isLoading = false,
-                        showPermissionsCallout = unacknowledged.isNotEmpty(),
                     )
                 }
                 .onFailure { error ->

@@ -45,13 +45,14 @@ class MainActivity : AppCompatActivity() {
     private var nextRouteImportRequestId = 0L
     private var routeImportRequest by mutableStateOf<ExternalRouteImportRequest?>(null)
     private var externalNavigationRoute by mutableStateOf<String?>(null)
-    private var forceOnboarding by mutableStateOf(false)
     private var startDestination by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (redirectHealthConnectOnboardingIfNeeded(intent)) {
+            return
+        }
         enableEdgeToEdge()
-        forceOnboarding = intent.isHealthConnectOnboardingIntent()
         updateRouteImportRequest(intent)
         updateExternalNavigationRoute(intent)
 
@@ -77,7 +78,6 @@ class MainActivity : AppCompatActivity() {
             OpenVitalsTheme(themeMode = appThemeMode) {
                 val resolvedStartDestination = startDestination ?: run {
                     if (
-                        !forceOnboarding &&
                         preferencesRepository.onboardingDone &&
                         healthRepository.availability() == HealthConnectAvailability.AVAILABLE
                     ) {
@@ -113,7 +113,6 @@ class MainActivity : AppCompatActivity() {
                             externalNavigationRoute = null
                         },
                         onOnboardingComplete = {
-                            forceOnboarding = false
                             preferencesRepository.onboardingDone = true
                             startDestination = Screen.Dashboard.route
                         },
@@ -126,12 +125,24 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.isHealthConnectOnboardingIntent()) {
-            forceOnboarding = true
-            startDestination = Screen.Onboarding.route
+        if (redirectHealthConnectOnboardingIfNeeded(intent)) {
+            return
         }
         updateRouteImportRequest(intent)
         updateExternalNavigationRoute(intent)
+    }
+
+    private fun redirectHealthConnectOnboardingIfNeeded(intent: Intent?): Boolean {
+        if (intent?.isHealthConnectOnboardingIntent() != true) return false
+        startActivity(
+            Intent(this, HealthConnectOnboardingActivity::class.java).apply {
+                action = intent.action
+                data = intent.data
+                putExtras(intent)
+            },
+        )
+        finish()
+        return true
     }
 
     private fun updateRouteImportRequest(intent: Intent?) {

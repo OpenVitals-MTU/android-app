@@ -11,6 +11,8 @@ import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.ManualEntryScreen
 import tech.mmarca.openvitals.features.manualentry.ManualEntryViewModel
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryScreen
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryScreen
@@ -34,25 +36,30 @@ internal fun NavGraphBuilder.manualEntryRoutes(
 ) {
     composable(Screen.ManualEntry.route) {
         val manualEntryViewModel = hiltViewModel<ManualEntryViewModel>()
-        ManualEntryScreen(
-            viewModel = manualEntryViewModel,
-            onOpenHydrationEntry = {
-                navController.navigate(Screen.HydrationEntry.route)
-            },
-            onOpenActivityEntry = {
-                navController.navigate(Screen.ActivityEntry.route)
-            },
-            onOpenMindfulnessEntry = {
-                navController.navigate(Screen.MindfulnessEntry.route)
-            },
-            onOpenBodyMeasurementEntry = { type ->
-                navController.navigate(Screen.BodyMeasurementEntry.createRoute(type.name))
-            },
-            onOpenVitalsMeasurementEntry = { type ->
-                navController.navigate(Screen.VitalsMeasurementEntry.createRoute(type.name))
-            },
-            onEditStateChanged = onManualEntryEditStateChanged,
-        )
+        WithHealthConnectFeatureScreen(
+            feature = HealthConnectFeature.MANUAL_ENTRY,
+            showInlineSyncBanner = false,
+        ) { _ ->
+            ManualEntryScreen(
+                viewModel = manualEntryViewModel,
+                onOpenHydrationEntry = {
+                    navController.navigate(Screen.HydrationEntry.route)
+                },
+                onOpenActivityEntry = {
+                    navController.navigate(Screen.ActivityEntry.route)
+                },
+                onOpenMindfulnessEntry = {
+                    navController.navigate(Screen.MindfulnessEntry.route)
+                },
+                onOpenBodyMeasurementEntry = { type ->
+                    navController.navigate(Screen.BodyMeasurementEntry.createRoute(type.name))
+                },
+                onOpenVitalsMeasurementEntry = { type ->
+                    navController.navigate(Screen.VitalsMeasurementEntry.createRoute(type.name))
+                },
+                onEditStateChanged = onManualEntryEditStateChanged,
+            )
+        }
     }
 
     composable(Screen.HydrationEntry.route) {

@@ -333,10 +333,15 @@
             </intent-filter>
         </activity-alias>
 
+        <activity
+            android:name=".HealthConnectOnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.OpenVitals" />
+
         <activity-alias
             android:name=".OnboardingActivity"
             android:exported="true"
-            android:targetActivity=".MainActivity"
+            android:targetActivity=".HealthConnectOnboardingActivity"
             android:permission="com.google.android.apps.healthdata.permission.START_ONBOARDING">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_ONBOARDING" />
@@ -346,7 +351,7 @@
         <activity-alias
             android:name=".UAndAboveOnboardingActivity"
             android:exported="true"
-            android:targetActivity=".MainActivity"
+            android:targetActivity=".HealthConnectOnboardingActivity"
             android:permission="android.permission.health.START_ONBOARDING">
             <intent-filter>
                 <action android:name="android.health.connect.action.SHOW_ONBOARDING" />

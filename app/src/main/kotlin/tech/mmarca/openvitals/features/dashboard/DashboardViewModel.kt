@@ -17,7 +17,7 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
-import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +29,7 @@ data class DashboardUiState(
     val data: DashboardData? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val showPermissionsCallout: Boolean = false,
+    val unacknowledgedWidgetPermissions: Set<String> = emptySet(),
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val showOpenVitalsCalculatedCalories: Boolean = false,
@@ -40,8 +40,6 @@ data class DashboardUiState(
     val healthConnectSyncEnabled: Boolean = true,
     val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val minimumPermissionsGranted: Boolean = true,
-    val showDoubleCancelRecovery: Boolean = false,
-    val grantedPermissions: Set<String> = emptySet(),
 )
 
 data class DashboardDailyGoals(
@@ -65,7 +63,6 @@ data class DashboardDailyGoals(
 class DashboardViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val prefs: PreferencesRepository,
-    private val permissionUxState: HealthConnectPermissionUxState,
     private val activityRepository: ActivityRepository? = null,
 ) : ViewModel() {
 
@@ -172,13 +169,6 @@ class DashboardViewModel @Inject constructor(
             } else {
                 emptySet()
             }
-            val healthConnectFields = DashboardHealthConnectFields(
-                healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
-                healthConnectAvailability = availability,
-                minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
-                showDoubleCancelRecovery = permissionUxState.shouldShowDoubleCancelRecovery(),
-                grantedPermissions = granted,
-            )
             val keepCurrentDataVisible = refreshMode == RefreshMode.FORCE && current.data != null
             _uiState.value = current.copy(
                 selectedDate = clampedDate,
@@ -189,11 +179,9 @@ class DashboardViewModel @Inject constructor(
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
                 pendingWidgets = deferredWidgets,
-                healthConnectSyncEnabled = healthConnectFields.healthConnectSyncEnabled,
-                healthConnectAvailability = healthConnectFields.healthConnectAvailability,
-                minimumPermissionsGranted = healthConnectFields.minimumPermissionsGranted,
-                showDoubleCancelRecovery = healthConnectFields.showDoubleCancelRecovery,
-                grantedPermissions = healthConnectFields.grantedPermissions,
+                healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
+                healthConnectAvailability = availability,
+                minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
             )
             runCatching {
                 repository.loadDashboard(
@@ -208,11 +196,10 @@ class DashboardViewModel @Inject constructor(
             }
                 .onSuccess { data ->
                     if (!isCurrent) return@load
-                    val unacknowledged = data.missingPermissions - prefs.acknowledgedPermissions()
                     _uiState.value = _uiState.value.copy(
                         data = data,
                         isLoading = false,
-                        showPermissionsCallout = unacknowledged.isNotEmpty(),
+                        unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(data.missingPermissions),
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
@@ -259,11 +246,15 @@ class DashboardViewModel @Inject constructor(
         load(clampedDate)
     }
 
-    fun acknowledgePermissionsCallout() {
-        val missing = _uiState.value.data?.missingPermissions ?: return
-        prefs.acknowledgePermissions(missing)
-        _uiState.value = _uiState.value.copy(showPermissionsCallout = false)
+    fun acknowledgeWidgetMissingPermissions() {
+        val missing = _uiState.value.unacknowledgedWidgetPermissions
+        if (missing.isEmpty()) return
+        prefs.acknowledgePermissionsFor(HealthConnectFeature.DASHBOARD, missing)
+        _uiState.value = _uiState.value.copy(unacknowledgedWidgetPermissions = emptySet())
     }
+
+    private fun unacknowledgedWidgetPermissions(missingPermissions: Set<String>): Set<String> =
+        missingPermissions - prefs.acknowledgedPermissionsFor(HealthConnectFeature.DASHBOARD)
 
     fun toggleDashboardEdit() {
         _uiState.value = _uiState.value.copy(isEditingDashboard = !_uiState.value.isEditingDashboard)
@@ -368,10 +359,9 @@ class DashboardViewModel @Inject constructor(
                         .map { (widgetId, _) -> widgetId }
                         .toSet()
                     val mergedData = (_uiState.value.data ?: currentData).mergeLoaded(remainingData)
-                    val unacknowledged = mergedData.missingPermissions - prefs.acknowledgedPermissions()
                     _uiState.value = _uiState.value.copy(
                         data = mergedData,
-                        showPermissionsCallout = unacknowledged.isNotEmpty(),
+                        unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(mergedData.missingPermissions),
                         pendingWidgets = _uiState.value.pendingWidgets - loadedWidgets,
                     )
                 }
@@ -389,14 +379,6 @@ class DashboardViewModel @Inject constructor(
         }
     }
 }
-
-private data class DashboardHealthConnectFields(
-    val healthConnectSyncEnabled: Boolean,
-    val healthConnectAvailability: HealthConnectAvailability,
-    val minimumPermissionsGranted: Boolean,
-    val showDoubleCancelRecovery: Boolean,
-    val grantedPermissions: Set<String>,
-)
 
 private val DashboardFastMetrics = setOf(
     DashboardMetric.STEPS,

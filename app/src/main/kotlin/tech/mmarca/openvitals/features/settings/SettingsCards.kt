@@ -83,7 +83,6 @@ import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntry
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
@@ -1187,10 +1186,8 @@ internal fun PermissionCategoryCard(
 internal fun HealthConnectSettingsCard(
     syncEnabled: Boolean,
     availability: HealthConnectAvailability,
-    matchmakingPossible: Boolean,
     onSyncEnabledChange: (Boolean) -> Unit,
     onManageAccess: () -> Unit,
-    onMatchmaking: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
@@ -1226,16 +1223,6 @@ internal fun HealthConnectSettingsCard(
                     .padding(top = 12.dp),
             ) {
                 Text(stringResource(R.string.settings_health_connect_manage_access))
-            }
-            if (matchmakingPossible) {
-                OpenVitalsTonalButton(
-                    onClick = onMatchmaking,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                ) {
-                    Text(stringResource(R.string.health_connect_matchmaking_action))
-                }
             }
         }
     }

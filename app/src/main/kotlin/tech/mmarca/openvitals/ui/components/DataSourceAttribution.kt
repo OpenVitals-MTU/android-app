@@ -5,9 +5,11 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AssistChip
@@ -27,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.HealthConnectSourceResolver
+import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 
 @Composable
 fun DataSourceAttribution(
@@ -80,6 +83,34 @@ fun DataSourceEducationLink(
         )
         Spacer(Modifier.width(8.dp))
         Text(stringResource(R.string.health_connect_data_source_manage))
+    }
+}
+
+fun LazyListScope.dataSourceEducationItem(
+    onManageDataSources: () -> Unit,
+) {
+    item {
+        DataSourceEducationLink(
+            onManageDataSources = onManageDataSources,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+fun DataSourceEducationItem(
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    DataSourceEducationLink(
+        onManageDataSources = { openHealthConnectPermissionSettings(context) },
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
+}
+
+fun LazyListScope.dataSourceEducationItem() {
+    item {
+        DataSourceEducationItem()
     }
 }
 

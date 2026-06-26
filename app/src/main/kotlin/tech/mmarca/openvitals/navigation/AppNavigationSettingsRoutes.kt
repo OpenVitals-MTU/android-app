@@ -7,6 +7,8 @@ import androidx.navigation.compose.composable
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 
 internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
     composable(Screen.Settings.route) {
@@ -63,10 +65,15 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
 
     composable(Screen.SettingsDataImport.route) {
         val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.DATA_IMPORT,
-        )
+        WithHealthConnectFeatureScreen(
+            feature = HealthConnectFeature.DATA_IMPORT,
+            showInlineSyncBanner = false,
+        ) { _ ->
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                section = SettingsSection.DATA_IMPORT,
+            )
+        }
     }
 
     composable(Screen.SettingsHealthConnect.route) {

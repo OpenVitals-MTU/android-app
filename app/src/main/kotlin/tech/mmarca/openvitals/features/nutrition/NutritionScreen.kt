@@ -45,7 +45,9 @@ import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricBarChart
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
@@ -95,25 +97,32 @@ fun NutritionScreen(
         viewModel.resumeCurrentPeriod()
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.NUTRITION,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
-        nutritionContent(
-            state = state,
-            period = period,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            chartDaySelection = chartDaySelection,
-        )
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
+            nutritionContent(
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+            )
+        }
     }
 }
 
@@ -180,18 +189,24 @@ private fun NutritionMetricScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.NUTRITION,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
         nutritionMetricContent(
             metric = metric,
             state = state,
@@ -202,6 +217,7 @@ private fun NutritionMetricScreen(
             onDecreaseGoal = viewModel::decreaseDailyGoal,
             onIncreaseGoal = viewModel::increaseDailyGoal,
         )
+    }
     }
 }
 

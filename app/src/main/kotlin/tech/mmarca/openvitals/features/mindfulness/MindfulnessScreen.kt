@@ -81,7 +81,9 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricBarChart
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -138,18 +140,24 @@ fun MindfulnessScreen(
         viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.MINDFULNESS,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
         if (state.sessions.isEmpty() && !state.isLoading) {
             item {
                 MetricCardPlaceholder(
@@ -279,6 +287,7 @@ fun MindfulnessScreen(
                 }
             }
         }
+    }
     }
 }
 

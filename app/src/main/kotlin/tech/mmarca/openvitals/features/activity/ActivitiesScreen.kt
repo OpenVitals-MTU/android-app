@@ -89,7 +89,9 @@ import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricBarChart
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
@@ -133,17 +135,23 @@ fun ActivitiesScreen(
         viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.ACTIVITIES,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.activityWeekMode.toWeekPeriodMode(),
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.activityWeekMode.toWeekPeriodMode(),
+            syncPaused = hcUx.syncPaused,
         periodOverride = {
             activityDisplayPeriod(
                 selectedRange = state.selectedRange,
@@ -261,6 +269,7 @@ fun ActivitiesScreen(
                 restingHr = state.crossDailyRestingHR,
             )
         }
+    }
     }
 }
 

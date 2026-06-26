@@ -53,12 +53,14 @@ import tech.mmarca.openvitals.domain.insights.DailyReadinessInsight
 import tech.mmarca.openvitals.domain.insights.ReadinessConfidence
 import tech.mmarca.openvitals.domain.insights.ReadinessFactorImpact
 import tech.mmarca.openvitals.domain.insights.ReadinessState
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.DayNavigator
+import tech.mmarca.openvitals.ui.components.DataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
@@ -68,7 +70,6 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 @Composable
 fun DailyReadinessScreen(
     viewModel: DailyReadinessViewModel,
-    onGrantPermissions: () -> Unit,
     onOpenBodyEnergyDetails: (LocalDate) -> Unit,
     onOpenTrainingReadinessDetails: (LocalDate) -> Unit,
     onOpenStressDetails: (LocalDate) -> Unit,
@@ -80,43 +81,44 @@ fun DailyReadinessScreen(
         viewModel.resumeCurrentDay()
     }
 
-    PullToRefreshBox(
-        isRefreshing = state.isLoading && state.insight != null,
-        onRefresh = viewModel::refresh,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        when {
-            state.isLoading && state.insight == null -> FullScreenLoading()
-            state.errorMessage != null && state.insight == null ->
-                ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
-            state.insight != null -> DailyReadinessContent(
-                state = state,
-                canGoForward = state.selectedDate.isBefore(LocalDate.now()),
-                onPreviousDay = viewModel::previousDay,
-                onNextDay = viewModel::nextDay,
-                onOpenCalendar = { showDatePicker = true },
-                onGrantPermissions = {
-                    viewModel.acknowledgePermissionsCallout()
-                    onGrantPermissions()
-                },
-                onDismissPermissionsCallout = viewModel::acknowledgePermissionsCallout,
-                onOpenBodyEnergyDetails = { onOpenBodyEnergyDetails(state.selectedDate) },
-                onOpenTrainingReadinessDetails = { onOpenTrainingReadinessDetails(state.selectedDate) },
-                onOpenStressDetails = { onOpenStressDetails(state.selectedDate) },
-            )
-            else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.READINESS,
+        isLoading = state.isLoading,
+        showInlineSyncBanner = false,
+    ) { _ ->
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && state.insight != null,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when {
+                state.isLoading && state.insight == null -> FullScreenLoading()
+                state.errorMessage != null && state.insight == null ->
+                    ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
+                state.insight != null -> DailyReadinessContent(
+                    state = state,
+                    canGoForward = state.selectedDate.isBefore(LocalDate.now()),
+                    onPreviousDay = viewModel::previousDay,
+                    onNextDay = viewModel::nextDay,
+                    onOpenCalendar = { showDatePicker = true },
+                    onOpenBodyEnergyDetails = { onOpenBodyEnergyDetails(state.selectedDate) },
+                    onOpenTrainingReadinessDetails = { onOpenTrainingReadinessDetails(state.selectedDate) },
+                    onOpenStressDetails = { onOpenStressDetails(state.selectedDate) },
+                )
+                else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
+            }
         }
-    }
 
-    if (showDatePicker) {
-        HealthDatePickerDialog(
-            selectedDate = state.selectedDate,
-            onDismiss = { showDatePicker = false },
-            onConfirm = { date ->
-                showDatePicker = false
-                viewModel.selectDate(date)
-            },
-        )
+        if (showDatePicker) {
+            HealthDatePickerDialog(
+                selectedDate = state.selectedDate,
+                onDismiss = { showDatePicker = false },
+                onConfirm = { date ->
+                    showDatePicker = false
+                    viewModel.selectDate(date)
+                },
+            )
+        }
     }
 }
 
@@ -127,8 +129,6 @@ private fun DailyReadinessContent(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
-    onGrantPermissions: () -> Unit,
-    onDismissPermissionsCallout: () -> Unit,
     onOpenBodyEnergyDetails: () -> Unit,
     onOpenTrainingReadinessDetails: () -> Unit,
     onOpenStressDetails: () -> Unit,
@@ -153,18 +153,6 @@ private fun DailyReadinessContent(
                     onOpenCalendar = onOpenCalendar,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
-            }
-
-            if (state.showPermissionsCallout) {
-                item {
-                    PermissionCallout(
-                        title = stringResource(R.string.message_missing_permissions_title),
-                        body = stringResource(R.string.message_missing_permissions_body),
-                        onGrant = onGrantPermissions,
-                        onDismiss = onDismissPermissionsCallout,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
             }
 
             item {
@@ -326,6 +314,8 @@ private fun DailyReadinessPanel(
             }
 
             DailyReadinessFactors(factors = insight.factors.take(5))
+
+            DataSourceEducationItem()
         }
     }
 }

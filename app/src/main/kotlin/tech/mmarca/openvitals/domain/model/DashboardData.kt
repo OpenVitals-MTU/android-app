@@ -63,6 +63,7 @@ data class DashboardData(
     val latestBasalBodyTemperatureCelsius: Double? = null,
     val missingPermissions: Set<String> = emptySet(),
     val loadedMetrics: Set<DashboardMetric> = emptySet(),
+    val metricSourcePackages: Map<DashboardMetric, String> = emptyMap(),
     val caloriesKcalSource: CaloriesBurnedSource = if (caloriesKcal > 0.0) {
         CaloriesBurnedSource.RECORDED_TOTAL
     } else {
@@ -230,6 +231,7 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         },
         missingPermissions = missingPermissions + other.missingPermissions,
         loadedMetrics = loadedMetrics + other.loadedMetrics,
+        metricSourcePackages = metricSourcePackages + other.metricSourcePackages,
     )
 
 data class DashboardWeeklyCardioLoad(

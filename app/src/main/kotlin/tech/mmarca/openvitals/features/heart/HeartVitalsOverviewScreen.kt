@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.heart
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,12 +31,14 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
+import tech.mmarca.openvitals.ui.components.dataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.MetricLinePoint
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
@@ -62,62 +62,48 @@ fun HeartVitalsOverviewScreen(
         selectedDate = state.selectedDate,
         key = "heart_vitals_overview",
     )
-    val requestVitalsPermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) { granted ->
-        viewModel.onVitalsPermissionsResult(granted)
-    }
-
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentPeriod()
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.HEART_VITALS,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
-        VitalsOverviewContent(
-            state = state,
-            phase3Permissions = viewModel.vitalsPermissions,
-            onGrantPermissions = requestVitalsPermissions::launch,
-            period = period,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            chartDaySelection = chartDaySelection,
-            onOpenMetric = onOpenMetric,
-        )
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
+            VitalsOverviewContent(
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+                onOpenMetric = onOpenMetric,
+            )
+        }
     }
 }
 
 fun LazyListScope.VitalsOverviewContent(
     state: HeartUiState,
-    phase3Permissions: Set<String>,
-    onGrantPermissions: (Set<String>) -> Unit,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     onOpenMetric: (HeartMetric) -> Unit,
 ) {
-    if (state.missingVitalsPermissions.isNotEmpty()) {
-        item {
-            PermissionCallout(
-                title = stringResource(R.string.vitals_permissions_needed_title),
-                body = stringResource(R.string.vitals_permissions_needed_body),
-                onGrant = { onGrantPermissions(phase3Permissions) },
-                modifier = overviewMetricModifier(),
-            )
-        }
-    }
-
     if (state.isLoading && !state.hasOverviewData) return
 
     item { SectionHeader(stringResource(R.string.section_heart)) }
@@ -158,6 +144,7 @@ fun LazyListScope.VitalsOverviewContent(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         chartDaySelection = chartDaySelection,
     )
+    dataSourceEducationItem()
 }
 
 private fun LazyListScope.overviewMetricRows(

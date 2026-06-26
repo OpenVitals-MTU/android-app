@@ -411,7 +411,10 @@ internal class HealthConnectPermissionService(
     private fun featureStatus(feature: Int): Int =
         clientProvider().features.getFeatureStatus(feature)
 
-    private companion object {
+    companion object {
+        /** Bump when requestable/managed permissions change so existing users see the new-permissions prompt. */
+        const val PERMISSION_SET_VERSION = 1
+
         private const val TAG = "HealthConnectPermissions"
         private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"
     }

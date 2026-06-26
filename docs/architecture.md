@@ -326,6 +326,16 @@ Current files:
 
 These screens should continue to depend on `HealthRepository`, not on feature repositories.
 
+### Health Connect screen shell
+
+Health Connect-backed screens (dashboard, metric detail, readiness, manual entry, imports) should wrap content with the shared shell:
+
+- [`HealthConnectFeature`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectFeature.kt) maps destinations to permission sets
+- [`HealthConnectScreenUxCoordinator`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectScreenUxCoordinator.kt) loads sync/access/contextual-prompt state
+- [`WithHealthConnectFeatureScreen`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/HealthConnectPermissionLauncher.kt) composes access gate, sync banner, contextual promotion, and permission launcher
+
+Metric detail screens pass `syncPaused` from the shell state into `MetricDetailScaffold` and set `showInlineSyncBanner = false` to avoid duplicate banners.
+
 ## Canonical Detail Feature Pattern
 
 New metric detail work should follow this shape.

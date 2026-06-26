@@ -42,12 +42,14 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.PhysiologicalStressConfidence
 import tech.mmarca.openvitals.domain.insights.PhysiologicalStressEstimate
 import tech.mmarca.openvitals.domain.insights.PhysiologicalStressLevel
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.DayNavigator
+import tech.mmarca.openvitals.ui.components.DataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
@@ -58,7 +60,6 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 fun StressDetailsScreen(
     viewModel: DailyReadinessViewModel,
     selectedDate: LocalDate,
-    onGrantPermissions: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showDatePicker by remember { mutableStateOf(false) }
@@ -69,40 +70,41 @@ fun StressDetailsScreen(
         }
     }
 
-    PullToRefreshBox(
-        isRefreshing = state.isLoading && state.insight != null,
-        onRefresh = viewModel::refresh,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        when {
-            state.isLoading && state.insight == null -> FullScreenLoading()
-            state.errorMessage != null && state.insight == null ->
-                ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
-            state.insight != null -> StressDetailsContent(
-                state = state,
-                canGoForward = state.selectedDate.isBefore(LocalDate.now()),
-                onPreviousDay = viewModel::previousDay,
-                onNextDay = viewModel::nextDay,
-                onOpenCalendar = { showDatePicker = true },
-                onGrantPermissions = {
-                    viewModel.acknowledgePermissionsCallout()
-                    onGrantPermissions()
-                },
-                onDismissPermissionsCallout = viewModel::acknowledgePermissionsCallout,
-            )
-            else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.READINESS,
+        isLoading = state.isLoading,
+        showInlineSyncBanner = false,
+    ) { _ ->
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && state.insight != null,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when {
+                state.isLoading && state.insight == null -> FullScreenLoading()
+                state.errorMessage != null && state.insight == null ->
+                    ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
+                state.insight != null -> StressDetailsContent(
+                    state = state,
+                    canGoForward = state.selectedDate.isBefore(LocalDate.now()),
+                    onPreviousDay = viewModel::previousDay,
+                    onNextDay = viewModel::nextDay,
+                    onOpenCalendar = { showDatePicker = true },
+                )
+                else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
+            }
         }
-    }
 
-    if (showDatePicker) {
-        HealthDatePickerDialog(
-            selectedDate = state.selectedDate,
-            onDismiss = { showDatePicker = false },
-            onConfirm = { date ->
-                showDatePicker = false
-                viewModel.selectDate(date)
-            },
-        )
+        if (showDatePicker) {
+            HealthDatePickerDialog(
+                selectedDate = state.selectedDate,
+                onDismiss = { showDatePicker = false },
+                onConfirm = { date ->
+                    showDatePicker = false
+                    viewModel.selectDate(date)
+                },
+            )
+        }
     }
 }
 
@@ -113,8 +115,6 @@ private fun StressDetailsContent(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
-    onGrantPermissions: () -> Unit,
-    onDismissPermissionsCallout: () -> Unit,
 ) {
     val stress = state.insight?.physiologicalStress ?: return
     Box(
@@ -137,18 +137,6 @@ private fun StressDetailsContent(
                     onOpenCalendar = onOpenCalendar,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
-            }
-
-            if (state.showPermissionsCallout) {
-                item {
-                    PermissionCallout(
-                        title = stringResource(R.string.message_missing_permissions_title),
-                        body = stringResource(R.string.message_missing_permissions_body),
-                        onGrant = onGrantPermissions,
-                        onDismiss = onDismissPermissionsCallout,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
             }
 
             item {
@@ -187,6 +175,9 @@ private fun StressDetailsContent(
                     items = stress.caveats,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
+            }
+            item {
+                DataSourceEducationItem()
             }
         }
     }

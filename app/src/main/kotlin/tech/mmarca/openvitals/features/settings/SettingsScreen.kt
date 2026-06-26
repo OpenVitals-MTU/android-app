@@ -371,16 +371,8 @@ fun SettingsScreen(
                         HealthConnectSettingsCard(
                             syncEnabled = state.healthConnectSyncEnabled,
                             availability = state.availability,
-                            matchmakingPossible = state.matchmakingPossible,
                             onSyncEnabledChange = viewModel::setHealthConnectSyncEnabled,
                             onManageAccess = openManualPermissionSettings,
-                            onMatchmaking = {
-                                runCatching {
-                                    context.startActivity(viewModel.createMatchmakingIntent())
-                                }.onFailure {
-                                    Toast.makeText(context, unableToOpenPermissions, Toast.LENGTH_SHORT).show()
-                                }
-                            },
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }

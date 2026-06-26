@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.cycle
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -19,7 +18,6 @@ import android.view.WindowManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
@@ -29,14 +27,15 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import java.time.ZoneId
@@ -58,107 +57,98 @@ fun CycleScreen(
             window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
-    val requestCyclePermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) { granted ->
-        viewModel.onCyclePermissionsResult(granted)
-    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentPeriod()
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.CYCLE,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
-        if (state.missingPermissions.isNotEmpty()) {
-            item {
-                PermissionCallout(
-                    title = stringResource(R.string.cycle_permissions_missing_title),
-                    body = stringResource(R.string.cycle_permissions_missing_body),
-                    onGrant = { requestCyclePermissions.launch(viewModel.cyclePermissions) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-        }
-
-        if (state.data.hasData) {
-            item {
-                CycleSummary(
-                    data = state.data,
-                    period = period,
-                    subtitle = localizedPeriodTitle(state.selectedRange, period),
-                    unitFormatter = unitFormatter,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            cycleDataConfidence(
-                data = state.data,
-                period = period,
-            )
-            cycleStatistics(
-                data = state.data,
-                period = period,
-                unitFormatter = unitFormatter,
-            )
-            item { SectionHeader(stringResource(R.string.section_cycle_calendar)) }
-            item {
-                CycleCalendarCard(
-                    data = state.data,
-                    period = period,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                )
-            }
-            if (state.data.basalBodyTemperature.isNotEmpty()) {
-                item { SectionHeader(stringResource(R.string.section_basal_body_temperature)) }
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
+            if (state.data.hasData) {
                 item {
-                    BasalTemperatureTrendCard(
-                        entries = state.data.basalBodyTemperature,
+                    CycleSummary(
+                        data = state.data,
+                        period = period,
+                        subtitle = localizedPeriodTitle(state.selectedRange, period),
                         unitFormatter = unitFormatter,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+                cycleDataConfidence(
+                    data = state.data,
+                    period = period,
+                )
+                cycleStatistics(
+                    data = state.data,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                )
+                item { SectionHeader(stringResource(R.string.section_cycle_calendar)) }
+                item {
+                    CycleCalendarCard(
+                        data = state.data,
+                        period = period,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                     )
                 }
-            }
-
-            val observations = observationsFor(state.data, resources)
-            if (observations.isNotEmpty()) {
-                item {
-                    PaginatedEntryList(
-                        title = stringResource(R.string.section_entries),
-                        entries = observations,
-                    ) { observation, rowModifier ->
-                        CycleObservationRow(
-                            observation = observation,
+                if (state.data.basalBodyTemperature.isNotEmpty()) {
+                    item { SectionHeader(stringResource(R.string.section_basal_body_temperature)) }
+                    item {
+                        BasalTemperatureTrendCard(
+                            entries = state.data.basalBodyTemperature,
+                            unitFormatter = unitFormatter,
                             dateTimeFormatterProvider = dateTimeFormatterProvider,
-                            modifier = rowModifier,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                         )
                     }
                 }
-            }
-        } else if (!state.isLoading) {
-            item {
-                MetricCardPlaceholder(
-                    title = stringResource(R.string.metric_cycle_tracking),
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = CycleColor,
-                    message = stringResource(R.string.message_no_cycle_period),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+
+                val observations = observationsFor(state.data, resources)
+                if (observations.isNotEmpty()) {
+                    item {
+                        PaginatedEntryList(
+                            title = stringResource(R.string.section_entries),
+                            entries = observations,
+                        ) { observation, rowModifier ->
+                            CycleObservationRow(
+                                observation = observation,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                modifier = rowModifier,
+                            )
+                        }
+                    }
+                }
+            } else if (!state.isLoading) {
+                item {
+                    MetricCardPlaceholder(
+                        title = stringResource(R.string.metric_cycle_tracking),
+                        icon = Icons.Outlined.CalendarMonth,
+                        accentColor = CycleColor,
+                        message = stringResource(R.string.message_no_cycle_period),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
             }
         }
     }

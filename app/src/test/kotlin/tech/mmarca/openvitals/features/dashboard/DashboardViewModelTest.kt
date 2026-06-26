@@ -12,7 +12,6 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -43,8 +42,8 @@ class DashboardViewModelTest {
         activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
         showOpenVitalsCalculatedCalories: Boolean = false,
     ) = mockk<PreferencesRepository>().also {
-        every { it.acknowledgedPermissions() } returns emptySet()
-        every { it.acknowledgePermissions(any()) } returns Unit
+        every { it.acknowledgedPermissionsFor(any()) } returns emptySet()
+        every { it.acknowledgePermissionsFor(any(), any()) } returns Unit
         every { it.sleepRangeMode } returns sleepRangeMode
         every { it.activityWeekMode } returns activityWeekMode
         every { it.showOpenVitalsCalculatedCalories } returns showOpenVitalsCalculatedCalories
@@ -76,7 +75,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -88,7 +87,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } throws RuntimeException("network error")
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -100,7 +99,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } throws RuntimeException()
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals("Unknown error", vm.uiState.value.errorMessage)
     }
@@ -111,7 +110,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         val futureDate = today.plusDays(10)
         vm.load(futureDate)
 
@@ -123,7 +122,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(today.plusDays(5))
 
         assertEquals(today, vm.uiState.value.selectedDate)
@@ -135,7 +134,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.previousDay()
 
         assertEquals(yesterday, vm.uiState.value.selectedDate)
@@ -145,7 +144,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.nextDay()
 
         assertEquals(today, vm.uiState.value.selectedDate)
@@ -157,7 +156,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(yesterday)
         vm.nextDay()
 
@@ -168,7 +167,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.load(yesterday)
         vm.resumeCurrentDay()
 
@@ -180,7 +179,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.selectDate(yesterday)
         vm.resumeCurrentDay()
 
@@ -194,7 +193,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals(12, vm.uiState.value.data?.floorsClimbed)
     }
@@ -204,7 +203,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertNull(vm.uiState.value.data?.floorsClimbed)
     }
@@ -214,7 +213,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals(85.0, vm.uiState.value.data?.elevationGainedMeters!!, 0.01)
     }
@@ -224,7 +223,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertNull(vm.uiState.value.data?.elevationGainedMeters)
     }
@@ -234,7 +233,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals(0, vm.uiState.value.data?.floorsClimbed)
     }
@@ -244,7 +243,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals(1_850.0, vm.uiState.value.data?.caloriesInKcal!!, 0.01)
     }
@@ -260,7 +259,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns data
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals(120, vm.uiState.value.data?.latestSystolicMmHg)
         assertEquals(78, vm.uiState.value.data?.latestDiastolicMmHg)
@@ -274,7 +273,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.refresh()
 
         // init + refresh = 2 calls
@@ -285,7 +284,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        DashboardViewModel(repo, prefs(sleepRangeMode = SleepRangeMode.NOON), permissionUxState())
+        DashboardViewModel(repo, prefs(sleepRangeMode = SleepRangeMode.NOON))
 
         coVerify { repo.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepRangeMode == SleepRangeMode.NOON }) }
     }
@@ -294,7 +293,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        DashboardViewModel(repo, prefs(activityWeekMode = ActivityWeekMode.LAST_7_DAYS), permissionUxState())
+        DashboardViewModel(repo, prefs(activityWeekMode = ActivityWeekMode.LAST_7_DAYS))
 
         coVerify {
             repo.loadDashboard(
@@ -321,7 +320,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.WEIGHT.name,
         )
 
-        DashboardViewModel(repo, prefs, permissionUxState())
+        DashboardViewModel(repo, prefs)
 
         assertEquals(
             setOf(
@@ -365,7 +364,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.HYDRATION.name,
         )
 
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         assertEquals(100L, vm.uiState.value.data?.steps)
         assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
@@ -420,7 +419,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.HYDRATION.name,
         )
 
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
         vm.load(yesterday)
         vm.load(today)
 
@@ -436,7 +435,7 @@ class DashboardViewModelTest {
             DashboardData(date = today)
         }
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.refresh()
 
         assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
@@ -452,7 +451,7 @@ class DashboardViewModelTest {
             DashboardData(date = query.date)
         }
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
         vm.load(yesterday)
         vm.load(today)
 
@@ -468,7 +467,7 @@ class DashboardViewModelTest {
             SleepRangeMode.NOON,
             SleepRangeMode.NOON,
         )
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         vm.refreshPreferences()
 
@@ -482,7 +481,7 @@ class DashboardViewModelTest {
         val prefs = prefs(activityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY)
         var activityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY
         every { prefs.activityWeekMode } answers { activityWeekMode }
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         activityWeekMode = ActivityWeekMode.LAST_7_DAYS
         vm.refreshPreferences()
@@ -503,7 +502,7 @@ class DashboardViewModelTest {
         val prefs = prefs()
         var showOpenVitalsCalculatedCalories = false
         every { prefs.showOpenVitalsCalculatedCalories } answers { showOpenVitalsCalculatedCalories }
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         showOpenVitalsCalculatedCalories = true
         vm.refreshPreferences()
@@ -516,7 +515,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState())
+        val vm = DashboardViewModel(repo, prefs())
 
         assertEquals(DefaultDashboardWidgetIds, vm.uiState.value.dashboardWidgets)
     }
@@ -529,7 +528,7 @@ class DashboardViewModelTest {
         every { prefs.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS) } returns 7.5
         every { prefs.hydrationDailyGoalLiters } returns 3.0
 
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         assertEquals(12_000.0, vm.uiState.value.dailyGoals.steps, 0.001)
         assertEquals(7.5, vm.uiState.value.dailyGoals.sleepHours, 0.001)
@@ -545,7 +544,7 @@ class DashboardViewModelTest {
         )
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         assertEquals(
             listOf(DashboardWidgetId.SLEEP, DashboardWidgetId.STEPS),
@@ -559,7 +558,7 @@ class DashboardViewModelTest {
         every { prefs.dashboardWidgetOrder() } returns listOf("unknown", DashboardWidgetId.STEPS.name)
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         assertEquals(listOf(DashboardWidgetId.STEPS), vm.uiState.value.dashboardWidgets)
     }
@@ -573,7 +572,7 @@ class DashboardViewModelTest {
         )
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         assertEquals(listOf(DashboardWidgetId.STEPS), vm.uiState.value.dashboardWidgets)
     }
@@ -582,7 +581,7 @@ class DashboardViewModelTest {
         val repo = mockHealthRepository()
         val prefs = prefs()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         vm.removeDashboardWidget(DashboardWidgetId.DISTANCE)
         assertFalse(DashboardWidgetId.DISTANCE in vm.uiState.value.dashboardWidgets)
@@ -607,7 +606,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.SLEEP.name,
         )
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.CALORIES_OUT)
 
@@ -633,7 +632,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.HYDRATION.name,
         )
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.HYDRATION, DashboardWidgetId.DISTANCE)
 
@@ -660,7 +659,7 @@ class DashboardViewModelTest {
             DashboardWidgetId.HYDRATION.name,
         )
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = DashboardViewModel(repo, prefs, permissionUxState())
+        val vm = DashboardViewModel(repo, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.HYDRATION)
 
@@ -685,7 +684,7 @@ class DashboardViewModelTest {
             workouts = listOf(workout),
         )
         coEvery { activityRepo.deleteActivityEntry("activity-1") } returns Unit
-        val vm = DashboardViewModel(repo, prefs(), permissionUxState(), activityRepo)
+        val vm = DashboardViewModel(repo, prefs(), activityRepo)
 
         vm.deleteActivityEntry("activity-1")
 
@@ -712,8 +711,4 @@ class DashboardViewModelTest {
             configure(repo)
         }
 
-    private fun permissionUxState(): HealthConnectPermissionUxState =
-        mockk<HealthConnectPermissionUxState>().also { state ->
-            every { state.shouldShowDoubleCancelRecovery() } returns false
-        }
 }

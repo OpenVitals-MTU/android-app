@@ -19,7 +19,6 @@ import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.theme.VitalsColor
@@ -28,26 +27,11 @@ import kotlin.math.roundToInt
 
 fun LazyListScope.HeartVitalsContent(
     state: HeartUiState,
-    phase3Permissions: Set<String>,
-    onGrantPermissions: (Set<String>) -> Unit,
     selectedRange: TimeRange,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
-    if (state.missingVitalsPermissions.isNotEmpty()) {
-        item {
-            PermissionCallout(
-                title = stringResource(R.string.vitals_permissions_needed_title),
-                body = stringResource(R.string.vitals_permissions_needed_body),
-                onGrant = {
-                    onGrantPermissions(phase3Permissions)
-                },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-        }
-    }
-
     if (!state.hasVitalsData && !state.isLoading) {
         item {
             MetricCardPlaceholder(

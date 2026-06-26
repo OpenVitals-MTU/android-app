@@ -106,13 +106,13 @@ import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
-import tech.mmarca.openvitals.ui.components.HealthConnectAccessGate
-import tech.mmarca.openvitals.ui.components.HealthConnectSyncStatusBanner
-import tech.mmarca.openvitals.ui.components.PermissionCallout
-import tech.mmarca.openvitals.ui.components.resolveHealthConnectAccessGateMode
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
+import tech.mmarca.openvitals.ui.components.ContextualPermissionPrompt
+import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
+import androidx.compose.runtime.mutableIntStateOf
 import tech.mmarca.openvitals.ui.components.shouldShowDashboardHealthConnectPromo
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import androidx.compose.ui.platform.LocalContext
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -141,7 +141,6 @@ fun DashboardScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     refreshRequest: Int = 0,
-    onGrantPermissions: () -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
@@ -153,17 +152,17 @@ fun DashboardScreen(
     val dashboardData = state.data
     val context = LocalContext.current
     var showDatePicker by remember { mutableStateOf(false) }
-    val accessGateMode = resolveHealthConnectAccessGateMode(
-        availability = state.healthConnectAvailability,
-        syncEnabled = state.healthConnectSyncEnabled,
-        requiredPermissions = viewModel.minimumOnboardingPermissions,
-        grantedPermissions = state.grantedPermissions,
-        showDoubleCancelRecovery = state.showDoubleCancelRecovery,
-    )
     val showPromo = shouldShowDashboardHealthConnectPromo(
         availability = state.healthConnectAvailability,
         syncEnabled = state.healthConnectSyncEnabled,
         minimumPermissionsGranted = state.minimumPermissionsGranted,
+    )
+    var permissionReloadKey by remember { mutableIntStateOf(0) }
+    val permissionLauncher = rememberHealthConnectPermissionLauncher(
+        onResult = {
+            permissionReloadKey++
+            viewModel.refresh()
+        },
     )
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -175,10 +174,10 @@ fun DashboardScreen(
         }
     }
 
-    HealthConnectAccessGate(
-        mode = accessGateMode,
-        onGrant = onGrantPermissions,
-        onOpenHealthConnectSettings = { openHealthConnectPermissionSettings(context) },
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.DASHBOARD,
+        isLoading = state.isLoading && dashboardData != null,
+        refreshKey = refreshRequest to permissionReloadKey,
     ) {
         PullToRefreshBox(
             isRefreshing = state.isLoading && dashboardData != null,
@@ -194,38 +193,38 @@ fun DashboardScreen(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     canGoForward = state.selectedDate.isBefore(LocalDate.now()),
-                    showPermissionsCallout = state.showPermissionsCallout,
+                    unacknowledgedWidgetPermissions = state.unacknowledgedWidgetPermissions,
                     showHealthConnectPromo = showPromo,
                     healthConnectAvailability = state.healthConnectAvailability,
                     healthConnectSyncEnabled = state.healthConnectSyncEnabled,
-                    syncInProgress = state.isLoading,
                     dashboardWidgets = state.dashboardWidgets,
-                pendingWidgets = state.pendingWidgets,
-                dailyGoals = state.dailyGoals,
-                isEditingDashboard = state.isEditingDashboard,
-                onPreviousDay = viewModel::previousDay,
-                onNextDay = viewModel::nextDay,
-                onOpenCalendar = { showDatePicker = true },
-                onGrantPermissions = {
-                    viewModel.acknowledgePermissionsCallout()
-                    onGrantPermissions()
-                },
-                onDismissPermissionsCallout = viewModel::acknowledgePermissionsCallout,
-                onMoveWidgetToTarget = viewModel::moveDashboardWidgetToTarget,
-                onRemoveWidget = viewModel::removeDashboardWidget,
-                onAddWidget = viewModel::addDashboardWidget,
-                onOpenMetric = onOpenMetric,
-                onOpenActivities = onOpenActivities,
-                onOpenActivity = onOpenActivity,
-                onEditActivity = onEditActivity,
-                onDeleteActivity = viewModel::deleteActivityEntry,
-                onOpenLog = onOpenLog,
-                onStartActivity = onStartActivity,
-                onToggleDashboardEdit = viewModel::toggleDashboardEdit,
-                onHealthConnectPromoAction = onGrantPermissions,
-            )
-            else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
-        }
+                    pendingWidgets = state.pendingWidgets,
+                    dailyGoals = state.dailyGoals,
+                    isEditingDashboard = state.isEditingDashboard,
+                    onPreviousDay = viewModel::previousDay,
+                    onNextDay = viewModel::nextDay,
+                    onOpenCalendar = { showDatePicker = true },
+                    onGrantWidgetPermissions = {
+                        permissionLauncher.launch(state.unacknowledgedWidgetPermissions)
+                    },
+                    onDismissWidgetPermissions = viewModel::acknowledgeWidgetMissingPermissions,
+                    onMoveWidgetToTarget = viewModel::moveDashboardWidgetToTarget,
+                    onRemoveWidget = viewModel::removeDashboardWidget,
+                    onAddWidget = viewModel::addDashboardWidget,
+                    onOpenMetric = onOpenMetric,
+                    onOpenActivities = onOpenActivities,
+                    onOpenActivity = onOpenActivity,
+                    onEditActivity = onEditActivity,
+                    onDeleteActivity = viewModel::deleteActivityEntry,
+                    onOpenLog = onOpenLog,
+                    onStartActivity = onStartActivity,
+                    onToggleDashboardEdit = viewModel::toggleDashboardEdit,
+                    onHealthConnectPromoAction = {
+                        permissionLauncher.launch(viewModel.minimumOnboardingPermissions)
+                    },
+                )
+                else -> ErrorMessage(stringResource(R.string.message_no_dashboard_data))
+            }
         }
     }
 
@@ -247,11 +246,10 @@ private fun DashboardContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     canGoForward: Boolean,
-    showPermissionsCallout: Boolean,
+    unacknowledgedWidgetPermissions: Set<String>,
     showHealthConnectPromo: Boolean,
     healthConnectAvailability: HealthConnectAvailability,
     healthConnectSyncEnabled: Boolean,
-    syncInProgress: Boolean,
     dashboardWidgets: List<DashboardWidgetId>,
     pendingWidgets: Set<DashboardWidgetId>,
     dailyGoals: DashboardDailyGoals,
@@ -259,8 +257,8 @@ private fun DashboardContent(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onOpenCalendar: () -> Unit,
-    onGrantPermissions: () -> Unit,
-    onDismissPermissionsCallout: () -> Unit,
+    onGrantWidgetPermissions: () -> Unit,
+    onDismissWidgetPermissions: () -> Unit,
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     onAddWidget: (DashboardWidgetId) -> Unit,
@@ -350,19 +348,6 @@ private fun DashboardContent(
                 )
             }
 
-            if (!healthConnectSyncEnabled || syncInProgress) {
-                item {
-                    HealthConnectSyncStatusBanner(
-                        syncPaused = !healthConnectSyncEnabled,
-                        syncInProgress = syncInProgress && healthConnectSyncEnabled,
-                        modifier = Modifier.padding(
-                            horizontal = DashboardScreenPadding,
-                            vertical = 4.dp,
-                        ),
-                    )
-                }
-            }
-
             if (showHealthConnectPromo) {
                 item {
                     DashboardHealthConnectPromoCard(
@@ -377,13 +362,12 @@ private fun DashboardContent(
                 }
             }
 
-            if (showPermissionsCallout) {
+            if (unacknowledgedWidgetPermissions.isNotEmpty()) {
                 item {
-                    PermissionCallout(
-                        title = stringResource(R.string.message_missing_permissions_title),
-                        body = stringResource(R.string.message_missing_permissions_body),
-                        onGrant = onGrantPermissions,
-                        onDismiss = onDismissPermissionsCallout,
+                    ContextualPermissionPrompt(
+                        feature = HealthConnectFeature.DASHBOARD,
+                        onGrant = onGrantWidgetPermissions,
+                        onDismiss = onDismissWidgetPermissions,
                         modifier = Modifier.padding(
                             horizontal = DashboardScreenPadding,
                             vertical = 4.dp,

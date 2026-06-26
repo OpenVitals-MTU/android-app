@@ -114,13 +114,15 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.features.activity.exerciseTypeIcon
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
 import tech.mmarca.openvitals.ui.components.AutoResizeText
+import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
+import tech.mmarca.openvitals.features.dashboard.components.DashboardSummaryCard
+import tech.mmarca.openvitals.features.dashboard.components.MetricStatCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
@@ -571,6 +573,35 @@ internal fun Rect.containsPoint(point: Offset): Boolean =
 
 
 @Composable
+internal fun DashboardMetricStatWidget(
+    title: String,
+    value: DisplayValue,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    progress: DashboardWidgetProgress? = null,
+    message: String? = null,
+    subtitle: String? = null,
+    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    showTitle: Boolean = true,
+    onClick: (() -> Unit)? = null,
+) {
+    MetricStatCard(
+        title = title,
+        value = value,
+        icon = icon,
+        accentColor = accentColor,
+        modifier = modifier,
+        message = message,
+        subtitle = subtitle,
+        subtitleColor = subtitleColor,
+        showTitle = showTitle,
+        progressFraction = progress?.fraction,
+        onClick = onClick,
+    )
+}
+
+@Composable
 internal fun DashboardPillWidget(
     title: String,
     value: DisplayValue,
@@ -684,89 +715,15 @@ internal fun DashboardCircleWidget(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val iconContainerColor = dashboardIconContainerColor(accentColor)
-    val progressTrackColor = dashboardAccentTrackColor(accentColor)
-    val progressFillColor = dashboardProgressFillColor(accentColor)
-    OpenVitalsCard(
+    DashboardSummaryCard(
+        title = title,
+        value = value,
+        icon = icon,
+        accentColor = accentColor,
+        progress = progress,
         modifier = modifier,
         onClick = onClick,
-        containerColor = containerColor,
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeWidth = DashboardCircleWidgetStroke.toPx()
-                val diameter = size.minDimension - strokeWidth
-                val topLeft = Offset(
-                    x = (size.width - diameter) / 2f,
-                    y = (size.height - diameter) / 2f,
-                )
-                val arcSize = Size(diameter, diameter)
-                drawArc(
-                    color = progressTrackColor,
-                    startAngle = 130f,
-                    sweepAngle = 280f,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                )
-                drawArc(
-                    color = progressFillColor,
-                    startAngle = 130f,
-                    sweepAngle = 280f * progress.fraction,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .background(iconContainerColor, shape = CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                AutoResizeText(
-                    text = title,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                AutoResizeText(
-                    text = value.value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                )
-                AutoResizeText(
-                    text = progress.label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
+    )
 }
 
 internal fun dashboardDisplayValue(value: DisplayValue): String =
@@ -858,6 +815,9 @@ internal fun WorkoutCard(
                             modifier = Modifier.size(20.dp),
                         )
                     }
+                }
+                if (workout.source.isNotBlank()) {
+                    SourceChip(source = workout.source)
                 }
             }
             Spacer(Modifier.weight(1f))

@@ -919,6 +919,33 @@ class HealthRepository @Inject constructor(
             ?.map { it.rmssdMs }
             ?.average()
 
+        val metricSourcePackages = buildMap {
+            fun putSource(metric: DashboardMetric, source: String?) {
+                source?.takeIf { it.isNotBlank() }?.let { put(metric, it) }
+            }
+            if (wants(DashboardMetric.SLEEP)) {
+                putSource(DashboardMetric.SLEEP, dashboardSleep?.sleep?.source)
+            }
+            if (wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI)) {
+                putSource(DashboardMetric.WEIGHT, latestWeight?.source)
+            }
+            if (wantsAny(DashboardMetric.HEIGHT, DashboardMetric.BMI)) {
+                putSource(DashboardMetric.HEIGHT, latestHeight?.source)
+            }
+            if (wants(DashboardMetric.BLOOD_PRESSURE)) {
+                putSource(DashboardMetric.BLOOD_PRESSURE, latestBloodPressure?.source)
+            }
+            if (wants(DashboardMetric.SPO2)) {
+                putSource(DashboardMetric.SPO2, spO2?.await()?.source)
+            }
+            if (wants(DashboardMetric.VO2_MAX)) {
+                putSource(DashboardMetric.VO2_MAX, vo2Max?.await()?.source)
+            }
+            if (wants(DashboardMetric.WORKOUT)) {
+                dayWorkouts.firstOrNull()?.source?.let { put(DashboardMetric.WORKOUT, it) }
+            }
+        }
+
         DashboardData(
             date = date,
             steps = steps?.await() ?: 0L,
@@ -997,6 +1024,7 @@ class HealthRepository @Inject constructor(
             latestBasalBodyTemperatureCelsius = basalBodyTemperature?.await(),
             missingPermissions = missingPerms,
             loadedMetrics = metrics,
+            metricSourcePackages = metricSourcePackages,
         )
     }
 

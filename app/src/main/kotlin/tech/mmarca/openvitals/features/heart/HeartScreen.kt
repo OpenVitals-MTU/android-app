@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.features.heart
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
-import androidx.activity.compose.rememberLauncherForActivityResult
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
@@ -66,16 +65,18 @@ import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
+import tech.mmarca.openvitals.ui.components.dataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
-import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
@@ -262,28 +263,29 @@ private fun HeartMetricScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
-    val requestVitalsPermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract(),
-    ) { granted ->
-        viewModel.onVitalsPermissionsResult(granted)
-    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentPeriod()
     }
 
-    MetricDetailScaffold(
+    WithHealthConnectFeatureScreen(
+        feature = HealthConnectFeature.HEART,
         isLoading = state.isLoading,
-        selectedRange = state.selectedRange,
-        selectedDate = state.selectedDate,
-        error = state.error,
-        onRefresh = viewModel::load,
-        onSelectRange = viewModel::selectRange,
-        onPreviousPeriod = viewModel::previousPeriod,
-        onNextPeriod = viewModel::nextPeriod,
-        onSelectDate = viewModel::selectDate,
-        weekPeriodMode = state.weekPeriodMode,
-    ) { period ->
+        showInlineSyncBanner = false,
+    ) { hcUx ->
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            error = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+        ) { period ->
         when (metric) {
             HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(
                 state = state,
@@ -304,98 +306,57 @@ private fun HeartMetricScreen(
                 chartDaySelection,
             )
             HeartMetric.HRV -> hrvContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
-            HeartMetric.BLOOD_PRESSURE -> vitalsMetricContent(
+            HeartMetric.BLOOD_PRESSURE -> bloodPressureContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                onEditVitalsMeasurement,
+                viewModel::deleteVitalsMeasurementEntry,
+            )
+            HeartMetric.SPO2 -> spO2Content(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                chartDaySelection,
+                onEditVitalsMeasurement,
+                viewModel::deleteVitalsMeasurementEntry,
+            )
+            HeartMetric.VO2_MAX -> vo2MaxContent(state, period, unitFormatter, dateTimeFormatterProvider)
+            HeartMetric.RESPIRATORY_RATE -> respiratoryRateContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                chartDaySelection,
+                onEditVitalsMeasurement,
+                viewModel::deleteVitalsMeasurementEntry,
+            )
+            HeartMetric.BODY_TEMPERATURE -> bodyTemperatureContent(
+                state,
+                period,
+                unitFormatter,
+                dateTimeFormatterProvider,
+                onEditVitalsMeasurement,
+                viewModel::deleteVitalsMeasurementEntry,
+            )
+            HeartMetric.BLOOD_GLUCOSE -> bloodGlucoseContent(
                 state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                bloodPressureContent(
-                    state,
-                    period,
-                    unitFormatter,
-                    dateTimeFormatterProvider,
-                    onEditVitalsMeasurement,
-                    viewModel::deleteVitalsMeasurementEntry,
-                )
-            }
-            HeartMetric.SPO2 -> vitalsMetricContent(
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+            )
+            HeartMetric.SKIN_TEMPERATURE -> skinTemperatureContent(
                 state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                spO2Content(
-                    state,
-                    period,
-                    unitFormatter,
-                    dateTimeFormatterProvider,
-                    chartDaySelection,
-                    onEditVitalsMeasurement,
-                    viewModel::deleteVitalsMeasurementEntry,
-                )
-            }
-            HeartMetric.VO2_MAX -> vitalsMetricContent(
-                state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                vo2MaxContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            }
-            HeartMetric.RESPIRATORY_RATE -> vitalsMetricContent(
-                state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                respiratoryRateContent(
-                    state,
-                    period,
-                    unitFormatter,
-                    dateTimeFormatterProvider,
-                    chartDaySelection,
-                    onEditVitalsMeasurement,
-                    viewModel::deleteVitalsMeasurementEntry,
-                )
-            }
-            HeartMetric.BODY_TEMPERATURE -> vitalsMetricContent(
-                state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                bodyTemperatureContent(
-                    state,
-                    period,
-                    unitFormatter,
-                    dateTimeFormatterProvider,
-                    onEditVitalsMeasurement,
-                    viewModel::deleteVitalsMeasurementEntry,
-                )
-            }
-            HeartMetric.BLOOD_GLUCOSE -> vitalsMetricContent(
-                state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                bloodGlucoseContent(
-                    state = state,
-                    period = period,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    chartDaySelection = chartDaySelection,
-                )
-            }
-            HeartMetric.SKIN_TEMPERATURE -> vitalsMetricContent(
-                state = state,
-                phase3Permissions = viewModel.vitalsPermissions,
-                onGrantPermissions = requestVitalsPermissions::launch,
-            ) {
-                skinTemperatureContent(
-                    state = state,
-                    period = period,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    chartDaySelection = chartDaySelection,
-                )
-            }
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+            )
         }
+    }
     }
 }
 
@@ -539,6 +500,7 @@ private fun LazyListScope.averageHeartRateContent(
                     )
                 }
             }
+            dataSourceEducationItem()
         }
         !state.isLoading -> noHeartMetricData(
             titleRes = R.string.metric_average_heart_rate,
@@ -914,25 +876,6 @@ private fun LazyListScope.hrvContent(
             accentColor = HeartColor,
         )
     }
-}
-
-private fun LazyListScope.vitalsMetricContent(
-    state: HeartUiState,
-    phase3Permissions: Set<String>,
-    onGrantPermissions: (Set<String>) -> Unit,
-    content: LazyListScope.() -> Unit,
-) {
-    if (state.missingVitalsPermissions.isNotEmpty()) {
-        item {
-            PermissionCallout(
-                title = stringResource(R.string.vitals_permissions_needed_title),
-                body = stringResource(R.string.vitals_permissions_needed_body),
-                onGrant = { onGrantPermissions(phase3Permissions) },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-        }
-    }
-    content()
 }
 
 private fun LazyListScope.bloodPressureContent(

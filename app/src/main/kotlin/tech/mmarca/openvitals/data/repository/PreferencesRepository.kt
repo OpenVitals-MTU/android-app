@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
+import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import java.time.LocalTime
 import java.util.Locale
 import javax.inject.Inject
@@ -419,6 +420,31 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    fun acknowledgedPermissionsFor(feature: HealthConnectFeature): Set<String> =
+        prefs.getStringSet(acknowledgedFeatureKey(feature), emptySet()) ?: emptySet()
+
+    fun acknowledgePermissionsFor(
+        feature: HealthConnectFeature,
+        permissions: Set<String>,
+    ) {
+        if (permissions.isEmpty()) return
+        prefs.edit {
+            putStringSet(
+                acknowledgedFeatureKey(feature),
+                acknowledgedPermissionsFor(feature) + permissions,
+            )
+        }
+    }
+
+    var lastPromptedPermissionSetVersion: Int
+        get() = prefs.getInt(KEY_LAST_PROMPTED_PERMISSION_SET_VERSION, 0)
+        set(value) {
+            prefs.edit { putInt(KEY_LAST_PROMPTED_PERMISSION_SET_VERSION, value) }
+        }
+
+    private fun acknowledgedFeatureKey(feature: HealthConnectFeature): String =
+        "$KEY_ACKNOWLEDGED_FEATURE_PREFIX${feature.name}"
+
     fun mindfulnessTimerConfig(): MindfulnessTimerConfig =
         MindfulnessTimerConfig(
             durationMinutes = prefs.getInt(
@@ -507,6 +533,8 @@ class PreferencesRepository @Inject constructor(
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_ACKNOWLEDGED_PERMISSIONS = "acknowledged_permissions"
+        private const val KEY_ACKNOWLEDGED_FEATURE_PREFIX = "acknowledged_feature_permissions_"
+        private const val KEY_LAST_PROMPTED_PERMISSION_SET_VERSION = "last_prompted_permission_set_version"
         private const val KEY_UNIT_SYSTEM = "unit_system"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_APP_THEME_MODE = "app_theme_mode"

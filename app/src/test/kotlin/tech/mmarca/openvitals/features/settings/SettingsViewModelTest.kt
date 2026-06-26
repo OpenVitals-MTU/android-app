@@ -27,7 +27,6 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.healthconnect.HealthConnectMatchmaking
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
@@ -55,7 +54,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -68,7 +66,6 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("steps")),
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -82,7 +79,6 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -97,7 +93,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -114,7 +109,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -131,7 +125,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -148,7 +141,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -165,7 +157,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -189,7 +180,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -206,7 +196,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -224,7 +213,6 @@ class SettingsViewModelTest {
             repository = repository,
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
-            matchmaking = matchmaking(),
             permissionUxState = permissionUxState(),
             metricSummaryCacheStore = cacheStore(),
         )
@@ -257,12 +245,6 @@ class SettingsViewModelTest {
             every { repo.cyclePermissions } returns setOf("cycle")
             every { repo.manualOnlyPermissions } returns setOf("route")
             coEvery { repo.grantedPermissions() } returns grantedPermissions
-        }
-
-    private fun matchmaking(): HealthConnectMatchmaking =
-        mockk<HealthConnectMatchmaking>().also { matchmaking ->
-            coEvery { matchmaking.isFeatureAvailable() } returns false
-            coEvery { matchmaking.isMatchmakingPossible() } returns false
         }
 
     private fun permissionUxState(): HealthConnectPermissionUxState =

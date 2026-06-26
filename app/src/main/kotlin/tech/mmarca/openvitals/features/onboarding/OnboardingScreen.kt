@@ -192,6 +192,14 @@ fun OnboardingScreen(
             icon = Icons.Outlined.PhoneAndroid,
             title = stringResource(R.string.onboarding_health_connect_title),
             body = stringResource(R.string.onboarding_health_connect_body),
+            leadingContent = {
+                Image(
+                    painter = painterResource(R.drawable.health_connect_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            },
         )
 
         Spacer(Modifier.height(24.dp))
@@ -281,7 +289,12 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun FeatureCard(icon: ImageVector, title: String, body: String) {
+private fun FeatureCard(
+    icon: ImageVector,
+    title: String,
+    body: String,
+    leadingContent: (@Composable () -> Unit)? = null,
+) {
                 OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
 
@@ -290,13 +303,18 @@ private fun FeatureCard(icon: ImageVector, title: String, body: String) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(Modifier.width(12.dp))
+            if (leadingContent != null) {
+                leadingContent()
+                Spacer(Modifier.width(12.dp))
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+            }
             Column {
                 Text(text = title, style = MaterialTheme.typography.titleSmall)
                 Text(

@@ -107,6 +107,7 @@ class HealthConnectManager @Inject constructor(
 
     val corePermissions: Set<String> get() = permissionService.corePermissions
     val routePermissions: Set<String> get() = permissionService.routePermissions
+    val permissionSetVersion: Int get() = HealthConnectPermissionService.PERMISSION_SET_VERSION
     val activityWritePermissions: Set<String> get() = permissionService.activityWritePermissions
     val heartPermissions: Set<String> get() = permissionService.heartPermissions
     val bodyPermissions: Set<String> get() = permissionService.bodyPermissions

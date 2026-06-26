@@ -70,6 +70,8 @@ import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.HealthConnectNewPermissionsPrompt
+import tech.mmarca.openvitals.ui.components.PrivacyReconsentPrompt
 
 internal const val CardioLoadDetailRoute = "activity/cardio_load"
 internal const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
@@ -393,7 +395,6 @@ fun AppNavigation(
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     refreshRequest = dashboardRefreshRequest,
-                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                     onOpenMetric = { metricId ->
                         when (metricId) {
                             DashboardWidgetId.CALORIES_OUT,
@@ -441,7 +442,6 @@ fun AppNavigation(
                 val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
                 DailyReadinessScreen(
                     viewModel = dailyReadinessViewModel,
-                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                     onOpenBodyEnergyDetails = { date ->
                         navController.navigate(Screen.BodyEnergyDetails.createRoute(date.toString()))
                     },
@@ -466,7 +466,6 @@ fun AppNavigation(
                 BodyEnergyDetailsScreen(
                     viewModel = dailyReadinessViewModel,
                     selectedDate = selectedDate,
-                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                 )
             }
 
@@ -482,7 +481,6 @@ fun AppNavigation(
                 TrainingReadinessDetailsScreen(
                     viewModel = dailyReadinessViewModel,
                     selectedDate = selectedDate,
-                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                 )
             }
 
@@ -498,7 +496,6 @@ fun AppNavigation(
                 StressDetailsScreen(
                     viewModel = dailyReadinessViewModel,
                     selectedDate = selectedDate,
-                    onGrantPermissions = { navController.navigate(Screen.Settings.route) },
                 )
             }
 
@@ -740,6 +737,8 @@ fun AppNavigation(
             settingsRoutes(navController)
         }
     }
+    HealthConnectNewPermissionsPrompt()
+    PrivacyReconsentPrompt()
 }
 
 private fun addEntryActionForCurrentRoute(
