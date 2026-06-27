@@ -8,6 +8,10 @@ import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTemplate
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -293,6 +297,24 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    fun activityRecordingDashboardLayout(activityTypeId: String): ActivityRecordingDashboardLayout =
+        prefs.getString(activityRecordingDashboardLayoutKey(activityTypeId), null)
+            ?.toActivityRecordingDashboardLayout()
+            ?: ActivityRecordingDashboardLayout()
+
+    fun setActivityRecordingDashboardLayout(
+        activityTypeId: String,
+        layout: ActivityRecordingDashboardLayout,
+    ) {
+        if (activityTypeId.isBlank()) return
+        prefs.edit {
+            putString(
+                activityRecordingDashboardLayoutKey(activityTypeId),
+                layout.normalized().toPreferenceString(),
+            )
+        }
+    }
+
     fun dailyGoalFor(key: MetricDailyGoalKey): Double =
         prefs.getFloat(key.storageKey, key.defaultValue.toFloat()).toDouble()
             .let(key::normalize)
@@ -529,6 +551,47 @@ class PreferencesRepository @Inject constructor(
     private fun String?.toReminderTimeOrDefault(default: LocalTime): LocalTime =
         this?.let { value -> runCatching { LocalTime.parse(value) }.getOrNull() } ?: default
 
+    private fun activityRecordingDashboardLayoutKey(activityTypeId: String): String =
+        "$KEY_ACTIVITY_RECORDING_DASHBOARD_LAYOUT_PREFIX$activityTypeId"
+
+    private fun ActivityRecordingDashboardLayout.toPreferenceString(): String {
+        val normalized = normalized()
+        return normalized.template.name + KEY_LAYOUT_SECTION_SEPARATOR +
+            normalized.items.joinToString(KEY_VALUE_SEPARATOR) { item ->
+                item.field.name + KEY_VALUE_PAIR_SEPARATOR + item.size.toPreferenceString()
+            }
+    }
+
+    private fun String.toActivityRecordingDashboardLayout(): ActivityRecordingDashboardLayout? {
+        val sections = split(KEY_LAYOUT_SECTION_SEPARATOR, limit = 2)
+        val template = sections.firstOrNull()
+            ?.let { value ->
+                runCatching { ActivityRecordingDashboardTemplate.valueOf(value) }.getOrNull()
+            }
+            ?: return null
+        val items = sections.getOrNull(1)
+            ?.split(KEY_VALUE_SEPARATOR)
+            ?.mapNotNull { value ->
+                val itemSections = value.split(KEY_VALUE_PAIR_SEPARATOR, limit = 2)
+                val field = itemSections.firstOrNull()
+                    ?.let { fieldName ->
+                        runCatching { ActivityRecordingDashboardField.valueOf(fieldName) }.getOrNull()
+                    }
+                    ?: return@mapNotNull null
+                val size = itemSections.getOrNull(1)
+                    ?.let { sizeName ->
+                        ActivityRecordingDashboardItemSize.fromPreferenceString(sizeName)
+                    }
+                field to size
+            }
+            .orEmpty()
+        return ActivityRecordingDashboardLayout(
+            template = template,
+            fields = items.map { it.first },
+            sizes = items.mapNotNull { (field, size) -> size?.let { field to it } }.toMap(),
+        ).normalized()
+    }
+
     companion object {
         const val PREFS_FILE = "openvitals_prefs"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
@@ -552,6 +615,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACTIVITY_RECORDING_VOICE_DISTANCE_INTERVAL_METERS = "activity_recording_voice_distance_interval_meters"
         private const val KEY_ACTIVITY_RECORDING_VOICE_IDLE_ENABLED = "activity_recording_voice_idle_enabled"
         private const val KEY_ACTIVITY_RECORDING_VOICE_LAP_ENABLED = "activity_recording_voice_lap_enabled"
+        private const val KEY_ACTIVITY_RECORDING_DASHBOARD_LAYOUT_PREFIX = "activity_recording_dashboard_layout_"
         private const val KEY_SHOW_OPENVITALS_CALCULATED_CALORIES = "show_openvitals_calculated_calories"
         private const val KEY_HEALTH_CONNECT_SYNC_ENABLED = "health_connect_sync_enabled"
         private const val KEY_HEALTH_CONNECT_PERMISSION_CANCEL_COUNT = "health_connect_permission_cancel_count"
@@ -581,6 +645,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_MINDFULNESS_REMINDER_TIME = "mindfulness_reminder_time"
         private const val KEY_VALUE_SEPARATOR = ","
         private const val KEY_VALUE_PAIR_SEPARATOR = "="
+        private const val KEY_LAYOUT_SECTION_SEPARATOR = "|"
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
         private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0

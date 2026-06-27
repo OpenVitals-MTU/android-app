@@ -10,6 +10,10 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarkerType
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTemplate
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
 internal fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
@@ -71,6 +75,7 @@ internal fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         lastLocationTime = getLong(KeyLastLocationTime, MissingLong).toInstantOrNull(),
         droppedPointCount = getInt(KeyDroppedPointCount, 0),
         errorMessage = getString(KeyErrorMessage, null),
+        dashboardLayout = restoreDashboardLayout(),
     )
 }
 
@@ -113,6 +118,8 @@ internal fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSt
         putLong(KeyLastLocationTime, state.lastLocationTime?.toEpochMilli() ?: MissingLong)
         putInt(KeyDroppedPointCount, state.droppedPointCount)
         putString(KeyErrorMessage, state.errorMessage)
+        putString(KeyDashboardTemplate, state.dashboardLayout.template.name)
+        putString(KeyDashboardFields, state.dashboardLayout.encodeDashboardItems())
     }
 }
 
@@ -232,6 +239,43 @@ private fun List<Int>.encodeIntList(): String =
 private fun String.decodeIntList(): List<Int> =
     split(',')
         .mapNotNull { value -> value.toIntOrNull()?.takeIf { it > 0 } }
+
+private fun SharedPreferences.restoreDashboardLayout(): ActivityRecordingDashboardLayout {
+    val template = getString(KeyDashboardTemplate, null)
+        ?.let { value ->
+            runCatching { ActivityRecordingDashboardTemplate.valueOf(value) }.getOrNull()
+        }
+        ?: ActivityRecordingDashboardTemplate.LARGE_TOP
+    val items = getString(KeyDashboardFields, null)
+        .orEmpty()
+        .decodeDashboardItems()
+    return ActivityRecordingDashboardLayout(
+        template = template,
+        fields = items.map { it.first },
+        sizes = items.mapNotNull { (field, size) -> size?.let { field to it } }.toMap(),
+    ).normalized()
+}
+
+private fun ActivityRecordingDashboardLayout.encodeDashboardItems(): String =
+    normalized().items.joinToString(separator = ",") { item ->
+        item.field.name + "=" + item.size.toPreferenceString()
+    }
+
+private fun String.decodeDashboardItems(): List<Pair<ActivityRecordingDashboardField, ActivityRecordingDashboardItemSize?>> =
+    split(',')
+        .mapNotNull { value ->
+            val itemSections = value.split("=", limit = 2)
+            val field = itemSections.firstOrNull()
+                ?.let { fieldName ->
+                    runCatching { ActivityRecordingDashboardField.valueOf(fieldName) }.getOrNull()
+                }
+                ?: return@mapNotNull null
+            val size = itemSections.getOrNull(1)
+                ?.let { sizeName ->
+                    ActivityRecordingDashboardItemSize.fromPreferenceString(sizeName)
+                }
+            field to size
+        }
 
 internal fun List<ExerciseRoutePoint>.encodeRoutePoints(): String =
     joinToString(separator = "\n") { point -> point.encodeRoutePoint() }

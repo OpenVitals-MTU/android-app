@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MyLocation
@@ -132,7 +133,6 @@ internal fun ActivityRecordingSetupScreen(
             if (selectedType.supportsGpsRoute) {
                 PreRecordingGpsFixStatus(
                     state = gpsFixState,
-                    unitFormatter = unitFormatter,
                 )
                 ActivityRecordingLiveSensorStats(
                     state = recordingState,
@@ -372,50 +372,34 @@ internal fun rememberPreRecordingGpsFixState(enabled: Boolean): PreRecordingGpsF
 @Composable
 internal fun PreRecordingGpsFixStatus(
     state: PreRecordingGpsFixState,
-    unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
-    val fixQuality = state.fixQuality
-    val accuracyText = fixQuality?.accuracyMeters?.let { unitFormatter.elevation(it).text }
-    val statusText = when {
-        !state.hasPrecisePermission -> stringResource(R.string.activity_entry_location_permission_needed)
-        !state.gpsProviderEnabled -> stringResource(R.string.activity_entry_recording_gps_disabled)
-        fixQuality?.isPrecise == true && accuracyText != null -> stringResource(
-            R.string.activity_entry_recording_gps_ready,
-            accuracyText,
-        )
-        accuracyText != null -> stringResource(
-            R.string.activity_entry_recording_gps_waiting_accuracy,
-            accuracyText,
-        )
-        else -> stringResource(R.string.activity_entry_recording_gps_waiting)
-    }
-    val statusColor = if (state.latestPreciseFix != null) {
+    val isReady = state.latestPreciseFix != null
+    val statusColor = if (isReady) {
         WorkoutColor
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MaterialTheme.colorScheme.error
     }
+    val statusDescription = stringResource(
+        if (isReady) {
+            R.string.activity_entry_recording_gps_fix
+        } else {
+            R.string.activity_entry_recording_gps_waiting
+        },
+    )
 
     OpenVitalsSurface(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+        shape = CircleShape,
+        modifier = modifier,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.MyLocation,
-                contentDescription = null,
-                tint = statusColor,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = statusColor,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        Icon(
+            imageVector = Icons.Outlined.MyLocation,
+            contentDescription = statusDescription,
+            tint = statusColor,
+            modifier = Modifier.size(24.dp),
+        )
     }
 }
 

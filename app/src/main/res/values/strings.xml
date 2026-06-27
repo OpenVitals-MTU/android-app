@@ -10,9 +10,13 @@
     <string name="cd_finish_dashboard_editing">Finish editing summary</string>
     <string name="cd_edit_manual_entry_widgets">Edit add entry widgets</string>
     <string name="cd_finish_manual_entry_editing">Finish editing add entry widgets</string>
+    <string name="cd_edit_recording_dashboard">Edit recording dashboard</string>
+    <string name="cd_finish_recording_dashboard_editing">Finish editing recording dashboard</string>
     <string name="cd_move_widget_up">Move widget up</string>
     <string name="cd_move_widget_down">Move widget down</string>
     <string name="cd_remove_widget">Remove widget</string>
+    <string name="cd_decrease_recording_dashboard_widget_size">Make widget smaller</string>
+    <string name="cd_increase_recording_dashboard_widget_size">Make widget larger</string>
     <string name="cd_delete_entry">Delete entry</string>
     <string name="cd_edit_entry">Edit entry</string>
     <string name="cd_previous_day">Previous day</string>
@@ -215,6 +219,11 @@
     <string name="activity_entry_recording_finish_hint">Finish opens the activity details form so you can add title, notes, calories, or adjust values before saving.</string>
     <string name="activity_entry_recording_repetition_correction_hint">Use + or - if the sensor misses or adds a rep.</string>
     <string name="activity_entry_recording_accuracy">Last accuracy %1$s</string>
+    <string name="activity_entry_recording_dashboard_layout">Dashboard layout</string>
+    <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>
+    <string name="activity_entry_recording_dashboard_layout_three_by_four">3x4</string>
+    <string name="activity_entry_recording_dashboard_layout_large_top">Large top</string>
+    <string name="activity_entry_recording_dashboard_add_field">Add widget</string>
     <string name="activity_entry_route_summary">%1$s • %2$s • %3$s gain • %4$d points</string>
     <string name="activity_entry_route_average_metrics">Avg pace %1$s • avg speed %2$s</string>
     <string name="activity_entry_add">Save activity</string>

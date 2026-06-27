@@ -58,6 +58,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 
@@ -128,6 +129,7 @@ data class ActivityRecordingState(
     val currentRunningCadenceRpm: Long? = null,
     val bleHeartRateNoSignal: Boolean = false,
     val bleDeviceStatuses: List<BleDeviceConnectionStatus> = emptyList(),
+    val dashboardLayout: ActivityRecordingDashboardLayout = ActivityRecordingDashboardLayout(),
 ) {
     val isActive: Boolean
         get() = status == ActivityRecordingStatus.RECORDING ||
@@ -214,8 +216,45 @@ class ActivityRecordingController @Inject constructor(
         return startRecording(activityType, initialFix)
     }
 
+    fun prepareRecordingDashboard(activityType: ActivityEntryType) {
+        if (_state.value.isActive) return
+        val recordingKind = if (activityType.supportsGpsRoute) {
+            ActivityRecordingKind.GPS_ROUTE
+        } else {
+            ActivityRecordingKind.REPETITION
+        }
+        persistenceScope.coroutineContext.cancelChildren()
+        recordingGeneration += 1
+        updateAndPersist(
+            ActivityRecordingState(
+                status = ActivityRecordingStatus.IDLE,
+                recordingKind = recordingKind,
+                activityTypeId = activityType.id,
+                exerciseType = activityType.exerciseType,
+                dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id),
+            ),
+            replaceRoutePoints = true,
+        )
+        previewBleConnections()
+    }
+
+    fun updateDashboardLayout(layout: ActivityRecordingDashboardLayout) {
+        val current = _state.value
+        val activityTypeId = current.activityTypeId ?: return
+        if (current.status == ActivityRecordingStatus.RECORDING) return
+        val normalized = layout.normalized()
+        preferencesRepository.setActivityRecordingDashboardLayout(activityTypeId, normalized)
+        updateAndPersist(current.copy(dashboardLayout = normalized, errorMessage = null))
+    }
+
+    fun clearPreparedRecording() {
+        if (_state.value.isActive) return
+        clearRecording()
+    }
+
     private fun startGpsRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean {
         val recordingPreferences = preferencesRepository.activityRecordingPreferences()
+        val dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id)
         if (!hasPreciseLocationPermission(context)) {
             updateAndPersist(
                 _state.value.copy(
@@ -263,6 +302,7 @@ class ActivityRecordingController @Inject constructor(
                 lastMovementAt = now,
                 lastAccuracyMeters = initialFixQuality.accuracyMeters,
                 lastLocationTime = now,
+                dashboardLayout = dashboardLayout,
             ),
             replaceRoutePoints = true,
         )
@@ -290,6 +330,7 @@ class ActivityRecordingController @Inject constructor(
         }
 
         val now = Instant.now()
+        val dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id)
         persistenceScope.coroutineContext.cancelChildren()
         recordingStore.clear()
         recordingGeneration += 1
@@ -302,6 +343,7 @@ class ActivityRecordingController @Inject constructor(
                 startTime = now,
                 currentSetStartedAt = now,
                 repetitionRestSeconds = repetitionRestSeconds.coerceAtLeast(0L),
+                dashboardLayout = dashboardLayout,
             ),
             replaceRoutePoints = true,
         )
@@ -980,3 +1022,5 @@ internal const val KeyLastAccuracyMeters = "last_accuracy_meters"
 internal const val KeyLastLocationTime = "last_location_time"
 internal const val KeyDroppedPointCount = "dropped_point_count"
 internal const val KeyErrorMessage = "error_message"
+internal const val KeyDashboardTemplate = "dashboard_template"
+internal const val KeyDashboardFields = "dashboard_fields"

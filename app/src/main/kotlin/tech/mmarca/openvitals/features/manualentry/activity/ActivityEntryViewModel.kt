@@ -46,6 +46,7 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
 
 @HiltViewModel
@@ -266,6 +267,7 @@ class ActivityEntryViewModel(
         if (_uiState.value.isEditMode) return
         recordingDraftStore?.clear()
         activityRecorder?.stopBlePreview()
+        activityRecorder?.clearPreparedRecording()
         _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
             canWrite = _uiState.value.canWrite,
             isCheckingPermission = _uiState.value.isCheckingPermission,
@@ -629,7 +631,49 @@ class ActivityEntryViewModel(
             validationErrors = emptySet(),
         )
         refreshPermission()
+        activityRecorder?.clearPreparedRecording()
         activityRecorder?.previewBleConnections()
+    }
+
+    fun openRecordingDashboard(repetitionRestSeconds: Long = 0L) {
+        val recorder = activityRecorder
+        if (recorder == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.RECORDING_FAILED,
+                detailMessage = "GPS recording is not available.",
+                validationErrors = emptySet(),
+            )
+            return
+        }
+        val currentState = _uiState.value
+        if (!currentState.selectedActivityType.supportsLiveRecording) {
+            _uiState.value = currentState.copy(
+                entryError = ActivityEntryError.INVALID_VALUE,
+                detailMessage = null,
+                validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
+            )
+            return
+        }
+        if (!currentState.selectedActivityType.supportsGpsRoute) {
+            startGpsRecording(null, repetitionRestSeconds)
+            return
+        }
+
+        recordingDraftStore?.clear()
+        _uiState.value = currentState.copy(
+            mode = ActivityEntryMode.RECORDING,
+            importedRoute = null,
+            recordedPauseIntervals = emptyList(),
+            recordedLaps = emptyList(),
+            recordedMarkers = emptyList(),
+            isRecordingDraft = false,
+            distanceText = "",
+            elevationText = "",
+            entryError = null,
+            detailMessage = null,
+            validationErrors = emptySet(),
+        )
+        recorder.prepareRecordingDashboard(currentState.selectedActivityType)
     }
 
     fun startGpsRecording(
@@ -716,6 +760,10 @@ class ActivityEntryViewModel(
 
     fun startNextRepetitionSet() {
         activityRecorder?.startNextRepetitionSet()
+    }
+
+    fun updateRecordingDashboardLayout(layout: ActivityRecordingDashboardLayout) {
+        activityRecorder?.updateDashboardLayout(layout)
     }
 
     fun discardGpsRecording() {

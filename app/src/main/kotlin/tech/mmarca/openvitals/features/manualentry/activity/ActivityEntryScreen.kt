@@ -86,7 +86,7 @@ fun ActivityEntryScreen(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted || ActivityRecordingController.hasActivityRecognitionPermission(context)) {
-            viewModel.startGpsRecording(null)
+            viewModel.openRecordingDashboard()
         } else {
             viewModel.reportActivityRecognitionPermissionNeeded()
         }
@@ -139,16 +139,22 @@ fun ActivityEntryScreen(
         }
     }
 
-    if (recordingState.isActive) {
+    if (
+        state.mode == ActivityEntryMode.RECORDING &&
+        (recordingState.isActive || recordingState.activityTypeId != null)
+    ) {
         ActivityRecordingScreen(
             state = recordingState,
             unitFormatter = unitFormatter,
+            onStartRecording = viewModel::startGpsRecording,
             onPauseRecording = viewModel::pauseGpsRecording,
             onResumeRecording = viewModel::resumeGpsRecording,
             onAddLap = viewModel::addRecordingLap,
             onAddMarker = viewModel::addRecordingMarker,
             onUpdateMarker = viewModel::updateRecordingMarker,
             onDeleteMarker = viewModel::deleteRecordingMarker,
+            onUpdateDashboardLayout = viewModel::updateRecordingDashboardLayout,
+            onChooseSource = viewModel::chooseSource,
             onAdjustRepetitionCount = viewModel::adjustRepetitionRecording,
             onEndRepetitionSet = viewModel::endRepetitionSet,
             onStartNextRepetitionSet = viewModel::startNextRepetitionSet,
@@ -168,7 +174,9 @@ fun ActivityEntryScreen(
                         recordingState = recordingState,
                         unitFormatter = unitFormatter,
                         onSelectActivityType = viewModel::selectActivityType,
-                        onStartRecording = viewModel::startGpsRecording,
+                        onStartRecording = { _, restSeconds ->
+                            viewModel.openRecordingDashboard(restSeconds)
+                        },
                         onRequestLocationPermission = {
                             requestGpsLocationPermissions.launch(activityRecordingLocationPermissions())
                         },
