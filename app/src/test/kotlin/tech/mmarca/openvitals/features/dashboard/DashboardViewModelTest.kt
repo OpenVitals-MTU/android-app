@@ -20,6 +20,8 @@ import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,6 +31,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
 
     @get:Rule
@@ -329,9 +332,32 @@ class DashboardViewModelTest {
                 DashboardMetric.CALORIES_OUT,
                 DashboardMetric.WHEELCHAIR_PUSHES,
                 DashboardMetric.WORKOUT,
+                DashboardMetric.AVG_HEART_RATE,
             ),
             queries.first().visibleMetrics,
         )
+    }
+
+    @Test fun `average heart rate widget loads with primary dashboard query`() = runTest {
+        val repo = mockHealthRepository()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            queries += query
+            DashboardData(
+                date = today,
+                avgHeartRateBpm = 72L,
+                loadedMetrics = setOf(DashboardMetric.AVG_HEART_RATE),
+            )
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(DashboardWidgetId.AVG_HEART_RATE.name)
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertTrue(DashboardMetric.AVG_HEART_RATE in queries.first().visibleMetrics)
+        assertFalse(DashboardWidgetId.AVG_HEART_RATE in vm.uiState.value.pendingWidgets)
+        assertEquals(1, queries.size)
     }
 
     @Test fun `deferred dashboard metrics merge after fast dashboard load`() = runTest {
@@ -365,6 +391,10 @@ class DashboardViewModelTest {
         )
 
         val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(1, queries.size)
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION))
+        advanceUntilIdle()
 
         assertEquals(100L, vm.uiState.value.data?.steps)
         assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
@@ -411,6 +441,9 @@ class DashboardViewModelTest {
 
         val vm = DashboardViewModel(repo, prefs)
 
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION, DashboardWidgetId.SLEEP))
+        advanceUntilIdle()
+
         assertEquals(100L, vm.uiState.value.data?.steps)
         assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
         assertTrue(vm.uiState.value.pendingWidgets.isEmpty())
@@ -418,7 +451,58 @@ class DashboardViewModelTest {
         assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
     }
 
-    @Test fun `deferred dashboard loads await missing derived metrics`() = runTest {
+    @Test fun `hidden deferred dashboard widgets wait until reported visible`() = runTest {
+        val repo = mockHealthRepository()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            queries += query
+            when (query.visibleMetrics.singleOrNull()) {
+                DashboardMetric.HYDRATION -> DashboardData(
+                    date = today,
+                    hydrationLiters = 1.5,
+                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
+                )
+                DashboardMetric.SLEEP -> DashboardData(
+                    date = today,
+                    sleep = null,
+                    loadedMetrics = setOf(DashboardMetric.SLEEP),
+                )
+                else -> DashboardData(
+                    date = today,
+                    steps = 100,
+                    loadedMetrics = setOf(
+                        DashboardMetric.STEPS,
+                        DashboardMetric.DISTANCE,
+                        DashboardMetric.CALORIES_OUT,
+                        DashboardMetric.WORKOUT,
+                    ),
+                )
+            }
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.HYDRATION.name,
+            DashboardWidgetId.SLEEP.name,
+        )
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(1, queries.size)
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.STEPS, DashboardWidgetId.HYDRATION))
+        advanceUntilIdle()
+
+        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.HYDRATION) })
+        assertFalse(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
+
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.SLEEP))
+        advanceUntilIdle()
+
+        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
+    }
+
+    @Test fun `weekly deferred dashboard loads do not await missing derived metrics`() = runTest {
         val repo = mockHealthRepository()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -440,11 +524,14 @@ class DashboardViewModelTest {
             DashboardWidgetId.WEEKLY_CARDIO_LOAD.name,
         )
 
-        DashboardViewModel(repo, prefs)
+        val vm = DashboardViewModel(repo, prefs)
+
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.WEEKLY_CARDIO_LOAD))
+        advanceUntilIdle()
 
         assertTrue(
             queries.any {
-                DashboardMetric.WEEKLY_CARDIO_LOAD in it.visibleMetrics && it.awaitMissingDerivedMetrics
+                DashboardMetric.WEEKLY_CARDIO_LOAD in it.visibleMetrics && !it.awaitMissingDerivedMetrics
             }
         )
     }
@@ -497,7 +584,10 @@ class DashboardViewModelTest {
 
         val vm = DashboardViewModel(repo, prefs)
         vm.load(yesterday)
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION))
         vm.load(today)
+        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION))
+        advanceUntilIdle()
 
         assertEquals(today, vm.uiState.value.data?.date)
         assertEquals(2.0, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)

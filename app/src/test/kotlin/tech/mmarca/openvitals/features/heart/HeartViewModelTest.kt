@@ -107,7 +107,6 @@ class HeartViewModelTest {
                 HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
                     HeartPeriodData(
                         dayHrvMs = repo.loadHrvRmssd(query.selectedDate),
-                        previousDayHrvMs = repo.loadHrvRmssd(windows.previous.start),
                         baselineDailyHrv = repo.loadDailyHRV(windows.baseline.start, windows.baseline.end),
                     )
                 } else {

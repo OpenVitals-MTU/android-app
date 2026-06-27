@@ -120,11 +120,9 @@ class HeartRepository @Inject constructor(
             }
             HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
                 val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
-                val previousDayHrvMs = async { loadHrvRmssd(windows.previous.start, granted) }
                 val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
                 HeartPeriodData(
                     dayHrvMs = dayHrvMs.await(),
-                    previousDayHrvMs = previousDayHrvMs.await(),
                     baselineDailyHrv = baselineDailyHrv.await(),
                 )
             } else {
@@ -289,8 +287,7 @@ class HeartRepository @Inject constructor(
         date: LocalDate,
         granted: Set<String>,
     ): Double? {
-        if (readHrvPermission !in granted) return null
-        return hc.readHrvRmssd(date)
+        return loadDailyHRV(date, date, granted).firstOrNull { it.date == date }?.rmssdMs
     }
 
     suspend fun loadDailyHRV(start: LocalDate, end: LocalDate): List<DailyHrv> {

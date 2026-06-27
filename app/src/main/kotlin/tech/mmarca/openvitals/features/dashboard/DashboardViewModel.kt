@@ -45,6 +45,7 @@ data class DashboardUiState(
     val healthConnectSyncEnabled: Boolean = true,
     val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val minimumPermissionsGranted: Boolean = true,
+    val visibleWidgetLoadToken: Long = 0L,
 )
 
 data class DashboardDailyGoals(
@@ -86,6 +87,10 @@ class DashboardViewModel @Inject constructor(
     private val loadCoordinator = LoadCoordinator()
     private val deferredLoadMutex = Mutex()
     private var userPinnedPastDay = false
+    private var deferredLoadContext: DeferredDashboardLoadContext? = null
+    private var deferredLoadGeneration = 0L
+    private var requestedDeferredWidgets: Set<DashboardWidgetId> = emptySet()
+    private var loadedDeferredWidgets: Set<DashboardWidgetId> = emptySet()
 
     init {
         load(_uiState.value.selectedDate)
@@ -159,15 +164,11 @@ class DashboardViewModel @Inject constructor(
             val activityWeekMode = prefs.activityWeekMode
             val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
             val dailyGoals = prefs.dashboardDailyGoals()
-            val dashboardWidgets = _uiState.value.dashboardWidgets
             val primaryMetrics = DashboardFastMetrics
-            val deferredWidgets = dashboardWidgets
-                .filter { widgetId ->
-                    widgetId.toDashboardMetricOrNull()
-                        ?.let { metric -> metric !in primaryMetrics }
-                        ?: false
-                }
-                .toSet()
+            val loadGeneration = ++deferredLoadGeneration
+            deferredLoadContext = null
+            requestedDeferredWidgets = emptySet()
+            loadedDeferredWidgets = emptySet()
             val current = _uiState.value
             val availability = repository.availability()
             val granted = if (availability == HealthConnectAvailability.AVAILABLE) {
@@ -184,7 +185,7 @@ class DashboardViewModel @Inject constructor(
                 activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
-                pendingWidgets = deferredWidgets,
+                pendingWidgets = emptySet(),
                 healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
                 healthConnectAvailability = availability,
                 minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
@@ -202,6 +203,13 @@ class DashboardViewModel @Inject constructor(
             }
                 .onSuccess { data ->
                     if (!isCurrent) return@load
+                    deferredLoadContext = DeferredDashboardLoadContext(
+                        date = clampedDate,
+                        sleepRangeMode = sleepRangeMode,
+                        activityWeekMode = activityWeekMode,
+                        refreshMode = refreshMode,
+                        generation = loadGeneration,
+                    )
                     _uiState.value = _uiState.value.copy(
                         data = data,
                         isLoading = false,
@@ -210,14 +218,7 @@ class DashboardViewModel @Inject constructor(
                         activityWeekMode = activityWeekMode,
                         showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
                         dailyGoals = prefs.dashboardDailyGoals(),
-                    )
-                    loadDeferredDashboardMetrics(
-                        date = clampedDate,
-                        sleepRangeMode = sleepRangeMode,
-                        activityWeekMode = activityWeekMode,
-                        widgets = deferredWidgets.toList(),
-                        refreshMode = refreshMode,
-                        isCurrentLoad = { isCurrent },
+                        visibleWidgetLoadToken = loadGeneration,
                     )
                 }
                 .onFailure { error ->
@@ -257,6 +258,31 @@ class DashboardViewModel @Inject constructor(
         if (missing.isEmpty()) return
         prefs.acknowledgePermissionsFor(HealthConnectFeature.DASHBOARD, missing)
         _uiState.value = _uiState.value.copy(unacknowledgedWidgetPermissions = emptySet())
+    }
+
+    fun loadVisibleDashboardWidgets(widgetIds: Set<DashboardWidgetId>) {
+        val context = deferredLoadContext ?: return
+        if (!isDeferredLoadCurrent(context)) return
+        val currentData = _uiState.value.data ?: return
+        val widgetsToLoad = widgetIds
+            .filter { widgetId ->
+                val metric = widgetId.toDashboardMetricOrNull() ?: return@filter false
+                metric !in DashboardFastMetrics &&
+                    metric !in currentData.loadedMetrics &&
+                    widgetId !in requestedDeferredWidgets &&
+                    widgetId !in loadedDeferredWidgets
+            }
+            .toSet()
+        if (widgetsToLoad.isEmpty()) return
+
+        requestedDeferredWidgets = requestedDeferredWidgets + widgetsToLoad
+        _uiState.value = _uiState.value.copy(pendingWidgets = pendingDeferredWidgets(context))
+        viewModelScope.launch {
+            loadDeferredDashboardMetrics(
+                context = context,
+                widgets = widgetsToLoad.toList(),
+            )
+        }
     }
 
     private fun unacknowledgedWidgetPermissions(missingPermissions: Set<String>): Set<String> =
@@ -320,46 +346,52 @@ class DashboardViewModel @Inject constructor(
 
     private fun updateDashboardWidgets(widgets: List<DashboardWidgetId>) {
         val customizableWidgets = customizableDashboardWidgetIds(widgets)
+        val customizableWidgetSet = customizableWidgets.toSet()
+        requestedDeferredWidgets = requestedDeferredWidgets intersect customizableWidgetSet
+        loadedDeferredWidgets = loadedDeferredWidgets intersect customizableWidgetSet
         prefs.setDashboardWidgetOrder(customizableWidgets.map { it.name })
-        _uiState.value = _uiState.value.copy(dashboardWidgets = customizableWidgets)
+        _uiState.value = _uiState.value.copy(
+            dashboardWidgets = customizableWidgets,
+            pendingWidgets = _uiState.value.pendingWidgets intersect customizableWidgetSet,
+        )
     }
 
     private suspend fun loadDeferredDashboardMetrics(
-        date: LocalDate,
-        sleepRangeMode: SleepRangeMode,
-        activityWeekMode: ActivityWeekMode,
+        context: DeferredDashboardLoadContext,
         widgets: List<DashboardWidgetId>,
-        refreshMode: RefreshMode,
-        isCurrentLoad: () -> Boolean,
     ) {
         deferredLoadMutex.withLock {
+            if (!isDeferredLoadCurrent(context)) return
             val currentData = _uiState.value.data ?: return
             if (widgets.isEmpty()) return
-            if (currentData.loadedMetrics.isEmpty()) {
-                _uiState.value = _uiState.value.copy(pendingWidgets = emptySet())
-                return
-            }
 
             val metricsByWidget = widgets
                 .mapNotNull { widgetId -> widgetId.toDashboardMetricOrNull()?.let { widgetId to it } }
+                .filter { (_, metric) -> metric !in currentData.loadedMetrics }
+            val skippedWidgets = widgets.toSet() - metricsByWidget.map { (widgetId, _) -> widgetId }.toSet()
+            if (skippedWidgets.isNotEmpty()) {
+                loadedDeferredWidgets = loadedDeferredWidgets + skippedWidgets
+            }
+            if (metricsByWidget.isEmpty()) {
+                _uiState.value = _uiState.value.copy(pendingWidgets = pendingDeferredWidgets(context))
+                return
+            }
             val orderedMetrics = metricsByWidget
                 .map { (_, metric) -> metric }
                 .distinct()
-            val pendingWidgetSet = widgets.toSet()
 
             coroutineScope {
                 var mergedData = currentData
-                var resolvedWidgets = emptySet<DashboardWidgetId>()
                 var debounceJob: Job? = null
 
                 fun publishDeferredProgress(force: Boolean) {
-                    if (!isCurrentLoad()) return
+                    if (!isDeferredLoadCurrent(context)) return
                     val publish = {
                         _uiState.value = _uiState.value.copy(
                             data = mergedData,
                             unacknowledgedWidgetPermissions =
                                 unacknowledgedWidgetPermissions(mergedData.missingPermissions),
-                            pendingWidgets = pendingWidgetSet - resolvedWidgets,
+                            pendingWidgets = pendingDeferredWidgets(context),
                         )
                     }
                     if (force) {
@@ -369,7 +401,7 @@ class DashboardViewModel @Inject constructor(
                         debounceJob?.cancel()
                         debounceJob = launch {
                             delay(DeferredDashboardUiDebounceMillis)
-                            if (isCurrentLoad()) {
+                            if (isDeferredLoadCurrent(context)) {
                                 publish()
                             }
                         }
@@ -377,39 +409,40 @@ class DashboardViewModel @Inject constructor(
                 }
 
                 deferredMetricLoadGroups(orderedMetrics).forEach { metricGroup ->
-                    if (!isCurrentLoad()) return@coroutineScope
+                    if (!isDeferredLoadCurrent(context)) return@coroutineScope
                     runCatching {
                         repository.loadDashboard(
                             DashboardQuery(
-                                date = date,
-                                sleepRangeMode = sleepRangeMode,
-                                activityWeekMode = activityWeekMode,
+                                date = context.date,
+                                sleepRangeMode = context.sleepRangeMode,
+                                activityWeekMode = context.activityWeekMode,
                                 visibleMetrics = metricGroup,
-                                refreshMode = refreshMode,
-                                awaitMissingDerivedMetrics = true,
+                                refreshMode = context.refreshMode,
+                                awaitMissingDerivedMetrics =
+                                    metricGroup.none { it in DashboardWeeklyTrainingDeferredMetrics },
                             )
                         )
                     }
                         .onSuccess { remainingData ->
-                            if (!isCurrentLoad()) return@coroutineScope
+                            if (!isDeferredLoadCurrent(context)) return@coroutineScope
                             val loadedWidgets = metricsByWidget
                                 .filter { (_, widgetMetric) -> widgetMetric in metricGroup }
                                 .map { (widgetId, _) -> widgetId }
                                 .toSet()
                             mergedData = mergedData.mergeLoaded(remainingData)
-                            resolvedWidgets = resolvedWidgets + loadedWidgets
+                            loadedDeferredWidgets = loadedDeferredWidgets + loadedWidgets
                             publishDeferredProgress(force = false)
                         }
                         .onFailure { error ->
-                            if (!isCurrentLoad()) return@coroutineScope
+                            if (!isDeferredLoadCurrent(context)) return@coroutineScope
                             val failedWidgets = metricsByWidget
                                 .filter { (_, widgetMetric) -> widgetMetric in metricGroup }
                                 .map { (widgetId, _) -> widgetId }
                                 .toSet()
-                            resolvedWidgets = resolvedWidgets + failedWidgets
+                            loadedDeferredWidgets = loadedDeferredWidgets + failedWidgets
                             _uiState.value = _uiState.value.copy(
                                 errorMessage = error.message ?: "Unknown error",
-                                pendingWidgets = pendingWidgetSet - resolvedWidgets,
+                                pendingWidgets = pendingDeferredWidgets(context),
                             )
                         }
                 }
@@ -417,7 +450,26 @@ class DashboardViewModel @Inject constructor(
             }
         }
     }
+
+    private fun isDeferredLoadCurrent(context: DeferredDashboardLoadContext): Boolean =
+        deferredLoadContext?.generation == context.generation &&
+            _uiState.value.selectedDate == context.date
+
+    private fun pendingDeferredWidgets(context: DeferredDashboardLoadContext): Set<DashboardWidgetId> =
+        if (isDeferredLoadCurrent(context)) {
+            requestedDeferredWidgets - loadedDeferredWidgets
+        } else {
+            emptySet()
+        }
 }
+
+private data class DeferredDashboardLoadContext(
+    val date: LocalDate,
+    val sleepRangeMode: SleepRangeMode,
+    val activityWeekMode: ActivityWeekMode,
+    val refreshMode: RefreshMode,
+    val generation: Long,
+)
 
 private val DashboardWeeklyTrainingDeferredMetrics = setOf(
     DashboardMetric.WEEKLY_CARDIO_LOAD,
@@ -443,6 +495,7 @@ private val DashboardFastMetrics = setOf(
     DashboardMetric.CALORIES_OUT,
     DashboardMetric.WHEELCHAIR_PUSHES,
     DashboardMetric.WORKOUT,
+    DashboardMetric.AVG_HEART_RATE,
 )
 
 private const val DeferredDashboardUiDebounceMillis = 150L

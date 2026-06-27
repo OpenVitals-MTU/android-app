@@ -60,6 +60,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +89,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
@@ -199,6 +201,7 @@ fun DashboardScreen(
                     healthConnectSyncEnabled = state.healthConnectSyncEnabled,
                     dashboardWidgets = state.dashboardWidgets,
                     pendingWidgets = state.pendingWidgets,
+                    visibleWidgetLoadToken = state.visibleWidgetLoadToken,
                     dailyGoals = state.dailyGoals,
                     isEditingDashboard = state.isEditingDashboard,
                     onPreviousDay = viewModel::previousDay,
@@ -211,6 +214,7 @@ fun DashboardScreen(
                     onMoveWidgetToTarget = viewModel::moveDashboardWidgetToTarget,
                     onRemoveWidget = viewModel::removeDashboardWidget,
                     onAddWidget = viewModel::addDashboardWidget,
+                    onVisibleWidgetsChanged = viewModel::loadVisibleDashboardWidgets,
                     onOpenMetric = onOpenMetric,
                     onOpenActivities = onOpenActivities,
                     onOpenActivity = onOpenActivity,
@@ -252,6 +256,7 @@ private fun DashboardContent(
     healthConnectSyncEnabled: Boolean,
     dashboardWidgets: List<DashboardWidgetId>,
     pendingWidgets: Set<DashboardWidgetId>,
+    visibleWidgetLoadToken: Long,
     dailyGoals: DashboardDailyGoals,
     isEditingDashboard: Boolean,
     onPreviousDay: () -> Unit,
@@ -262,6 +267,7 @@ private fun DashboardContent(
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     onAddWidget: (DashboardWidgetId) -> Unit,
+    onVisibleWidgetsChanged: (Set<DashboardWidgetId>) -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
@@ -386,6 +392,8 @@ private fun DashboardContent(
                     onDraggingWidgetChanged = { widgetId -> draggingWidgetId = widgetId },
                     onMoveWidgetToTarget = onMoveWidgetToTarget,
                     onRemoveWidget = onRemoveWidget,
+                    visibleWidgetLoadToken = visibleWidgetLoadToken,
+                    onVisibleWidgetsChanged = onVisibleWidgetsChanged,
                     actionContent = {
                         DashboardQuickActions(
                             isEditingDashboard = isEditingDashboard,
@@ -684,6 +692,8 @@ private fun DashboardWidgetSections(
     onDraggingWidgetChanged: (DashboardWidgetId?) -> Unit,
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
+    visibleWidgetLoadToken: Long,
+    onVisibleWidgetsChanged: (Set<DashboardWidgetId>) -> Unit,
     actionContent: @Composable () -> Unit,
     hiddenContent: @Composable () -> Unit,
 ) {
@@ -703,6 +713,7 @@ private fun DashboardWidgetSections(
     var carouselSectionBounds by remember { mutableStateOf<Rect?>(null) }
     val dragOffsetState = remember { mutableStateOf(Offset.Zero) }
     var draggedWidgetStartBounds by remember { mutableStateOf<Rect?>(null) }
+    val onVisibleWidgetsChangedState = rememberUpdatedState(onVisibleWidgetsChanged)
     val density = LocalDensity.current
     val edgeScrollThresholdPx = with(density) { DashboardCarouselEdgeScrollThreshold.toPx() }
     val currentDropTargetIds: (DashboardWidgetId, Offset) -> List<DashboardWidgetId> = { draggedId, droppedOffset ->
@@ -725,6 +736,21 @@ private fun DashboardWidgetSections(
             dragOffsetState.value = Offset.Zero
             draggedWidgetStartBounds = null
         }
+    }
+
+    LaunchedEffect(visibleWidgetLoadToken, fixedIds, carouselPages, pagerState) {
+        fun visibleWidgetsFor(page: Int): Set<DashboardWidgetId> =
+            (
+                fixedIds +
+                    carouselPages.getOrNull(page).orEmpty()
+            ).toSet()
+
+        onVisibleWidgetsChangedState.value(visibleWidgetsFor(pagerState.currentPage))
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged()
+            .collect { page ->
+                onVisibleWidgetsChangedState.value(visibleWidgetsFor(page))
+            }
     }
 
     LaunchedEffect(draggingWidgetId, carouselPages.size, sectionBounds, edgeScrollThresholdPx) {
@@ -858,4 +884,3 @@ private fun DashboardWidgetSections(
         )
     }
 }
-
