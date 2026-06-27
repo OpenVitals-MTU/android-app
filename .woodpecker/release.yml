@@ -152,13 +152,14 @@ steps:
       - printf '%s' "$${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64}" | base64 -d > "$${play_key_path}"
       - test -s "$${play_key_path}"
       - release_tag="$$(cat .woodpecker/tmp/release-tag.txt)"
-      - test -f ".woodpecker/tmp/OpenVitals-$${release_tag}.aab"
+      - release_aab_path="$${CI_WORKSPACE}/.woodpecker/tmp/OpenVitals-$${release_tag}.aab"
+      - test -f "$${release_aab_path}"
       - version_code="$$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
       - test -n "$${version_code}"
       - |
         bundle exec fastlane android production \
           json_key:"$${play_key_path}" \
-          aab:".woodpecker/tmp/OpenVitals-$${release_tag}.aab" \
+          aab:"$${release_aab_path}" \
           version_code:"$${version_code}"
     when:
       - event: deployment

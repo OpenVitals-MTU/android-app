@@ -2,8 +2,19 @@ opt_out_usage
 
 default_platform(:android)
 
+require "pathname"
+
 OPENVITALS_PACKAGE_NAME = "tech.mmarca.openvitals"
 OPENVITALS_METADATA_PATH = "fastlane/metadata/android"
+OPENVITALS_PROJECT_ROOT = File.expand_path("..", __dir__)
+
+def openvitals_project_path(path)
+  value = path.to_s
+  return value if value.empty?
+
+  pathname = Pathname.new(value)
+  pathname.absolute? ? value : File.expand_path(value, OPENVITALS_PROJECT_ROOT)
+end
 
 platform :android do
   desc "Upload the signed Android App Bundle directly to Google Play production with store metadata"
@@ -14,6 +25,10 @@ platform :android do
 
     UI.user_error!("json_key is required") if json_key.to_s.empty?
     UI.user_error!("aab is required") if aab.to_s.empty?
+
+    json_key = openvitals_project_path(json_key)
+    aab = openvitals_project_path(aab)
+
     UI.user_error!("aab does not exist: #{aab}") unless File.file?(aab)
 
     if version_code.to_s.length > 0
