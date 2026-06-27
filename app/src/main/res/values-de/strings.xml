@@ -10,9 +10,14 @@
     <string name="cd_finish_dashboard_editing">Übersichtsbearbeitung beenden</string>
     <string name="cd_edit_manual_entry_widgets">Widgets zum Hinzufügen von Einträgen bearbeiten</string>
     <string name="cd_finish_manual_entry_editing">Bearbeitung der Widgets zum Hinzufügen von Einträgen beenden</string>
+    <string name="cd_edit_recording_dashboard">Aufzeichnungsübersicht bearbeiten</string>
+    <string name="cd_finish_recording_dashboard_editing">Bearbeitung der Aufzeichnungsübersicht beenden</string>
     <string name="cd_move_widget_up">Widget nach oben verschieben</string>
     <string name="cd_move_widget_down">Widget nach unten verschieben</string>
     <string name="cd_remove_widget">Widget entfernen</string>
+    <string name="cd_decrease_recording_dashboard_widget_size">Widget kleiner machen</string>
+    <string name="cd_increase_recording_dashboard_widget_size">Widget größer machen</string>
+    <string name="cd_exit_recording_focus_mode">Fokusmodus verlassen</string>
     <string name="cd_delete_entry">Eintrag löschen</string>
     <string name="cd_edit_entry">Eintrag bearbeiten</string>
     <string name="cd_previous_day">Vorheriger Tag</string>
@@ -162,6 +167,12 @@
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
     <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und starte die Aufzeichnung, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
+    <string name="activity_entry_recording_focus">Fokus</string>
+    <string name="activity_entry_recording_dashboard_layout">Dashboard-Layout</string>
+    <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>
+    <string name="activity_entry_recording_dashboard_layout_three_by_four">3x4</string>
+    <string name="activity_entry_recording_dashboard_layout_large_top">Groß oben</string>
+    <string name="activity_entry_recording_dashboard_add_field">Widget hinzufügen</string>
     <string name="activity_entry_recording_active">Aufzeichnung läuft</string>
     <string name="activity_entry_recording_paused">Pausiert</string>
     <string name="activity_entry_recording_idle">Leerlauf</string>
@@ -254,6 +265,8 @@
     <string name="activity_recording_voice_resumed">Aufzeichnung fortgesetzt.</string>
     <string name="activity_recording_notification_channel">Aktivitätsaufzeichnung</string>
     <string name="activity_recording_notification_title">Aktivität wird aufgezeichnet</string>
+    <string name="activity_recording_notification_timed_recording">Aufzeichnung läuft • %1$s gesamt</string>
+    <string name="activity_recording_notification_timed_paused">Pausiert • %1$s gesamt</string>
     <string name="activity_recording_notification_recording">Aufzeichnung läuft • %1$s gesamt • %2$s in Bewegung • %3$s • %4$s</string>
     <string name="activity_recording_notification_paused">Pausiert • %1$s gesamt • %2$s in Bewegung • %3$s • %4$s</string>
     <string name="activity_recording_notification_repetition_recording">Aufzeichnung läuft • %1$s gesamt • %2$s %3$s</string>
@@ -296,6 +309,7 @@
     <string name="exercise_type_treadmill">Laufband</string>
     <string name="exercise_type_push_ups">Liegestütze</string>
     <string name="exercise_type_pull_ups">Klimmzüge</string>
+    <string name="exercise_type_strength_training">Krafttraining</string>
     <string name="exercise_type_rope_skipping">Seilspringen</string>
     <string name="exercise_type_trampoline_jumping">Trampolinspringen</string>
     <string name="exercise_type_other_workout">Anderes Training</string>

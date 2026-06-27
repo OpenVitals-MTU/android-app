@@ -9,9 +9,14 @@
     <string name="cd_finish_dashboard_editing">Termina modifica riepilogo</string>
     <string name="cd_edit_manual_entry_widgets">Modifica</string>
     <string name="cd_finish_manual_entry_editing">Termina modifica widget di inserimento</string>
+    <string name="cd_edit_recording_dashboard">Modifica dashboard registrazione</string>
+    <string name="cd_finish_recording_dashboard_editing">Termina modifica dashboard registrazione</string>
     <string name="cd_move_widget_up">Sposta widget su</string>
     <string name="cd_move_widget_down">Sposta widget giù</string>
     <string name="cd_remove_widget">Rimuovi widget</string>
+    <string name="cd_decrease_recording_dashboard_widget_size">Rendi widget più piccolo</string>
+    <string name="cd_increase_recording_dashboard_widget_size">Rendi widget più grande</string>
+    <string name="cd_exit_recording_focus_mode">Esci dalla modalità focus</string>
     <string name="cd_delete_entry">Elimina voce</string>
     <string name="cd_edit_entry">Modifica voce</string>
     <string name="cd_previous_day">Giorno precedente</string>
@@ -159,6 +164,12 @@
     <string name="activity_entry_imported_route">Percorso importato</string>
     <string name="activity_entry_recording_title">Registrazione attività</string>
     <string name="activity_entry_recording_ready_body">Scegliere il tipo di attività, quindi iniziare a registrare quando si è pronti. Dopo aver terminato, è possibile rivedere e aggiungere dettagli prima di salvare.</string>
+    <string name="activity_entry_recording_focus">Focus</string>
+    <string name="activity_entry_recording_dashboard_layout">Layout dashboard</string>
+    <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>
+    <string name="activity_entry_recording_dashboard_layout_three_by_four">3x4</string>
+    <string name="activity_entry_recording_dashboard_layout_large_top">Grande in alto</string>
+    <string name="activity_entry_recording_dashboard_add_field">Aggiungi widget</string>
     <string name="activity_entry_recording_active">Registrazione</string>
     <string name="activity_entry_recording_paused">In pausa</string>
     <string name="activity_entry_recording_idle">Inattivo</string>
@@ -251,6 +262,8 @@
     <string name="activity_recording_voice_resumed">Registrazione ripresa.</string>
     <string name="activity_recording_notification_channel">Registrazione attività</string>
     <string name="activity_recording_notification_title">Registrazione attività in corso</string>
+    <string name="activity_recording_notification_timed_recording">Registrazione • %1$s totale</string>
+    <string name="activity_recording_notification_timed_paused">In pausa • %1$s totale</string>
     <string name="activity_recording_notification_recording">Registrazione • %1$s totale • %2$s movimento • %3$s • %4$s</string>
     <string name="activity_recording_notification_paused">In pausa • %1$s totale • %2$s movimento • %3$s • %4$s</string>
     <string name="activity_recording_notification_repetition_recording">Registrazione • %1$s totale • %2$s %3$s</string>
@@ -293,6 +306,7 @@
     <string name="exercise_type_treadmill">Tapis roulant</string>
     <string name="exercise_type_push_ups">Piegamenti</string>
     <string name="exercise_type_pull_ups">Trazioni</string>
+    <string name="exercise_type_strength_training">Allenamento di forza</string>
     <string name="exercise_type_rope_skipping">Salto della corda</string>
     <string name="exercise_type_trampoline_jumping">Salto sul trampolino</string>
     <string name="exercise_type_other_workout">Altro allenamento</string>
