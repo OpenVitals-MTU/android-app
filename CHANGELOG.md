@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.6.2 - 2026-06-27
+
+### English
+
+- Add a configurable activity recording dashboard with Focus mode for a cleaner in-recording view.
+- Add strength training recording with heart-rate monitoring and richer repetition training heart-rate stats.
+- Keep the screen awake during activity recording when enabled and make recording setup and review flows cleaner.
+- Improve Bluetooth LE sensor timeout handling so stale sensor values drop out more reliably.
+- Fix daily HRV loading and defer heavier dashboard widget reads to improve dashboard responsiveness.
+- Fix release automation so the signed Android App Bundle is found reliably during publishing.
+
+### Español
+
+- Añade un panel configurable de grabación de actividad con modo Enfoque para una vista de grabación más limpia.
+- Añade grabación de entrenamiento de fuerza con monitorización de frecuencia cardiaca y estadísticas de frecuencia cardiaca más completas para entrenamientos de repeticiones.
+- Mantiene la pantalla activa durante la grabación de actividades cuando está habilitado y mejora los flujos de configuración y revisión.
+- Mejora el manejo de tiempos de espera de sensores Bluetooth LE para descartar con más fiabilidad valores obsoletos.
+- Corrige la carga diaria de HRV y difiere lecturas más pesadas de widgets del panel para mejorar la capacidad de respuesta.
+- Corrige la automatización de release para encontrar de forma fiable el Android App Bundle firmado durante la publicación.
+
+### Deutsch
+
+- Ergänzt ein konfigurierbares Dashboard für Aktivitätsaufzeichnungen mit Fokusmodus für eine übersichtlichere Aufzeichnungsansicht.
+- Ergänzt Krafttraining-Aufzeichnungen mit Herzfrequenzmessung und ausführlicheren Herzfrequenzwerten für Wiederholungstraining.
+- Hält den Bildschirm während Aktivitätsaufzeichnungen wach, wenn die Option aktiviert ist, und verbessert Einrichtungs- und Prüfabläufe.
+- Verbessert das Timeout-Handling von Bluetooth-LE-Sensoren, sodass veraltete Sensorwerte zuverlässiger verschwinden.
+- Korrigiert das tägliche HRV-Laden und verschiebt schwerere Dashboard-Widget-Abfragen, um die Reaktionsfähigkeit zu verbessern.
+- Korrigiert die Release-Automation, damit das signierte Android App Bundle bei der Veröffentlichung zuverlässig gefunden wird.
+
+### Italiano
+
+- Aggiunge una dashboard configurabile per la registrazione attività con modalità Focus per una vista di registrazione più pulita.
+- Aggiunge la registrazione dell'allenamento di forza con monitoraggio della frequenza cardiaca e statistiche più ricche per gli allenamenti a ripetizioni.
+- Mantiene lo schermo attivo durante la registrazione delle attività quando l'opzione è abilitata e migliora i flussi di configurazione e revisione.
+- Migliora la gestione dei timeout dei sensori Bluetooth LE, così i valori obsoleti vengono rimossi con maggiore affidabilità.
+- Corregge il caricamento giornaliero dell'HRV e rimanda le letture più pesanti dei widget della dashboard per migliorare la reattività.
+- Corregge l'automazione di release in modo che l'Android App Bundle firmato venga trovato in modo affidabile durante la pubblicazione.
+
 ## 1.6.1 - 2026-06-27
 
 ### English

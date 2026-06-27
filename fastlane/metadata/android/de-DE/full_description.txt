@@ -15,8 +15,8 @@ Was du tun kannst
 * Erfolgsabzeichen für Aktivität, Distanz, Etagen, Trainings, Flüssigkeit, Schlaf und Achtsamkeit verfolgen
 * GPX-, KML-, KMZ- und FIT-Routen importieren, vorab ansehen und routenbasierte Trainings speichern
 * Unterstützte Apple-Health-Exportdaten in Health Connect importieren
-* GPS-Aktivitäten mit Pause, Fortsetzen, Abschließen, Verwerfen, Routenvorschau, Distanz, Höhenmetern, Bewegungszeit und permanenter Benachrichtigung aufzeichnen
-* Experimentelle Bluetooth-LE-Sensoren für Herzfrequenz, Kadenz, Leistung und Footpod während der Aktivitätsaufzeichnung verbinden
+* GPS-Aktivitäten mit Pause, Fortsetzen, Abschließen, Verwerfen, Routenvorschau, Distanz, Höhenmetern, Bewegungszeit, konfigurierbarem Aufzeichnungs-Dashboard, Fokusmodus, Bildschirm-wach-Option und permanenter Benachrichtigung aufzeichnen
+* Experimentelle Bluetooth-LE-Sensoren für Herzfrequenz, Kadenz, Leistung und Footpod während der Aktivitätsaufzeichnung verbinden, inklusive Herzfrequenzmessung für unterstütztes Kraft- und Wiederholungstraining
 * Aktive und gesamte Kalorien für importierte oder aufgezeichnete Aktivitäten vor dem Speichern schätzen
 * Optionale Flüssigkeitserinnerungen mit aktiven Zeiten und Pause nach Erreichen des Tagesziels aktivieren
 * Für Aktivitäten eine feste Mo-So-Woche oder die letzten 7 Tage wählen

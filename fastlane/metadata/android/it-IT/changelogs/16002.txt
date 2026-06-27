@@ -1,0 +1,1 @@
+Aggiunge una dashboard configurabile per le registrazioni con modalità Focus, allenamento di forza con frequenza cardiaca, schermo sempre attivo, migliore gestione dei sensori Bluetooth, correzione HRV giornaliera, letture dashboard differite e fix per la pubblicazione AAB.

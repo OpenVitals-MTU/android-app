@@ -1,0 +1,1 @@
+Añade un panel configurable de grabación con modo Enfoque, entrenamiento de fuerza con frecuencia cardiaca, pantalla activa durante grabaciones, mejor manejo de sensores Bluetooth, corrección diaria de HRV, lecturas diferidas del panel y arreglo de publicación AAB.

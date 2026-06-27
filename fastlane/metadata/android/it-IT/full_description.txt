@@ -15,8 +15,8 @@ Cosa puoi fare
 * Seguire badge obiettivo per attività, distanza, piani, allenamenti, idratazione, sonno e mindfulness
 * Importare percorsi GPX, KML, KMZ e FIT, visualizzarli in anteprima e salvare allenamenti con percorso
 * Importare record supportati da esportazioni Apple Health in Health Connect
-* Registrare attività GPS con pausa, ripresa, fine, annullamento, anteprima percorso, distanza, dislivello, tempo in movimento e notifica persistente
-* Collegare sensori Bluetooth LE sperimentali per frequenza cardiaca, cadenza, potenza e footpod durante la registrazione delle attività
+* Registrare attività GPS con pausa, ripresa, fine, annullamento, anteprima percorso, distanza, dislivello, tempo in movimento, dashboard configurabile, modalità Focus, schermo sempre attivo e notifica persistente
+* Collegare sensori Bluetooth LE sperimentali per frequenza cardiaca, cadenza, potenza e footpod durante la registrazione, incluso il monitoraggio cardiaco per allenamenti di forza e a ripetizioni supportati
 * Stimare calorie attive e totali per attività importate o registrate prima del salvataggio
 * Attivare promemoria opzionali per l'idratazione con orari attivi e pausa al raggiungimento dell'obiettivo giornaliero
 * Scegliere una settimana attività fissa Lun-Dom o gli ultimi 7 giorni mobili

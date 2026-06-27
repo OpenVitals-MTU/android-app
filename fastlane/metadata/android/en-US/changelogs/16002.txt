@@ -1,0 +1,1 @@
+Adds a configurable activity recording dashboard with Focus mode, strength training with heart-rate monitoring, keep-screen-on recording, better Bluetooth sensor timeout handling, fixed daily HRV loading, deferred dashboard widget reads, and a release AAB publishing fix.

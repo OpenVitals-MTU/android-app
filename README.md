@@ -36,7 +36,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ/FIT route import and GPS activity recording with review before saving
-- Experimental Bluetooth LE sensor integration for activity recording
+- Configurable activity recording dashboard with Focus mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
 - App language support for system default, English, Spanish, German, and Italian
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
@@ -91,7 +91,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, Fat-Free Mass Index (FFMI), bone mass, body water mass, basal metabolic rate
-- Manual entry: hydration, activity sessions with optional GPX/KML/KMZ/FIT route import or GPS recording, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
+- Manual entry: hydration, activity sessions with optional GPX/KML/KMZ/FIT route import, GPS recording, configurable recording dashboard, Focus mode, strength training heart-rate monitoring, or experimental Bluetooth LE sensors, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
 - Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, tap-to-save container presets, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, and macros

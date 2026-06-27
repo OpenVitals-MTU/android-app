@@ -74,6 +74,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - View activity metrics including steps, distance, pace, speed, recorded speed, power, cadence, calories, wheelchair pushes, floors, and elevation.
 - View route previews, route point counts, start/end route points, map opening, and GPX/KMZ export when route data is available.
 - View activity segments, laps, repetitions, and set information where available.
+- Configure the activity recording dashboard, use Focus mode, keep the screen awake while recording, and monitor heart rate for supported strength and repetition training recordings.
 
 ### Cardio Load
 

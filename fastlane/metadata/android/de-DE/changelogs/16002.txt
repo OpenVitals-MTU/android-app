@@ -1,0 +1,1 @@
+Ergänzt ein konfigurierbares Aktivitätsaufzeichnungs-Dashboard mit Fokusmodus, Krafttraining mit Herzfrequenzmessung, Bildschirm-wach-Option, besseres Bluetooth-Sensor-Timeout, tägliche HRV-Korrektur, verzögerte Dashboard-Ladevorgänge und einen AAB-Publishing-Fix.
