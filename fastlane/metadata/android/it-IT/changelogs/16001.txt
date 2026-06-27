@@ -1,0 +1,1 @@
+Corregge le notifiche del tracciamento attività in modo che un tocco riapra la registrazione attiva, migliora le prestazioni di caricamento delle metriche nella dashboard e in background, e aggiunge le traduzioni italiane.

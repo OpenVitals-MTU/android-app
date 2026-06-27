@@ -318,7 +318,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 
 ### Display Settings
 
-- Change language: system default, English, Spanish, or German.
+- Change language: system default, English, Spanish, German, or Italian.
 - Change unit system: metric or imperial.
 - Change theme: system, light, dark, or AMOLED.
 

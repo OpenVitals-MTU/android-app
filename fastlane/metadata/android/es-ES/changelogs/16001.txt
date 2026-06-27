@@ -1,0 +1,1 @@
+Corrige las notificaciones de grabacion de actividad para que al tocarlas se abra de nuevo la grabacion activa, mejora el rendimiento al cargar metricas del panel y en segundo plano, y anade traducciones al italiano.

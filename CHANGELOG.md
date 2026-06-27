@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.6.1 - 2026-06-27
+
+### English
+
+- Fix activity tracking notifications so tapping the notification reopens the active recording screen.
+- Improve dashboard and background metric loading performance, including coalesced refreshes and more efficient summary reads.
+- Add Italian translations and make Italian available in the in-app language selector.
+
+### Español
+
+- Corrige las notificaciones de grabación de actividad para que al tocarlas se abra de nuevo la pantalla de grabación activa.
+- Mejora el rendimiento de carga de métricas del panel y en segundo plano, incluidas actualizaciones agrupadas y lecturas de resúmenes más eficientes.
+- Añade traducciones al italiano y permite elegir italiano en el selector de idioma de la app.
+
+### Deutsch
+
+- Korrigiert Aktivitätsaufzeichnungs-Benachrichtigungen, sodass Antippen wieder den aktiven Aufzeichnungsbildschirm öffnet.
+- Verbessert die Ladeleistung für Dashboard- und Hintergrundmetriken, einschließlich zusammengefasster Aktualisierungen und effizienterer Zusammenfassungsabfragen.
+- Fügt italienische Übersetzungen hinzu und macht Italienisch in der Sprachauswahl der App verfügbar.
+
+### Italiano
+
+- Corregge le notifiche del tracciamento attività in modo che un tocco riapra la schermata della registrazione attiva.
+- Migliora le prestazioni di caricamento delle metriche nella dashboard e in background, incluse le sincronizzazioni raggruppate e letture dei riepiloghi più efficienti.
+- Aggiunge le traduzioni italiane e rende l'italiano disponibile nel selettore lingua dell'app.
+
 ## 1.6.0 - 2026-06-27
 
 ### English

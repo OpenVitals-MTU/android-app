@@ -1,0 +1,1 @@
+Fixes activity tracking notifications so tapping them reopens the active recording screen, improves dashboard/background metric loading performance, and adds Italian translations.

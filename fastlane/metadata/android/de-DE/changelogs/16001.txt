@@ -1,0 +1,1 @@
+Behebt Aktivitätsaufzeichnungs-Benachrichtigungen, sodass Antippen wieder die laufende Aufzeichnung öffnet, verbessert die Leistung beim Laden von Dashboard- und Hintergrundmetriken und fügt italienische Übersetzungen hinzu.

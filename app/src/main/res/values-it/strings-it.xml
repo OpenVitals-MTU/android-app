@@ -1070,6 +1070,7 @@
     <string name="settings_language_english">Inglese</string>
     <string name="settings_language_spanish">Spagnolo</string>
     <string name="settings_language_german">Tedesco</string>
+    <string name="settings_language_italian">Italiano</string>
     <string name="settings_units_title">Unità di misura</string>
     <string name="settings_units_body">Scegli come vengono visualizzate distanze, pesi, idratazione e temperatura.</string>
     <string name="settings_unit_metric">Metrico</string>
