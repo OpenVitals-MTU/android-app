@@ -1073,7 +1073,7 @@
     <string name="settings_debug_logs_saved">Debug logs saved</string>
     <string name="settings_debug_logs_save_failed">Could not save debug logs</string>
     <string name="settings_privacy_policy_link">View privacy policy</string>
-    <string name="settings_privacy_policy_url" translatable="false">https://github.com/mmarca-tech/OpenVitals/blob/main/PRIVACY.md</string>
+    <string name="settings_privacy_policy_url" translatable="false">https://codeberg.org/OpenVitals/android-app/src/branch/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Require device unlock to open OpenVitals.</string>
     <string name="onboarding_core_required">Activity, sleep, and heart rate access are needed to get started. You can add more data types later from Settings.</string>
