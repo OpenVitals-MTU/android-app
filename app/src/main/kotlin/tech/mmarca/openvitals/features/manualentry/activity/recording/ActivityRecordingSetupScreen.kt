@@ -139,15 +139,20 @@ internal fun ActivityRecordingSetupScreen(
                     unitFormatter = unitFormatter,
                 )
             } else if (selectedType.isRepetitionLike) {
-                OutlinedTextField(
-                    value = restSecondsText,
-                    onValueChange = { restSecondsText = it },
-                    enabled = baseEnabled,
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.activity_entry_recording_rest_seconds_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = restSecondsText,
+                        onValueChange = { restSecondsText = it },
+                        enabled = baseEnabled,
+                        singleLine = true,
+                        label = { Text(stringResource(R.string.activity_entry_recording_rest_seconds_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ActivityRecordingSensorStatusCard(deviceStatuses = recordingState.bleDeviceStatuses)
+                }
+            } else if (selectedType.recordingSensor == ActivityRecordingSensor.BLE) {
+                ActivityRecordingSensorStatusCard(deviceStatuses = recordingState.bleDeviceStatuses)
             }
 
             OpenVitalsButton(
@@ -213,6 +218,7 @@ internal fun rememberRecordingSensorReadiness(activityType: ActivityEntryType): 
         ActivityRecordingSensor.PROXIMITY -> sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null
         ActivityRecordingSensor.ACCELEROMETER -> sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
         ActivityRecordingSensor.STEP_DETECTOR -> sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null
+        ActivityRecordingSensor.BLE -> true
         ActivityRecordingSensor.GPS,
         ActivityRecordingSensor.NONE -> if (activityType.supportsStepCounting) {
             sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null

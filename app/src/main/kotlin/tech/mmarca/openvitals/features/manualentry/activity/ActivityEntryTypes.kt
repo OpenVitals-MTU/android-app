@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.R
 enum class ActivityRecordingSensor {
     NONE,
     GPS,
+    BLE,
     PROXIMITY,
     ACCELEROMETER,
     STEP_DETECTOR,
@@ -131,6 +132,13 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_GOLF,
         labelRes = R.string.exercise_type_golf,
+    ),
+    ActivityEntryType(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
+        labelRes = R.string.exercise_type_strength_training,
+        supportsGpsRoute = false,
+        supportsDistance = false,
+        recordingSensor = ActivityRecordingSensor.BLE,
     ),
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL,

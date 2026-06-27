@@ -72,6 +72,7 @@ enum class ActivityRecordingStatus {
 enum class ActivityRecordingKind {
     GPS_ROUTE,
     REPETITION,
+    TIMED,
 }
 
 enum class ActivityGpsStatus {
@@ -202,6 +203,8 @@ class ActivityRecordingController @Inject constructor(
             startGpsRecording(activityType, initialFix)
         } else if (activityType.isRepetitionLike) {
             startRepetitionRecording(activityType, repetitionRestSeconds)
+        } else if (activityType.recordingSensor == ActivityRecordingSensor.BLE) {
+            startTimedRecording(activityType)
         } else {
             updateAndPersist(
                 _state.value.copy(
@@ -219,11 +222,7 @@ class ActivityRecordingController @Inject constructor(
 
     fun prepareRecordingDashboard(activityType: ActivityEntryType) {
         if (_state.value.isActive) return
-        val recordingKind = if (activityType.supportsGpsRoute) {
-            ActivityRecordingKind.GPS_ROUTE
-        } else {
-            ActivityRecordingKind.REPETITION
-        }
+        val recordingKind = activityType.recordingKind()
         persistenceScope.coroutineContext.cancelChildren()
         recordingGeneration += 1
         updateAndPersist(
@@ -347,6 +346,43 @@ class ActivityRecordingController @Inject constructor(
                 keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
                 currentSetStartedAt = now,
                 repetitionRestSeconds = repetitionRestSeconds.coerceAtLeast(0L),
+                dashboardLayout = dashboardLayout,
+            ),
+            replaceRoutePoints = true,
+        )
+        bleSensorCoordinator.startRecording()
+        acceptBleMetrics(bleSensorCoordinator.metrics.value)
+        ContextCompat.startForegroundService(
+            context,
+            ActivityRecordingService.intent(context, ActivityRecordingService.ActionStart),
+        )
+        return true
+    }
+
+    private fun startTimedRecording(activityType: ActivityEntryType): Boolean {
+        if (!hasNotificationPermission(context)) {
+            updateAndPersist(
+                _state.value.copy(
+                    errorMessage = context.getString(R.string.activity_recording_error_notification_permission),
+                )
+            )
+            return false
+        }
+
+        val now = Instant.now()
+        val recordingPreferences = preferencesRepository.activityRecordingPreferences()
+        val dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id)
+        persistenceScope.coroutineContext.cancelChildren()
+        recordingStore.clear()
+        recordingGeneration += 1
+        updateAndPersist(
+            ActivityRecordingState(
+                status = ActivityRecordingStatus.RECORDING,
+                recordingKind = ActivityRecordingKind.TIMED,
+                activityTypeId = activityType.id,
+                exerciseType = activityType.exerciseType,
+                startTime = now,
+                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
                 dashboardLayout = dashboardLayout,
             ),
             replaceRoutePoints = true,
@@ -977,6 +1013,13 @@ class ActivityRecordingStore @Inject constructor(
         routePointsFile.delete()
     }
 }
+
+private fun ActivityEntryType.recordingKind(): ActivityRecordingKind =
+    when {
+        supportsGpsRoute -> ActivityRecordingKind.GPS_ROUTE
+        isRepetitionLike -> ActivityRecordingKind.REPETITION
+        else -> ActivityRecordingKind.TIMED
+    }
 
 internal const val RecordingPreferencesName = "activity_recording"
 internal const val RecordingRoutePointsFileName = "activity_recording_points.csv"

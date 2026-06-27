@@ -115,7 +115,7 @@
     <string name="mindfulness_entry_subtitle">Mindfulness sessions are saved directly to Health Connect.</string>
     <string name="mindfulness_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.</string>
     <string name="activity_entry_subtitle">Create a Health Connect activity session. Route files are written only when you import one.</string>
-    <string name="activity_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, active calories, and total calories; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.</string>
+    <string name="activity_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.</string>
     <string name="activity_entry_source_body">Create an empty activity, record a GPS route, or import GPX/KML/KMZ/FIT first and review the detected route, time, title, notes, and type before saving.</string>
     <string name="activity_entry_create_manual">Create manually</string>
     <string name="activity_entry_create_from_existing_plan">Create from existing plan</string>
@@ -269,6 +269,8 @@
     <string name="activity_recording_notification_repetition_recording">Recording • %1$s total • %2$s %3$s</string>
     <string name="activity_recording_notification_repetition_paused">Paused • %1$s total • %2$s %3$s</string>
     <string name="activity_recording_notification_repetition_resting">Resting • %1$s total • %2$s left</string>
+    <string name="activity_recording_notification_timed_recording">Recording • %1$s total</string>
+    <string name="activity_recording_notification_timed_paused">Paused • %1$s total</string>
     <string name="activity_recording_error_service">Could not start activity recording service.</string>
     <string name="activity_recording_error_precise_location_permission">Precise location permission is required for reliable GPS tracks.</string>
     <string name="activity_recording_error_notification_permission">Notification permission is required to show the ongoing recording notification.</string>
@@ -303,6 +305,7 @@
     <string name="exercise_type_surfing">Surfing</string>
     <string name="exercise_type_swimming_open_water">Swimming (open water)</string>
     <string name="exercise_type_golf">Golf</string>
+    <string name="exercise_type_strength_training">Strength training</string>
     <string name="exercise_type_treadmill">Treadmill</string>
     <string name="exercise_type_push_ups">Push-ups</string>
     <string name="exercise_type_pull_ups">Pull-ups</string>

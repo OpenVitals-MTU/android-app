@@ -177,7 +177,10 @@ internal fun RepetitionRecordingStats(
         }
 
         if (state.bleDeviceStatuses.isNotEmpty()) {
-            ActivityRecordingSensorStatusCard(deviceStatuses = state.bleDeviceStatuses)
+            ActivityRecordingLiveSensorStats(
+                state = state,
+                unitFormatter = unitFormatter,
+            )
         }
     }
 }

@@ -38,6 +38,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -301,6 +302,34 @@ class ActivityEntryViewModelTest {
         assertTrue(request.laps.isEmpty())
     }
 
+    @Test fun `buildWriteRequest keeps BLE heart rate samples for strength training`() {
+        val strengthTraining = DefaultActivityEntryTypes.first {
+            it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING
+        }
+        val sampleTime = Instant.parse("2026-05-26T08:35:00Z")
+        val state = ActivityEntryUiState(
+            selectedActivityType = strengthTraining,
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "30",
+            recordedBleSamples = BleRecordingSampleBuffer()
+                .withHeartRateSample(sampleTime, 132)
+                .withHeartRateSample(sampleTime.plusSeconds(30), 140),
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, request.exerciseType)
+        assertTrue(strengthTraining.supportsLiveRecording)
+        assertFalse(strengthTraining.supportsGpsRoute)
+        assertFalse(strengthTraining.isRepetitionLike)
+        assertTrue(request.routePoints.isEmpty())
+        assertTrue(request.exerciseSegments.isEmpty())
+        assertEquals(2, request.bleSamples.heartRateSamples.size)
+        assertEquals(132L, request.bleSamples.heartRateSamples.first().beatsPerMinute)
+    }
+
     @Test fun `buildWriteRequest writes total push-ups as one set segment`() {
         val state = ActivityEntryUiState(
             selectedActivityType = DefaultActivityEntryTypes.first { it.id == "push_ups" },
@@ -358,6 +387,36 @@ class ActivityEntryViewModelTest {
         assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST, request.exerciseSegments[1].segmentType)
         assertEquals(6, request.exerciseSegments[2].repetitions)
         assertEquals(1, request.exerciseSegments[2].setIndex)
+    }
+
+    @Test fun `buildWriteRequest keeps BLE heart rate samples for repetition recordings`() {
+        val repetitionType = DefaultActivityEntryTypes.first { it.id == "pull_ups" }
+        val sampleTime = Instant.parse("2026-05-26T08:35:00Z")
+        val state = ActivityEntryUiState(
+            selectedActivityType = repetitionType,
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "5",
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionSets = listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "1"),
+                ActivityRepetitionSetInput(repetitionsText = "6"),
+            ),
+            recordedBleSamples = BleRecordingSampleBuffer()
+                .withHeartRateSample(sampleTime, 128)
+                .withHeartRateSample(sampleTime.plusSeconds(30), 136),
+        )
+
+        val request = buildWriteRequest(state, UnitSystem.METRIC)
+
+        requireNotNull(request)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS, request.exerciseType)
+        assertTrue(repetitionType.supportsLiveRecording)
+        assertTrue(repetitionType.isRepetitionLike)
+        assertFalse(repetitionType.supportsGpsRoute)
+        assertEquals(3, request.exerciseSegments.size)
+        assertEquals(2, request.bleSamples.heartRateSamples.size)
+        assertEquals(128L, request.bleSamples.heartRateSamples.first().beatsPerMinute)
     }
 
     @Test fun `buildWriteRequest links selected planned workout`() {

@@ -243,10 +243,9 @@ class ActivityRecordingService : Service() {
             }
             return type
         }
-        return if (
-            recordingKind == ActivityRecordingKind.REPETITION &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-        ) {
+        val usesHealthForegroundType =
+            recordingKind == ActivityRecordingKind.REPETITION || recordingKind == ActivityRecordingKind.TIMED
+        return if (usesHealthForegroundType && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
             if (hasBleDevices) {
                 type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
@@ -455,12 +454,26 @@ class ActivityRecordingService : Service() {
                 ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
             }
         }
-        val movingTime = formatNotificationElapsed(state.movingDuration(now))
-        val distance = unitFormatter.distance(state.distanceMeters).text
-        val gpsStatus = getString(state.gpsStatusLabelRes(now))
         val heartRateSuffix = state.currentHeartRateBpm?.let { bpm ->
             " · ${getString(R.string.activity_recording_notification_heart_rate, unitFormatter.count(bpm))}"
         }.orEmpty()
+        if (state.recordingKind == ActivityRecordingKind.TIMED) {
+            return when (state.status) {
+                ActivityRecordingStatus.RECORDING -> getString(
+                    R.string.activity_recording_notification_timed_recording,
+                    totalTime,
+                ) + heartRateSuffix
+                ActivityRecordingStatus.PAUSED -> getString(
+                    R.string.activity_recording_notification_timed_paused,
+                    totalTime,
+                ) + heartRateSuffix
+                ActivityRecordingStatus.RESTING -> getString(R.string.activity_recording_notification_title)
+                ActivityRecordingStatus.IDLE -> getString(R.string.activity_recording_notification_title)
+            }
+        }
+        val movingTime = formatNotificationElapsed(state.movingDuration(now))
+        val distance = unitFormatter.distance(state.distanceMeters).text
+        val gpsStatus = getString(state.gpsStatusLabelRes(now))
         return when (state.status) {
             ActivityRecordingStatus.RECORDING -> getString(
                 R.string.activity_recording_notification_recording,
@@ -543,6 +556,7 @@ private fun ActivityRecordingSensor.toAndroidSensorType(): Int? =
         ActivityRecordingSensor.ACCELEROMETER -> Sensor.TYPE_ACCELEROMETER
         ActivityRecordingSensor.STEP_DETECTOR -> Sensor.TYPE_STEP_DETECTOR
         ActivityRecordingSensor.GPS,
+        ActivityRecordingSensor.BLE,
         ActivityRecordingSensor.NONE -> null
     }
 
@@ -552,6 +566,7 @@ private fun Context.recordingSensorUnavailableMessage(sensor: ActivityRecordingS
         ActivityRecordingSensor.ACCELEROMETER -> getString(R.string.activity_recording_error_accelerometer)
         ActivityRecordingSensor.STEP_DETECTOR -> getString(R.string.activity_recording_error_step_detector)
         ActivityRecordingSensor.GPS,
+        ActivityRecordingSensor.BLE,
         ActivityRecordingSensor.NONE -> getString(R.string.activity_recording_error_unsupported_type)
     }
 
