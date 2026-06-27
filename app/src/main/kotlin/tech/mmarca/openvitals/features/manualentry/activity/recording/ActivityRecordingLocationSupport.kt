@@ -91,6 +91,8 @@ internal fun ActivityRecordingState.withLocationMetadata(
 ): ActivityRecordingState =
     copy(
         gpsStatus = gpsStatus,
+        keepScreenOnDuringRecording = recordingPreferences?.keepScreenOnDuringRecording
+            ?: keepScreenOnDuringRecording,
         autoIdleEnabled = recordingPreferences?.autoIdleEnabled ?: autoIdleEnabled,
         autoIdleTimeoutMillis = recordingPreferences?.autoIdleTimeoutSeconds?.times(1_000L) ?: autoIdleTimeoutMillis,
         lastAccuracyMeters = accuracyMeters ?: lastAccuracyMeters,

@@ -52,6 +52,10 @@ internal fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         gpsStatus = getString(KeyGpsStatus, null)
             ?.let { runCatching { ActivityGpsStatus.valueOf(it) }.getOrNull() }
             ?: ActivityGpsStatus.WAITING_FOR_FIX,
+        keepScreenOnDuringRecording = getBoolean(
+            KeyKeepScreenOnDuringRecording,
+            ActivityRecordingPreferences.DefaultKeepScreenOnDuringRecording,
+        ),
         autoIdleEnabled = getBoolean(
             KeyAutoIdleEnabled,
             ActivityRecordingPreferences.DefaultAutoIdleEnabled,
@@ -103,6 +107,7 @@ internal fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSt
         putFloat(KeyCurrentSpeedMetersPerSecond, state.currentSpeedMetersPerSecond.toFloat())
         putFloat(KeyMaxSpeedMetersPerSecond, state.maxSpeedMetersPerSecond.toFloat())
         putString(KeyGpsStatus, state.gpsStatus.name)
+        putBoolean(KeyKeepScreenOnDuringRecording, state.keepScreenOnDuringRecording)
         putBoolean(KeyAutoIdleEnabled, state.autoIdleEnabled)
         putLong(KeyAutoIdleTimeoutMillis, state.autoIdleTimeoutMillis)
         putLong(KeyLastMovementAt, state.lastMovementAt?.toEpochMilli() ?: MissingLong)

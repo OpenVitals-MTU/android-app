@@ -446,6 +446,13 @@ internal fun ActivityRecordingPreferencesCard(
             )
 
             SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_keep_screen_on_title),
+                body = stringResource(R.string.settings_activity_recording_keep_screen_on_body),
+                checked = preferences.keepScreenOnDuringRecording,
+                onCheckedChange = { enabled -> onChange(preferences.copy(keepScreenOnDuringRecording = enabled)) },
+            )
+
+            SettingsSwitchRow(
                 title = stringResource(R.string.settings_activity_recording_auto_idle_title),
                 body = stringResource(R.string.settings_activity_recording_auto_idle_body),
                 checked = preferences.autoIdleEnabled,

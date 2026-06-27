@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.domain.preferences
 data class ActivityRecordingPreferences(
     val autoIdleEnabled: Boolean = DefaultAutoIdleEnabled,
     val autoIdleTimeoutSeconds: Int = DefaultAutoIdleTimeoutSeconds,
+    val keepScreenOnDuringRecording: Boolean = DefaultKeepScreenOnDuringRecording,
     val requiredGpsAccuracyMeters: Int = DefaultRequiredGpsAccuracyMeters,
     val routeGapMeters: Int? = DefaultRouteGapMeters,
     val barometerClimbEnabled: Boolean = DefaultBarometerClimbEnabled,
@@ -37,6 +38,7 @@ data class ActivityRecordingPreferences(
         const val DefaultAutoIdleTimeoutSeconds = 10
         const val MinAutoIdleTimeoutSeconds = 5
         const val MaxAutoIdleTimeoutSeconds = 60
+        const val DefaultKeepScreenOnDuringRecording = false
         const val DefaultRequiredGpsAccuracyMeters = 30
         const val DefaultBarometerClimbEnabled = true
         val DefaultRecordingDistanceIntervalMeters: Int? = null

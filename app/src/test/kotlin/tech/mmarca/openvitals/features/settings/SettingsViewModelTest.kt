@@ -163,6 +163,7 @@ class SettingsViewModelTest {
         val recordingPreferences = ActivityRecordingPreferences(
             autoIdleEnabled = false,
             autoIdleTimeoutSeconds = 30,
+            keepScreenOnDuringRecording = true,
             requiredGpsAccuracyMeters = 50,
             routeGapMeters = null,
             barometerClimbEnabled = false,

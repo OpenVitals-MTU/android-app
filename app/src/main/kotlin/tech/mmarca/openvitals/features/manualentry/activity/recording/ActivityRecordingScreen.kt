@@ -66,6 +66,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -88,6 +89,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
@@ -144,6 +146,16 @@ internal fun ActivityRecordingScreen(
         enabled = state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
             state.status == ActivityRecordingStatus.IDLE,
     )
+    val view = LocalView.current
+    if (state.isActive && state.keepScreenOnDuringRecording) {
+        DisposableEffect(view) {
+            val previousKeepScreenOn = view.keepScreenOn
+            view.keepScreenOn = true
+            onDispose {
+                view.keepScreenOn = previousKeepScreenOn
+            }
+        }
+    }
     LaunchedEffect(state.status) {
         if (state.status == ActivityRecordingStatus.RECORDING) {
             isEditingDashboard = false

@@ -10,6 +10,7 @@ class ActivityRecordingPreferencesTest {
 
         assertEquals(true, preferences.autoIdleEnabled)
         assertEquals(10, preferences.autoIdleTimeoutSeconds)
+        assertEquals(false, preferences.keepScreenOnDuringRecording)
         assertEquals(30, preferences.requiredGpsAccuracyMeters)
         assertEquals(200, preferences.routeGapMeters)
         assertEquals(true, preferences.barometerClimbEnabled)

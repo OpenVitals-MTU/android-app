@@ -1112,6 +1112,8 @@
     <string name="settings_favorite_activity_latest">Use latest</string>
     <string name="settings_activity_recording_title">Activity recording</string>
     <string name="settings_activity_recording_body">Tune live GPS recording without changing the saved activity details workflow.</string>
+    <string name="settings_activity_recording_keep_screen_on_title">Screen always on</string>
+    <string name="settings_activity_recording_keep_screen_on_body">Keep the screen awake while an activity recording is active.</string>
     <string name="settings_activity_recording_auto_idle_title">Auto-idle</string>
     <string name="settings_activity_recording_auto_idle_body">Pause moving time when you stop for longer than the selected timeout.</string>
     <string name="settings_activity_recording_idle_timeout_title">Idle timeout</string>

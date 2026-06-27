@@ -107,6 +107,7 @@ data class ActivityRecordingState(
     val currentSpeedMetersPerSecond: Double = 0.0,
     val maxSpeedMetersPerSecond: Double = 0.0,
     val gpsStatus: ActivityGpsStatus = ActivityGpsStatus.WAITING_FOR_FIX,
+    val keepScreenOnDuringRecording: Boolean = ActivityRecordingPreferences.DefaultKeepScreenOnDuringRecording,
     val autoIdleEnabled: Boolean = ActivityRecordingPreferences.DefaultAutoIdleEnabled,
     val autoIdleTimeoutMillis: Long = ActivityRecordingPreferences.DefaultAutoIdleTimeoutSeconds * 1_000L,
     val lastMovementAt: Instant? = null,
@@ -297,6 +298,7 @@ class ActivityRecordingController @Inject constructor(
                 exerciseType = activityType.exerciseType,
                 startTime = now,
                 gpsStatus = ActivityGpsStatus.FIX,
+                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
                 autoIdleEnabled = recordingPreferences.autoIdleEnabled,
                 autoIdleTimeoutMillis = recordingPreferences.autoIdleTimeoutSeconds * 1_000L,
                 lastMovementAt = now,
@@ -330,6 +332,7 @@ class ActivityRecordingController @Inject constructor(
         }
 
         val now = Instant.now()
+        val recordingPreferences = preferencesRepository.activityRecordingPreferences()
         val dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id)
         persistenceScope.coroutineContext.cancelChildren()
         recordingStore.clear()
@@ -341,6 +344,7 @@ class ActivityRecordingController @Inject constructor(
                 activityTypeId = activityType.id,
                 exerciseType = activityType.exerciseType,
                 startTime = now,
+                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
                 currentSetStartedAt = now,
                 repetitionRestSeconds = repetitionRestSeconds.coerceAtLeast(0L),
                 dashboardLayout = dashboardLayout,
@@ -637,6 +641,7 @@ class ActivityRecordingController @Inject constructor(
                 currentSpeedMetersPerSecond = currentSpeedMetersPerSecond,
                 maxSpeedMetersPerSecond = maxOf(current.maxSpeedMetersPerSecond, currentSpeedMetersPerSecond),
                 gpsStatus = ActivityGpsStatus.FIX,
+                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
                 autoIdleEnabled = recordingPreferences.autoIdleEnabled,
                 autoIdleTimeoutMillis = recordingPreferences.autoIdleTimeoutSeconds * 1_000L,
                 lastMovementAt = lastMovementAt,
@@ -803,6 +808,7 @@ class ActivityRecordingController @Inject constructor(
             current.copy(
                 gpsStatus = gpsStatus,
                 latestUiPoint = fixQuality.locationTime?.let { location.toRoutePoint(it) } ?: current.latestUiPoint,
+                keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
                 autoIdleEnabled = recordingPreferences.autoIdleEnabled,
                 autoIdleTimeoutMillis = recordingPreferences.autoIdleTimeoutSeconds * 1_000L,
                 lastAccuracyMeters = fixQuality.accuracyMeters ?: current.lastAccuracyMeters,
@@ -1007,6 +1013,7 @@ internal const val KeyLastBarometerAltitudeMeters = "last_barometer_altitude_met
 internal const val KeyCurrentSpeedMetersPerSecond = "current_speed_meters_per_second"
 internal const val KeyMaxSpeedMetersPerSecond = "max_speed_meters_per_second"
 internal const val KeyGpsStatus = "gps_status"
+internal const val KeyKeepScreenOnDuringRecording = "keep_screen_on_during_recording"
 internal const val KeyAutoIdleEnabled = "auto_idle_enabled"
 internal const val KeyAutoIdleTimeoutMillis = "auto_idle_timeout_millis"
 internal const val KeyLastMovementAt = "last_movement_at"

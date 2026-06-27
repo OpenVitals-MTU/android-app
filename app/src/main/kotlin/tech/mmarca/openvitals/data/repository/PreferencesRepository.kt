@@ -228,6 +228,10 @@ class PreferencesRepository @Inject constructor(
                 KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS,
                 ActivityRecordingPreferences.DefaultAutoIdleTimeoutSeconds,
             ),
+            keepScreenOnDuringRecording = prefs.getBoolean(
+                KEY_ACTIVITY_RECORDING_KEEP_SCREEN_ON,
+                ActivityRecordingPreferences.DefaultKeepScreenOnDuringRecording,
+            ),
             requiredGpsAccuracyMeters = prefs.getInt(
                 KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS,
                 ActivityRecordingPreferences.DefaultRequiredGpsAccuracyMeters,
@@ -275,6 +279,7 @@ class PreferencesRepository @Inject constructor(
         prefs.edit {
             putBoolean(KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED, normalized.autoIdleEnabled)
             putInt(KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS, normalized.autoIdleTimeoutSeconds)
+            putBoolean(KEY_ACTIVITY_RECORDING_KEEP_SCREEN_ON, normalized.keepScreenOnDuringRecording)
             putInt(KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS, normalized.requiredGpsAccuracyMeters)
             putInt(KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS, normalized.routeGapMeters ?: ROUTE_GAP_OFF)
             putBoolean(KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED, normalized.barometerClimbEnabled)
@@ -605,6 +610,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
         private const val KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED = "activity_recording_auto_idle_enabled"
         private const val KEY_ACTIVITY_RECORDING_AUTO_IDLE_TIMEOUT_SECONDS = "activity_recording_auto_idle_timeout_seconds"
+        private const val KEY_ACTIVITY_RECORDING_KEEP_SCREEN_ON = "activity_recording_keep_screen_on"
         private const val KEY_ACTIVITY_RECORDING_REQUIRED_GPS_ACCURACY_METERS = "activity_recording_required_gps_accuracy_meters"
         private const val KEY_ACTIVITY_RECORDING_ROUTE_GAP_METERS = "activity_recording_route_gap_meters"
         private const val KEY_ACTIVITY_RECORDING_BAROMETER_CLIMB_ENABLED = "activity_recording_barometer_climb_enabled"

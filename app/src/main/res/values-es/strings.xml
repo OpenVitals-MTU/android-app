@@ -1097,6 +1097,8 @@
     <string name="settings_favorite_activity_latest">Usar última</string>
     <string name="settings_activity_recording_title">Grabación de actividad</string>
     <string name="settings_activity_recording_body">Ajusta la grabación GPS en vivo sin cambiar el flujo de detalles de la actividad guardada.</string>
+    <string name="settings_activity_recording_keep_screen_on_title">Pantalla siempre encendida</string>
+    <string name="settings_activity_recording_keep_screen_on_body">Mantiene la pantalla activa mientras una grabación de actividad está en curso.</string>
     <string name="settings_activity_recording_auto_idle_title">Pausa automática</string>
     <string name="settings_activity_recording_auto_idle_body">Detiene el tiempo en movimiento cuando paras más que el tiempo elegido.</string>
     <string name="settings_activity_recording_idle_timeout_title">Tiempo de pausa</string>
