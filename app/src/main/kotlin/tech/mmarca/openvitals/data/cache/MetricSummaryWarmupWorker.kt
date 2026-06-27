@@ -16,6 +16,7 @@ import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.ActivityRepository
@@ -50,6 +51,7 @@ class MetricSummaryWarmupWorker(
             )
             val repository = entryPoint.healthRepository()
             val prefs = entryPoint.preferencesRepository()
+            val foregroundGate = entryPoint.appForegroundGate()
             val today = LocalDate.now()
             val baseQuery = DashboardQuery(
                 date = today,
@@ -58,9 +60,10 @@ class MetricSummaryWarmupWorker(
                 refreshMode = RefreshMode.NORMAL,
             )
 
-            repository.loadDashboard(baseQuery.copy(visibleMetrics = WarmupDashboardFastMetrics))
-            repository.loadDashboard(baseQuery.copy(visibleMetrics = WarmupReadinessMetrics))
-            warmPeriodSummaries(entryPoint, prefs, today)
+            if (!foregroundGate.isForeground) {
+                repository.loadDashboard(baseQuery.copy(visibleMetrics = WarmupReadinessMetrics))
+                warmPeriodSummaries(entryPoint, prefs, today)
+            }
 
             val ninetyDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(90)
             entryPoint.metricSummaryCacheStore().prune(ninetyDaysAgo)
@@ -137,6 +140,7 @@ interface MetricSummaryWarmupEntryPoint {
     fun preferencesRepository(): PreferencesRepository
     fun metricSummaryCacheStore(): MetricSummaryCacheStore
     fun derivedMetricStore(): DerivedMetricStore
+    fun appForegroundGate(): AppForegroundGate
     fun activityRepository(): ActivityRepository
     fun sleepRepository(): SleepRepository
     fun heartRepository(): HeartRepository
@@ -147,14 +151,6 @@ interface MetricSummaryWarmupEntryPoint {
     fun mindfulnessRepository(): MindfulnessRepository
     fun cycleRepository(): CycleRepository
 }
-
-private val WarmupDashboardFastMetrics = setOf(
-    DashboardMetric.STEPS,
-    DashboardMetric.DISTANCE,
-    DashboardMetric.CALORIES_OUT,
-    DashboardMetric.WHEELCHAIR_PUSHES,
-    DashboardMetric.WORKOUT,
-)
 
 private val WarmupReadinessMetrics = setOf(
     DashboardMetric.SLEEP,

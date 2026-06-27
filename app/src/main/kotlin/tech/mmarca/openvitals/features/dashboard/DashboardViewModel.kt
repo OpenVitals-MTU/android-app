@@ -23,6 +23,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class DashboardUiState(
     val selectedDate: LocalDate = LocalDate.now(),
@@ -79,6 +84,7 @@ class DashboardViewModel @Inject constructor(
     )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
+    private val deferredLoadMutex = Mutex()
     private var userPinnedPastDay = false
 
     init {
@@ -326,58 +332,109 @@ class DashboardViewModel @Inject constructor(
         refreshMode: RefreshMode,
         isCurrentLoad: () -> Boolean,
     ) {
-        val currentData = _uiState.value.data ?: return
-        if (widgets.isEmpty()) return
-        if (currentData.loadedMetrics.isEmpty()) {
-            _uiState.value = _uiState.value.copy(pendingWidgets = emptySet())
-            return
-        }
-
-        val metricsByWidget = widgets
-            .mapNotNull { widgetId -> widgetId.toDashboardMetricOrNull()?.let { widgetId to it } }
-        val orderedMetrics = metricsByWidget
-            .map { (_, metric) -> metric }
-            .distinct()
-
-        orderedMetrics.forEach { metric ->
-            if (!isCurrentLoad()) return
-            runCatching {
-                repository.loadDashboard(
-                    DashboardQuery(
-                        date = date,
-                        sleepRangeMode = sleepRangeMode,
-                        activityWeekMode = activityWeekMode,
-                        visibleMetrics = setOf(metric),
-                        refreshMode = refreshMode,
-                    )
-                )
+        deferredLoadMutex.withLock {
+            val currentData = _uiState.value.data ?: return
+            if (widgets.isEmpty()) return
+            if (currentData.loadedMetrics.isEmpty()) {
+                _uiState.value = _uiState.value.copy(pendingWidgets = emptySet())
+                return
             }
-                .onSuccess { remainingData ->
+
+            val metricsByWidget = widgets
+                .mapNotNull { widgetId -> widgetId.toDashboardMetricOrNull()?.let { widgetId to it } }
+            val orderedMetrics = metricsByWidget
+                .map { (_, metric) -> metric }
+                .distinct()
+            val pendingWidgetSet = widgets.toSet()
+
+            coroutineScope {
+                var mergedData = currentData
+                var resolvedWidgets = emptySet<DashboardWidgetId>()
+                var debounceJob: Job? = null
+
+                fun publishDeferredProgress(force: Boolean) {
                     if (!isCurrentLoad()) return
-                    val loadedWidgets = metricsByWidget
-                        .filter { (_, widgetMetric) -> widgetMetric == metric }
-                        .map { (widgetId, _) -> widgetId }
-                        .toSet()
-                    val mergedData = (_uiState.value.data ?: currentData).mergeLoaded(remainingData)
-                    _uiState.value = _uiState.value.copy(
-                        data = mergedData,
-                        unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(mergedData.missingPermissions),
-                        pendingWidgets = _uiState.value.pendingWidgets - loadedWidgets,
-                    )
+                    val publish = {
+                        _uiState.value = _uiState.value.copy(
+                            data = mergedData,
+                            unacknowledgedWidgetPermissions =
+                                unacknowledgedWidgetPermissions(mergedData.missingPermissions),
+                            pendingWidgets = pendingWidgetSet - resolvedWidgets,
+                        )
+                    }
+                    if (force) {
+                        debounceJob?.cancel()
+                        publish()
+                    } else {
+                        debounceJob?.cancel()
+                        debounceJob = launch {
+                            delay(DeferredDashboardUiDebounceMillis)
+                            if (isCurrentLoad()) {
+                                publish()
+                            }
+                        }
+                    }
                 }
-                .onFailure { error ->
-                    if (!isCurrentLoad()) return
-                    val failedWidgets = metricsByWidget
-                        .filter { (_, widgetMetric) -> widgetMetric == metric }
-                        .map { (widgetId, _) -> widgetId }
-                        .toSet()
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = error.message ?: "Unknown error",
-                        pendingWidgets = _uiState.value.pendingWidgets - failedWidgets,
-                    )
+
+                deferredMetricLoadGroups(orderedMetrics).forEach { metricGroup ->
+                    if (!isCurrentLoad()) return@coroutineScope
+                    runCatching {
+                        repository.loadDashboard(
+                            DashboardQuery(
+                                date = date,
+                                sleepRangeMode = sleepRangeMode,
+                                activityWeekMode = activityWeekMode,
+                                visibleMetrics = metricGroup,
+                                refreshMode = refreshMode,
+                                awaitMissingDerivedMetrics = true,
+                            )
+                        )
+                    }
+                        .onSuccess { remainingData ->
+                            if (!isCurrentLoad()) return@coroutineScope
+                            val loadedWidgets = metricsByWidget
+                                .filter { (_, widgetMetric) -> widgetMetric in metricGroup }
+                                .map { (widgetId, _) -> widgetId }
+                                .toSet()
+                            mergedData = mergedData.mergeLoaded(remainingData)
+                            resolvedWidgets = resolvedWidgets + loadedWidgets
+                            publishDeferredProgress(force = false)
+                        }
+                        .onFailure { error ->
+                            if (!isCurrentLoad()) return@coroutineScope
+                            val failedWidgets = metricsByWidget
+                                .filter { (_, widgetMetric) -> widgetMetric in metricGroup }
+                                .map { (widgetId, _) -> widgetId }
+                                .toSet()
+                            resolvedWidgets = resolvedWidgets + failedWidgets
+                            _uiState.value = _uiState.value.copy(
+                                errorMessage = error.message ?: "Unknown error",
+                                pendingWidgets = pendingWidgetSet - resolvedWidgets,
+                            )
+                        }
                 }
+                publishDeferredProgress(force = true)
+            }
         }
     }
+}
+
+private val DashboardWeeklyTrainingDeferredMetrics = setOf(
+    DashboardMetric.WEEKLY_CARDIO_LOAD,
+    DashboardMetric.INTENSITY_MINUTES,
+)
+
+private fun deferredMetricLoadGroups(metrics: List<DashboardMetric>): List<Set<DashboardMetric>> {
+    val remaining = metrics.toMutableList()
+    val groups = mutableListOf<Set<DashboardMetric>>()
+    if (DashboardWeeklyTrainingDeferredMetrics.all { it in remaining }) {
+        groups += DashboardWeeklyTrainingDeferredMetrics
+        remaining.removeAll(DashboardWeeklyTrainingDeferredMetrics)
+    }
+    remaining.forEach { metric ->
+        groups += setOf(metric)
+    }
+    return groups
 }
 
 private val DashboardFastMetrics = setOf(
@@ -387,6 +444,8 @@ private val DashboardFastMetrics = setOf(
     DashboardMetric.WHEELCHAIR_PUSHES,
     DashboardMetric.WORKOUT,
 )
+
+private const val DeferredDashboardUiDebounceMillis = 150L
 
 private fun PreferencesRepository.dashboardDailyGoals(): DashboardDailyGoals =
     DashboardDailyGoals(

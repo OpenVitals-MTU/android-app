@@ -24,6 +24,7 @@ import io.mockk.unmockkStatic
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -474,6 +475,57 @@ class HealthRepositoryDashboardTest {
         }
     }
 
+    @Test fun `weekly cardio reads heart rate samples for two week window`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val zone = ZoneId.systemDefault()
+        val heartRateSampleStart = date.minusDays(13)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(
+            stepsPermission,
+            distancePermission,
+            heartRatePermission,
+        )
+        coEvery { hc.grantedPermissions() } returns setOf(
+            stepsPermission,
+            distancePermission,
+            heartRatePermission,
+        )
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns (0..34).map { offset ->
+            DailySteps(
+                date = date.minusDays(offset.toLong()),
+                steps = 3_000L,
+                distanceMeters = 0.0,
+            )
+        }
+        coEvery { hc.readHeartRateSamples(any(), any()) } returns emptyList()
+        coEvery { hc.readExerciseSessions(any(), any()) } returns emptyList()
+        coEvery { hc.readDailyRestingHR(any(), any()) } returns emptyList()
+
+        HealthRepository(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+            )
+        )
+
+        val expectedStart = heartRateSampleStart.atStartOfDay(zone).toInstant()
+        val expectedEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
+        coVerify(exactly = 1) {
+            hc.readHeartRateSamples(expectedStart, expectedEnd)
+        }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `force refresh returns previous weekly cardio projection while refreshing in background`() = runTest {
         val date = LocalDate.of(2026, 6, 2)
@@ -600,6 +652,49 @@ class HealthRepositoryDashboardTest {
                 activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
                 visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
                 refreshMode = RefreshMode.FORCE,
+            )
+        )
+
+        assertEquals(7, data.weeklyCardioLoad?.currentScore)
+        assertEquals(1, data.weeklyCardioLoad?.todayScore)
+    }
+
+    @Test fun `awaitMissingDerivedMetrics computes missing weekly cardio projection immediately`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns (0..6).map { offset ->
+            DailySteps(
+                date = date.minusDays(offset.toLong()),
+                steps = 3_000L,
+                distanceMeters = 0.0,
+            )
+        }
+        val repository = HealthRepository(
+            hc = hc,
+            derivedMetricStore = DerivedMetricStore(
+                dao = FakeDerivedMetricDao(),
+                today = { date },
+            ),
+        )
+
+        val data = repository.loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+                awaitMissingDerivedMetrics = true,
             )
         )
 

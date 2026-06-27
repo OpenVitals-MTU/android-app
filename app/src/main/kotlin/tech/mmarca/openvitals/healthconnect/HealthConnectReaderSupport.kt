@@ -102,7 +102,7 @@ internal class HealthConnectReaderSupport(
 
     private companion object {
         private const val TAG = "HealthConnectManager"
-        private const val MaxConcurrentReads = 4
+        private const val MaxConcurrentReads = 2
     }
 }
 

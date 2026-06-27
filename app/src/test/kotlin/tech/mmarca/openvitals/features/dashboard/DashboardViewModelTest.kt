@@ -373,6 +373,82 @@ class DashboardViewModelTest {
         assertTrue(vm.uiState.value.pendingWidgets.isEmpty())
     }
 
+    @Test fun `deferred dashboard metrics coalesce ui updates`() = runTest {
+        val repo = mockHealthRepository()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            queries += query
+            when (query.visibleMetrics.singleOrNull()) {
+                DashboardMetric.HYDRATION -> DashboardData(
+                    date = today,
+                    hydrationLiters = 1.5,
+                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
+                )
+                DashboardMetric.SLEEP -> DashboardData(
+                    date = today,
+                    sleep = null,
+                    loadedMetrics = setOf(DashboardMetric.SLEEP),
+                )
+                else -> DashboardData(
+                    date = today,
+                    steps = 100,
+                    loadedMetrics = setOf(
+                        DashboardMetric.STEPS,
+                        DashboardMetric.DISTANCE,
+                        DashboardMetric.CALORIES_OUT,
+                        DashboardMetric.WORKOUT,
+                    ),
+                )
+            }
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.HYDRATION.name,
+            DashboardWidgetId.SLEEP.name,
+        )
+
+        val vm = DashboardViewModel(repo, prefs)
+
+        assertEquals(100L, vm.uiState.value.data?.steps)
+        assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
+        assertTrue(vm.uiState.value.pendingWidgets.isEmpty())
+        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.HYDRATION) })
+        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
+    }
+
+    @Test fun `deferred dashboard loads await missing derived metrics`() = runTest {
+        val repo = mockHealthRepository()
+        val queries = mutableListOf<DashboardQuery>()
+        coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            queries += firstArg<DashboardQuery>()
+            DashboardData(
+                date = today,
+                steps = 100,
+                loadedMetrics = setOf(
+                    DashboardMetric.STEPS,
+                    DashboardMetric.DISTANCE,
+                    DashboardMetric.CALORIES_OUT,
+                    DashboardMetric.WORKOUT,
+                ),
+            )
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.WEEKLY_CARDIO_LOAD.name,
+        )
+
+        DashboardViewModel(repo, prefs)
+
+        assertTrue(
+            queries.any {
+                DashboardMetric.WEEKLY_CARDIO_LOAD in it.visibleMetrics && it.awaitMissingDerivedMetrics
+            }
+        )
+    }
+
     @Test fun `stale deferred dashboard load cannot overwrite newer data`() = runTest {
         val repo = mockHealthRepository()
         coEvery { repo.loadDashboard(any<DashboardQuery>()) } coAnswers {
