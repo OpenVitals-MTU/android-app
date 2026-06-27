@@ -21,6 +21,8 @@ import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryScree
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryScreen
 import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryViewModel
+import tech.mmarca.openvitals.features.manualentry.nutrition.CarbsEntryScreen
+import tech.mmarca.openvitals.features.manualentry.nutrition.CarbsEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntryViewModel
 
@@ -47,6 +49,9 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                 viewModel = manualEntryViewModel,
                 onOpenHydrationEntry = {
                     navController.navigate(Screen.HydrationEntry.route)
+                },
+                onOpenCarbsEntry = {
+                    navController.navigate(Screen.CarbsEntry.route)
                 },
                 onOpenActivityEntry = {
                     navController.navigate(Screen.ActivityEntry.route)
@@ -83,6 +88,15 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             viewModel = hydrationViewModel,
             unitFormatter = unitFormatter,
             onEntrySaved = onEntrySavedAndPopBack,
+        )
+    }
+
+    composable(Screen.CarbsEntry.route) {
+        val carbsEntryViewModel = hiltViewModel<CarbsEntryViewModel>()
+        CarbsEntryScreen(
+            viewModel = carbsEntryViewModel,
+            unitFormatter = unitFormatter,
+            onEntrySaved = onEntrySaved,
         )
     }
 

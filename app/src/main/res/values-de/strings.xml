@@ -96,6 +96,7 @@
     <string name="screen_hydration_entry">Hydrierungseintrag</string>
     <string name="screen_activity_entry">Aktivitätseintrag</string>
     <string name="screen_mindfulness_entry">Achtsamkeitseintrag</string>
+    <string name="screen_carbs_entry">Kohlenhydrateintrag</string>
     <string name="screen_body_measurement_entry">Körpermessungseintrag</string>
     <string name="screen_vitals_measurement_entry">Vitalwerteeintrag</string>
 
@@ -110,6 +111,7 @@
     <string name="manual_entry_write_permission_title">Schreibberechtigung für Hydrierung</string>
     <string name="manual_entry_activity_write_permission_title">Schreibberechtigungen für Aktivitäten</string>
     <string name="manual_entry_mindfulness_write_permission_title">Schreibberechtigung für Achtsamkeit</string>
+    <string name="manual_entry_carbs_write_permission_title">Schreibberechtigung für Kohlenhydrate</string>
     <string name="manual_entry_body_write_permission_title">Schreibberechtigung für %1$s</string>
     <string name="manual_entry_vitals_write_permission_title">Schreibberechtigung für %1$s</string>
     <string name="mindfulness_entry_subtitle">Achtsamkeitssitzungen werden direkt in Health Connect gespeichert.</string>
@@ -359,6 +361,12 @@
     <string name="body_entry_add_selected">%1$s hinzufügen</string>
     <string name="body_entry_invalid_value">Gib einen gültigen Wert für diese Messung ein.</string>
     <string name="body_entry_write_failed">Körpermessung konnte nicht gespeichert werden: %1$s</string>
+    <string name="carbs_entry_subtitle">Kohlenhydrateinträge werden direkt in Health Connect gespeichert.</string>
+    <string name="carbs_entry_permission_needed">Zum Hinzufügen von Kohlenhydrateinträgen benötigt OpenVitals die Health-Connect-Schreibberechtigung. Die App speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
+    <string name="carbs_entry_value_label">Kohlenhydrate (%1$s)</string>
+    <string name="carbs_entry_add">Kohlenhydrate hinzufügen</string>
+    <string name="carbs_entry_invalid_value">Gib eine gültige Kohlenhydratmenge ein.</string>
+    <string name="carbs_entry_write_failed">Kohlenhydrate konnten nicht gespeichert werden: %1$s</string>
     <string name="vitals_entry_subtitle">%1$s-Einträge werden direkt in Health Connect gespeichert.</string>
     <string name="vitals_entry_permission_needed">Zum Hinzufügen von %1$s-Einträgen benötigt OpenVitals die Health-Connect-Schreibberechtigung. Die App speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>

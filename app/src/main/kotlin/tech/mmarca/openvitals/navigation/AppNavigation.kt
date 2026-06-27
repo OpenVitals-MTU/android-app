@@ -169,6 +169,7 @@ fun AppNavigation(
             Screen.ManualEntry.route,
             Screen.HydrationEntry.route,
             Screen.HydrationEntryEdit.route,
+            Screen.CarbsEntry.route,
             Screen.ActivityEntry.route,
             Screen.ActivityEntryEdit.route,
             Screen.MindfulnessEntry.route,
@@ -261,6 +262,7 @@ fun AppNavigation(
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
+        Screen.CarbsEntry.route -> stringResource(R.string.screen_carbs_entry)
         Screen.ActivityEntry.route -> activityEntryTopBarTitleRes
             ?.let { stringResource(it) }
             ?: stringResource(R.string.screen_activity_entry)
@@ -813,6 +815,7 @@ private fun addEntryActionForCurrentRoute(
 private fun DashboardWidgetId.entryRoute(): String? =
     when (this) {
         DashboardWidgetId.HYDRATION -> Screen.HydrationEntry.route
+        DashboardWidgetId.CARBS -> Screen.CarbsEntry.route
         DashboardWidgetId.MINDFULNESS -> Screen.MindfulnessEntry.route
         DashboardWidgetId.WEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
         DashboardWidgetId.HEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.HEIGHT.name)

@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -87,6 +88,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
+import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 private const val ManualEntryGridColumns = 3
@@ -98,6 +100,7 @@ private val ManualEntryTileIconSize = 34.dp
 fun ManualEntryScreen(
     viewModel: ManualEntryViewModel,
     onOpenHydrationEntry: () -> Unit,
+    onOpenCarbsEntry: () -> Unit,
     onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
@@ -114,6 +117,11 @@ fun ManualEntryScreen(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) {
         viewModel.onBodyWritePermissionResult()
+    }
+    val requestNutritionWritePermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        viewModel.onNutritionWritePermissionResult()
     }
     val requestActivityWritePermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
@@ -133,6 +141,7 @@ fun ManualEntryScreen(
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
+        onOpenCarbsEntry = viewModel::onCarbsWidgetTapped,
         onOpenActivityEntry = viewModel::onActivityWidgetTapped,
         onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
@@ -152,6 +161,12 @@ fun ManualEntryScreen(
         if (state.pendingHydrationEntryNavigation) {
             viewModel.onHydrationEntryNavigationHandled()
             onOpenHydrationEntry()
+        }
+    }
+    LaunchedEffect(state.pendingCarbsEntryNavigation) {
+        if (state.pendingCarbsEntryNavigation) {
+            viewModel.onCarbsEntryNavigationHandled()
+            onOpenCarbsEntry()
         }
     }
     LaunchedEffect(state.pendingActivityEntryNavigation) {
@@ -218,6 +233,17 @@ fun ManualEntryScreen(
             onGrant = {
                 viewModel.grantActivityWritePermissionFromPrompt()
                 requestActivityWritePermissions.launch(state.activityWritePermissions)
+            },
+        )
+    }
+
+    if (state.showNutritionWritePermissionPrompt) {
+        NutritionWritePermissionPrompt(
+            onDismiss = viewModel::dismissNutritionWritePermissionPrompt,
+            onOpenEntry = viewModel::continueCarbsEntryFromWritePermissionPrompt,
+            onGrant = {
+                viewModel.grantNutritionWritePermissionFromPrompt()
+                requestNutritionWritePermissions.launch(state.nutritionWritePermissions)
             },
         )
     }
@@ -318,6 +344,29 @@ private fun ActivityWritePermissionPrompt(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.manual_entry_activity_write_permission_title)) },
         text = { Text(stringResource(R.string.activity_entry_permission_needed)) },
+        confirmButton = {
+            OpenVitalsButton(onClick = onGrant) {
+                Text(stringResource(R.string.action_grant))
+            }
+        },
+        dismissButton = {
+            OpenVitalsTextButton(onClick = onOpenEntry) {
+                Text(stringResource(R.string.action_open))
+            }
+        },
+    )
+}
+
+@Composable
+private fun NutritionWritePermissionPrompt(
+    onDismiss: () -> Unit,
+    onOpenEntry: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.manual_entry_carbs_write_permission_title)) },
+        text = { Text(stringResource(R.string.carbs_entry_permission_needed)) },
         confirmButton = {
             OpenVitalsButton(onClick = onGrant) {
                 Text(stringResource(R.string.action_grant))
@@ -591,12 +640,14 @@ private fun LazyListScope.hiddenManualEntryWidgets(
 private fun manualEntryWidgetSpecs(
     isEditingWidgets: Boolean,
     onOpenHydrationEntry: () -> Unit,
+    onOpenCarbsEntry: () -> Unit,
     onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): List<ManualEntryWidgetSpec> {
     val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
+    val carbsClick = if (isEditingWidgets) null else onOpenCarbsEntry
     val activityClick = if (isEditingWidgets) null else onOpenActivityEntry
     val mindfulnessClick = if (isEditingWidgets) null else onOpenMindfulnessEntry
     return listOf(
@@ -610,6 +661,19 @@ private fun manualEntryWidgetSpecs(
                     accentColor = HydrationColor,
                     modifier = modifier,
                     onClick = hydrationClick,
+                )
+            },
+        ),
+        ManualEntryWidgetSpec(
+            id = ManualEntryWidgetId.CARBS,
+            title = stringResource(R.string.metric_carbs),
+            content = { modifier ->
+                ManualEntryMetricTile(
+                    title = stringResource(R.string.metric_carbs),
+                    icon = Icons.Outlined.Restaurant,
+                    accentColor = NutritionColor,
+                    modifier = modifier,
+                    onClick = carbsClick,
                 )
             },
         ),

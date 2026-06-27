@@ -35,6 +35,7 @@ sealed class Screen(val route: String) {
     data object HydrationEntryEdit : Screen("manual_entry/hydration/edit/{$HYDRATION_ENTRY_ID_ARG}") {
         fun createRoute(entryId: String): String = "manual_entry/hydration/edit/${Uri.encode(entryId)}"
     }
+    data object CarbsEntry : Screen("manual_entry/carbs")
     data object ActivityEntry : Screen("manual_entry/activity")
     data object ActivityEntryEdit : Screen("manual_entry/activity/edit/{$ACTIVITY_ENTRY_ID_ARG}") {
         fun createRoute(entryId: String): String = "manual_entry/activity/edit/${Uri.encode(entryId)}"

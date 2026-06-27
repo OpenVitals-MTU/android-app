@@ -94,6 +94,7 @@
     <string name="screen_hydration_entry">Voce idratazione</string>
     <string name="screen_activity_entry">Voce attività</string>
     <string name="screen_mindfulness_entry">Voce consapevolezza</string>
+    <string name="screen_carbs_entry">Voce carboidrati</string>
     <string name="screen_body_measurement_entry">Voce misurazione corporea</string>
     <string name="screen_vitals_measurement_entry">Voce parametri vitali</string>
     <string name="bottom_nav_dashboard">Sommario</string>
@@ -107,6 +108,7 @@
     <string name="manual_entry_write_permission_title">Permessi di scrittura idratazione</string>
     <string name="manual_entry_activity_write_permission_title">Autorizzazioni di scrittura attività</string>
     <string name="manual_entry_mindfulness_write_permission_title">Autorizzazione di scrittura consapevolezza</string>
+    <string name="manual_entry_carbs_write_permission_title">Autorizzazione di scrittura carboidrati</string>
     <string name="manual_entry_body_write_permission_title">Autorizzazione di scrittura %1$s</string>
     <string name="manual_entry_vitals_write_permission_title">Autorizzazione di scrittura %1$s</string>
     <string name="mindfulness_entry_subtitle">Le sessioni di consapevolezza vengono salvate direttamente su Health Connect.</string>
@@ -356,6 +358,12 @@
     <string name="body_entry_add_selected">Aggiungi %1$s</string>
     <string name="body_entry_invalid_value">Inserisci un valore valido per questa misurazione.</string>
     <string name="body_entry_write_failed">Impossibile salvare la misurazione corporea: %1$s</string>
+    <string name="carbs_entry_subtitle">Le voci carboidrati vengono salvate direttamente in Health Connect.</string>
+    <string name="carbs_entry_permission_needed">Per aggiungere voci carboidrati, OpenVitals necessita del permesso di scrittura su Health Connect. L\'app non memorizzerà questi dati; le voci vengono salvate in Health Connect.</string>
+    <string name="carbs_entry_value_label">Carboidrati (%1$s)</string>
+    <string name="carbs_entry_add">Aggiungi carboidrati</string>
+    <string name="carbs_entry_invalid_value">Inserisci una quantità valida di carboidrati.</string>
+    <string name="carbs_entry_write_failed">Impossibile salvare i carboidrati: %1$s</string>
     <string name="vitals_entry_subtitle">Le voci %1$s vengono salvate direttamente in Health Connect.</string>
     <string name="vitals_entry_permission_needed">Per aggiungere voci di %1$s, OpenVitals necessita del permesso di scrittura su Health Connect. L\'app non memorizzerà questi dati; le voci vengono salvate in Health Connect.</string>
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>

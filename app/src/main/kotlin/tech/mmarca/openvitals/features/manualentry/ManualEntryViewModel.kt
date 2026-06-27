@@ -25,6 +25,7 @@ import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
+import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 
@@ -36,6 +37,11 @@ data class ManualEntryUiState(
     val canWriteHydration: Boolean = false,
     val showHydrationWritePermissionPrompt: Boolean = false,
     val pendingHydrationEntryNavigation: Boolean = false,
+    val nutritionWritePermissions: Set<String> = emptySet(),
+    val isCheckingNutritionWritePermission: Boolean = false,
+    val canWriteNutrition: Boolean = false,
+    val showNutritionWritePermissionPrompt: Boolean = false,
+    val pendingCarbsEntryNavigation: Boolean = false,
     val activityWritePermissions: Set<String> = emptySet(),
     val isCheckingActivityWritePermission: Boolean = false,
     val showActivityWritePermissionPrompt: Boolean = false,
@@ -61,6 +67,7 @@ data class ManualEntryUiState(
 @HiltViewModel
 class ManualEntryViewModel @Inject constructor(
     private val hydrationRepository: HydrationRepository,
+    private val nutritionRepository: NutritionRepository,
     private val activityRepository: ActivityRepository,
     private val bodyRepository: BodyRepository,
     private val vitalsRepository: VitalsRepository,
@@ -101,6 +108,37 @@ class ManualEntryViewModel @Inject constructor(
                     isCheckingHydrationWritePermission = false,
                     canWriteHydration = false,
                     pendingHydrationEntryNavigation = true,
+                )
+            }
+        }
+    }
+
+    fun onCarbsWidgetTapped() {
+        if (_uiState.value.isCheckingNutritionWritePermission) return
+        viewModelScope.launch {
+            val writePermissions = nutritionRepository.nutritionWritePermissions
+            _uiState.value = _uiState.value.copy(
+                isCheckingNutritionWritePermission = true,
+                nutritionWritePermissions = writePermissions,
+                showNutritionWritePermissionPrompt = false,
+                pendingCarbsEntryNavigation = false,
+            )
+            runCatching {
+                nutritionRepository.hasNutritionWritePermission()
+            }.onSuccess { canWriteNutrition ->
+                val unacknowledgedWritePermissions = writePermissions - preferencesRepository.acknowledgedPermissions()
+                val shouldShowPrompt = !canWriteNutrition && unacknowledgedWritePermissions.isNotEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isCheckingNutritionWritePermission = false,
+                    canWriteNutrition = canWriteNutrition,
+                    showNutritionWritePermissionPrompt = shouldShowPrompt,
+                    pendingCarbsEntryNavigation = !shouldShowPrompt,
+                )
+            }.onFailure {
+                _uiState.value = _uiState.value.copy(
+                    isCheckingNutritionWritePermission = false,
+                    canWriteNutrition = false,
+                    pendingCarbsEntryNavigation = true,
                 )
             }
         }
@@ -259,6 +297,41 @@ class ManualEntryViewModel @Inject constructor(
 
     fun onHydrationEntryNavigationHandled() {
         _uiState.value = _uiState.value.copy(pendingHydrationEntryNavigation = false)
+    }
+
+    fun continueCarbsEntryFromWritePermissionPrompt() {
+        acknowledgeNutritionWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(
+            showNutritionWritePermissionPrompt = false,
+            pendingCarbsEntryNavigation = true,
+        )
+    }
+
+    fun dismissNutritionWritePermissionPrompt() {
+        acknowledgeNutritionWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showNutritionWritePermissionPrompt = false)
+    }
+
+    fun grantNutritionWritePermissionFromPrompt() {
+        acknowledgeNutritionWritePermissionPrompt()
+        _uiState.value = _uiState.value.copy(showNutritionWritePermissionPrompt = false)
+    }
+
+    fun onNutritionWritePermissionResult() {
+        viewModelScope.launch {
+            val canWriteNutrition = runCatching {
+                nutritionRepository.hasNutritionWritePermission()
+            }.getOrDefault(false)
+            _uiState.value = _uiState.value.copy(
+                isCheckingNutritionWritePermission = false,
+                canWriteNutrition = canWriteNutrition,
+                pendingCarbsEntryNavigation = true,
+            )
+        }
+    }
+
+    fun onCarbsEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingCarbsEntryNavigation = false)
     }
 
     fun continueActivityEntryFromWritePermissionPrompt() {
@@ -442,6 +515,13 @@ class ManualEntryViewModel @Inject constructor(
 
     private fun acknowledgeHydrationWritePermissionPrompt() {
         val writePermissions = _uiState.value.hydrationWritePermissions
+        if (writePermissions.isNotEmpty()) {
+            preferencesRepository.acknowledgePermissions(writePermissions)
+        }
+    }
+
+    private fun acknowledgeNutritionWritePermissionPrompt() {
+        val writePermissions = _uiState.value.nutritionWritePermissions
         if (writePermissions.isNotEmpty()) {
             preferencesRepository.acknowledgePermissions(writePermissions)
         }

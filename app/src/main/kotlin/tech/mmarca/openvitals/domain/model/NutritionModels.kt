@@ -59,6 +59,11 @@ data class NutritionEntry(
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
 )
 
+data class NutritionWriteRequest(
+    val time: Instant,
+    val carbsGrams: Double,
+)
+
 data class DailyMacros(
     val date: LocalDate,
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),

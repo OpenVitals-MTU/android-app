@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -35,6 +36,8 @@ class NutritionRepository @Inject constructor(
     }
 
     private val readNutritionPermission = HealthPermission.getReadPermission(NutritionRecord::class)
+    private val writeNutritionPermission = HealthPermission.getWritePermission(NutritionRecord::class)
+    val nutritionWritePermissions: Set<String> get() = setOf(writeNutritionPermission)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -115,6 +118,20 @@ class NutritionRepository @Inject constructor(
         val startInstant = start.atStartOfDay(zone).toInstant()
         val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
         return hc.readNutritionEntries(startInstant, endInstant)
+    }
+
+    suspend fun hasNutritionWritePermission(): Boolean =
+        writeNutritionPermission in grantedPermissionsIfAvailable()
+
+    suspend fun writeCarbsEntry(request: NutritionWriteRequest): String {
+        val granted = grantedPermissionsIfAvailable()
+        if (writeNutritionPermission !in granted) {
+            Log.w(TAG, "Skipping writeCarbsEntry missingCount=1")
+            throw SecurityException("Missing Health Connect nutrition write permission.")
+        }
+        return hc.writeCarbsEntry(request).also {
+            metricSummaryCacheStore?.invalidateSurface(NutritionPeriodDataCodec.Surface)
+        }
     }
 }
 

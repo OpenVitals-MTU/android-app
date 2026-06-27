@@ -1,11 +1,15 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.util.Log
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.MealType
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -16,10 +20,14 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal class NutritionHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -158,7 +166,41 @@ internal class NutritionHealthReader(
                 )
             }
         }
+
+    suspend fun writeCarbsEntry(request: NutritionWriteRequest): String = withContext(Dispatchers.IO) {
+        require(request.carbsGrams.isFinite() && request.carbsGrams > 0.0) {
+            "Carbs must be greater than zero."
+        }
+        require(request.carbsGrams <= MaxNutritionCarbsGrams) {
+            "Carbs must not exceed ${MaxNutritionCarbsGrams.toInt()} g."
+        }
+
+        val startTime = request.time
+        val endTime = startTime.plusSeconds(1)
+        val zone = ZoneId.systemDefault()
+        val clientRecordId = "openvitals_carbs_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
+        val record = NutritionRecord(
+            startTime = startTime,
+            startZoneOffset = zone.rules.getOffset(startTime),
+            endTime = endTime,
+            endZoneOffset = zone.rules.getOffset(endTime),
+            metadata = Metadata.manualEntry(
+                device = Device(type = Device.TYPE_PHONE),
+                clientRecordId = clientRecordId,
+            ),
+            totalCarbohydrate = Mass.grams(request.carbsGrams),
+            name = "OpenVitals carbs",
+            mealType = MealType.MEAL_TYPE_UNKNOWN,
+        )
+
+        Log.d(TAG, "Writing carbs nutrition record ${support.diagnosticsSummary()}")
+        support.client().insertRecords(listOf(record))
+        clientRecordId
+    }
 }
+
+private const val TAG = "NutritionHealthReader"
+private const val MaxNutritionCarbsGrams = 10000.0
 
 private data class NutritionEnergyAggregate(
     val nutrient: NutritionNutrient,

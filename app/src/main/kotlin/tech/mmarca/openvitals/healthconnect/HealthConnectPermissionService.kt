@@ -137,6 +137,10 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(HydrationRecord::class),
     )
 
+    val nutritionWritePermissions: Set<String> = setOf(
+        HealthPermission.getWritePermission(NutritionRecord::class),
+    )
+
     val bodyWritePermissions: Set<String> = setOf(
         HealthPermission.getWritePermission(WeightRecord::class),
         HealthPermission.getWritePermission(HeightRecord::class),
@@ -259,6 +263,7 @@ internal class HealthConnectPermissionService(
         get() = activityWritePermissions +
             plannedExercisePermissions +
             hydrationWritePermissions +
+            nutritionWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
             (if (isMindfulnessSessionAvailable()) mindfulnessWritePermissions else emptySet())
@@ -283,6 +288,7 @@ internal class HealthConnectPermissionService(
             activityWritePermissions +
             plannedExercisePermissions +
             hydrationWritePermissions +
+            nutritionWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
             mindfulnessWritePermissions +
@@ -294,6 +300,7 @@ internal class HealthConnectPermissionService(
             activityWritePermissions +
             plannedExercisePermissions +
             hydrationWritePermissions +
+            nutritionWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
             mindfulnessWritePermissions +
@@ -418,7 +425,7 @@ internal class HealthConnectPermissionService(
 
     companion object {
         /** Bump when requestable/managed permissions change so existing users see the new-permissions prompt. */
-        const val PERMISSION_SET_VERSION = 1
+        const val PERMISSION_SET_VERSION = 2
 
         private const val TAG = "HealthConnectPermissions"
         private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"
