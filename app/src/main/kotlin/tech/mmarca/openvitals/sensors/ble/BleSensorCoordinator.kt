@@ -60,6 +60,15 @@ class BleSensorCoordinator @Inject constructor(
 
     private var scanCallback: ScanCallback? = null
     private val scanResults = ConcurrentHashMap<String, BleDiscoveredDevice>()
+    private var metricsTimeoutTickerScheduled = false
+    private val metricsTimeoutTicker = object : Runnable {
+        override fun run() {
+            metricsTimeoutTickerScheduled = false
+            if (connections.isEmpty()) return
+            publishMetrics(recordSamples = recordingActive)
+            scheduleMetricsTimeoutTicker()
+        }
+    }
 
     fun currentSampleBuffer(): BleRecordingSampleBuffer = sampleBuffer
 
@@ -71,6 +80,7 @@ class BleSensorCoordinator @Inject constructor(
             refreshConnections()
         } else {
             publishMetrics()
+            scheduleMetricsTimeoutTicker()
         }
     }
 
@@ -106,9 +116,11 @@ class BleSensorCoordinator @Inject constructor(
             connection.connect()
         }
         publishMetrics()
+        scheduleMetricsTimeoutTicker()
     }
 
     fun disconnectAll() {
+        stopMetricsTimeoutTicker()
         connections.values.forEach { it.disconnect() }
         connections.clear()
         capabilityOwners.clear()
@@ -278,15 +290,12 @@ class BleSensorCoordinator @Inject constructor(
     private val connectionListener = object : BleConnectionListener {
         override fun onConnectionStatusChanged(status: BleConnectionStatus) {
             publishMetrics()
+            scheduleMetricsTimeoutTicker()
         }
 
         override fun onMetricsUpdated() {
-            val now = Instant.now()
-            val metrics = collectMetrics(now)
-            _metrics.value = metrics
-            if (recordingActive) {
-                appendSamples(now, metrics)
-            }
+            publishMetrics(recordSamples = true)
+            scheduleMetricsTimeoutTicker()
         }
     }
 
@@ -342,8 +351,26 @@ class BleSensorCoordinator @Inject constructor(
         return connections[device.address]
     }
 
-    private fun publishMetrics() {
-        _metrics.value = collectMetrics()
+    private fun publishMetrics(
+        now: Instant = Instant.now(),
+        recordSamples: Boolean = false,
+    ) {
+        val metrics = collectMetrics(now)
+        _metrics.value = metrics
+        if (recordSamples && recordingActive) {
+            appendSamples(now, metrics)
+        }
+    }
+
+    private fun scheduleMetricsTimeoutTicker() {
+        if (connections.isEmpty() || metricsTimeoutTickerScheduled) return
+        metricsTimeoutTickerScheduled = true
+        bleHandler.postDelayed(metricsTimeoutTicker, METRICS_TIMEOUT_PUBLISH_INTERVAL_MS)
+    }
+
+    private fun stopMetricsTimeoutTicker() {
+        metricsTimeoutTickerScheduled = false
+        bleHandler.removeCallbacks(metricsTimeoutTicker)
     }
 
     private fun BleDiscoveredDevice.displayLabel(): String =
@@ -351,5 +378,6 @@ class BleSensorCoordinator @Inject constructor(
 
     companion object {
         private const val CAPABILITY_DISCOVERY_TIMEOUT_MS = 8_000L
+        private const val METRICS_TIMEOUT_PUBLISH_INTERVAL_MS = 1_000L
     }
 }

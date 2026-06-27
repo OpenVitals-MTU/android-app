@@ -13,7 +13,9 @@ internal data class BleAggregatedSample<T>(
     val receivedAt: Instant,
 )
 
-internal abstract class BleSampleAggregator<Input, Output> {
+internal abstract class BleSampleAggregator<Input, Output>(
+    private val staleOutput: Output? = null,
+) {
     private var previous: Pair<Instant, Input>? = null
     protected var output: Output? = null
     private var lastReceivedAt: Instant? = null
@@ -29,7 +31,7 @@ internal abstract class BleSampleAggregator<Input, Output> {
     fun current(now: Instant = Instant.now()): Output? {
         val receivedAt = lastReceivedAt ?: return null
         if (Duration.between(receivedAt, now) > MaxAge) {
-            output = null
+            output = staleOutput
         }
         return output
     }
@@ -61,7 +63,9 @@ internal class BlePowerAggregator : BleSampleAggregator<BleCyclingPowerData, Dou
     }
 }
 
-internal class BleCyclingCadenceAggregator : BleSampleAggregator<BleCrankData, Long>() {
+internal class BleCyclingCadenceAggregator : BleSampleAggregator<BleCrankData, Long>(
+    staleOutput = 0L,
+) {
     override fun computeValue(now: Instant, current: BleCrankData) {
         val previous = previousValue() ?: return
         val timeDiffMs = BleUintUtils.diff(
@@ -69,7 +73,10 @@ internal class BleCyclingCadenceAggregator : BleSampleAggregator<BleCrankData, L
             previous.crankRevolutionsTime.toLong(),
             BleUintUtils.UINT16_MAX.toLong(),
         ) / 1024.0 * 1000.0
-        if (timeDiffMs <= 0.0) return
+        if (timeDiffMs <= 0.0) {
+            output = 0L
+            return
+        }
         if (current.crankRevolutionsCount < previous.crankRevolutionsCount) return
         val crankDiff = BleUintUtils.diff(
             current.crankRevolutionsCount,
@@ -82,7 +89,9 @@ internal class BleCyclingCadenceAggregator : BleSampleAggregator<BleCrankData, L
 
 internal class BleCyclingSpeedAggregator(
     private var wheelCircumferenceMeters: Double,
-) : BleSampleAggregator<BleWheelData, Double>() {
+) : BleSampleAggregator<BleWheelData, Double>(
+    staleOutput = 0.0,
+) {
     fun setWheelCircumferenceMeters(value: Double) {
         wheelCircumferenceMeters = value
     }
@@ -94,7 +103,10 @@ internal class BleCyclingSpeedAggregator(
             previous.wheelRevolutionsTime.toLong(),
             BleUintUtils.UINT16_MAX.toLong(),
         ) / 1024.0 * 1000.0
-        if (timeDiffMs <= 0.0) return
+        if (timeDiffMs <= 0.0) {
+            output = 0.0
+            return
+        }
         if (current.wheelRevolutionsCount < previous.wheelRevolutionsCount) return
         val wheelDiff = BleUintUtils.diff(
             current.wheelRevolutionsCount,
@@ -106,7 +118,9 @@ internal class BleCyclingSpeedAggregator(
 }
 
 internal class BleRunningSpeedCadenceAggregator :
-    BleSampleAggregator<BleRunningSpeedCadenceData, Pair<Double?, Long?>>() {
+    BleSampleAggregator<BleRunningSpeedCadenceData, Pair<Double?, Long?>>(
+        staleOutput = 0.0 to 0L,
+    ) {
     override fun computeValue(now: Instant, current: BleRunningSpeedCadenceData) {
         output = current.speedMetersPerSecond to current.cadenceRpm
     }

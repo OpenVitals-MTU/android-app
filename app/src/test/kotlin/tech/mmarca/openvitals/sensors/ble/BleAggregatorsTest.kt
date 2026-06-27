@@ -29,6 +29,18 @@ class BleAggregatorsTest {
     }
 
     @Test
+    fun cyclingCadenceAggregator_returnsZeroWhenCrankStops() {
+        val aggregator = BleCyclingCadenceAggregator()
+        val t0 = Instant.parse("2024-01-01T12:00:00Z")
+        val t1 = Instant.parse("2024-01-01T12:00:01Z")
+        val t2 = Instant.parse("2024-01-01T12:00:02Z")
+        aggregator.add(t0, BleCrankData(crankRevolutionsCount = 10, crankRevolutionsTime = 0))
+        aggregator.add(t1, BleCrankData(crankRevolutionsCount = 11, crankRevolutionsTime = 1024))
+        aggregator.add(t2, BleCrankData(crankRevolutionsCount = 11, crankRevolutionsTime = 1024))
+        assertEquals(0L, aggregator.current(t2))
+    }
+
+    @Test
     fun cyclingSpeedAggregator_computesMetersPerSecond() {
         val aggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
         val t0 = Instant.parse("2024-01-01T12:00:00Z")
@@ -37,6 +49,18 @@ class BleAggregatorsTest {
         aggregator.add(t1, BleWheelData(wheelRevolutionsCount = 102, wheelRevolutionsTime = 1024))
         val speed = aggregator.current(t1)
         assertEquals(4.2, speed!!, 0.01)
+    }
+
+    @Test
+    fun cyclingSpeedAggregator_returnsZeroWhenWheelStops() {
+        val aggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
+        val t0 = Instant.parse("2024-01-01T12:00:00Z")
+        val t1 = Instant.parse("2024-01-01T12:00:01Z")
+        val t2 = Instant.parse("2024-01-01T12:00:02Z")
+        aggregator.add(t0, BleWheelData(wheelRevolutionsCount = 100, wheelRevolutionsTime = 0))
+        aggregator.add(t1, BleWheelData(wheelRevolutionsCount = 102, wheelRevolutionsTime = 1024))
+        aggregator.add(t2, BleWheelData(wheelRevolutionsCount = 102, wheelRevolutionsTime = 1024))
+        assertEquals(0.0, aggregator.current(t2)!!, 0.01)
     }
 
     @Test
@@ -66,5 +90,33 @@ class BleAggregatorsTest {
         val now = Instant.parse("2024-01-01T12:00:00Z")
         aggregator.add(now, 120L)
         assertNull(aggregator.current(now.plusSeconds(6)))
+    }
+
+    @Test
+    fun speedAndCadenceAggregators_returnZeroWhenStale() {
+        val now = Instant.parse("2024-01-01T12:00:00Z")
+
+        val cadenceAggregator = BleCyclingCadenceAggregator()
+        cadenceAggregator.add(
+            now,
+            BleCrankData(crankRevolutionsCount = 10, crankRevolutionsTime = 0),
+        )
+        assertEquals(0L, cadenceAggregator.current(now.plusSeconds(6)))
+
+        val speedAggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
+        speedAggregator.add(
+            now,
+            BleWheelData(wheelRevolutionsCount = 100, wheelRevolutionsTime = 0),
+        )
+        assertEquals(0.0, speedAggregator.current(now.plusSeconds(6))!!, 0.01)
+
+        val runningAggregator = BleRunningSpeedCadenceAggregator()
+        runningAggregator.add(
+            now,
+            BleRunningSpeedCadenceData(speedMetersPerSecond = 3.5, cadenceRpm = 90L),
+        )
+        val running = runningAggregator.current(now.plusSeconds(6))
+        assertEquals(0.0, running?.first)
+        assertEquals(0L, running?.second)
     }
 }
