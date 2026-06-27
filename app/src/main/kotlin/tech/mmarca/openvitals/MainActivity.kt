@@ -170,6 +170,7 @@ private fun Intent.openVitalsRoute(): String? =
 private fun isSupportedOpenVitalsRoute(route: String): Boolean {
     if (route == Screen.Dashboard.route) return true
     if (route == Screen.DailyReadiness.route) return true
+    if (route == Screen.ActivityEntry.route) return true
     if (route.startsWith("daily_readiness/body_energy/")) return true
     val metricPrefix = "metric/"
     if (!route.startsWith(metricPrefix)) return false

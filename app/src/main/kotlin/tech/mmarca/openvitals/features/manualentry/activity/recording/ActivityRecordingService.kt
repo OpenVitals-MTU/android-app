@@ -48,6 +48,8 @@ import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
+import tech.mmarca.openvitals.navigation.Screen
 
 @AndroidEntryPoint
 class ActivityRecordingService : Service() {
@@ -380,6 +382,7 @@ class ActivityRecordingService : Service() {
             RequestOpenApp,
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(EXTRA_OPENVITALS_ROUTE, Screen.ActivityEntry.route)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
