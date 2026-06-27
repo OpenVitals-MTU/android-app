@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
@@ -114,6 +115,8 @@ fun AppNavigation(
         null
     }
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
+    var activityEntryTopBarTitleRes by remember { mutableStateOf<Int?>(null) }
+    var activityEntryTopBarEditState by remember { mutableStateOf<TopBarEditState?>(null) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
 
     fun markDashboardDirty() {
@@ -245,8 +248,12 @@ fun AppNavigation(
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
-        Screen.ActivityEntry.route -> stringResource(R.string.screen_activity_entry)
-        Screen.ActivityEntryEdit.route -> stringResource(R.string.screen_activity_entry)
+        Screen.ActivityEntry.route -> activityEntryTopBarTitleRes
+            ?.let { stringResource(it) }
+            ?: stringResource(R.string.screen_activity_entry)
+        Screen.ActivityEntryEdit.route -> activityEntryTopBarTitleRes
+            ?.let { stringResource(it) }
+            ?: stringResource(R.string.screen_activity_entry)
         Screen.MindfulnessEntry.route -> stringResource(R.string.screen_mindfulness_entry)
         Screen.MindfulnessEntryEdit.route -> stringResource(R.string.screen_mindfulness_entry)
         Screen.BodyMeasurementEntry.route,
@@ -304,14 +311,26 @@ fun AppNavigation(
         topBarActions = {
             val topBarEditState = when (currentRoute) {
                 Screen.ManualEntry.route -> manualEntryTopBarState
+                Screen.ActivityEntry.route,
+                Screen.ActivityEntryEdit.route -> activityEntryTopBarEditState
                 else -> null
             }
             if (topBarEditState != null) {
+                val isActivityRecordingEditState =
+                    currentRoute == Screen.ActivityEntry.route ||
+                        currentRoute == Screen.ActivityEntryEdit.route
                 OpenVitalsIconButton(onClick = topBarEditState.onToggleEdit) {
                     Icon(
-                        imageVector = Icons.Outlined.Edit,
+                        imageVector = if (isActivityRecordingEditState && topBarEditState.isEditing) {
+                            Icons.Outlined.Check
+                        } else {
+                            Icons.Outlined.Edit
+                        },
                         contentDescription = stringResource(
                             when {
+                                isActivityRecordingEditState && topBarEditState.isEditing ->
+                                    R.string.cd_finish_recording_dashboard_editing
+                                isActivityRecordingEditState -> R.string.cd_edit_recording_dashboard
                                 currentRoute == Screen.Dashboard.route && topBarEditState.isEditing ->
                                     R.string.cd_finish_dashboard_editing
                                 currentRoute == Screen.Dashboard.route -> R.string.cd_edit_dashboard
@@ -539,6 +558,16 @@ fun AppNavigation(
                 onRouteImportRequestHandled = onRouteImportRequestHandled,
                 onManualEntryEditStateChanged = { isEditing, onToggleEdit ->
                     manualEntryTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                },
+                onActivityEntryTitleChanged = { titleRes ->
+                    activityEntryTopBarTitleRes = titleRes
+                },
+                onActivityEntryEditStateChanged = { isAvailable, isEditing, onToggleEdit ->
+                    activityEntryTopBarEditState = if (isAvailable) {
+                        TopBarEditState(isEditing, onToggleEdit)
+                    } else {
+                        null
+                    }
                 },
                 onEntrySaved = ::markDashboardDirty,
                 onEntrySavedAndPopBack = ::markDashboardDirtyAndPopBack,

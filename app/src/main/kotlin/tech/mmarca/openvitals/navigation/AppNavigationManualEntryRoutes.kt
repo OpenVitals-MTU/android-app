@@ -30,6 +30,8 @@ internal fun NavGraphBuilder.manualEntryRoutes(
     routeImportRequest: ExternalRouteImportRequest?,
     onRouteImportRequestHandled: (Long) -> Unit,
     onManualEntryEditStateChanged: (Boolean, () -> Unit) -> Unit,
+    onActivityEntryTitleChanged: (Int?) -> Unit,
+    onActivityEntryEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
     onEntrySaved: () -> Unit,
     onEntrySavedAndPopBack: () -> Unit,
     onActivityEntrySaved: () -> Unit,
@@ -92,6 +94,8 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             pendingRouteImportRequestId = routeImportRequest?.id,
             onPendingRouteImportHandled = onRouteImportRequestHandled,
             onEntrySaved = onActivityEntrySaved,
+            onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
+            onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
         )
     }
 
@@ -104,6 +108,8 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             viewModel = activityEntryViewModel,
             unitFormatter = unitFormatter,
             onEntrySaved = onEntrySavedAndPopBack,
+            onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
+            onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
         )
     }
 

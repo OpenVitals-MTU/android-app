@@ -42,6 +42,8 @@ fun ActivityEntryScreen(
     pendingRouteImportRequestId: Long? = null,
     onPendingRouteImportHandled: (Long) -> Unit = {},
     onEntrySaved: () -> Unit = {},
+    onActivityRecordingTitleChanged: (Int?) -> Unit = {},
+    onActivityRecordingEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordingState by viewModel.recordingState.collectAsStateWithLifecycle()
@@ -139,10 +141,17 @@ fun ActivityEntryScreen(
         }
     }
 
-    if (
+    val isRecordingDashboardVisible =
         state.mode == ActivityEntryMode.RECORDING &&
         (recordingState.isActive || recordingState.activityTypeId != null)
-    ) {
+    LaunchedEffect(isRecordingDashboardVisible) {
+        if (!isRecordingDashboardVisible) {
+            onActivityRecordingTitleChanged(null)
+            onActivityRecordingEditStateChanged(false, false) {}
+        }
+    }
+
+    if (isRecordingDashboardVisible) {
         ActivityRecordingScreen(
             state = recordingState,
             unitFormatter = unitFormatter,
@@ -161,6 +170,8 @@ fun ActivityEntryScreen(
             onFinishRecording = {
                 viewModel.finishGpsRecording(unitFormatter.unitSystem())
             },
+            onActivityRecordingTitleChanged = onActivityRecordingTitleChanged,
+            onDashboardEditStateChanged = onActivityRecordingEditStateChanged,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp, vertical = 16.dp),

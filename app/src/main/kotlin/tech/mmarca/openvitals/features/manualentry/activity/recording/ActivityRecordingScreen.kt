@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -53,7 +54,6 @@ import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -136,10 +136,14 @@ internal fun ActivityRecordingScreen(
     onEndRepetitionSet: () -> Unit,
     onStartNextRepetitionSet: () -> Unit,
     onFinishRecording: () -> Unit,
+    onActivityRecordingTitleChanged: (Int?) -> Unit = {},
+    onDashboardEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
     var isEditingDashboard by rememberSaveable(state.activityTypeId) { mutableStateOf(false) }
+    val currentOnActivityRecordingTitleChanged by rememberUpdatedState(onActivityRecordingTitleChanged)
+    val currentOnDashboardEditStateChanged by rememberUpdatedState(onDashboardEditStateChanged)
     val canEditDashboard = state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
         (state.status == ActivityRecordingStatus.IDLE || state.status == ActivityRecordingStatus.PAUSED)
     val idleGpsFixState = rememberPreRecordingGpsFixState(
@@ -174,65 +178,33 @@ internal fun ActivityRecordingScreen(
     } else {
         state.elapsedDuration(now)
     }
+    LaunchedEffect(Unit) {
+        currentOnActivityRecordingTitleChanged(R.string.activity_entry_recording_title)
+    }
+    LaunchedEffect(canEditDashboard, isEditingDashboard) {
+        currentOnDashboardEditStateChanged(canEditDashboard, isEditingDashboard) {
+            isEditingDashboard = !isEditingDashboard
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            currentOnActivityRecordingTitleChanged(null)
+            currentOnDashboardEditStateChanged(false, false) {}
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Timer,
-                contentDescription = null,
-                tint = WorkoutColor,
-                modifier = Modifier.size(22.dp),
-            )
-            Text(
-                text = stringResource(R.string.activity_entry_recording_title),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = stringResource(state.recordingStatusLabelRes(now)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (
-                state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
-                state.status == ActivityRecordingStatus.IDLE
+        if (state.recordingKind == ActivityRecordingKind.REPETITION) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                PreRecordingGpsFixStatus(state = idleGpsFixState)
-            }
-            if (canEditDashboard) {
-                OpenVitalsIconButton(
-                    onClick = { isEditingDashboard = !isEditingDashboard },
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Icon(
-                        imageVector = if (isEditingDashboard) Icons.Outlined.Check else Icons.Outlined.Edit,
-                        contentDescription = stringResource(
-                            if (isEditingDashboard) {
-                                R.string.cd_finish_recording_dashboard_editing
-                            } else {
-                                R.string.cd_edit_recording_dashboard
-                            },
-                        ),
-                    )
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            if (state.recordingKind == ActivityRecordingKind.REPETITION) {
                 RepetitionRecordingStats(
                     state = state,
                     totalTime = totalTime,
@@ -240,34 +212,34 @@ internal fun ActivityRecordingScreen(
                     unitFormatter = unitFormatter,
                     onAdjustRepetitionCount = onAdjustRepetitionCount,
                 )
-            } else {
-                GpsRecordingTabs(
-                    state = state,
-                    totalTime = totalTime,
-                    movingTime = movingTime,
-                    now = now,
-                    unitFormatter = unitFormatter,
-                    isEditingDashboard = isEditingDashboard,
-                    onUpdateDashboardLayout = onUpdateDashboardLayout,
-                )
-                RecordingMarkersList(
-                    markers = state.markers,
-                    unitFormatter = unitFormatter,
-                    onUpdateMarker = onUpdateMarker,
-                    onDeleteMarker = onDeleteMarker,
-                )
-            }
 
-            state.errorMessage?.let { errorMessage ->
-                Text(
-                    text = errorMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
+                state.errorMessage?.let { errorMessage ->
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
-        }
-
-        if (state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
+            RepetitionRecordingControls(
+                state = state,
+                onEndRepetitionSet = onEndRepetitionSet,
+                onStartNextRepetitionSet = onStartNextRepetitionSet,
+                onFinishRecording = onFinishRecording,
+            )
+        } else {
+            GpsRecordingTabs(
+                state = state,
+                totalTime = totalTime,
+                movingTime = movingTime,
+                now = now,
+                unitFormatter = unitFormatter,
+                isEditingDashboard = isEditingDashboard,
+                onUpdateDashboardLayout = onUpdateDashboardLayout,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
             GpsRecordingControls(
                 state = state,
                 canStartRecording = idleGpsFixState.latestPreciseFix != null,
@@ -279,12 +251,14 @@ internal fun ActivityRecordingScreen(
                 onAddMarker = onAddMarker,
                 onChooseSource = onChooseSource,
             )
-        } else {
-            RepetitionRecordingControls(
+            GpsRecordingOverflowContent(
                 state = state,
-                onEndRepetitionSet = onEndRepetitionSet,
-                onStartNextRepetitionSet = onStartNextRepetitionSet,
-                onFinishRecording = onFinishRecording,
+                unitFormatter = unitFormatter,
+                onUpdateMarker = onUpdateMarker,
+                onDeleteMarker = onDeleteMarker,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 72.dp),
             )
         }
     }
@@ -302,22 +276,26 @@ private fun GpsRecordingControls(
     onAddMarker: () -> Unit,
     onChooseSource: () -> Unit,
 ) {
+    val buttonModifier = Modifier.height(44.dp)
+    val buttonContentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+
     OpenVitalsSurface(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+        contentPadding = PaddingValues(8.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (state.status == ActivityRecordingStatus.IDLE) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     OpenVitalsButton(
                         onClick = onStartRecording,
                         enabled = canStartRecording,
-                        modifier = Modifier.weight(1f),
+                        modifier = buttonModifier.weight(1f),
+                        contentPadding = buttonContentPadding,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PlayArrow,
@@ -331,7 +309,8 @@ private fun GpsRecordingControls(
                     }
                     OpenVitalsOutlinedButton(
                         onClick = onChooseSource,
-                        modifier = Modifier.weight(1f),
+                        modifier = buttonModifier.weight(1f),
+                        contentPadding = buttonContentPadding,
                     ) {
                         Text(stringResource(R.string.action_cancel))
                     }
@@ -339,20 +318,15 @@ private fun GpsRecordingControls(
                 return@Column
             }
 
-            Text(
-                text = stringResource(R.string.activity_entry_recording_finish_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (state.status == ActivityRecordingStatus.PAUSED) {
                     OpenVitalsOutlinedButton(
                         onClick = onResumeRecording,
-                        modifier = Modifier.weight(1f),
+                        modifier = buttonModifier.weight(1f),
+                        contentPadding = buttonContentPadding,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PlayArrow,
@@ -367,7 +341,8 @@ private fun GpsRecordingControls(
                 } else {
                     OpenVitalsOutlinedButton(
                         onClick = onPauseRecording,
-                        modifier = Modifier.weight(1f),
+                        modifier = buttonModifier.weight(1f),
+                        contentPadding = buttonContentPadding,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Pause,
@@ -383,7 +358,8 @@ private fun GpsRecordingControls(
 
                 OpenVitalsOutlinedButton(
                     onClick = onFinishRecording,
-                    modifier = Modifier.weight(1f),
+                    modifier = buttonModifier.weight(1f),
+                    contentPadding = buttonContentPadding,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Check,
@@ -399,12 +375,13 @@ private fun GpsRecordingControls(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 OpenVitalsOutlinedButton(
                     onClick = onAddLap,
                     enabled = state.points.size >= 2,
-                    modifier = Modifier.weight(1f),
+                    modifier = buttonModifier.weight(1f),
+                    contentPadding = buttonContentPadding,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Flag,
@@ -419,7 +396,8 @@ private fun GpsRecordingControls(
                 OpenVitalsOutlinedButton(
                     onClick = onAddMarker,
                     enabled = state.latestUiPoint != null || state.points.isNotEmpty(),
-                    modifier = Modifier.weight(1f),
+                    modifier = buttonModifier.weight(1f),
+                    contentPadding = buttonContentPadding,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Place,
@@ -445,6 +423,7 @@ private fun GpsRecordingTabs(
     unitFormatter: UnitFormatter,
     isEditingDashboard: Boolean,
     onUpdateDashboardLayout: (ActivityRecordingDashboardLayout) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ActivityRecordingTab.STATS) }
     var timeSplitMinutes by rememberSaveable { mutableIntStateOf(DefaultTimeSplitMinutes) }
@@ -452,14 +431,27 @@ private fun GpsRecordingTabs(
     var distanceSplitMeters by rememberSaveable(unitSystem) {
         mutableDoubleStateOf(defaultDistanceSplitMeters(unitSystem))
     }
+    val activeTab = if (isEditingDashboard) ActivityRecordingTab.STATS else selectedTab
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ActivityRecordingTabRow(
-            selectedTab = selectedTab,
-            onSelect = { selectedTab = it },
-        )
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (isEditingDashboard) {
+            val availableFields = availableRecordingDashboardFields(state)
+            RecordingDashboardEditor(
+                layout = state.dashboardLayout.withAvailableFields(availableFields),
+                availableFields = availableFields,
+                onUpdateLayout = onUpdateDashboardLayout,
+            )
+        } else {
+            ActivityRecordingTabRow(
+                selectedTab = selectedTab,
+                onSelect = { selectedTab = it },
+            )
+        }
 
-        when (selectedTab) {
+        when (activeTab) {
             ActivityRecordingTab.STATS -> RecordingStatsTab(
                 state = state,
                 totalTime = totalTime,
@@ -537,6 +529,37 @@ private fun GpsRecordingTabs(
 }
 
 @Composable
+private fun GpsRecordingOverflowContent(
+    state: ActivityRecordingState,
+    unitFormatter: UnitFormatter,
+    onUpdateMarker: (ActivityRecordingMarker) -> Unit,
+    onDeleteMarker: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (state.markers.isEmpty() && state.errorMessage == null) return
+
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RecordingMarkersList(
+            markers = state.markers,
+            unitFormatter = unitFormatter,
+            onUpdateMarker = onUpdateMarker,
+            onDeleteMarker = onDeleteMarker,
+        )
+
+        state.errorMessage?.let { errorMessage ->
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ActivityRecordingTabRow(
     selectedTab: ActivityRecordingTab,
     onSelect: (ActivityRecordingTab) -> Unit,
@@ -579,13 +602,6 @@ private fun RecordingStatsTab(
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (isEditingDashboard) {
-            RecordingDashboardEditor(
-                layout = layout,
-                availableFields = availableFields,
-                onUpdateLayout = onUpdateDashboardLayout,
-            )
-        }
         RecordingDashboardGrid(
             layout = layout,
             stats = stats,
@@ -1689,21 +1705,6 @@ private fun distanceRangeLabel(
 
 private fun splitDistanceDecimals(value: Double): Int =
     if (value < 1.0 || value % 1.0 != 0.0) 1 else 0
-
-private fun ActivityRecordingState.recordingStatusLabelRes(now: Instant): Int =
-    when {
-        status == ActivityRecordingStatus.IDLE -> R.string.activity_entry_recording_idle
-        status == ActivityRecordingStatus.PAUSED -> R.string.activity_entry_recording_paused
-        status == ActivityRecordingStatus.RESTING -> R.string.activity_entry_recording_resting
-        recordingKind != ActivityRecordingKind.GPS_ROUTE -> R.string.activity_entry_recording_active
-        isAutoIdle(now) -> R.string.activity_entry_recording_idle
-        gpsStatus == ActivityGpsStatus.FIX -> R.string.activity_entry_recording_gps_fix
-        gpsStatus == ActivityGpsStatus.POOR_ACCURACY -> R.string.activity_entry_recording_gps_poor
-        gpsStatus == ActivityGpsStatus.LOST -> R.string.activity_entry_recording_gps_lost
-        gpsStatus == ActivityGpsStatus.DISABLED -> R.string.activity_entry_recording_gps_off
-        gpsStatus == ActivityGpsStatus.WAITING_FOR_FIX -> R.string.activity_entry_recording_waiting_for_gps
-        else -> R.string.activity_entry_recording_active
-    }
 
 private const val RecordingDashboardDragMimeType = "application/vnd.openvitals.recording-dashboard-field"
 private const val RecordingDashboardDragLabel = "OpenVitals recording dashboard widget"
