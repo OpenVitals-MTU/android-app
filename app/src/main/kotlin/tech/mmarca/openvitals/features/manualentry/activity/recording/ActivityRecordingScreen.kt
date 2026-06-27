@@ -13,7 +13,11 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.location.Location
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -51,6 +55,8 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Fullscreen
+import androidx.compose.material.icons.outlined.FullscreenExit
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -98,8 +104,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
 import tech.mmarca.openvitals.R
@@ -138,13 +148,17 @@ internal fun ActivityRecordingScreen(
     onFinishRecording: () -> Unit,
     onActivityRecordingTitleChanged: (Int?) -> Unit = {},
     onDashboardEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
+    isFocusMode: Boolean = false,
+    onFocusModeChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
     var isEditingDashboard by rememberSaveable(state.activityTypeId) { mutableStateOf(false) }
     val currentOnActivityRecordingTitleChanged by rememberUpdatedState(onActivityRecordingTitleChanged)
     val currentOnDashboardEditStateChanged by rememberUpdatedState(onDashboardEditStateChanged)
-    val canEditDashboard = state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
+    val canUseFocusMode = state.isActive && state.recordingKind != ActivityRecordingKind.REPETITION
+    val canEditDashboard = !isFocusMode &&
+        state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
         (state.status == ActivityRecordingStatus.IDLE || state.status == ActivityRecordingStatus.PAUSED)
     val idleGpsFixState = rememberPreRecordingGpsFixState(
         enabled = state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
@@ -160,9 +174,14 @@ internal fun ActivityRecordingScreen(
             }
         }
     }
-    LaunchedEffect(state.status) {
-        if (state.status == ActivityRecordingStatus.RECORDING) {
+    LaunchedEffect(state.status, isFocusMode) {
+        if (state.status == ActivityRecordingStatus.RECORDING || isFocusMode) {
             isEditingDashboard = false
+        }
+    }
+    LaunchedEffect(canUseFocusMode, isFocusMode) {
+        if (!canUseFocusMode && isFocusMode) {
+            onFocusModeChanged(false)
         }
     }
     LaunchedEffect(state.status) {
@@ -191,6 +210,25 @@ internal fun ActivityRecordingScreen(
             currentOnActivityRecordingTitleChanged(null)
             currentOnDashboardEditStateChanged(false, false) {}
         }
+    }
+    BackHandler(enabled = isFocusMode) {
+        onFocusModeChanged(false)
+    }
+    ActivityRecordingFocusSystemBars(enabled = isFocusMode && canUseFocusMode)
+
+    if (isFocusMode && canUseFocusMode) {
+        ActivityRecordingFocusMode(
+            state = state,
+            totalTime = totalTime,
+            movingTime = movingTime,
+            now = now,
+            unitFormatter = unitFormatter,
+            onPauseRecording = onPauseRecording,
+            onResumeRecording = onResumeRecording,
+            onExitFocusMode = { onFocusModeChanged(false) },
+            modifier = modifier,
+        )
+        return
     }
 
     Column(
@@ -259,6 +297,7 @@ internal fun ActivityRecordingScreen(
                     state = state,
                     onPauseRecording = onPauseRecording,
                     onResumeRecording = onResumeRecording,
+                    onEnterFocusMode = { onFocusModeChanged(true) },
                     onFinishRecording = onFinishRecording,
                 )
             }
@@ -281,6 +320,7 @@ internal fun ActivityRecordingScreen(
                     onStartRecording = { onStartRecording(idleGpsFixState.latestPreciseFix) },
                     onPauseRecording = onPauseRecording,
                     onResumeRecording = onResumeRecording,
+                    onEnterFocusMode = { onFocusModeChanged(true) },
                     onFinishRecording = onFinishRecording,
                     onAddLap = onAddLap,
                     onAddMarker = onAddMarker,
@@ -305,6 +345,7 @@ private fun TimedRecordingControls(
     state: ActivityRecordingState,
     onPauseRecording: () -> Unit,
     onResumeRecording: () -> Unit,
+    onEnterFocusMode: () -> Unit,
     onFinishRecording: () -> Unit,
 ) {
     val buttonModifier = Modifier.height(44.dp)
@@ -356,6 +397,23 @@ private fun TimedRecordingControls(
             }
 
             OpenVitalsOutlinedButton(
+                onClick = onEnterFocusMode,
+                enabled = state.isActive,
+                modifier = buttonModifier.weight(1f),
+                contentPadding = buttonContentPadding,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Fullscreen,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.activity_entry_recording_focus),
+                    modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+
+            OpenVitalsOutlinedButton(
                 onClick = onFinishRecording,
                 enabled = state.isActive,
                 modifier = buttonModifier.weight(1f),
@@ -382,6 +440,7 @@ private fun GpsRecordingControls(
     onStartRecording: () -> Unit,
     onPauseRecording: () -> Unit,
     onResumeRecording: () -> Unit,
+    onEnterFocusMode: () -> Unit,
     onFinishRecording: () -> Unit,
     onAddLap: () -> Unit,
     onAddMarker: () -> Unit,
@@ -465,6 +524,22 @@ private fun GpsRecordingControls(
                             modifier = Modifier.padding(start = 6.dp),
                         )
                     }
+                }
+
+                OpenVitalsOutlinedButton(
+                    onClick = onEnterFocusMode,
+                    modifier = buttonModifier.weight(1f),
+                    contentPadding = buttonContentPadding,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Fullscreen,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.activity_entry_recording_focus),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
                 }
 
                 OpenVitalsOutlinedButton(
@@ -635,6 +710,119 @@ private fun GpsRecordingTabs(
                     )
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun ActivityRecordingFocusMode(
+    state: ActivityRecordingState,
+    totalTime: Duration,
+    movingTime: Duration,
+    now: Instant,
+    unitFormatter: UnitFormatter,
+    onPauseRecording: () -> Unit,
+    onResumeRecording: () -> Unit,
+    onExitFocusMode: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val availableFields = availableRecordingDashboardFields(state)
+    val layout = state.dashboardLayout.withAvailableFields(availableFields)
+    val stats = recordingDashboardStats(
+        state = state,
+        totalTime = totalTime,
+        movingTime = movingTime,
+        now = now,
+        unitFormatter = unitFormatter,
+    )
+    val clockText = now
+        .atZone(ZoneId.systemDefault())
+        .format(TwentyFourHourClockFormatter)
+    val isPaused = state.status == ActivityRecordingStatus.PAUSED
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = clockText,
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(Alignment.Center),
+                maxLines = 1,
+            )
+            OpenVitalsIconButton(
+                onClick = onExitFocusMode,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FullscreenExit,
+                    contentDescription = stringResource(R.string.cd_exit_recording_focus_mode),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        RecordingDashboardGrid(
+            layout = layout,
+            stats = stats,
+            isEditingDashboard = false,
+            onUpdateLayout = {},
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            fillHeight = true,
+        )
+
+        OpenVitalsButton(
+            onClick = if (isPaused) onResumeRecording else onPauseRecording,
+            enabled = state.status == ActivityRecordingStatus.RECORDING || isPaused,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        ) {
+            Icon(
+                imageVector = if (isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                text = stringResource(if (isPaused) R.string.action_resume else R.string.action_pause),
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActivityRecordingFocusSystemBars(enabled: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(enabled, view) {
+        if (!enabled) {
+            return@DisposableEffect onDispose {}
+        }
+        val window = view.context.findActivity()?.window
+        if (window == null) {
+            return@DisposableEffect onDispose {}
+        }
+        val controller = WindowInsetsControllerCompat(window, view)
+        val hiddenBars = if (view.context.isGestureNavigationMode()) {
+            WindowInsetsCompat.Type.statusBars()
+        } else {
+            WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars()
+        }
+        val previousBehavior = controller.systemBarsBehavior
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(hiddenBars)
+        onDispose {
+            controller.systemBarsBehavior = previousBehavior
+            controller.show(hiddenBars)
         }
     }
 }
@@ -879,6 +1067,8 @@ private fun RecordingDashboardGrid(
     stats: Map<ActivityRecordingDashboardField, RecordingDashboardStat>,
     isEditingDashboard: Boolean,
     onUpdateLayout: (ActivityRecordingDashboardLayout) -> Unit,
+    modifier: Modifier = Modifier,
+    fillHeight: Boolean = false,
 ) {
     val normalizedLayout = layout.normalized()
     val placements = normalizedLayout.placements()
@@ -896,8 +1086,9 @@ private fun RecordingDashboardGrid(
     }
 
     Layout(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
             .animateContentSize(),
         content = {
             placements.forEach { placement ->
@@ -941,12 +1132,20 @@ private fun RecordingDashboardGrid(
         },
     ) { measurables, constraints ->
         val spacingPx = spacing.roundToPx()
-        val cellHeightPx = cellHeight.roundToPx()
+        val defaultCellHeightPx = cellHeight.roundToPx()
         val layoutWidth = constraints.maxWidth
         val columnWidth = (
             (layoutWidth - spacingPx * (normalizedLayout.template.columns - 1)) /
                 normalizedLayout.template.columns
             ).coerceAtLeast(0)
+        val cellHeightPx = if (fillHeight && constraints.hasBoundedHeight) {
+            (
+                (constraints.maxHeight - spacingPx * (normalizedLayout.template.rows - 1)) /
+                    normalizedLayout.template.rows
+                ).coerceAtLeast(0)
+        } else {
+            defaultCellHeightPx
+        }
         val layoutHeight = cellHeightPx * normalizedLayout.template.rows +
             spacingPx * (normalizedLayout.template.rows - 1)
         val placeables = measurables.mapIndexed { index, measurable ->
@@ -1824,10 +2023,28 @@ private fun distanceRangeLabel(
 private fun splitDistanceDecimals(value: Double): Int =
     if (value < 1.0 || value % 1.0 != 0.0) 1 else 0
 
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+
+private fun Context.isGestureNavigationMode(): Boolean {
+    val resourceId = resources.getIdentifier(
+        "config_navBarInteractionMode",
+        "integer",
+        "android",
+    )
+    return resourceId != 0 && resources.getInteger(resourceId) == AndroidGestureNavigationMode
+}
+
 private const val RecordingDashboardDragMimeType = "application/vnd.openvitals.recording-dashboard-field"
 private const val RecordingDashboardDragLabel = "OpenVitals recording dashboard widget"
 private const val RecordingDashboardEditWiggleDegrees = 0.45f
 private val RecordingDashboardResizeStep = 44.dp
+private val TwentyFourHourClockFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private const val DefaultTimeSplitMinutes = 5
 private val TimeSplitMinuteOptions = listOf(1, 5, 10)
+private const val AndroidGestureNavigationMode = 2
 private const val MetersPerMile = 1_609.344

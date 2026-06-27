@@ -32,6 +32,7 @@ internal fun NavGraphBuilder.manualEntryRoutes(
     onManualEntryEditStateChanged: (Boolean, () -> Unit) -> Unit,
     onActivityEntryTitleChanged: (Int?) -> Unit,
     onActivityEntryEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
+    onActivityEntryFocusModeChanged: (Boolean) -> Unit,
     onEntrySaved: () -> Unit,
     onEntrySavedAndPopBack: () -> Unit,
     onActivityEntrySaved: () -> Unit,
@@ -96,6 +97,7 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             onEntrySaved = onActivityEntrySaved,
             onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
             onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
+            onActivityRecordingFocusModeChanged = onActivityEntryFocusModeChanged,
         )
     }
 
@@ -110,6 +112,7 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             onEntrySaved = onEntrySavedAndPopBack,
             onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
             onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
+            onActivityRecordingFocusModeChanged = onActivityEntryFocusModeChanged,
         )
     }
 

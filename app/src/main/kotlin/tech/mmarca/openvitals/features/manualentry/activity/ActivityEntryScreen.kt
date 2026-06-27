@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,11 +45,19 @@ fun ActivityEntryScreen(
     onEntrySaved: () -> Unit = {},
     onActivityRecordingTitleChanged: (Int?) -> Unit = {},
     onActivityRecordingEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
+    onActivityRecordingFocusModeChanged: (Boolean) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordingState by viewModel.recordingState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var pendingSourceAction by remember { mutableStateOf<ActivityEntrySourceAction?>(null) }
+    var isRecordingFocusMode by rememberSaveable { mutableStateOf(false) }
+    fun setRecordingFocusMode(enabled: Boolean) {
+        isRecordingFocusMode = enabled
+    }
+    LaunchedEffect(isRecordingFocusMode) {
+        onActivityRecordingFocusModeChanged(isRecordingFocusMode)
+    }
     val importRouteFile = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -146,6 +155,7 @@ fun ActivityEntryScreen(
         (recordingState.isActive || recordingState.activityTypeId != null)
     LaunchedEffect(isRecordingDashboardVisible) {
         if (!isRecordingDashboardVisible) {
+            setRecordingFocusMode(false)
             onActivityRecordingTitleChanged(null)
             onActivityRecordingEditStateChanged(false, false) {}
         }
@@ -172,9 +182,15 @@ fun ActivityEntryScreen(
             },
             onActivityRecordingTitleChanged = onActivityRecordingTitleChanged,
             onDashboardEditStateChanged = onActivityRecordingEditStateChanged,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+            isFocusMode = isRecordingFocusMode,
+            onFocusModeChanged = ::setRecordingFocusMode,
+            modifier = if (isRecordingFocusMode) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            },
         )
     } else {
         LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {

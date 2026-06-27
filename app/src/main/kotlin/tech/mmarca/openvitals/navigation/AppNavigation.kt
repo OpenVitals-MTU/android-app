@@ -117,6 +117,7 @@ fun AppNavigation(
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
     var activityEntryTopBarTitleRes by remember { mutableStateOf<Int?>(null) }
     var activityEntryTopBarEditState by remember { mutableStateOf<TopBarEditState?>(null) }
+    var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
 
     fun markDashboardDirty() {
@@ -194,7 +195,13 @@ fun AppNavigation(
         )
     }
 
-    val showTopBar = currentRoute != null && currentRoute != Screen.Onboarding.route
+    val isActivityEntryRoute =
+        currentRoute == Screen.ActivityEntry.route ||
+            currentRoute == Screen.ActivityEntryEdit.route
+    val isActivityRecordingFocusRoute = isActivityEntryRoute && isActivityRecordingFocusMode
+    val showTopBar = currentRoute != null &&
+        currentRoute != Screen.Onboarding.route &&
+        !isActivityRecordingFocusRoute
     val isTaskRoute = currentRoute?.let { it in taskRoutes } == true
     val isSettingsRoute = currentRoute?.let { it in settingsRoutes } == true
     val showNavigation =
@@ -220,6 +227,12 @@ fun AppNavigation(
             navController.navigate(Screen.ActivityEntry.route) {
                 launchSingleTop = true
             }
+        }
+    }
+
+    LaunchedEffect(isActivityEntryRoute) {
+        if (!isActivityEntryRoute) {
+            isActivityRecordingFocusMode = false
         }
     }
 
@@ -569,6 +582,7 @@ fun AppNavigation(
                         null
                     }
                 },
+                onActivityEntryFocusModeChanged = { isActivityRecordingFocusMode = it },
                 onEntrySaved = ::markDashboardDirty,
                 onEntrySavedAndPopBack = ::markDashboardDirtyAndPopBack,
                 onActivityEntrySaved = ::finishActivityEntrySave,
