@@ -216,3 +216,21 @@ data class ActivityProgressPoint(
     val totalFloorsClimbed: Int? = null,
     val totalElevationGainedMeters: Double? = null,
 )
+
+data class SpeedSample(
+    val time: Instant,
+    val metersPerSecond: Double,
+    val source: String,
+)
+
+enum class ActivityCadenceKind {
+    CYCLING,
+    STEPS,
+}
+
+data class ActivityCadenceSample(
+    val time: Instant,
+    val rate: Double,
+    val kind: ActivityCadenceKind,
+    val source: String,
+)

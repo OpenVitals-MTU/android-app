@@ -7,6 +7,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
@@ -52,6 +53,7 @@ import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SexualActivityEntry
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.StepProgressPoint
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -312,6 +314,12 @@ class HealthConnectManager @Inject constructor(
             includeCyclingCadence = includeCyclingCadence,
             includeHeartRate = includeHeartRate,
         )
+
+    suspend fun readSpeedSamples(start: Instant, end: Instant): List<SpeedSample> =
+        activityReader.readSpeedSamples(start, end)
+
+    suspend fun readActivityCadenceSamples(start: Instant, end: Instant): List<ActivityCadenceSample> =
+        activityReader.readActivityCadenceSamples(start, end)
 
     suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =
         activityReader.readPlannedExerciseSessions(start, end)

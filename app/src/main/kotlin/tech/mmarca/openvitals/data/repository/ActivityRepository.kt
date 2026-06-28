@@ -17,6 +17,8 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
+import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
@@ -26,6 +28,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.performance.AppCoroutineScope
@@ -38,6 +41,7 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -354,6 +358,45 @@ class ActivityRepository @Inject constructor(
             includeCyclingCadence = readCyclingCadencePermission in granted,
             includeHeartRate = readHeartRatePermission in granted,
         )
+    }
+
+    suspend fun loadSpeedSamples(start: Instant, end: Instant): List<SpeedSample> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadSpeedSamples(start, end, granted)
+    }
+
+    private suspend fun loadSpeedSamples(
+        start: Instant,
+        end: Instant,
+        granted: Set<String>,
+    ): List<SpeedSample> {
+        if (readSpeedPermission !in granted) {
+            Log.w(TAG, "Skipping loadSpeedSamples missingCount=1")
+            return emptyList()
+        }
+        return hc.readSpeedSamples(start, end)
+    }
+
+    suspend fun loadActivityCadenceSamples(start: Instant, end: Instant): List<ActivityCadenceSample> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadActivityCadenceSamples(start, end, granted)
+    }
+
+    private suspend fun loadActivityCadenceSamples(
+        start: Instant,
+        end: Instant,
+        granted: Set<String>,
+    ): List<ActivityCadenceSample> {
+        if (readStepsCadencePermission !in granted && readCyclingCadencePermission !in granted) {
+            Log.w(TAG, "Skipping loadActivityCadenceSamples missingCount=1")
+            return emptyList()
+        }
+        return hc.readActivityCadenceSamples(start, end).filter { sample ->
+            when (sample.kind) {
+                ActivityCadenceKind.CYCLING -> readCyclingCadencePermission in granted
+                ActivityCadenceKind.STEPS -> readStepsCadencePermission in granted
+            }
+        }
     }
 
     private fun BleRecordingSampleBuffer.writePermissions(): Set<String> = buildSet {

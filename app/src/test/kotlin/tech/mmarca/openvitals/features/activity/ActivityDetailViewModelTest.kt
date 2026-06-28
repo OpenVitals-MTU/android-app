@@ -23,6 +23,7 @@ class ActivityDetailViewModelTest {
         val workout = workout(id = "activity-1")
         val repo = mockk<ActivityRepository>()
         coEvery { repo.loadWorkout("activity-1") } returns workout
+        stubMetricSamples(repo)
 
         val vm = ActivityDetailViewModel(repo, "activity-1")
 
@@ -56,6 +57,7 @@ class ActivityDetailViewModelTest {
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<ActivityRepository>()
         coEvery { repo.loadWorkout("activity-1") } throws RuntimeException("timeout")
+        stubMetricSamples(repo)
 
         val vm = ActivityDetailViewModel(repo, "activity-1")
 
@@ -69,6 +71,7 @@ class ActivityDetailViewModelTest {
         val repo = mockk<ActivityRepository>()
         coEvery { repo.loadWorkout("activity-1") } returns workout
         coEvery { repo.deleteActivityEntry("activity-1") } returns Unit
+        stubMetricSamples(repo)
         val vm = ActivityDetailViewModel(repo, "activity-1")
         var deleted = false
 
@@ -84,12 +87,18 @@ class ActivityDetailViewModelTest {
         val workout = workout(id = "activity-1", isOpenVitalsEntry = false)
         val repo = mockk<ActivityRepository>(relaxed = true)
         coEvery { repo.loadWorkout("activity-1") } returns workout
+        stubMetricSamples(repo)
         val vm = ActivityDetailViewModel(repo, "activity-1")
 
         vm.deleteActivity()
 
         assertEquals(workout, vm.uiState.value.workout)
         coVerify(exactly = 0) { repo.deleteActivityEntry(any()) }
+    }
+
+    private fun stubMetricSamples(repo: ActivityRepository) {
+        coEvery { repo.loadSpeedSamples(any(), any()) } returns emptyList()
+        coEvery { repo.loadActivityCadenceSamples(any(), any()) } returns emptyList()
     }
 
     private fun workout(id: String, isOpenVitalsEntry: Boolean = false) = ExerciseData(

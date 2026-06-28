@@ -171,7 +171,7 @@ internal fun List<BleHeartRateSample>.toHeartRateSamples(): List<HeartRateSample
         )
     }
 
-private fun sessionElapsedLabels(durationMillis: Long): List<String> {
+internal fun sessionElapsedLabels(durationMillis: Long): List<String> {
     val duration = Duration.ofMillis(durationMillis)
     return listOf(
         formatRecordingElapsed(Duration.ZERO),

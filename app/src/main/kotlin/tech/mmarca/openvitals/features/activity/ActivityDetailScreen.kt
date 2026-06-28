@@ -30,9 +30,12 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -114,6 +117,8 @@ fun ActivityDetailScreen(
         workout != null -> ActivityDetailContent(
             workout = workout,
             heartRateSamples = state.heartRateSamples,
+            speedSamples = state.speedSamples,
+            cadenceSamples = state.cadenceSamples,
             markers = state.markers,
             isDeleting = state.isDeleting,
             unitFormatter = unitFormatter,
@@ -140,6 +145,8 @@ fun ActivityDetailScreen(
 private fun ActivityDetailContent(
     workout: ExerciseData,
     heartRateSamples: List<HeartRateSample>,
+    speedSamples: List<SpeedSample>,
+    cadenceSamples: List<ActivityCadenceSample>,
     markers: List<ActivityRecordingMarker>,
     isDeleting: Boolean,
     unitFormatter: UnitFormatter,
@@ -183,6 +190,35 @@ private fun ActivityDetailContent(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 )
+            }
+        }
+        if (speedSamples.isNotEmpty()) {
+            item {
+                ActivitySpeedChartCard(
+                    samples = speedSamples,
+                    sessionStart = workout.startTime,
+                    sessionEnd = workout.endTime,
+                    unitFormatter = unitFormatter,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+        }
+        ActivityCadenceKind.entries.forEach { cadenceKind ->
+            if (cadenceSamples.any { it.kind == cadenceKind }) {
+                item(key = "cadence-$cadenceKind") {
+                    ActivityCadenceChartCard(
+                        samples = cadenceSamples,
+                        kind = cadenceKind,
+                        sessionStart = workout.startTime,
+                        sessionEnd = workout.endTime,
+                        unitFormatter = unitFormatter,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
             }
         }
         item {

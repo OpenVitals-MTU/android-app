@@ -8,9 +8,11 @@ import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.navigation.ACTIVITY_DETAIL_ID_ARG
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +25,8 @@ data class ActivityDetailUiState(
     val isDeleting: Boolean = false,
     val workout: ExerciseData? = null,
     val heartRateSamples: List<HeartRateSample> = emptyList(),
+    val speedSamples: List<SpeedSample> = emptyList(),
+    val cadenceSamples: List<ActivityCadenceSample> = emptyList(),
     val markers: List<ActivityRecordingMarker> = emptyList(),
     val error: String? = null,
 )
@@ -76,10 +80,22 @@ class ActivityDetailViewModel(
                     } else {
                         emptyList()
                     }
+                    val speedSamples = if (workout != null) {
+                        repository.loadSpeedSamples(workout.startTime, workout.endTime)
+                    } else {
+                        emptyList()
+                    }
+                    val cadenceSamples = if (workout != null) {
+                        repository.loadActivityCadenceSamples(workout.startTime, workout.endTime)
+                    } else {
+                        emptyList()
+                    }
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
                         workout = workout,
                         heartRateSamples = heartRateSamples,
+                        speedSamples = speedSamples,
+                        cadenceSamples = cadenceSamples,
                         markers = workout?.let { loadedWorkout ->
                             markerRepository?.markersForActivity(loadedWorkout.id).orEmpty()
                                 .ifEmpty {

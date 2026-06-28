@@ -36,7 +36,10 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
+import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
@@ -555,6 +558,62 @@ internal class ActivityHealthReader(
                 },
                 appPackageName = appPackageName,
             )
+        }
+
+    suspend fun readSpeedSamples(start: Instant, end: Instant): List<SpeedSample> =
+        support.withLogging("readSpeedSamples[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = SpeedRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+                pageSize = 500,
+            ).flatMap { record ->
+                val source = record.metadata.dataOrigin.packageName
+                record.samples.map { sample ->
+                    SpeedSample(
+                        time = sample.time,
+                        metersPerSecond = sample.speed.inMetersPerSecond,
+                        source = source,
+                    )
+                }
+            }
+        }
+
+    suspend fun readActivityCadenceSamples(start: Instant, end: Instant): List<ActivityCadenceSample> =
+        support.withLogging("readActivityCadenceSamples[$start..$end]", emptyList()) {
+            val cyclingSamples = support.client().readRecordsPaged(
+                recordType = CyclingPedalingCadenceRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+                pageSize = 500,
+            ).flatMap { record ->
+                val source = record.metadata.dataOrigin.packageName
+                record.samples.map { sample ->
+                    ActivityCadenceSample(
+                        time = sample.time,
+                        rate = sample.revolutionsPerMinute,
+                        kind = ActivityCadenceKind.CYCLING,
+                        source = source,
+                    )
+                }
+            }
+            val stepsSamples = support.client().readRecordsPaged(
+                recordType = StepsCadenceRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+                pageSize = 500,
+            ).flatMap { record ->
+                val source = record.metadata.dataOrigin.packageName
+                record.samples.map { sample ->
+                    ActivityCadenceSample(
+                        time = sample.time,
+                        rate = sample.rate,
+                        kind = ActivityCadenceKind.STEPS,
+                        source = source,
+                    )
+                }
+            }
+            (cyclingSamples + stepsSamples).sortedBy { it.time }
         }
 
     suspend fun readPlannedExerciseSessions(start: Instant, end: Instant): List<PlannedExerciseData> =
