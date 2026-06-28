@@ -78,6 +78,7 @@ internal fun MetricRouteContent(
     onEditMindfulnessSession: (String) -> Unit,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     if (metricId?.isCaloriesDetailMetric() == true) {
         val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
@@ -117,6 +118,7 @@ internal fun MetricRouteContent(
             viewModel = activityViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onSectionEditStateChanged = onSectionEditStateChanged,
         )
         return
     }
@@ -221,15 +223,51 @@ private fun ActivityMetricRouteScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
-        ActivityMetric.STEPS -> StepsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.DISTANCE -> DistanceScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.CALORIES_BURNED -> CaloriesOutScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.ACTIVE_CALORIES -> ActiveCaloriesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.FLOORS -> FloorsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.ELEVATION -> ElevationScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        ActivityMetric.WHEELCHAIR_PUSHES -> WheelchairPushesScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        ActivityMetric.STEPS -> StepsScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        ActivityMetric.DISTANCE -> DistanceScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        ActivityMetric.CALORIES_BURNED -> CaloriesOutScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        ActivityMetric.ACTIVE_CALORIES -> ActiveCaloriesScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        ActivityMetric.FLOORS -> FloorsScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        ActivityMetric.ELEVATION -> ElevationScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        ActivityMetric.WHEELCHAIR_PUSHES -> WheelchairPushesScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
     }
 }
 

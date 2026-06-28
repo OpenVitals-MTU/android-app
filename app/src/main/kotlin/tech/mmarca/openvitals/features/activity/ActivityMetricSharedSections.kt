@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.DataValueKind
-import tech.mmarca.openvitals.domain.insights.DailyGoalDirection
+import tech.mmarca.openvitals.domain.insights.DailyGoalProgress
 import tech.mmarca.openvitals.domain.insights.DailyGoalValue
 import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
 import tech.mmarca.openvitals.domain.insights.dataConfidence
@@ -78,17 +78,33 @@ internal fun LazyListScope.activityDataConfidence(
     if (period.start == period.end) return
 
     item {
-        DataConfidenceCard(
-            confidence = dataConfidence(
-                period = period,
-                trackedDates = trackedDates,
-                sampleCount = sampleCount,
-                valueKind = DataValueKind.AGGREGATED,
-            ),
+        ActivityDataConfidenceCard(
+            period = period,
+            trackedDates = trackedDates,
+            sampleCount = sampleCount,
             accentColor = accentColor,
-            modifier = activityMetricModifier(),
         )
     }
+}
+
+@Composable
+internal fun ActivityDataConfidenceCard(
+    period: DatePeriod,
+    trackedDates: Collection<LocalDate>,
+    sampleCount: Int,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    DataConfidenceCard(
+        confidence = dataConfidence(
+            period = period,
+            trackedDates = trackedDates,
+            sampleCount = sampleCount,
+            valueKind = DataValueKind.AGGREGATED,
+        ),
+        accentColor = accentColor,
+        modifier = modifier.then(activityMetricModifier()),
+    )
 }
 
 internal fun LazyListScope.activityGoal(
@@ -98,7 +114,7 @@ internal fun LazyListScope.activityGoal(
     unitFormatter: UnitFormatter,
     icon: ImageVector,
     accentColor: Color,
-    direction: DailyGoalDirection,
+    direction: tech.mmarca.openvitals.domain.insights.DailyGoalDirection,
     goalFormatter: @Composable (Double) -> DisplayValue,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
@@ -110,27 +126,69 @@ internal fun LazyListScope.activityGoal(
         direction = direction,
     )
     item {
-        DailyGoalCard(
+        ActivityDailyGoalCard(
             goal = goalFormatter(state.dailyGoal),
             progress = progress,
             icon = icon,
             accentColor = accentColor,
             onDecreaseGoal = onDecreaseGoal,
             onIncreaseGoal = onIncreaseGoal,
-            modifier = activityMetricModifier(),
         )
     }
     item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
-        DailyGoalStatistics(
+        ActivityGoalStatisticsContent(
             progress = progress,
             averageGap = goalFormatter(progress.averageGapToGoal),
             unitFormatter = unitFormatter,
             icon = icon,
             accentColor = accentColor,
-            modifier = activityMetricModifier(),
         )
     }
+}
+
+@Composable
+internal fun ActivityDailyGoalCard(
+    goal: DisplayValue,
+    progress: DailyGoalProgress,
+    icon: ImageVector,
+    accentColor: Color,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    DailyGoalCard(
+        goal = goal,
+        progress = progress,
+        icon = icon,
+        accentColor = accentColor,
+        onDecreaseGoal = onDecreaseGoal,
+        onIncreaseGoal = onIncreaseGoal,
+        modifier = modifier.then(activityMetricModifier()),
+    )
+}
+
+@Composable
+internal fun ActivityGoalStatisticsContent(
+    progress: DailyGoalProgress,
+    averageGap: DisplayValue,
+    unitFormatter: UnitFormatter,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    includeHeader: Boolean = true,
+) {
+    if (includeHeader) {
+        SectionHeader(stringResource(R.string.section_statistics))
+    }
+    DailyGoalStatistics(
+        progress = progress,
+        averageGap = averageGap,
+        unitFormatter = unitFormatter,
+        icon = icon,
+        accentColor = accentColor,
+        modifier = modifier.then(activityMetricModifier()),
+    )
 }
 
 internal fun LazyListScope.activityStatistics(
@@ -153,59 +211,93 @@ internal fun LazyListScope.activityStatistics(
         item { SectionHeader(stringResource(R.string.section_statistics)) }
     }
     item {
-        val totalValue = total()
-        val averageValue = average()
-        val bestValue = best()
-        InsightStatGrid(
-            stats = listOf(
-                InsightStat(
-                    title = stringResource(R.string.stat_total),
-                    value = totalValue.value,
-                    unit = totalValue.unit,
-                    icon = icon,
-                    accentColor = accentColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_daily_average),
-                    value = averageValue.value,
-                    unit = averageValue.unit,
-                    icon = Icons.Outlined.Star,
-                    accentColor = accentColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_best_day),
-                    value = bestValue.value,
-                    unit = bestValue.unit,
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = accentColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_active_days),
-                    value = unitFormatter.count(activeDays),
-                    unit = stringResource(R.string.unit_days),
-                    icon = Icons.Outlined.CheckCircle,
-                    accentColor = accentColor,
-                ),
-                previousPeriodInsightStat(
-                    comparison = comparison,
-                    selectedRange = selectedRange,
-                    unitFormatter = unitFormatter,
-                    valueFormatter = comparisonValueFormatter,
-                    accentColor = accentColor,
-                ),
-            ) + personalBaselineInsightStats(
-                insight = personalBaselineInsight(
-                    currentValue = baselineCurrentValue,
-                    values = baselineValues,
-                    referenceDate = period.start.minusDays(1),
-                ),
+        ActivityPeriodStatisticsGrid(
+            unitFormatter = unitFormatter,
+            period = period,
+            total = total,
+            average = average,
+            best = best,
+            activeDays = activeDays,
+            comparison = comparison,
+            selectedRange = selectedRange,
+            comparisonValueFormatter = comparisonValueFormatter,
+            baselineCurrentValue = baselineCurrentValue,
+            baselineValues = baselineValues,
+            icon = icon,
+            accentColor = accentColor,
+        )
+    }
+}
+
+@Composable
+internal fun ActivityPeriodStatisticsGrid(
+    unitFormatter: UnitFormatter,
+    period: DatePeriod,
+    total: @Composable () -> DisplayValue,
+    average: @Composable () -> DisplayValue,
+    best: @Composable () -> DisplayValue,
+    activeDays: Int,
+    comparison: tech.mmarca.openvitals.domain.insights.PeriodComparison,
+    selectedRange: TimeRange,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
+    baselineCurrentValue: Double,
+    baselineValues: List<BaselineValue>,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val totalValue = total()
+    val averageValue = average()
+    val bestValue = best()
+    InsightStatGrid(
+        stats = listOf(
+            InsightStat(
+                title = stringResource(R.string.stat_total),
+                value = totalValue.value,
+                unit = totalValue.unit,
+                icon = icon,
+                accentColor = accentColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_daily_average),
+                value = averageValue.value,
+                unit = averageValue.unit,
+                icon = Icons.Outlined.Star,
+                accentColor = accentColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_best_day),
+                value = bestValue.value,
+                unit = bestValue.unit,
+                icon = Icons.Outlined.CalendarMonth,
+                accentColor = accentColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_active_days),
+                value = unitFormatter.count(activeDays),
+                unit = stringResource(R.string.unit_days),
+                icon = Icons.Outlined.CheckCircle,
+                accentColor = accentColor,
+            ),
+            previousPeriodInsightStat(
+                comparison = comparison,
+                selectedRange = selectedRange,
                 unitFormatter = unitFormatter,
                 valueFormatter = comparisonValueFormatter,
                 accentColor = accentColor,
             ),
-            modifier = activityMetricModifier(),
-        )
-    }
+        ) + personalBaselineInsightStats(
+            insight = personalBaselineInsight(
+                currentValue = baselineCurrentValue,
+                values = baselineValues,
+                referenceDate = period.start.minusDays(1),
+            ),
+            unitFormatter = unitFormatter,
+            valueFormatter = comparisonValueFormatter,
+            accentColor = accentColor,
+        ),
+        modifier = modifier.then(activityMetricModifier()),
+    )
 }
 
 internal fun LazyListScope.noMetricData(
@@ -233,20 +325,41 @@ internal fun <T> LazyListScope.activityDailyEntries(
     accentColor: Color,
     titleDate: LocalDate? = null,
 ) {
-    val sortedEntries = entries.sortedByDescending(date)
     item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = sortedEntries,
-        ) { entry, rowModifier ->
-            ActivityDailyEntryRow(
-                date = date(entry),
-                value = value(entry),
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                accentColor = accentColor,
-                modifier = rowModifier,
-            )
-        }
+        ActivityDailyEntriesContent(
+            entries = entries,
+            date = date,
+            value = value,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = accentColor,
+            titleDate = titleDate,
+        )
+    }
+}
+
+@Composable
+internal fun <T> ActivityDailyEntriesContent(
+    entries: List<T>,
+    date: (T) -> LocalDate,
+    value: @Composable (T) -> DisplayValue,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    accentColor: Color,
+    titleDate: LocalDate? = null,
+    modifier: Modifier = Modifier,
+) {
+    val sortedEntries = entries.sortedByDescending(date)
+    PaginatedEntryList(
+        title = entryListTitle(titleDate, dateTimeFormatterProvider),
+        entries = sortedEntries,
+        modifier = modifier.then(activityMetricModifier()),
+    ) { entry, rowModifier ->
+        ActivityDailyEntryRow(
+            date = date(entry),
+            value = value(entry),
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = accentColor,
+            modifier = rowModifier,
+        )
     }
 }
 

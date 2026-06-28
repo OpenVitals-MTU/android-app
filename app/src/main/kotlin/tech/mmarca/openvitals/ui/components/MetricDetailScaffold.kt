@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -42,12 +46,15 @@ fun MetricDetailScaffold(
     periodOverride: (DatePeriod) -> DatePeriod = { it },
     periodTitle: @Composable ((DatePeriod) -> String)? = null,
     syncPaused: Boolean = false,
+    sectionListState: MetricDetailSectionListState? = null,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
 ) {
     val period = periodOverride(displayPeriodFor(selectedRange, selectedDate, weekPeriodMode = weekPeriodMode))
     val today = LocalDate.now()
     var showDatePicker by remember { mutableStateOf(false) }
+    val defaultListState = rememberLazyListState()
+    val lazyListState = sectionListState?.lazyListState ?: defaultListState
 
     PullToRefreshBox(
         isRefreshing = isLoading,
@@ -55,10 +62,15 @@ fun MetricDetailScaffold(
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned { coordinates ->
+                    sectionListState?.viewportBounds = coordinates.boundsInRoot()
+                },
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(
+                state = lazyListState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 920.dp),

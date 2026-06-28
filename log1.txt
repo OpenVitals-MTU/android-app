@@ -1,0 +1,739 @@
+type: logcat
+osVersion: google/tegu/tegu:17/CP2A.260605.012/2026062301:user/release-keys
+flags: dev options enabled
+package: tech.mmarca.openvitals:16003, targetSdk 36
+buffers: main,system,crash,events,kernel
+level: verbose
+
+--------- beginning of crash
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-1
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: Process: tech.mmarca.openvitals, PID: 26016
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: java.lang.OutOfMemoryError: Failed to allocate a 32 byte allocation with 2430032 free bytes and 2373KB until OOM, target footprint 268435456, growth limit 268435456; giving up on allocation because <1% of heap free after GC.
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at java.lang.Class.getDeclaredAnnotation(Native Method)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at java.lang.Class.getAnnotation(Class.java:4238)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.datatypes.Record.<init>(Record.java:73)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.datatypes.IntervalRecord.<init>(IntervalRecord.java:50)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.datatypes.HeartRateRecord.<init>(HeartRateRecord.java:98)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.datatypes.HeartRateRecord.<init>(HeartRateRecord.java:0)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.datatypes.HeartRateRecord$Builder.buildWithoutValidation(HeartRateRecord.java:311)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.internal.datatypes.HeartRateRecordInternal.toExternalRecord(HeartRateRecordInternal.java:126)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.internal.datatypes.HeartRateRecordInternal.toExternalRecord(HeartRateRecordInternal.java:41)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.internal.datatypes.utils.InternalExternalRecordConverter.getExternalRecords(InternalExternalRecordConverter.java:85)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.HealthConnectManager$ReadRecordsResponseCallback.lambda$onResult$0(HealthConnectManager.java:2642)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at android.health.connect.HealthConnectManager$ReadRecordsResponseCallback$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at pg4.run(r8-map-id-0bb7b40342e1678d5543dbd82380353cd24a39f0937243c678b2bafe2256da85:3)
+06-27 05:10:37.735 26016 26582 E AndroidRuntime: 	at fo0.run(r8-map-id-0bb7b40342e1678d5543dbd82380353cd24a39f0937243c678b2bafe2256da85:118)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-8
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: Process: tech.mmarca.openvitals, PID: 27211
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: java.lang.OutOfMemoryError: Failed to allocate a 40 byte allocation with 312400 free bytes and 305KB until OOM, target footprint 268435456, growth limit 268435456; giving up on allocation because <1% of heap free after GC.
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at $Proxy2.recordIdentifier(Unknown Source)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.datatypes.Record.<init>(Record.java:79)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.datatypes.IntervalRecord.<init>(IntervalRecord.java:50)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.datatypes.HeartRateRecord.<init>(HeartRateRecord.java:98)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.datatypes.HeartRateRecord.<init>(HeartRateRecord.java:0)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.datatypes.HeartRateRecord$Builder.buildWithoutValidation(HeartRateRecord.java:311)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.internal.datatypes.HeartRateRecordInternal.toExternalRecord(HeartRateRecordInternal.java:126)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.internal.datatypes.HeartRateRecordInternal.toExternalRecord(HeartRateRecordInternal.java:41)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.internal.datatypes.utils.InternalExternalRecordConverter.getExternalRecords(InternalExternalRecordConverter.java:85)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.HealthConnectManager$ReadRecordsResponseCallback.lambda$onResult$0(HealthConnectManager.java:2642)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at android.health.connect.HealthConnectManager$ReadRecordsResponseCallback$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at pg4.run(r8-map-id-0bb7b40342e1678d5543dbd82380353cd24a39f0937243c678b2bafe2256da85:3)
+06-27 05:11:35.380 27211 27268 E AndroidRuntime: 	at fo0.run(r8-map-id-0bb7b40342e1678d5543dbd82380353cd24a39f0937243c678b2bafe2256da85:118)
+--------- beginning of events
+06-28 19:09:58.241 15726 15726 I auditd  : avc=type=1400 audit(0.0:98230): avc:  denied  { read } for  comm="arca.openvitals" name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.253 15726 15726 I auditd  : avc=type=1400 audit(0.0:98231): avc:  denied  { getattr } for  comm="arca.openvitals" path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.505 15726 15726 I auditd  : avc=type=1400 audit(0.0:98232): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.505 15726 15726 I auditd  : avc=type=1400 audit(0.0:98233): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.505 15726 15726 I auditd  : avc=type=1400 audit(0.0:98234): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.505 15726 15726 I auditd  : avc=type=1400 audit(0.0:98235): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.505 15726 15726 I auditd  : avc=type=1400 audit(0.0:98236): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.713 15726 15726 I auditd  : avc=type=1400 audit(0.0:98237): avc:  denied  { read } for  comm="binder:15726_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:09:58.713 15726 15726 I auditd  : avc=type=1400 audit(0.0:98238): avc:  denied  { read } for  comm="binder:15726_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.316 22922 22922 I auditd  : avc=type=1400 audit(0.0:99020): avc:  denied  { read } for  comm="arca.openvitals" name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.328 22922 22922 I auditd  : avc=type=1400 audit(0.0:99021): avc:  denied  { getattr } for  comm="arca.openvitals" path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.516 22922 22922 I auditd  : avc=type=1400 audit(0.0:99022): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.516 22922 22922 I auditd  : avc=type=1400 audit(0.0:99023): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.516 22922 22922 I auditd  : avc=type=1400 audit(0.0:99024): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.516 22922 22922 I auditd  : avc=type=1400 audit(0.0:99025): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.516 22922 22922 I auditd  : avc=type=1400 audit(0.0:99026): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.664 22922 22922 I auditd  : avc=type=1400 audit(0.0:99027): avc:  denied  { read } for  comm="binder:22922_2" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 19:47:29.664 22922 22922 I auditd  : avc=type=1400 audit(0.0:99028): avc:  denied  { read } for  comm="binder:22922_2" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.256 26712 26712 I auditd  : avc=type=1400 audit(0.0:99368): avc:  denied  { read } for  comm="arca.openvitals" name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.260 26712 26712 I auditd  : avc=type=1400 audit(0.0:99369): avc:  denied  { getattr } for  comm="arca.openvitals" path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.384 26712 26712 I auditd  : avc=type=1400 audit(0.0:99370): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.384 26712 26712 I auditd  : avc=type=1400 audit(0.0:99371): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.384 26712 26712 I auditd  : avc=type=1400 audit(0.0:99372): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.384 26712 26712 I auditd  : avc=type=1400 audit(0.0:99373): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.384 26712 26712 I auditd  : avc=type=1400 audit(0.0:99374): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.484 26712 26712 I auditd  : avc=type=1400 audit(0.0:99375): avc:  denied  { read } for  comm="binder:26712_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:00:32.484 26712 26712 I auditd  : avc=type=1400 audit(0.0:99376): avc:  denied  { read } for  comm="binder:26712_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- beginning of system
+06-28 20:00:32.574 26712 26734 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+--------- switch to events
+06-28 20:00:32.605 26712 26712 I wm_on_create_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performCreate,time=15ms]
+06-28 20:00:32.605 26712 26712 I wm_on_start_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleStartActivity,time=0ms]
+06-28 20:00:32.608 26712 26712 I wm_on_resume_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=RESUME_ACTIVITY,time=2ms]
+06-28 20:00:32.628 26712 26712 I wm_on_top_resumed_gained_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+06-28 20:00:32.684 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b60f32c,event=applyTransactionOnDraw applyImmediately]
+06-28 20:00:32.763 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b60f32c,event=reportDrawFinished seqId=1]
+06-28 20:00:32.803 26712 26712 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:00:32.815 26712 26712 D InsetsController: hide(ime())
+06-28 20:00:32.815 26712 26712 I ImeTracker: tech.mmarca.openvitals:7bfa3497: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+--------- switch to events
+06-28 20:02:13.591 26712 26712 I wm_on_top_resumed_lost_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=pausing]
+06-28 20:02:13.591 26712 26712 I wm_on_paused_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performPause,time=0ms]
+06-28 20:02:13.594 26712 26712 I wm_on_stop_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleRelaunchActivity,time=0ms]
+06-28 20:02:13.596 26712 26712 I wm_on_destroy_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performDestroy,time=0ms]
+06-28 20:02:13.618 26712 26712 I wm_on_create_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performCreate,time=4ms]
+06-28 20:02:13.618 26712 26712 I wm_on_start_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleStartActivity,time=0ms]
+06-28 20:02:13.618 26712 26712 I wm_on_resume_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=RESUME_ACTIVITY,time=0ms]
+06-28 20:02:13.618 26712 26712 I wm_on_top_resumed_gained_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topWhenResuming]
+06-28 20:02:13.644 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]30236fa,event=applyTransactionOnDraw applyImmediately]
+06-28 20:02:13.675 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]30236fa,event=reportDrawFinished seqId=1]
+06-28 20:02:13.717 26712 26712 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:02:13.720 26712 26712 D InsetsController: hide(ime())
+06-28 20:02:13.720 26712 26712 I ImeTracker: tech.mmarca.openvitals:e4792202: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+--------- switch to events
+06-28 20:02:14.949 26712 26712 I wm_on_top_resumed_lost_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=pausing]
+06-28 20:02:14.949 26712 26712 I wm_on_paused_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performPause,time=0ms]
+06-28 20:02:14.951 26712 26712 I wm_on_stop_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleRelaunchActivity,time=1ms]
+06-28 20:02:14.953 26712 26712 I wm_on_destroy_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performDestroy,time=0ms]
+06-28 20:02:14.964 26712 26712 I wm_on_create_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performCreate,time=2ms]
+06-28 20:02:14.964 26712 26712 I wm_on_start_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleStartActivity,time=0ms]
+06-28 20:02:14.964 26712 26712 I wm_on_resume_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=RESUME_ACTIVITY,time=0ms]
+06-28 20:02:14.964 26712 26712 I wm_on_top_resumed_gained_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topWhenResuming]
+06-28 20:02:14.983 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=applyTransactionOnDraw applyImmediately]
+06-28 20:02:14.988 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=reportDrawFinished seqId=1]
+06-28 20:02:15.015 26712 26712 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:02:15.017 26712 26712 D InsetsController: hide(ime())
+06-28 20:02:15.017 26712 26712 I ImeTracker: tech.mmarca.openvitals:20059f90: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+--------- switch to events
+06-28 20:02:21.888 26712 26712 I input_focus: window=ViewRootImpl focus=false for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+06-28 20:02:25.134 26712 26712 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:02:25.137 26712 26712 D InsetsController: hide(ime())
+06-28 20:02:25.137 26712 26712 I ImeTracker: tech.mmarca.openvitals:4969ccad: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+--------- switch to events
+06-28 20:02:56.551 26712 26712 I wm_on_top_resumed_lost_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+06-28 20:02:56.553 26712 26712 I wm_on_paused_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performPause,time=1ms]
+06-28 20:02:56.580 26712 26712 I input_focus: window=ViewRootImpl focus=false for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+06-28 20:02:57.668 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+06-28 20:02:57.673 26712 26712 I wm_on_stop_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=STOP_ACTIVITY_ITEM,time=1ms]
+06-28 20:04:30.138 26712 26712 I wm_on_restart_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performRestart,time=1ms]
+06-28 20:04:30.147 26712 26712 I wm_on_start_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleStartActivity,time=9ms]
+06-28 20:04:30.160 26712 26712 I wm_on_resume_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=RESUME_ACTIVITY,time=1ms]
+06-28 20:04:30.169 26712 26712 I wm_on_top_resumed_gained_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+06-28 20:04:30.190 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=applyTransactionOnDraw applyImmediately]
+06-28 20:04:30.192 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=Start draw after previous draw not visible]
+06-28 20:04:30.501 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=reportDrawFinished seqId=1]
+06-28 20:04:30.514 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=reportDrawFinished seqId=2]
+06-28 20:04:30.557 26712 26712 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:04:30.559 26712 26712 D InsetsController: hide(ime())
+06-28 20:04:30.559 26712 26712 I ImeTracker: tech.mmarca.openvitals:97959a0a: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+06-28 20:04:30.597 26712 26712 I ImeTracker: system_server:998125ae: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+--------- switch to events
+06-28 20:05:01.448 26712 26712 I wm_on_top_resumed_lost_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+06-28 20:05:01.450 26712 26712 I wm_on_paused_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performPause,time=0ms]
+06-28 20:05:01.477 26712 26712 I input_focus: window=ViewRootImpl focus=false for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+06-28 20:05:02.506 26712 26712 I viewroot_draw_event: [window=VRI[MainActivity]b3dc584,event=Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+06-28 20:05:02.514 26712 26712 I wm_on_stop_called: [Token=32730982,Component Name=tech.mmarca.openvitals.MainActivity,Reason=STOP_ACTIVITY_ITEM,time=1ms]
+--------- beginning of main
+06-28 20:12:22.318 31375 31375 I libc    : SetHeapTaggingLevel: tag level set to 0
+06-28 20:12:22.332 31375 31375 I Zygote  : Process 31375 created for tech.mmarca.openvitals
+06-28 20:12:22.334 31375 31375 I arca.openvitals: Using generational CollectorTypeCMC GC.
+06-28 20:12:22.375 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.615 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.682 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.682 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.683 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.688 31375 31375 D AndroidRuntime: >>>>>> START com.android.internal.os.ZygoteInit uid 10313 <<<<<<
+06-28 20:12:22.690 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.702 31375 31375 I AndroidRuntime: Using default boot image
+--------- switch to events
+06-28 20:12:22.700 31375 31375 I auditd  : avc=type=1400 audit(0.0:99964): avc:  denied  { read } for  comm="arca.openvitals" name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:22.702 31375 31375 I AndroidRuntime: Leaving lock profiling enabled
+06-28 20:12:22.702 31375 31375 W libc    : Access denied finding property "odsign.verification.success"
+06-28 20:12:22.700 31375 31375 W arca.openvitals: type=1400 audit(0.0:99964): avc:  denied  { read } for  name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:12:22.703 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:22.704 31375 31375 E cutils-trace: Error opening trace file: No such file or directory (2)
+06-28 20:12:22.709 31375 31375 W tech.mmarca.openvitals: ART APEX data files are untrusted.
+06-28 20:12:22.709 31375 31375 I tech.mmarca.openvitals: Using generational CollectorTypeCMC GC.
+--------- switch to events
+06-28 20:12:22.708 31375 31375 I auditd  : avc=type=1400 audit(0.0:99965): avc:  denied  { getattr } for  comm="arca.openvitals" path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:22.708 31375 31375 W arca.openvitals: type=1400 audit(0.0:99965): avc:  denied  { getattr } for  path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:12:22.913 31375 31375 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+06-28 20:12:22.941 31375 31375 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-28 20:12:22.941 31375 31375 D tech.mmarca.openvitals: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/10/icu") succeeded. 
+06-28 20:12:22.941 31375 31375 D tech.mmarca.openvitals: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt78l.dat
+06-28 20:12:22.945 31375 31375 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-28 20:12:22.949 31375 31375 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-28 20:12:22.953 31375 31375 I tech.mmarca.openvitals: Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+06-28 20:12:23.014 31375 31375 W libc    : Access denied finding property "ro.product.name_for_attestation"
+06-28 20:12:23.014 31375 31375 W libc    : Access denied finding property "ro.product.device_for_attestation"
+06-28 20:12:23.014 31375 31375 W libc    : Access denied finding property "ro.product.manufacturer_for_attestation"
+06-28 20:12:23.014 31375 31375 W libc    : Access denied finding property "ro.product.brand_for_attestation"
+06-28 20:12:23.014 31375 31375 W libc    : Access denied finding property "ro.product.model_for_attestation"
+06-28 20:12:23.015 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+--------- switch to events
+06-28 20:12:23.012 31375 31375 I auditd  : avc=type=1400 audit(0.0:99967): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.012 31375 31375 W main    : type=1400 audit(0.0:99967): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:12:23.012 31375 31375 I auditd  : avc=type=1400 audit(0.0:99968): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.012 31375 31375 W main    : type=1400 audit(0.0:99968): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:12:23.012 31375 31375 I auditd  : avc=type=1400 audit(0.0:99969): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.019 31375 31375 D Zygote  : IS_EXEC_SPAWNED_APP_PROCESS is 1
+--------- switch to events
+06-28 20:12:23.012 31375 31375 I auditd  : avc=type=1400 audit(0.0:99970): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.012 31375 31375 W main    : type=1400 audit(0.0:99970): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:12:23.012 31375 31375 I auditd  : avc=type=1400 audit(0.0:99971): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.012 31375 31375 W main    : type=1400 audit(0.0:99971): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:12:23.038 31375 31375 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-28 20:12:23.039 31375 31375 D AndroidRuntime: Calling main entry com.android.internal.os.ExecInit
+06-28 20:12:23.039 31375 31375 D Zygote  : begin preload
+06-28 20:12:23.040 31375 31375 I Zygote  : Calling ZygoteHooks.beginPreload()
+06-28 20:12:23.221 31375 31375 I Zygote  : Preloading shared libraries...
+06-28 20:12:23.221 31375 31375 D nativeloader: Load libandroid.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:12:23.222 31375 31375 D nativeloader: Load libjnigraphics.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:12:23.222 31375 31375 D nativeloader: Load libperfetto_framework_jni.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:12:23.223 31375 31375 D nativeloader: Load libcompiler_rt.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:12:23.258 31375 31375 I Zygote  : Preloading compat config...
+06-28 20:12:23.259 31375 31375 I CompatibilityRules: Loading configs from /system/etc/compatconfig
+06-28 20:12:23.259 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/framework-ondeviceintelligence-platform-compat-config.xml
+06-28 20:12:23.260 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/calendar-provider-compat-config.xml
+06-28 20:12:23.260 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/SystemUI-application-compat-config.xml
+06-28 20:12:23.260 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/framework-location-compat-config.xml
+06-28 20:12:23.260 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/framework-platform-compat-config.xml
+06-28 20:12:23.261 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/services-platform-compat-config.xml
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/contacts-provider-platform-compat-config.xml
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/icu4j-platform-compat-config.xml
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/TeleService-platform-compat-config.xml
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Reading config file: /system/etc/compatconfig/documents-ui-compat-config.xml
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Loading configs from /system/system_ext/etc/compatconfig
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Reading config file: /system/system_ext/etc/compatconfig/settings-platform-compat-config.xml
+06-28 20:12:23.262 31375 31375 I CompatibilityRules: Compatibility rules initialized with 334 rules.
+06-28 20:12:23.263 31375 31375 I Zygote  : Called ZygoteHooks.endPreload()
+06-28 20:12:23.279 31375 31375 D nativeloader: Load libjavacrypto.so using APEX ns com_android_conscrypt for caller /apex/com.android.conscrypt/javalib/conscrypt.jar: ok
+06-28 20:12:23.285 31375 31375 I Zygote  : Installed AndroidKeyStoreProvider in 23ms.
+06-28 20:12:23.285 31375 31375 D Zygote  : end preload
+06-28 20:12:23.286 31375 31375 I libc    : SetHeapTaggingLevel: tag level set to 0
+06-28 20:12:23.301 31375 31375 I AconfigPackage: com.android.adbd.flags is mapped to com.android.adbd
+06-28 20:12:23.301 31375 31375 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+06-28 20:12:23.302 31375 31375 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+06-28 20:12:23.302 31375 31375 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+06-28 20:12:23.302 31375 31375 I AconfigPackage: com.android.media.metrics.flags is mapped to com.android.media
+06-28 20:12:23.302 31375 31375 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+06-28 20:12:23.302 31375 31375 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+06-28 20:12:23.303 31375 31375 I AconfigPackage: com.android.rkpd.flags is mapped to com.android.rkpd
+06-28 20:12:23.303 31375 31375 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+06-28 20:12:23.303 31375 31375 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+06-28 20:12:23.304 31375 31375 I AconfigPackage: com.android.permissioncontroller.flags is mapped to com.android.permission
+06-28 20:12:23.304 31375 31375 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+06-28 20:12:23.304 31375 31375 I AconfigPackage: com.android.compos.flags is mapped to com.android.compos
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.art.rw.flags is mapped to com.android.art
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.libcore is mapped to com.android.art
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+06-28 20:12:23.305 31375 31375 I AconfigPackage: android.telecom.flags is mapped to com.android.telephonycore
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.internal.telecom.flags is mapped to com.android.telephonycore
+06-28 20:12:23.305 31375 31375 I AconfigPackage: com.android.telephony.flags is mapped to com.android.telephonycore
+06-28 20:12:23.306 31375 31375 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+06-28 20:12:23.306 31375 31375 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+06-28 20:12:23.306 31375 31375 I AconfigPackage: com.android.webapp.flags is mapped to com.android.webapp
+06-28 20:12:23.307 31375 31375 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+06-28 20:12:23.307 31375 31375 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+06-28 20:12:23.307 31375 31375 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+06-28 20:12:23.307 31375 31375 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+06-28 20:12:23.307 31375 31375 I AconfigPackage: com.google.android.widevine.flags is mapped to com.google.android.widevine
+06-28 20:12:23.308 31375 31375 I AconfigPackage: com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+06-28 20:12:23.308 31375 31375 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+06-28 20:12:23.308 31375 31375 I AconfigPackage: com.android.uprobestats.flags is mapped to com.android.uprobestats
+06-28 20:12:23.308 31375 31375 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+06-28 20:12:23.309 31375 31375 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+06-28 20:12:23.309 31375 31375 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+06-28 20:12:23.309 31375 31375 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+06-28 20:12:23.309 31375 31375 I AconfigPackage: android.os.profiling.anomaly.flags is mapped to com.android.profiling
+06-28 20:12:23.309 31375 31375 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+06-28 20:12:23.309 31375 31375 I AconfigPackage: com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+06-28 20:12:23.309 31375 31375 I AconfigPackage: com.android.crashrecovery.flags is mapped to com.android.crashrecovery
+06-28 20:12:23.309 31375 31375 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+06-28 20:12:23.309 31375 31375 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+06-28 20:12:23.309 31375 31375 I AconfigPackage: android.app.sdksandbox.flags is mapped to com.android.adservices
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.bluetooth.beta.flags is mapped to com.android.bt
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.tethering.mainline.beta is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: android.net.http is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.tethering.readonly.flags is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.tethering.flags is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.tethering.beta.test is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+06-28 20:12:23.310 31375 31375 I AconfigPackage: com.android.net.ct.flags is mapped to com.android.tethering
+06-28 20:12:23.311 31375 31375 I AconfigPackage: com.android.nfc.module.flags is mapped to com.android.nfcservices
+06-28 20:12:23.311 31375 31375 I AconfigPackage: com.android.nfc.module.nonexported.flags is mapped to com.android.nfcservices
+06-28 20:12:23.311 31375 31375 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+06-28 20:12:23.311 31375 31375 I AconfigPackage: com.android.npumanager is mapped to com.android.npumanager
+06-28 20:12:23.312 31375 31375 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+--------- switch to events
+06-28 20:12:23.320 31375 31375 I auditd  : avc=type=1400 audit(0.0:99979): avc:  denied  { read } for  comm="binder:31375_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.320 31375 31375 W binder:31375_1: type=1400 audit(0.0:99979): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:12:23.320 31375 31375 I auditd  : avc=type=1400 audit(0.0:99980): avc:  denied  { read } for  comm="binder:31375_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:12:23.320 31375 31375 W binder:31375_1: type=1400 audit(0.0:99980): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:12:23.320 31375 31411 W libc    : Access denied finding property "qemu.sf.lcd_density"
+06-28 20:12:23.322 31375 31375 I Typeface: Preloading /system/fonts/Roboto-Regular.ttf
+06-28 20:12:23.322 31375 31375 I Typeface: Preloading /system/fonts/RobotoStatic-Regular.ttf
+06-28 20:12:23.331 31375 31375 I SystemFonts: Loading font config from /system/etc/fonts.xml
+06-28 20:12:23.423 31375 31375 D nativeloader: InitApexLibraries:
+06-28 20:12:23.423 31375 31375 D nativeloader:   com_android_art: libnativehelper.so
+06-28 20:12:23.423 31375 31375 D nativeloader:   com_android_i18n: libicui18n.so:libicuuc.so:libicu.so
+06-28 20:12:23.423 31375 31375 D nativeloader:   com_android_neuralnetworks: libneuralnetworks.so
+06-28 20:12:23.423 31375 31375 D nativeloader: InitDefaultPublicLibraries for_preload=0: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libclang_rt.hwasan-aarch64-android.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+06-28 20:12:23.423 31375 31375 D nativeloader: Configuring clns-1 for other apk /system_ext/framework/androidx.window.extensions.jar. target_sdk_version=36, uses_libraries=ALL, library_path=/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/lib/arm64:/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/tech.mmarca.openvitals
+06-28 20:12:23.423 31375 31375 D nativeloader: InitExtendedPublicLibraries: 
+06-28 20:12:23.424 31375 31375 D nativeloader: InitApexLibraries:
+06-28 20:12:23.424 31375 31375 D nativeloader:   
+06-28 20:12:23.425 31375 31375 D nativeloader: InitVendorPublicLibraries: libOpenCL.so:libOpenCL-pixel.so:libedgetpu_client.google.so:libedgetpu_util.so:lib_aion_buffer.so:lib_jpg_encoder.so:libgxp.so:libedgetpu_tachyon.google.so:libedgetpu_litert.so
+06-28 20:12:23.425 31375 31375 D nativeloader: InitProductPublicLibraries: 
+06-28 20:12:23.429 31375 31375 D nativeloader: Configuring clns-2 for other apk /system_ext/framework/androidx.window.sidecar.jar. target_sdk_version=36, uses_libraries=ALL, library_path=/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/lib/arm64:/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/tech.mmarca.openvitals
+06-28 20:12:23.432 31375 31375 D nativeloader: Configuring clns-3 for other apk /data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/lib/arm64:/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/tech.mmarca.openvitals
+06-28 20:12:23.437 31375 31375 D DynCodeLoading: AppBindFlags: 0
+06-28 20:12:23.439 31375 31375 D nativeloader: Load libframework-connectivity-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity.jar: ok
+06-28 20:12:23.441 31375 31375 V GraphicsEnvironment: Currently set values for:
+06-28 20:12:23.441 31375 31375 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[com.android.angle, com.google.android.apps.tachyon]
+06-28 20:12:23.441 31375 31375 V GraphicsEnvironment:   angle_gl_driver_selection_values=[angle, native]
+06-28 20:12:23.441 31375 31375 V GraphicsEnvironment: tech.mmarca.openvitals is not listed in per-application setting
+06-28 20:12:23.441 31375 31375 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+06-28 20:12:23.441 31375 31375 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+06-28 20:12:23.474 31375 31375 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:12:23.595 31375 31431 W JobInfo : Requested important-while-foreground flag for job397 is ignored and takes no effect
+06-28 20:12:24.922 31375 31403 D nativeloader: Load libstats_jni.so using APEX ns com_android_os_statsd for caller /apex/com.android.os.statsd/javalib/framework-statsd.jar: ok
+--------- switch to system
+06-28 20:12:46.488 31375 31493 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+--------- switch to main
+06-28 20:12:46.502 31375 31375 D DesktopExperienceFlags: Toggle override initialized to: false
+06-28 20:12:46.525 31375 31375 D CompatChangeReporter: Compat change id reported: 377864165; UID 10313; state: ENABLED
+--------- switch to events
+06-28 20:12:46.529 31375 31375 I wm_on_create_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performCreate,time=15ms]
+06-28 20:12:46.530 31375 31375 I wm_on_start_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleStartActivity,time=0ms]
+06-28 20:12:46.534 31375 31375 I wm_on_resume_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=RESUME_ACTIVITY,time=2ms]
+06-28 20:12:46.555 31375 31375 I wm_on_top_resumed_gained_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+--------- switch to main
+06-28 20:12:46.563 31375 31375 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@60d3e29
+06-28 20:12:46.582 31375 31375 D VRI[MainActivity]: WindowInsets changed: 1080x2424 statusBars:[0,152,0,0] navigationBars:[0,0,0,126] mandatorySystemGestures:[0,184,0,126] 
+06-28 20:12:46.599 31375 31375 I HWUI    : Using FreeType backend (prop=Auto)
+06-28 20:12:46.614 31375 31375 I Surface : Creating surface for consumer unnamed-31375-0 with slotExpansion=1 for 64 slots
+06-28 20:12:46.614 31375 31375 I Surface : Creating surface for consumer VRI[MainActivity]#0(BLAST Consumer)0 with slotExpansion=1 for 64 slots
+--------- switch to events
+06-28 20:12:46.614 31375 31375 I viewroot_draw_event: [window=VRI[MainActivity]8c598f0,event=applyTransactionOnDraw applyImmediately]
+06-28 20:12:46.726 31375 31375 I viewroot_draw_event: [window=VRI[MainActivity]8c598f0,event=reportDrawFinished seqId=1]
+06-28 20:12:46.757 31375 31375 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:12:46.759 31375 31375 D InsetsController: hide(ime())
+06-28 20:12:46.759 31375 31375 I ImeTracker: tech.mmarca.openvitals:aefa631b: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+06-28 20:12:46.826 31375 31375 I ImeTracker: system_server:809a1a10: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+--------- switch to main
+06-28 20:12:46.829 31375 31375 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ImeBackAnimationController@1db8543
+06-28 20:12:46.830 31375 31375 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@60d3e29
+06-28 20:12:52.198 31375 31375 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): av3@b364b61
+06-28 20:12:52.249 31375 31439 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:         WHERE surface = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:           AND startDate = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:           AND endDate = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:           AND metricSet = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:           AND configHash = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:12:52.249 31375 31439 E SQLiteQuery:         LIMIT 1
+06-28 20:12:52.394 31375 31402 I tech.mmarca.openvitals: NativeAlloc concurrent mark compact GC freed 189MB AllocSpace bytes, 0(0B) LOS objects, 84% free, 38MB/256MB, paused 405us,1.022ms total 133.842ms
+--------- switch to events
+06-28 20:12:57.623 31375 31375 I input_focus: window=ViewRootImpl focus=false for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to main
+06-28 20:12:57.870 31375 31402 I tech.mmarca.openvitals: Background young concurrent mark compact GC freed 173MB AllocSpace bytes, 0(0B) LOS objects, 70% free, 75MB/256MB, paused 1.934ms,1.245ms total 143.633ms
+--------- switch to events
+06-28 20:13:00.603 31375 31375 I wm_on_top_resumed_lost_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+06-28 20:13:00.606 31375 31375 I wm_on_paused_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performPause,time=0ms]
+--------- switch to main
+06-28 20:13:00.608 31375 31375 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+--------- switch to events
+06-28 20:13:00.647 31375 31375 I viewroot_draw_event: [window=VRI[MainActivity]8c598f0,event=Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+--------- switch to main
+06-28 20:13:00.648 31375 31375 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@60d3e29
+--------- switch to events
+06-28 20:13:00.656 31375 31375 I wm_on_stop_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=STOP_ACTIVITY_ITEM,time=1ms]
+--------- switch to main
+06-28 20:13:00.678 31375 31375 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): null
+--------- switch to events
+06-28 20:13:00.679 31375 31375 I wm_on_destroy_called: [Token=242206705,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performDestroy,time=1ms]
+--------- switch to main
+06-28 20:13:00.684 31375 31375 D ViewRootImpl: Skipping stats log for color mode
+06-28 20:13:03.289 31541 31541 I libc    : SetHeapTaggingLevel: tag level set to 0
+06-28 20:13:03.293 31541 31541 I Zygote  : Process 31541 created for tech.mmarca.openvitals
+06-28 20:13:03.293 31541 31541 I arca.openvitals: Using generational CollectorTypeCMC GC.
+06-28 20:13:03.326 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.580 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.611 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.612 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.612 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.614 31541 31541 D AndroidRuntime: >>>>>> START com.android.internal.os.ZygoteInit uid 10313 <<<<<<
+06-28 20:13:03.615 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.638 31541 31541 I AndroidRuntime: Using default boot image
+06-28 20:13:03.638 31541 31541 I AndroidRuntime: Leaving lock profiling enabled
+06-28 20:13:03.638 31541 31541 W libc    : Access denied finding property "odsign.verification.success"
+--------- switch to events
+06-28 20:13:03.636 31541 31541 I auditd  : avc=type=1400 audit(0.0:99986): avc:  denied  { read } for  comm="arca.openvitals" name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.636 31541 31541 W arca.openvitals: type=1400 audit(0.0:99986): avc:  denied  { read } for  name="u:object_r:odsign_prop:s0" dev="tmpfs" ino=319 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:odsign_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:13:03.639 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.641 31541 31541 E cutils-trace: Error opening trace file: No such file or directory (2)
+06-28 20:13:03.648 31541 31541 W tech.mmarca.openvitals: ART APEX data files are untrusted.
+--------- switch to events
+06-28 20:13:03.648 31541 31541 I auditd  : avc=type=1400 audit(0.0:99987): avc:  denied  { getattr } for  comm="arca.openvitals" path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.648 31541 31541 W arca.openvitals: type=1400 audit(0.0:99987): avc:  denied  { getattr } for  path="/apex/apex-info-list.xml" dev="tmpfs" ino=95 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:apex_info_file:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:13:03.648 31541 31541 I tech.mmarca.openvitals: Using generational CollectorTypeCMC GC.
+06-28 20:13:03.759 31541 31541 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+06-28 20:13:03.788 31541 31541 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-28 20:13:03.788 31541 31541 D tech.mmarca.openvitals: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/10/icu") succeeded. 
+06-28 20:13:03.788 31541 31541 D tech.mmarca.openvitals: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt78l.dat
+06-28 20:13:03.792 31541 31541 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-28 20:13:03.794 31541 31541 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-28 20:13:03.795 31541 31541 I tech.mmarca.openvitals: Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+06-28 20:13:03.825 31541 31541 W libc    : Access denied finding property "ro.product.name_for_attestation"
+06-28 20:13:03.825 31541 31541 W libc    : Access denied finding property "ro.product.device_for_attestation"
+06-28 20:13:03.825 31541 31541 W libc    : Access denied finding property "ro.product.manufacturer_for_attestation"
+06-28 20:13:03.825 31541 31541 W libc    : Access denied finding property "ro.product.brand_for_attestation"
+06-28 20:13:03.825 31541 31541 W libc    : Access denied finding property "ro.product.model_for_attestation"
+--------- switch to events
+06-28 20:13:03.824 31541 31541 I auditd  : avc=type=1400 audit(0.0:99988): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.824 31541 31541 W main    : type=1400 audit(0.0:99988): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:13:03.824 31541 31541 I auditd  : avc=type=1400 audit(0.0:99989): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.824 31541 31541 W main    : type=1400 audit(0.0:99989): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:13:03.824 31541 31541 I auditd  : avc=type=1400 audit(0.0:99990): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.824 31541 31541 W main    : type=1400 audit(0.0:99990): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:13:03.824 31541 31541 I auditd  : avc=type=1400 audit(0.0:99991): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.824 31541 31541 W main    : type=1400 audit(0.0:99991): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:13:03.824 31541 31541 I auditd  : avc=type=1400 audit(0.0:99992): avc:  denied  { read } for  comm="main" name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.824 31541 31541 W main    : type=1400 audit(0.0:99992): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=123 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:13:03.828 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+06-28 20:13:03.834 31541 31541 D Zygote  : IS_EXEC_SPAWNED_APP_PROCESS is 1
+06-28 20:13:03.844 31541 31541 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-28 20:13:03.845 31541 31541 D AndroidRuntime: Calling main entry com.android.internal.os.ExecInit
+06-28 20:13:03.845 31541 31541 D Zygote  : begin preload
+06-28 20:13:03.845 31541 31541 I Zygote  : Calling ZygoteHooks.beginPreload()
+06-28 20:13:03.899 31541 31541 I Zygote  : Preloading shared libraries...
+06-28 20:13:03.900 31541 31541 D nativeloader: Load libandroid.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:13:03.900 31541 31541 D nativeloader: Load libjnigraphics.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:13:03.900 31541 31541 D nativeloader: Load libperfetto_framework_jni.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:13:03.901 31541 31541 D nativeloader: Load libcompiler_rt.so using system ns (caller=/system/framework/framework.jar!classes5.dex): ok
+06-28 20:13:03.909 31541 31541 I Zygote  : Preloading compat config...
+06-28 20:13:03.911 31541 31541 I CompatibilityRules: Loading configs from /system/etc/compatconfig
+06-28 20:13:03.912 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/framework-ondeviceintelligence-platform-compat-config.xml
+06-28 20:13:03.913 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/calendar-provider-compat-config.xml
+06-28 20:13:03.914 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/SystemUI-application-compat-config.xml
+06-28 20:13:03.914 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/framework-location-compat-config.xml
+06-28 20:13:03.914 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/framework-platform-compat-config.xml
+06-28 20:13:03.915 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/services-platform-compat-config.xml
+06-28 20:13:03.916 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/contacts-provider-platform-compat-config.xml
+06-28 20:13:03.916 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/icu4j-platform-compat-config.xml
+06-28 20:13:03.916 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/TeleService-platform-compat-config.xml
+06-28 20:13:03.917 31541 31541 I CompatibilityRules: Reading config file: /system/etc/compatconfig/documents-ui-compat-config.xml
+06-28 20:13:03.917 31541 31541 I CompatibilityRules: Loading configs from /system/system_ext/etc/compatconfig
+06-28 20:13:03.918 31541 31541 I CompatibilityRules: Reading config file: /system/system_ext/etc/compatconfig/settings-platform-compat-config.xml
+06-28 20:13:03.918 31541 31541 I CompatibilityRules: Compatibility rules initialized with 334 rules.
+06-28 20:13:03.918 31541 31541 I Zygote  : Called ZygoteHooks.endPreload()
+06-28 20:13:03.925 31541 31541 D nativeloader: Load libjavacrypto.so using APEX ns com_android_conscrypt for caller /apex/com.android.conscrypt/javalib/conscrypt.jar: ok
+06-28 20:13:03.945 31541 31541 I Zygote  : Installed AndroidKeyStoreProvider in 27ms.
+06-28 20:13:03.945 31541 31541 D Zygote  : end preload
+06-28 20:13:03.945 31541 31541 I libc    : SetHeapTaggingLevel: tag level set to 0
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.adbd.flags is mapped to com.android.adbd
+06-28 20:13:03.956 31541 31541 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.media.metrics.flags is mapped to com.android.media
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.rkpd.flags is mapped to com.android.rkpd
+06-28 20:13:03.956 31541 31541 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.permissioncontroller.flags is mapped to com.android.permission
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.compos.flags is mapped to com.android.compos
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.art.rw.flags is mapped to com.android.art
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.libcore is mapped to com.android.art
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+06-28 20:13:03.957 31541 31541 I AconfigPackage: android.telecom.flags is mapped to com.android.telephonycore
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.internal.telecom.flags is mapped to com.android.telephonycore
+06-28 20:13:03.957 31541 31541 I AconfigPackage: com.android.telephony.flags is mapped to com.android.telephonycore
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.webapp.flags is mapped to com.android.webapp
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+06-28 20:13:03.958 31541 31541 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+06-28 20:13:03.958 31541 31541 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.google.android.widevine.flags is mapped to com.google.android.widevine
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+06-28 20:13:03.958 31541 31541 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.uprobestats.flags is mapped to com.android.uprobestats
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.os.profiling.anomaly.flags is mapped to com.android.profiling
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.crashrecovery.flags is mapped to com.android.crashrecovery
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.app.sdksandbox.flags is mapped to com.android.adservices
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.bluetooth.beta.flags is mapped to com.android.bt
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.tethering.mainline.beta is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.net.http is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.tethering.readonly.flags is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.tethering.flags is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.tethering.beta.test is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.net.ct.flags is mapped to com.android.tethering
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.nfc.module.flags is mapped to com.android.nfcservices
+06-28 20:13:03.959 31541 31541 I AconfigPackage: com.android.nfc.module.nonexported.flags is mapped to com.android.nfcservices
+06-28 20:13:03.960 31541 31541 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+06-28 20:13:03.960 31541 31541 I AconfigPackage: com.android.npumanager is mapped to com.android.npumanager
+06-28 20:13:03.960 31541 31541 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+06-28 20:13:03.968 31541 31558 W libc    : Access denied finding property "qemu.sf.lcd_density"
+06-28 20:13:03.968 31541 31558 W libc    : Access denied finding property "qemu.sf.lcd_density"
+--------- switch to events
+06-28 20:13:03.968 31541 31541 I auditd  : avc=type=1400 audit(0.0:99993): avc:  denied  { read } for  comm="binder:31541_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.968 31541 31541 W binder:31541_1: type=1400 audit(0.0:99993): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to events
+06-28 20:13:03.968 31541 31541 I auditd  : avc=type=1400 audit(0.0:99994): avc:  denied  { read } for  comm="binder:31541_1" name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+--------- switch to main
+06-28 20:13:03.968 31541 31541 W binder:31541_1: type=1400 audit(0.0:99994): avc:  denied  { read } for  name="u:object_r:qemu_sf_lcd_density_prop:s0" dev="tmpfs" ino=349 scontext=u:r:untrusted_app_34:s0:c57,c257,c512,c768 tcontext=u:object_r:qemu_sf_lcd_density_prop:s0 tclass=file permissive=0 app=tech.mmarca.openvitals
+06-28 20:13:03.970 31541 31541 I Typeface: Preloading /system/fonts/Roboto-Regular.ttf
+06-28 20:13:03.970 31541 31541 I Typeface: Preloading /system/fonts/RobotoStatic-Regular.ttf
+06-28 20:13:03.978 31541 31541 I SystemFonts: Loading font config from /system/etc/fonts.xml
+06-28 20:13:04.025 31541 31541 D nativeloader: InitApexLibraries:
+06-28 20:13:04.025 31541 31541 D nativeloader:   com_android_art: libnativehelper.so
+06-28 20:13:04.025 31541 31541 D nativeloader:   com_android_i18n: libicui18n.so:libicuuc.so:libicu.so
+06-28 20:13:04.025 31541 31541 D nativeloader:   com_android_neuralnetworks: libneuralnetworks.so
+06-28 20:13:04.025 31541 31541 D nativeloader: InitDefaultPublicLibraries for_preload=0: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libclang_rt.hwasan-aarch64-android.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+06-28 20:13:04.025 31541 31541 D nativeloader: Configuring clns-1 for other apk /system_ext/framework/androidx.window.extensions.jar. target_sdk_version=36, uses_libraries=ALL, library_path=/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/lib/arm64:/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/tech.mmarca.openvitals
+06-28 20:13:04.026 31541 31541 D nativeloader: InitExtendedPublicLibraries: 
+06-28 20:13:04.027 31541 31541 D nativeloader: InitApexLibraries:
+06-28 20:13:04.027 31541 31541 D nativeloader:   
+06-28 20:13:04.027 31541 31541 D nativeloader: InitVendorPublicLibraries: libOpenCL.so:libOpenCL-pixel.so:libedgetpu_client.google.so:libedgetpu_util.so:lib_aion_buffer.so:lib_jpg_encoder.so:libgxp.so:libedgetpu_tachyon.google.so:libedgetpu_litert.so
+06-28 20:13:04.027 31541 31541 D nativeloader: InitProductPublicLibraries: 
+06-28 20:13:04.029 31541 31541 D nativeloader: Configuring clns-2 for other apk /system_ext/framework/androidx.window.sidecar.jar. target_sdk_version=36, uses_libraries=ALL, library_path=/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/lib/arm64:/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/tech.mmarca.openvitals
+06-28 20:13:04.038 31541 31541 D nativeloader: Configuring clns-3 for other apk /data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/lib/arm64:/data/app/~~sFDanyd1w1i--lQYhUUwYA==/tech.mmarca.openvitals-847Aj-GZSaxuENjD14aiBQ==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/tech.mmarca.openvitals
+06-28 20:13:04.043 31541 31541 D DynCodeLoading: AppBindFlags: 0
+06-28 20:13:04.043 31541 31541 D nativeloader: Load libframework-connectivity-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity.jar: ok
+06-28 20:13:04.046 31541 31541 V GraphicsEnvironment: Currently set values for:
+06-28 20:13:04.046 31541 31541 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[com.android.angle, com.google.android.apps.tachyon]
+06-28 20:13:04.046 31541 31541 V GraphicsEnvironment:   angle_gl_driver_selection_values=[angle, native]
+06-28 20:13:04.046 31541 31541 V GraphicsEnvironment: tech.mmarca.openvitals is not listed in per-application setting
+06-28 20:13:04.046 31541 31541 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+06-28 20:13:04.046 31541 31541 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+06-28 20:13:04.052 31541 31541 W libc    : Access denied finding property "ro.debuggable"
+--------- switch to system
+06-28 20:13:04.064 31541 31563 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+--------- switch to main
+06-28 20:13:04.066 31541 31541 D DesktopExperienceFlags: Toggle override initialized to: false
+06-28 20:13:04.080 31541 31541 D CompatChangeReporter: Compat change id reported: 377864165; UID 10313; state: ENABLED
+--------- switch to events
+06-28 20:13:04.082 31541 31541 I wm_on_create_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performCreate,time=12ms]
+06-28 20:13:04.083 31541 31541 I wm_on_start_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=handleStartActivity,time=0ms]
+06-28 20:13:04.084 31541 31541 I wm_on_resume_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=RESUME_ACTIVITY,time=1ms]
+06-28 20:13:04.091 31541 31541 I wm_on_top_resumed_gained_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+--------- switch to main
+06-28 20:13:04.093 31541 31541 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@84946c8
+06-28 20:13:04.114 31541 31541 D VRI[MainActivity]: WindowInsets changed: 1080x2424 statusBars:[0,152,0,0] navigationBars:[0,0,0,126] mandatorySystemGestures:[0,184,0,126] 
+06-28 20:13:04.137 31541 31561 W JobInfo : Requested important-while-foreground flag for job397 is ignored and takes no effect
+06-28 20:13:04.138 31541 31541 I HWUI    : Using FreeType backend (prop=Auto)
+06-28 20:13:04.148 31541 31541 I Surface : Creating surface for consumer unnamed-31541-0 with slotExpansion=1 for 64 slots
+06-28 20:13:04.149 31541 31541 I Surface : Creating surface for consumer VRI[MainActivity]#0(BLAST Consumer)0 with slotExpansion=1 for 64 slots
+--------- switch to events
+06-28 20:13:04.149 31541 31541 I viewroot_draw_event: [window=VRI[MainActivity]5eddae3,event=applyTransactionOnDraw applyImmediately]
+--------- switch to main
+06-28 20:13:04.150 31541 31541 D nativeloader: Load libstats_jni.so using APEX ns com_android_os_statsd for caller /apex/com.android.os.statsd/javalib/framework-statsd.jar: ok
+--------- switch to events
+06-28 20:13:04.164 31541 31541 I viewroot_draw_event: [window=VRI[MainActivity]5eddae3,event=reportDrawFinished seqId=1]
+--------- switch to main
+06-28 20:13:04.188 31541 31541 W GlanceSessionWorker: SessionWorker attempted restart but Session is not available for appWidget-8
+--------- switch to events
+06-28 20:13:04.197 31541 31541 I input_focus: window=ViewRootImpl focus=true for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+--------- switch to system
+06-28 20:13:04.213 31541 31541 D InsetsController: hide(ime())
+06-28 20:13:04.213 31541 31541 I ImeTracker: tech.mmarca.openvitals:e20e7814: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+--------- switch to main
+06-28 20:13:06.630 31541 31541 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): av3@7c5d7e0
+06-28 20:13:06.670 31541 31589 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:06.670 31541 31589 E SQLiteQuery:         LIMIT 1
+06-28 20:13:19.081 31541 31586 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:19.081 31541 31586 E SQLiteQuery:         LIMIT 1
+06-28 20:13:22.223 31541 31588 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:22.223 31541 31588 E SQLiteQuery:         LIMIT 1
+06-28 20:13:24.191 31541 31586 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:24.191 31541 31586 E SQLiteQuery:         LIMIT 1
+06-28 20:13:24.970 31541 31588 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:24.970 31541 31588 E SQLiteQuery:         LIMIT 1
+06-28 20:13:25.863 31541 31590 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:25.863 31541 31590 E SQLiteQuery:         LIMIT 1
+06-28 20:13:29.721 31541 31590 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:29.721 31541 31590 E SQLiteQuery:         LIMIT 1
+06-28 20:13:31.647 31541 31588 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:31.647 31541 31588 E SQLiteQuery:         LIMIT 1
+06-28 20:13:32.998 31541 31586 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:32.998 31541 31586 E SQLiteQuery:         LIMIT 1
+06-28 20:13:35.288 31541 31589 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:35.288 31541 31589 E SQLiteQuery:         LIMIT 1
+06-28 20:13:37.289 31541 31586 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:37.289 31541 31586 E SQLiteQuery:         LIMIT 1
+06-28 20:13:38.755 31541 31588 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:38.755 31541 31588 E SQLiteQuery:         LIMIT 1
+06-28 20:13:45.920 31541 31590 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:45.920 31541 31590 E SQLiteQuery:         LIMIT 1
+06-28 20:13:48.703 31541 31589 E SQLiteQuery: exception: Row too big to fit into CursorWindow requiredPos=0, totalRows=1; query: SELECT * FROM metric_summary_cache
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:         WHERE surface = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:           AND startDate = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:           AND endDate = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:           AND metricSet = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:           AND permissionFingerprint = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:           AND configHash = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:           AND schemaVersion = ?
+06-28 20:13:48.703 31541 31589 E SQLiteQuery:         LIMIT 1
+--------- switch to events
+06-28 20:13:53.197 31541 31541 I input_focus: window=ViewRootImpl focus=false for tech.mmarca.openvitals/tech.mmarca.openvitals.MainActivity
+06-28 20:13:55.077 31541 31541 I wm_on_top_resumed_lost_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=topStateChangedWhenResumed]
+06-28 20:13:55.078 31541 31541 I wm_on_paused_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=performPause,time=0ms]
+--------- switch to main
+06-28 20:13:55.481 31541 31541 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+--------- switch to events
+06-28 20:13:55.532 31541 31541 I viewroot_draw_event: [window=VRI[MainActivity]5eddae3,event=Not drawing due to not visible. Reason=!mAppVisible && !mForceDecorViewVisibility]
+--------- switch to main
+06-28 20:13:55.533 31541 31541 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.app.Activity$$ExternalSyntheticLambda0@84946c8
+--------- switch to events
+06-28 20:13:55.536 31541 31541 I wm_on_stop_called: [Token=14370384,Component Name=tech.mmarca.openvitals.MainActivity,Reason=STOP_ACTIVITY_ITEM,time=1ms]

@@ -118,6 +118,7 @@ fun AppNavigation(
         null
     }
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
+    var metricSectionTopBarState by remember { mutableStateOf<TopBarEditState?>(null) }
     var activityEntryTopBarTitleRes by remember { mutableStateOf<Int?>(null) }
     var activityEntryTopBarEditState by remember { mutableStateOf<TopBarEditState?>(null) }
     var activityRecordingOutdoorTopBarState by remember { mutableStateOf<TopBarOutdoorModeState?>(null) }
@@ -222,6 +223,12 @@ fun AppNavigation(
         currentMetricId = currentMetricId,
         onNavigate = { route -> navController.navigate(route) },
     )
+
+    LaunchedEffect(currentRoute) {
+        if (currentRoute != Screen.Metric.route) {
+            metricSectionTopBarState = null
+        }
+    }
 
     LaunchedEffect(routeImportRequest?.id, currentRoute) {
         if (
@@ -330,6 +337,7 @@ fun AppNavigation(
         topBarActions = {
             val topBarEditState = when (currentRoute) {
                 Screen.ManualEntry.route -> manualEntryTopBarState
+                Screen.Metric.route -> metricSectionTopBarState
                 Screen.ActivityEntry.route,
                 Screen.ActivityEntryEdit.route -> activityEntryTopBarEditState
                 else -> null
@@ -363,6 +371,9 @@ fun AppNavigation(
                                 currentRoute == Screen.Dashboard.route && topBarEditState.isEditing ->
                                     R.string.cd_finish_dashboard_editing
                                 currentRoute == Screen.Dashboard.route -> R.string.cd_edit_dashboard
+                                currentRoute == Screen.Metric.route && topBarEditState.isEditing ->
+                                    R.string.cd_finish_metric_section_editing
+                                currentRoute == Screen.Metric.route -> R.string.cd_edit_metric_sections
                                 topBarEditState.isEditing -> R.string.cd_finish_manual_entry_editing
                                 else -> R.string.cd_edit_manual_entry_widgets
                             }
@@ -375,12 +386,7 @@ fun AppNavigation(
                     )
                 }
             }
-            if (
-                showTopBar &&
-                !isTaskRoute &&
-                !isSettingsRoute &&
-                currentRoute != Screen.DailyReadiness.route
-            ) {
+            if (currentRoute == Screen.Dashboard.route) {
                 OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.DailyReadiness.route) {
@@ -393,8 +399,6 @@ fun AppNavigation(
                         contentDescription = stringResource(R.string.cd_daily_readiness),
                     )
                 }
-            }
-            if (showTopBar && !isTaskRoute && currentRoute != Screen.Achievements.route) {
                 OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.Achievements.route) {
@@ -407,8 +411,6 @@ fun AppNavigation(
                         contentDescription = stringResource(R.string.cd_achievements),
                     )
                 }
-            }
-            if (showTopBar && !isTaskRoute && !isSettingsRoute) {
                 OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.Settings.route) {
@@ -687,6 +689,9 @@ fun AppNavigation(
                     },
                     onEditVitalsMeasurement = { type, entryId ->
                         navController.navigate(Screen.VitalsMeasurementEntryEdit.createRoute(type.name, entryId))
+                    },
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
                     },
                 )
             }

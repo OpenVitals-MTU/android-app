@@ -14,6 +14,10 @@
     <string name="cd_finish_recording_dashboard_editing">Finish editing recording dashboard</string>
     <string name="cd_move_widget_up">Move widget up</string>
     <string name="cd_move_widget_down">Move widget down</string>
+    <string name="cd_edit_metric_sections">Edit metric sections</string>
+    <string name="cd_finish_metric_section_editing">Finish editing metric sections</string>
+    <string name="cd_move_section_up">Move section up</string>
+    <string name="cd_move_section_down">Move section down</string>
     <string name="cd_remove_widget">Remove widget</string>
     <string name="cd_decrease_recording_dashboard_widget_size">Make widget smaller</string>
     <string name="cd_increase_recording_dashboard_widget_size">Make widget larger</string>

@@ -438,6 +438,17 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    fun metricDetailSectionOrder(): List<String>? =
+        prefs.getString(KEY_METRIC_DETAIL_SECTION_ORDER, null)
+            ?.split(KEY_VALUE_SEPARATOR)
+            ?.filter { it.isNotBlank() }
+
+    fun setMetricDetailSectionOrder(sectionIds: List<String>) {
+        prefs.edit {
+            putString(KEY_METRIC_DETAIL_SECTION_ORDER, sectionIds.joinToString(KEY_VALUE_SEPARATOR))
+        }
+    }
+
     fun acknowledgedPermissions(): Set<String> =
         prefs.getStringSet(KEY_ACKNOWLEDGED_PERMISSIONS, emptySet()) ?: emptySet()
 
@@ -633,6 +644,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
+        private const val KEY_METRIC_DETAIL_SECTION_ORDER = "metric_detail_section_order"
         private const val KEY_HYDRATION_DAILY_GOAL_LITERS = "hydration_daily_goal_liters"
         private const val KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS = "hydration_container_volume_milliliters"
         private const val KEY_LAST_CUSTOM_HYDRATION_AMOUNT_MILLILITERS =
