@@ -1,0 +1,1 @@
+Aggiunge inserimenti manuali dei carboidrati che scrivono NutritionRecord con carboidrati totali in Health Connect, oltre alle mappe attività offline: importa pacchetti PMTiles o Mapsforge dalle Impostazioni e usali durante le registrazioni o nelle anteprime dei percorsi, con avanzamento in background e ricentratura.

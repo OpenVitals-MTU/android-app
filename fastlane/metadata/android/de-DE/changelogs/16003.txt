@@ -1,0 +1,1 @@
+Ergänzt manuelle Kohlenhydrateinträge, die Gesamt-Kohlenhydrate als NutritionRecords in Health Connect schreiben, plus Offline-Aktivitätskarten: Importiere PMTiles- oder Mapsforge-Pakete aus den Einstellungen und nutze sie beim Aufzeichnen oder in Routenvorschauen, mit Hintergrundfortschritt und Neuzentrierung.

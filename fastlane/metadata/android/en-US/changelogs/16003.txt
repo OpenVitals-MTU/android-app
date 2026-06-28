@@ -1,0 +1,1 @@
+Adds manual carbohydrate entries that write total-carbohydrate NutritionRecords to Health Connect, plus offline activity maps: import PMTiles or Mapsforge packs from Settings and use them while recording activities or previewing saved/imported routes, with background import progress and map recentering.

@@ -1,6 +1,6 @@
 # OpenVitals Privacy Policy
 
-Last updated: June 13, 2026
+Last updated: June 28, 2026
 
 OpenVitals is a local-first Android app for viewing health and fitness data from Health Connect.
 
@@ -28,7 +28,7 @@ If you grant permission, OpenVitals may access the following data from Health Co
 - Sleep data, including sleep sessions, duration, and sleep stages.
 - Heart and recovery data, including heart rate, resting heart rate, and heart rate variability.
 - Body data, including weight, height, body fat, lean body mass, bone mass, and basal metabolic rate. Weight, height, and body fat entries you explicitly log in OpenVitals are written to Health Connect.
-- Nutrition and hydration data, including hydration, meals, calories, and macronutrients. Hydration entries you explicitly log in OpenVitals are written to Health Connect.
+- Nutrition and hydration data, including hydration, meals, calories, and macronutrients. Hydration and carbohydrate entries you explicitly log in OpenVitals are written to Health Connect.
 - Mindfulness session data, when supported by Health Connect on your device. Sessions you explicitly log or save from the timer are written to Health Connect.
 - Vitals data, including blood pressure, oxygen saturation, respiratory rate, body temperature, and VO2 max. Blood pressure, oxygen saturation, respiratory rate, and body temperature entries you explicitly log in OpenVitals are written to Health Connect.
 - Optional cycle tracking data, including menstruation, ovulation tests, cervical mucus, basal body temperature, intermenstrual bleeding, and sexual activity. This access is grouped as a sensitive Health Connect permission category and is used only after you grant those permissions.

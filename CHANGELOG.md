@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.6.3 - 2026-06-28
+
+### English
+
+- Add a manual carbohydrate entry flow that writes total-carbohydrate NutritionRecords to Health Connect.
+- Add offline activity maps by importing PMTiles or Mapsforge map packs from Settings.
+- Show imported offline maps while recording activities and previewing saved or imported routes, with map recentering and background import progress.
+
+### Español
+
+- Añade un flujo de entrada manual de carbohidratos que escribe NutritionRecords de carbohidratos totales en Health Connect.
+- Añade mapas de actividad sin conexión mediante paquetes PMTiles o Mapsforge importados desde Ajustes.
+- Muestra mapas sin conexión importados al grabar actividades y previsualizar rutas guardadas o importadas, con recentrado del mapa y progreso de importación en segundo plano.
+
+### Deutsch
+
+- Ergänzt einen manuellen Kohlenhydrateintrag, der Gesamt-Kohlenhydrate als NutritionRecords in Health Connect schreibt.
+- Ergänzt Offline-Aktivitätskarten über aus den Einstellungen importierte PMTiles- oder Mapsforge-Kartenpakete.
+- Zeigt importierte Offline-Karten beim Aufzeichnen von Aktivitäten und in gespeicherten oder importierten Routenvorschauen, mit Neuzentrierung und Importfortschritt im Hintergrund.
+
+### Italiano
+
+- Aggiunge un flusso di inserimento manuale dei carboidrati che scrive NutritionRecord con carboidrati totali in Health Connect.
+- Aggiunge mappe attività offline tramite pacchetti PMTiles o Mapsforge importati dalle Impostazioni.
+- Mostra le mappe offline importate durante la registrazione attività e nelle anteprime di percorsi salvati o importati, con ricentratura e avanzamento import in background.
+
 ## 1.6.2 - 2026-06-27
 
 ### English

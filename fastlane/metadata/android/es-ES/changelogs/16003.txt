@@ -1,0 +1,1 @@
+Añade entradas manuales de carbohidratos que escriben NutritionRecords de carbohidratos totales en Health Connect, además de mapas de actividad sin conexión: importa paquetes PMTiles o Mapsforge desde Ajustes y úsalos al grabar actividades o previsualizar rutas guardadas/importadas, con progreso en segundo plano y recentrado del mapa.

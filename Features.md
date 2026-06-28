@@ -72,7 +72,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - View cross-metric insight comparing workouts with resting heart rate.
 - View activity details including title, type, start/end time, duration, moving time, source, notes, time zones, recording method, device, record IDs, client record IDs, client record version, planned session ID, and last modified time.
 - View activity metrics including steps, distance, pace, speed, recorded speed, power, cadence, calories, wheelchair pushes, floors, and elevation.
-- View route previews, route point counts, start/end route points, map opening, and GPX/KMZ export when route data is available.
+- View route previews, route point counts, start/end route points, offline maps from imported PMTiles or Mapsforge packs, map opening, and GPX/KMZ export when route data is available.
 - View activity segments, laps, repetitions, and set information where available.
 - Configure the activity recording dashboard, use Focus mode, keep the screen awake while recording, and monitor heart rate for supported strength and repetition training recordings.
 
@@ -219,7 +219,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 ### Manual Entry Screen
 
 - Open a centralized manual entry area with configurable entry widgets.
-- Show entry widgets for hydration, activity, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
+- Show entry widgets for hydration, activity, carbohydrate, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
 - Reorder, remove, and manage manual entry widgets.
 
 ### Hydration
@@ -235,6 +235,12 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - Delete OpenVitals-created hydration entries.
 - Request Health Connect hydration write permission from the entry flow.
 
+### Nutrition
+
+- Add carbohydrate entries.
+- Save carbohydrate totals directly to Health Connect nutrition records.
+- Request Health Connect nutrition write permission from the entry flow.
+
 ### Activity And Workouts
 
 - Add workout/activity sessions manually.
@@ -245,6 +251,8 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - Import route/activity files in GPX, KML, KMZ, or FIT formats.
 - Preview imported routes and inferred activity details before saving.
 - Save imported route data with inferred type, title, notes, distance, elevation, time range, and calorie estimates where available.
+- Import PMTiles or Mapsforge map packs from Settings for offline activity maps.
+- Use imported offline maps while recording activities and previewing saved or imported routes.
 - Record route-based activities with GPS.
 - Start, pause, resume, finish, or discard a recording.
 - Save recorded route points, pause intervals, distance, and elevation.
@@ -308,7 +316,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 ### View-Only Or External-Only Data
 
 - Sleep sessions are view-only in the app.
-- Nutrition and meal entries are view-only in the manual UI.
+- Meal entries and nutrition fields other than manual carbohydrate totals are view-only in the manual UI.
 - Cycle tracking observations are view-only in the app.
 - Heart rate, resting heart rate, HRV, VO2 max, blood glucose, and skin temperature are view-only in the manual UI.
 - Lean body mass, BMR, bone mass, body water mass, and BMI are view-only in the manual UI.
