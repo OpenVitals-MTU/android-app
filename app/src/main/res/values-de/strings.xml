@@ -169,7 +169,8 @@
     <string name="activity_entry_import_route_file">GPX/KML/KMZ/FIT importieren</string>
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
-    <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und starte die Aufzeichnung, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
+    <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und öffne den Aktivitätsbildschirm, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
+    <string name="activity_entry_recording_go_to_activity_screen">Zum Aktivitätsbildschirm</string>
     <string name="activity_entry_recording_focus">Fokus</string>
     <string name="activity_entry_recording_dashboard_layout">Dashboard-Layout</string>
     <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>

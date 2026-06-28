@@ -372,10 +372,10 @@ private data class StressContextFactor(
 )
 
 private fun nutritionContext(data: DashboardData): StressContextFactor? {
-    val hasNutrition = data.caloriesInKcal != null ||
-        data.proteinGrams != null ||
-        data.carbsGrams != null ||
-        data.fatGrams != null
+    val hasNutrition = (data.caloriesInKcal != null && data.caloriesInKcal > 0.0) ||
+        (data.proteinGrams != null && data.proteinGrams > 0.0) ||
+        (data.carbsGrams != null && data.carbsGrams > 0.0) ||
+        (data.fatGrams != null && data.fatGrams > 0.0)
     if (!hasNutrition) return null
     val calories = data.caloriesInKcal
     return if (calories != null && calories >= 1_000.0) {

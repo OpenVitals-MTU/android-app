@@ -179,7 +179,7 @@ internal fun ActivityRecordingSetupScreen(
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.action_start),
+                    text = stringResource(R.string.activity_entry_recording_go_to_activity_screen),
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

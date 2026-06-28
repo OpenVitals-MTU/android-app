@@ -4,6 +4,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.DashboardData
@@ -192,6 +193,68 @@ class DailyReadinessTest {
         assertEquals(ReadinessConfidence.LOW, insight.confidence)
         assertEquals(0, insight.score)
         assertTrue(insight.explanation.contains("not enough local data"))
+    }
+
+    @Test
+    fun explanationJoinsFactorDetailsWithoutDoublePunctuation() {
+        val insight = calculateDailyReadiness(
+            DashboardData(
+                date = date,
+                sleep = sleep(Duration.ofHours(5)),
+                sleepScore = sleepScore(score = 36, hours = 5.0),
+                restingHeartRateBpm = 68,
+                restingHeartRateBaselineBpm = 58,
+                hrvRmssdMs = 35.0,
+                hrvBaselineRmssdMs = 55.0,
+                avgHeartRateBpm = 94,
+                weeklyCardioLoad = weeklyLoad(current = 145, target = 100, today = 20),
+                loadedMetrics = setOf(
+                    DashboardMetric.SLEEP,
+                    DashboardMetric.AVG_HEART_RATE,
+                    DashboardMetric.RESTING_HEART_RATE,
+                    DashboardMetric.HRV,
+                    DashboardMetric.WEEKLY_CARDIO_LOAD,
+                ),
+            ),
+        )
+
+        assertFalse(insight.explanation.contains("., and"))
+        assertTrue(insight.explanation.endsWith("."))
+    }
+
+    @Test
+    fun nutritionFactorNotShownWhenOnlyHydrationIsLogged() {
+        val insight = calculateDailyReadiness(
+            DashboardData(
+                date = date,
+                hydrationLiters = 1.5,
+                proteinGrams = 0.0,
+                carbsGrams = 0.0,
+                fatGrams = 0.0,
+                loadedMetrics = setOf(
+                    DashboardMetric.HYDRATION,
+                    DashboardMetric.PROTEIN,
+                    DashboardMetric.CARBS,
+                    DashboardMetric.FAT,
+                ),
+            ),
+            goals = DailyReadinessGoalInputs(hydrationLitersGoal = 2.0),
+        )
+
+        assertFalse(insight.factors.any { it.kind == ReadinessFactorKind.NUTRITION_LOGGED })
+    }
+
+    @Test
+    fun nutritionFactorShownWhenMealDataIsPresent() {
+        val insight = calculateDailyReadiness(
+            DashboardData(
+                date = date,
+                caloriesInKcal = 1_800.0,
+                loadedMetrics = setOf(DashboardMetric.CALORIES_IN),
+            ),
+        )
+
+        assertTrue(insight.factors.any { it.kind == ReadinessFactorKind.NUTRITION_LOGGED })
     }
 
     @Test

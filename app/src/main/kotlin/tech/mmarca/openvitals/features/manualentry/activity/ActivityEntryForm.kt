@@ -17,12 +17,10 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
@@ -35,6 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -259,21 +259,22 @@ private fun ActivityFeelingNotesSection(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        LazyRow(
+        Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(start = 2.dp, end = 24.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            items(ActivityEntryFeeling.entries, key = { it.name }) { feeling ->
+            ActivityEntryFeeling.entries.forEach { feeling ->
+                val feelingLabel = stringResource(feeling.labelRes)
                 FilterChip(
                     selected = selectedFeeling == feeling,
                     onClick = {
                         onFeelingChanged(feeling.takeUnless { it == selectedFeeling })
                     },
                     enabled = enabled,
-                    label = {
-                        Text("${feeling.emoji} ${stringResource(feeling.labelRes)}")
-                    },
+                    label = { Text(feeling.emoji) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { contentDescription = feelingLabel },
                 )
             }
         }

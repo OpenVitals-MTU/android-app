@@ -696,11 +696,7 @@ fun calculateDailyReadiness(
         }
     }
 
-    val nutritionLogged = data.caloriesInKcal != null ||
-        data.proteinGrams != null ||
-        data.carbsGrams != null ||
-        data.fatGrams != null
-    if (nutritionLogged) {
+    if (data.hasLoggedNutrition()) {
         availableSignals += 1
         bodyEnergyScore += 2
         addFactor(
@@ -790,6 +786,12 @@ fun calculateDailyReadiness(
     )
 }
 
+private fun DashboardData.hasLoggedNutrition(): Boolean =
+    (caloriesInKcal != null && caloriesInKcal > 0.0) ||
+        (proteinGrams != null && proteinGrams > 0.0) ||
+        (carbsGrams != null && carbsGrams > 0.0) ||
+        (fatGrams != null && fatGrams > 0.0)
+
 private val ReadinessFactorImpact.priority: Int
     get() = when (this) {
         ReadinessFactorImpact.WARNING -> 3
@@ -847,8 +849,14 @@ private fun explanationFor(
         }
     }
     return "Your signals suggest this mainly because " +
-        meaningful.joinToNaturalText { it.detail.replaceFirstChar { char -> char.lowercase(Locale.US) } }
+        meaningful.joinToNaturalText { it.detail.toExplanationClause() } +
+        "."
 }
+
+private fun String.toExplanationClause(): String =
+    replaceFirstChar { char -> char.lowercase(Locale.US) }
+        .trimEnd()
+        .trimEnd('.')
 
 private fun alternativeFor(state: ReadinessState): String =
     when (state) {
