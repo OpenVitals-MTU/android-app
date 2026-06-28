@@ -680,23 +680,38 @@ private fun GpsRecordingTabs(
     }
     val activeTab = if (isEditingDashboard) ActivityRecordingTab.STATS else selectedTab
 
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        if (isEditingDashboard) {
-            val availableFields = availableRecordingDashboardFields(state)
+    if (isEditingDashboard) {
+        val availableFields = availableRecordingDashboardFields(state)
+        Column(
+            modifier = modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             RecordingDashboardEditor(
                 layout = state.dashboardLayout.withAvailableFields(availableFields),
                 availableFields = availableFields,
                 onUpdateLayout = onUpdateDashboardLayout,
             )
-        } else {
-            ActivityRecordingTabRow(
-                selectedTab = selectedTab,
-                onSelect = { selectedTab = it },
+            RecordingStatsTab(
+                state = state,
+                totalTime = totalTime,
+                movingTime = movingTime,
+                now = now,
+                unitFormatter = unitFormatter,
+                isEditingDashboard = true,
+                onUpdateDashboardLayout = onUpdateDashboardLayout,
             )
         }
+        return
+    }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        ActivityRecordingTabRow(
+            selectedTab = selectedTab,
+            onSelect = { selectedTab = it },
+        )
 
         when (activeTab) {
             ActivityRecordingTab.MAP -> OfflineRouteMapOrPreview(
@@ -1256,8 +1271,13 @@ private fun RecordingDashboardGrid(
         } else {
             defaultCellHeightPx
         }
-        val layoutHeight = cellHeightPx * normalizedLayout.template.rows +
-            spacingPx * (normalizedLayout.template.rows - 1)
+        val occupiedRows = if (fillHeight) {
+            normalizedLayout.template.rows
+        } else {
+            placements.maxOfOrNull { it.row + it.rowSpan } ?: normalizedLayout.template.rows
+        }
+        val layoutHeight = cellHeightPx * occupiedRows +
+            spacingPx * (occupiedRows - 1).coerceAtLeast(0)
         val placeables = measurables.mapIndexed { index, measurable ->
             val placement = placements[index]
             val width = columnWidth * placement.columnSpan + spacingPx * (placement.columnSpan - 1)
