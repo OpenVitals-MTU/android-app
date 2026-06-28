@@ -231,15 +231,25 @@ class AppleHealthImportService
                 .filter { it.clientRecordId != null }
                 .groupBy { it.recordType }
                 .flatMapTo(mutableSetOf()) { (recordType, grouped) ->
-                    val start = grouped.minOfOrNull { it.sourceTimeRange.start }?.minusSeconds(1) ?: return@flatMapTo emptySet()
-                    val end = grouped.maxOfOrNull { it.sourceTimeRange.end }?.plusSeconds(1) ?: return@flatMapTo emptySet()
-                    val wantedIds = grouped.mapNotNullTo(mutableSetOf()) { it.clientRecordId }
-                    runCatching {
-                        importRepository.readImportedClientRecordIds(recordType, start, end)
-                            .intersect(wantedIds)
-                    }.getOrElse {
-                        emptySet()
-                    }
+                    grouped
+                        .chunkForDuplicateCheck(MaxDuplicateCheckSpanSeconds)
+                        .flatMap { chunk ->
+                            val wantedIds = chunk.mapNotNullTo(mutableSetOf()) { it.clientRecordId }
+                            val start = chunk.minOfOrNull { it.sourceTimeRange.start }?.minusSeconds(1)
+                                ?: return@flatMap emptySet()
+                            val end = chunk.maxOfOrNull { it.sourceTimeRange.end }?.plusSeconds(1)
+                                ?: return@flatMap emptySet()
+                            runCatching {
+                                importRepository.findMatchingImportedClientRecordIds(
+                                    recordType = recordType,
+                                    start = start,
+                                    end = end,
+                                    wantedIds = wantedIds,
+                                )
+                            }.getOrElse {
+                                emptySet()
+                            }
+                        }
                 }
 
         private suspend fun insertConvertedRecords(
@@ -475,3 +485,25 @@ private const val DiagnosticReportLimit = 200
 private const val ConvertedBatchSize = 300
 private const val BufferedRecordBatchSize = 2_000
 private const val ProgressReportElementInterval = 500
+private const val MaxDuplicateCheckSpanSeconds = 6L * 60L * 60L
+
+private fun List<ConvertedAppleRecord>.chunkForDuplicateCheck(maxSpanSeconds: Long): List<List<ConvertedAppleRecord>> {
+    if (isEmpty()) return emptyList()
+    val sorted = sortedBy { it.sourceTimeRange.start }
+    val chunks = mutableListOf<MutableList<ConvertedAppleRecord>>()
+    var current = mutableListOf(sorted.first())
+    var chunkStart = sorted.first().sourceTimeRange.start
+
+    for (index in 1 until sorted.size) {
+        val record = sorted[index]
+        if (record.sourceTimeRange.start.epochSecond - chunkStart.epochSecond > maxSpanSeconds) {
+            chunks += current
+            current = mutableListOf(record)
+            chunkStart = record.sourceTimeRange.start
+        } else {
+            current += record
+        }
+    }
+    chunks += current
+    return chunks
+}

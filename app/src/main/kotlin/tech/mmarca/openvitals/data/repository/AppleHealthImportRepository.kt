@@ -21,12 +21,13 @@ class AppleHealthImportRepository @Inject constructor(
             hc.insertImportedRecords(records)
         }
 
-    suspend fun readImportedClientRecordIds(
+    suspend fun findMatchingImportedClientRecordIds(
         recordType: KClass<out Record>,
         start: Instant,
         end: Instant,
+        wantedIds: Set<String>,
     ): Set<String> =
         withContext(dispatchers.io) {
-            hc.readImportedClientRecordIds(recordType, start, end)
+            hc.findMatchingImportedClientRecordIds(recordType, start, end, wantedIds)
         }
 }

@@ -167,7 +167,7 @@ class AppleHealthImportServiceTest {
         every { context.contentResolver } returns resolver
         every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
         every { repository.isMindfulnessAvailable() } returns true
-        coEvery { repository.readImportedClientRecordIds(any(), any(), any()) } returns emptySet()
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
         coEvery { repository.insertImportedRecords(capture(insertedRecords)) } just runs
 
         val result = AppleHealthImportService(context, repository).importAppleHealthExport(uri)

@@ -540,29 +540,36 @@ class HealthConnectManager @Inject constructor(
     }
 
     @Suppress("UNCHECKED_CAST")
-    suspend fun readImportedClientRecordIds(
+    suspend fun findMatchingImportedClientRecordIds(
         recordType: KClass<out Record>,
         start: Instant,
         end: Instant,
+        wantedIds: Set<String>,
     ): Set<String> {
+        if (wantedIds.isEmpty()) return emptySet()
         val typedRecordType = recordType as KClass<Record>
-        val clientRecordIds = mutableSetOf<String>()
+        val matches = mutableSetOf<String>()
         var pageToken: String? = null
         do {
             val response = client().readRecords(
                 ReadRecordsRequest(
                     recordType = typedRecordType,
                     timeRangeFilter = TimeRangeFilter.between(start, end),
-                    pageSize = 1000,
+                    pageSize = ImportedClientRecordIdPageSize,
                     pageToken = pageToken,
                 ),
             )
-            response.records.mapNotNullTo(clientRecordIds) { record ->
-                record.metadata.clientRecordId?.takeIf { it.startsWith("apple_health_") }
+            for (record in response.records) {
+                val clientRecordId = record.metadata.clientRecordId ?: continue
+                if (!clientRecordId.startsWith(ImportedClientRecordIdPrefix)) continue
+                if (clientRecordId in wantedIds) {
+                    matches += clientRecordId
+                }
             }
+            if (matches.size == wantedIds.size) break
             pageToken = response.pageToken
         } while (!pageToken.isNullOrBlank())
-        return clientRecordIds
+        return matches
     }
 
     private suspend fun <T> withSyncEnabled(block: suspend () -> T): T {
@@ -573,3 +580,6 @@ class HealthConnectManager @Inject constructor(
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(context)
 }
+
+private const val ImportedClientRecordIdPrefix = "apple_health_"
+private const val ImportedClientRecordIdPageSize = 500
