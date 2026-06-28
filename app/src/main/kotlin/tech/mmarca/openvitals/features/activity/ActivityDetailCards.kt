@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseRouteData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
+import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.ui.components.DetailRow
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -269,12 +270,13 @@ internal fun RouteCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    RoutePreview(
+                    OfflineRouteMapOrPreview(
                         points = route.points,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(260.dp),
                     )
+                    Spacer(Modifier.height(12.dp))
                     if (onOpenRouteInMap != null) {
                         OpenVitalsOutlinedButton(
                             onClick = onOpenRouteInMap,

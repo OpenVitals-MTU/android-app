@@ -16,6 +16,13 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportPhase
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
@@ -42,6 +49,12 @@ data class SettingsUiState(
     val appleHealthImportProgress: AppleHealthImportProgress? = null,
     val appleHealthImportResult: AppleHealthImportResult? = null,
     val appleHealthImportError: String? = null,
+    val offlineMapPacks: List<OfflineMapPack> = emptyList(),
+    val activeOfflineMapFormat: OfflineMapPackFormat? = null,
+    val isImportingOfflineMap: Boolean = false,
+    val offlineMapImportProgress: OfflineMapImportProgress? = null,
+    val offlineMapImportResult: OfflineMapImportResult? = null,
+    val offlineMapImportError: String? = null,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
@@ -81,6 +94,8 @@ class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
+    private val offlineMapRepository: OfflineMapRepository,
+    private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val permissionUxState: HealthConnectPermissionUxState,
     private val metricSummaryCacheStore: MetricSummaryCacheStore,
 ) : ViewModel() {
@@ -93,7 +108,9 @@ class SettingsViewModel @Inject constructor(
 
     init {
         refresh()
+        observeOfflineMaps()
         observeAppleHealthImportWork()
+        observeOfflineMapImportWork()
     }
 
     fun refresh() {
@@ -152,6 +169,42 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun importOfflineMap(uri: Uri) {
+        if (_uiState.value.isImportingOfflineMap) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isImportingOfflineMap = true,
+                offlineMapImportProgress = OfflineMapImportProgress(phase = OfflineMapImportPhase.QUEUED),
+                offlineMapImportResult = null,
+                offlineMapImportError = null,
+            )
+
+            runCatching { offlineMapImportWorkController.enqueue(uri) }
+                .onFailure { error ->
+                    Log.e(TAG, "Offline map import enqueue failed type=${error::class.java.simpleName}")
+                    _uiState.value = _uiState.value.copy(
+                        isImportingOfflineMap = false,
+                        offlineMapImportProgress = null,
+                        offlineMapImportResult = null,
+                        offlineMapImportError = error.localizedMessage
+                            ?: "Offline map import failed.",
+                    )
+                }
+        }
+    }
+
+    private fun observeOfflineMaps() {
+        viewModelScope.launch {
+            offlineMapRepository.state.collect { libraryState ->
+                _uiState.value = _uiState.value.copy(
+                    offlineMapPacks = libraryState.mapPacks,
+                    activeOfflineMapFormat = libraryState.activeFormat,
+                )
+            }
+        }
+    }
+
     private fun observeAppleHealthImportWork() {
         viewModelScope.launch {
             appleHealthImportWorkController.workInfos.collect { workInfos ->
@@ -207,6 +260,59 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private fun observeOfflineMapImportWork() {
+        viewModelScope.launch {
+            offlineMapImportWorkController.workInfos.collect { workInfos ->
+                val workInfo = workInfos.firstOrNull() ?: return@collect
+                when (workInfo.state) {
+                    WorkInfo.State.ENQUEUED,
+                    WorkInfo.State.BLOCKED,
+                    WorkInfo.State.RUNNING,
+                    -> {
+                        _uiState.value = _uiState.value.copy(
+                            isImportingOfflineMap = true,
+                            offlineMapImportProgress = offlineMapImportWorkController.progressFor(workInfo)
+                                ?: OfflineMapImportProgress(phase = OfflineMapImportPhase.QUEUED),
+                            offlineMapImportResult = null,
+                            offlineMapImportError = null,
+                        )
+                    }
+                    WorkInfo.State.SUCCEEDED -> {
+                        val result = offlineMapImportWorkController.resultFor(workInfo)
+                        offlineMapRepository.refresh()
+                        Log.d(TAG, "Offline map import completed mapId=${result?.mapId.orEmpty()}")
+                        _uiState.value = _uiState.value.copy(
+                            isImportingOfflineMap = false,
+                            offlineMapImportProgress = null,
+                            offlineMapImportResult = result,
+                            offlineMapImportError = null,
+                        )
+                    }
+                    WorkInfo.State.FAILED -> {
+                        val error = offlineMapImportWorkController.errorFor(workInfo)
+                            ?: "Offline map import failed."
+                        Log.e(TAG, "Offline map import failed")
+                        offlineMapRepository.refresh()
+                        _uiState.value = _uiState.value.copy(
+                            isImportingOfflineMap = false,
+                            offlineMapImportProgress = null,
+                            offlineMapImportResult = null,
+                            offlineMapImportError = error,
+                        )
+                    }
+                    WorkInfo.State.CANCELLED -> {
+                        if (_uiState.value.isImportingOfflineMap) {
+                            _uiState.value = _uiState.value.copy(
+                                isImportingOfflineMap = false,
+                                offlineMapImportProgress = null,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun selectUnitSystem(unitSystem: UnitSystem) {
         preferencesRepository.unitSystem = unitSystem
         _uiState.value = _uiState.value.copy(unitSystem = unitSystem)
@@ -246,6 +352,27 @@ class SettingsViewModel @Inject constructor(
     fun selectFavoriteActivity(exerciseType: Int?) {
         preferencesRepository.favoriteActivityExerciseType = exerciseType
         _uiState.value = _uiState.value.copy(favoriteActivityExerciseType = exerciseType)
+    }
+
+    fun selectOfflineMapFormat(format: OfflineMapPackFormat?) {
+        offlineMapRepository.setActiveFormat(format)
+        val libraryState = offlineMapRepository.state.value
+        _uiState.value = _uiState.value.copy(
+            offlineMapPacks = libraryState.mapPacks,
+            activeOfflineMapFormat = libraryState.activeFormat,
+        )
+    }
+
+    fun deleteOfflineMap(id: String) {
+        viewModelScope.launch {
+            runCatching { offlineMapRepository.deleteMap(id) }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        offlineMapImportError = error.localizedMessage
+                            ?: "Unable to delete offline map.",
+                    )
+                }
+        }
     }
 
     fun onPermissionsResult(granted: Set<String>) {

@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 internal enum class ActivityRecordingTab {
+    MAP,
     STATS,
     INTERVALS,
     BY_TIME,

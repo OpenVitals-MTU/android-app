@@ -186,6 +186,14 @@ fun SettingsScreen(
         }
     }
 
+    val offlineMapPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importOfflineMap(uri)
+        }
+    }
+
     val appleHealthReportSaver = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
@@ -328,6 +336,23 @@ fun SettingsScreen(
                         ActivityRecordingPreferencesCard(
                             preferences = state.activityRecordingPreferences,
                             onChange = viewModel::updateActivityRecordingPreferences,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    item { SettingsCardSpacer() }
+                    item {
+                        OfflineMapsCard(
+                            mapPacks = state.offlineMapPacks,
+                            activeFormat = state.activeOfflineMapFormat,
+                            isImporting = state.isImportingOfflineMap,
+                            progress = state.offlineMapImportProgress,
+                            result = state.offlineMapImportResult,
+                            error = state.offlineMapImportError,
+                            onImport = {
+                                offlineMapPicker.launch(OfflineMapMimeTypes)
+                            },
+                            onSelectActiveFormat = viewModel::selectOfflineMapFormat,
+                            onDeleteMap = viewModel::deleteOfflineMap,
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }

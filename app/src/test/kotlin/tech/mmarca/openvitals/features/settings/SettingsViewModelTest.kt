@@ -11,6 +11,7 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -27,6 +28,9 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
@@ -50,7 +54,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `refresh includes cycle permissions with visible permissions`() = runTest {
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
@@ -62,7 +66,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `missingVisiblePermissions excludes already granted visible permissions`() = runTest {
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(grantedPermissions = setOf("steps")),
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
@@ -75,7 +79,7 @@ class SettingsViewModelTest {
     }
 
     @Test fun `missingVisiblePermissions is empty when all visible permissions are granted`() = runTest {
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
@@ -89,7 +93,7 @@ class SettingsViewModelTest {
 
     @Test fun `selectAppLanguage persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -105,7 +109,7 @@ class SettingsViewModelTest {
 
     @Test fun `selectAppThemeMode persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -121,7 +125,7 @@ class SettingsViewModelTest {
 
     @Test fun `selectSleepRangeMode persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -137,7 +141,7 @@ class SettingsViewModelTest {
 
     @Test fun `selectActivityWeekMode persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -153,7 +157,7 @@ class SettingsViewModelTest {
 
     @Test fun `updateActivityRecordingPreferences persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -177,7 +181,7 @@ class SettingsViewModelTest {
 
     @Test fun `setShowOpenVitalsCalculatedCalories persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -193,7 +197,7 @@ class SettingsViewModelTest {
 
     @Test fun `selectFavoriteActivity persists preference and updates ui state`() = runTest {
         val prefs = prefs()
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
@@ -210,7 +214,7 @@ class SettingsViewModelTest {
     @Test fun `refresh skips granted permissions when Health Connect is unsupported`() = runTest {
         val repository = repo(availability = HealthConnectAvailability.NOT_SUPPORTED)
 
-        val vm = SettingsViewModel(
+        val vm = viewModel(
             repository = repository,
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
@@ -222,6 +226,25 @@ class SettingsViewModelTest {
         assertTrue(vm.uiState.value.grantedPermissions.isEmpty())
         coVerify(exactly = 0) { repository.grantedPermissions() }
     }
+
+    private fun viewModel(
+        repository: HealthRepository = repo(),
+        preferencesRepository: PreferencesRepository = prefs(),
+        appleHealthImportWorkController: AppleHealthImportWorkController = importController(),
+        offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
+        offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
+        permissionUxState: HealthConnectPermissionUxState = permissionUxState(),
+        metricSummaryCacheStore: MetricSummaryCacheStore = cacheStore(),
+    ): SettingsViewModel =
+        SettingsViewModel(
+            repository = repository,
+            preferencesRepository = preferencesRepository,
+            appleHealthImportWorkController = appleHealthImportWorkController,
+            offlineMapRepository = offlineMapRepository,
+            offlineMapImportWorkController = offlineMapImportWorkController,
+            permissionUxState = permissionUxState,
+            metricSummaryCacheStore = metricSummaryCacheStore,
+        )
 
     private fun repo(
         availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
@@ -277,6 +300,16 @@ class SettingsViewModelTest {
 
     private fun importController(): AppleHealthImportWorkController =
         mockk<AppleHealthImportWorkController>(relaxed = true).also { controller ->
+            every { controller.workInfos } returns emptyFlow()
+        }
+
+    private fun offlineMapRepository(): OfflineMapRepository =
+        mockk<OfflineMapRepository>(relaxed = true).also { repository ->
+            every { repository.state } returns MutableStateFlow(OfflineMapLibraryState())
+        }
+
+    private fun offlineMapImportController(): OfflineMapImportWorkController =
+        mockk<OfflineMapImportWorkController>(relaxed = true).also { controller ->
             every { controller.workInfos } returns emptyFlow()
         }
 }

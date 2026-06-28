@@ -1,0 +1,168 @@
+{
+  "version": 8,
+  "name": "OpenVitals Offline PMTiles",
+  "sources": {
+    "openvitals_pmtiles": {
+      "type": "vector",
+      "url": "__OPENVITALS_PMTILES_URL__",
+      "attribution": "© OpenStreetMap contributors, Protomaps"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#eef1e8"
+      }
+    },
+    {
+      "id": "earth",
+      "type": "fill",
+      "source": "openvitals_pmtiles",
+      "source-layer": "earth",
+      "paint": {
+        "fill-color": "#eef1e8"
+      }
+    },
+    {
+      "id": "landuse-green",
+      "type": "fill",
+      "source": "openvitals_pmtiles",
+      "source-layer": "landuse",
+      "filter": [
+        "in",
+        "kind",
+        "park",
+        "forest",
+        "wood",
+        "nature_reserve",
+        "grass",
+        "grassland",
+        "scrub",
+        "golf_course",
+        "cemetery"
+      ],
+      "paint": {
+        "fill-color": "#d8e6cc",
+        "fill-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5,
+          0.35,
+          11,
+          0.82
+        ]
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openvitals_pmtiles",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#b8d8df"
+      }
+    },
+    {
+      "id": "physical-lines",
+      "type": "line",
+      "source": "openvitals_pmtiles",
+      "source-layer": "physical_line",
+      "paint": {
+        "line-color": "#9db6bd",
+        "line-opacity": 0.52,
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5,
+          0.25,
+          12,
+          0.75
+        ]
+      }
+    },
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "openvitals_pmtiles",
+      "source-layer": "buildings",
+      "minzoom": 13,
+      "paint": {
+        "fill-color": "#d7d1c5",
+        "fill-opacity": 0.75
+      }
+    },
+    {
+      "id": "roads-casing",
+      "type": "line",
+      "source": "openvitals_pmtiles",
+      "source-layer": "roads",
+      "paint": {
+        "line-color": "#d7d1c5",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5,
+          0.8,
+          12,
+          2.8,
+          16,
+          8.5
+        ]
+      }
+    },
+    {
+      "id": "roads",
+      "type": "line",
+      "source": "openvitals_pmtiles",
+      "source-layer": "roads",
+      "paint": {
+        "line-color": [
+          "match",
+          ["get", "kind"],
+          ["highway", "major_road"],
+          "#f4f0df",
+          ["minor_road"],
+          "#ffffff",
+          ["path", "footway", "cycleway"],
+          "#c6cfb8",
+          "#f8f7f1"
+        ],
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5,
+          0.45,
+          12,
+          1.6,
+          16,
+          6.0
+        ]
+      }
+    },
+    {
+      "id": "boundaries",
+      "type": "line",
+      "source": "openvitals_pmtiles",
+      "source-layer": "boundaries",
+      "paint": {
+        "line-color": "#b7aaa0",
+        "line-opacity": 0.35,
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5,
+          0.3,
+          11,
+          1.0
+        ]
+      }
+    }
+  ]
+}

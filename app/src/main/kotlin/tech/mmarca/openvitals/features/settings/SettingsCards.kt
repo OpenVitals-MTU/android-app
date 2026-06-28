@@ -28,12 +28,14 @@ import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -69,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import java.util.Locale
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
@@ -78,6 +81,11 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
+import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
+import tech.mmarca.openvitals.features.activity.maps.labelRes
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.labelRes
@@ -181,6 +189,20 @@ internal val AppleHealthExportMimeTypes = arrayOf(
     "application/octet-stream",
     "*/*",
 )
+
+internal val OfflineMapMimeTypes = arrayOf(
+    "application/vnd.pmtiles",
+    "application/x-mapsforge-map",
+    "application/octet-stream",
+    "*/*",
+)
+
+private val OfflineMapPackFormat.settingsLabelRes: Int
+    @StringRes
+    get() = when (this) {
+        OfflineMapPackFormat.PMTILES -> R.string.settings_offline_maps_format_pmtiles
+        OfflineMapPackFormat.MAPSFORGE -> R.string.settings_offline_maps_format_mapsforge
+    }
 
 @Composable
 internal fun CalorieDataSourceCard(
@@ -540,6 +562,230 @@ internal fun ActivityRecordingPreferencesCard(
             )
         }
     }
+}
+
+@Composable
+internal fun OfflineMapsCard(
+    mapPacks: List<OfflineMapPack>,
+    activeFormat: OfflineMapPackFormat?,
+    isImporting: Boolean,
+    progress: OfflineMapImportProgress?,
+    result: OfflineMapImportResult?,
+    error: String?,
+    onImport: () -> Unit,
+    onSelectActiveFormat: (OfflineMapPackFormat?) -> Unit,
+    onDeleteMap: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    imageVector = Icons.Outlined.Map,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(20.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_offline_maps_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_offline_maps_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+
+            if (mapPacks.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.settings_offline_maps_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                OfflineMapRenderFormatSelector(
+                    mapPacks = mapPacks,
+                    activeFormat = activeFormat,
+                    onSelect = onSelectActiveFormat,
+                )
+                mapPacks.forEach { pack ->
+                    OfflineMapPackRow(
+                        pack = pack,
+                        onDelete = { onDeleteMap(pack.id) },
+                    )
+                }
+            }
+
+            result?.let { importResult ->
+                Text(
+                    text = stringResource(
+                        R.string.settings_offline_maps_import_result,
+                        importResult.displayName,
+                        formatOfflineMapSize(importResult.sizeBytes),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            if (!error.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.settings_offline_maps_import_error, error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            if (isImporting) {
+                AppleHealthImportProgressBar(modifier = Modifier.fillMaxWidth())
+                val importProgress = progress ?: OfflineMapImportProgress()
+                Text(
+                    text = importProgress.percent?.let { percent ->
+                        stringResource(
+                            R.string.settings_offline_maps_import_progress_with_percent,
+                            stringResource(importProgress.phase.labelRes),
+                            percent,
+                        )
+                    } ?: stringResource(
+                        R.string.settings_offline_maps_import_progress,
+                        stringResource(importProgress.phase.labelRes),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(R.string.settings_offline_maps_import_background),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            OpenVitalsOutlinedButton(
+                onClick = onImport,
+                enabled = !isImporting,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FolderOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.widthIn(min = 6.dp))
+                Text(
+                    if (isImporting) {
+                        stringResource(R.string.settings_offline_maps_importing)
+                    } else {
+                        stringResource(R.string.settings_offline_maps_import_action)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfflineMapRenderFormatSelector(
+    mapPacks: List<OfflineMapPack>,
+    activeFormat: OfflineMapPackFormat?,
+    onSelect: (OfflineMapPackFormat?) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.settings_offline_maps_render_format_title),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            OfflineMapPackFormat.entries.forEachIndexed { index, format ->
+                val packCount = mapPacks.count { it.format == format }
+                SegmentedButton(
+                    selected = activeFormat == format,
+                    enabled = packCount > 0,
+                    onClick = { onSelect(format) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = OfflineMapPackFormat.entries.size,
+                    ),
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string.settings_offline_maps_render_format_option,
+                                stringResource(format.settingsLabelRes),
+                                packCount,
+                            ),
+                        )
+                    },
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.settings_offline_maps_render_format_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun OfflineMapPackRow(
+    pack: OfflineMapPack,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = pack.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = stringResource(
+                    R.string.settings_offline_maps_pack_detail,
+                    stringResource(pack.format.settingsLabelRes),
+                    pack.originalFileName,
+                    formatOfflineMapSize(pack.sizeBytes),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        OpenVitalsTextButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Outlined.Delete,
+                contentDescription = stringResource(R.string.action_delete),
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+private fun formatOfflineMapSize(bytes: Long): String {
+    if (bytes < 1_000L) return "$bytes B"
+    val units = listOf("KB", "MB", "GB")
+    var value = bytes / 1_000.0
+    var unitIndex = 0
+    while (value >= 1_000.0 && unitIndex < units.lastIndex) {
+        value /= 1_000.0
+        unitIndex += 1
+    }
+    return String.format(Locale.getDefault(), "%.1f %s", value, units[unitIndex])
 }
 
 @Composable

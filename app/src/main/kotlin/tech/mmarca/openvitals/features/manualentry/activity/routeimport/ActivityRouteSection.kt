@@ -32,7 +32,7 @@ import java.time.Duration
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
-import tech.mmarca.openvitals.features.activity.RoutePreview
+import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 
@@ -80,7 +80,7 @@ internal fun ImportedActivityRouteSection(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                RoutePreview(
+                OfflineRouteMapOrPreview(
                     points = route.points,
                     modifier = Modifier
                         .fillMaxWidth()

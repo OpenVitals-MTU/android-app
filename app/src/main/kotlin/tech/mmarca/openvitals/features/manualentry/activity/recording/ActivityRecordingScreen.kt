@@ -117,6 +117,8 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
+import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
@@ -304,6 +306,7 @@ internal fun ActivityRecordingScreen(
             ActivityRecordingKind.GPS_ROUTE -> {
                 GpsRecordingTabs(
                     state = state,
+                    preStartPoint = idleGpsFixState.latestPreciseFix?.toRoutePoint(),
                     totalTime = totalTime,
                     movingTime = movingTime,
                     now = now,
@@ -603,6 +606,7 @@ private fun GpsRecordingControls(
 @Composable
 private fun GpsRecordingTabs(
     state: ActivityRecordingState,
+    preStartPoint: ExerciseRoutePoint?,
     totalTime: Duration,
     movingTime: Duration,
     now: Instant,
@@ -638,6 +642,15 @@ private fun GpsRecordingTabs(
         }
 
         when (activeTab) {
+            ActivityRecordingTab.MAP -> OfflineRouteMapOrPreview(
+                points = state.points,
+                routeBreakIndexes = state.routeBreakIndexes,
+                currentPoint = state.latestUiPoint ?: preStartPoint,
+                showRecenterControl = true,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
             ActivityRecordingTab.STATS -> RecordingStatsTab(
                 state = state,
                 totalTime = totalTime,
@@ -1935,6 +1948,7 @@ internal fun formatRecordingElapsed(duration: Duration): String {
 
 private val ActivityRecordingTab.labelRes: Int
     get() = when (this) {
+        ActivityRecordingTab.MAP -> R.string.activity_entry_recording_tab_map
         ActivityRecordingTab.STATS -> R.string.activity_entry_recording_tab_stats
         ActivityRecordingTab.INTERVALS -> R.string.activity_entry_recording_tab_intervals
         ActivityRecordingTab.BY_TIME -> R.string.activity_entry_recording_tab_by_time

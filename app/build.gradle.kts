@@ -135,6 +135,11 @@ dependencies {
     // Health Connect
     implementation(libs.health.connect.client)
 
+    // Offline maps
+    implementation(libs.maplibre.android.sdk)
+    implementation(libs.mapsforge.map.android)
+    implementation(libs.mapsforge.themes)
+
     // Dependency injection
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
