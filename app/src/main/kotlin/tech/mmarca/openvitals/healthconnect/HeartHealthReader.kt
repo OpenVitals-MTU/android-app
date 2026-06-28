@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
+import tech.mmarca.openvitals.domain.model.reducedForChart
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -19,6 +20,10 @@ import java.time.ZoneId
 internal class HeartHealthReader(
     private val support: HealthConnectReaderSupport,
 ) {
+    companion object {
+        private val HeartRateSampleReadChunkDuration = Duration.ofHours(1)
+    }
+
     suspend fun readAvgHeartRate(date: LocalDate): Long? {
         val (start, end) = support.dayRange(date)
         return support.withNullableLogging("readAvgHeartRate[$date][$start..$end]") {
@@ -35,20 +40,34 @@ internal class HeartHealthReader(
 
     suspend fun readHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         support.withLogging("readHeartRateSamples[$start..$end]", emptyList()) {
-            support.client().readRecordsPaged(
-                recordType = HeartRateRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-                pageSize = 500,
-            ).flatMap { record ->
-                val source = record.metadata.dataOrigin.packageName
-                record.samples.map { sample ->
-                    HeartRateSample(
-                        time = sample.time,
-                        beatsPerMinute = sample.beatsPerMinute,
-                        source = source,
-                    )
-                }
+            var chunkStart = start
+            var accumulated = emptyList<HeartRateSample>()
+            while (chunkStart < end) {
+                val chunkEnd = minOf(
+                    chunkStart.plus(HeartRateSampleReadChunkDuration),
+                    end,
+                )
+                val chunkSamples = readHeartRateSamplesChunk(chunkStart, chunkEnd)
+                accumulated = (accumulated + chunkSamples).reducedForChart()
+                chunkStart = chunkEnd
+            }
+            accumulated
+        }
+
+    private suspend fun readHeartRateSamplesChunk(start: Instant, end: Instant): List<HeartRateSample> =
+        support.client().readRecordsPaged(
+            recordType = HeartRateRecord::class,
+            timeRangeFilter = TimeRangeFilter.between(start, end),
+            ascendingOrder = true,
+            pageSize = 500,
+        ).flatMap { record ->
+            val source = record.metadata.dataOrigin.packageName
+            record.samples.map { sample ->
+                HeartRateSample(
+                    time = sample.time,
+                    beatsPerMinute = sample.beatsPerMinute,
+                    source = source,
+                )
             }
         }
 

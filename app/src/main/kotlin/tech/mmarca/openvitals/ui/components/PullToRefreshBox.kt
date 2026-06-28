@@ -12,12 +12,14 @@ fun PullToRefreshBox(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     MaterialPullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = modifier,
+        enabled = enabled,
         content = content,
     )
 }

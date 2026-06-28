@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.reducedForChart
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -61,7 +62,7 @@ class HeartRepository @Inject constructor(
             permissionFingerprint = granted.permissionFingerprint(),
             schemaVersion = HeartPeriodDataCodec.SchemaVersion,
         )
-        return periodCacheLoader().load(
+        val cached = periodCacheLoader().load(
             key = key,
             refreshMode = refreshMode,
             decode = HeartPeriodDataCodec::decode,
@@ -138,6 +139,11 @@ class HeartRepository @Inject constructor(
         }
             }
         }
+        return if (query.range == TimeRange.DAY) {
+            enrichDayHeartRateSamples(cached, query, metric, granted)
+        } else {
+            cached
+        }
     }
 
     private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
@@ -191,7 +197,39 @@ class HeartRepository @Inject constructor(
         val zone = ZoneId.systemDefault()
         val start = date.atStartOfDay(zone).toInstant()
         val end = date.plusDays(1).atStartOfDay(zone).toInstant()
-        return hc.readHeartRateSamples(start, end)
+        return hc.readHeartRateSamples(start, end).reducedForChart()
+    }
+
+    private suspend fun enrichDayHeartRateSamples(
+        data: HeartPeriodData,
+        query: PeriodLoadQuery,
+        metric: HeartPeriodMetric,
+        granted: Set<String>,
+    ): HeartPeriodData = coroutineScope {
+        when (metric) {
+            HeartPeriodMetric.ALL -> if (data.daySamples.isEmpty()) {
+                data.copy(daySamples = loadHeartRateSamples(query.selectedDate, granted))
+            } else {
+                data
+            }
+            HeartPeriodMetric.AVERAGE_HEART_RATE -> {
+                val daySamples = if (data.daySamples.isEmpty()) {
+                    async { loadHeartRateSamples(query.selectedDate, granted) }
+                } else {
+                    null
+                }
+                val previousDaySamples = if (data.previousDaySamples.isEmpty()) {
+                    async { loadHeartRateSamples(query.windows.previous.start, granted) }
+                } else {
+                    null
+                }
+                data.copy(
+                    daySamples = daySamples?.await() ?: data.daySamples,
+                    previousDaySamples = previousDaySamples?.await() ?: data.previousDaySamples,
+                )
+            }
+            else -> data
+        }
     }
 
     suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample> {
@@ -213,7 +251,7 @@ class HeartRepository @Inject constructor(
             Log.w(TAG, "Skipping loadHeartRateSamples missingCount=1")
             return emptyList()
         }
-        return hc.readHeartRateSamples(start, end)
+        return hc.readHeartRateSamples(start, end).reducedForChart()
     }
 
     private suspend fun loadHeartRateSamples(
@@ -229,6 +267,8 @@ class HeartRepository @Inject constructor(
         val startInstant = start.atStartOfDay(zone).toInstant()
         val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
         return hc.readHeartRateSamples(startInstant, endInstant)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+            .flatMap { (_, daySamples) -> daySamples.reducedForChart() }
     }
 
     suspend fun loadDailyHeartRateSummaries(start: LocalDate, end: LocalDate): List<HeartRateSummary> {

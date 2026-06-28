@@ -163,7 +163,11 @@ class PeriodResultCodecsTest {
             dailyHrv = listOf(DailyHrv(date, rmssdMs = 52.2)),
         )
         assertRoundTrip(HeartPeriodData(), HeartPeriodDataCodec::encode, HeartPeriodDataCodec::decode)
-        assertRoundTrip(heart, HeartPeriodDataCodec::encode, HeartPeriodDataCodec::decode)
+        val encoded = HeartPeriodDataCodec.decode(HeartPeriodDataCodec.encode(heart))
+        assertEquals(emptyList<HeartRateSample>(), encoded.daySamples)
+        assertEquals(heart.dailySummaries, encoded.dailySummaries)
+        assertEquals(heart.dayRestingBpm, encoded.dayRestingBpm)
+        assertEquals(heart.dayHrvMs, encoded.dayHrvMs)
     }
 
     @Test

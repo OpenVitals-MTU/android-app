@@ -55,25 +55,32 @@ fun MetricDetailScaffold(
     var showDatePicker by remember { mutableStateOf(false) }
     val defaultListState = rememberLazyListState()
     val lazyListState = sectionListState?.lazyListState ?: defaultListState
+    val isSectionDragActive = sectionListState?.draggingSectionId != null
 
     PullToRefreshBox(
         isRefreshing = isLoading,
         onRefresh = onRefresh,
+        enabled = !isSectionDragActive,
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned { coordinates ->
-                    sectionListState?.viewportBounds = coordinates.boundsInRoot()
-                },
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(
                 state = lazyListState,
+                userScrollEnabled = !isSectionDragActive,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 920.dp),
+                    .fillMaxSize()
+                    .widthIn(max = 920.dp)
+                    .onGloballyPositioned { coordinates ->
+                        sectionListState?.viewportBounds = coordinates.boundsInRoot()
+                    }
+                    .then(
+                        sectionListState?.let { listState ->
+                            Modifier.metricDetailSectionDragGesture(listState)
+                        } ?: Modifier,
+                    ),
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 headerItems()
@@ -120,6 +127,8 @@ fun MetricDetailScaffold(
                 content(period)
                 item { Spacer(Modifier.height(16.dp)) }
             }
+            sectionListState?.let { MetricDetailSectionEdgeScrollEffect(listState = it) }
+            sectionListState?.let { MetricDetailSectionDragOverlay(listState = it) }
         }
     }
 

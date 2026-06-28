@@ -86,11 +86,10 @@ object SleepPeriodDataCodec {
 
 object HeartPeriodDataCodec {
     const val Surface = "heart-period"
-    const val SchemaVersion = 1
+    const val SchemaVersion = 2
 
     fun encode(data: HeartPeriodData): String = encodeObject {
-        put("daySamples", data.daySamples.toJsonArray { it.toJson() })
-        put("previousDaySamples", data.previousDaySamples.toJsonArray { it.toJson() })
+        // High-frequency day samples are loaded fresh and are not persisted in SQLite cache.
         put("dailySummaries", data.dailySummaries.toJsonArray { it.toJson() })
         put("previousDailySummaries", data.previousDailySummaries.toJsonArray { it.toJson() })
         put("baselineDailySummaries", data.baselineDailySummaries.toJsonArray { it.toJson() })
