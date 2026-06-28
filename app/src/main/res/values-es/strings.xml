@@ -1201,6 +1201,8 @@
     <string name="settings_offline_maps_import_notification_title">Importando mapa sin conexión</string>
     <string name="settings_offline_maps_import_notification_text">%1$s.</string>
     <string name="settings_offline_maps_import_notification_text_with_percent">%1$s • %2$d%%.</string>
+    <string name="settings_offline_maps_help_prompt">¿Quieres aprender a añadir mapas sin conexión? Ve a:</string>
+    <string name="settings_offline_maps_help_link">Abrir guía de mapas sin conexión</string>
     <string name="settings_privacy_no_account">No hace falta cuenta</string>
     <string name="settings_privacy_no_cloud">Sin sincronización en la nube de datos de salud</string>
     <string name="settings_privacy_no_analytics">Sin SDK de analíticas</string>

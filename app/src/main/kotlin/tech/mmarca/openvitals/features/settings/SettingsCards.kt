@@ -2,6 +2,8 @@ package tech.mmarca.openvitals.features.settings
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -577,6 +579,8 @@ internal fun OfflineMapsCard(
     onDeleteMap: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val offlineMapsHelpUrl = stringResource(R.string.settings_offline_maps_help_url)
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -609,6 +613,23 @@ internal fun OfflineMapsCard(
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
+            }
+
+            Text(
+                text = stringResource(R.string.settings_offline_maps_help_prompt),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OpenVitalsTextButton(
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(offlineMapsHelpUrl)),
+                        )
+                    }
+                },
+            ) {
+                Text(stringResource(R.string.settings_offline_maps_help_link))
             }
 
             if (mapPacks.isEmpty()) {
