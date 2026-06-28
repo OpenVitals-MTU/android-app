@@ -65,7 +65,8 @@ class BleSensorCoordinator @Inject constructor(
         override fun run() {
             metricsTimeoutTickerScheduled = false
             if (connections.isEmpty()) return
-            publishMetrics(recordSamples = recordingActive)
+            // Refresh displayed metrics only; samples are recorded on BLE notifications.
+            publishMetrics(recordSamples = false)
             scheduleMetricsTimeoutTicker()
         }
     }
@@ -79,7 +80,7 @@ class BleSensorCoordinator @Inject constructor(
         if (connections.isEmpty() || capabilityOwners.toMap() != desiredAssignments) {
             refreshConnections()
         } else {
-            publishMetrics()
+            publishMetrics(recordSamples = true)
             scheduleMetricsTimeoutTicker()
         }
     }
@@ -343,7 +344,7 @@ class BleSensorCoordinator @Inject constructor(
         metrics.runningCadenceRpm?.let {
             next = next.withStepsCadenceSample(now, it)
         }
-        sampleBuffer = next.trimmed()
+        sampleBuffer = next
     }
 
     private fun connectionForCapability(capability: BleSensorCapability): BleGattConnection? {

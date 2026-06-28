@@ -132,7 +132,8 @@ data class BleRecordingSampleBuffer(
         )
 
     companion object {
-        const val MaxSamplesPerSeries = 3_600
+        // ~6 hours at 1 Hz; applied only when finishing a recording as a safety cap.
+        const val MaxSamplesPerSeries = 21_600
     }
 }
 
