@@ -12,12 +12,14 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 import android.content.ClipData
+import android.graphics.Color as AndroidColor
 import android.content.ClipDescription
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.location.Location
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -57,9 +59,11 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.FullscreenExit
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -123,9 +127,13 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTemplate
+import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.preferences.isDarkTheme
 import tech.mmarca.openvitals.ui.components.AutoResizeText
-import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import tech.mmarca.openvitals.ui.theme.ActivityRecordingTheme
+import tech.mmarca.openvitals.ui.theme.activityRecordingAccentColor
+import tech.mmarca.openvitals.ui.theme.recordingOutdoorAccentForAppTheme
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
@@ -152,6 +160,9 @@ internal fun ActivityRecordingScreen(
     onDashboardEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
     isFocusMode: Boolean = false,
     onFocusModeChanged: (Boolean) -> Unit = {},
+    isOutdoorMode: Boolean = false,
+    onOutdoorModeChanged: (Boolean) -> Unit = {},
+    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     modifier: Modifier = Modifier,
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
@@ -216,28 +227,49 @@ internal fun ActivityRecordingScreen(
     BackHandler(enabled = isFocusMode) {
         onFocusModeChanged(false)
     }
-    ActivityRecordingFocusSystemBars(enabled = isFocusMode && canUseFocusMode)
-
-    if (isFocusMode && canUseFocusMode) {
-        ActivityRecordingFocusMode(
-            state = state,
-            totalTime = totalTime,
-            movingTime = movingTime,
-            now = now,
-            unitFormatter = unitFormatter,
-            onPauseRecording = onPauseRecording,
-            onResumeRecording = onResumeRecording,
-            onExitFocusMode = { onFocusModeChanged(false) },
-            modifier = modifier,
-        )
-        return
-    }
-
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ActivityRecordingTheme(
+        outdoorModeEnabled = isOutdoorMode,
+        appThemeMode = appThemeMode,
     ) {
-        when (state.recordingKind) {
+        val outdoorUsesLightScheme = isOutdoorMode &&
+            !appThemeMode.isDarkTheme(isSystemInDarkTheme())
+        ActivityRecordingSystemBars(
+            hideSystemBars = isFocusMode && canUseFocusMode,
+            outdoorModeEnabled = isOutdoorMode,
+            outdoorUsesLightScheme = outdoorUsesLightScheme,
+        )
+
+        if (isFocusMode && canUseFocusMode) {
+            ActivityRecordingFocusMode(
+                state = state,
+                totalTime = totalTime,
+                movingTime = movingTime,
+                now = now,
+                unitFormatter = unitFormatter,
+                isOutdoorMode = isOutdoorMode,
+                onOutdoorModeChanged = onOutdoorModeChanged,
+                appThemeMode = appThemeMode,
+                onPauseRecording = onPauseRecording,
+                onResumeRecording = onResumeRecording,
+                onExitFocusMode = { onFocusModeChanged(false) },
+                modifier = modifier,
+            )
+            return@ActivityRecordingTheme
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .then(
+                    if (isOutdoorMode) {
+                        Modifier.background(MaterialTheme.colorScheme.background)
+                    } else {
+                        Modifier
+                    },
+                ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            when (state.recordingKind) {
             ActivityRecordingKind.REPETITION -> {
                 Column(
                     modifier = Modifier
@@ -340,6 +372,31 @@ internal fun ActivityRecordingScreen(
                 )
             }
         }
+        }
+    }
+}
+
+@Composable
+internal fun ActivityRecordingOutdoorModeToggle(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    modifier: Modifier = Modifier,
+) {
+    val contentDescription = stringResource(R.string.cd_toggle_recording_outdoor_mode)
+    OpenVitalsIconButton(
+        onClick = { onEnabledChange(!enabled) },
+        modifier = modifier,
+    ) {
+        Icon(
+            imageVector = if (enabled) Icons.Outlined.LightMode else Icons.Outlined.WbSunny,
+            contentDescription = contentDescription,
+            tint = if (enabled) {
+                recordingOutdoorAccentForAppTheme(appThemeMode)
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
     }
 }
 
@@ -734,6 +791,9 @@ private fun ActivityRecordingFocusMode(
     movingTime: Duration,
     now: Instant,
     unitFormatter: UnitFormatter,
+    isOutdoorMode: Boolean,
+    onOutdoorModeChanged: (Boolean) -> Unit,
+    appThemeMode: AppThemeMode,
     onPauseRecording: () -> Unit,
     onResumeRecording: () -> Unit,
     onExitFocusMode: () -> Unit,
@@ -756,11 +816,17 @@ private fun ActivityRecordingFocusMode(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
+            ActivityRecordingOutdoorModeToggle(
+                enabled = isOutdoorMode,
+                onEnabledChange = onOutdoorModeChanged,
+                appThemeMode = appThemeMode,
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
             Text(
                 text = clockText,
                 style = MaterialTheme.typography.displayLarge,
@@ -813,29 +879,60 @@ private fun ActivityRecordingFocusMode(
 }
 
 @Composable
-private fun ActivityRecordingFocusSystemBars(enabled: Boolean) {
+private fun ActivityRecordingSystemBars(
+    hideSystemBars: Boolean,
+    outdoorModeEnabled: Boolean,
+    outdoorUsesLightScheme: Boolean,
+) {
     val view = LocalView.current
-    DisposableEffect(enabled, view) {
-        if (!enabled) {
-            return@DisposableEffect onDispose {}
-        }
+    DisposableEffect(hideSystemBars, outdoorModeEnabled, outdoorUsesLightScheme, view) {
         val window = view.context.findActivity()?.window
         if (window == null) {
             return@DisposableEffect onDispose {}
         }
         val controller = WindowInsetsControllerCompat(window, view)
-        val hiddenBars = if (view.context.isGestureNavigationMode()) {
-            WindowInsetsCompat.Type.statusBars()
-        } else {
-            WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars()
-        }
         val previousBehavior = controller.systemBarsBehavior
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller.hide(hiddenBars)
+        val previousLightStatusBars = controller.isAppearanceLightStatusBars
+        val previousLightNavigationBars = controller.isAppearanceLightNavigationBars
+        val previousStatusBarColor = window.statusBarColor
+        val previousNavigationBarColor = window.navigationBarColor
+
+        if (outdoorModeEnabled) {
+            if (outdoorUsesLightScheme) {
+                window.statusBarColor = AndroidColor.WHITE
+                window.navigationBarColor = AndroidColor.WHITE
+                controller.isAppearanceLightStatusBars = true
+                controller.isAppearanceLightNavigationBars = true
+            } else {
+                window.statusBarColor = AndroidColor.BLACK
+                window.navigationBarColor = AndroidColor.BLACK
+                controller.isAppearanceLightStatusBars = false
+                controller.isAppearanceLightNavigationBars = false
+            }
+        }
+
+        if (hideSystemBars) {
+            val hiddenBars = if (view.context.isGestureNavigationMode()) {
+                WindowInsetsCompat.Type.statusBars()
+            } else {
+                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars()
+            }
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(hiddenBars)
+        }
+
         onDispose {
             controller.systemBarsBehavior = previousBehavior
-            controller.show(hiddenBars)
+            controller.isAppearanceLightStatusBars = previousLightStatusBars
+            controller.isAppearanceLightNavigationBars = previousLightNavigationBars
+            window.statusBarColor = previousStatusBarColor
+            window.navigationBarColor = previousNavigationBarColor
+            if (hideSystemBars) {
+                controller.show(
+                    WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars(),
+                )
+            }
         }
     }
 }
@@ -881,7 +978,7 @@ private fun ActivityRecordingTabRow(
         selectedTabIndex = tabs.indexOf(selectedTab),
         edgePadding = 0.dp,
         containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = WorkoutColor,
+        contentColor = activityRecordingAccentColor(),
     ) {
         tabs.forEach { tab ->
             Tab(
@@ -1340,7 +1437,7 @@ private fun RecordingDashboardTile(
                         Modifier.border(
                             width = if (isDropTargetActive) 2.dp else 1.dp,
                             color = if (isDropTargetActive) {
-                                WorkoutColor
+                                activityRecordingAccentColor()
                             } else {
                                 MaterialTheme.colorScheme.primary.copy(alpha = 0.52f)
                             },
@@ -1495,7 +1592,7 @@ private fun RecordingDashboardTileContent(
                 AutoResizeText(
                     text = stat.value.value,
                     style = valueStyle,
-                    color = if (emphasized) WorkoutColor else MaterialTheme.colorScheme.onSurface,
+                    color = if (emphasized) activityRecordingAccentColor() else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
                 )
@@ -1512,7 +1609,7 @@ private fun RecordingDashboardTileContent(
             AutoResizeText(
                 text = stat.label.uppercase(),
                 style = labelStyle,
-                color = WorkoutColor,
+                color = activityRecordingAccentColor(),
                 maxLines = 1,
             )
         }
@@ -1913,7 +2010,7 @@ internal fun RecordingStat(
                 } else {
                     MaterialTheme.typography.displaySmall
                 },
-                color = if (emphasized) WorkoutColor else MaterialTheme.colorScheme.onSurface,
+                color = if (emphasized) activityRecordingAccentColor() else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
             if (value.unit.isNotBlank()) {
@@ -1928,7 +2025,7 @@ internal fun RecordingStat(
         AutoResizeText(
             text = label.uppercase(),
             style = MaterialTheme.typography.labelLarge,
-            color = WorkoutColor,
+            color = activityRecordingAccentColor(),
             maxLines = 1,
         )
     }

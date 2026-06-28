@@ -47,9 +47,11 @@ import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.features.heart.HeartVitalsOverviewScreen
+import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.body.titleRes
+import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingOutdoorModeToggle
 import tech.mmarca.openvitals.features.manualentry.vitals.titleRes
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
@@ -83,6 +85,7 @@ fun AppNavigation(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     startDestination: String,
+    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     routeImportRequest: ExternalRouteImportRequest? = null,
     externalNavigationRoute: String? = null,
     onRouteImportRequestHandled: (Long) -> Unit = {},
@@ -117,6 +120,7 @@ fun AppNavigation(
     var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
     var activityEntryTopBarTitleRes by remember { mutableStateOf<Int?>(null) }
     var activityEntryTopBarEditState by remember { mutableStateOf<TopBarEditState?>(null) }
+    var activityRecordingOutdoorTopBarState by remember { mutableStateOf<TopBarOutdoorModeState?>(null) }
     var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
 
@@ -330,10 +334,20 @@ fun AppNavigation(
                 Screen.ActivityEntryEdit.route -> activityEntryTopBarEditState
                 else -> null
             }
+            val isActivityRecordingRoute =
+                currentRoute == Screen.ActivityEntry.route ||
+                    currentRoute == Screen.ActivityEntryEdit.route
+            if (isActivityRecordingRoute) {
+                activityRecordingOutdoorTopBarState?.let { outdoorState ->
+                    ActivityRecordingOutdoorModeToggle(
+                        enabled = outdoorState.enabled,
+                        onEnabledChange = { outdoorState.onToggle() },
+                        appThemeMode = appThemeMode,
+                    )
+                }
+            }
             if (topBarEditState != null) {
-                val isActivityRecordingEditState =
-                    currentRoute == Screen.ActivityEntry.route ||
-                        currentRoute == Screen.ActivityEntryEdit.route
+                val isActivityRecordingEditState = isActivityRecordingRoute
                 OpenVitalsIconButton(onClick = topBarEditState.onToggleEdit) {
                     Icon(
                         imageVector = if (isActivityRecordingEditState && topBarEditState.isEditing) {
@@ -569,6 +583,7 @@ fun AppNavigation(
             manualEntryRoutes(
                 navController = navController,
                 unitFormatter = unitFormatter,
+                appThemeMode = appThemeMode,
                 routeImportRequest = routeImportRequest,
                 onRouteImportRequestHandled = onRouteImportRequestHandled,
                 onManualEntryEditStateChanged = { isEditing, onToggleEdit ->
@@ -585,6 +600,13 @@ fun AppNavigation(
                     }
                 },
                 onActivityEntryFocusModeChanged = { isActivityRecordingFocusMode = it },
+                onActivityRecordingOutdoorModeStateChanged = { isAvailable, enabled, onToggle ->
+                    activityRecordingOutdoorTopBarState = if (isAvailable) {
+                        TopBarOutdoorModeState(enabled, onToggle)
+                    } else {
+                        null
+                    }
+                },
                 onEntrySaved = ::markDashboardDirty,
                 onEntrySavedAndPopBack = ::markDashboardDirtyAndPopBack,
                 onActivityEntrySaved = ::finishActivityEntrySave,
@@ -875,4 +897,9 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
 private data class TopBarEditState(
     val isEditing: Boolean = false,
     val onToggleEdit: () -> Unit = {},
+)
+
+private data class TopBarOutdoorModeState(
+    val enabled: Boolean = false,
+    val onToggle: () -> Unit = {},
 )

@@ -34,6 +34,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 
 @Composable
 fun ActivityEntryScreen(
@@ -46,12 +47,15 @@ fun ActivityEntryScreen(
     onActivityRecordingTitleChanged: (Int?) -> Unit = {},
     onActivityRecordingEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
     onActivityRecordingFocusModeChanged: (Boolean) -> Unit = {},
+    onActivityRecordingOutdoorModeStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
+    appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordingState by viewModel.recordingState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var pendingSourceAction by remember { mutableStateOf<ActivityEntrySourceAction?>(null) }
     var isRecordingFocusMode by rememberSaveable { mutableStateOf(false) }
+    var isRecordingOutdoorMode by rememberSaveable { mutableStateOf(false) }
     fun setRecordingFocusMode(enabled: Boolean) {
         isRecordingFocusMode = enabled
     }
@@ -153,11 +157,21 @@ fun ActivityEntryScreen(
     val isRecordingDashboardVisible =
         state.mode == ActivityEntryMode.RECORDING &&
         (recordingState.isActive || recordingState.activityTypeId != null)
+    LaunchedEffect(isRecordingDashboardVisible, isRecordingFocusMode, isRecordingOutdoorMode) {
+        onActivityRecordingOutdoorModeStateChanged(
+            isRecordingDashboardVisible && !isRecordingFocusMode,
+            isRecordingOutdoorMode,
+        ) {
+            isRecordingOutdoorMode = !isRecordingOutdoorMode
+        }
+    }
     LaunchedEffect(isRecordingDashboardVisible) {
         if (!isRecordingDashboardVisible) {
             setRecordingFocusMode(false)
+            isRecordingOutdoorMode = false
             onActivityRecordingTitleChanged(null)
             onActivityRecordingEditStateChanged(false, false) {}
+            onActivityRecordingOutdoorModeStateChanged(false, false) {}
         }
     }
 
@@ -184,7 +198,10 @@ fun ActivityEntryScreen(
             onDashboardEditStateChanged = onActivityRecordingEditStateChanged,
             isFocusMode = isRecordingFocusMode,
             onFocusModeChanged = ::setRecordingFocusMode,
-            modifier = if (isRecordingFocusMode) {
+            isOutdoorMode = isRecordingOutdoorMode,
+            onOutdoorModeChanged = { isRecordingOutdoorMode = it },
+            appThemeMode = appThemeMode,
+            modifier = if (isRecordingFocusMode || isRecordingOutdoorMode) {
                 Modifier.fillMaxSize()
             } else {
                 Modifier

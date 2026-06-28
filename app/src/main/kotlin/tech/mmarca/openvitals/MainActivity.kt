@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.isDarkTheme
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -102,6 +103,7 @@ class MainActivity : AppCompatActivity() {
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         startDestination = resolvedStartDestination,
+                        appThemeMode = appThemeMode,
                         routeImportRequest = routeImportRequest,
                         externalNavigationRoute = externalNavigationRoute,
                         onRouteImportRequestHandled = { requestId ->
@@ -226,11 +228,3 @@ private val RouteImportMimeTypes = setOf(
 )
 
 private val RouteImportExtensions = setOf("gpx", "kml", "kmz", "fit")
-
-private fun AppThemeMode.isDarkTheme(systemInDarkTheme: Boolean): Boolean =
-    when (this) {
-        AppThemeMode.SYSTEM -> systemInDarkTheme
-        AppThemeMode.LIGHT -> false
-        AppThemeMode.DARK,
-        AppThemeMode.AMOLED -> true
-    }

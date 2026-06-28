@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.ManualEntryScreen
@@ -29,12 +30,14 @@ import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntry
 internal fun NavGraphBuilder.manualEntryRoutes(
     navController: NavHostController,
     unitFormatter: UnitFormatter,
+    appThemeMode: AppThemeMode,
     routeImportRequest: ExternalRouteImportRequest?,
     onRouteImportRequestHandled: (Long) -> Unit,
     onManualEntryEditStateChanged: (Boolean, () -> Unit) -> Unit,
     onActivityEntryTitleChanged: (Int?) -> Unit,
     onActivityEntryEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
     onActivityEntryFocusModeChanged: (Boolean) -> Unit,
+    onActivityRecordingOutdoorModeStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
     onEntrySaved: () -> Unit,
     onEntrySavedAndPopBack: () -> Unit,
     onActivityEntrySaved: () -> Unit,
@@ -112,6 +115,8 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
             onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
             onActivityRecordingFocusModeChanged = onActivityEntryFocusModeChanged,
+            onActivityRecordingOutdoorModeStateChanged = onActivityRecordingOutdoorModeStateChanged,
+            appThemeMode = appThemeMode,
         )
     }
 
@@ -127,6 +132,8 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
             onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
             onActivityRecordingFocusModeChanged = onActivityEntryFocusModeChanged,
+            onActivityRecordingOutdoorModeStateChanged = onActivityRecordingOutdoorModeStateChanged,
+            appThemeMode = appThemeMode,
         )
     }
 

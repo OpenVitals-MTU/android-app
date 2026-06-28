@@ -37,3 +37,10 @@ val CycleColor = Color(0xFFC35B7A)
 // Surface variants
 val SurfaceDark = Color(0xFF1A1C1E)
 val SurfaceContainerDark = Color(0xFF2B2D30)
+
+// Activity recording outdoor (sunlight) readability
+val RecordingOutdoorAccent = Color(0xFFFFB300)
+val RecordingOutdoorLightAccent = Color(0xFFE65100)
+val RecordingOutdoorAccentMuted = Color(0xFFFF8F00)
+val RecordingOutdoorBackground = Color(0xFF000000)
+val RecordingOutdoorSurface = Color(0xFF121212)

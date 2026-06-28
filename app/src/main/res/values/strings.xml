@@ -18,6 +18,7 @@
     <string name="cd_decrease_recording_dashboard_widget_size">Make widget smaller</string>
     <string name="cd_increase_recording_dashboard_widget_size">Make widget larger</string>
     <string name="cd_exit_recording_focus_mode">Exit focus mode</string>
+    <string name="cd_toggle_recording_outdoor_mode">Toggle outdoor readability mode</string>
     <string name="cd_recenter_map">Recenter map</string>
     <string name="cd_delete_entry">Delete entry</string>
     <string name="cd_edit_entry">Edit entry</string>

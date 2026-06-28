@@ -27,7 +27,7 @@ import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import tech.mmarca.openvitals.features.activity.ActivityHeartRateChartCard
 import tech.mmarca.openvitals.features.activity.toHeartRateSamples
-import tech.mmarca.openvitals.ui.theme.WorkoutColor
+import tech.mmarca.openvitals.ui.theme.activityRecordingAccentColor
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -190,7 +190,7 @@ private fun LiveSensorStat(
             Icon(
                 imageVector = Icons.Outlined.Favorite,
                 contentDescription = null,
-                tint = WorkoutColor,
+                tint = activityRecordingAccentColor(),
                 modifier = Modifier.size(14.dp),
             )
             Text(
@@ -218,7 +218,7 @@ private fun statusLabel(status: BleConnectionStatus): String =
 @Composable
 private fun statusColor(status: BleConnectionStatus) =
     when (status) {
-        BleConnectionStatus.CONNECTED -> WorkoutColor
+        BleConnectionStatus.CONNECTED -> activityRecordingAccentColor()
         BleConnectionStatus.CONNECTING,
         BleConnectionStatus.RECONNECTING,
         -> MaterialTheme.colorScheme.tertiary
