@@ -42,7 +42,7 @@ class HeartRepositoryTest {
             }
         }
 
-        val data = HeartRepository(hc).loadHeartPeriod(query, HeartPeriodMetric.HRV)
+        val data = HeartRepositoryImpl(hc).loadHeartPeriod(query, HeartPeriodMetric.HRV)
 
         assertEquals(44.0, data.dayHrvMs ?: 0.0, 0.01)
         assertNull(data.previousDayHrvMs)

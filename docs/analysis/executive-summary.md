@@ -1,59 +1,72 @@
 # Executive Summary
 
-OpenVitals is a mature, single-module health app with a **documented target architecture** that already aligns well with MVVM + Repository. The codebase is **production-oriented** but sits between pragmatic Android layering and full Clean Architecture.
+OpenVitals is a mature, single-module health app with a **documented target architecture** that aligns well with MVVM + Repository. A **P0–P3 gap-closure program** (June 2026) brought period-detail screens, dashboard, and cross-cutting boundaries much closer to that target without a multi-module split or MVI migration.
 
 ## Grades at a glance
 
 | Area | Grade | Notes |
 |------|-------|-------|
-| MVVM + Repository | **Strong** | Consistent `ViewModel` + `StateFlow` + feature repositories |
-| UI / business separation | **Good, uneven** | ViewModels own orchestration; some screens still derive heavily in Compose |
-| Testability | **Good** | ~92 unit tests, test constructors, MockK; no repository abstractions |
-| Error handling / null safety | **Adequate** | `runCatching` + `String?` errors; Kotlin null safety used well |
-| Project structure | **Strong** | Feature-first packages, shared shell, clear docs |
-| Compose performance | **Mixed** | `collectAsStateWithLifecycle` + `remember` used; large monolithic screens hurt recomposition |
-| Clean Architecture | **Partial** | Logical layers exist; not use-case/domain-interface driven |
+| MVVM + Repository | **Strong** | Feature repositories + interfaces; `HealthRepository` narrowed to permissions/availability |
+| UI / business separation | **Strong** | Presentation mappers + `*DisplayState`; metric routes are thin composables |
+| Testability | **Strong** | ~100+ JVM tests, use-case tests, repository interfaces; Compose UI pilot added |
+| Error handling / null safety | **Good** | Sealed `ScreenError` on period-detail screens; Kotlin null safety used well |
+| Project structure | **Strong** | Feature-first packages, shared shell, split screen files |
+| Compose performance | **Good** | `@Immutable` on `*UiState`; granular collection pilot on Dashboard + Heart |
+| Clean Architecture | **Good (pragmatic)** | Use cases for heavy loads; `domain/query` period DTOs; not full ceremony |
 
 ## What is working well
 
 - **Feature-first organization** under `features/<metric>/` with shared shell in `ui/components`
-- **Consistent MVVM**: `UiState` data classes, `MutableStateFlow` / `StateFlow`, Hilt `@HiltViewModel`
-- **Feature repositories** (`SleepRepository`, `HeartRepository`, etc.) that guard permissions and hide Health Connect
+- **Consistent MVVM**: `@Immutable` `UiState` data classes, `StateFlow`, Hilt `@HiltViewModel`
+- **Repository interfaces** in `data/repository/contract/` with `*Impl` classes bound in Hilt (`Sleep`, `Activity`, `Health`, `Heart`, `Hydration`, `Body`)
+- **Narrow `HealthRepository`** (~55 lines) — permissions and availability only; dashboard reads via `DashboardDataLoader` + `DashboardAggregator`
 - **`PeriodSelectionDriver`** centralizes Day/Week/Month/Year navigation across detail screens
 - **`LoadCoordinator`** cancels stale loads when period or date changes quickly
+- **Use cases** for complex orchestration: `LoadDashboardDayUseCase`, `LoadHeartPeriodUseCase`, `LoadSleepPeriodUseCase`
+- **Presentation mappers** (`SleepPresentationMapper`, `DashboardPresentationMapper`, etc.) prepare display-ready state off the main thread
 - **`MetricDetailScaffold`** + `WithHealthConnectFeatureScreen` provide reusable period and permission UX
-- **Domain layer** is mostly pure Kotlin (`domain/model`, `domain/insights`)
-- **Unit test culture**: ViewModels, repositories, domain insights, and period math are tested
+- **Domain layer** is mostly pure Kotlin (`domain/model`, `domain/insights`, `domain/query`)
+- **Unit test culture**: ViewModels, mappers, use cases, repositories, and domain insights are tested
 - **Project docs** (`architecture.md`, `feature-playbook.md`, `AGENTS.md`) match the code direction
 
-## Main technical debt
+## Completed in P0–P3 program
 
-1. **Oversized screen files** — `ActivityRecordingScreen.kt` (~2,000+ lines), `BodyScreen.kt`, `SleepScreen.kt`, `HeartScreen.kt`, `HydrationScreen.kt`
-2. **Business derivation in Compose** — especially `SleepScreen` and similar screens that compute chart/summary data in `remember { }` blocks instead of ViewModel state
-3. **No repository interfaces** — concrete singletons only; tests rely on MockK
-4. **`HealthRepository` is still very large** despite being documented as narrow (dashboard aggregation lives there)
-5. **Unstructured errors** — `String?` on `UiState` instead of sealed error types
-6. **No `@Immutable` / `@Stable`** on `UiState` data classes for Compose skip optimization
-7. **Large monolithic `UiState`** objects (e.g. `HeartUiState`) cause coarse-grained recomposition
+See [refactor-backlog.md](refactor-backlog.md) migration tracker for full checklist.
 
-## Highest-value improvements
+1. **Split oversized screen files** — metric routes under ~150 lines; content in sibling composables (e.g. `DashboardContent`, `SleepPeriodContent`, `HeartMetricContent`)
+2. **Moved derived display state into ViewModels/mappers** — screens render `display` payloads; no `domain/insights` imports in routes
+3. **`@Immutable` on `*UiState`** — all feature screen state classes annotated
+4. **Sealed `ScreenError`** — rolled out to period-detail and dashboard screens
+5. **Granular state collection** — pilot on `DashboardScreen` and `HeartScreen` via `remember(viewModel) { uiState.map { … } }`
+6. **Use cases + repository interfaces** — see cross-cutting phases 6–7 in backlog
+7. **`domain/query/*PeriodData`** — period result DTOs moved out of `data.repository`
+8. **Slim `HealthRepository`** — dashboard aggregation extracted to `DashboardDataLoader` / `DashboardAggregator`
+9. **Compose UI test pilot** — `SleepScreenWeekTest` + `compileDebugAndroidTestKotlin` in `verifyLocalApp`
+10. **Split `MetricCard.kt`** — `SectionHeader`, `TimeRangeSelector` extracted
 
-These are **not** a multi-module split or MVI migration:
+## Remaining gaps (deferred or incremental)
 
-1. Move derived display state from large screens into ViewModels (on `Default` dispatcher where expensive)
-2. Split route composables from section/card/chart files
-3. Add `@Immutable` to `*UiState` data classes
-4. Introduce a small sealed `ScreenError` hierarchy for user-facing errors
-5. Optionally add use cases and repository interfaces at the busiest boundaries (dashboard, heart)
-
-See [refactor-backlog.md](refactor-backlog.md) for a prioritized list.
+1. **Large non-metric screens** — manual-entry forms, settings, achievements, and activity recording setup still exceed ~400 lines in places
+2. **Repository interfaces** — `NutritionRepository`, `MindfulnessRepository`, `CycleRepository`, `VitalsRepository` remain concrete-only (add when touching those boundaries)
+3. **Granular collection** — only piloted on Dashboard + Heart; extend if profiling shows jank elsewhere
+4. **Compose UI coverage** — one golden-path androidTest; expand scaffold/navigation tests incrementally
+5. **Multi-module split, MVI, universal charts, Room HC mirror** — explicitly deferred per [architecture.md](../architecture.md)
 
 ## Reference implementations
 
-| Pattern | Best example | Known outlier |
-|---------|--------------|---------------|
-| Period detail ViewModel | `SleepViewModel`, `HydrationViewModel` | `DashboardViewModel` (complex orchestration) |
-| Feature repository | `SleepRepository` | `HealthRepository` (too broad) |
-| Shared shell | `MetricDetailScaffold` | — |
-| Screen composition | `BodyCards.kt`, `ActivitiesOverviewSections.kt` | `SleepScreen.kt` (derivation in UI) |
-| ViewModel tests | `SleepViewModelTest` | — |
+| Pattern | Best example | Notes |
+|---------|--------------|-------|
+| Period detail ViewModel | `SleepViewModel`, `HydrationViewModel` | `LoadSleepPeriodUseCase` for cross-repo orchestration |
+| Presentation mapper | `SleepPresentationMapper`, `DashboardPresentationMapper` | Unit-tested; builds `*DisplayState` |
+| Feature repository | `SleepRepository` (interface) | Permission guard + period bundle |
+| App-level repository | `HealthRepository` (interface) | Permissions/availability only |
+| Shared shell | `MetricDetailScaffold` | Period controls + error slot |
+| Thin route | `SleepScreen.kt`, `DashboardScreen.kt` | Delegate to content/section composables |
+| Use case | `LoadDashboardDayUseCase` | Dashboard load orchestration |
+| ViewModel tests | `SleepViewModelTest`, `DashboardViewModelTest` | Stale-load + period navigation |
+
+## Related docs
+
+- [refactor-backlog.md](refactor-backlog.md) — prioritized list and migration tracker
+- [clean-architecture-refactor.md](clean-architecture-refactor.md) — layer mapping and phased plan status
+- [architecture.md](../architecture.md) — source of truth for new work

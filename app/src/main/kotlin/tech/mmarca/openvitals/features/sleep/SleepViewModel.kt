@@ -20,9 +20,10 @@ import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
-import tech.mmarca.openvitals.data.repository.HeartRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.domain.usecase.LoadSleepPeriodUseCase
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -52,8 +53,7 @@ data class SleepUiState(
 
 @HiltViewModel
 class SleepViewModel(
-    private val repository: SleepRepository,
-    private val heartRepository: HeartRepository? = null,
+    private val loadSleepPeriodUseCase: LoadSleepPeriodUseCase,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
@@ -69,10 +69,10 @@ class SleepViewModel(
     constructor(
         repository: SleepRepository,
         heartRepository: HeartRepository,
+        loadSleepPeriodUseCase: LoadSleepPeriodUseCase,
         preferencesRepository: PreferencesRepository,
     ) : this(
-        repository = repository,
-        heartRepository = heartRepository,
+        loadSleepPeriodUseCase = loadSleepPeriodUseCase,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         initialSleepRangeMode = preferencesRepository.sleepRangeMode,
@@ -85,6 +85,31 @@ class SleepViewModel(
         onDailyGoalChanged = { goal ->
             preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
         },
+    )
+
+    constructor(
+        repository: SleepRepository,
+        heartRepository: HeartRepository? = null,
+        dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+        initialRange: TimeRange = TimeRange.WEEK,
+        initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+        initialSleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
+        initialDailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
+        weekPeriodModeFlow: Flow<WeekPeriodMode>? = null,
+        sleepRangeModeFlow: Flow<SleepRangeMode>? = null,
+        onRangeSelected: (TimeRange) -> Unit = {},
+        onDailyGoalChanged: (Double) -> Unit = {},
+    ) : this(
+        loadSleepPeriodUseCase = LoadSleepPeriodUseCase(repository, heartRepository),
+        dispatchers = dispatchers,
+        initialRange = initialRange,
+        initialWeekPeriodMode = initialWeekPeriodMode,
+        initialSleepRangeMode = initialSleepRangeMode,
+        initialDailyGoalHours = initialDailyGoalHours,
+        weekPeriodModeFlow = weekPeriodModeFlow,
+        sleepRangeModeFlow = sleepRangeModeFlow,
+        onRangeSelected = onRangeSelected,
+        onDailyGoalChanged = onDailyGoalChanged,
     )
 
     private val goalKey = MetricDailyGoalKey.SLEEP_HOURS
@@ -182,22 +207,11 @@ class SleepViewModel(
                 anchorDate = periodDriver.selection.selectedDate,
                 weekPeriodMode = _uiState.value.weekPeriodMode,
             )
-            val windows = query.windows
             val date = query.selectedDate
             val sleepRangeMode = _uiState.value.sleepRangeMode
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val periodData = if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadSleepPeriod(query, sleepRangeMode)
-                } else {
-                    repository.loadSleepPeriod(query, sleepRangeMode, refreshMode)
-                }
-                SleepLoadResult(
-                    sessions = periodData.sessions,
-                    previousSessions = periodData.previousSessions,
-                    baselineSessions = periodData.baselineSessions,
-                    crossDailyHrv = heartRepository?.loadDailyHRV(windows.current.start, windows.current.end).orEmpty(),
-                )
+                loadSleepPeriodUseCase(query, sleepRangeMode, refreshMode)
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load
@@ -234,13 +248,6 @@ class SleepViewModel(
                 }
         }
     }
-
-    private data class SleepLoadResult(
-        val sessions: List<SleepData>,
-        val previousSessions: List<SleepData>,
-        val baselineSessions: List<SleepData>,
-        val crossDailyHrv: List<DailyHrv>,
-    )
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(

@@ -27,7 +27,7 @@ import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
-import tech.mmarca.openvitals.data.repository.BodyRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.navigation.BODY_ENTRY_ID_ARG
 
 private const val MaxWeightKg = 1000.0

@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class OnboardingUiState(
     val availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val grantedPermissions: Set<String> = emptySet(),

@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.reducedForChart
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.Instant
@@ -32,11 +33,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class HeartRepository @Inject constructor(
+class HeartRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : HeartRepository {
 
     companion object {
         private const val TAG = "HeartRepository"
@@ -49,10 +50,10 @@ class HeartRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadHeartPeriod(
+    override suspend fun loadHeartPeriod(
         query: PeriodLoadQuery,
         metric: HeartPeriodMetric,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): HeartPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -182,7 +183,7 @@ class HeartRepository @Inject constructor(
         }
     }
 
-    suspend fun loadHeartRateSamples(date: LocalDate): List<HeartRateSample> {
+    override suspend fun loadHeartRateSamples(date: LocalDate): List<HeartRateSample> {
         val granted = grantedPermissionsIfAvailable()
         return loadHeartRateSamples(date, granted)
     }
@@ -233,12 +234,12 @@ class HeartRepository @Inject constructor(
         }
     }
 
-    suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample> {
+    override suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample> {
         val granted = grantedPermissionsIfAvailable()
         return loadHeartRateSamples(start, end, granted)
     }
 
-    suspend fun loadHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> {
+    override suspend fun loadHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> {
         val granted = grantedPermissionsIfAvailable()
         return loadHeartRateSamples(start, end, granted)
     }
@@ -272,7 +273,7 @@ class HeartRepository @Inject constructor(
             .flatMap { (_, daySamples) -> daySamples.reducedForChart() }
     }
 
-    suspend fun loadDailyHeartRateSummaries(start: LocalDate, end: LocalDate): List<HeartRateSummary> {
+    override suspend fun loadDailyHeartRateSummaries(start: LocalDate, end: LocalDate): List<HeartRateSummary> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailyHeartRateSummaries(start, end, granted)
     }
@@ -289,7 +290,7 @@ class HeartRepository @Inject constructor(
         return hc.readDailyHeartRateSummaries(start, end)
     }
 
-    suspend fun loadRestingHeartRate(date: LocalDate): Long? {
+    override suspend fun loadRestingHeartRate(date: LocalDate): Long? {
         val granted = grantedPermissionsIfAvailable()
         return loadRestingHeartRate(date, granted)
     }
@@ -302,7 +303,7 @@ class HeartRepository @Inject constructor(
         return hc.readRestingHeartRate(date)
     }
 
-    suspend fun loadDailyRestingHR(start: LocalDate, end: LocalDate): List<DailyRestingHR> {
+    override suspend fun loadDailyRestingHR(start: LocalDate, end: LocalDate): List<DailyRestingHR> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailyRestingHR(start, end, granted)
     }
@@ -319,7 +320,7 @@ class HeartRepository @Inject constructor(
         return hc.readDailyRestingHR(start, end)
     }
 
-    suspend fun loadHrvRmssd(date: LocalDate): Double? {
+    override suspend fun loadHrvRmssd(date: LocalDate): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadHrvRmssd(date, granted)
     }
@@ -331,7 +332,7 @@ class HeartRepository @Inject constructor(
         return loadDailyHRV(date, date, granted).firstOrNull { it.date == date }?.rmssdMs
     }
 
-    suspend fun loadDailyHRV(start: LocalDate, end: LocalDate): List<DailyHrv> {
+    override suspend fun loadDailyHRV(start: LocalDate, end: LocalDate): List<DailyHrv> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailyHRV(start, end, granted)
     }

@@ -2,6 +2,8 @@
 
 Senior Android architecture review of the OpenVitals codebase (June 2026).
 
+A **P0–P3 gap-closure program** updated metric screens, dashboard boundaries, and cross-cutting docs. Start with [executive-summary.md](executive-summary.md) and the [migration tracker](refactor-backlog.md#migration-tracker-gap-closure-program) for current status.
+
 This section documents how the project measures against MVVM + Repository, Clean Architecture, Compose performance, testability, and production practices. Use it alongside:
 
 - [Architecture](../architecture.md) — target architecture and current snapshot

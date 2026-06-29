@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HydrationPeriodData
+import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -27,13 +28,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class HydrationRepository @Inject constructor(
+class HydrationRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : HydrationRepository {
 
     companion object {
         private const val TAG = "HydrationRepository"
@@ -42,23 +43,23 @@ class HydrationRepository @Inject constructor(
 
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
     private val writeHydrationPermission = HealthPermission.getWritePermission(HydrationRecord::class)
-    val hydrationWritePermissions: Set<String> get() = setOf(writeHydrationPermission)
+    override val hydrationWritePermissions: Set<String> get() = setOf(writeHydrationPermission)
 
-    fun hydrationContainerVolumeMilliliters(): Map<String, Double> =
+    override fun hydrationContainerVolumeMilliliters(): Map<String, Double> =
         preferencesRepository?.hydrationContainerVolumeMilliliters().orEmpty()
 
-    fun setHydrationContainerVolumeMilliliters(containerId: String, milliliters: Double) {
+    override fun setHydrationContainerVolumeMilliliters(containerId: String, milliliters: Double) {
         preferencesRepository?.setHydrationContainerVolumeMilliliters(containerId, milliliters)
     }
 
-    fun lastCustomHydrationAmountMilliliters(): Double? =
+    override fun lastCustomHydrationAmountMilliliters(): Double? =
         preferencesRepository?.lastCustomHydrationAmountMilliliters()
 
-    fun setLastCustomHydrationAmountMilliliters(milliliters: Double) {
+    override fun setLastCustomHydrationAmountMilliliters(milliliters: Double) {
         preferencesRepository?.setLastCustomHydrationAmountMilliliters(milliliters)
     }
 
-    fun hydrationDailyGoalLiters(): Double =
+    override fun hydrationDailyGoalLiters(): Double =
         preferencesRepository?.hydrationDailyGoalLiters
             ?.takeIf { it > 0.0 && it.isFinite() }
             ?: DefaultHydrationDailyGoalLiters
@@ -66,9 +67,9 @@ class HydrationRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadHydrationPeriod(
+    override suspend fun loadHydrationPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): HydrationPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -107,7 +108,7 @@ class HydrationRepository @Inject constructor(
             tag = TAG,
         )
 
-    suspend fun loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration> {
+    override suspend fun loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailyHydration(start, end, granted)
     }
@@ -124,7 +125,7 @@ class HydrationRepository @Inject constructor(
         return hc.readDailyHydration(start, end)
     }
 
-    suspend fun loadHydrationEntries(start: LocalDate, end: LocalDate): List<HydrationEntry> {
+    override suspend fun loadHydrationEntries(start: LocalDate, end: LocalDate): List<HydrationEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadHydrationEntries(start, end, granted)
     }
@@ -145,10 +146,10 @@ class HydrationRepository @Inject constructor(
         )
     }
 
-    suspend fun hasHydrationWritePermission(): Boolean =
+    override suspend fun hasHydrationWritePermission(): Boolean =
         writeHydrationPermission in grantedPermissionsIfAvailable()
 
-    suspend fun writeHydrationEntry(request: HydrationWriteRequest): String {
+    override suspend fun writeHydrationEntry(request: HydrationWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()
         if (writeHydrationPermission !in granted) {
             Log.w(TAG, "Skipping writeHydrationEntry missingCount=1")
@@ -159,7 +160,7 @@ class HydrationRepository @Inject constructor(
         }
     }
 
-    suspend fun loadHydrationEntry(id: String): HydrationEntry? {
+    override suspend fun loadHydrationEntry(id: String): HydrationEntry? {
         val granted = grantedPermissionsIfAvailable()
         if (readHydrationPermission !in granted) {
             Log.w(TAG, "Skipping loadHydrationEntry missingCount=1")
@@ -168,7 +169,7 @@ class HydrationRepository @Inject constructor(
         return hc.readHydrationEntry(id)
     }
 
-    suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) {
+    override suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) {
         val granted = grantedPermissionsIfAvailable()
         if (writeHydrationPermission !in granted) {
             Log.w(TAG, "Skipping updateHydrationEntry missingCount=1")
@@ -178,7 +179,7 @@ class HydrationRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 
-    suspend fun deleteHydrationEntry(id: String) {
+    override suspend fun deleteHydrationEntry(id: String) {
         val granted = grantedPermissionsIfAvailable()
         if (writeHydrationPermission !in granted) {
             Log.w(TAG, "Skipping deleteHydrationEntry missingCount=1")

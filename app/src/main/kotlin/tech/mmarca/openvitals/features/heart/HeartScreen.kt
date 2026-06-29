@@ -2,10 +2,12 @@ package tech.mmarca.openvitals.features.heart
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.map
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -185,7 +187,10 @@ private fun HeartMetricScreen(
     metric: HeartMetric,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState = viewModel.uiState
+    val isLoading by remember(viewModel) { uiState.map { it.isLoading } }
+        .collectAsStateWithLifecycle(initialValue = true)
+    val state by uiState.collectAsStateWithLifecycle()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -194,11 +199,11 @@ private fun HeartMetricScreen(
 
     WithHealthConnectFeatureScreen(
         feature = HealthConnectFeature.HEART,
-        isLoading = state.isLoading,
+        isLoading = isLoading,
         showInlineSyncBanner = false,
     ) { hcUx ->
         MetricDetailScaffold(
-            isLoading = state.isLoading,
+            isLoading = isLoading,
             selectedRange = state.selectedRange,
             selectedDate = state.selectedDate,
             screenError = state.error,

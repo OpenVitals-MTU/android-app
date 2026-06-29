@@ -2,24 +2,26 @@
 
 ## Current state
 
-OpenVitals implements a **pragmatic three-layer model** inside one Android module. It is **not** full Clean Architecture with explicit use cases, repository interfaces, and framework isolation — and the project docs intentionally avoid over-correcting into that model prematurely.
+OpenVitals implements a **pragmatic three-layer model** inside one Android module. It is **not** full Clean Architecture with a use case per screen, but the **P0–P3 gap-closure program** (June 2026) added use cases, repository interfaces, domain query DTOs, and presentation mappers where complexity justified them.
 
 ## Layer mapping
 
 | Clean Architecture concept | OpenVitals location | Maturity |
 |--------------------------|---------------------|----------|
 | **Entities** | `domain/model` | Strong — mostly pure Kotlin |
-| **Use cases** | Implicit in ViewModels; calculations in `domain/insights` | Partial |
-| **Interface adapters** | `features/*` (UI), `data/repository` (data access) | Good |
+| **Use cases** | `domain/usecase/` for dashboard, heart, sleep loads; calculations in `domain/insights` | Good for heavy flows; implicit elsewhere |
+| **Interface adapters** | `features/*` (UI + mappers), `data/repository` (data access) | Strong |
 | **Frameworks & drivers** | `healthconnect`, Room, Compose, WorkManager | Correct placement |
 
 ### Dependency direction (intended)
 
 ```
-features (UI + ViewModel)
-    → data/repository, domain, core
-data/repository, healthconnect
-    → domain, Android SDK, Health Connect
+features (UI + ViewModel + PresentationMapper)
+    → domain/usecase, domain/query, domain/model, data/repository/contract, core
+domain/usecase
+    → data/repository/contract, domain/query, domain/insights
+data/repository (*Impl)
+    → healthconnect, domain, Android SDK, Health Connect
 domain
     → Kotlin stdlib (minimal Android in preferences)
 ```
@@ -29,22 +31,23 @@ domain
 ## What already aligns with Clean Architecture
 
 1. **Pure domain models** — `SleepData`, `ExerciseData`, etc. without Health Connect types
-2. **Insight calculations** in `domain/insights` — testable without Android
-3. **Period primitives** in `core/period` — no UI or repository coupling
-4. **Feature repositories** as facades — single entry for feature-shaped queries
-5. **Health Connect isolation** in `healthconnect/` package
-6. **Narrowing `HealthRepository`** — dashboard/permissions vs. feature reads
+2. **Period query DTOs** in `domain/query/` — `SleepPeriodData`, `HeartPeriodData`, etc.
+3. **Insight calculations** in `domain/insights` — testable without Android
+4. **Period primitives** in `core/period` — no UI or repository coupling
+5. **Feature repositories as interfaces** — `data/repository/contract/` + `*Impl` in Hilt
+6. **Health Connect isolation** in `healthconnect/` package
+7. **Narrow `HealthRepository`** — permissions + availability only (~55 lines in `HealthRepositoryImpl`)
+8. **Dashboard aggregation** in `domain/dashboard/DashboardAggregator` + `DashboardDataLoader`
+9. **Presentation mappers** — ViewModels map use case / repository results → `@Immutable` `UiState`
 
-## Gaps vs. strict Clean Architecture
+## Remaining gaps vs. strict Clean Architecture
 
 | Gap | Description |
 |-----|-------------|
-| No use case layer | ViewModels call repositories directly |
-| No repository interfaces | Concrete classes bound in Hilt |
-| DTOs in data layer | `SleepPeriodData`, `HeartPeriodData` live in `data.repository` |
-| Large ViewModels | `HeartViewModel`, `DashboardViewModel` combine orchestration + mapping |
-| UI derivation | Some domain logic still runs in Compose (`SleepScreen`) |
-| `HealthRepository` size | Dashboard aggregation blurs repository vs. domain service |
+| Partial use case layer | Only dashboard, heart, and sleep loads have explicit use cases |
+| Some repositories concrete-only | Nutrition, mindfulness, cycle, vitals still bind impl classes directly |
+| Large non-metric screens | Manual-entry and settings screens can still exceed ~400 lines |
+| Multi-module split | Still single `:app` module (intentionally deferred) |
 
 ## What not to do
 
@@ -57,33 +60,25 @@ Per [architecture.md](../architecture.md) and [AGENTS.md](../../AGENTS.md):
 - **Raw Health Connect mirror** in Room
 - **General background-sync layer** beyond existing cache and import workers
 
-## Phased migration plan
+## Phased migration plan — status
 
-### Phase 1 — Strengthen domain (low risk)
+### Phase 1 — Strengthen domain ✅ Complete
 
-**Goal:** Pure Kotlin owns business results; data layer only fetches and maps.
+- [x] Move `*PeriodData` result types → `domain/query/`
+- [x] Extract dashboard aggregation → `DashboardAggregator` + `DashboardDataLoader`
+- [x] Slim `HealthRepository` to permissions/availability
 
-1. Move `*PeriodData` result types from `data.repository` → `domain/model` or new `domain/query/`
-2. Extract dashboard aggregation from `HealthRepository` into:
-   - `domain/dashboard/DashboardAggregator.kt` (pure combine logic), or
-   - `domain/insights` helpers already used by dashboard
-3. Keep repository methods as thin: fetch → map → return domain types
+### Phase 2 — Use cases for complex flows ✅ Complete (scoped)
 
-**Acceptance:** `domain` has no new imports from `data` or `healthconnect`.
+| Use case | Replaces logic in | Status |
+|----------|-------------------|--------|
+| `LoadSleepPeriodUseCase` | `SleepViewModel.load` | Done |
+| `LoadDashboardDayUseCase` | `DashboardViewModel.load` | Done |
+| `LoadHeartPeriodUseCase` | `HeartViewModel.load` | Done |
 
-### Phase 2 — Use cases for complex flows (medium risk)
+Do **not** create a use case per trivial repository call. Add new use cases only when orchestration is non-trivial.
 
-**Goal:** Thin ViewModels; test orchestration without UI state.
-
-Introduce use cases only where complexity justifies them:
-
-| Use case | Replaces logic in |
-|----------|-------------------|
-| `LoadSleepPeriodUseCase` | `SleepViewModel.load` |
-| `LoadDashboardDayUseCase` | `DashboardViewModel.load` |
-| `LoadHeartPeriodUseCase` | `HeartViewModel.load` |
-
-Shape:
+Example shape (implemented):
 
 ```kotlin
 class LoadSleepPeriodUseCase @Inject constructor(
@@ -91,73 +86,31 @@ class LoadSleepPeriodUseCase @Inject constructor(
     private val heartRepository: HeartRepository,
     private val dispatchers: DispatcherProvider,
 ) {
-    suspend operator fun invoke(
-        query: PeriodLoadQuery,
-        sleepRangeMode: SleepRangeMode,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
-    ): SleepPeriodResult = coroutineScope {
-        val periodData = sleepRepository.loadSleepPeriod(query, sleepRangeMode, refreshMode)
-        val hrv = async {
-            heartRepository.loadDailyHrv(query.windows.current)
-        }
-        SleepPeriodResult(periodData, hrv.await())
+    suspend operator fun invoke(/* query, modes */): SleepPeriodResult = coroutineScope {
+        // parallel fetch + combine
     }
 }
 ```
 
-ViewModel:
+### Phase 3 — Repository interfaces ✅ Complete (top 6)
 
-```kotlin
-runCatching { loadSleepPeriodUseCase(query, sleepRangeMode, refreshMode) }
-    .onSuccess { /* map to UiState */ }
-```
+Interfaces + `@Binds` in `RepositoryModule`:
 
-Do **not** create a use case per trivial repository call.
+- `SleepRepository`, `ActivityRepository`, `HealthRepository`
+- `HeartRepository`, `HydrationRepository`, `BodyRepository`
 
-### Phase 3 — Repository interfaces (medium risk)
+Implementations renamed to `*Impl`. Remaining feature repos can follow the same pattern when touched.
 
-**Goal:** Explicit boundaries for testing and future modules.
+### Phase 4 — Presentation mapping layer ✅ Complete (metric screens)
 
-```kotlin
-interface SleepRepository {
-    suspend fun loadSleepPeriod(
-        query: PeriodLoadQuery,
-        sleepRangeMode: SleepRangeMode,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
-    ): SleepPeriodData
-}
-```
+Each migrated metric feature has:
 
-Hilt:
+- `*PresentationMapper` (+ unit tests)
+- `*DisplayState` or display payload on `UiState`
+- ViewModel builds display on `DispatcherProvider.default`
+- Thin route composable (< ~150 lines)
 
-```kotlin
-@Binds
-@Singleton
-abstract fun bindSleepRepository(impl: SleepRepositoryImpl): SleepRepository
-```
-
-Start with: `SleepRepository`, `HealthRepository`, `ActivityRepository`.
-
-Rename implementations to `*Impl` only when introducing interfaces to avoid churn.
-
-### Phase 4 — Presentation mapping layer (low–medium risk)
-
-**Goal:** ViewModels only map use case results → `UiState`; expensive display prep off main thread.
-
-```kotlin
-// features/sleep/SleepPresentationMapper.kt
-object SleepPresentationMapper {
-    fun toUiState(
-        raw: SleepPeriodResult,
-        selection: PeriodSelection,
-        sleepRangeMode: SleepRangeMode,
-    ): SleepDisplayPayload = /* duration points, summaries, scores */
-}
-```
-
-Or private functions on ViewModel using `withContext(dispatchers.default)`.
-
-Aligns with [compose-performance.md](compose-performance.md) and [viewmodel-stateflow.md](viewmodel-stateflow.md).
+See per-feature table in [refactor-backlog.md](refactor-backlog.md).
 
 ## Target architecture diagram
 
@@ -171,6 +124,7 @@ flowchart TB
     subgraph domain_layer
         UC[Use Cases]
         Ent[Entities / Models]
+        Query[domain/query PeriodData]
         Ins[Insights]
     end
     subgraph data_layer
@@ -188,12 +142,12 @@ flowchart TB
     RepoI --> RepoImpl
     RepoImpl --> HC
     RepoImpl --> Room
-    RepoImpl --> Ent
-    Map --> Ent
+    RepoImpl --> Query
+    Map --> Query
     Ins --> Ent
 ```
 
-Solid lines represent **today** (VM → Repo). Dashed migration adds UC and RepoI without removing feature packages.
+Solid lines represent **current** wiring. Use cases and repo interfaces are in place for the heaviest boundaries; lighter features still use VM → Repo directly.
 
 ## Module split criteria (future)
 
@@ -209,15 +163,15 @@ Until then, **package boundaries** (`domain`, `data`, `features`, `healthconnect
 
 Clean Architecture migration is successful when:
 
-- New metrics add a use case only if orchestration is non-trivial
-- Repositories stay thin mappers + permission guards
-- ViewModels are mostly state machines + `UiState` mapping
-- Domain tests cover business rules without MockK
-- Compose screens contain no repository or Health Connect imports
-- Docs remain proportional — no ceremony for simple CRUD-style screens
+- New metrics add a use case only if orchestration is non-trivial ✅ policy in place
+- Repositories stay thin mappers + permission guards ✅ metric repos follow this
+- ViewModels are mostly state machines + `UiState` mapping ✅ metric ViewModels migrated
+- Domain tests cover business rules without MockK ✅ insights, aggregators, use cases tested
+- Compose screens contain no repository or Health Connect imports ✅ metric routes comply
+- Docs remain proportional — no ceremony for simple CRUD-style screens ✅
 
 ## Related documents
 
 - [mvvm-repository.md](mvvm-repository.md) — current repository rules
-- [refactor-backlog.md](refactor-backlog.md) — ordered work items
+- [refactor-backlog.md](refactor-backlog.md) — ordered work items and tracker
 - [architecture.md](../architecture.md) — source of truth for new work

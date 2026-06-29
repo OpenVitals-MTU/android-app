@@ -35,7 +35,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.work.WorkInfo
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class SettingsUiState(
     val isLoading: Boolean = true,
     val availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,

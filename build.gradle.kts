@@ -30,6 +30,15 @@ tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
     languageVersion = JavaLanguageVersion.of(17)
 }
 
+tasks.register("verifyAndroidTest") {
+    group = "verification"
+    description = "Runs connectedDebugAndroidTest when ANDROID_SERIAL is set."
+    onlyIf {
+        providers.environmentVariable("ANDROID_SERIAL").isPresent
+    }
+    dependsOn(":app:connectedDebugAndroidTest")
+}
+
 tasks.register("verifyLocalApp") {
     group = "verification"
     description = "Runs CI verification for the local internet-free OpenVitals app."
@@ -37,6 +46,7 @@ tasks.register("verifyLocalApp") {
         ":app:testDebugUnitTest",
         ":app:lintDebug",
         ":app:assembleDebug",
+        ":app:compileDebugAndroidTestKotlin",
     )
 }
 

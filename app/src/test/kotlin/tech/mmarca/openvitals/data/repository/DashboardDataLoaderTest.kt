@@ -74,7 +74,7 @@ import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 
-class HealthRepositoryDashboardTest {
+class DashboardDataLoaderTest {
 
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)

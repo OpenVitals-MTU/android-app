@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -45,6 +46,7 @@ internal fun LazyListScope.sleepPeriodContent(
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("sleep_week_period_content")
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
             selectedDate = chartDaySelection.selectedDate,

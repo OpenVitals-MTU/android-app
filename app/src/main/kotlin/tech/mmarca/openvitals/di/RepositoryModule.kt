@@ -6,10 +6,16 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import tech.mmarca.openvitals.data.repository.ActivityRepositoryImpl
+import tech.mmarca.openvitals.data.repository.BodyRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HealthRepositoryImpl
+import tech.mmarca.openvitals.data.repository.HeartRepositoryImpl
+import tech.mmarca.openvitals.data.repository.HydrationRepositoryImpl
 import tech.mmarca.openvitals.data.repository.SleepRepositoryImpl
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
+import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 
 @Module
@@ -27,4 +33,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindHealthRepository(impl: HealthRepositoryImpl): HealthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHeartRepository(impl: HeartRepositoryImpl): HeartRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHydrationRepository(impl: HydrationRepositoryImpl): HydrationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBodyRepository(impl: BodyRepositoryImpl): BodyRepository
 }

@@ -17,9 +17,7 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.DashboardData
-import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
-import tech.mmarca.openvitals.domain.model.mergeLoaded
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
@@ -31,11 +29,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -101,12 +94,9 @@ class DashboardViewModel @Inject constructor(
     )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
-    private val deferredLoadMutex = Mutex()
+    private val deferredLoadCoordinator = DashboardDeferredLoadCoordinator(loadDashboardDayUseCase)
     private var userPinnedPastDay = false
-    private var deferredLoadContext: DeferredDashboardLoadContext? = null
     private var deferredLoadGeneration = 0L
-    private var requestedDeferredWidgets: Set<DashboardWidgetId> = emptySet()
-    private var loadedDeferredWidgets: Set<DashboardWidgetId> = emptySet()
     private var permissionPromptDismissedForLoad = false
 
     init {
@@ -189,9 +179,7 @@ class DashboardViewModel @Inject constructor(
             val dailyGoals = prefs.dashboardDailyGoals()
             val primaryMetrics = DashboardFastMetrics
             val loadGeneration = ++deferredLoadGeneration
-            deferredLoadContext = null
-            requestedDeferredWidgets = emptySet()
-            loadedDeferredWidgets = emptySet()
+            deferredLoadCoordinator.reset()
             permissionPromptDismissedForLoad = false
             val current = _uiState.value
             val availability = repository.availability()
@@ -227,13 +215,14 @@ class DashboardViewModel @Inject constructor(
             }
                 .onSuccess { data ->
                     if (!isCurrent) return@load
-                    deferredLoadContext = DeferredDashboardLoadContext(
+                    val deferredContext = DeferredDashboardLoadContext(
                         date = clampedDate,
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         refreshMode = refreshMode,
                         generation = loadGeneration,
                     )
+                    deferredLoadCoordinator.beginLoad(deferredContext)
                     val goals = prefs.dashboardDailyGoals()
                     val display = buildDisplay(data, goals, pendingWidgets = emptySet())
                     _uiState.value = _uiState.value.copy(
@@ -289,32 +278,39 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun loadVisibleDashboardWidgets(widgetIds: Set<DashboardWidgetId>) {
-        val context = deferredLoadContext ?: return
-        if (!isDeferredLoadCurrent(context)) return
+        val context = deferredLoadCoordinator.activeContext ?: return
+        if (_uiState.value.selectedDate != context.date) return
         val currentData = _uiState.value.data ?: return
-        val widgetsToLoad = widgetIds
-            .filter { widgetId ->
-                val metric = widgetId.toDashboardMetricOrNull() ?: return@filter false
-                metric !in DashboardFastMetrics &&
-                    metric !in currentData.loadedMetrics &&
-                    widgetId !in requestedDeferredWidgets &&
-                    widgetId !in loadedDeferredWidgets
-            }
-            .toSet()
+        val widgetsToLoad = deferredLoadCoordinator.widgetsToLoad(context, widgetIds, currentData)
         if (widgetsToLoad.isEmpty()) return
 
-        requestedDeferredWidgets = requestedDeferredWidgets + widgetsToLoad
-        val pending = pendingDeferredWidgets(context)
+        deferredLoadCoordinator.markRequested(widgetsToLoad)
+        val pending = deferredLoadCoordinator.pendingWidgets(context)
         viewModelScope.launch {
             val display = buildDisplay(currentData, _uiState.value.dailyGoals, pending)
             _uiState.value = _uiState.value.copy(pendingWidgets = pending, display = display)
         }
         viewModelScope.launch {
-            loadDeferredDashboardMetrics(
+            deferredLoadCoordinator.loadDeferredMetrics(
                 context = context,
                 widgets = widgetsToLoad.toList(),
+                currentData = currentData,
+                dailyGoals = _uiState.value.dailyGoals,
+                buildDisplay = ::buildDisplay,
+                unacknowledgedPermissions = ::unacknowledgedWidgetPermissions,
+                onProgress = ::applyDeferredProgress,
             )
         }
+    }
+
+    private suspend fun applyDeferredProgress(update: DeferredDashboardProgressUpdate) {
+        _uiState.value = _uiState.value.copy(
+            data = update.data,
+            pendingWidgets = update.pendingWidgets,
+            display = update.display,
+            unacknowledgedWidgetPermissions = update.unacknowledgedWidgetPermissions,
+            error = update.error ?: _uiState.value.error,
+        )
     }
 
     private fun unacknowledgedWidgetPermissions(missingPermissions: Set<String>): Set<String> =
@@ -380,122 +376,13 @@ class DashboardViewModel @Inject constructor(
     private fun updateDashboardWidgets(widgets: List<DashboardWidgetId>) {
         val customizableWidgets = customizableDashboardWidgetIds(widgets)
         val customizableWidgetSet = customizableWidgets.toSet()
-        requestedDeferredWidgets = requestedDeferredWidgets intersect customizableWidgetSet
-        loadedDeferredWidgets = loadedDeferredWidgets intersect customizableWidgetSet
+        deferredLoadCoordinator.retainWidgets(customizableWidgetSet)
         prefs.setDashboardWidgetOrder(customizableWidgets.map { it.name })
         _uiState.value = _uiState.value.copy(
             dashboardWidgets = customizableWidgets,
             pendingWidgets = _uiState.value.pendingWidgets intersect customizableWidgetSet,
         )
     }
-
-    private suspend fun loadDeferredDashboardMetrics(
-        context: DeferredDashboardLoadContext,
-        widgets: List<DashboardWidgetId>,
-    ) {
-        deferredLoadMutex.withLock {
-            if (!isDeferredLoadCurrent(context)) return
-            val currentData = _uiState.value.data ?: return
-            if (widgets.isEmpty()) return
-
-            val metricsByWidget = widgets
-                .mapNotNull { widgetId -> widgetId.toDashboardMetricOrNull()?.let { widgetId to it } }
-                .filter { (_, metric) -> metric !in currentData.loadedMetrics }
-            val skippedWidgets = widgets.toSet() - metricsByWidget.map { (widgetId, _) -> widgetId }.toSet()
-            if (skippedWidgets.isNotEmpty()) {
-                loadedDeferredWidgets = loadedDeferredWidgets + skippedWidgets
-            }
-            if (metricsByWidget.isEmpty()) {
-                _uiState.value = _uiState.value.copy(pendingWidgets = pendingDeferredWidgets(context))
-                return
-            }
-            val orderedMetrics = metricsByWidget
-                .map { (_, metric) -> metric }
-                .distinct()
-
-            coroutineScope {
-                var mergedData = currentData
-                var debounceJob: Job? = null
-
-                suspend fun publishDeferredProgress(force: Boolean) {
-                    if (!isDeferredLoadCurrent(context)) return
-                    val pending = pendingDeferredWidgets(context)
-                    suspend fun publishNow() {
-                        val display = buildDisplay(mergedData, _uiState.value.dailyGoals, pending)
-                        if (!isDeferredLoadCurrent(context)) return
-                        _uiState.value = _uiState.value.copy(
-                            data = mergedData,
-                            unacknowledgedWidgetPermissions =
-                                unacknowledgedWidgetPermissions(mergedData.missingPermissions),
-                            pendingWidgets = pending,
-                            display = display,
-                        )
-                    }
-                    if (force) {
-                        debounceJob?.cancel()
-                        publishNow()
-                    } else {
-                        debounceJob?.cancel()
-                        debounceJob = launch {
-                            delay(DeferredDashboardUiDebounceMillis)
-                            publishNow()
-                        }
-                    }
-                }
-
-                deferredMetricLoadGroups(orderedMetrics).forEach { metricGroup ->
-                    if (!isDeferredLoadCurrent(context)) return@coroutineScope
-                    runCatching {
-                        loadDashboardDayUseCase(
-                            DashboardQuery(
-                                date = context.date,
-                                sleepRangeMode = context.sleepRangeMode,
-                                activityWeekMode = context.activityWeekMode,
-                                visibleMetrics = metricGroup,
-                                refreshMode = context.refreshMode,
-                                awaitMissingDerivedMetrics =
-                                    metricGroup.none { it in DashboardWeeklyTrainingDeferredMetrics },
-                            )
-                        )
-                    }
-                        .onSuccess { remainingData ->
-                            if (!isDeferredLoadCurrent(context)) return@coroutineScope
-                            val loadedWidgets = metricsByWidget
-                                .filter { (_, widgetMetric) -> widgetMetric in metricGroup }
-                                .map { (widgetId, _) -> widgetId }
-                                .toSet()
-                            mergedData = mergedData.mergeLoaded(remainingData)
-                            loadedDeferredWidgets = loadedDeferredWidgets + loadedWidgets
-                            publishDeferredProgress(force = false)
-                        }
-                        .onFailure { error ->
-                            if (!isDeferredLoadCurrent(context)) return@coroutineScope
-                            val failedWidgets = metricsByWidget
-                                .filter { (_, widgetMetric) -> widgetMetric in metricGroup }
-                                .map { (widgetId, _) -> widgetId }
-                                .toSet()
-                            loadedDeferredWidgets = loadedDeferredWidgets + failedWidgets
-                            _uiState.value = _uiState.value.copy(
-                                error = error.toScreenError("Unknown error"),
-                                pendingWidgets = pendingDeferredWidgets(context),
-                            )
-                        }
-                }
-                publishDeferredProgress(force = true)
-            }
-        }
-    }
-
-    private fun isDeferredLoadCurrent(context: DeferredDashboardLoadContext): Boolean =
-        deferredLoadContext?.generation == context.generation &&
-            _uiState.value.selectedDate == context.date
-
-    private fun pendingDeferredWidgets(context: DeferredDashboardLoadContext): Set<DashboardWidgetId> =
-        if (isDeferredLoadCurrent(context)) {
-            requestedDeferredWidgets - loadedDeferredWidgets
-        } else {
-            emptySet()
-        }
 
     private suspend fun buildDisplay(
         data: DashboardData,
@@ -511,43 +398,6 @@ class DashboardViewModel @Inject constructor(
         )
     }
 }
-
-private data class DeferredDashboardLoadContext(
-    val date: LocalDate,
-    val sleepRangeMode: SleepRangeMode,
-    val activityWeekMode: ActivityWeekMode,
-    val refreshMode: RefreshMode,
-    val generation: Long,
-)
-
-private val DashboardWeeklyTrainingDeferredMetrics = setOf(
-    DashboardMetric.WEEKLY_CARDIO_LOAD,
-    DashboardMetric.INTENSITY_MINUTES,
-)
-
-private fun deferredMetricLoadGroups(metrics: List<DashboardMetric>): List<Set<DashboardMetric>> {
-    val remaining = metrics.toMutableList()
-    val groups = mutableListOf<Set<DashboardMetric>>()
-    if (DashboardWeeklyTrainingDeferredMetrics.all { it in remaining }) {
-        groups += DashboardWeeklyTrainingDeferredMetrics
-        remaining.removeAll(DashboardWeeklyTrainingDeferredMetrics)
-    }
-    remaining.forEach { metric ->
-        groups += setOf(metric)
-    }
-    return groups
-}
-
-private val DashboardFastMetrics = setOf(
-    DashboardMetric.STEPS,
-    DashboardMetric.DISTANCE,
-    DashboardMetric.CALORIES_OUT,
-    DashboardMetric.WHEELCHAIR_PUSHES,
-    DashboardMetric.WORKOUT,
-    DashboardMetric.AVG_HEART_RATE,
-)
-
-private const val DeferredDashboardUiDebounceMillis = 150L
 
 private fun PreferencesRepository.dashboardDailyGoals(): DashboardDailyGoals =
     DashboardDailyGoals(

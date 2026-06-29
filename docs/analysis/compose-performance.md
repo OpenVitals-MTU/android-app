@@ -12,16 +12,35 @@ val state by viewModel.uiState.collectAsStateWithLifecycle()
 
 This stops collecting when the lifecycle is below `STARTED`, reducing wasted work.
 
+### Granular collection (pilot)
+
+On hot screens where profiling showed coarse recomposition risk, state is collected in slices wrapped in `remember(viewModel)` (required by `FlowOperatorInvokedInComposition` lint):
+
+```kotlin
+val isLoading by remember(viewModel) { uiState.map { it.isLoading } }
+    .collectAsStateWithLifecycle(initialValue = true)
+val display by remember(viewModel) { uiState.map { it.display } }
+    .collectAsStateWithLifecycle(initialValue = null)
+```
+
+**Pilot screens:** `DashboardScreen`, `HeartScreen`. Extend to other large states only if Layout Inspector shows unnecessary recompositions.
+
+### `@Immutable` on screen state
+
+All feature `*UiState` data classes and display DTOs are annotated with `@Immutable` so Compose can skip recomposition more aggressively when unrelated fields change.
+
+### Presentation mappers off main thread
+
+Expensive chart points, summaries, and insights are prepared in ViewModels via `*PresentationMapper` on `DispatcherProvider.default` and stored in `UiState.display`. Route composables no longer run `domain/insights` in `remember { }`.
+
 ### `remember` with explicit keys
 
-Chart and period components cache expensive derived values:
+Chart and period components cache layout-only derived values:
 
 ```kotlin
 val axisDates = remember(period) { datesInPeriod(period) }
 val cells = remember(values, period) { periodMonthHeatmapCells(values, period) }
 ```
-
-`SleepScreen` uses many keyed `remember` blocks for sessions, summaries, and chart points.
 
 ### Lazy lists
 
@@ -52,110 +71,40 @@ Avoids redundant reloads when the value is unchanged.
 
 `MetricDetailSectionListState` disables pull-to-refresh during section reorder — prevents gesture conflicts without extra recompositions.
 
-## Performance concerns
+## Remaining performance considerations
 
-### 1. Whole-`UiState` collection
+### 1. Whole-`UiState` collection on most screens
 
-Any field change on `uiState` recomposes the entire screen composable subtree. Large states amplify cost:
+Metric detail routes still collect full `uiState` where slice collection is not yet justified. Large states (`HeartUiState`, pre-mapper legacy fields) can still cause broader recomposition than necessary.
 
-- `HeartUiState` — dozens of list fields
-- `DashboardUiState` — widgets, goals, permissions, deferred load tokens
+**Mitigations when profiling shows jank:**
 
-**Mitigations:**
+- `.map { }.collectAsStateWithLifecycle()` inside `remember(viewModel) { … }`
+- Nested state objects in `UiState`
+- Separate `StateFlows` (use sparingly)
 
-```kotlin
-// Option A: map to a slice
-val isLoading by viewModel.uiState
-    .map { it.isLoading }
-    .collectAsStateWithLifecycle(initialValue = true)
+### 2. Large non-metric composables
 
-// Option B: nested state in UiState
-data class HeartUiState(
-    val period: PeriodUiState = PeriodUiState(),
-    val heartPayload: HeartPayload = HeartPayload(),
-)
+Manual-entry forms, settings, and achievements screens can still combine many concerns in one file (~400–800 lines). Splitting into section composables with minimal parameters remains the fix when touching those files.
 
-// Option C: separate StateFlows (use sparingly)
-```
-
-### 2. Missing stability annotations
-
-No `@Immutable` or `@Stable` annotations were found on `UiState` data classes. Compose cannot skip recomposition as aggressively for unknown stability.
-
-**Low-cost fix:**
-
-```kotlin
-import androidx.compose.runtime.Immutable
-
-@Immutable
-data class SleepUiState(
-    val isLoading: Boolean = true,
-    val sessions: List<SleepData> = emptyList(),
-    // ...
-)
-```
-
-Apply to `UiState` and feature display models passed deep into charts.
-
-### 3. Heavy derivation on main thread
-
-Even with `remember`, the **first** computation after a relevant state change runs during composition on the main thread:
-
-- `calculateSleepScoreForDate`
-- `periodComparison`, `personalBaselineInsight`
-- `sleepDurationPoints`, list filtering/sorting
-
-**Fix:** compute in ViewModel inside `withContext(dispatchers.default)` and store results in `UiState`. See [viewmodel-stateflow.md](viewmodel-stateflow.md).
-
-### 4. Monolithic composables
-
-`HydrationScreen` (~872 lines) combines:
-
-- Notification permission launcher state
-- Reminder toggles
-- `MetricDetailScaffold`
-- Multiple chart and list sections
-
-A state change at the top forces recomposition of the entire function unless split into child composables with minimal parameters.
-
-**Fix:**
-
-```kotlin
-@Composable
-fun HydrationScreen(viewModel: HydrationViewModel, /* ... */) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HydrationScreenContent(
-        state = state,
-        onRefresh = viewModel::load,
-        // ...
-    )
-}
-
-@Composable
-private fun HydrationDaySection(
-    summary: HydrationDaySummary,
-    unitFormatter: UnitFormatter,
-) { /* only recomposes when summary changes */ }
-```
-
-### 5. Lists without stable keys
+### 3. Lists without stable keys
 
 Use `key(item.id)` in `LazyColumn` items for sessions, workouts, and entries to preserve item state and help Compose reuse nodes.
 
-### 6. `LocalDate.now()` in scaffold
+### 4. `LocalDate.now()` in scaffold
 
 `MetricDetailScaffold` calls `LocalDate.now()` during composition for period capping. Minor cost; if used in equality-sensitive child composables, pass `today: LocalDate` from ViewModel or `remember { LocalDate.now() }` once per screen.
 
 ## Recomposition checklist for new screens
 
-- [ ] Route composable under ~150 lines; delegate to sections
-- [ ] `@Immutable` on `UiState` and display DTOs
-- [ ] Expensive lists and insights prepared in ViewModel
-- [ ] Section composables take primitives or small immutable types, not full `ViewModel`
-- [ ] `key(id)` on dynamic lazy list items
-- [ ] `collectAsStateWithLifecycle` (not raw `collectAsState`)
+- [x] Route composable under ~150 lines; delegate to sections (metric features)
+- [x] `@Immutable` on `UiState` and display DTOs
+- [x] Expensive lists and insights prepared in ViewModel / mapper (metric features)
+- [ ] Section composables take primitives or small immutable types, not full `ViewModel` (apply per new section)
+- [ ] `key(id)` on dynamic lazy list items (verify per list)
+- [x] `collectAsStateWithLifecycle` (not raw `collectAsState`)
 - [ ] Avoid creating new lambdas in hot paths; use method references or `remember(onClick) { { vm.action() } }`
-- [ ] Chart data classes are immutable lists, not mutable collections mutated in place
+- [x] Chart data classes are immutable lists, not mutable collections mutated in place
 
 ## `MetricDetailScaffold` integration
 
@@ -176,7 +125,7 @@ MetricDetailScaffold(
     syncPaused = hcUx.syncPaused,
     headerItems = { /* optional header */ },
 ) { period ->
-  sleepPeriodContent(period, state, /* ... */)
+  sleepPeriodContent(period, state.display, /* ... */)
 }
 ```
 
@@ -199,10 +148,10 @@ For measurable regressions:
 
 1. Android Studio Layout Inspector → Compose recomposition counts
 2. Macrobenchmark for scroll jank on large lazy lists (optional)
-3. Compare before/after moving derivation from `SleepScreen` into `SleepViewModel`
+3. Compare before/after granular collection on Dashboard / Heart pilots
 
 ## Related docs
 
 - [viewmodel-stateflow.md](viewmodel-stateflow.md) — move derivation out of composables
 - [project-structure.md](project-structure.md) — split large screen files
-- [refactor-backlog.md](refactor-backlog.md) — prioritized UI performance work
+- [refactor-backlog.md](refactor-backlog.md) — migration tracker

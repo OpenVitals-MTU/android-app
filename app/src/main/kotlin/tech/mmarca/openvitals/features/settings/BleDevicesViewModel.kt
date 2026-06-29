@@ -17,7 +17,9 @@ import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class BleDevicesUiState(
     val devices: List<BleSensorDevice> = emptyList(),
     val discoveredDevices: List<BleDiscoveredDevice> = emptyList(),

@@ -29,6 +29,7 @@ import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
+import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -41,12 +42,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class BodyRepository @Inject constructor(
+class BodyRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : BodyRepository {
 
     companion object {
         private const val TAG = "BodyRepository"
@@ -63,7 +64,7 @@ class BodyRepository @Inject constructor(
     private val writeHeightPermission = HealthPermission.getWritePermission(HeightRecord::class)
     private val writeBodyFatPermission = HealthPermission.getWritePermission(BodyFatRecord::class)
 
-    fun bodyWritePermissions(type: BodyMeasurementType): Set<String> = setOf(
+    override fun bodyWritePermissions(type: BodyMeasurementType): Set<String> = setOf(
         when (type) {
             BodyMeasurementType.WEIGHT -> writeWeightPermission
             BodyMeasurementType.HEIGHT -> writeHeightPermission
@@ -74,10 +75,10 @@ class BodyRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadBodyPeriod(
+    override suspend fun loadBodyPeriod(
         query: PeriodLoadQuery,
         metric: BodyPeriodMetric,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): BodyPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -243,7 +244,7 @@ class BodyRepository @Inject constructor(
         )
     }
 
-    suspend fun loadWeightEntries(start: LocalDate, end: LocalDate): List<WeightEntry> {
+    override suspend fun loadWeightEntries(start: LocalDate, end: LocalDate): List<WeightEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadWeightEntries(start, end, granted)
     }
@@ -268,7 +269,7 @@ class BodyRepository @Inject constructor(
         return hc.readWeightEntries(startInstant, endInstant)
     }
 
-    suspend fun loadLatestHeight(): Double? {
+    override suspend fun loadLatestHeight(): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadLatestHeight(granted)
     }
@@ -278,7 +279,7 @@ class BodyRepository @Inject constructor(
         return hc.readLatestHeight()
     }
 
-    suspend fun loadHeightEntries(start: LocalDate, end: LocalDate): List<HeightEntry> {
+    override suspend fun loadHeightEntries(start: LocalDate, end: LocalDate): List<HeightEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadHeightEntries(start, end, granted)
     }
@@ -295,7 +296,7 @@ class BodyRepository @Inject constructor(
         return hc.readHeightEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadBodyFatEntries(start: LocalDate, end: LocalDate): List<BodyFatEntry> {
+    override suspend fun loadBodyFatEntries(start: LocalDate, end: LocalDate): List<BodyFatEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBodyFatEntries(start, end, granted)
     }
@@ -320,7 +321,7 @@ class BodyRepository @Inject constructor(
         return hc.readBodyFatEntries(startInstant, endInstant)
     }
 
-    suspend fun loadLatestLeanBodyMass(): Double? {
+    override suspend fun loadLatestLeanBodyMass(): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadLatestLeanBodyMass(granted)
     }
@@ -330,7 +331,7 @@ class BodyRepository @Inject constructor(
         return hc.readLatestLeanBodyMass()
     }
 
-    suspend fun loadLeanBodyMassEntries(start: LocalDate, end: LocalDate): List<LeanBodyMassEntry> {
+    override suspend fun loadLeanBodyMassEntries(start: LocalDate, end: LocalDate): List<LeanBodyMassEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadLeanBodyMassEntries(start, end, granted)
     }
@@ -347,7 +348,7 @@ class BodyRepository @Inject constructor(
         return hc.readLeanBodyMassEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadLatestBMR(): Double? {
+    override suspend fun loadLatestBMR(): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadLatestBMR(granted)
     }
@@ -357,7 +358,7 @@ class BodyRepository @Inject constructor(
         return hc.readLatestBMR()
     }
 
-    suspend fun loadBmrEntries(start: LocalDate, end: LocalDate): List<BmrEntry> {
+    override suspend fun loadBmrEntries(start: LocalDate, end: LocalDate): List<BmrEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBmrEntries(start, end, granted)
     }
@@ -374,7 +375,7 @@ class BodyRepository @Inject constructor(
         return hc.readBmrEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadLatestBoneMass(): Double? {
+    override suspend fun loadLatestBoneMass(): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadLatestBoneMass(granted)
     }
@@ -384,7 +385,7 @@ class BodyRepository @Inject constructor(
         return hc.readLatestBoneMass()
     }
 
-    suspend fun loadBoneMassEntries(start: LocalDate, end: LocalDate): List<BoneMassEntry> {
+    override suspend fun loadBoneMassEntries(start: LocalDate, end: LocalDate): List<BoneMassEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBoneMassEntries(start, end, granted)
     }
@@ -401,7 +402,7 @@ class BodyRepository @Inject constructor(
         return hc.readBoneMassEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadLatestBodyWaterMass(): Double? {
+    override suspend fun loadLatestBodyWaterMass(): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadLatestBodyWaterMass(granted)
     }
@@ -411,7 +412,7 @@ class BodyRepository @Inject constructor(
         return hc.readLatestBodyWaterMass()
     }
 
-    suspend fun loadBodyWaterMassEntries(start: LocalDate, end: LocalDate): List<BodyWaterMassEntry> {
+    override suspend fun loadBodyWaterMassEntries(start: LocalDate, end: LocalDate): List<BodyWaterMassEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBodyWaterMassEntries(start, end, granted)
     }
@@ -428,10 +429,10 @@ class BodyRepository @Inject constructor(
         return hc.readBodyWaterMassEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun hasBodyWritePermission(type: BodyMeasurementType): Boolean =
+    override suspend fun hasBodyWritePermission(type: BodyMeasurementType): Boolean =
         bodyWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
 
-    suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String {
+    override suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String {
         val missingPermissions = bodyWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping writeBodyMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
@@ -440,7 +441,7 @@ class BodyRepository @Inject constructor(
         return hc.writeBodyMeasurementEntry(request).also { invalidateBodyCaches() }
     }
 
-    suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
+    override suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
         val readPermission = when (type) {
             BodyMeasurementType.WEIGHT -> readWeightPermission
             BodyMeasurementType.HEIGHT -> readHeightPermission
@@ -454,7 +455,7 @@ class BodyRepository @Inject constructor(
         return hc.readBodyMeasurementEntry(type, id)
     }
 
-    suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) {
+    override suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest) {
         val missingPermissions = bodyWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping updateBodyMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
@@ -464,7 +465,7 @@ class BodyRepository @Inject constructor(
         invalidateBodyCaches()
     }
 
-    suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) {
+    override suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) {
         val missingPermissions = bodyWritePermissions(type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping deleteBodyMeasurementEntry type=$type missingCount=${missingPermissions.size}")

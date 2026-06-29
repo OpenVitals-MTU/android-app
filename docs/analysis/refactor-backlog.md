@@ -2,116 +2,78 @@
 
 Prioritized improvements from the architecture code analysis. Ordered by **impact vs. effort**. Pick items when touching related files — no big-bang rewrite required.
 
-## P0 — High impact, start here
+**Status (June 2026):** P0–P3 items below are **complete** for metric detail screens, dashboard, and cross-cutting phases. See [Migration tracker](#migration-tracker-gap-closure-program) for per-feature checklist. Remaining large files are mostly manual-entry, settings, and secondary flows.
+
+## P0 — High impact ✅ Complete
 
 ### Split oversized screen files
 
-**Problem:** Route, sections, charts, and permission wiring live in single files (up to ~2,000 lines).
+**Problem:** Route, sections, charts, and permission wiring lived in single files (up to ~2,000 lines).
 
-**Targets:**
+**Outcome:** Metric routes are thin (~100–200 lines); content lives in sibling composables (`*MetricContent`, `*PeriodContent`, `DashboardContent`, etc.). Activity recording split into setup + recording screens.
 
-| File | Approx. lines | Suggested split |
-|------|---------------|-----------------|
-| `BodyScreen.kt` | ~1,116 | Route, day content, period content, cards |
-| `ActivityScreen.kt` | ~277 | Route + scaffold; content in `ActivityMetricContent.kt` |
-| `SleepScreen.kt` | ~936 | Route, day/period content, charts |
-| `HeartScreen.kt` | ~280 | Route + scaffold; content in `HeartMetricContent.kt` |
-| `HydrationScreen.kt` | ~872 | Route, reminders, charts |
-| `ActivityRecordingScreen.kt` | ~401 | Route; controls, GPS tabs, dashboard, splits in sibling files |
-| `ManualEntryScreen.kt` | ~210 | Route; widgets in `ManualEntryWidgets.kt` |
+| Route (after) | Approx. lines |
+|---------------|---------------|
+| `DashboardScreen.kt` | ~147 |
+| `SleepScreen.kt` | ~100 |
+| `HydrationScreen.kt` | ~104 |
+| `BodyScreen.kt` | ~197 |
+| `HeartScreen.kt` | ~290 |
+| `ActivityRecordingScreen.kt` | ~401 |
 
-**Done when:** Route composable &lt; ~150 lines; sections in named files per [project-structure.md](project-structure.md).
+**Done when:** Route composable &lt; ~150 lines; sections in named files per [project-structure.md](project-structure.md). ✅
 
 ### Move sleep/activity derived state into ViewModels
 
-**Problem:** `SleepScreen` (and similar) compute summaries, chart points, and insights in `remember { }` on the main thread.
+**Problem:** Screens computed summaries, chart points, and insights in `remember { }` on the main thread.
 
-**Done when:** `SleepUiState` (and peers) expose display-ready fields; ViewModel tests cover derived values; screen only renders.
+**Outcome:** `*PresentationMapper` + `*DisplayState` on metric ViewModels; routes render `display` only. See per-feature migration table.
 
-**References:** `HydrationViewModel`, `BodyViewModel` for patterns already closer to target.
-
-## P1 — Medium impact, low cost
+## P1 — Medium impact, low cost ✅ Complete
 
 ### Add `@Immutable` to `*UiState` data classes
 
-**Problem:** Compose cannot skip recomposition aggressively.
+**Problem:** Compose could not skip recomposition aggressively.
 
-**Action:** Annotate all feature `UiState` and display DTOs with `@Immutable`.
-
-**Files:** `features/*/XxxViewModel.kt` (state data classes), feature display models.
+**Outcome:** All feature `UiState` and display DTOs annotated with `@Immutable`.
 
 ### Introduce sealed `ScreenError`
 
-**Problem:** `String?` errors are not localizable or typed.
-
-**Action:**
-
-1. Add `ScreenError` in `core/presentation`
-2. Migrate one pilot screen (e.g. `SleepDetailViewModel`)
-3. Map to strings in scaffold or composable resolver
-4. Roll out to period-detail screens incrementally
-
-See [error-handling-null-safety.md](error-handling-null-safety.md).
+**Outcome:** `ScreenError` in `core/presentation`; rolled out to period-detail and dashboard ViewModels. See [error-handling-null-safety.md](error-handling-null-safety.md).
 
 ### Granular state collection (where profiling shows jank)
 
-**Problem:** Large `UiState` causes full-screen recomposition.
+**Outcome:** Pilot on `DashboardScreen` and `HeartScreen` using `remember(viewModel) { uiState.map { … } }`. Extend only if profiling shows jank on other screens.
 
-**Action:** Use `.map { }.collectAsStateWithLifecycle()` for loading-only subtrees, or nested state objects on hot screens (`HeartScreen`, `DashboardScreen`).
-
-## P2 — Medium impact, medium effort
+## P2 — Medium impact, medium effort ✅ Complete
 
 ### Extract use cases for dashboard and heart loads
 
-**Problem:** `DashboardViewModel` and `HeartViewModel` are large orchestrators.
-
-**Action:**
-
-- `LoadDashboardDayUseCase`
-- `LoadHeartPeriodUseCase`
-- `LoadSleepPeriodUseCase` (optional pilot)
-
-**Done when:** ViewModel `load()` is &lt; ~80 lines delegating to use case.
+**Outcome:** `LoadDashboardDayUseCase`, `LoadHeartPeriodUseCase`, `LoadSleepPeriodUseCase` in `domain/usecase/` with unit tests. ViewModels delegate orchestration.
 
 See [clean-architecture-refactor.md](clean-architecture-refactor.md).
 
-### Repository interfaces (top 3)
+### Repository interfaces
 
-**Problem:** No compile-time data/presentation boundary.
-
-**Action:** Introduce interfaces + `@Binds` for:
-
-1. `SleepRepository`
-2. `HealthRepository`
-3. `ActivityRepository`
-
-**Done when:** ViewModels depend on interfaces; existing tests pass with mocks or fakes.
+**Outcome:** Interfaces + `@Binds` for `SleepRepository`, `ActivityRepository`, `HealthRepository`, `HeartRepository`, `HydrationRepository`, `BodyRepository`. Implementations in `*Impl` classes.
 
 ### Move period result DTOs to domain
 
-**Problem:** `SleepPeriodData`, `HeartPeriodData`, etc. live in `data.repository`.
+**Outcome:** `*PeriodData` types in `domain/query/`; repositories return domain query types.
 
-**Action:** Relocate to `domain/query/` or `domain/model/`; update imports.
-
-## P3 — Lower urgency
+## P3 — Lower urgency ✅ Complete
 
 ### Slim `HealthRepository`
 
-**Problem:** ~1,600 lines; dashboard aggregation exceeds documented “narrow” scope.
-
-**Action:** Extract `DashboardDataLoader` or domain aggregator; leave permissions + availability on `HealthRepository`.
+**Outcome:** `HealthRepositoryImpl` ~55 lines (permissions/availability). Dashboard reads via `DashboardDataLoader` + `DashboardAggregator`.
 
 ### Compose UI tests
 
-**Problem:** No automated UI regression for scaffold/navigation.
-
-**Action:** Add tests for `MetricDetailScaffold` period controls and one golden-path screen (e.g. sleep week view).
+**Outcome:** `SleepScreenWeekTest` androidTest; `compileDebugAndroidTestKotlin` in `verifyLocalApp`; optional `verifyAndroidTest` when device connected.
 
 ### Split broad shared UI files
 
-**Problem:** `MetricCard.kt` mixes `MetricCard`, `SectionHeader`, `TimeRangeSelector`, etc.
-
-**Action:** Split by component when file growth slows reviews.
+**Outcome:** `SectionHeader.kt` and `TimeRangeSelector.kt` extracted from `MetricCard.kt`.
 
 ## Explicitly deferred (do not schedule without new requirements)
 
@@ -157,7 +119,8 @@ Verify before each PR: `.\gradlew.bat verifyLocalApp` (see [development.md](../d
 | Cycle | [x] | [x] | [x] | [x] | Display mapper + period content split |
 | Manual entry | n/a | [x] | [x] | [x] | Hub + 5 write forms; activity entry ScreenError |
 | Activity recording | n/a | [x] | [x] | n/a | Recording screen split; live `errorMessage` stays localized in controller |
-| Dashboard | [ ] | [ ] | [ ] | [x] | LoadDashboardDayUseCase |
+| Dashboard | [x] | [x] | [x] | [x] | Presentation mapper + screen split + deferred-load coordinator |
+| Daily readiness | n/a | [x] | [x] | [x] | Route split; insight from ViewModel |
 
 ### Cross-cutting program phases
 
@@ -166,10 +129,20 @@ Verify before each PR: `.\gradlew.bat verifyLocalApp` (see [development.md](../d
 | 4 | `@Immutable` on all `*UiState` | [x] |
 | 4 | `ScreenError` rollout complete | [x] |
 | 5 | `domain/query/*PeriodData` | [x] |
-| 6 | `LoadHeartPeriodUseCase`, `LoadDashboardDayUseCase` | [x] |
-| 7 | Repository interfaces (Sleep, Activity, Health) | [x] |
+| 6 | `LoadHeartPeriodUseCase`, `LoadDashboardDayUseCase`, `LoadSleepPeriodUseCase` | [x] |
+| 7 | Repository interfaces (Sleep, Activity, Health, Heart, Hydration, Body) | [x] |
 | 8 | `DashboardAggregator` + slim `HealthRepository` | [x] |
 | 9 | Compose UI tests for `MetricDetailScaffold` | [x] |
+
+## Documented exceptions
+
+| Area | Decision |
+|------|----------|
+| Activity recording errors | `errorMessage` stays in recording controller; localized at source; `ScreenError` n/a |
+| Activity entry | `ScreenError` on ViewModel; form/recording split into sibling composables |
+| androidTest | `compileDebugAndroidTestKotlin` in `verifyLocalApp`; `connectedDebugAndroidTest` optional via `verifyAndroidTest` when `ANDROID_SERIAL` is set |
+| Period screens | Keep existing ViewModel period navigation; MVI/reducer deferred |
+| Charts | Feature-owned semantics; shared primitives stay in `ui/components` until a second consumer appears |
 
 ## Tracking template
 

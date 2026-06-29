@@ -34,7 +34,7 @@ class BodyRepositoryTest {
         coEvery { hc.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") } returns Unit
         coEvery { cacheStore.invalidateSurface(BodyPeriodDataCodec.Surface) } returns Unit
 
-        val repository = BodyRepository(hc, metricSummaryCacheStore = cacheStore)
+        val repository = BodyRepositoryImpl(hc, metricSummaryCacheStore = cacheStore)
 
         repository.writeBodyMeasurementEntry(request)
         repository.updateBodyMeasurementEntry("weight-id", request)

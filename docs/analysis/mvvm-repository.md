@@ -76,11 +76,25 @@ Documented scope:
 
 - Health Connect availability
 - Permission contract and granted/missing sets
-- Dashboard aggregation
 
 **Do not** add new feature-detail read methods here unless during a temporary migration.
 
-**Current gap:** `HealthRepository` is still very large (~1,600 lines) because dashboard aggregation and some insight calculation live inside it. Consider extracting a `DashboardAggregator` or similar domain service over time.
+Dashboard day aggregation lives in `DashboardDataLoader` (data) and `DashboardAggregator` (domain). `HealthRepositoryImpl` is ~55 lines and delegates permission/availability to `HealthConnectManager`.
+
+### Repository interfaces
+
+Interfaces live in `data/repository/contract/` with `@Binds` in `RepositoryModule`:
+
+| Interface | Implementation |
+|-----------|----------------|
+| `SleepRepository` | `SleepRepositoryImpl` |
+| `ActivityRepository` | `ActivityRepositoryImpl` |
+| `HealthRepository` | `HealthRepositoryImpl` |
+| `HeartRepository` | `HeartRepositoryImpl` |
+| `HydrationRepository` | `HydrationRepositoryImpl` |
+| `BodyRepository` | `BodyRepositoryImpl` |
+
+ViewModels and use cases depend on interfaces. Remaining repos (`NutritionRepository`, etc.) can adopt the same pattern when touched.
 
 ### `PreferencesRepository`
 
@@ -125,20 +139,13 @@ flowchart TB
 
 ## Gaps and recommendations
 
-### No repository interfaces
+### Repository interfaces (partial)
 
-ViewModels depend on concrete `@Singleton` classes. Unit tests use MockK successfully, but:
+Top six repositories now have interfaces. Nutrition, mindfulness, cycle, and vitals remain concrete-only — add interfaces when those files are next refactored.
 
-- No compile-time boundary between domain and data
-- Harder to swap fakes in instrumented tests or future modules
+### Period result DTOs ✅
 
-**Recommendation:** Add interfaces for high-traffic repositories (`SleepRepository`, `HealthRepository`, `ActivityRepository`) when touching those files; bind implementations in Hilt.
-
-### Result DTOs in `data.repository`
-
-Types like `SleepPeriodData`, `HeartPeriodData` live next to repository implementations. In stricter Clean Architecture these belong in `domain` as query results.
-
-**Recommendation:** Move period result types to `domain/model` or `domain/query` incrementally.
+Types like `SleepPeriodData`, `HeartPeriodData` live in `domain/query/`. Repositories return domain query types; mappers consume them in the presentation layer.
 
 ### Multi-repository ViewModels
 

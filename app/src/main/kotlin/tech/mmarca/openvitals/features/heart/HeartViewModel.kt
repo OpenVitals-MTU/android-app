@@ -36,7 +36,6 @@ import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadRequest
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadResult
 import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase
-import tech.mmarca.openvitals.domain.usecase.vitalsSummary
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
 import javax.inject.Inject
@@ -295,79 +294,16 @@ class HeartViewModel(
                 )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
-                val highThreshold = _uiState.value.highHeartRateCheck.thresholdBpm
-                val lowThreshold = _uiState.value.lowHeartRateCheck.thresholdBpm
-                val vitalsSummary = result.vitalsSummary()
-                val highHeartRateCheck = result.heartRateThresholdCheck(
-                    selectedRange = query.range,
-                    type = HeartRateThresholdCheckType.HIGH,
-                    thresholdBpm = highThreshold,
-                )
-                val lowHeartRateCheck = result.heartRateThresholdCheck(
-                    selectedRange = query.range,
-                    type = HeartRateThresholdCheckType.LOW,
-                    thresholdBpm = lowThreshold,
-                )
-                val loadedState = _uiState.value.copy(
-                    isLoading = false,
-                    selectedDate = date,
-                    daySamples = result.daySamples,
-                    previousDaySamples = result.previousDaySamples,
-                    dailySummaries = result.dailySummaries,
-                    previousDailySummaries = result.previousDailySummaries,
-                    baselineDailySummaries = result.baselineDailySummaries,
-                    dayRestingBpm = result.dayRestingBpm,
-                    previousDayRestingBpm = result.previousDayRestingBpm,
-                    dayHrvMs = result.dayHrvMs,
-                    previousDayHrvMs = result.previousDayHrvMs,
-                    dailyRestingHR = result.dailyRestingHR,
-                    previousDailyRestingHR = result.previousDailyRestingHR,
-                    baselineDailyRestingHR = result.baselineDailyRestingHR,
-                    dailyHrv = result.dailyHrv,
-                    previousDailyHrv = result.previousDailyHrv,
-                    baselineDailyHrv = result.baselineDailyHrv,
-                    missingVitalsPermissions = result.missingVitalsPermissions,
-                    bloodPressure = result.bloodPressure,
-                    previousBloodPressure = result.previousBloodPressure,
-                    baselineBloodPressure = result.baselineBloodPressure,
-                    spO2 = result.spO2,
-                    previousSpO2 = result.previousSpO2,
-                    baselineSpO2 = result.baselineSpO2,
-                    respiratoryRate = result.respiratoryRate,
-                    previousRespiratoryRate = result.previousRespiratoryRate,
-                    baselineRespiratoryRate = result.baselineRespiratoryRate,
-                    bodyTemperature = result.bodyTemperature,
-                    previousBodyTemperature = result.previousBodyTemperature,
-                    baselineBodyTemperature = result.baselineBodyTemperature,
-                    vo2Max = result.vo2Max,
-                    previousVo2Max = result.previousVo2Max,
-                    baselineVo2Max = result.baselineVo2Max,
-                    bloodGlucose = result.bloodGlucose,
-                    previousBloodGlucose = result.previousBloodGlucose,
-                    baselineBloodGlucose = result.baselineBloodGlucose,
-                    skinTemperature = result.skinTemperature,
-                    previousSkinTemperature = result.previousSkinTemperature,
-                    baselineSkinTemperature = result.baselineSkinTemperature,
-                    hasVitalsData = vitalsSummary.hasVitalsData,
-                    latestBloodPressure = vitalsSummary.latestBloodPressure,
-                    latestSpO2 = vitalsSummary.latestSpO2,
-                    latestRespiratoryRate = vitalsSummary.latestRespiratoryRate,
-                    latestBodyTemperature = vitalsSummary.latestBodyTemperature,
-                    latestVo2Max = vitalsSummary.latestVo2Max,
-                    latestBloodGlucose = vitalsSummary.latestBloodGlucose,
-                    latestSkinTemperature = vitalsSummary.latestSkinTemperature,
-                    highHeartRateCheck = highHeartRateCheck,
-                    lowHeartRateCheck = lowHeartRateCheck,
-                )
-                val display = withContext(dispatchers.default) {
-                    HeartPresentationMapper.build(
+                val loadedState = withContext(dispatchers.default) {
+                    HeartPresentationMapper.applyLoadResult(
+                        current = _uiState.value,
                         query = query,
                         metric = selectedMetric,
-                        state = loadedState,
+                        result = result,
                     )
                 }
                 if (!isCurrent) return@load
-                _uiState.value = loadedState.copy(display = display)
+                _uiState.value = loadedState
             }.onFailure {
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -489,65 +425,6 @@ private fun HeartMetric?.toLoadRequest(): HeartPeriodLoadRequest =
         HeartMetric.BLOOD_GLUCOSE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.BLOOD_GLUCOSE)
         HeartMetric.SKIN_TEMPERATURE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.SKIN_TEMPERATURE)
     }
-
-private fun HeartPeriodLoadResult.heartRateThresholdCheck(
-    selectedRange: TimeRange,
-    type: HeartRateThresholdCheckType,
-    thresholdBpm: Int,
-): HeartRateThresholdCheck {
-    val hasData = if (selectedRange == TimeRange.DAY) {
-        daySamples.isNotEmpty()
-    } else {
-        dailySummaries.isNotEmpty()
-    }
-    val count = when (type) {
-        HeartRateThresholdCheckType.HIGH -> if (selectedRange == TimeRange.DAY) {
-            daySamples.count { it.beatsPerMinute >= thresholdBpm }
-        } else {
-            dailySummaries.count { it.maxBpm >= thresholdBpm }
-        }
-        HeartRateThresholdCheckType.LOW -> if (selectedRange == TimeRange.DAY) {
-            daySamples.count { it.beatsPerMinute <= thresholdBpm }
-        } else {
-            dailySummaries.count { it.minBpm <= thresholdBpm }
-        }
-    }
-    return HeartRateThresholdCheck(
-        type = type,
-        thresholdBpm = thresholdBpm,
-        count = count,
-        hasData = hasData,
-    )
-}
-
-private fun HeartUiState.heartRateThresholdCheck(
-    type: HeartRateThresholdCheckType,
-    thresholdBpm: Int,
-): HeartRateThresholdCheck {
-    val hasData = if (selectedRange == TimeRange.DAY) {
-        daySamples.isNotEmpty()
-    } else {
-        dailySummaries.isNotEmpty()
-    }
-    val count = when (type) {
-        HeartRateThresholdCheckType.HIGH -> if (selectedRange == TimeRange.DAY) {
-            daySamples.count { it.beatsPerMinute >= thresholdBpm }
-        } else {
-            dailySummaries.count { it.maxBpm >= thresholdBpm }
-        }
-        HeartRateThresholdCheckType.LOW -> if (selectedRange == TimeRange.DAY) {
-            daySamples.count { it.beatsPerMinute <= thresholdBpm }
-        } else {
-            dailySummaries.count { it.minBpm <= thresholdBpm }
-        }
-    }
-    return HeartRateThresholdCheck(
-        type = type,
-        thresholdBpm = thresholdBpm,
-        count = count,
-        hasData = hasData,
-    )
-}
 
 private fun heartMetricFromRoute(metricId: String?): HeartMetric? {
     if (metricId == null) return null
