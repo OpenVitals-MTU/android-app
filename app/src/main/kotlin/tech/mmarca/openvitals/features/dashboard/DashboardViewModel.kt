@@ -5,7 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -32,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 @Immutable
 data class DashboardUiState(
@@ -51,6 +56,7 @@ data class DashboardUiState(
     val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val minimumPermissionsGranted: Boolean = true,
     val visibleWidgetLoadToken: Long = 0L,
+    val display: DashboardDisplayState = DashboardDisplayState(),
 )
 
 @Immutable
@@ -76,6 +82,9 @@ class DashboardViewModel @Inject constructor(
     private val loadDashboardDayUseCase: LoadDashboardDayUseCase,
     private val repository: HealthRepository,
     private val prefs: PreferencesRepository,
+    private val unitFormatter: UnitFormatter,
+    private val dateTimeFormatterProvider: DateTimeFormatterProvider,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val activityRepository: ActivityRepository? = null,
 ) : ViewModel() {
 
@@ -145,12 +154,18 @@ class DashboardViewModel @Inject constructor(
             calorieModeChanged ||
             current.dailyGoals != dailyGoals
         ) {
-            _uiState.value = current.copy(
-                sleepRangeMode = sleepRangeMode,
-                activityWeekMode = activityWeekMode,
-                showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
-                dailyGoals = dailyGoals,
-            )
+            viewModelScope.launch {
+                val display = current.data?.let { data ->
+                    buildDisplay(data, dailyGoals, current.pendingWidgets)
+                } ?: current.display
+                _uiState.value = current.copy(
+                    sleepRangeMode = sleepRangeMode,
+                    activityWeekMode = activityWeekMode,
+                    showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
+                    dailyGoals = dailyGoals,
+                    display = display,
+                )
+            }
         }
         if (sleepRangeChanged || activityWeekModeChanged || calorieModeChanged) {
             load(current.selectedDate)
@@ -219,6 +234,8 @@ class DashboardViewModel @Inject constructor(
                         refreshMode = refreshMode,
                         generation = loadGeneration,
                     )
+                    val goals = prefs.dashboardDailyGoals()
+                    val display = buildDisplay(data, goals, pendingWidgets = emptySet())
                     _uiState.value = _uiState.value.copy(
                         data = data,
                         isLoading = false,
@@ -226,8 +243,9 @@ class DashboardViewModel @Inject constructor(
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
                         showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
-                        dailyGoals = prefs.dashboardDailyGoals(),
+                        dailyGoals = goals,
                         visibleWidgetLoadToken = loadGeneration,
+                        display = display,
                     )
                 }
                 .onFailure { error ->
@@ -286,7 +304,11 @@ class DashboardViewModel @Inject constructor(
         if (widgetsToLoad.isEmpty()) return
 
         requestedDeferredWidgets = requestedDeferredWidgets + widgetsToLoad
-        _uiState.value = _uiState.value.copy(pendingWidgets = pendingDeferredWidgets(context))
+        val pending = pendingDeferredWidgets(context)
+        viewModelScope.launch {
+            val display = buildDisplay(currentData, _uiState.value.dailyGoals, pending)
+            _uiState.value = _uiState.value.copy(pendingWidgets = pending, display = display)
+        }
         viewModelScope.launch {
             loadDeferredDashboardMetrics(
                 context = context,
@@ -395,26 +417,28 @@ class DashboardViewModel @Inject constructor(
                 var mergedData = currentData
                 var debounceJob: Job? = null
 
-                fun publishDeferredProgress(force: Boolean) {
+                suspend fun publishDeferredProgress(force: Boolean) {
                     if (!isDeferredLoadCurrent(context)) return
-                    val publish = {
+                    val pending = pendingDeferredWidgets(context)
+                    suspend fun publishNow() {
+                        val display = buildDisplay(mergedData, _uiState.value.dailyGoals, pending)
+                        if (!isDeferredLoadCurrent(context)) return
                         _uiState.value = _uiState.value.copy(
                             data = mergedData,
                             unacknowledgedWidgetPermissions =
                                 unacknowledgedWidgetPermissions(mergedData.missingPermissions),
-                            pendingWidgets = pendingDeferredWidgets(context),
+                            pendingWidgets = pending,
+                            display = display,
                         )
                     }
                     if (force) {
                         debounceJob?.cancel()
-                        publish()
+                        publishNow()
                     } else {
                         debounceJob?.cancel()
                         debounceJob = launch {
                             delay(DeferredDashboardUiDebounceMillis)
-                            if (isDeferredLoadCurrent(context)) {
-                                publish()
-                            }
+                            publishNow()
                         }
                     }
                 }
@@ -472,6 +496,20 @@ class DashboardViewModel @Inject constructor(
         } else {
             emptySet()
         }
+
+    private suspend fun buildDisplay(
+        data: DashboardData,
+        dailyGoals: DashboardDailyGoals,
+        pendingWidgets: Set<DashboardWidgetId>,
+    ): DashboardDisplayState = withContext(dispatchers.default) {
+        DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            pendingWidgets = pendingWidgets,
+        )
+    }
 }
 
 private data class DeferredDashboardLoadContext(

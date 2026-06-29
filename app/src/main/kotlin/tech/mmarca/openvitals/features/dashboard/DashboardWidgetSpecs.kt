@@ -142,559 +142,249 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 @Composable
 internal fun dashboardWidgetSpecs(
-    data: DashboardData,
+    display: DashboardDisplayState,
     unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    dailyGoals: DashboardDailyGoals,
     widgetIds: Collection<DashboardWidgetId>,
-    pendingWidgets: Set<DashboardWidgetId>,
     isEditingDashboard: Boolean,
     onOpenMetric: (DashboardWidgetId) -> Unit,
 ): List<DashboardWidgetSpec> = buildList {
-    val widgetIdsToBuild = widgetIds.toSet()
-    fun shouldBuild(widgetId: DashboardWidgetId): Boolean =
-        widgetId in widgetIdsToBuild
     val loadingMessage = stringResource(R.string.loading)
-    fun loadingMessageFor(widgetId: DashboardWidgetId): String? =
-        loadingMessage.takeIf { widgetId in pendingWidgets }
     val openMetric: (DashboardWidgetId) -> (() -> Unit)? = { widgetId ->
         if (isEditingDashboard) null else ({ onOpenMetric(widgetId) })
     }
-    val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
-
-    if (shouldBuild(DashboardWidgetId.STEPS)) {
-        addMetric(
-            id = DashboardWidgetId.STEPS,
-            title = stringResource(R.string.metric_steps),
-            value = DisplayValue(unitFormatter.count(data.steps), stringResource(R.string.unit_steps)),
-            icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
-            accentColor = StepsColor,
-            progress = dashboardGoalProgress(
-                current = data.steps.toDouble(),
-                target = dailyGoals.steps,
-                label = stringResource(R.string.dashboard_goal_of, unitFormatter.count(dailyGoals.steps.roundToInt())),
-            ),
-            style = DashboardWidgetStyle.CIRCLE,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.STEPS),
-            onClick = openMetric(DashboardWidgetId.STEPS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.WEEKLY_CARDIO_LOAD)) {
-        addWeeklyCardioLoadMetric(
-            id = DashboardWidgetId.WEEKLY_CARDIO_LOAD,
-            title = stringResource(R.string.metric_weekly_cardio_load),
-            weeklyCardioLoad = data.weeklyCardioLoad,
-            icon = Icons.Outlined.Favorite,
-            accentColor = WorkoutColor,
-            style = DashboardWidgetStyle.CIRCLE,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.WEEKLY_CARDIO_LOAD),
-            onClick = openMetric(DashboardWidgetId.WEEKLY_CARDIO_LOAD),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.CARDIO_LOAD)) {
-        addWeeklyCardioLoadMetric(
-            id = DashboardWidgetId.CARDIO_LOAD,
-            title = stringResource(R.string.metric_weekly_cardio_load),
-            weeklyCardioLoad = data.weeklyCardioLoad,
-            icon = Icons.Outlined.Favorite,
-            accentColor = WorkoutColor,
-            style = DashboardWidgetStyle.PILL,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.CARDIO_LOAD),
-            onClick = openMetric(DashboardWidgetId.CARDIO_LOAD),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.DISTANCE)) {
-        addMetric(
-            id = DashboardWidgetId.DISTANCE,
-            title = stringResource(R.string.metric_distance),
-            value = unitFormatter.distance(data.distanceMeters),
-            icon = Icons.Outlined.Straighten,
-            accentColor = DistanceColor,
-            progress = dashboardGoalProgress(
-                current = data.distanceMeters,
-                target = dailyGoals.distanceMeters,
-                label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.distance(dailyGoals.distanceMeters))),
-            ),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.DISTANCE),
-            onClick = openMetric(DashboardWidgetId.DISTANCE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.CALORIES_OUT)) {
-        val caloriesKcal = if (data.caloriesKcalSource == CaloriesBurnedSource.NO_DATA) 0.0 else data.caloriesKcal
-        val caloriesValue = unitFormatter.energy(caloriesKcal)
-        addOptionalMetric(
-            id = DashboardWidgetId.CALORIES_OUT,
-            title = stringResource(R.string.metric_calories_out),
-            value = caloriesValue,
-            icon = Icons.Outlined.LocalFireDepartment,
-            accentColor = CaloriesColor,
-            subtitle = if (data.caloriesKcalSource == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR) {
-                stringResource(R.string.calories_estimated_active_bmr)
-            } else {
-                null
-            },
-            subtitleColor = MaterialTheme.colorScheme.onSurface,
-            progress = dashboardGoalProgress(
-                current = caloriesKcal,
-                target = dailyGoals.caloriesOutKcal,
-                label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.energy(dailyGoals.caloriesOutKcal))),
-            ),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.CALORIES_OUT),
-            onClick = openMetric(DashboardWidgetId.CALORIES_OUT),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.ACTIVE_CALORIES)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.ACTIVE_CALORIES,
-            title = stringResource(R.string.metric_active_calories),
-            value = data.activeCaloriesKcal?.let(unitFormatter::energy),
-            icon = Icons.Outlined.LocalFireDepartment,
-            accentColor = ActiveCaloriesColor,
-            progress = data.activeCaloriesKcal?.let {
-                dashboardGoalProgress(
-                    current = it,
-                    target = dailyGoals.activeCaloriesKcal,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.energy(dailyGoals.activeCaloriesKcal))),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.ACTIVE_CALORIES),
-            onClick = openMetric(DashboardWidgetId.ACTIVE_CALORIES),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.FLOORS)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.FLOORS,
-            title = stringResource(R.string.metric_floors_climbed),
-            value = data.floorsClimbed?.let {
-                DisplayValue(unitFormatter.count(it), stringResource(R.string.unit_floors))
-            },
-            icon = Icons.Outlined.Stairs,
-            accentColor = FloorsColor,
-            progress = data.floorsClimbed?.let {
-                dashboardGoalProgress(
-                    current = it.toDouble(),
-                    target = dailyGoals.floors,
-                    label = stringResource(R.string.dashboard_goal_of, unitFormatter.count(dailyGoals.floors.roundToInt())),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.FLOORS),
-            onClick = openMetric(DashboardWidgetId.FLOORS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.ELEVATION)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.ELEVATION,
-            title = stringResource(R.string.metric_elevation),
-            value = data.elevationGainedMeters?.let(unitFormatter::elevation),
-            icon = Icons.Outlined.Terrain,
-            accentColor = ElevationColor,
-            progress = data.elevationGainedMeters?.let {
-                dashboardGoalProgress(
-                    current = it,
-                    target = dailyGoals.elevationMeters,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.elevation(dailyGoals.elevationMeters))),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.ELEVATION),
-            onClick = openMetric(DashboardWidgetId.ELEVATION),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.WHEELCHAIR_PUSHES)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.WHEELCHAIR_PUSHES,
-            title = stringResource(R.string.metric_wheelchair_pushes),
-            value = data.wheelchairPushes?.let {
-                DisplayValue(unitFormatter.count(it), stringResource(R.string.unit_pushes))
-            },
-            icon = Icons.AutoMirrored.Outlined.Accessible,
-            accentColor = WheelchairPushesColor,
-            progress = data.wheelchairPushes?.let {
-                dashboardGoalProgress(
-                    current = it.toDouble(),
-                    target = dailyGoals.wheelchairPushes,
-                    label = stringResource(
-                        R.string.dashboard_goal_of,
-                        unitFormatter.count(dailyGoals.wheelchairPushes.roundToInt()),
-                    ),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.WHEELCHAIR_PUSHES),
-            onClick = openMetric(DashboardWidgetId.WHEELCHAIR_PUSHES),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.SLEEP)) {
-        val sleepScoreSubtitle = data.sleepScore
-            .takeIf { it.confidence != SleepScoreConfidence.NO_DATA }
-            ?.let { score ->
-                stringResource(
-                    R.string.dashboard_sleep_score_subtitle,
-                    unitFormatter.count(score.score),
-                    sleepScoreRatingLabel(score.score),
+    widgetIds.forEach { widgetId ->
+        val model = display.widgets[widgetId] ?: return@forEach
+        val meta = dashboardWidgetMeta(widgetId)
+        val title = dashboardWidgetTitle(widgetId)
+        when {
+            model.weeklyCardioLoad != null || model.id == DashboardWidgetId.WEEKLY_CARDIO_LOAD ||
+                model.id == DashboardWidgetId.CARDIO_LOAD -> {
+                addWeeklyCardioLoadMetric(
+                    id = widgetId,
+                    title = title,
+                    weeklyCardioLoad = model.weeklyCardioLoad,
+                    icon = meta.icon,
+                    accentColor = meta.accentColor,
+                    style = model.style,
+                    loadingMessage = loadingMessage.takeIf { model.isLoading },
+                    onClick = openMetric(widgetId),
                 )
             }
-        addOptionalMetric(
-            id = DashboardWidgetId.SLEEP,
-            title = stringResource(R.string.metric_sleep),
-            value = data.sleep?.let { DisplayValue(unitFormatter.duration(it.durationMs), "") },
-            icon = Icons.Outlined.Bed,
-            accentColor = SleepColor,
-            noDataMessage = stringResource(R.string.message_no_sleep_day),
-            subtitle = sleepScoreSubtitle,
-            subtitleColor = MaterialTheme.colorScheme.onSurface,
-            showTitle = false,
-            progress = data.sleep?.let {
-                dashboardGoalProgress(
-                    current = it.durationMs.toDouble(),
-                    target = sleepGoalMs.toDouble(),
-                    label = stringResource(R.string.dashboard_goal_of, unitFormatter.duration(sleepGoalMs)),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.SLEEP),
-            onClick = openMetric(DashboardWidgetId.SLEEP),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.HYDRATION)) {
-        addMetric(
-            id = DashboardWidgetId.HYDRATION,
-            title = stringResource(R.string.metric_hydration),
-            value = unitFormatter.hydration(data.hydrationLiters),
-            icon = Icons.Outlined.LocalDrink,
-            accentColor = HydrationColor,
-            progress = dashboardGoalProgress(
-                current = data.hydrationLiters,
-                target = dailyGoals.hydrationLiters,
-                label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.hydration(dailyGoals.hydrationLiters))),
-            ),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.HYDRATION),
-            onClick = openMetric(DashboardWidgetId.HYDRATION),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.CALORIES_IN)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.CALORIES_IN,
-            title = stringResource(R.string.metric_calories_in),
-            value = data.caloriesInKcal?.let(unitFormatter::energy),
-            icon = Icons.Outlined.Restaurant,
-            accentColor = NutritionColor,
-            progress = data.caloriesInKcal?.let {
-                dashboardGoalProgress(
-                    current = it,
-                    target = dailyGoals.caloriesInKcal,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.energy(dailyGoals.caloriesInKcal))),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.CALORIES_IN),
-            onClick = openMetric(DashboardWidgetId.CALORIES_IN),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.PROTEIN)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.PROTEIN,
-            title = stringResource(R.string.metric_protein),
-            value = data.proteinGrams?.let { DisplayValue(unitFormatter.count(it.roundToInt()), stringResource(R.string.unit_grams)) },
-            icon = Icons.Outlined.Restaurant,
-            accentColor = NutritionColor,
-            progress = data.proteinGrams?.let {
-                dashboardGoalProgress(
-                    current = it,
-                    target = dailyGoals.proteinGrams,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(dashboardGramDisplayValue(dailyGoals.proteinGrams, unitFormatter))),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.PROTEIN),
-            onClick = openMetric(DashboardWidgetId.PROTEIN),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.CARBS)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.CARBS,
-            title = stringResource(R.string.metric_carbs),
-            value = data.carbsGrams?.let { DisplayValue(unitFormatter.count(it.roundToInt()), stringResource(R.string.unit_grams)) },
-            icon = Icons.Outlined.Restaurant,
-            accentColor = NutritionColor,
-            progress = data.carbsGrams?.let {
-                dashboardGoalProgress(
-                    current = it,
-                    target = dailyGoals.carbsGrams,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(dashboardGramDisplayValue(dailyGoals.carbsGrams, unitFormatter))),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.CARBS),
-            onClick = openMetric(DashboardWidgetId.CARBS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.FAT)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.FAT,
-            title = stringResource(R.string.metric_fat),
-            value = data.fatGrams?.let { DisplayValue(unitFormatter.count(it.roundToInt()), stringResource(R.string.unit_grams)) },
-            icon = Icons.Outlined.Restaurant,
-            accentColor = NutritionColor,
-            progress = data.fatGrams?.let {
-                dashboardGoalProgress(
-                    current = it,
-                    target = dailyGoals.fatGrams,
-                    label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(dashboardGramDisplayValue(dailyGoals.fatGrams, unitFormatter))),
-                )
-            },
-            loadingMessage = loadingMessageFor(DashboardWidgetId.FAT),
-            onClick = openMetric(DashboardWidgetId.FAT),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.WEIGHT)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.WEIGHT,
-            title = stringResource(R.string.metric_latest_weight),
-            value = data.weightKg?.let(unitFormatter::weight),
-            subtitle = data.weightTime?.let { dashboardMeasurementDate(it, dateTimeFormatterProvider) },
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.WEIGHT),
-            onClick = openMetric(DashboardWidgetId.WEIGHT),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.HEIGHT)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.HEIGHT,
-            title = stringResource(R.string.metric_height),
-            value = data.heightCm?.let(unitFormatter::height),
-            subtitle = data.heightTime?.let { dashboardMeasurementDate(it, dateTimeFormatterProvider) },
-            icon = Icons.Outlined.Straighten,
-            accentColor = WeightColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.HEIGHT),
-            onClick = openMetric(DashboardWidgetId.HEIGHT),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BMI)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BMI,
-            title = stringResource(R.string.metric_bmi),
-            value = data.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BMI),
-            onClick = openMetric(DashboardWidgetId.BMI),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.FFMI)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.FFMI,
-            title = stringResource(R.string.metric_ffmi),
-            value = data.ffmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
-            icon = Icons.Outlined.FitnessCenter,
-            accentColor = BodyFatColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.FFMI),
-            onClick = openMetric(DashboardWidgetId.FFMI),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BODY_FAT)) {
-        addMetric(
-            id = DashboardWidgetId.BODY_FAT,
-            title = stringResource(R.string.metric_body_fat),
-            value = unitFormatter.percent(data.bodyFatPercent),
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = BodyFatColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BODY_FAT),
-            onClick = openMetric(DashboardWidgetId.BODY_FAT),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.LEAN_MASS)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.LEAN_MASS,
-            title = stringResource(R.string.metric_lean_mass),
-            value = data.leanMassKg?.let(unitFormatter::bodyMass),
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.LEAN_MASS),
-            onClick = openMetric(DashboardWidgetId.LEAN_MASS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BMR)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BMR,
-            title = stringResource(R.string.metric_bmr),
-            value = data.bmrKcal?.let(unitFormatter::energy),
-            icon = Icons.Outlined.LocalFireDepartment,
-            accentColor = CaloriesColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BMR),
-            onClick = openMetric(DashboardWidgetId.BMR),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BONE_MASS)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BONE_MASS,
-            title = stringResource(R.string.metric_bone_mass),
-            value = data.boneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
-            icon = Icons.Outlined.MonitorWeight,
-            accentColor = WeightColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BONE_MASS),
-            onClick = openMetric(DashboardWidgetId.BONE_MASS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BODY_WATER_MASS)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BODY_WATER_MASS,
-            title = stringResource(R.string.metric_body_water_mass),
-            value = data.bodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
-            icon = Icons.Outlined.LocalDrink,
-            accentColor = WeightColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BODY_WATER_MASS),
-            onClick = openMetric(DashboardWidgetId.BODY_WATER_MASS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.AVG_HEART_RATE)) {
-        addMetric(
-            id = DashboardWidgetId.AVG_HEART_RATE,
-            title = stringResource(R.string.metric_avg_heart_rate),
-            value = unitFormatter.heartRate(data.avgHeartRateBpm),
-            icon = Icons.Outlined.Favorite,
-            accentColor = HeartColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.AVG_HEART_RATE),
-            onClick = openMetric(DashboardWidgetId.AVG_HEART_RATE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.RESTING_HEART_RATE)) {
-        addMetric(
-            id = DashboardWidgetId.RESTING_HEART_RATE,
-            title = stringResource(R.string.metric_resting_heart_rate),
-            value = unitFormatter.heartRate(data.restingHeartRateBpm),
-            icon = Icons.Outlined.FavoriteBorder,
-            accentColor = HeartColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.RESTING_HEART_RATE),
-            onClick = openMetric(DashboardWidgetId.RESTING_HEART_RATE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.HRV)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.HRV,
-            title = stringResource(R.string.metric_hrv),
-            value = data.hrvRmssdMs?.let(unitFormatter::hrv),
-            icon = Icons.Outlined.FavoriteBorder,
-            accentColor = HeartColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.HRV),
-            onClick = openMetric(DashboardWidgetId.HRV),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BLOOD_PRESSURE)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BLOOD_PRESSURE,
-            title = stringResource(R.string.metric_blood_pressure),
-            value = if (data.latestSystolicMmHg != null && data.latestDiastolicMmHg != null) {
-                unitFormatter.bloodPressure(data.latestSystolicMmHg, data.latestDiastolicMmHg)
-            } else {
-                null
-            },
-            icon = Icons.Outlined.Favorite,
-            accentColor = VitalsColor,
-            noDataMessage = stringResource(R.string.message_no_blood_pressure),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BLOOD_PRESSURE),
-            onClick = openMetric(DashboardWidgetId.BLOOD_PRESSURE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.SPO2)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.SPO2,
-            title = stringResource(R.string.metric_spo2),
-            value = data.latestSpO2Percent?.let(unitFormatter::percent),
-            icon = Icons.Outlined.FavoriteBorder,
-            accentColor = VitalsColor,
-            noDataMessage = stringResource(R.string.message_no_oxygen),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.SPO2),
-            onClick = openMetric(DashboardWidgetId.SPO2),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.VO2_MAX)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.VO2_MAX,
-            title = stringResource(R.string.metric_vo2_max),
-            value = data.latestVo2Max?.let(unitFormatter::vo2Max),
-            icon = Icons.AutoMirrored.Outlined.DirectionsRun,
-            accentColor = VitalsColor,
-            noDataMessage = stringResource(R.string.message_no_vo2_max),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.VO2_MAX),
-            onClick = openMetric(DashboardWidgetId.VO2_MAX),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.RESPIRATORY_RATE)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.RESPIRATORY_RATE,
-            title = stringResource(R.string.metric_respiratory_rate),
-            value = data.avgRespiratoryRate?.let(unitFormatter::respiratoryRate),
-            icon = Icons.Outlined.Favorite,
-            accentColor = VitalsColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.RESPIRATORY_RATE),
-            onClick = openMetric(DashboardWidgetId.RESPIRATORY_RATE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BODY_TEMPERATURE)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BODY_TEMPERATURE,
-            title = stringResource(R.string.metric_body_temp),
-            value = data.latestBodyTemperatureCelsius?.let(unitFormatter::temperature),
-            icon = Icons.Outlined.FavoriteBorder,
-            accentColor = VitalsColor,
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BODY_TEMPERATURE),
-            onClick = openMetric(DashboardWidgetId.BODY_TEMPERATURE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.BLOOD_GLUCOSE)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.BLOOD_GLUCOSE,
-            title = stringResource(R.string.metric_blood_glucose),
-            value = data.latestBloodGlucoseMillimolesPerLiter?.let(unitFormatter::bloodGlucose),
-            icon = Icons.Outlined.Favorite,
-            accentColor = VitalsColor,
-            noDataMessage = stringResource(R.string.message_no_blood_glucose),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.BLOOD_GLUCOSE),
-            onClick = openMetric(DashboardWidgetId.BLOOD_GLUCOSE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.SKIN_TEMPERATURE)) {
-        addOptionalMetric(
-            id = DashboardWidgetId.SKIN_TEMPERATURE,
-            title = stringResource(R.string.metric_skin_temperature),
-            value = data.latestSkinTemperatureDeltaCelsius?.let(unitFormatter::temperatureDelta),
-            icon = Icons.Outlined.DeviceThermostat,
-            accentColor = VitalsColor,
-            noDataMessage = stringResource(R.string.message_no_skin_temperature),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.SKIN_TEMPERATURE),
-            onClick = openMetric(DashboardWidgetId.SKIN_TEMPERATURE),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.MINDFULNESS)) {
-        addMetric(
-            id = DashboardWidgetId.MINDFULNESS,
-            title = stringResource(R.string.metric_mindfulness),
-            value = unitFormatter.minutes((data.mindfulnessMinutes ?: 0).toLong()),
-            icon = Icons.Outlined.SelfImprovement,
-            accentColor = MindfulnessColor,
-            progress = dashboardGoalProgress(
-                current = (data.mindfulnessMinutes ?: 0).toDouble(),
-                target = dailyGoals.mindfulnessMinutes,
-                label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(unitFormatter.minutes(dailyGoals.mindfulnessMinutes.roundToInt().toLong()))),
-            ),
-            loadingMessage = loadingMessageFor(DashboardWidgetId.MINDFULNESS),
-            onClick = openMetric(DashboardWidgetId.MINDFULNESS),
-        )
-    }
-    if (shouldBuild(DashboardWidgetId.CYCLE)) {
-        add(
-            DashboardWidgetSpec(DashboardWidgetId.CYCLE, stringResource(R.string.metric_cycle)) { modifier ->
-                val cycleValue = cycleDisplayValue(data, unitFormatter)
-                DashboardPillWidget(
-                    title = stringResource(R.string.metric_cycle),
-                    value = cycleValue ?: DisplayValue("", ""),
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = CycleColor,
-                    message = loadingMessageFor(DashboardWidgetId.CYCLE)
-                        ?: if (cycleValue == null) stringResource(R.string.message_cycle_browse) else null,
-                    modifier = modifier,
-                    onClick = openMetric(DashboardWidgetId.CYCLE),
+            model.id == DashboardWidgetId.CYCLE -> {
+                add(
+                    DashboardWidgetSpec(widgetId, title) { modifier ->
+                        val cycleValue = model.cycle?.toDisplayValue(unitFormatter)
+                        DashboardPillWidget(
+                            title = title,
+                            value = cycleValue ?: DisplayValue("", ""),
+                            icon = meta.icon,
+                            accentColor = meta.accentColor,
+                            message = loadingMessage.takeIf { model.isLoading }
+                                ?: if (cycleValue == null) stringResource(R.string.message_cycle_browse) else null,
+                            modifier = modifier,
+                            onClick = openMetric(widgetId),
+                        )
+                    },
                 )
             }
-        )
+            widgetId in dashboardRequiredMetricWidgets && model.value != null -> {
+                addMetric(
+                    id = widgetId,
+                    title = title,
+                    value = model.value,
+                    icon = meta.icon,
+                    accentColor = meta.accentColor,
+                    progress = model.progress?.toWidgetProgress(),
+                    style = model.style,
+                    loadingMessage = loadingMessage.takeIf { model.isLoading },
+                    onClick = openMetric(widgetId),
+                )
+            }
+            else -> {
+                addOptionalMetric(
+                    id = widgetId,
+                    title = title,
+                    value = model.value,
+                    icon = meta.icon,
+                    accentColor = meta.accentColor,
+                    noDataMessage = noDataMessageFor(model),
+                    subtitle = caloriesSubtitleFor(model)
+                        ?: model.sleepScore?.toSubtitle(unitFormatter)
+                        ?: model.measurementSubtitle,
+                    subtitleColor = MaterialTheme.colorScheme.onSurface,
+                    showTitle = model.showTitle,
+                    progress = model.progress?.toWidgetProgress(),
+                    loadingMessage = loadingMessage.takeIf { model.isLoading },
+                    onClick = openMetric(widgetId),
+                )
+            }
+        }
     }
 }
+
+private val dashboardRequiredMetricWidgets = setOf(
+    DashboardWidgetId.STEPS,
+    DashboardWidgetId.DISTANCE,
+    DashboardWidgetId.HYDRATION,
+    DashboardWidgetId.BODY_FAT,
+    DashboardWidgetId.AVG_HEART_RATE,
+    DashboardWidgetId.RESTING_HEART_RATE,
+    DashboardWidgetId.MINDFULNESS,
+)
+
+@Composable
+private fun caloriesSubtitleFor(model: DashboardWidgetDisplayModel): String? =
+    if (model.caloriesSubtitle == CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR) {
+        stringResource(R.string.calories_estimated_active_bmr)
+    } else {
+        null
+    }
+
+@Composable
+private fun DashboardWidgetProgressModel.toWidgetProgress(): DashboardWidgetProgress =
+    DashboardWidgetProgress(
+        fraction = fraction,
+        label = stringResource(R.string.dashboard_goal_of, dashboardDisplayValue(goalLabelValue)),
+    )
+
+@Composable
+private fun SleepScoreDisplay.toSubtitle(unitFormatter: UnitFormatter): String =
+    stringResource(
+        R.string.dashboard_sleep_score_subtitle,
+        unitFormatter.count(score),
+        sleepScoreRatingLabel(rating),
+    )
+
+@Composable
+private fun sleepScoreRatingLabel(rating: SleepScoreRating): String =
+    stringResource(
+        when (rating) {
+            SleepScoreRating.EXCELLENT -> R.string.sleep_score_rating_excellent
+            SleepScoreRating.GOOD -> R.string.sleep_score_rating_good
+            SleepScoreRating.FAIR -> R.string.sleep_score_rating_fair
+            SleepScoreRating.POOR -> R.string.sleep_score_rating_poor
+        },
+    )
+
+@Composable
+private fun noDataMessageFor(model: DashboardWidgetDisplayModel): String? =
+    when (model.id) {
+        DashboardWidgetId.SLEEP -> stringResource(R.string.message_no_sleep_day)
+        DashboardWidgetId.BLOOD_PRESSURE -> stringResource(R.string.message_no_blood_pressure)
+        DashboardWidgetId.SPO2 -> stringResource(R.string.message_no_oxygen)
+        DashboardWidgetId.VO2_MAX -> stringResource(R.string.message_no_vo2_max)
+        DashboardWidgetId.BLOOD_GLUCOSE -> stringResource(R.string.message_no_blood_glucose)
+        DashboardWidgetId.SKIN_TEMPERATURE -> stringResource(R.string.message_no_skin_temperature)
+        else -> if (model.requiresNoDataMessage) stringResource(R.string.no_data) else null
+    }
+
+@Composable
+private fun CycleWidgetDisplay.toDisplayValue(unitFormatter: UnitFormatter): DisplayValue =
+    when (this) {
+        is CycleWidgetDisplay.MenstruationDays ->
+            DisplayValue(unitFormatter.count(days), stringResource(R.string.unit_days))
+        is CycleWidgetDisplay.OvulationTests ->
+            DisplayValue(unitFormatter.count(count), stringResource(R.string.unit_tests))
+        is CycleWidgetDisplay.BasalTemperature ->
+            unitFormatter.temperature(celsius)
+    }
+
+@Composable
+private fun dashboardWidgetTitle(widgetId: DashboardWidgetId): String =
+    stringResource(
+        when (widgetId) {
+            DashboardWidgetId.STEPS -> R.string.metric_steps
+            DashboardWidgetId.DISTANCE -> R.string.metric_distance
+            DashboardWidgetId.CALORIES_OUT -> R.string.metric_calories_out
+            DashboardWidgetId.ACTIVE_CALORIES -> R.string.metric_active_calories
+            DashboardWidgetId.FLOORS -> R.string.metric_floors_climbed
+            DashboardWidgetId.ELEVATION -> R.string.metric_elevation
+            DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
+            DashboardWidgetId.SLEEP -> R.string.metric_sleep
+            DashboardWidgetId.HYDRATION -> R.string.metric_hydration
+            DashboardWidgetId.CALORIES_IN -> R.string.metric_calories_in
+            DashboardWidgetId.PROTEIN -> R.string.metric_protein
+            DashboardWidgetId.CARBS -> R.string.metric_carbs
+            DashboardWidgetId.FAT -> R.string.metric_fat
+            DashboardWidgetId.WEIGHT -> R.string.metric_latest_weight
+            DashboardWidgetId.HEIGHT -> R.string.metric_height
+            DashboardWidgetId.BMI -> R.string.metric_bmi
+            DashboardWidgetId.FFMI -> R.string.metric_ffmi
+            DashboardWidgetId.BODY_FAT -> R.string.metric_body_fat
+            DashboardWidgetId.LEAN_MASS -> R.string.metric_lean_mass
+            DashboardWidgetId.BMR -> R.string.metric_bmr
+            DashboardWidgetId.BONE_MASS -> R.string.metric_bone_mass
+            DashboardWidgetId.BODY_WATER_MASS -> R.string.metric_body_water_mass
+            DashboardWidgetId.AVG_HEART_RATE -> R.string.metric_avg_heart_rate
+            DashboardWidgetId.RESTING_HEART_RATE -> R.string.metric_resting_heart_rate
+            DashboardWidgetId.HRV -> R.string.metric_hrv
+            DashboardWidgetId.BLOOD_PRESSURE -> R.string.metric_blood_pressure
+            DashboardWidgetId.SPO2 -> R.string.metric_spo2
+            DashboardWidgetId.VO2_MAX -> R.string.metric_vo2_max
+            DashboardWidgetId.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
+            DashboardWidgetId.BODY_TEMPERATURE -> R.string.metric_body_temp
+            DashboardWidgetId.BLOOD_GLUCOSE -> R.string.metric_blood_glucose
+            DashboardWidgetId.SKIN_TEMPERATURE -> R.string.metric_skin_temperature
+            DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+            DashboardWidgetId.CARDIO_LOAD,
+            -> R.string.metric_weekly_cardio_load
+            DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
+            DashboardWidgetId.CYCLE -> R.string.metric_cycle
+            DashboardWidgetId.WORKOUT -> R.string.metric_workout
+        },
+    )
+
+private data class DashboardWidgetMeta(
+    val icon: ImageVector,
+    val accentColor: Color,
+)
+
+private fun dashboardWidgetMeta(widgetId: DashboardWidgetId): DashboardWidgetMeta =
+    when (widgetId) {
+        DashboardWidgetId.STEPS -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.DirectionsWalk, StepsColor)
+        DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+        DashboardWidgetId.CARDIO_LOAD,
+        -> DashboardWidgetMeta(Icons.Outlined.Favorite, WorkoutColor)
+        DashboardWidgetId.DISTANCE -> DashboardWidgetMeta(Icons.Outlined.Straighten, DistanceColor)
+        DashboardWidgetId.CALORIES_OUT,
+        DashboardWidgetId.BMR,
+        -> DashboardWidgetMeta(Icons.Outlined.LocalFireDepartment, CaloriesColor)
+        DashboardWidgetId.ACTIVE_CALORIES -> DashboardWidgetMeta(Icons.Outlined.LocalFireDepartment, ActiveCaloriesColor)
+        DashboardWidgetId.FLOORS -> DashboardWidgetMeta(Icons.Outlined.Stairs, FloorsColor)
+        DashboardWidgetId.ELEVATION -> DashboardWidgetMeta(Icons.Outlined.Terrain, ElevationColor)
+        DashboardWidgetId.WHEELCHAIR_PUSHES -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.Accessible, WheelchairPushesColor)
+        DashboardWidgetId.SLEEP -> DashboardWidgetMeta(Icons.Outlined.Bed, SleepColor)
+        DashboardWidgetId.HYDRATION -> DashboardWidgetMeta(Icons.Outlined.LocalDrink, HydrationColor)
+        DashboardWidgetId.CALORIES_IN,
+        DashboardWidgetId.PROTEIN,
+        DashboardWidgetId.CARBS,
+        DashboardWidgetId.FAT,
+        -> DashboardWidgetMeta(Icons.Outlined.Restaurant, NutritionColor)
+        DashboardWidgetId.WEIGHT,
+        DashboardWidgetId.HEIGHT,
+        DashboardWidgetId.LEAN_MASS,
+        DashboardWidgetId.BONE_MASS,
+        DashboardWidgetId.BODY_WATER_MASS,
+        -> DashboardWidgetMeta(Icons.Outlined.MonitorWeight, WeightColor)
+        DashboardWidgetId.BMI -> DashboardWidgetMeta(Icons.Outlined.MonitorWeight, WeightColor)
+        DashboardWidgetId.FFMI -> DashboardWidgetMeta(Icons.Outlined.FitnessCenter, BodyFatColor)
+        DashboardWidgetId.BODY_FAT -> DashboardWidgetMeta(Icons.Outlined.MonitorWeight, BodyFatColor)
+        DashboardWidgetId.AVG_HEART_RATE,
+        DashboardWidgetId.RESTING_HEART_RATE,
+        DashboardWidgetId.BLOOD_PRESSURE,
+        DashboardWidgetId.RESPIRATORY_RATE,
+        DashboardWidgetId.BODY_TEMPERATURE,
+        -> DashboardWidgetMeta(Icons.Outlined.Favorite, VitalsColor)
+        DashboardWidgetId.HRV,
+        DashboardWidgetId.SPO2,
+        -> DashboardWidgetMeta(Icons.Outlined.FavoriteBorder, VitalsColor)
+        DashboardWidgetId.VO2_MAX -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.DirectionsRun, VitalsColor)
+        DashboardWidgetId.BLOOD_GLUCOSE -> DashboardWidgetMeta(Icons.Outlined.Favorite, VitalsColor)
+        DashboardWidgetId.SKIN_TEMPERATURE -> DashboardWidgetMeta(Icons.Outlined.DeviceThermostat, VitalsColor)
+        DashboardWidgetId.MINDFULNESS -> DashboardWidgetMeta(Icons.Outlined.SelfImprovement, MindfulnessColor)
+        DashboardWidgetId.CYCLE -> DashboardWidgetMeta(Icons.Outlined.CalendarMonth, CycleColor)
+        DashboardWidgetId.WORKOUT -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.DirectionsRun, WorkoutColor)
+    }
 
 internal fun MutableList<DashboardWidgetSpec>.addMetric(
     id: DashboardWidgetId,
@@ -800,32 +490,7 @@ internal fun MutableList<DashboardWidgetSpec>.addOptionalMetric(
     )
 }
 
-internal fun dashboardMeasurementDate(
-    time: Instant,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-): String =
-    dateTimeFormatterProvider.mediumDate().format(time.atZone(ZoneId.systemDefault()).toLocalDate())
-
-@Composable
-internal fun cycleDisplayValue(data: DashboardData, unitFormatter: UnitFormatter): DisplayValue? =
-    when {
-        data.menstruationPeriodDays != null && data.menstruationPeriodDays > 0 -> {
-            DisplayValue(
-                value = unitFormatter.count(data.menstruationPeriodDays),
-                unit = stringResource(R.string.unit_days),
-            )
-        }
-        data.ovulationTestCount != null && data.ovulationTestCount > 0 -> {
-            DisplayValue(
-                value = unitFormatter.count(data.ovulationTestCount),
-                unit = stringResource(R.string.unit_tests),
-            )
-        }
-        data.latestBasalBodyTemperatureCelsius != null -> unitFormatter.temperature(data.latestBasalBodyTemperatureCelsius)
-        else -> null
-    }
-
-internal enum class DashboardWidgetStyle {
+enum class DashboardWidgetStyle {
     PILL,
     CIRCLE,
 }

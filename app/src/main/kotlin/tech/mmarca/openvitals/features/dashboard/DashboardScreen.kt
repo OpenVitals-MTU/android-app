@@ -193,6 +193,7 @@ fun DashboardScreen(
                     ErrorMessage(state.error?.resolve() ?: stringResource(R.string.unknown_error))
                 dashboardData != null -> DashboardContent(
                     data = dashboardData,
+                    display = state.display,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     canGoForward = state.selectedDate.isBefore(LocalDate.now()),
@@ -248,6 +249,7 @@ fun DashboardScreen(
 @Composable
 private fun DashboardContent(
     data: DashboardData,
+    display: DashboardDisplayState,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     canGoForward: Boolean,
@@ -288,12 +290,9 @@ private fun DashboardContent(
         }
     }
     val specs = dashboardWidgetSpecs(
-        data = data,
+        display = display,
         unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        dailyGoals = dailyGoals,
         widgetIds = specWidgetIds,
-        pendingWidgets = pendingWidgets,
         isEditingDashboard = isEditingDashboard,
         onOpenMetric = onOpenMetric,
     )

@@ -12,6 +12,9 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -74,6 +77,19 @@ class DashboardViewModelTest {
         // _uiState initial value (new DashboardUiState() has isLoading = true).
         val initial = DashboardUiState()
         assertTrue(initial.isLoading)
+    }
+
+    @Test fun `load success populates display widgets`() = runTest {
+        val data = DashboardData(date = today, steps = 8_500)
+        val loader = mockDashboardDataLoader()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
+
+        val vm = dashboardViewModel(loader, prefs())
+
+        val stepsDisplay = vm.uiState.value.display.widgets[DashboardWidgetId.STEPS]
+        assertNotNull(stepsDisplay)
+        assertEquals(DashboardWidgetStyle.CIRCLE, stepsDisplay?.style)
+        assertFalse(stepsDisplay?.isLoading ?: true)
     }
 
     @Test fun `load success populates data and clears loading`() = runTest {
@@ -882,6 +898,9 @@ class DashboardViewModelTest {
             loadDashboardDayUseCase = LoadDashboardDayUseCase(loader),
             repository = repo,
             prefs = prefs,
+            unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC }),
+            dateTimeFormatterProvider = DateTimeFormatterProvider(),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
             activityRepository = activityRepo,
         )
 

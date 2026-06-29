@@ -113,6 +113,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+
+@Singleton
 class DashboardDataLoader @Inject constructor(
     private val hc: HealthConnectManager,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,

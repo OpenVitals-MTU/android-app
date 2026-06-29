@@ -1,6 +1,6 @@
 package tech.mmarca.openvitals.healthconnect
 
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import javax.inject.Inject
