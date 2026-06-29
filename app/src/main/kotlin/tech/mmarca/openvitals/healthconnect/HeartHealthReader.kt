@@ -8,10 +8,12 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
+import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
-import tech.mmarca.openvitals.domain.model.reducedForChart
+import tech.mmarca.openvitals.domain.model.heartRateSampleFromAggregateBucket
+import tech.mmarca.openvitals.domain.model.shouldUseAggregatedHeartRateSamples
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -21,7 +23,7 @@ internal class HeartHealthReader(
     private val support: HealthConnectReaderSupport,
 ) {
     companion object {
-        private val HeartRateSampleReadChunkDuration = Duration.ofHours(1)
+        private val HeartRateRawSampleReadChunkDuration = Duration.ofHours(1)
     }
 
     suspend fun readAvgHeartRate(date: LocalDate): Long? {
@@ -40,21 +42,51 @@ internal class HeartHealthReader(
 
     suspend fun readHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         support.withLogging("readHeartRateSamples[$start..$end]", emptyList()) {
-            var chunkStart = start
-            var accumulated = emptyList<HeartRateSample>()
-            while (chunkStart < end) {
-                val chunkEnd = minOf(
-                    chunkStart.plus(HeartRateSampleReadChunkDuration),
-                    end,
-                )
-                val chunkSamples = readHeartRateSamplesChunk(chunkStart, chunkEnd)
-                accumulated = (accumulated + chunkSamples).reducedForChart()
-                chunkStart = chunkEnd
+            val range = Duration.between(start, end)
+            if (shouldUseAggregatedHeartRateSamples(range)) {
+                readAggregatedHeartRateSamples(start, end)
+            } else {
+                readRawHeartRateSamples(start, end)
             }
-            accumulated
         }
 
-    private suspend fun readHeartRateSamplesChunk(start: Instant, end: Instant): List<HeartRateSample> =
+    /**
+     * Uses Health Connect duration aggregation so high-frequency days (for example Fitbit) are not
+     * truncated by [readRecordsPaged] page limits.
+     */
+    private suspend fun readAggregatedHeartRateSamples(
+        start: Instant,
+        end: Instant,
+    ): List<HeartRateSample> =
+        support.client().aggregateGroupByDuration(
+            AggregateGroupByDurationRequest(
+                metrics = setOf(HeartRateRecord.BPM_AVG),
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                timeRangeSlicer = HeartRateChartBucketDuration,
+            )
+        ).mapNotNull { bucket ->
+            val avg = bucket.result[HeartRateRecord.BPM_AVG] ?: return@mapNotNull null
+            heartRateSampleFromAggregateBucket(
+                startTime = bucket.startTime,
+                avgBpm = avg,
+            )
+        }
+
+    private suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> {
+        var chunkStart = start
+        val accumulated = mutableListOf<HeartRateSample>()
+        while (chunkStart < end) {
+            val chunkEnd = minOf(
+                chunkStart.plus(HeartRateRawSampleReadChunkDuration),
+                end,
+            )
+            accumulated += readRawHeartRateSamplesChunk(chunkStart, chunkEnd)
+            chunkStart = chunkEnd
+        }
+        return accumulated
+    }
+
+    private suspend fun readRawHeartRateSamplesChunk(start: Instant, end: Instant): List<HeartRateSample> =
         support.client().readRecordsPaged(
             recordType = HeartRateRecord::class,
             timeRangeFilter = TimeRangeFilter.between(start, end),
