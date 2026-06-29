@@ -1,11 +1,14 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.CardioLoadTimeWindow
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.insights.calculateCardioLoad
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
@@ -24,7 +27,7 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
+@Immutable
 data class ActivitiesUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -52,7 +56,7 @@ data class ActivitiesUiState(
     val baselineWorkouts: List<ExerciseData> = emptyList(),
     val overviewDays: List<ActivityOverviewDay> = emptyList(),
     val crossDailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val error: String? = null,
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
@@ -181,7 +185,7 @@ class ActivitiesViewModel(
             }.onSuccess {
                 load()
             }.onFailure { error ->
-                _uiState.value = previous.copy(error = error.message)
+                _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
@@ -260,7 +264,7 @@ class ActivitiesViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
-                        error = it.message,
+                        error = it.toScreenError(),
                     )
                 }
         }

@@ -25,7 +25,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 
 internal fun ExerciseData.toEditState(
     unitSystem: UnitSystem,

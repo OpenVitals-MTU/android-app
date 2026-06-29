@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,6 +26,8 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.navigation.VITALS_ENTRY_ID_ARG
 
@@ -44,6 +47,7 @@ enum class VitalsMeasurementEntryError {
     WRITE_FAILED,
 }
 
+@Immutable
 data class VitalsMeasurementEntryUiState(
     val type: VitalsMeasurementType = VitalsMeasurementType.BLOOD_PRESSURE,
     val inputText: String = "",
@@ -56,7 +60,7 @@ data class VitalsMeasurementEntryUiState(
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
     val entryError: VitalsMeasurementEntryError? = null,
-    val writeErrorMessage: String? = null,
+    val writeError: ScreenError? = null,
 ) {
     val isEditMode: Boolean
         get() = editRecordId != null
@@ -96,7 +100,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isCheckingPermission = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 repository.vitalsWritePermissions(type) to repository.hasVitalsWritePermission(type)
@@ -112,7 +116,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     writePermissions = repository.vitalsWritePermissions(type),
                     canWrite = false,
                     entryError = VitalsMeasurementEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -123,7 +127,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
             inputText = text,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -132,7 +136,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
             secondaryInputText = text,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -141,7 +145,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
             editTime = time.coerceAtMost(Instant.now()),
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -150,14 +154,14 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
         if (!current.canWrite) {
             _uiState.value = current.copy(
                 entryError = VitalsMeasurementEntryError.MISSING_WRITE_PERMISSION,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
         if (!isValidVitalsValue(current.type, value, secondaryValue)) {
             _uiState.value = current.copy(
                 entryError = VitalsMeasurementEntryError.INVALID_VALUE,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -166,7 +170,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isSavingEntry = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 val request = VitalsMeasurementWriteRequest(
@@ -187,13 +191,13 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     isSavingEntry = false,
                     saveCompleted = true,
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = VitalsMeasurementEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -212,7 +216,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 if (entry == null || !entry.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = VitalsMeasurementEntryError.WRITE_FAILED,
-                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
                     )
                     return@onSuccess
                 }
@@ -221,12 +225,12 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                     secondaryInputText = entry.secondaryValue?.toInputText().orEmpty(),
                     editTime = entry.time.coerceAtMost(Instant.now()),
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     entryError = VitalsMeasurementEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }

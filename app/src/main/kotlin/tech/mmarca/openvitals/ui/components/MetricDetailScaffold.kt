@@ -28,6 +28,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.period.displayPeriodFor
 import java.time.LocalDate
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.resolve
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +37,8 @@ fun MetricDetailScaffold(
     isLoading: Boolean,
     selectedRange: TimeRange,
     selectedDate: LocalDate,
-    error: String?,
+    screenError: ScreenError? = null,
+    error: String? = null,
     onRefresh: () -> Unit,
     onSelectRange: (TimeRange) -> Unit,
     onPreviousPeriod: () -> Unit,
@@ -52,6 +55,7 @@ fun MetricDetailScaffold(
 ) {
     val period = periodOverride(displayPeriodFor(selectedRange, selectedDate, weekPeriodMode = weekPeriodMode))
     val today = LocalDate.now()
+    val resolvedError = screenError.resolve() ?: error
     var showDatePicker by remember { mutableStateOf(false) }
     val defaultListState = rememberLazyListState()
     val lazyListState = sectionListState?.lazyListState ?: defaultListState
@@ -121,7 +125,7 @@ fun MetricDetailScaffold(
                         )
                     }
                 }
-                error?.let { err ->
+                resolvedError?.let { err ->
                     item { ErrorMessage(err) }
                 }
                 content(period)

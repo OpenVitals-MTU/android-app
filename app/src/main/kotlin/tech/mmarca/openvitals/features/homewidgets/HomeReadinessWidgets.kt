@@ -456,7 +456,7 @@ private suspend fun loadReadinessInsight(context: Context): DailyReadinessInsigh
         )
         val preferences = entryPoint.preferencesRepository()
         val data = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
-            entryPoint.healthRepository().loadDashboard(
+            entryPoint.dashboardDataLoader().loadDashboard(
                 DashboardQuery(
                     date = LocalDate.now(),
                     sleepRangeMode = preferences.sleepRangeMode,
@@ -480,7 +480,7 @@ private suspend fun loadDashboardResult(
         )
         val preferences = entryPoint.preferencesRepository()
         val data = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
-            entryPoint.healthRepository().loadDashboard(
+            entryPoint.dashboardDataLoader().loadDashboard(
                 DashboardQuery(
                     date = LocalDate.now(),
                     sleepRangeMode = preferences.sleepRangeMode,

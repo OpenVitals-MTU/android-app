@@ -40,6 +40,7 @@ import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
 import tech.mmarca.openvitals.core.presentation.DisplayValue
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.ErrorMessage
@@ -72,7 +73,7 @@ fun CardioLoadDetailScreen(
     ) {
         when {
             state.isLoading && state.days.isEmpty() -> FullScreenLoading()
-            state.error != null && state.days.isEmpty() -> ErrorMessage(state.error ?: stringResource(R.string.unknown_error))
+            state.error != null && state.days.isEmpty() -> ErrorMessage(state.error?.resolve() ?: stringResource(R.string.unknown_error))
             else -> CardioLoadDetailContent(
                 day = state.today,
                 unitFormatter = unitFormatter,

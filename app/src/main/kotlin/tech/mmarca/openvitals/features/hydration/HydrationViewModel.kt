@@ -1,8 +1,13 @@
 package tech.mmarca.openvitals.features.hydration
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -30,12 +35,14 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 private const val DefaultHydrationDailyGoalLiters = 2.0
 private const val HydrationGoalStepLiters = 0.25
 private const val MinHydrationDailyGoalLiters = 0.25
 private const val MaxHydrationDailyGoalLiters = 10.0
 
+@Immutable
 data class HydrationUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -48,21 +55,14 @@ data class HydrationUiState(
     val baselineDailyHydration: List<DailyHydration> = emptyList(),
     val hydrationEntries: List<HydrationEntry> = emptyList(),
     val crossWeightEntries: List<WeightEntry> = emptyList(),
-    val totalLiters: Double = 0.0,
-    val trackedDays: Int = 0,
-    val averageLiters: Double = 0.0,
-    val bestDayLiters: Double = 0.0,
-    val goalMetDays: Int = 0,
-    val goalSuccessRatePercent: Int = 0,
-    val currentTrackedStreakDays: Int = 0,
-    val currentGoalStreakDays: Int = 0,
-    val longestGoalStreakDays: Int = 0,
-    val error: String? = null,
+    val display: HydrationDisplayState = HydrationDisplayState(),
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class HydrationViewModel(
     private val repository: HydrationRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val bodyRepository: BodyRepository? = null,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
@@ -80,8 +80,10 @@ class HydrationViewModel(
         bodyRepository: BodyRepository,
         preferencesRepository: PreferencesRepository,
         reminderController: HydrationReminderController,
+        dispatchers: DispatcherProvider,
     ) : this(
         repository = repository,
+        dispatchers = dispatchers,
         bodyRepository = bodyRepository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
@@ -176,10 +178,7 @@ class HydrationViewModel(
     fun setDailyGoalLiters(liters: Double) {
         val goal = normalizeHydrationGoalLiters(liters)
         onDailyGoalChanged(goal)
-        _uiState.value = _uiState.value.withHydrationSummary(
-            dailyGoalLiters = goal,
-            dailyHydration = _uiState.value.dailyHydration,
-        )
+        _uiState.value = _uiState.value.copy(dailyGoalLiters = goal).withDisplay()
     }
 
     fun setHydrationRemindersEnabled(enabled: Boolean) {
@@ -218,7 +217,7 @@ class HydrationViewModel(
             }.onSuccess {
                 load(RefreshMode.FORCE)
             }.onFailure { error ->
-                _uiState.value = previous.copy(error = error.message)
+                _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
@@ -250,7 +249,18 @@ class HydrationViewModel(
                 )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
-                _uiState.value = _uiState.value.withHydrationSummary(
+                val display = withContext(dispatchers.default) {
+                    HydrationPresentationMapper.build(
+                        query = query,
+                        dailyGoalLiters = _uiState.value.dailyGoalLiters,
+                        dailyHydration = result.dailyHydration,
+                        previousDailyHydration = result.previousDailyHydration,
+                        baselineDailyHydration = result.baselineDailyHydration,
+                        crossWeightEntries = result.crossWeightEntries,
+                    )
+                }
+                if (!isCurrent) return@load
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
                     dailyHydration = result.dailyHydration,
@@ -258,13 +268,14 @@ class HydrationViewModel(
                     baselineDailyHydration = result.baselineDailyHydration,
                     hydrationEntries = result.hydrationEntries,
                     crossWeightEntries = result.crossWeightEntries,
+                    display = display,
                 )
             }.onFailure { error ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    error = error.message,
+                    error = error.toScreenError(),
                 )
             }
         }
@@ -295,47 +306,21 @@ class HydrationViewModel(
         liters.coerceIn(MinHydrationDailyGoalLiters, MaxHydrationDailyGoalLiters)
 }
 
-private data class HydrationSummary(
-    val totalLiters: Double,
-    val trackedDays: Int,
-    val averageLiters: Double,
-    val bestDayLiters: Double,
-    val goalMetDays: Int,
-    val goalSuccessRatePercent: Int,
-    val currentTrackedStreakDays: Int,
-    val currentGoalStreakDays: Int,
-    val longestGoalStreakDays: Int,
-)
-
-private fun HydrationUiState.withHydrationSummary(
-    isLoading: Boolean = this.isLoading,
-    selectedDate: LocalDate = this.selectedDate,
-    dailyGoalLiters: Double = this.dailyGoalLiters,
-    dailyHydration: List<DailyHydration> = this.dailyHydration,
-    previousDailyHydration: List<DailyHydration> = this.previousDailyHydration,
-    baselineDailyHydration: List<DailyHydration> = this.baselineDailyHydration,
-    hydrationEntries: List<HydrationEntry> = this.hydrationEntries,
-    crossWeightEntries: List<WeightEntry> = this.crossWeightEntries,
-): HydrationUiState {
-    val summary = dailyHydration.summaryForGoal(dailyGoalLiters)
+private fun HydrationUiState.withDisplay(): HydrationUiState {
+    val query = PeriodLoadQuery(
+        range = selectedRange,
+        anchorDate = selectedDate,
+        weekPeriodMode = weekPeriodMode,
+    )
     return copy(
-        isLoading = isLoading,
-        selectedDate = selectedDate,
-        dailyGoalLiters = dailyGoalLiters,
-        dailyHydration = dailyHydration,
-        previousDailyHydration = previousDailyHydration,
-        baselineDailyHydration = baselineDailyHydration,
-        hydrationEntries = hydrationEntries,
-        crossWeightEntries = crossWeightEntries,
-        totalLiters = summary.totalLiters,
-        trackedDays = summary.trackedDays,
-        averageLiters = summary.averageLiters,
-        bestDayLiters = summary.bestDayLiters,
-        goalMetDays = summary.goalMetDays,
-        goalSuccessRatePercent = summary.goalSuccessRatePercent,
-        currentTrackedStreakDays = summary.currentTrackedStreakDays,
-        currentGoalStreakDays = summary.currentGoalStreakDays,
-        longestGoalStreakDays = summary.longestGoalStreakDays,
+        display = HydrationPresentationMapper.build(
+            query = query,
+            dailyGoalLiters = dailyGoalLiters,
+            dailyHydration = dailyHydration,
+            previousDailyHydration = previousDailyHydration,
+            baselineDailyHydration = baselineDailyHydration,
+            crossWeightEntries = crossWeightEntries,
+        ),
     )
 }
 
@@ -349,40 +334,9 @@ private fun HydrationUiState.withDeletedHydrationEntry(entryId: String): Hydrati
             day
         }
     }
-    return withHydrationSummary(
+    return copy(
         dailyHydration = updatedDailyHydration,
         hydrationEntries = hydrationEntries.filterNot { it.id == entryId },
-    ).copy(error = null)
+        error = null,
+    ).withDisplay()
 }
-
-private fun List<DailyHydration>.summaryForGoal(dailyGoalLiters: Double): HydrationSummary {
-    val sorted = sortedBy { it.date }
-    val totalLiters = sumOf { it.liters }
-    val trackedDays = count { it.liters > 0.0 }
-    val goalMetDays = count { it.meetsDailyGoal(dailyGoalLiters) }
-    var currentGoalStreak = 0
-    var longestGoalStreak = 0
-    sorted.forEach { day ->
-        if (day.meetsDailyGoal(dailyGoalLiters)) {
-            currentGoalStreak += 1
-            longestGoalStreak = maxOf(longestGoalStreak, currentGoalStreak)
-        } else {
-            currentGoalStreak = 0
-        }
-    }
-    val reversed = sorted.asReversed()
-    return HydrationSummary(
-        totalLiters = totalLiters,
-        trackedDays = trackedDays,
-        averageLiters = trackedDays.takeIf { it > 0 }?.let { totalLiters / it } ?: 0.0,
-        bestDayLiters = maxOfOrNull { it.liters } ?: 0.0,
-        goalMetDays = goalMetDays,
-        goalSuccessRatePercent = trackedDays.takeIf { it > 0 }?.let { goalMetDays * 100 / it } ?: 0,
-        currentTrackedStreakDays = reversed.takeWhile { it.liters > 0.0 }.count(),
-        currentGoalStreakDays = reversed.takeWhile { it.meetsDailyGoal(dailyGoalLiters) }.count(),
-        longestGoalStreakDays = longestGoalStreak,
-    )
-}
-
-private fun DailyHydration.meetsDailyGoal(dailyGoalLiters: Double): Boolean =
-    dailyGoalLiters > 0.0 && liters >= dailyGoalLiters

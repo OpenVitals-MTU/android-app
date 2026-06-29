@@ -29,6 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -323,6 +324,6 @@ class HydrationEntryViewModelTest {
 
         assertFalse(vm.uiState.value.isSavingEntry)
         assertEquals(HydrationEntryError.WRITE_FAILED, vm.uiState.value.entryError)
-        assertEquals("denied", vm.uiState.value.writeErrorMessage)
+        assertEquals(ScreenError.Message("denied"), vm.uiState.value.writeError)
     }
 }

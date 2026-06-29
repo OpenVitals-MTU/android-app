@@ -17,13 +17,13 @@ import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
-internal data class LongRangeSummary(
+data class LongRangeSummary(
     val average: Long,
     val min: Long,
     val max: Long,
 )
 
-internal data class DoubleRangeSummary(
+data class DoubleRangeSummary(
     val average: Double,
     val min: Double,
     val max: Double,

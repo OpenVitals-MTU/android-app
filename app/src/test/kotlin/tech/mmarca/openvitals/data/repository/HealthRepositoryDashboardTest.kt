@@ -44,6 +44,9 @@ import tech.mmarca.openvitals.data.cache.FakeMetricSummaryCacheDao
 import tech.mmarca.openvitals.data.cache.FakeDerivedMetricDao
 import tech.mmarca.openvitals.data.cache.DerivedMetricStore
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
+import kotlinx.coroutines.CoroutineScope
+import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
@@ -111,7 +114,7 @@ class HealthRepositoryDashboardTest {
         )
         coEvery { hc.readDistanceMeters(date) } returns 1234.0
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.STEPS, DashboardMetric.DISTANCE),
@@ -131,7 +134,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
         coEvery { hc.readAvgHeartRate(date) } returns 72L
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.AVG_HEART_RATE),
@@ -155,7 +158,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.readAvgHeartRate(date) } throws CancellationException("cancelled")
 
         try {
-            HealthRepository(hc).loadDashboard(
+            dashboardDataLoader(hc).loadDashboard(
                 DashboardQuery(
                     date = date,
                     visibleMetrics = setOf(DashboardMetric.AVG_HEART_RATE),
@@ -175,7 +178,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
         coEvery { hc.readSteps(date) } returns 8_765L
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.STEPS),
@@ -203,11 +206,11 @@ class HealthRepositoryDashboardTest {
             visibleMetrics = setOf(DashboardMetric.STEPS),
         )
 
-        val first = HealthRepository(
+        val first = dashboardDataLoader(
             hc = hc,
             metricSummaryCacheStore = cacheStore,
         ).loadDashboard(query)
-        val second = HealthRepository(
+        val second = dashboardDataLoader(
             hc = hc,
             metricSummaryCacheStore = cacheStore,
         ).loadDashboard(query)
@@ -237,7 +240,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(sleepPermission)
         coEvery { hc.readSleepSessions(any(), any()) } returns listOf(nextDaySleep, eveningSleep)
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 sleepRangeMode = SleepRangeMode.EVENING_18H,
@@ -259,7 +262,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
         coEvery { hc.readSteps(date) } returns 9876L
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.STEPS),
@@ -279,7 +282,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
         coEvery { hc.readSteps(date) } returns 9876L
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.STEPS, DashboardMetric.DISTANCE),
@@ -311,7 +314,7 @@ class HealthRepositoryDashboardTest {
         coEvery { hc.grantedPermissions() } returns setOf(exercisePermission)
         coEvery { hc.readExerciseSessions(any(), any()) } returns listOf(latestWorkout, earlierWorkout)
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.WORKOUT),
@@ -341,7 +344,7 @@ class HealthRepositoryDashboardTest {
             hc.readCaloriesBurned(date = date, includeEstimatedCalories = false)
         } returns CaloriesBurnedValue(123.0, CaloriesBurnedSource.RECORDED_TOTAL)
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.CALORIES_OUT),
@@ -375,7 +378,7 @@ class HealthRepositoryDashboardTest {
             hc.readCaloriesBurned(date = date, includeEstimatedCalories = true)
         } returns CaloriesBurnedValue(456.0, CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR)
 
-        val data = HealthRepository(
+        val data = dashboardDataLoader(
             hc = hc,
             preferencesRepository = prefs,
         ).loadDashboard(
@@ -405,7 +408,7 @@ class HealthRepositoryDashboardTest {
             hc.readCaloriesBurned(date = date, includeEstimatedCalories = false)
         } returns null
 
-        val data = HealthRepository(
+        val data = dashboardDataLoader(
             hc = hc,
             preferencesRepository = prefs,
         ).loadDashboard(
@@ -431,7 +434,7 @@ class HealthRepositoryDashboardTest {
             source = "test",
         )
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.WEIGHT),
@@ -456,7 +459,7 @@ class HealthRepositoryDashboardTest {
             source = "test",
         )
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.HEIGHT),
@@ -483,7 +486,7 @@ class HealthRepositoryDashboardTest {
             ),
         )
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.CYCLE),
@@ -524,7 +527,7 @@ class HealthRepositoryDashboardTest {
             override val io: CoroutineContext = testDispatcher
             override val default: CoroutineContext = testDispatcher
         }
-        val repository = HealthRepository(
+        val repository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = DerivedMetricStore(
@@ -580,7 +583,7 @@ class HealthRepositoryDashboardTest {
             activeCaloriesPermission,
         )
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
@@ -649,7 +652,7 @@ class HealthRepositoryDashboardTest {
             override val default: CoroutineContext = testDispatcher
         }
 
-        HealthRepository(
+        dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = DerivedMetricStore(
@@ -732,7 +735,7 @@ class HealthRepositoryDashboardTest {
                 )
             ),
         )
-        val repository = HealthRepository(
+        val repository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = derivedStore,
@@ -793,7 +796,7 @@ class HealthRepositoryDashboardTest {
             override val io: CoroutineContext = testDispatcher
             override val default: CoroutineContext = testDispatcher
         }
-        val repository = HealthRepository(
+        val repository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = DerivedMetricStore(
@@ -848,7 +851,7 @@ class HealthRepositoryDashboardTest {
             override val io: CoroutineContext = testDispatcher
             override val default: CoroutineContext = testDispatcher
         }
-        val repository = HealthRepository(
+        val repository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = DerivedMetricStore(
@@ -934,7 +937,7 @@ class HealthRepositoryDashboardTest {
             override val io: CoroutineContext = testDispatcher
             override val default: CoroutineContext = testDispatcher
         }
-        val repository = HealthRepository(
+        val repository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = DerivedMetricStore(
@@ -990,7 +993,7 @@ class HealthRepositoryDashboardTest {
             DailyHrv(date.minusDays(1), 56.0),
         )
 
-        val data = HealthRepository(hc).loadDashboard(
+        val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
                 date = date,
                 visibleMetrics = setOf(DashboardMetric.RESTING_HEART_RATE, DashboardMetric.HRV),
@@ -1035,12 +1038,12 @@ class HealthRepositoryDashboardTest {
             dispatchers = dispatchers,
             today = { date },
         )
-        val coldRepository = HealthRepository(
+        val coldRepository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = derivedStore,
         )
-        val warmingRepository = HealthRepository(
+        val warmingRepository = dashboardDataLoader(
             hc = hc,
             dispatchers = dispatchers,
             derivedMetricStore = derivedStore,
@@ -1089,3 +1092,21 @@ class HealthRepositoryDashboardTest {
         source = "gadgetbridge",
     )
 }
+
+private fun dashboardDataLoader(
+    hc: HealthConnectManager,
+    dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    preferencesRepository: PreferencesRepository? = null,
+    metricSummaryCacheStore: MetricSummaryCacheStore? = null,
+    derivedMetricStore: DerivedMetricStore? = null,
+    appScope: CoroutineScope? = null,
+): DashboardDataLoader =
+    DashboardDataLoader(
+        hc = hc,
+        dispatchers = dispatchers,
+        preferencesRepository = preferencesRepository,
+        metricSummaryCacheStore = metricSummaryCacheStore,
+        derivedMetricStore = derivedMetricStore,
+        appScope = appScope,
+    )
+

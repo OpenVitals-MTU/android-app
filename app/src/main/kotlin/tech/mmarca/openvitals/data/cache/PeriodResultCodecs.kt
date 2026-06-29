@@ -3,16 +3,16 @@ package tech.mmarca.openvitals.data.cache
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import tech.mmarca.openvitals.data.repository.ActivitiesPeriodData
-import tech.mmarca.openvitals.data.repository.ActivityPeriodData
-import tech.mmarca.openvitals.data.repository.BodyPeriodData
-import tech.mmarca.openvitals.data.repository.CyclePeriodData
-import tech.mmarca.openvitals.data.repository.HeartPeriodData
-import tech.mmarca.openvitals.data.repository.HydrationPeriodData
-import tech.mmarca.openvitals.data.repository.MindfulnessPeriodData
-import tech.mmarca.openvitals.data.repository.NutritionPeriodData
-import tech.mmarca.openvitals.data.repository.SleepPeriodData
-import tech.mmarca.openvitals.data.repository.VitalsPeriodData
+import tech.mmarca.openvitals.domain.query.ActivitiesPeriodData
+import tech.mmarca.openvitals.domain.query.ActivityPeriodData
+import tech.mmarca.openvitals.domain.query.BodyPeriodData
+import tech.mmarca.openvitals.domain.query.CyclePeriodData
+import tech.mmarca.openvitals.domain.query.HeartPeriodData
+import tech.mmarca.openvitals.domain.query.HydrationPeriodData
+import tech.mmarca.openvitals.domain.query.MindfulnessPeriodData
+import tech.mmarca.openvitals.domain.query.NutritionPeriodData
+import tech.mmarca.openvitals.domain.query.SleepPeriodData
+import tech.mmarca.openvitals.domain.query.VitalsPeriodData
 
 object ActivityPeriodDataCodec {
     const val Surface = "activity-period"

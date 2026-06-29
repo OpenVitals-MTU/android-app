@@ -13,7 +13,9 @@ import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.query.SleepPeriodData
 import tech.mmarca.openvitals.domain.model.mergeSleepSessions
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
@@ -25,14 +27,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class SleepRepository @Inject constructor(
+class SleepRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : SleepRepository {
 
     companion object {
-        private const val TAG = "SleepRepository"
+        private const val TAG = "SleepRepositoryImpl"
     }
 
     private val readSleepPermission = HealthPermission.getReadPermission(SleepSessionRecord::class)
@@ -40,10 +42,10 @@ class SleepRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadSleepPeriod(
+    override suspend fun loadSleepPeriod(
         query: PeriodLoadQuery,
         sleepRangeMode: SleepRangeMode,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): SleepPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -81,7 +83,7 @@ class SleepRepository @Inject constructor(
             tag = TAG,
         )
 
-    suspend fun loadSleepSessions(start: LocalDate, end: LocalDate): List<SleepData> {
+    override suspend fun loadSleepSessions(start: LocalDate, end: LocalDate): List<SleepData> {
         val granted = grantedPermissionsIfAvailable()
         return loadSleepSessions(start, end, granted)
     }
@@ -105,7 +107,7 @@ class SleepRepository @Inject constructor(
             }
     }
 
-    suspend fun loadSleepSession(id: String): SleepData? {
+    override suspend fun loadSleepSession(id: String): SleepData? {
         val granted = grantedPermissionsIfAvailable()
         if (readSleepPermission !in granted) {
             Log.w(TAG, "Skipping loadSleepSession missingCount=1")
@@ -121,9 +123,3 @@ class SleepRepository @Inject constructor(
             SleepRangeMode.EVENING_18H -> start.minusDays(1)
         }
 }
-
-data class SleepPeriodData(
-    val sessions: List<SleepData> = emptyList(),
-    val previousSessions: List<SleepData> = emptyList(),
-    val baselineSessions: List<SleepData> = emptyList(),
-)

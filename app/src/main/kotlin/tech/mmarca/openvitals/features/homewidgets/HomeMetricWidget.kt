@@ -58,7 +58,7 @@ import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
@@ -414,7 +414,7 @@ internal suspend fun loadSnapshot(
         val metric = metricId.toDashboardMetricOrNull()
         val data = if (metric != null) {
             withTimeoutOrNull(WidgetLoadTimeoutMillis) {
-                entryPoint.healthRepository().loadDashboard(
+                entryPoint.dashboardDataLoader().loadDashboard(
                     DashboardQuery(
                         date = LocalDate.now(),
                         sleepRangeMode = entryPoint.preferencesRepository().sleepRangeMode,
@@ -618,7 +618,7 @@ internal fun openMetricIntent(context: Context, route: String): Intent =
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface HomeMetricWidgetEntryPoint {
-    fun healthRepository(): HealthRepository
+    fun dashboardDataLoader(): DashboardDataLoader
     fun preferencesRepository(): PreferencesRepository
     fun unitFormatter(): UnitFormatter
 }

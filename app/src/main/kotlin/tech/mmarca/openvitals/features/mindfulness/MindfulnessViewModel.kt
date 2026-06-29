@@ -1,9 +1,14 @@
 package tech.mmarca.openvitals.features.mindfulness
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -18,7 +23,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
 import java.time.LocalDate
 import java.time.LocalTime
@@ -30,7 +35,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class MindfulnessUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -43,14 +50,14 @@ data class MindfulnessUiState(
     val previousSessions: List<MindfulnessSession> = emptyList(),
     val baselineSessions: List<MindfulnessSession> = emptyList(),
     val crossSleepSessions: List<SleepData> = emptyList(),
-    val error: String? = null,
-) {
-    val totalMinutes: Long get() = sessions.sumOf { it.durationMinutes }
-}
+    val display: MindfulnessDisplayState = MindfulnessDisplayState(),
+    val error: ScreenError? = null,
+)
 
 @HiltViewModel
 class MindfulnessViewModel(
     private val repository: MindfulnessRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val sleepRepository: SleepRepository? = null,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
@@ -69,8 +76,10 @@ class MindfulnessViewModel(
         sleepRepository: SleepRepository,
         preferencesRepository: PreferencesRepository,
         reminderController: MindfulnessReminderController,
+        dispatchers: DispatcherProvider,
     ) : this(
         repository = repository,
+        dispatchers = dispatchers,
         sleepRepository = sleepRepository,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
@@ -168,7 +177,7 @@ class MindfulnessViewModel(
     fun setDailyGoalMinutes(minutes: Double) {
         val goal = goalKey.normalize(minutes)
         onDailyGoalChanged(goal)
-        _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
+        _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal).withDisplay()
     }
 
     fun setMindfulnessRemindersEnabled(enabled: Boolean) {
@@ -185,16 +194,13 @@ class MindfulnessViewModel(
         if (!entry.isOpenVitalsEntry) return
         viewModelScope.launch {
             val previous = _uiState.value
-            _uiState.value = previous.copy(
-                sessions = previous.sessions.filterNot { it.id == entryId },
-                error = null,
-            )
+            _uiState.value = previous.withDeletedSession(entryId)
             runCatching {
                 repository.deleteMindfulnessSessionEntry(entryId)
             }.onSuccess {
                 load(RefreshMode.FORCE)
             }.onFailure { error ->
-                _uiState.value = previous.copy(error = error.message)
+                _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
@@ -230,6 +236,18 @@ class MindfulnessViewModel(
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load
+                    val display = withContext(dispatchers.default) {
+                        MindfulnessPresentationMapper.build(
+                            query = query,
+                            dailyGoalMinutes = _uiState.value.dailyGoalMinutes,
+                            sleepRangeMode = sleepRangeMode,
+                            sessions = result.sessions,
+                            previousSessions = result.previousSessions,
+                            baselineSessions = result.baselineSessions,
+                            crossSleepSessions = result.crossSleepSessions,
+                        )
+                    }
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
@@ -237,6 +255,7 @@ class MindfulnessViewModel(
                         previousSessions = result.previousSessions,
                         baselineSessions = result.baselineSessions,
                         crossSleepSessions = result.crossSleepSessions,
+                        display = display,
                     )
                 }
                 .onFailure { error ->
@@ -244,7 +263,7 @@ class MindfulnessViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
-                        error = error.message,
+                        error = error.toScreenError(),
                     )
                 }
         }
@@ -270,3 +289,28 @@ class MindfulnessViewModel(
         onReminderConfigChanged(normalized)
     }
 }
+
+private fun MindfulnessUiState.withDisplay(): MindfulnessUiState {
+    val query = PeriodLoadQuery(
+        range = selectedRange,
+        anchorDate = selectedDate,
+        weekPeriodMode = weekPeriodMode,
+    )
+    return copy(
+        display = MindfulnessPresentationMapper.build(
+            query = query,
+            dailyGoalMinutes = dailyGoalMinutes,
+            sleepRangeMode = sleepRangeMode,
+            sessions = sessions,
+            previousSessions = previousSessions,
+            baselineSessions = baselineSessions,
+            crossSleepSessions = crossSleepSessions,
+        ),
+    )
+}
+
+private fun MindfulnessUiState.withDeletedSession(entryId: String): MindfulnessUiState =
+    copy(
+        sessions = sessions.filterNot { it.id == entryId },
+        error = null,
+    ).withDisplay()

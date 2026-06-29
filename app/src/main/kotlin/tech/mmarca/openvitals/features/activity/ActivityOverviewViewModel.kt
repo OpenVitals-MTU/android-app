@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -7,6 +8,8 @@ import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.CardioLoadTimeWindow
 import tech.mmarca.openvitals.domain.insights.calculateCardioLoad
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
@@ -21,7 +24,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
@@ -37,6 +40,7 @@ import kotlinx.coroutines.withContext
 
 private const val ActivityOverviewLookbackDays = 30L
 
+@Immutable
 data class ActivityOverviewDay(
     val date: LocalDate,
     val steps: Long = 0L,
@@ -63,12 +67,13 @@ data class ActivityOverviewDay(
         get() = cardioLoadScore.confidence
 }
 
+@Immutable
 data class ActivityOverviewUiState(
     val isLoading: Boolean = true,
     val selectedDate: LocalDate = LocalDate.now(),
     val days: List<ActivityOverviewDay> = emptyList(),
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
-    val error: String? = null,
+    val error: ScreenError? = null,
 ) {
     val today: ActivityOverviewDay
         get() = days.firstOrNull { it.date == selectedDate } ?: ActivityOverviewDay(selectedDate)
@@ -150,7 +155,7 @@ class ActivityOverviewViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = today,
-                    error = error.message,
+                    error = error.toScreenError(),
                 )
             }
         }

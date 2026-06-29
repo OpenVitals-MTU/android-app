@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.body
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.BodyFatEntry
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BmrEntry
@@ -9,7 +10,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.domain.model.WeightEntry
-import tech.mmarca.openvitals.data.repository.BodyPeriodData
+import tech.mmarca.openvitals.domain.query.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.domain.model.RefreshMode
@@ -37,6 +38,18 @@ class BodyViewModelTest {
 
     private val today = LocalDate.now()
     private val pastAnchor = today.minusWeeks(4)
+
+    private fun bodyViewModel(
+        repository: BodyRepository,
+        initialRange: TimeRange = TimeRange.MONTH,
+        onRangeSelected: (TimeRange) -> Unit = {},
+    ) = BodyViewModel(
+        repository = repository,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+        initialRange = initialRange,
+        onRangeSelected = onRangeSelected,
+    )
+
 
     private fun emptyRepo() = mockk<BodyRepository>().also { repo ->
         coEvery { repo.loadWeightEntries(any(), any()) } returns emptyList()
@@ -136,35 +149,35 @@ class BodyViewModelTest {
     // ─── Initial state ────────────────────────────────────────────────────────
 
     @Test fun `initial range is MONTH`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial range can be restored`() = runTest {
-        val vm = BodyViewModel(emptyRepo(), initialRange = TimeRange.YEAR)
+        val vm = bodyViewModel(emptyRepo(), initialRange = TimeRange.YEAR)
         assertEquals(TimeRange.YEAR, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial load clears loading and produces no error`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.error)
     }
 
     @Test fun `initial state has empty weight entries and all nulls`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         val state = vm.uiState.value
         assertTrue(state.weightEntries.isEmpty())
-        assertNull(state.heightCm)
+        assertNull(state.display.summary.heightCm)
         assertTrue(state.heightEntries.isEmpty())
         assertTrue(state.bodyFatEntries.isEmpty())
-        assertNull(state.ffmi)
-        assertNull(state.adjustedFfmi)
-        assertNull(state.leanMassKg)
+        assertNull(state.display.summary.ffmi)
+        assertNull(state.display.summary.adjustedFfmi)
+        assertNull(state.display.summary.leanMassKg)
         assertTrue(state.leanMassEntries.isEmpty())
-        assertNull(state.bmrKcal)
+        assertNull(state.display.summary.bmrKcal)
         assertTrue(state.bmrEntries.isEmpty())
-        assertNull(state.boneMassKg)
+        assertNull(state.display.summary.boneMassKg)
         assertTrue(state.boneMassEntries.isEmpty())
     }
 
@@ -175,7 +188,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadWeightEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
         assertEquals(entries, vm.uiState.value.weightEntries)
     }
@@ -194,7 +207,7 @@ class BodyViewModelTest {
         coEvery { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") } coAnswers {
             entries = emptyList()
         }
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
         vm.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id")
         advanceUntilIdle()
@@ -216,7 +229,7 @@ class BodyViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadWeightEntries(any(), any()) } returns entries
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
         vm.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "external-weight-id")
         advanceUntilIdle()
@@ -230,9 +243,9 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadHeightEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
-        assertEquals(178.0, vm.uiState.value.heightCm!!, 0.01)
+        assertEquals(178.0, vm.uiState.value.display.summary.heightCm!!, 0.01)
         assertEquals(entries, vm.uiState.value.heightEntries)
     }
 
@@ -241,7 +254,7 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadBodyFatEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
         assertEquals(entries, vm.uiState.value.bodyFatEntries)
     }
@@ -254,16 +267,16 @@ class BodyViewModelTest {
             latestBodyFatPercent = 20.0,
         )
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
         val state = vm.uiState.value
 
         assertTrue(state.weightEntries.isEmpty())
         assertTrue(state.bodyFatEntries.isEmpty())
-        assertEquals(77.0, state.latestWeightKg!!, 0.01)
-        assertEquals(20.0, state.latestBodyFatPercent!!, 0.01)
-        assertEquals(22.26, state.bmi!!, 0.01)
-        assertEquals(17.81, state.ffmi!!, 0.01)
-        assertEquals(17.43, state.adjustedFfmi!!, 0.01)
+        assertEquals(77.0, state.display.summary.latestWeightKg!!, 0.01)
+        assertEquals(20.0, state.display.summary.latestBodyFatPercent!!, 0.01)
+        assertEquals(22.26, state.display.summary.bmi!!, 0.01)
+        assertEquals(17.81, state.display.summary.ffmi!!, 0.01)
+        assertEquals(17.43, state.display.summary.adjustedFfmi!!, 0.01)
     }
 
     @Test fun `load success populates lean mass`() = runTest {
@@ -271,9 +284,9 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadLeanBodyMassEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
-        assertEquals(58.3, vm.uiState.value.leanMassKg!!, 0.01)
+        assertEquals(58.3, vm.uiState.value.display.summary.leanMassKg!!, 0.01)
         assertEquals(entries, vm.uiState.value.leanMassEntries)
     }
 
@@ -282,9 +295,9 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadBmrEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
-        assertEquals(1_750.0, vm.uiState.value.bmrKcal!!, 0.01)
+        assertEquals(1_750.0, vm.uiState.value.display.summary.bmrKcal!!, 0.01)
         assertEquals(entries, vm.uiState.value.bmrEntries)
     }
 
@@ -293,9 +306,9 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadBoneMassEntries(any(), any()) } returns entries
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
-        assertEquals(3.2, vm.uiState.value.boneMassKg!!, 0.001)
+        assertEquals(3.2, vm.uiState.value.display.summary.boneMassKg!!, 0.001)
         assertEquals(entries, vm.uiState.value.boneMassEntries)
     }
 
@@ -305,157 +318,23 @@ class BodyViewModelTest {
         val repo = mockk<BodyRepository>()
         coEvery { repo.loadBodyPeriod(any(), any()) } throws RuntimeException("timeout")
 
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
-    }
-
-    // ─── BodyUiState.bmi ─────────────────────────────────────────────────────
-
-    @Test fun `bmi is null when height is missing`() {
-        val state = BodyUiState(weightEntries = listOf(weightAt(75.0, 1_000)), heightCm = null)
-        assertNull(state.bmi)
-    }
-
-    @Test fun `bmi is null when weight entries are empty`() {
-        val state = BodyUiState(weightEntries = emptyList(), heightCm = 178.0)
-        assertNull(state.bmi)
-    }
-
-    @Test fun `bmi is null for zero height`() {
-        val state = BodyUiState(weightEntries = listOf(weightAt(75.0, 1_000)), heightCm = 0.0)
-        assertNull(state.bmi)
-    }
-
-    @Test fun `bmi computed correctly from weight and height`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(75.0, 1_000)),
-            heightCm = 178.0,
-        )
-        // 75 / (1.78^2) ≈ 23.67
-        assertEquals(23.67, state.bmi!!, 0.01)
-    }
-
-    @Test fun `bmi uses most recent weight entry`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(80.0, 1_000), weightAt(76.0, 2_000)),
-            heightCm = 180.0,
-        )
-        // 76 / (1.80^2) ≈ 23.46
-        assertEquals(23.46, state.bmi!!, 0.01)
-    }
-
-    // ─── BodyUiState.ffmi ────────────────────────────────────────────────────
-
-    @Test fun `ffmi is null when body fat is missing`() {
-        val state = BodyUiState(weightEntries = listOf(weightAt(75.0, 1_000)), heightCm = 178.0)
-        assertNull(state.ffmi)
-        assertNull(state.adjustedFfmi)
-    }
-
-    @Test fun `ffmi computed correctly from weight height and body fat`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(75.0, 1_000)),
-            heightCm = 178.0,
-            bodyFatEntries = listOf(bodyFatAt(20.0, 1_000)),
-        )
-        // 60 kg fat-free mass / (1.78^2) ≈ 18.94; adjusted ≈ 19.06
-        assertEquals(18.94, state.ffmi!!, 0.01)
-        assertEquals(19.06, state.adjustedFfmi!!, 0.01)
-    }
-
-    @Test fun `ffmi uses most recent body fat entry`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(75.0, 1_000)),
-            heightCm = 178.0,
-            bodyFatEntries = listOf(bodyFatAt(25.0, 1_000), bodyFatAt(20.0, 2_000)),
-        )
-        assertEquals(18.94, state.ffmi!!, 0.01)
-    }
-
-    @Test fun `ffmi is null for invalid body fat percent`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(75.0, 1_000)),
-            heightCm = 178.0,
-            bodyFatEntries = listOf(bodyFatAt(100.0, 1_000)),
-        )
-        assertNull(state.ffmi)
-        assertNull(state.adjustedFfmi)
-    }
-
-    // ─── BodyUiState.latestWeightKg / firstWeightKg / weightChangKg ──────────
-
-    @Test fun `latestWeightKg returns the most recent entry by time`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(72.0, 1_000), weightAt(74.5, 2_000)),
-        )
-        assertEquals(74.5, state.latestWeightKg!!, 0.01)
-    }
-
-    @Test fun `firstWeightKg returns the earliest entry by time`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(74.5, 2_000), weightAt(72.0, 1_000)),
-        )
-        assertEquals(72.0, state.firstWeightKg!!, 0.01)
-    }
-
-    @Test fun `weightChangKg is positive when weight increased`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(70.0, 1_000), weightAt(73.5, 2_000)),
-        )
-        assertEquals(3.5, state.weightChangKg!!, 0.01)
-    }
-
-    @Test fun `weightChangKg is negative when weight decreased`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(80.0, 1_000), weightAt(76.0, 2_000)),
-        )
-        assertEquals(-4.0, state.weightChangKg!!, 0.01)
-    }
-
-    @Test fun `weightChangKg is null when only one entry exists`() {
-        val state = BodyUiState(weightEntries = listOf(weightAt(75.0, 1_000)))
-        assertNull(state.weightChangKg)
-    }
-
-    @Test fun `weightChangKg is null when weight entries are empty`() {
-        val state = BodyUiState(weightEntries = emptyList())
-        assertNull(state.weightChangKg)
-    }
-
-    @Test fun `weightChangKg is null when first and latest weight are equal`() {
-        val state = BodyUiState(
-            weightEntries = listOf(weightAt(75.0, 1_000), weightAt(75.0, 2_000)),
-        )
-        assertNull(state.weightChangKg)
-    }
-
-    // ─── BodyUiState.latestBodyFatPercent ────────────────────────────────────
-
-    @Test fun `latestBodyFatPercent returns most recent entry`() {
-        val state = BodyUiState(
-            bodyFatEntries = listOf(bodyFatAt(25.0, 1_000), bodyFatAt(22.0, 2_000)),
-        )
-        assertEquals(22.0, state.latestBodyFatPercent!!, 0.01)
-    }
-
-    @Test fun `latestBodyFatPercent is null when entries are empty`() {
-        val state = BodyUiState(bodyFatEntries = emptyList())
-        assertNull(state.latestBodyFatPercent)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     // ─── selectRange ──────────────────────────────────────────────────────────
 
     @Test fun `selectRange updates selectedRange`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         vm.selectRange(TimeRange.YEAR)
         assertEquals(TimeRange.YEAR, vm.uiState.value.selectedRange)
     }
 
     @Test fun `selectRange saves selected range`() = runTest {
         var savedRange: TimeRange? = null
-        val vm = BodyViewModel(
+        val vm = bodyViewModel(
             repository = emptyRepo(),
             onRangeSelected = { range -> savedRange = range },
         )
@@ -467,7 +346,7 @@ class BodyViewModelTest {
 
     @Test fun `selectRange triggers reload`() = runTest {
         val repo = emptyRepo()
-        val vm = BodyViewModel(repo)
+        val vm = bodyViewModel(repo)
         vm.selectRange(TimeRange.YEAR)
         // init load + selectRange load = 2 calls
         io.mockk.coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), any()) }
@@ -476,14 +355,14 @@ class BodyViewModelTest {
     // ─── previousPeriod / nextPeriod ──────────────────────────────────────────
 
     @Test fun `previousPeriod MONTH moves back one month`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
         assertEquals(before.minusMonths(1), vm.uiState.value.selectedDate)
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         vm.selectRange(TimeRange.WEEK)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -491,7 +370,7 @@ class BodyViewModelTest {
     }
 
     @Test fun `previousPeriod YEAR moves back one year`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         vm.selectRange(TimeRange.YEAR)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -499,14 +378,14 @@ class BodyViewModelTest {
     }
 
     @Test fun `nextPeriod MONTH is blocked when current month includes today`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         val before = vm.uiState.value.selectedDate
         vm.nextPeriod()
         assertEquals(before, vm.uiState.value.selectedDate)
     }
 
     @Test fun `nextPeriod MONTH advances from a past anchor`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         vm.selectDate(today.minusMonths(2))
         val before = vm.uiState.value.selectedDate
         vm.nextPeriod()
@@ -516,13 +395,13 @@ class BodyViewModelTest {
     // ─── selectDate ───────────────────────────────────────────────────────────
 
     @Test fun `selectDate clamps future date to today`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         vm.selectDate(today.plusDays(5))
         assertEquals(today, vm.uiState.value.selectedDate)
     }
 
     @Test fun `selectDate accepts past date unchanged`() = runTest {
-        val vm = BodyViewModel(emptyRepo())
+        val vm = bodyViewModel(emptyRepo())
         vm.selectDate(pastAnchor)
         assertEquals(pastAnchor, vm.uiState.value.selectedDate)
     }

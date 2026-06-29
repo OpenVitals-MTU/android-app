@@ -27,7 +27,7 @@ import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 

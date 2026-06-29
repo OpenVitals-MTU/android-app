@@ -11,6 +11,9 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import androidx.compose.runtime.Immutable
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
@@ -122,6 +125,7 @@ data class ActivityRepetitionSetInput(
     val restMinutesText: String = "",
 )
 
+@Immutable
 data class ActivityEntryUiState(
     val mode: ActivityEntryMode = ActivityEntryMode.CHOOSE_SOURCE,
     val activityTypes: List<ActivityEntryType> = DefaultActivityEntryTypes,
@@ -155,7 +159,7 @@ data class ActivityEntryUiState(
     val isImportingRoute: Boolean = false,
     val isSavingEntry: Boolean = false,
     val entryError: ActivityEntryError? = null,
-    val detailMessage: String? = null,
+    val detailError: ScreenError? = null,
     val validationErrors: Set<ActivityEntryValidationError> = emptySet(),
     val editRecordId: String? = null,
     val isRecordingDraft: Boolean = false,

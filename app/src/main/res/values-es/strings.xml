@@ -15,9 +15,14 @@
     <string name="cd_move_widget_up">Mover widget arriba</string>
     <string name="cd_move_widget_down">Mover widget abajo</string>
     <string name="cd_remove_widget">Quitar widget</string>
+    <string name="cd_edit_metric_sections">Editar secciones de métricas</string>
+    <string name="cd_finish_metric_section_editing">Terminar edición de secciones de métricas</string>
+    <string name="cd_move_section_up">Mover sección arriba</string>
+    <string name="cd_move_section_down">Mover sección abajo</string>
     <string name="cd_decrease_recording_dashboard_widget_size">Hacer widget más pequeño</string>
     <string name="cd_increase_recording_dashboard_widget_size">Hacer widget más grande</string>
     <string name="cd_exit_recording_focus_mode">Salir del modo enfoque</string>
+    <string name="cd_toggle_recording_outdoor_mode">Alternar modo de lectura exterior</string>
     <string name="cd_recenter_map">Recentrar mapa</string>
     <string name="cd_delete_entry">Eliminar entrada</string>
     <string name="cd_edit_entry">Editar entrada</string>
@@ -51,6 +56,12 @@
     <string name="action_finish">Terminar</string>
     <string name="action_discard">Descartar</string>
     <string name="unknown_error">Error desconocido</string>
+    <string name="screen_error_not_found">No se encontró el elemento solicitado.</string>
+    <string name="screen_error_missing_argument">Falta información obligatoria.</string>
+    <string name="screen_error_permission_denied">Se requiere permiso para cargar estos datos.</string>
+    <string name="screen_error_health_connect_unavailable">Health Connect no está disponible en este dispositivo.</string>
+    <string name="screen_error_load_sleep_session">No se pudo cargar la sesión de sueño.</string>
+    <string name="screen_error_load_sleep_period">No se pudieron cargar los datos de sueño.</string>
     <string name="not_available">No disponible</string>
     <string name="not_recorded">No registrado</string>
     <string name="no_data">Sin datos</string>

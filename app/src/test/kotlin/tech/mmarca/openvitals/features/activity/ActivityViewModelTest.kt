@@ -1,12 +1,13 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.ActivityPeriodData
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.domain.query.ActivityPeriodData
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -27,6 +28,15 @@ class ActivityViewModelTest {
 
     private val today = LocalDate.now()
     private val pastAnchor = today.minusWeeks(4) // safely in the past for all ranges
+
+    private fun viewModel(
+        repo: ActivityRepository,
+        selectedMetric: ActivityMetric = ActivityMetric.STEPS,
+    ) = ActivityViewModel(
+        repository = repo,
+        selectedMetric = selectedMetric,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+    )
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
         coEvery { repo.loadDailySteps(any(), any()) } returns emptyList()
@@ -52,12 +62,12 @@ class ActivityViewModelTest {
     // ─── Initial state ────────────────────────────────────────────────────────
 
     @Test fun `initial range is WEEK`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         assertEquals(TimeRange.WEEK, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial load clears loading and sets empty lists`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         val state = vm.uiState.value
         assertFalse(state.isLoading)
         assertTrue(state.dailySteps.isEmpty())
@@ -71,34 +81,47 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
 
         assertEquals(steps, vm.uiState.value.dailySteps)
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.error)
     }
 
+    @Test fun `load success populates display metric values`() = runTest {
+        val steps = listOf(
+            DailySteps(today.minusDays(1), 6_000L, 4_800.0),
+            DailySteps(today, 8_000L, 6_400.0),
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadDailySteps(any(), any()) } returns steps
+
+        val vm = viewModel(repo)
+
+        assertEquals(listOf(6_000.0, 8_000.0), vm.uiState.value.display.metric.values)
+    }
+
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<ActivityRepository>()
         coEvery { repo.loadActivityPeriod(any(), any(), any()) } throws RuntimeException("timeout")
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     // ─── selectRange ──────────────────────────────────────────────────────────
 
     @Test fun `selectRange updates selectedRange`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectRange(TimeRange.MONTH)
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
     }
 
     @Test fun `selectRange triggers reload`() = runTest {
         val repo = emptyRepo()
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.MONTH)
         // init load + selectRange load = 2 bundled period calls
         coVerify(atLeast = 2) { repo.loadActivityPeriod(any(), any(), any()) }
@@ -107,7 +130,7 @@ class ActivityViewModelTest {
     // ─── previousPeriod ───────────────────────────────────────────────────────
 
     @Test fun `previousPeriod DAY moves back one day`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectRange(TimeRange.DAY)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -115,14 +138,14 @@ class ActivityViewModelTest {
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
         assertEquals(before.minusWeeks(1), vm.uiState.value.selectedDate)
     }
 
     @Test fun `previousPeriod MONTH moves back one month`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectRange(TimeRange.MONTH)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -130,7 +153,7 @@ class ActivityViewModelTest {
     }
 
     @Test fun `previousPeriod YEAR moves back one year`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectRange(TimeRange.YEAR)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -141,7 +164,7 @@ class ActivityViewModelTest {
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
         val repo = emptyRepo()
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
         // selectedDate should be today after init
         val before = vm.uiState.value.selectedDate
@@ -153,7 +176,7 @@ class ActivityViewModelTest {
 
     @Test fun `nextPeriod DAY advances when selectedDate is in the past`() = runTest {
         val repo = emptyRepo()
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
         vm.selectDate(today.minusDays(2))
         val before = vm.uiState.value.selectedDate
@@ -165,7 +188,7 @@ class ActivityViewModelTest {
 
     @Test fun `nextPeriod WEEK advances from a past week`() = runTest {
         val repo = emptyRepo()
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectDate(pastAnchor)
         val before = vm.uiState.value.selectedDate
 
@@ -177,13 +200,13 @@ class ActivityViewModelTest {
     // ─── selectDate ───────────────────────────────────────────────────────────
 
     @Test fun `selectDate clamps future date to today`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectDate(today.plusDays(10))
         assertEquals(today, vm.uiState.value.selectedDate)
     }
 
     @Test fun `selectDate accepts past date unchanged`() = runTest {
-        val vm = ActivityViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectDate(pastAnchor)
         assertEquals(pastAnchor, vm.uiState.value.selectedDate)
     }
@@ -195,7 +218,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadActivityProgress(any()) } returns progress
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
         assertEquals(progress, vm.uiState.value.activityProgress)
@@ -216,7 +239,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadActivityProgress(any()) } returns progress
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
         val point = vm.uiState.value.activityProgress.single()
@@ -227,7 +250,7 @@ class ActivityViewModelTest {
 
     @Test fun `load for WEEK range returns empty activityProgress`() = runTest {
         val repo = emptyRepo()
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         // WEEK is the default range
         assertTrue(vm.uiState.value.activityProgress.isEmpty())
         coVerify(exactly = 0) { repo.loadActivityProgress(any()) }
@@ -249,7 +272,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
 
         val day = vm.uiState.value.dailySteps.single()
         assertEquals(12, day.floorsClimbed)
@@ -262,7 +285,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
 
         val day = vm.uiState.value.dailySteps.single()
         assertNull(day.floorsClimbed)
@@ -278,7 +301,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
 
         val days = vm.uiState.value.dailySteps
         assertEquals(2, days.size)
@@ -295,7 +318,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
 
         val days = vm.uiState.value.dailySteps
         assertNull(days[0].floorsClimbed)
@@ -309,7 +332,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
         assertTrue(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
@@ -320,7 +343,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
         assertFalse(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
@@ -331,7 +354,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
         assertTrue(vm.uiState.value.dailySteps.any { it.elevationGainedMeters != null })
@@ -342,7 +365,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps
 
-        val vm = ActivityViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
 
         assertTrue(vm.uiState.value.dailySteps.any { it.activeCaloriesKcal != null })
@@ -355,7 +378,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
-        val vm = ActivityViewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
+        val vm = viewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
         vm.selectRange(TimeRange.DAY)
 
         assertEquals(500.0, vm.uiState.value.nutrition.single().caloriesBurnedKcal, 0.001)
@@ -367,7 +390,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
-        val vm = ActivityViewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
+        val vm = viewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
 
         assertFalse(vm.uiState.value.nutrition.any { it.caloriesBurnedKcal > 0 })
     }
@@ -380,7 +403,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns nutrition
 
-        val vm = ActivityViewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
+        val vm = viewModel(repo, selectedMetric = ActivityMetric.CALORIES_BURNED)
 
         assertEquals(1_200.0, vm.uiState.value.nutrition.sumOf { it.caloriesBurnedKcal }, 0.001)
     }

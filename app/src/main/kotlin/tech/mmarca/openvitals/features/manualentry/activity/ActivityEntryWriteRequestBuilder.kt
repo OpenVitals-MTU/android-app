@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 
 internal const val MilesToMeters = 1609.344
 internal const val FeetToMeters = 0.3048

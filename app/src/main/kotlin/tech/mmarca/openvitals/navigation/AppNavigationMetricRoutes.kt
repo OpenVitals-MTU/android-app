@@ -57,8 +57,13 @@ import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessViewModel
+import tech.mmarca.openvitals.features.nutrition.CaloriesInScreen
+import tech.mmarca.openvitals.features.nutrition.CarbsScreen
+import tech.mmarca.openvitals.features.nutrition.FatScreen
+import tech.mmarca.openvitals.features.nutrition.NutritionMetric
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
+import tech.mmarca.openvitals.features.nutrition.ProteinScreen
 import tech.mmarca.openvitals.features.sleep.SleepScreen
 import tech.mmarca.openvitals.features.sleep.SleepViewModel
 
@@ -91,13 +96,17 @@ internal fun MetricRouteContent(
     }
 
     if (metricId?.isNutritionDetailMetric() == true) {
-        val nutritionViewModel = hiltViewModel<NutritionViewModel>()
-        NutritionScreen(
-            viewModel = nutritionViewModel,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-        return
+        val nutritionMetric = metricId.toNutritionMetricOrNull()
+        if (nutritionMetric != null) {
+            val nutritionViewModel = hiltViewModel<NutritionViewModel>()
+            NutritionMetricRouteScreen(
+                metric = nutritionMetric,
+                viewModel = nutritionViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+            return
+        }
     }
 
     if (metricId?.isBodyDetailMetric() == true) {
@@ -309,6 +318,21 @@ private fun HeartMetricRouteScreen(
 }
 
 @Composable
+private fun NutritionMetricRouteScreen(
+    metric: NutritionMetric,
+    viewModel: NutritionViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    when (metric) {
+        NutritionMetric.CALORIES_IN -> CaloriesInScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.PROTEIN -> ProteinScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.CARBS -> CarbsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.FAT -> FatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+    }
+}
+
+@Composable
 private fun BodyMetricRouteScreen(
     metric: BodyMetric,
     viewModel: BodyViewModel,
@@ -385,6 +409,15 @@ private fun DashboardWidgetId.toHeartMetricOrNull(): HeartMetric? =
         DashboardWidgetId.BODY_TEMPERATURE -> HeartMetric.BODY_TEMPERATURE
         DashboardWidgetId.BLOOD_GLUCOSE -> HeartMetric.BLOOD_GLUCOSE
         DashboardWidgetId.SKIN_TEMPERATURE -> HeartMetric.SKIN_TEMPERATURE
+        else -> null
+    }
+
+private fun DashboardWidgetId.toNutritionMetricOrNull(): NutritionMetric? =
+    when (this) {
+        DashboardWidgetId.CALORIES_IN -> NutritionMetric.CALORIES_IN
+        DashboardWidgetId.PROTEIN -> NutritionMetric.PROTEIN
+        DashboardWidgetId.CARBS -> NutritionMetric.CARBS
+        DashboardWidgetId.FAT -> NutritionMetric.FAT
         else -> null
     }
 

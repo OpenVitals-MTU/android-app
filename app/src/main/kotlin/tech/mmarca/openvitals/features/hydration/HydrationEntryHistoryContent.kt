@@ -21,9 +21,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.insights.CrossMetricValue
 import tech.mmarca.openvitals.domain.model.HydrationEntry
-import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
@@ -31,7 +29,6 @@ import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.math.abs
 
 internal fun LazyListScope.hydrationEntries(
     entries: List<HydrationEntry>,
@@ -147,20 +144,5 @@ private fun HydrationEntryRowContent(
                 }
             }
         }
-    }
-}
-
-internal fun weightFluctuationValues(entries: List<WeightEntry>): List<CrossMetricValue> {
-    val zone = ZoneId.systemDefault()
-    val dailyWeights = entries
-        .groupBy { it.time.atZone(zone).toLocalDate() }
-        .mapValues { (_, dayEntries) -> dayEntries.map { it.weightKg }.average() }
-        .toSortedMap()
-
-    var previousWeight: Double? = null
-    return dailyWeights.mapNotNull { (date, weight) ->
-        val previous = previousWeight
-        previousWeight = weight
-        previous?.let { CrossMetricValue(date, abs(weight - it)) }
     }
 }

@@ -6,13 +6,9 @@ import androidx.compose.material.icons.automirrored.outlined.Accessible
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
-import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.insights.BaselineValue
-import tech.mmarca.openvitals.domain.insights.DailyGoalValue
-import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.theme.WheelchairPushesColor
@@ -28,11 +24,13 @@ internal fun LazyListScope.wheelchairPushesContent(
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
-    if (state.selectedRange == TimeRange.DAY || state.dailySteps.any { it.wheelchairPushes != null }) {
-        val values = state.dailySteps.map { (it.wheelchairPushes ?: 0L).toDouble() }
+    val display = state.display.metric
+    if (display.hasData) {
+        val values = display.values
         renderActivityMetricOrderedContent(
             ActivityMetricOrderedContentSpec(
                 state = state,
+                display = display,
                 period = period,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -44,34 +42,20 @@ internal fun LazyListScope.wheelchairPushesContent(
                 goalFormatter = {
                     DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_pushes))
                 },
-                goalValues = state.dailySteps.map { DailyGoalValue(it.date, (it.wheelchairPushes ?: 0L).toDouble()) },
-                trackedDates = state.dailySteps.filter { (it.wheelchairPushes ?: 0L) > 0L }.map { it.date },
-                sampleCount = if (state.selectedRange == TimeRange.DAY) {
-                    state.activityProgress.count { (it.totalWheelchairPushes ?: 0L) > 0L }
-                } else {
-                    values.count { it > 0.0 }
-                },
-                values = values,
-                previousTotal = state.previousDailySteps.sumOf { (it.wheelchairPushes ?: 0L).toDouble() },
-                baselineValues = state.baselineDailySteps.map { BaselineValue(it.date, (it.wheelchairPushes ?: 0L).toDouble()) },
                 statisticsIcon = Icons.AutoMirrored.Outlined.Accessible,
                 comparisonValueFormatter = {
                     DisplayValue(unitFormatter.count(it.roundToLong()), stringResource(R.string.unit_pushes))
                 },
-                activeDays = values.count { it > 0.0 },
                 onDecreaseGoal = onDecreaseGoal,
                 onIncreaseGoal = onIncreaseGoal,
                 intradayChart = {
-                    val pushesTotal = state.dailySteps.firstOrNull()?.wheelchairPushes ?: 0L
                     IntradayActivityChartCard(
                         selectedDate = state.selectedDate,
                         title = stringResource(R.string.metric_wheelchair_pushes),
-                        valueText = "${unitFormatter.count(pushesTotal)} ${stringResource(R.string.unit_pushes)}",
+                        valueText = "${unitFormatter.count(display.dayTotal.roundToLong())} ${stringResource(R.string.unit_pushes)}",
                         emptyText = stringResource(R.string.message_no_wheelchair_pushes),
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        points = state.activityProgress.mapNotNull { point ->
-                            point.totalWheelchairPushes?.let { point.time to it.toDouble() }
-                        },
+                        points = display.intradayPoints.map { it.time to it.value },
                         accentColor = WheelchairPushesColor,
                         yAxisValueFormatter = { unitFormatter.count(it.roundToLong()) },
                         modifier = activityMetricModifier(),
@@ -126,7 +110,7 @@ internal fun LazyListScope.wheelchairPushesContent(
                 },
                 statisticsAverage = {
                     DisplayValue(
-                        unitFormatter.count(averageOrZero(values.sum(), values.count { it > 0.0 }).roundToLong()),
+                        unitFormatter.count(averageOrZero(values.sum(), display.activeDays).roundToLong()),
                         stringResource(R.string.unit_pushes),
                     )
                 },

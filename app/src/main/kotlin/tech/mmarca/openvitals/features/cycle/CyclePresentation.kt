@@ -18,7 +18,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
-internal data class CycleDay(
+data class CycleDay(
     val date: LocalDate,
     val inSelectedPeriod: Boolean,
     val periodActive: Boolean,

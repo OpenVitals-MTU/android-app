@@ -1,7 +1,8 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.ExerciseData
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -41,7 +42,7 @@ class ActivityDetailViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.workout)
-        assertEquals("Activity not found.", vm.uiState.value.error)
+        assertEquals(ScreenError.NotFound, vm.uiState.value.error)
     }
 
     @Test fun `blank activity id fails without calling repository`() = runTest {
@@ -50,7 +51,7 @@ class ActivityDetailViewModelTest {
         val vm = ActivityDetailViewModel(repo, "")
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("Missing activity id.", vm.uiState.value.error)
+        assertEquals(ScreenError.MissingArgument, vm.uiState.value.error)
         coVerify(exactly = 0) { repo.loadWorkout(any()) }
     }
 
@@ -63,7 +64,7 @@ class ActivityDetailViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.workout)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     @Test fun `deleteActivity deletes OpenVitals activity and reports completion`() = runTest {

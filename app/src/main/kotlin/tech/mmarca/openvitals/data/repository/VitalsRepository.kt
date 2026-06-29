@@ -28,6 +28,7 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
+import tech.mmarca.openvitals.domain.query.VitalsPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -401,28 +402,3 @@ enum class VitalsPeriodMetric {
     BLOOD_GLUCOSE,
     SKIN_TEMPERATURE,
 }
-
-data class VitalsPeriodData(
-    val missingVitalsPermissions: Set<String> = emptySet(),
-    val bloodPressure: List<BloodPressureEntry> = emptyList(),
-    val previousBloodPressure: List<BloodPressureEntry> = emptyList(),
-    val baselineBloodPressure: List<BloodPressureEntry> = emptyList(),
-    val spO2: List<SpO2Entry> = emptyList(),
-    val previousSpO2: List<SpO2Entry> = emptyList(),
-    val baselineSpO2: List<SpO2Entry> = emptyList(),
-    val respiratoryRate: List<RespiratoryRateEntry> = emptyList(),
-    val previousRespiratoryRate: List<RespiratoryRateEntry> = emptyList(),
-    val baselineRespiratoryRate: List<RespiratoryRateEntry> = emptyList(),
-    val bodyTemperature: List<BodyTempEntry> = emptyList(),
-    val previousBodyTemperature: List<BodyTempEntry> = emptyList(),
-    val baselineBodyTemperature: List<BodyTempEntry> = emptyList(),
-    val vo2Max: List<Vo2MaxEntry> = emptyList(),
-    val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
-    val baselineVo2Max: List<Vo2MaxEntry> = emptyList(),
-    val bloodGlucose: List<BloodGlucoseEntry> = emptyList(),
-    val previousBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
-    val baselineBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
-    val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
-    val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
-    val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
-)

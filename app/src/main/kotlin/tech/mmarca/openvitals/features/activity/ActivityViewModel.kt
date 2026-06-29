@@ -1,9 +1,14 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -15,7 +20,7 @@ import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.RefreshMode
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
@@ -25,7 +30,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class ActivityUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -39,12 +46,14 @@ data class ActivityUiState(
     val previousNutrition: List<DailyNutrition> = emptyList(),
     val baselineNutrition: List<DailyNutrition> = emptyList(),
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
-    val error: String? = null,
+    val display: ActivityDisplayState = ActivityDisplayState(),
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class ActivityViewModel(
     private val repository: ActivityRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val selectedMetric: ActivityMetric = ActivityMetric.STEPS,
@@ -60,8 +69,10 @@ class ActivityViewModel(
         repository: ActivityRepository,
         preferencesRepository: PreferencesRepository,
         savedStateHandle: SavedStateHandle,
+        dispatchers: DispatcherProvider,
     ) : this(
         repository = repository,
+        dispatchers = dispatchers,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         selectedMetric = activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
@@ -173,7 +184,7 @@ class ActivityViewModel(
     fun setDailyGoal(goal: Double) {
         val normalized = goalKey.normalize(goal)
         onDailyGoalChanged(normalized)
-        _uiState.value = _uiState.value.copy(dailyGoal = normalized)
+        _uiState.value = _uiState.value.copy(dailyGoal = normalized).withDisplay(selectedMetric)
     }
 
     fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
@@ -204,6 +215,21 @@ class ActivityViewModel(
                 }
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                val display = withContext(dispatchers.default) {
+                    ActivityPresentationMapper.build(
+                        query = query,
+                        metric = selectedMetric,
+                        dailyGoal = _uiState.value.dailyGoal,
+                        dailySteps = result.dailySteps,
+                        previousDailySteps = result.previousDailySteps,
+                        baselineDailySteps = result.baselineDailySteps,
+                        nutrition = result.nutrition,
+                        previousNutrition = result.previousNutrition,
+                        baselineNutrition = result.baselineNutrition,
+                        activityProgress = result.activityProgress,
+                    )
+                }
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -214,13 +240,14 @@ class ActivityViewModel(
                     previousNutrition = result.previousNutrition,
                     baselineNutrition = result.baselineNutrition,
                     activityProgress = result.activityProgress,
+                    display = display,
                 )
             }.onFailure {
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    error = it.message,
+                    error = it.toScreenError(),
                 )
             }
         }
@@ -230,6 +257,29 @@ class ActivityViewModel(
         _uiState.value = _uiState.value.copy(
             selectedRange = selection.selectedRange,
             selectedDate = selection.selectedDate,
+        )
+    }
+
+    private fun ActivityUiState.withDisplay(metric: ActivityMetric): ActivityUiState {
+        val query = PeriodLoadQuery(
+            range = selectedRange,
+            anchorDate = selectedDate,
+            weekPeriodMode = weekPeriodMode,
+        )
+        return copy(
+            dailyGoal = dailyGoal,
+            display = ActivityPresentationMapper.build(
+                query = query,
+                metric = metric,
+                dailyGoal = dailyGoal,
+                dailySteps = dailySteps,
+                previousDailySteps = previousDailySteps,
+                baselineDailySteps = baselineDailySteps,
+                nutrition = nutrition,
+                previousNutrition = previousNutrition,
+                baselineNutrition = baselineNutrition,
+                activityProgress = activityProgress,
+            ),
         )
     }
 }

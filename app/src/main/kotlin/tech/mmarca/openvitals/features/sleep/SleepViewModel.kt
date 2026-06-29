@@ -1,9 +1,14 @@
 package tech.mmarca.openvitals.features.sleep
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -17,7 +22,7 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +32,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class SleepUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -39,13 +46,15 @@ data class SleepUiState(
     val previousSessions: List<SleepData> = emptyList(),
     val baselineSessions: List<SleepData> = emptyList(),
     val crossDailyHrv: List<DailyHrv> = emptyList(),
-    val error: String? = null,
+    val display: SleepDisplayState = SleepDisplayState(),
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class SleepViewModel(
     private val repository: SleepRepository,
     private val heartRepository: HeartRepository? = null,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     initialSleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
@@ -192,6 +201,17 @@ class SleepViewModel(
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load
+                    val display = withContext(dispatchers.default) {
+                        SleepPresentationMapper.build(
+                            query = query,
+                            sleepRangeMode = sleepRangeMode,
+                            sessions = result.sessions,
+                            previousSessions = result.previousSessions,
+                            baselineSessions = result.baselineSessions,
+                            crossDailyHrv = result.crossDailyHrv,
+                        )
+                    }
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
@@ -200,6 +220,7 @@ class SleepViewModel(
                         previousSessions = result.previousSessions,
                         baselineSessions = result.baselineSessions,
                         crossDailyHrv = result.crossDailyHrv,
+                        display = display,
                     )
                 }
                 .onFailure {
@@ -208,7 +229,7 @@ class SleepViewModel(
                         isLoading = false,
                         selectedDate = date,
                         sleepRangeMode = sleepRangeMode,
-                        error = it.message,
+                        error = it.toScreenError(),
                     )
                 }
         }

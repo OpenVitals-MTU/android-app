@@ -1,10 +1,11 @@
 package tech.mmarca.openvitals.features.nutrition
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.NutritionPeriodData
+import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -42,13 +43,24 @@ class NutritionViewModelTest {
         }
     }
 
+    private fun viewModel(
+        repo: NutritionRepository,
+        selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
+        initialRange: TimeRange = TimeRange.WEEK,
+    ) = NutritionViewModel(
+        repository = repo,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+        selectedMetric = selectedMetric,
+        initialRange = initialRange,
+    )
+
     @Test fun `initial range is WEEK`() = runTest {
-        val vm = NutritionViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         assertEquals(TimeRange.WEEK, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial load clears loading and sets empty lists`() = runTest {
-        val vm = NutritionViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         val state = vm.uiState.value
         assertFalse(state.isLoading)
         assertTrue(state.dailyMacros.isEmpty())
@@ -90,29 +102,29 @@ class NutritionViewModelTest {
         coEvery { repo.loadDailyMacros(any(), any()) } returns macros
         coEvery { repo.loadNutritionEntries(any(), any()) } returns entries
 
-        val vm = NutritionViewModel(repo)
+        val vm = viewModel(repo)
 
         assertEquals(macros, vm.uiState.value.dailyMacros)
         assertEquals(entries, vm.uiState.value.entries)
-        assertEquals(4_000.0, vm.uiState.value.totalEnergyKcal, 0.01)
-        assertEquals(190.0, vm.uiState.value.totalProteinGrams, 0.01)
-        assertEquals(470.0, vm.uiState.value.totalCarbsGrams, 0.01)
-        assertEquals(130.0, vm.uiState.value.totalFatGrams, 0.01)
+        assertEquals(4_000.0, vm.uiState.value.display.totals.energyKcal, 0.01)
+        assertEquals(190.0, vm.uiState.value.display.totals.proteinGrams, 0.01)
+        assertEquals(470.0, vm.uiState.value.display.totals.carbsGrams, 0.01)
+        assertEquals(130.0, vm.uiState.value.display.totals.fatGrams, 0.01)
     }
 
     @Test fun `load failure sets error and clears loading`() = runTest {
         val repo = mockk<NutritionRepository>()
         coEvery { repo.loadNutritionPeriod(any()) } throws RuntimeException("timeout")
 
-        val vm = NutritionViewModel(repo)
+        val vm = viewModel(repo)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     @Test fun `selectRange updates selectedRange and reloads`() = runTest {
         val repo = emptyRepo()
-        val vm = NutritionViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.selectRange(TimeRange.MONTH)
 
@@ -122,20 +134,20 @@ class NutritionViewModelTest {
 
     @Test fun `year range loads raw meal entries`() = runTest {
         val repo = emptyRepo()
-        NutritionViewModel(repo, initialRange = TimeRange.YEAR)
+        viewModel(repo, initialRange = TimeRange.YEAR)
 
         coVerify(exactly = 1) { repo.loadNutritionEntries(any(), any()) }
     }
 
     @Test fun `macro metrics load raw meal entries`() = runTest {
         val repo = emptyRepo()
-        NutritionViewModel(repo, selectedMetric = NutritionMetric.PROTEIN)
+        viewModel(repo, selectedMetric = NutritionMetric.PROTEIN)
 
         coVerify(exactly = 1) { repo.loadNutritionEntries(any(), any()) }
     }
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
-        val vm = NutritionViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectRange(TimeRange.DAY)
         val before = vm.uiState.value.selectedDate
 
@@ -145,7 +157,7 @@ class NutritionViewModelTest {
     }
 
     @Test fun `nextPeriod WEEK advances from a past week`() = runTest {
-        val vm = NutritionViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectDate(today.minusWeeks(4))
         val before = vm.uiState.value.selectedDate
 
@@ -155,7 +167,7 @@ class NutritionViewModelTest {
     }
 
     @Test fun `selectDate clamps future date to today`() = runTest {
-        val vm = NutritionViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
 
         vm.selectDate(today.plusDays(10))
 

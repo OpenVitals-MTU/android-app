@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.query.CyclePeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
@@ -154,8 +155,3 @@ class CycleRepository @Inject constructor(
         }
     }
 }
-
-data class CyclePeriodData(
-    val data: CycleData,
-    val missingPermissions: Set<String>,
-)

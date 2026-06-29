@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -26,10 +29,11 @@ import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.RefreshMode
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
+@Immutable
 data class CaloriesUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -44,7 +48,7 @@ data class CaloriesUiState(
     val bmrEntries: List<BmrEntry> = emptyList(),
     val latestBmrKcal: Double? = null,
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
-    val error: String? = null,
+    val error: ScreenError? = null,
 ) {
     val latestBmrEntry: BmrEntry? = bmrEntries.maxByOrNull { it.time }
     val displayBmrKcal: Double? = latestBmrEntry?.kcalPerDay ?: latestBmrKcal
@@ -205,7 +209,7 @@ class CaloriesViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    error = it.message,
+                    error = it.toScreenError(),
                 )
             }
         }

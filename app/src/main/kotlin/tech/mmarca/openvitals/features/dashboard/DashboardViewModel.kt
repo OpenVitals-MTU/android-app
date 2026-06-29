@@ -1,9 +1,12 @@
 package tech.mmarca.openvitals.features.dashboard
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
@@ -13,8 +16,9 @@ import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.mergeLoaded
-import tech.mmarca.openvitals.data.repository.ActivityRepository
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
@@ -29,11 +33,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+@Immutable
 data class DashboardUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val data: DashboardData? = null,
     val isLoading: Boolean = true,
-    val errorMessage: String? = null,
+    val error: ScreenError? = null,
     val unacknowledgedWidgetPermissions: Set<String> = emptySet(),
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
@@ -48,6 +53,7 @@ data class DashboardUiState(
     val visibleWidgetLoadToken: Long = 0L,
 )
 
+@Immutable
 data class DashboardDailyGoals(
     val steps: Double = MetricDailyGoalKey.STEPS.defaultValue,
     val distanceMeters: Double = MetricDailyGoalKey.DISTANCE_METERS.defaultValue,
@@ -67,6 +73,7 @@ data class DashboardDailyGoals(
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
+    private val loadDashboardDayUseCase: LoadDashboardDayUseCase,
     private val repository: HealthRepository,
     private val prefs: PreferencesRepository,
     private val activityRepository: ActivityRepository? = null,
@@ -117,7 +124,7 @@ class DashboardViewModel @Inject constructor(
                 refresh()
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
-                    errorMessage = error.message ?: "Unable to delete activity.",
+                    error = error.toScreenError("Unable to delete activity."),
                 )
             }
         }
@@ -182,7 +189,7 @@ class DashboardViewModel @Inject constructor(
             _uiState.value = current.copy(
                 selectedDate = clampedDate,
                 isLoading = !keepCurrentDataVisible,
-                errorMessage = null,
+                error = null,
                 sleepRangeMode = sleepRangeMode,
                 activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
@@ -193,7 +200,7 @@ class DashboardViewModel @Inject constructor(
                 minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
             )
             runCatching {
-                repository.loadDashboard(
+                loadDashboardDayUseCase(
                     DashboardQuery(
                         date = clampedDate,
                         sleepRangeMode = sleepRangeMode,
@@ -227,7 +234,7 @@ class DashboardViewModel @Inject constructor(
                     if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Unknown error",
+                        error = error.toScreenError("Unknown error"),
                     )
                 }
         }
@@ -415,7 +422,7 @@ class DashboardViewModel @Inject constructor(
                 deferredMetricLoadGroups(orderedMetrics).forEach { metricGroup ->
                     if (!isDeferredLoadCurrent(context)) return@coroutineScope
                     runCatching {
-                        repository.loadDashboard(
+                        loadDashboardDayUseCase(
                             DashboardQuery(
                                 date = context.date,
                                 sleepRangeMode = context.sleepRangeMode,
@@ -445,7 +452,7 @@ class DashboardViewModel @Inject constructor(
                                 .toSet()
                             loadedDeferredWidgets = loadedDeferredWidgets + failedWidgets
                             _uiState.value = _uiState.value.copy(
-                                errorMessage = error.message ?: "Unknown error",
+                                error = error.toScreenError("Unknown error"),
                                 pendingWidgets = pendingDeferredWidgets(context),
                             )
                         }

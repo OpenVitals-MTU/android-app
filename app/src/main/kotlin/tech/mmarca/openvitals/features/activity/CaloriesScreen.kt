@@ -78,7 +78,7 @@ fun CaloriesScreen(
             isLoading = state.isLoading,
             selectedRange = state.selectedRange,
             selectedDate = state.selectedDate,
-            error = state.error,
+            screenError = state.error,
             onRefresh = viewModel::load,
             onSelectRange = viewModel::selectRange,
             onPreviousPeriod = viewModel::previousPeriod,

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.achievements
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -7,19 +8,22 @@ import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToLong
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.domain.model.DailySteps
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 
 private val LegacyActivityStartDate: LocalDate = LocalDate.of(2009, 1, 1)
 
+@Immutable
 data class AchievementsUiState(
     val isLoading: Boolean = true,
     val badges: List<AchievementProgress> = emptyList(),
     val stats: AchievementStats = AchievementStats(),
-    val error: String? = null,
+    val error: ScreenError? = null,
 ) {
     val unlockedCount: Int get() = badges.count { it.isUnlocked }
     val totalCount: Int get() = badges.size
@@ -28,6 +32,7 @@ data class AchievementsUiState(
     val hasFloorHistory: Boolean get() = stats.hasFloorData
 }
 
+@Immutable
 data class AchievementStats(
     val startDate: LocalDate = LegacyActivityStartDate,
     val endDate: LocalDate = LocalDate.now(),
@@ -39,6 +44,7 @@ data class AchievementStats(
     val hasFloorData: Boolean = false,
 )
 
+@Immutable
 data class AchievementProgress(
     val definition: AchievementDefinition,
     val currentValue: Double,
@@ -87,7 +93,7 @@ class AchievementsViewModel @Inject constructor(
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = error.message,
+                    error = error.toScreenError(),
                 )
             }
         }

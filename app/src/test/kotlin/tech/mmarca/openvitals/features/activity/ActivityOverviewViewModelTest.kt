@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
@@ -9,7 +10,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -274,7 +275,7 @@ class ActivityOverviewViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
-        assertEquals("timeout", state.error)
+        assertEquals(ScreenError.Message("timeout"), state.error)
     }
 
     private fun workout(start: Instant, end: Instant): ExerciseData =

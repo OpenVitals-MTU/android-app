@@ -4,8 +4,8 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.model.ExerciseData
-import tech.mmarca.openvitals.data.repository.ActivitiesPeriodData
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.domain.query.ActivitiesPeriodData
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify

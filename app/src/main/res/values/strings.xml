@@ -57,6 +57,12 @@
     <string name="action_finish">Finish</string>
     <string name="action_discard">Discard</string>
     <string name="unknown_error">Unknown error</string>
+    <string name="screen_error_not_found">The requested item was not found.</string>
+    <string name="screen_error_missing_argument">Required information is missing.</string>
+    <string name="screen_error_permission_denied">Permission is required to load this data.</string>
+    <string name="screen_error_health_connect_unavailable">Health Connect is not available on this device.</string>
+    <string name="screen_error_load_sleep_session">Unable to load sleep session.</string>
+    <string name="screen_error_load_sleep_period">Unable to load sleep data.</string>
     <string name="not_available">Not available</string>
     <string name="not_recorded">Not recorded</string>
     <string name="no_data">No data</string>

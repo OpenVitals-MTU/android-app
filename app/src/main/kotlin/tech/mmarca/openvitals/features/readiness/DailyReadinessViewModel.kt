@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.readiness
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -8,9 +9,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
-import tech.mmarca.openvitals.data.repository.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.domain.insights.DailyReadinessGoalInputs
 import tech.mmarca.openvitals.domain.insights.DailyReadinessInsight
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
@@ -22,20 +25,21 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 
+@Immutable
 data class DailyReadinessUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val data: DashboardData? = null,
     val insight: DailyReadinessInsight? = null,
     val goals: DailyReadinessGoalInputs = DailyReadinessGoalInputs(),
     val isLoading: Boolean = true,
-    val errorMessage: String? = null,
+    val error: ScreenError? = null,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
 )
 
 @HiltViewModel
 class DailyReadinessViewModel @Inject constructor(
-    private val repository: HealthRepository,
+    private val loadDashboardDayUseCase: LoadDashboardDayUseCase,
     private val prefs: PreferencesRepository,
 ) : ViewModel() {
 
@@ -125,10 +129,10 @@ class DailyReadinessViewModel @Inject constructor(
                 sleepRangeMode = sleepRangeMode,
                 activityWeekMode = activityWeekMode,
                 isLoading = true,
-                errorMessage = null,
+                error = null,
             )
             runCatching {
-                repository.loadDashboard(
+                loadDashboardDayUseCase(
                     DashboardQuery(
                         date = clampedDate,
                         sleepRangeMode = sleepRangeMode,
@@ -150,7 +154,7 @@ class DailyReadinessViewModel @Inject constructor(
                     if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Unknown error",
+                        error = error.toScreenError("Unknown error"),
                     )
                 }
         }

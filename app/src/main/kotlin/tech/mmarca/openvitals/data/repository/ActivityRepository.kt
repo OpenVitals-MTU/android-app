@@ -28,6 +28,8 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
+import tech.mmarca.openvitals.domain.query.ActivitiesPeriodData
+import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -38,6 +40,7 @@ import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
 import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -51,17 +54,17 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class ActivityRepository @Inject constructor(
+class ActivityRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : ActivityRepository {
 
     companion object {
-        private const val TAG = "ActivityRepository"
+        private const val TAG = "ActivityRepositoryImpl"
     }
 
     private val readStepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
@@ -97,12 +100,12 @@ class ActivityRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadActivityPeriod(
+    override suspend fun loadActivityPeriod(
         query: PeriodLoadQuery,
         includeSteps: Boolean,
         includeNutrition: Boolean,
-        includeWheelchairPushes: Boolean = false,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        includeWheelchairPushes: Boolean,
+        refreshMode: RefreshMode,
     ): ActivityPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -197,9 +200,9 @@ class ActivityRepository @Inject constructor(
         }
     }
 
-    suspend fun loadActivitiesPeriod(
+    override suspend fun loadActivitiesPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): ActivitiesPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -238,7 +241,7 @@ class ActivityRepository @Inject constructor(
             tag = TAG,
         )
 
-    suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> {
+    override suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailySteps(start, end, granted)
     }
@@ -284,7 +287,7 @@ class ActivityRepository @Inject constructor(
         }
     }
 
-    suspend fun loadActivityProgress(date: LocalDate = LocalDate.now()): List<ActivityProgressPoint> {
+    override suspend fun loadActivityProgress(date: LocalDate): List<ActivityProgressPoint> {
         val granted = grantedPermissionsIfAvailable()
         return loadActivityProgress(date, granted)
     }
@@ -316,7 +319,7 @@ class ActivityRepository @Inject constructor(
         )
     }
 
-    suspend fun loadWorkouts(start: LocalDate, end: LocalDate): List<ExerciseData> {
+    override suspend fun loadWorkouts(start: LocalDate, end: LocalDate): List<ExerciseData> {
         val granted = grantedPermissionsIfAvailable()
         return loadWorkouts(start, end, granted)
     }
@@ -336,7 +339,7 @@ class ActivityRepository @Inject constructor(
         return hc.readExerciseSessions(startInstant, endInstant)
     }
 
-    suspend fun loadWorkout(id: String): ExerciseData? {
+    override suspend fun loadWorkout(id: String): ExerciseData? {
         val granted = grantedPermissionsIfAvailable()
         if (readExercisePermission !in granted) {
             Log.w(TAG, "Skipping loadWorkout missingCount=1")
@@ -360,7 +363,7 @@ class ActivityRepository @Inject constructor(
         )
     }
 
-    suspend fun loadSpeedSamples(start: Instant, end: Instant): List<SpeedSample> {
+    override suspend fun loadSpeedSamples(start: Instant, end: Instant): List<SpeedSample> {
         val granted = grantedPermissionsIfAvailable()
         return loadSpeedSamples(start, end, granted)
     }
@@ -377,7 +380,7 @@ class ActivityRepository @Inject constructor(
         return hc.readSpeedSamples(start, end)
     }
 
-    suspend fun loadActivityCadenceSamples(start: Instant, end: Instant): List<ActivityCadenceSample> {
+    override suspend fun loadActivityCadenceSamples(start: Instant, end: Instant): List<ActivityCadenceSample> {
         val granted = grantedPermissionsIfAvailable()
         return loadActivityCadenceSamples(start, end, granted)
     }
@@ -407,16 +410,16 @@ class ActivityRepository @Inject constructor(
         if (stepsCadenceSamples.isNotEmpty()) add(writeStepsCadencePermission)
     }
 
-    suspend fun loadPlannedWorkouts(start: LocalDate, end: LocalDate): List<PlannedExerciseData> {
+    override suspend fun loadPlannedWorkouts(start: LocalDate, end: LocalDate): List<PlannedExerciseData> {
         val granted = grantedPermissionsIfAvailable()
         return loadPlannedWorkouts(start, end, granted)
     }
 
-    suspend fun loadPlannedWorkoutOptions(date: LocalDate, exerciseType: Int): List<PlannedExerciseData> =
+    override suspend fun loadPlannedWorkoutOptions(date: LocalDate, exerciseType: Int): List<PlannedExerciseData> =
         loadPlannedWorkouts(date, date)
             .filter { plan -> plan.exerciseType == exerciseType && plan.completedExerciseSessionId == null }
 
-    suspend fun loadExistingPlannedWorkouts(anchorDate: LocalDate = LocalDate.now()): List<PlannedExerciseData> {
+    override suspend fun loadExistingPlannedWorkouts(anchorDate: LocalDate): List<PlannedExerciseData> {
         val granted = grantedPermissionsIfAvailable()
         if (!hc.isPlannedExerciseAvailable() || readPlannedExercisePermission !in granted) {
             Log.w(TAG, "Skipping loadExistingPlannedWorkouts missingCount=1")
@@ -429,7 +432,7 @@ class ActivityRepository @Inject constructor(
         ).filter { plan -> plan.completedExerciseSessionId == null }
     }
 
-    suspend fun writePlannedWorkout(request: PlannedExerciseWriteRequest): String {
+    override suspend fun writePlannedWorkout(request: PlannedExerciseWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()
         if (!hc.isPlannedExerciseAvailable() || writePlannedExercisePermission !in granted) {
             Log.w(TAG, "Skipping writePlannedWorkout missingCount=1")
@@ -455,7 +458,7 @@ class ActivityRepository @Inject constructor(
         return hc.readPlannedExerciseSessions(startInstant, endInstant)
     }
 
-    suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition> {
+    override suspend fun loadDailyNutrition(start: LocalDate, end: LocalDate): List<DailyNutrition> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailyNutrition(start, end, granted)
     }
@@ -482,7 +485,7 @@ class ActivityRepository @Inject constructor(
             readActiveCaloriesPermission in granted &&
             readBmrPermission in granted
 
-    fun activityWritePermissions(): Set<String> =
+    override fun activityWritePermissions(): Set<String> =
         activityWritePermissions(
             includeRoute = true,
             includeDistance = true,
@@ -492,13 +495,13 @@ class ActivityRepository @Inject constructor(
             includeSteps = false,
         )
 
-    fun activityWritePermissions(
+    override fun activityWritePermissions(
         includeRoute: Boolean,
         includeDistance: Boolean,
         includeElevation: Boolean,
         includeActiveCalories: Boolean,
         includeTotalCalories: Boolean,
-        includeSteps: Boolean = false,
+        includeSteps: Boolean,
     ): Set<String> = buildSet {
         add(writeExercisePermission)
         if (includeRoute) add(writeExerciseRoutePermission)
@@ -509,7 +512,7 @@ class ActivityRepository @Inject constructor(
         if (includeSteps) add(writeStepsPermission)
     }
 
-    fun activityWritePermissions(request: ActivityWriteRequest): Set<String> =
+    override fun activityWritePermissions(request: ActivityWriteRequest): Set<String> =
         activityWritePermissions(
             includeRoute = request.routePoints.isNotEmpty(),
             includeDistance = request.distanceMeters != null,
@@ -523,14 +526,14 @@ class ActivityRepository @Inject constructor(
             emptySet()
         } + request.bleSamples.writePermissions()
 
-    fun plannedWorkoutWritePermissions(): Set<String> =
+    override fun plannedWorkoutWritePermissions(): Set<String> =
         if (hc.isPlannedExerciseAvailable()) {
             setOf(readPlannedExercisePermission, writePlannedExercisePermission)
         } else {
             emptySet()
         }
 
-    suspend fun hasActivityWritePermission(): Boolean =
+    override suspend fun hasActivityWritePermission(): Boolean =
         hasActivityWritePermission(
             includeRoute = true,
             includeDistance = true,
@@ -540,13 +543,13 @@ class ActivityRepository @Inject constructor(
             includeSteps = false,
         )
 
-    suspend fun hasActivityWritePermission(
+    override suspend fun hasActivityWritePermission(
         includeRoute: Boolean,
         includeDistance: Boolean,
         includeElevation: Boolean,
         includeActiveCalories: Boolean,
         includeTotalCalories: Boolean,
-        includeSteps: Boolean = false,
+        includeSteps: Boolean,
     ): Boolean {
         val required = activityWritePermissions(
             includeRoute = includeRoute,
@@ -559,10 +562,10 @@ class ActivityRepository @Inject constructor(
         return required.all { permission -> permission in grantedPermissionsIfAvailable() }
     }
 
-    suspend fun hasActivityWritePermission(request: ActivityWriteRequest): Boolean =
+    override suspend fun hasActivityWritePermission(request: ActivityWriteRequest): Boolean =
         activityWritePermissions(request).all { permission -> permission in grantedPermissionsIfAvailable() }
 
-    suspend fun writeActivityEntry(request: ActivityWriteRequest): String {
+    override suspend fun writeActivityEntry(request: ActivityWriteRequest): String {
         val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping writeActivityEntry missingCount=${missingPermissions.size}")
@@ -573,7 +576,7 @@ class ActivityRepository @Inject constructor(
         }
     }
 
-    suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
+    override suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
         val missingPermissions = activityWritePermissions(request) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping updateActivityEntry missingCount=${missingPermissions.size}")
@@ -583,7 +586,7 @@ class ActivityRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 
-    suspend fun deleteActivityEntry(id: String) {
+    override suspend fun deleteActivityEntry(id: String) {
         val granted = grantedPermissionsIfAvailable()
         if (writeExercisePermission !in granted) {
             Log.w(TAG, "Skipping deleteActivityEntry missingCount=1")
@@ -594,20 +597,3 @@ class ActivityRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 }
-
-data class ActivityPeriodData(
-    val dailySteps: List<DailySteps> = emptyList(),
-    val previousDailySteps: List<DailySteps> = emptyList(),
-    val baselineDailySteps: List<DailySteps> = emptyList(),
-    val nutrition: List<DailyNutrition> = emptyList(),
-    val previousNutrition: List<DailyNutrition> = emptyList(),
-    val baselineNutrition: List<DailyNutrition> = emptyList(),
-    val activityProgress: List<ActivityProgressPoint> = emptyList(),
-)
-
-data class ActivitiesPeriodData(
-    val workouts: List<ExerciseData> = emptyList(),
-    val previousWorkouts: List<ExerciseData> = emptyList(),
-    val baselineWorkouts: List<ExerciseData> = emptyList(),
-    val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
-)

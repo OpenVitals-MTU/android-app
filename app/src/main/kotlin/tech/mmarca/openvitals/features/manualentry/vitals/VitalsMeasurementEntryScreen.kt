@@ -50,6 +50,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -243,7 +245,7 @@ private fun VitalsMeasurementEntryCard(
 
             state.entryError?.let { entryError ->
                 Text(
-                    text = vitalsMeasurementEntryErrorText(entryError, state.writeErrorMessage, title),
+                    text = vitalsMeasurementEntryErrorText(entryError, state.writeError, title),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -274,14 +276,14 @@ private fun VitalsValueField(
 @Composable
 private fun vitalsMeasurementEntryErrorText(
     error: VitalsMeasurementEntryError,
-    message: String?,
+    writeError: ScreenError?,
     title: String,
 ): String = when (error) {
     VitalsMeasurementEntryError.INVALID_VALUE -> stringResource(R.string.vitals_entry_invalid_value)
     VitalsMeasurementEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.vitals_entry_permission_needed, title)
     VitalsMeasurementEntryError.WRITE_FAILED -> stringResource(
         R.string.vitals_entry_write_failed,
-        message ?: stringResource(R.string.unknown_error),
+        writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
 

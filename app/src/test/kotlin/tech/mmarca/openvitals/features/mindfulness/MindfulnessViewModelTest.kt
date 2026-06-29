@@ -1,10 +1,11 @@
 package tech.mmarca.openvitals.features.mindfulness
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.MindfulnessPeriodData
+import tech.mmarca.openvitals.domain.query.MindfulnessPeriodData
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -56,13 +57,24 @@ class MindfulnessViewModelTest {
         }
     }
 
+    private fun viewModel(
+        repository: MindfulnessRepository,
+        initialReminderConfig: MindfulnessReminderConfig = MindfulnessReminderConfig(),
+        onReminderConfigChanged: (MindfulnessReminderConfig) -> Unit = {},
+    ) = MindfulnessViewModel(
+        repository = repository,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+        initialReminderConfig = initialReminderConfig,
+        onReminderConfigChanged = onReminderConfigChanged,
+    )
+
     @Test fun `initial range is WEEK`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         assertEquals(TimeRange.WEEK, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial reminder config uses default disabled daily reminder`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
 
         assertFalse(vm.uiState.value.reminderConfig.enabled)
         assertEquals(LocalTime.of(18, 0), vm.uiState.value.reminderConfig.reminderTime)
@@ -70,7 +82,7 @@ class MindfulnessViewModelTest {
 
     @Test fun `mindfulness reminder config updates and persists`() = runTest {
         val changes = mutableListOf<MindfulnessReminderConfig>()
-        val vm = MindfulnessViewModel(
+        val vm = viewModel(
             repository = emptyRepo(),
             initialReminderConfig = MindfulnessReminderConfig(reminderTime = LocalTime.of(17, 0)),
             onReminderConfigChanged = changes::add,
@@ -93,7 +105,7 @@ class MindfulnessViewModelTest {
     }
 
     @Test fun `initial load clears loading and sets empty list`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         val state = vm.uiState.value
         assertFalse(state.isLoading)
         assertTrue(state.sessions.isEmpty())
@@ -108,10 +120,10 @@ class MindfulnessViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadMindfulnessSessions(any(), any()) } returns sessions
 
-        val vm = MindfulnessViewModel(repo)
+        val vm = viewModel(repo)
 
         assertEquals(sessions, vm.uiState.value.sessions)
-        assertEquals(90L, vm.uiState.value.totalMinutes)
+        assertEquals(90L, vm.uiState.value.display.summary.totalMinutes)
         assertNull(vm.uiState.value.error)
     }
 
@@ -132,13 +144,13 @@ class MindfulnessViewModelTest {
         coEvery { repo.deleteMindfulnessSessionEntry("session-id") } coAnswers {
             sessions = emptyList()
         }
-        val vm = MindfulnessViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.deleteMindfulnessSessionEntry("session-id")
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.sessions.isEmpty())
-        assertEquals(0L, vm.uiState.value.totalMinutes)
+        assertEquals(0L, vm.uiState.value.display.summary.totalMinutes)
         coVerify { repo.deleteMindfulnessSessionEntry("session-id") }
         coVerify { repo.loadMindfulnessPeriod(any(), RefreshMode.FORCE) }
     }
@@ -158,7 +170,7 @@ class MindfulnessViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadMindfulnessSessions(any(), any()) } returns sessions
-        val vm = MindfulnessViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.deleteMindfulnessSessionEntry("external-session-id")
         advanceUntilIdle()
@@ -171,15 +183,15 @@ class MindfulnessViewModelTest {
         val repo = mockk<MindfulnessRepository>()
         coEvery { repo.loadMindfulnessPeriod(any()) } throws RuntimeException("timeout")
 
-        val vm = MindfulnessViewModel(repo)
+        val vm = viewModel(repo)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     @Test fun `selectRange updates selectedRange and reloads`() = runTest {
         val repo = emptyRepo()
-        val vm = MindfulnessViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.selectRange(TimeRange.MONTH)
 
@@ -188,7 +200,7 @@ class MindfulnessViewModelTest {
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         val before = vm.uiState.value.selectedDate
 
         vm.previousPeriod()
@@ -197,7 +209,7 @@ class MindfulnessViewModelTest {
     }
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectRange(TimeRange.DAY)
         val before = vm.uiState.value.selectedDate
 
@@ -207,7 +219,7 @@ class MindfulnessViewModelTest {
     }
 
     @Test fun `nextPeriod WEEK advances from a past week`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
         vm.selectDate(pastAnchor)
         val before = vm.uiState.value.selectedDate
 
@@ -217,7 +229,7 @@ class MindfulnessViewModelTest {
     }
 
     @Test fun `selectDate clamps future date to today`() = runTest {
-        val vm = MindfulnessViewModel(emptyRepo())
+        val vm = viewModel(emptyRepo())
 
         vm.selectDate(today.plusDays(10))
 

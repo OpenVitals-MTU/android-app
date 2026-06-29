@@ -232,7 +232,7 @@ internal fun ActivityEntryCard(
 
             state.entryError?.let { error ->
                 Text(
-                    text = activityEntryErrorText(error, state.detailMessage),
+                    text = activityEntryErrorText(error, state.detailError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

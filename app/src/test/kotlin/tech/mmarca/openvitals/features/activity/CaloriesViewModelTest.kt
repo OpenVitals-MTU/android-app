@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -17,8 +18,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
-import tech.mmarca.openvitals.data.repository.ActivityPeriodData
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.domain.query.ActivityPeriodData
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -132,6 +133,6 @@ class CaloriesViewModelTest {
         val vm = CaloriesViewModel(activityRepository, bodyRepository)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 }

@@ -24,6 +24,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.resolve
 
 @Composable
 internal fun FieldErrorText(errorText: String?) {
@@ -85,13 +87,13 @@ internal fun String.toStartTimeOrNull(): LocalTime? =
 @Composable
 internal fun activityEntryErrorText(
     error: ActivityEntryError,
-    message: String?,
+    detailError: ScreenError?,
 ): String = when (error) {
     ActivityEntryError.INVALID_VALUE -> stringResource(R.string.activity_entry_invalid_value)
     ActivityEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.activity_entry_permission_needed)
     ActivityEntryError.ROUTE_IMPORT_FAILED -> stringResource(
         R.string.activity_entry_route_import_failed,
-        message ?: stringResource(R.string.unknown_error),
+        detailError.resolve() ?: stringResource(R.string.unknown_error),
     )
     ActivityEntryError.LOCATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_location_permission_needed)
     ActivityEntryError.NOTIFICATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_notification_permission_needed)
@@ -99,11 +101,11 @@ internal fun activityEntryErrorText(
         stringResource(R.string.activity_entry_activity_recognition_permission_needed)
     ActivityEntryError.RECORDING_FAILED -> stringResource(
         R.string.activity_entry_recording_failed,
-        message ?: stringResource(R.string.unknown_error),
+        detailError.resolve() ?: stringResource(R.string.unknown_error),
     )
     ActivityEntryError.WRITE_FAILED -> stringResource(
         R.string.activity_entry_write_failed,
-        message ?: stringResource(R.string.unknown_error),
+        detailError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
 

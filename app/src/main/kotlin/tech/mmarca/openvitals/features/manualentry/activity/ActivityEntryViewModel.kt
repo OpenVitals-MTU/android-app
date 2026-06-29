@@ -33,9 +33,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
@@ -114,7 +116,7 @@ class ActivityEntryViewModel(
                 isSavingEntry = false,
                 isImportingRoute = false,
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = emptySet(),
                 editRecordId = null,
                 saveCompleted = false,
@@ -137,7 +139,7 @@ class ActivityEntryViewModel(
             _uiState.value = _uiState.value.copy(
                 isCheckingPermission = true,
                 writePermissions = permissions,
-                detailMessage = null,
+                detailError = null,
             )
             runCatching {
                 repository.hasActivityWritePermission()
@@ -152,7 +154,7 @@ class ActivityEntryViewModel(
                     isCheckingPermission = false,
                     canWrite = false,
                     entryError = ActivityEntryError.WRITE_FAILED,
-                    detailMessage = error.message,
+                    detailError = error.toScreenError(),
                     writePermissions = currentRequiredPermissions(),
                 )
             }
@@ -179,7 +181,7 @@ class ActivityEntryViewModel(
                 currentState.mode
             },
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         refreshPermission()
@@ -198,7 +200,7 @@ class ActivityEntryViewModel(
             recordedMarkers = emptyList(),
             isRecordingDraft = false,
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         refreshPermission()
@@ -216,7 +218,7 @@ class ActivityEntryViewModel(
                 isLoadingPlannedWorkouts = true,
                 isRecordingDraft = false,
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = emptySet(),
             )
             runCatching {
@@ -237,7 +239,7 @@ class ActivityEntryViewModel(
                     } else {
                         ActivityEntryError.WRITE_FAILED
                     },
-                    detailMessage = error.message,
+                    detailError = error.toScreenError(),
                 )
             }
         }
@@ -249,7 +251,7 @@ class ActivityEntryViewModel(
             selectedPlannedWorkoutActivityTypeId = typeId,
             selectedPlannedWorkoutId = null,
             entryError = null,
-            detailMessage = null,
+            detailError = null,
         )
     }
 
@@ -259,7 +261,7 @@ class ActivityEntryViewModel(
             selectedPlannedWorkoutActivityTypeId = null,
             selectedPlannedWorkoutId = null,
             entryError = null,
-            detailMessage = null,
+            detailError = null,
         )
     }
 
@@ -278,70 +280,70 @@ class ActivityEntryViewModel(
 
     fun updateTitle(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.TITLE)) {
-            copy(titleText = text, entryError = null, detailMessage = null)
+            copy(titleText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateNotes(text: String) {
-        updateState { copy(notesText = text, entryError = null, detailMessage = null) }
+        updateState { copy(notesText = text, entryError = null, detailError = null) }
     }
 
     fun updateFeeling(feeling: ActivityEntryFeeling?) {
-        updateState { copy(selectedFeeling = feeling, entryError = null, detailMessage = null) }
+        updateState { copy(selectedFeeling = feeling, entryError = null, detailError = null) }
     }
 
     fun updateStartDate(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.START_DATE, ActivityEntryField.START_TIME)) {
-            copy(startDateText = text, selectedPlannedWorkoutId = null, entryError = null, detailMessage = null)
+            copy(startDateText = text, selectedPlannedWorkoutId = null, entryError = null, detailError = null)
         }
         refreshPlannedWorkouts()
     }
 
     fun updateStartTime(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.START_TIME)) {
-            copy(startTimeText = text, entryError = null, detailMessage = null)
+            copy(startTimeText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateDurationMinutes(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.DURATION)) {
-            copy(durationMinutesText = text, entryError = null, detailMessage = null)
+            copy(durationMinutesText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateDistance(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.DISTANCE)) {
-            copy(distanceText = text, entryError = null, detailMessage = null)
+            copy(distanceText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateElevation(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.ELEVATION)) {
-            copy(elevationText = text, entryError = null, detailMessage = null)
+            copy(elevationText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateActiveCalories(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.ACTIVE_CALORIES, ActivityEntryField.TOTAL_CALORIES)) {
-            copy(activeCaloriesText = text, entryError = null, detailMessage = null)
+            copy(activeCaloriesText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateTotalCalories(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.TOTAL_CALORIES)) {
-            copy(totalCaloriesText = text, entryError = null, detailMessage = null)
+            copy(totalCaloriesText = text, entryError = null, detailError = null)
         }
     }
 
     fun updateRepetitionMode(mode: ActivityRepetitionEntryMode) {
         updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
-            copy(repetitionMode = mode, entryError = null, detailMessage = null)
+            copy(repetitionMode = mode, entryError = null, detailError = null)
         }
     }
 
     fun updateRepetitionTotal(text: String) {
         updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
-            copy(repetitionTotalText = text, entryError = null, detailMessage = null)
+            copy(repetitionTotalText = text, entryError = null, detailError = null)
         }
     }
 
@@ -352,7 +354,7 @@ class ActivityEntryViewModel(
                     if (itemIndex == index) item.copy(repetitionsText = text) else item
                 },
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
             )
         }
     }
@@ -364,7 +366,7 @@ class ActivityEntryViewModel(
                     if (itemIndex == index) item.copy(restMinutesText = text) else item
                 },
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
             )
         }
     }
@@ -375,7 +377,7 @@ class ActivityEntryViewModel(
                 repetitionMode = ActivityRepetitionEntryMode.SETS,
                 repetitionSets = repetitionSets + ActivityRepetitionSetInput(),
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
             )
         }
     }
@@ -387,7 +389,7 @@ class ActivityEntryViewModel(
                     .filterIndexed { itemIndex, _ -> itemIndex != index }
                     .ifEmpty { listOf(ActivityRepetitionSetInput()) },
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
             )
         }
     }
@@ -397,7 +399,7 @@ class ActivityEntryViewModel(
         if (importer == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
-                detailMessage = "Route file import is not available.",
+                detailError = ScreenError.Message("Route file import is not available."),
                 validationErrors = emptySet(),
             )
             return
@@ -405,7 +407,7 @@ class ActivityEntryViewModel(
         if (!_uiState.value.selectedActivityType.supportsGpsRoute) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = "Selected activity type does not support GPS routes.",
+                detailError = ScreenError.Message("Selected activity type does not support GPS routes."),
                 validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
             )
             return
@@ -417,7 +419,7 @@ class ActivityEntryViewModel(
                 isImportingRoute = true,
                 isRecordingDraft = false,
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = emptySet(),
             )
             runCatching { importer.import(uri) }
@@ -428,7 +430,7 @@ class ActivityEntryViewModel(
                     _uiState.value = _uiState.value.copy(
                         isImportingRoute = false,
                         entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
-                        detailMessage = error.message,
+                        detailError = error.toScreenError(),
                         validationErrors = emptySet(),
                     )
                 }
@@ -466,7 +468,7 @@ class ActivityEntryViewModel(
                     plannedWorkouts = emptyList(),
                     selectedPlannedWorkoutId = null,
                     isLoadingPlannedWorkouts = false,
-                    detailMessage = error.message,
+                    detailError = error.toScreenError(),
                 )
             }
         }
@@ -502,7 +504,7 @@ class ActivityEntryViewModel(
             repetitionTotalText = "",
             repetitionSets = sets,
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
     }
@@ -520,7 +522,7 @@ class ActivityEntryViewModel(
             repetitionTotalText = "",
             repetitionSets = listOf(ActivityRepetitionSetInput()),
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
     }
@@ -536,7 +538,7 @@ class ActivityEntryViewModel(
         if (validationErrors.isNotEmpty() || request == null) {
             _uiState.value = current.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = validationErrors,
             )
             return
@@ -545,7 +547,7 @@ class ActivityEntryViewModel(
             _uiState.value = _uiState.value.copy(
                 isSavingPlannedWorkout = true,
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
             )
             runCatching {
                 repository.writePlannedWorkout(request)
@@ -555,7 +557,7 @@ class ActivityEntryViewModel(
                     selectedPlannedWorkoutId = savedPlanId,
                     selectedPlannedWorkoutBaseline = savedState.plannedWorkoutBaseline(savedPlanId),
                     isSavingPlannedWorkout = false,
-                    detailMessage = null,
+                    detailError = null,
                 )
                 refreshPlannedWorkouts()
             }.onFailure { error ->
@@ -568,7 +570,7 @@ class ActivityEntryViewModel(
                     } else {
                         ActivityEntryError.WRITE_FAILED
                     },
-                    detailMessage = error.message,
+                    detailError = error.toScreenError(),
                 )
             }
         }
@@ -582,7 +584,7 @@ class ActivityEntryViewModel(
             recordedLaps = emptyList(),
             recordedMarkers = emptyList(),
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         refreshPermission()
@@ -591,7 +593,7 @@ class ActivityEntryViewModel(
     fun reportLocationPermissionNeeded() {
         _uiState.value = _uiState.value.copy(
             entryError = ActivityEntryError.LOCATION_PERMISSION_NEEDED,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
     }
@@ -599,7 +601,7 @@ class ActivityEntryViewModel(
     fun reportNotificationPermissionNeeded() {
         _uiState.value = _uiState.value.copy(
             entryError = ActivityEntryError.NOTIFICATION_PERMISSION_NEEDED,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
     }
@@ -607,7 +609,7 @@ class ActivityEntryViewModel(
     fun reportActivityRecognitionPermissionNeeded() {
         _uiState.value = _uiState.value.copy(
             entryError = ActivityEntryError.ACTIVITY_RECOGNITION_PERMISSION_NEEDED,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
     }
@@ -627,7 +629,7 @@ class ActivityEntryViewModel(
             distanceText = "",
             elevationText = "",
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         refreshPermission()
@@ -640,7 +642,7 @@ class ActivityEntryViewModel(
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailMessage = "GPS recording is not available.",
+                detailError = ScreenError.Message("GPS recording is not available."),
                 validationErrors = emptySet(),
             )
             return
@@ -649,7 +651,7 @@ class ActivityEntryViewModel(
         if (!currentState.selectedActivityType.supportsLiveRecording) {
             _uiState.value = currentState.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
             )
             return
@@ -670,7 +672,7 @@ class ActivityEntryViewModel(
             distanceText = "",
             elevationText = "",
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         recorder.prepareRecordingDashboard(currentState.selectedActivityType)
@@ -684,7 +686,7 @@ class ActivityEntryViewModel(
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailMessage = "GPS recording is not available.",
+                detailError = ScreenError.Message("GPS recording is not available."),
                 validationErrors = emptySet(),
             )
             return
@@ -693,7 +695,7 @@ class ActivityEntryViewModel(
         if (!currentState.selectedActivityType.supportsLiveRecording) {
             _uiState.value = currentState.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
             )
             return
@@ -714,13 +716,13 @@ class ActivityEntryViewModel(
             distanceText = "",
             elevationText = "",
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         if (!recorder.startRecording(currentState.selectedActivityType, initialFix, repetitionRestSeconds)) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailMessage = recorder.state.value.errorMessage,
+                detailError = recorder.state.value.errorMessage?.let(ScreenError::Message),
                 validationErrors = emptySet(),
             )
         }
@@ -784,7 +786,7 @@ class ActivityEntryViewModel(
         if (snapshot == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailMessage = "No active activity recording was found.",
+                detailError = ScreenError.Message("No active activity recording was found."),
                 validationErrors = emptySet(),
             )
             return
@@ -834,7 +836,7 @@ class ActivityEntryViewModel(
                 if (workout == null || !workout.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = ActivityEntryError.WRITE_FAILED,
-                        detailMessage = "Only OpenVitals entries can be edited.",
+                        detailError = ScreenError.Message("Only OpenVitals entries can be edited."),
                         validationErrors = emptySet(),
                     )
                     return@onSuccess
@@ -861,7 +863,7 @@ class ActivityEntryViewModel(
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     entryError = ActivityEntryError.WRITE_FAILED,
-                    detailMessage = error.message,
+                    detailError = error.toScreenError(),
                     validationErrors = emptySet(),
                 )
             }
@@ -872,7 +874,7 @@ class ActivityEntryViewModel(
         if (_uiState.value.mode == ActivityEntryMode.CHOOSE_SOURCE) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = emptySet(),
             )
             return
@@ -882,7 +884,7 @@ class ActivityEntryViewModel(
         if (validationErrors.isNotEmpty()) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = validationErrors,
             )
             return
@@ -892,7 +894,7 @@ class ActivityEntryViewModel(
         if (request == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.INVALID_VALUE,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = validationErrors,
             )
             return
@@ -908,7 +910,7 @@ class ActivityEntryViewModel(
             _uiState.value = _uiState.value.copy(
                 isSavingEntry = true,
                 entryError = null,
-                detailMessage = null,
+                detailError = null,
                 validationErrors = emptySet(),
                 writePermissions = requestPermissions,
             )
@@ -918,7 +920,7 @@ class ActivityEntryViewModel(
                     isSavingEntry = false,
                     canWrite = false,
                     entryError = ActivityEntryError.MISSING_WRITE_PERMISSION,
-                    detailMessage = null,
+                    detailError = null,
                     validationErrors = emptySet(),
                 )
                 return@launch
@@ -946,7 +948,7 @@ class ActivityEntryViewModel(
                         isSavingEntry = false,
                         saveCompleted = true,
                         entryError = null,
-                        detailMessage = null,
+                        detailError = null,
                         validationErrors = emptySet(),
                     )
                 }
@@ -954,7 +956,7 @@ class ActivityEntryViewModel(
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = ActivityEntryError.WRITE_FAILED,
-                    detailMessage = error.message,
+                    detailError = error.toScreenError(),
                     validationErrors = emptySet(),
                 )
             }
@@ -1012,7 +1014,7 @@ class ActivityEntryViewModel(
             durationMinutesText = routeDurationMinutes,
             isImportingRoute = false,
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         refreshPermission()
@@ -1033,7 +1035,7 @@ class ActivityEntryViewModel(
             startTimeText = TimeFormatter.format(startDateTime.toLocalTime()),
             durationMinutesText = durationMinutes.toString(),
             entryError = recording.errorMessage?.let { ActivityEntryError.RECORDING_FAILED },
-            detailMessage = recording.errorMessage,
+            detailError = recording.errorMessage?.let(ScreenError::Message),
             validationErrors = emptySet(),
         )
     }
@@ -1089,7 +1091,7 @@ class ActivityEntryViewModel(
             repetitionSets = recordedSets.takeIf { it.isNotEmpty() } ?: listOf(ActivityRepetitionSetInput()),
             recordedBleSamples = snapshot.bleSamples,
             entryError = null,
-            detailMessage = null,
+            detailError = null,
             validationErrors = emptySet(),
         )
         refreshPermission()

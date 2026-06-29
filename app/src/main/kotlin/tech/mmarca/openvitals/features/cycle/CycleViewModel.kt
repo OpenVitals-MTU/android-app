@@ -1,11 +1,16 @@
 package tech.mmarca.openvitals.features.cycle
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -23,20 +28,24 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class CycleUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.MONTH,
     val selectedDate: LocalDate = LocalDate.now(),
     val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     val data: CycleData = CycleData(),
+    val display: CycleDisplayState = CycleDisplayState(),
     val missingPermissions: Set<String> = emptySet(),
-    val error: String? = null,
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class CycleViewModel(
     private val repository: CycleRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.MONTH,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
@@ -47,8 +56,10 @@ class CycleViewModel(
     constructor(
         repository: CycleRepository,
         preferencesRepository: PreferencesRepository,
+        dispatchers: DispatcherProvider,
     ) : this(
         repository = repository,
+        dispatchers = dispatchers,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
@@ -143,10 +154,18 @@ class CycleViewModel(
                 }
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                val display = withContext(dispatchers.default) {
+                    CyclePresentationMapper.build(
+                        query = query,
+                        data = result.data,
+                    )
+                }
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
                     data = result.data,
+                    display = display,
                     missingPermissions = result.missingPermissions,
                 )
             }.onFailure { error ->
@@ -154,7 +173,7 @@ class CycleViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    error = error.message,
+                    error = error.toScreenError(),
                 )
             }
         }

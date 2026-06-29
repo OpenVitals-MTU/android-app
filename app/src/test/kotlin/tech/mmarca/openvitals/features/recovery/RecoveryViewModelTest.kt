@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.recovery
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -13,7 +14,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import kotlinx.coroutines.test.runTest
 
@@ -103,7 +104,7 @@ class RecoveryViewModelTest {
         val vm = RecoveryViewModel(repo, mainDispatcherRule.dispatcherProvider)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("offline", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("offline"), vm.uiState.value.error)
     }
 
     private fun sleepSession(

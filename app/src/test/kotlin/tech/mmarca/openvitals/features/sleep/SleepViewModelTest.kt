@@ -1,12 +1,13 @@
 package tech.mmarca.openvitals.features.sleep
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
-import tech.mmarca.openvitals.data.repository.SleepPeriodData
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.domain.query.SleepPeriodData
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -62,17 +63,17 @@ class SleepViewModelTest {
     // ─── Initial state ────────────────────────────────────────────────────────
 
     @Test fun `initial range is WEEK`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         assertEquals(TimeRange.WEEK, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial load clears loading`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         assertFalse(vm.uiState.value.isLoading)
     }
 
     @Test fun `initial sessions list is empty when repo returns nothing`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         assertTrue(vm.uiState.value.sessions.isEmpty())
     }
 
@@ -83,20 +84,21 @@ class SleepViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadSleepSessions(any(), any()) } returns sessions
 
-        val vm = SleepViewModel(repo)
+        val vm = SleepViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertEquals(sessions, vm.uiState.value.sessions)
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.error)
+        assertTrue(vm.uiState.value.display.durationPoints.isNotEmpty())
     }
 
     @Test fun `load failure sets error message`() = runTest {
         val repo = mockk<SleepRepository>()
         coEvery { repo.loadSleepPeriod(any(), any()) } throws RuntimeException("offline")
 
-        val vm = SleepViewModel(repo)
+        val vm = SleepViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
-        assertEquals("offline", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("offline"), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -104,7 +106,7 @@ class SleepViewModelTest {
 
     @Test fun `selectRange updates range and triggers load`() = runTest {
         val repo = emptyRepo()
-        val vm = SleepViewModel(repo)
+        val vm = SleepViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectRange(TimeRange.MONTH)
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
@@ -118,6 +120,7 @@ class SleepViewModelTest {
             repository = repo,
             initialRange = TimeRange.DAY,
             initialSleepRangeMode = SleepRangeMode.EVENING_18H,
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         coVerify { repo.loadSleepSessions(today.minusDays(1), today) }
@@ -126,7 +129,7 @@ class SleepViewModelTest {
     // ─── previousPeriod ───────────────────────────────────────────────────────
 
     @Test fun `previousPeriod DAY moves back one day`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectRange(TimeRange.DAY)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -134,14 +137,14 @@ class SleepViewModelTest {
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
         assertEquals(before.minusWeeks(1), vm.uiState.value.selectedDate)
     }
 
     @Test fun `previousPeriod MONTH moves back one month`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectRange(TimeRange.MONTH)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -149,7 +152,7 @@ class SleepViewModelTest {
     }
 
     @Test fun `previousPeriod YEAR moves back one year`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectRange(TimeRange.YEAR)
         val before = vm.uiState.value.selectedDate
         vm.previousPeriod()
@@ -159,7 +162,7 @@ class SleepViewModelTest {
     // ─── nextPeriod ───────────────────────────────────────────────────────────
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectRange(TimeRange.DAY)
         val before = vm.uiState.value.selectedDate
 
@@ -169,7 +172,7 @@ class SleepViewModelTest {
     }
 
     @Test fun `nextPeriod DAY advances from a past day`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectRange(TimeRange.DAY)
         vm.selectDate(today.minusDays(2))
         val before = vm.uiState.value.selectedDate
@@ -180,7 +183,7 @@ class SleepViewModelTest {
     }
 
     @Test fun `nextPeriod WEEK advances from a past anchor`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectDate(pastAnchor)
         val before = vm.uiState.value.selectedDate
 
@@ -192,13 +195,13 @@ class SleepViewModelTest {
     // ─── selectDate ───────────────────────────────────────────────────────────
 
     @Test fun `selectDate clamps future date to today`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectDate(today.plusDays(5))
         assertEquals(today, vm.uiState.value.selectedDate)
     }
 
     @Test fun `selectDate accepts past date unchanged`() = runTest {
-        val vm = SleepViewModel(emptyRepo())
+        val vm = SleepViewModel(emptyRepo(), dispatchers = mainDispatcherRule.dispatcherProvider)
         vm.selectDate(pastAnchor)
         assertEquals(pastAnchor, vm.uiState.value.selectedDate)
     }

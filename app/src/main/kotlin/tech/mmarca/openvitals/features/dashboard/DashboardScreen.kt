@@ -96,6 +96,7 @@ import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
@@ -188,8 +189,8 @@ fun DashboardScreen(
         ) {
             when {
                 state.isLoading && dashboardData == null -> FullScreenLoading()
-                state.errorMessage != null && dashboardData == null ->
-                    ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
+                state.error != null && dashboardData == null ->
+                    ErrorMessage(state.error?.resolve() ?: stringResource(R.string.unknown_error))
                 dashboardData != null -> DashboardContent(
                     data = dashboardData,
                     unitFormatter = unitFormatter,

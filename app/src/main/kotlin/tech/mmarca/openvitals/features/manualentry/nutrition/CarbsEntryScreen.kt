@@ -30,6 +30,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -165,7 +167,7 @@ private fun CarbsEntryCard(
 
             state.entryError?.let { entryError ->
                 Text(
-                    text = carbsEntryErrorText(entryError, state.writeErrorMessage),
+                    text = carbsEntryErrorText(entryError, state.writeError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -177,13 +179,13 @@ private fun CarbsEntryCard(
 @Composable
 private fun carbsEntryErrorText(
     error: CarbsEntryError,
-    message: String?,
+    writeError: ScreenError?,
 ): String = when (error) {
     CarbsEntryError.INVALID_VALUE -> stringResource(R.string.carbs_entry_invalid_value)
     CarbsEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.carbs_entry_permission_needed)
     CarbsEntryError.WRITE_FAILED -> stringResource(
         R.string.carbs_entry_write_failed,
-        message ?: stringResource(R.string.unknown_error),
+        writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
 

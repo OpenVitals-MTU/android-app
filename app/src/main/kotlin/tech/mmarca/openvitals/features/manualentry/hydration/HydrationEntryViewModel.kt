@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,6 +26,8 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
 
 internal const val MillilitersPerLiter = 1000.0
@@ -87,6 +90,7 @@ enum class HydrationEntryError {
     WRITE_FAILED,
 }
 
+@Immutable
 data class HydrationEntryUiState(
     val isCheckingPermission: Boolean = true,
     val hydrationWritePermissions: Set<String> = emptySet(),
@@ -103,7 +107,7 @@ data class HydrationEntryUiState(
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
     val entryError: HydrationEntryError? = null,
-    val writeErrorMessage: String? = null,
+    val writeError: ScreenError? = null,
 ) {
     val isEditMode: Boolean
         get() = editRecordId != null
@@ -147,7 +151,7 @@ class HydrationEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isCheckingPermission = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 repository.hydrationWritePermissions to repository.hasHydrationWritePermission()
@@ -163,7 +167,7 @@ class HydrationEntryViewModel @Inject constructor(
                     hydrationWritePermissions = repository.hydrationWritePermissions,
                     canWriteHydration = false,
                     entryError = HydrationEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -190,7 +194,7 @@ class HydrationEntryViewModel @Inject constructor(
             selectedBeverage = beverage,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -199,7 +203,7 @@ class HydrationEntryViewModel @Inject constructor(
             selectedContainer = container,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -208,7 +212,7 @@ class HydrationEntryViewModel @Inject constructor(
             editTime = time.coerceAtMost(Instant.now()),
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -216,7 +220,7 @@ class HydrationEntryViewModel @Inject constructor(
         if (!isValidHydrationContainerMilliliters(milliliters)) {
             _uiState.value = _uiState.value.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -232,7 +236,7 @@ class HydrationEntryViewModel @Inject constructor(
             selectedContainer = updatedContainer,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -249,7 +253,7 @@ class HydrationEntryViewModel @Inject constructor(
             selectedContainer = container,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
         saveHydrationEntry(container.volumeLiters)
     }
@@ -258,7 +262,7 @@ class HydrationEntryViewModel @Inject constructor(
         if (!isValidHydrationContainerMilliliters(milliliters)) {
             _uiState.value = _uiState.value.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -282,7 +286,7 @@ class HydrationEntryViewModel @Inject constructor(
                 if (entry == null || !entry.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = HydrationEntryError.WRITE_FAILED,
-                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
                     )
                     return@onSuccess
                 }
@@ -298,12 +302,12 @@ class HydrationEntryViewModel @Inject constructor(
                     selectedContainer = option,
                     editTime = entry.startTime.coerceAtMost(Instant.now()),
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     entryError = HydrationEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -314,7 +318,7 @@ class HydrationEntryViewModel @Inject constructor(
         if (!current.canWriteHydration) {
             _uiState.value = current.copy(
                 entryError = HydrationEntryError.MISSING_WRITE_PERMISSION,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -323,7 +327,7 @@ class HydrationEntryViewModel @Inject constructor(
         if (effectiveLiters <= 0.0 || effectiveLiters > MaxHealthConnectHydrationLiters) {
             _uiState.value = current.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -333,7 +337,7 @@ class HydrationEntryViewModel @Inject constructor(
                 isSavingEntry = true,
                 saveCompleted = false,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 val request = HydrationWriteRequest(
@@ -355,14 +359,14 @@ class HydrationEntryViewModel @Inject constructor(
                     },
                     saveCompleted = true,
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
                 runCatching { reminderController?.hideReminderNotification() }
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = HydrationEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }

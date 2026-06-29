@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.recovery
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,16 +13,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.domain.insights.calculateSleepScoresByDate
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 
 private const val RecoveryLookbackDays = 7L
 
+@Immutable
 data class RecoveryDay(
     val date: LocalDate,
     val sessions: List<SleepData> = emptyList(),
@@ -40,11 +44,12 @@ data class RecoveryDay(
         get() = sessions.stageDurationMs(SleepStage.STAGE_DEEP)
 }
 
+@Immutable
 data class RecoveryUiState(
     val isLoading: Boolean = true,
     val selectedDate: LocalDate = LocalDate.now(),
     val days: List<RecoveryDay> = emptyList(),
-    val error: String? = null,
+    val error: ScreenError? = null,
 ) {
     val today: RecoveryDay
         get() = days.firstOrNull { it.date == selectedDate } ?: RecoveryDay(selectedDate)
@@ -93,7 +98,7 @@ class RecoveryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = today,
-                    error = error.message,
+                    error = error.toScreenError(),
                 )
             }
         }

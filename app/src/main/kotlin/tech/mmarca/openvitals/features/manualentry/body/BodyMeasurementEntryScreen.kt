@@ -48,6 +48,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
@@ -220,7 +222,7 @@ private fun BodyMeasurementEntryCard(
 
             state.entryError?.let { entryError ->
                 Text(
-                    text = bodyMeasurementEntryErrorText(entryError, state.writeErrorMessage, title),
+                    text = bodyMeasurementEntryErrorText(entryError, state.writeError, title),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -232,14 +234,14 @@ private fun BodyMeasurementEntryCard(
 @Composable
 private fun bodyMeasurementEntryErrorText(
     error: BodyMeasurementEntryError,
-    message: String?,
+    writeError: ScreenError?,
     title: String,
 ): String = when (error) {
     BodyMeasurementEntryError.INVALID_VALUE -> stringResource(R.string.body_entry_invalid_value)
     BodyMeasurementEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.body_entry_permission_needed, title)
     BodyMeasurementEntryError.WRITE_FAILED -> stringResource(
         R.string.body_entry_write_failed,
-        message ?: stringResource(R.string.unknown_error),
+        writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
 

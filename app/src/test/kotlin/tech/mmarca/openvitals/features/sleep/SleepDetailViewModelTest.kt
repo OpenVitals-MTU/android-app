@@ -1,7 +1,8 @@
 package tech.mmarca.openvitals.features.sleep
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.SleepData
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -40,7 +41,7 @@ class SleepDetailViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.session)
-        assertEquals("Sleep session not found.", vm.uiState.value.error)
+        assertEquals(ScreenError.NotFound, vm.uiState.value.error)
     }
 
     @Test fun `blank sleep id fails without calling repository`() = runTest {
@@ -49,7 +50,7 @@ class SleepDetailViewModelTest {
         val vm = SleepDetailViewModel(repo, "")
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("Missing sleep id.", vm.uiState.value.error)
+        assertEquals(ScreenError.MissingArgument, vm.uiState.value.error)
         coVerify(exactly = 0) { repo.loadSleepSession(any()) }
     }
 
@@ -61,7 +62,7 @@ class SleepDetailViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.session)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     private fun sleepSession(id: String) = SleepData(

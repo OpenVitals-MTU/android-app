@@ -26,31 +26,25 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import tech.mmarca.openvitals.ui.theme.CycleColor
-import java.time.ZoneId
 
 @Composable
 internal fun CycleSummary(
-    data: CycleData,
-    period: DatePeriod,
+    display: CycleDisplayState,
     subtitle: String,
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
-    val zone = ZoneId.systemDefault()
-    val periodDays = cycleDays(period, data, zone)
-        .count { it.inSelectedPeriod && (it.periodActive || it.flows.isNotEmpty()) }
-    val latestBbt = data.basalBodyTemperature.maxByOrNull { it.time }
-    val latestTemperature = latestBbt?.let { unitFormatter.temperature(it.temperatureCelsius) }
+    val summary = display.summary
+    val latestTemperature = summary.latestBbtCelsius?.let { unitFormatter.temperature(it) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard(
                 title = stringResource(R.string.metric_period_days),
-                value = unitFormatter.count(periodDays),
+                value = unitFormatter.count(summary.periodDays),
                 unit = stringResource(R.string.unit_days),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = CycleColor,
@@ -59,7 +53,7 @@ internal fun CycleSummary(
             )
             MetricCard(
                 title = stringResource(R.string.metric_ovulation_tests),
-                value = unitFormatter.count(data.ovulationTests.size),
+                value = unitFormatter.count(summary.ovulationTestCount),
                 unit = stringResource(R.string.unit_tests),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = CycleColor,
@@ -74,7 +68,7 @@ internal fun CycleSummary(
                 unit = latestTemperature.unit,
                 icon = Icons.Outlined.DeviceThermostat,
                 accentColor = CycleColor,
-                subtitle = measurementLocationLabel(latestBbt?.measurementLocation ?: 0),
+                subtitle = measurementLocationLabel(summary.latestBbtMeasurementLocation),
             )
         }
     }
@@ -82,14 +76,11 @@ internal fun CycleSummary(
 
 @Composable
 internal fun CycleCalendarCard(
-    data: CycleData,
+    days: List<CycleDay>,
     period: DatePeriod,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
-    val zone = ZoneId.systemDefault()
-    val days = cycleDays(period, data, zone)
-
     OpenVitalsCard(
         modifier = modifier,
 

@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
@@ -134,10 +135,3 @@ class NutritionRepository @Inject constructor(
         }
     }
 }
-
-data class NutritionPeriodData(
-    val dailyMacros: List<DailyMacros> = emptyList(),
-    val previousDailyMacros: List<DailyMacros> = emptyList(),
-    val baselineDailyMacros: List<DailyMacros> = emptyList(),
-    val entries: List<NutritionEntry> = emptyList(),
-)

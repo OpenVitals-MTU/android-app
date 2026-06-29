@@ -1,12 +1,15 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
@@ -20,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+@Immutable
 data class ActivityDetailUiState(
     val isLoading: Boolean = true,
     val isDeleting: Boolean = false,
@@ -28,7 +32,7 @@ data class ActivityDetailUiState(
     val speedSamples: List<SpeedSample> = emptyList(),
     val cadenceSamples: List<ActivityCadenceSample> = emptyList(),
     val markers: List<ActivityRecordingMarker> = emptyList(),
-    val error: String? = null,
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
@@ -64,7 +68,7 @@ class ActivityDetailViewModel(
         if (activityId.isBlank()) {
             _uiState.value = ActivityDetailUiState(
                 isLoading = false,
-                error = "Missing activity id.",
+                error = ScreenError.MissingArgument,
             )
             return
         }
@@ -104,14 +108,14 @@ class ActivityDetailViewModel(
                                         .orEmpty()
                                 }
                         }.orEmpty(),
-                        error = if (workout == null) "Activity not found." else null,
+                        error = if (workout == null) ScreenError.NotFound else null,
                     )
                 }
                 .onFailure {
                     if (!isCurrent) return@load
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
-                        error = it.message ?: "Unable to load activity.",
+                        error = it.toScreenError("Unable to load activity."),
                     )
                 }
         }
@@ -131,7 +135,7 @@ class ActivityDetailViewModel(
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isDeleting = false,
-                    error = error.message ?: "Unable to delete activity.",
+                    error = error.toScreenError("Unable to delete activity."),
                 )
             }
         }

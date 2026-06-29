@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
@@ -113,7 +114,7 @@ fun ActivityDetailScreen(
 
     when {
         state.isLoading -> FullScreenLoading()
-        error != null -> ErrorMessage(message = error)
+        error != null -> ErrorMessage(message = error.resolve().orEmpty())
         workout != null -> ActivityDetailContent(
             workout = workout,
             heartRateSamples = state.heartRateSamples,

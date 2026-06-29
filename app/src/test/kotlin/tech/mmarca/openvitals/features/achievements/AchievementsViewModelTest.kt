@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.achievements
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -11,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.DailySteps
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 class AchievementsViewModelTest {
@@ -87,7 +88,7 @@ class AchievementsViewModelTest {
         val vm = AchievementsViewModel(repo, mainDispatcherRule.dispatcherProvider)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     private fun repo(dailySteps: List<DailySteps> = emptyList()) =

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.cycle
 
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -17,7 +18,7 @@ import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.CyclePeriodData
+import tech.mmarca.openvitals.domain.query.CyclePeriodData
 import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -55,14 +56,21 @@ class CycleViewModelTest {
         }
     }
 
+    private fun viewModel(
+        repository: CycleRepository,
+    ) = CycleViewModel(
+        repository = repository,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+    )
+
     @Test fun `initial range is MONTH`() = runTest {
-        val vm = CycleViewModel(repo())
+        val vm = viewModel(repo())
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
     }
 
     @Test fun `initial load clears loading and sets empty data`() = runTest {
-        val vm = CycleViewModel(repo())
+        val vm = viewModel(repo())
         val state = vm.uiState.value
 
         assertFalse(state.isLoading)
@@ -80,7 +88,7 @@ class CycleViewModelTest {
                 )
             )
         )
-        val vm = CycleViewModel(
+        val vm = viewModel(
             repo(
                 data = cycleData,
                 missingPermissions = setOf("ovulation"),
@@ -89,13 +97,13 @@ class CycleViewModelTest {
 
         assertEquals(cycleData, vm.uiState.value.data)
         assertEquals(setOf("ovulation"), vm.uiState.value.missingPermissions)
-        assertTrue(vm.uiState.value.data.hasData)
+        assertTrue(vm.uiState.value.display.hasData)
     }
 
     @Test fun `initial load requests the current month period`() = runTest {
         val repo = repo()
 
-        CycleViewModel(repo)
+        viewModel(repo)
 
         coVerify {
             repo.loadCycleData(today.withDayOfMonth(1), today)
@@ -103,7 +111,7 @@ class CycleViewModelTest {
     }
 
     @Test fun `cyclePermissions exposes repository phase 4 permissions`() = runTest {
-        val vm = CycleViewModel(repo())
+        val vm = viewModel(repo())
 
         assertEquals(setOf("cycle"), vm.cyclePermissions)
     }
@@ -111,7 +119,7 @@ class CycleViewModelTest {
     @Test fun `onCyclePermissionsResult refreshes missing permissions`() = runTest {
         val repo = repo(missingPermissions = setOf("cycle"))
         coEvery { repo.missingPermissions() } returnsMany listOf(setOf("cycle"), emptySet())
-        val vm = CycleViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.onCyclePermissionsResult(setOf("cycle"))
 
@@ -123,15 +131,15 @@ class CycleViewModelTest {
         every { repo.phase4Permissions } returns setOf("cycle")
         coEvery { repo.loadCyclePeriod(any()) } throws RuntimeException("timeout")
 
-        val vm = CycleViewModel(repo)
+        val vm = viewModel(repo)
 
         assertFalse(vm.uiState.value.isLoading)
-        assertEquals("timeout", vm.uiState.value.error)
+        assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
     @Test fun `selectRange updates selectedRange and reloads`() = runTest {
         val repo = repo()
-        val vm = CycleViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.selectRange(TimeRange.YEAR)
 
@@ -140,7 +148,7 @@ class CycleViewModelTest {
     }
 
     @Test fun `previousPeriod MONTH moves back one month`() = runTest {
-        val vm = CycleViewModel(repo())
+        val vm = viewModel(repo())
         val before = vm.uiState.value.selectedDate
 
         vm.previousPeriod()
@@ -150,7 +158,7 @@ class CycleViewModelTest {
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
         val repo = repo()
-        val vm = CycleViewModel(repo)
+        val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
         val before = vm.uiState.value.selectedDate
 
@@ -160,7 +168,7 @@ class CycleViewModelTest {
     }
 
     @Test fun `nextPeriod MONTH advances from a past month`() = runTest {
-        val vm = CycleViewModel(repo())
+        val vm = viewModel(repo())
         vm.selectDate(pastAnchor)
         val before = vm.uiState.value.selectedDate
 
@@ -170,7 +178,7 @@ class CycleViewModelTest {
     }
 
     @Test fun `selectDate clamps future date to today`() = runTest {
-        val vm = CycleViewModel(repo())
+        val vm = viewModel(repo())
 
         vm.selectDate(today.plusDays(10))
 
@@ -179,7 +187,7 @@ class CycleViewModelTest {
 
     @Test fun `onCyclePermissionsResult reloads data`() = runTest {
         val repo = repo()
-        val vm = CycleViewModel(repo)
+        val vm = viewModel(repo)
 
         vm.onCyclePermissionsResult(setOf("cycle"))
 

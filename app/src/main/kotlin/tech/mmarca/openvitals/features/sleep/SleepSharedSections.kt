@@ -1,106 +1,49 @@
 package tech.mmarca.openvitals.features.sleep
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.metadata.Metadata
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.DisplayValue
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.CrossMetricValue
 import tech.mmarca.openvitals.domain.insights.DataValueKind
 import tech.mmarca.openvitals.domain.insights.DailyGoalValue
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
-import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
-import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.domain.insights.crossMetricInsight
 import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
 import tech.mmarca.openvitals.domain.insights.dataConfidence
 import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
 import tech.mmarca.openvitals.domain.insights.sleepTargetInterpretation
-import tech.mmarca.openvitals.core.period.DatePeriod
-import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.baselinePeriodBefore
-import tech.mmarca.openvitals.core.period.displayPeriodFor
-import tech.mmarca.openvitals.core.period.previousPeriodFor
-import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
-import tech.mmarca.openvitals.core.presentation.DisplayValue
-import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.SleepData
-import tech.mmarca.openvitals.domain.model.SleepStage
-import tech.mmarca.openvitals.domain.model.dailySleepSummary
-import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
-import tech.mmarca.openvitals.domain.model.sleepSessionsForRange
-import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
 import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
-import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
-import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
-import tech.mmarca.openvitals.ui.components.entryListTitle
-import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
-import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
-import java.time.format.TextStyle
-import kotlin.math.PI
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.roundToLong
-import kotlin.math.roundToInt
-import kotlin.math.sin
 
 internal fun LazyListScope.sleepDataConfidence(
     sessions: List<SleepData>,
@@ -302,6 +245,48 @@ internal fun LazyListScope.sleepStatistics(
             modifier = metricModifier(),
         )
     }
+}
+
+internal fun LazyListScope.sleepInsightSections(
+    state: SleepUiState,
+    period: DatePeriod,
+    confidenceSessions: List<SleepData>,
+    display: SleepDisplayState,
+    unitFormatter: UnitFormatter,
+    onDecreaseGoal: () -> Unit,
+    onIncreaseGoal: () -> Unit,
+) {
+    sleepDataConfidence(
+        sessions = confidenceSessions,
+        durationPoints = display.durationPoints,
+        period = period,
+    )
+    sleepGoal(
+        state = state,
+        period = period,
+        durationPoints = display.durationPoints,
+        unitFormatter = unitFormatter,
+        onDecreaseGoal = onDecreaseGoal,
+        onIncreaseGoal = onIncreaseGoal,
+    )
+    sleepStatistics(
+        durationPoints = display.durationPoints,
+        previousDurationPoints = display.previousDurationPoints,
+        baselineDurationPoints = display.baselineDurationPoints,
+        period = period,
+        selectedRange = state.selectedRange,
+        unitFormatter = unitFormatter,
+        includeHeader = false,
+    )
+    sleepTargetContext(
+        durationPoints = display.durationPoints,
+        targetHours = state.dailyGoalHours,
+        unitFormatter = unitFormatter,
+    )
+    sleepHrvInsight(
+        durationPoints = display.durationPoints,
+        hrvValues = display.crossMetricHrvValues,
+    )
 }
 
 internal fun LazyListScope.sleepHrvInsight(

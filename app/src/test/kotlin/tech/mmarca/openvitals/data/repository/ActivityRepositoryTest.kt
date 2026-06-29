@@ -35,7 +35,7 @@ class ActivityRepositoryTest {
         val dailySteps = listOf(DailySteps(date = end, steps = 4_000, distanceMeters = 0.0))
         val hc = hc(granted = setOf(stepsPermission), dailySteps = dailySteps)
 
-        val result = ActivityRepository(hc).loadDailySteps(start, end)
+        val result = ActivityRepositoryImpl(hc).loadDailySteps(start, end)
 
         assertEquals(dailySteps, result)
         coVerify {
@@ -59,7 +59,7 @@ class ActivityRepositoryTest {
             additionalDataAccessPermissions = setOf(historyPermission),
         )
 
-        ActivityRepository(hc).loadDailySteps(start, end)
+        ActivityRepositoryImpl(hc).loadDailySteps(start, end)
 
         coVerify {
             hc.readDailySteps(
@@ -82,7 +82,7 @@ class ActivityRepositoryTest {
             additionalDataAccessPermissions = setOf(historyPermission),
         )
 
-        ActivityRepository(hc).loadDailySteps(start, end)
+        ActivityRepositoryImpl(hc).loadDailySteps(start, end)
 
         coVerify {
             hc.readDailySteps(
@@ -117,7 +117,7 @@ class ActivityRepositoryTest {
             )
         } returns nutrition
 
-        val result = ActivityRepository(hc).loadDailyNutrition(start, end)
+        val result = ActivityRepositoryImpl(hc).loadDailyNutrition(start, end)
 
         assertEquals(nutrition, result)
         coVerify(exactly = 0) {
@@ -153,7 +153,7 @@ class ActivityRepositoryTest {
             )
         } returns nutrition
 
-        val result = ActivityRepository(
+        val result = ActivityRepositoryImpl(
             hc = hc,
             preferencesRepository = prefs,
         ).loadDailyNutrition(start, end)

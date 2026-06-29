@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,8 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.navigation.BODY_ENTRY_ID_ARG
 
@@ -39,6 +42,7 @@ enum class BodyMeasurementEntryError {
     WRITE_FAILED,
 }
 
+@Immutable
 data class BodyMeasurementEntryUiState(
     val type: BodyMeasurementType = BodyMeasurementType.WEIGHT,
     val inputText: String = "",
@@ -50,7 +54,7 @@ data class BodyMeasurementEntryUiState(
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
     val entryError: BodyMeasurementEntryError? = null,
-    val writeErrorMessage: String? = null,
+    val writeError: ScreenError? = null,
 ) {
     val isEditMode: Boolean
         get() = editRecordId != null
@@ -90,7 +94,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isCheckingPermission = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 repository.bodyWritePermissions(type) to repository.hasBodyWritePermission(type)
@@ -106,7 +110,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                     writePermissions = repository.bodyWritePermissions(type),
                     canWrite = false,
                     entryError = BodyMeasurementEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -117,7 +121,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
             inputText = text,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -126,7 +130,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
             editTime = time.coerceAtMost(Instant.now()),
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -135,14 +139,14 @@ class BodyMeasurementEntryViewModel @Inject constructor(
         if (!current.canWrite) {
             _uiState.value = current.copy(
                 entryError = BodyMeasurementEntryError.MISSING_WRITE_PERMISSION,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
         if (canonicalValue == null || !canonicalValue.isValidFor(current.type)) {
             _uiState.value = current.copy(
                 entryError = BodyMeasurementEntryError.INVALID_VALUE,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -151,7 +155,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isSavingEntry = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 val request = BodyMeasurementWriteRequest(
@@ -170,13 +174,13 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                     isSavingEntry = false,
                     saveCompleted = true,
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = BodyMeasurementEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -195,7 +199,7 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                 if (entry == null || !entry.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = BodyMeasurementEntryError.WRITE_FAILED,
-                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
                     )
                     return@onSuccess
                 }
@@ -203,12 +207,12 @@ class BodyMeasurementEntryViewModel @Inject constructor(
                     inputText = entry.value.toDisplayInput(type, unitSystem),
                     editTime = entry.time.coerceAtMost(Instant.now()),
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     entryError = BodyMeasurementEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }

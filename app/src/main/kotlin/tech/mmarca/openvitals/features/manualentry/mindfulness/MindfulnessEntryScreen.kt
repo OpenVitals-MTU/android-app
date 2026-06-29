@@ -75,6 +75,8 @@ import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -218,7 +220,7 @@ private fun MindfulnessTimerCard(
 
             state.entryError?.let { entryError ->
                 Text(
-                    text = mindfulnessEntryErrorText(entryError, state.writeErrorMessage),
+                    text = mindfulnessEntryErrorText(entryError, state.writeError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -661,7 +663,7 @@ private fun MindfulnessManualEntryCard(
             }
             state.entryError?.let { entryError ->
                 Text(
-                    text = mindfulnessEntryErrorText(entryError, state.writeErrorMessage),
+                    text = mindfulnessEntryErrorText(entryError, state.writeError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -768,7 +770,7 @@ private fun MindfulnessBackgroundEffect(
 @Composable
 private fun mindfulnessEntryErrorText(
     error: MindfulnessEntryError,
-    message: String?,
+    writeError: ScreenError?,
 ): String = when (error) {
     MindfulnessEntryError.INVALID_TIMER -> stringResource(R.string.mindfulness_entry_invalid_timer)
     MindfulnessEntryError.INVALID_MANUAL_ENTRY -> stringResource(R.string.mindfulness_entry_invalid_manual)
@@ -777,7 +779,7 @@ private fun mindfulnessEntryErrorText(
     MindfulnessEntryError.UNAVAILABLE -> stringResource(R.string.mindfulness_entry_unavailable)
     MindfulnessEntryError.WRITE_FAILED -> stringResource(
         R.string.mindfulness_entry_write_failed,
-        message ?: stringResource(R.string.unknown_error),
+        writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
 

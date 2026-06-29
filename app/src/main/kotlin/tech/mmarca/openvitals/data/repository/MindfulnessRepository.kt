@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.query.MindfulnessPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -160,9 +161,3 @@ class MindfulnessRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 }
-
-data class MindfulnessPeriodData(
-    val sessions: List<MindfulnessSession> = emptyList(),
-    val previousSessions: List<MindfulnessSession> = emptyList(),
-    val baselineSessions: List<MindfulnessSession> = emptyList(),
-)

@@ -1,9 +1,14 @@
 package tech.mmarca.openvitals.features.nutrition
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -26,7 +31,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class NutritionUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -37,16 +44,14 @@ data class NutritionUiState(
     val previousDailyMacros: List<DailyMacros> = emptyList(),
     val baselineDailyMacros: List<DailyMacros> = emptyList(),
     val entries: List<NutritionEntry> = emptyList(),
-    val totalEnergyKcal: Double = 0.0,
-    val totalProteinGrams: Double = 0.0,
-    val totalCarbsGrams: Double = 0.0,
-    val totalFatGrams: Double = 0.0,
-    val error: String? = null,
+    val display: NutritionDisplayState = NutritionDisplayState(),
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class NutritionViewModel(
     private val repository: NutritionRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
@@ -61,8 +66,10 @@ class NutritionViewModel(
         repository: NutritionRepository,
         preferencesRepository: PreferencesRepository,
         savedStateHandle: SavedStateHandle,
+        dispatchers: DispatcherProvider,
     ) : this(
         repository = repository,
+        dispatchers = dispatchers,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         selectedMetric = nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
@@ -157,7 +164,7 @@ class NutritionViewModel(
     fun setDailyGoal(goal: Double) {
         val normalized = goalKey.normalize(goal)
         onDailyGoalChanged(normalized)
-        _uiState.value = _uiState.value.copy(dailyGoal = normalized)
+        _uiState.value = _uiState.value.copy(dailyGoal = normalized).withDisplay()
     }
 
     fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
@@ -177,7 +184,18 @@ class NutritionViewModel(
                 }
             }.onSuccess { result ->
                 if (!isCurrent) return@load
-                val totals = result.dailyMacros.totals()
+                val display = withContext(dispatchers.default) {
+                    NutritionPresentationMapper.build(
+                        query = query,
+                        metric = selectedMetric,
+                        dailyGoal = _uiState.value.dailyGoal,
+                        dailyMacros = result.dailyMacros,
+                        previousDailyMacros = result.previousDailyMacros,
+                        baselineDailyMacros = result.baselineDailyMacros,
+                        entries = result.entries,
+                    )
+                }
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
@@ -185,17 +203,14 @@ class NutritionViewModel(
                     previousDailyMacros = result.previousDailyMacros,
                     baselineDailyMacros = result.baselineDailyMacros,
                     entries = result.entries,
-                    totalEnergyKcal = totals.energyKcal,
-                    totalProteinGrams = totals.proteinGrams,
-                    totalCarbsGrams = totals.carbsGrams,
-                    totalFatGrams = totals.fatGrams,
+                    display = display,
                 )
             }.onFailure { error ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    error = error.message,
+                    error = error.toScreenError(),
                 )
             }
         }
@@ -207,22 +222,26 @@ class NutritionViewModel(
             selectedDate = selection.selectedDate,
         )
     }
+
+    private fun NutritionUiState.withDisplay(): NutritionUiState {
+        val query = PeriodLoadQuery(
+            range = selectedRange,
+            anchorDate = selectedDate,
+            weekPeriodMode = weekPeriodMode,
+        )
+        return copy(
+            display = NutritionPresentationMapper.build(
+                query = query,
+                metric = selectedMetric,
+                dailyGoal = dailyGoal,
+                dailyMacros = dailyMacros,
+                previousDailyMacros = previousDailyMacros,
+                baselineDailyMacros = baselineDailyMacros,
+                entries = entries,
+            ),
+        )
+    }
 }
 
 private fun nutritionMetricFromRoute(metricId: String?): NutritionMetric =
     runCatching { metricId?.let(NutritionMetric::valueOf) }.getOrNull() ?: NutritionMetric.CALORIES_IN
-
-private data class NutritionTotals(
-    val energyKcal: Double,
-    val proteinGrams: Double,
-    val carbsGrams: Double,
-    val fatGrams: Double,
-)
-
-private fun List<DailyMacros>.totals(): NutritionTotals =
-    NutritionTotals(
-        energyKcal = sumOf { it.energyKcal },
-        proteinGrams = sumOf { it.proteinGrams },
-        carbsGrams = sumOf { it.carbsGrams },
-        fatGrams = sumOf { it.fatGrams },
-    )

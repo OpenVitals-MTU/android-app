@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.query.HydrationPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
@@ -187,10 +188,3 @@ class HydrationRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 }
-
-data class HydrationPeriodData(
-    val dailyHydration: List<DailyHydration> = emptyList(),
-    val previousDailyHydration: List<DailyHydration> = emptyList(),
-    val baselineDailyHydration: List<DailyHydration> = emptyList(),
-    val hydrationEntries: List<HydrationEntry> = emptyList(),
-)

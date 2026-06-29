@@ -40,3 +40,21 @@ Follow this checklist when adding or extending a metric screen.
 - Add or update ViewModel tests for period navigation and stale-load behavior.
 - Add repository tests when introducing a new bundled query.
 - Update architecture docs if the feature changes a shared pattern.
+
+## Sleep Reference Implementation
+
+Use the sleep feature as the template for splitting a period-based detail screen:
+
+| File | Responsibility |
+|------|----------------|
+| `SleepScreen.kt` | Route only: collect state, Health Connect shell, `MetricDetailScaffold`, delegate to content extensions |
+| `SleepDayContent.kt` | `LazyListScope` extensions for `Day` mode (timeline, sessions, education) |
+| `SleepPeriodContent.kt` | `LazyListScope` extensions for `Week / Month / Year` (bar chart, drill-down list, sessions) |
+| `SleepCharts.kt` | Overview top cards, metric cards, sparklines, and `sleepOverview` list section |
+| `SleepSharedSections.kt` | Reusable insight sections (confidence, goal, statistics, target context, HRV) |
+| `SleepDisplayState.kt` | UI-ready display models produced by the ViewModel |
+| `SleepPresentationMapper.kt` | Maps repository/domain data into `SleepDisplayState` |
+| `SleepViewModel.kt` | Period selection, loading, and `display` state |
+| `SleepCards.kt` | Session timeline and list row composables |
+
+Keep `screenError` on the scaffold and read presentation values from `state.display`, not raw repository models in composables.

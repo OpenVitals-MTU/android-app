@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +29,8 @@ import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.navigation.MINDFULNESS_ENTRY_ID_ARG
@@ -48,18 +51,21 @@ enum class MindfulnessEntryError {
     WRITE_FAILED,
 }
 
+@Immutable
 data class MindfulnessBellEvent(
     val id: Long,
     val sound: MindfulnessBellSound,
     val previewMillis: Long? = null,
 )
 
+@Immutable
 data class MindfulnessBackgroundEvent(
     val id: Long,
     val sound: MindfulnessBackgroundSound,
     val previewMillis: Long,
 )
 
+@Immutable
 data class MindfulnessEntryUiState(
     val durationMinutesText: String = "",
     val intervalEnabled: Boolean = false,
@@ -81,7 +87,7 @@ data class MindfulnessEntryUiState(
     val editStartTime: Instant? = null,
     val saveCompleted: Boolean = false,
     val entryError: MindfulnessEntryError? = null,
-    val writeErrorMessage: String? = null,
+    val writeError: ScreenError? = null,
     val bellEvent: MindfulnessBellEvent? = null,
     val backgroundEvent: MindfulnessBackgroundEvent? = null,
 ) {
@@ -122,7 +128,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isCheckingPermission = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 val available = repository.isMindfulnessAvailable()
@@ -146,7 +152,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     writePermissions = repository.mindfulnessWritePermissions,
                     canWrite = false,
                     entryError = MindfulnessEntryError.UNAVAILABLE,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -181,7 +187,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             bellSound = sound,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
             bellEvent = MindfulnessBellEvent(
                 id = bellEventId,
                 sound = sound,
@@ -196,7 +202,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             backgroundSound = sound,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
             backgroundEvent = if (sound == MindfulnessBackgroundSound.NONE) {
                 null
             } else {
@@ -214,7 +220,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             manualMinutesText = text,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -224,7 +230,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             editStartTime = time.coerceAtLatestSessionStart(minutes),
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -233,7 +239,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         if (config == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = MindfulnessEntryError.INVALID_TIMER,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -254,7 +260,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             isTimerPaused = false,
             timerCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
         timerJob = viewModelScope.launch {
             runTimer(config)
@@ -276,7 +282,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             isTimerPaused = true,
             timerCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -287,7 +293,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         if (config == null || state.remainingSeconds <= 0) {
             _uiState.value = state.copy(
                 entryError = MindfulnessEntryError.INVALID_TIMER,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -298,7 +304,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             isTimerPaused = false,
             timerCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
         timerJob = viewModelScope.launch {
             runTimer(config)
@@ -319,7 +325,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             remainingSeconds = duration * 60,
             totalSeconds = duration * 60,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -329,7 +335,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         if (Duration.between(start, end).toMinutes() < MinSessionMinutes) {
             _uiState.value = _uiState.value.copy(
                 entryError = MindfulnessEntryError.TIMER_TOO_SHORT,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -347,7 +353,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     totalSeconds = duration * 60,
                     saveCompleted = true,
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
                 completedStart = null
                 completedEnd = null
@@ -361,7 +367,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         if (minutes == null || minutes !in MinSessionMinutes..MaxSessionMinutes) {
             _uiState.value = _uiState.value.copy(
                 entryError = MindfulnessEntryError.INVALID_MANUAL_ENTRY,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -378,7 +384,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                     manualMinutesText = if (_uiState.value.isEditMode) _uiState.value.manualMinutesText else "",
                     saveCompleted = true,
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             },
         )
@@ -431,14 +437,14 @@ class MindfulnessEntryViewModel @Inject constructor(
             !current.mindfulnessAvailable -> {
                 _uiState.value = current.copy(
                     entryError = MindfulnessEntryError.UNAVAILABLE,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
                 return
             }
             !current.canWrite -> {
                 _uiState.value = current.copy(
                     entryError = MindfulnessEntryError.MISSING_WRITE_PERMISSION,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
                 return
             }
@@ -448,7 +454,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isSavingEntry = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 val request = MindfulnessSessionWriteRequest(
@@ -467,7 +473,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = MindfulnessEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -482,7 +488,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                 if (session == null || !session.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = MindfulnessEntryError.WRITE_FAILED,
-                        writeErrorMessage = "Only OpenVitals entries can be edited.",
+                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
                     )
                     return@onSuccess
                 }
@@ -494,12 +500,12 @@ class MindfulnessEntryViewModel @Inject constructor(
                     manualMinutesText = minutes.toString(),
                     editStartTime = session.startTime.coerceAtLatestSessionStart(minutes.toInt()),
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     entryError = MindfulnessEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -509,7 +515,7 @@ class MindfulnessEntryViewModel @Inject constructor(
         if (_uiState.value.isEditMode || _uiState.value.isTimerRunning || _uiState.value.isTimerPaused || _uiState.value.timerCompleted) return
         _uiState.value = _uiState.value.update().copy(
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 

@@ -25,6 +25,7 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -83,6 +84,7 @@ enum class ActivityGpsStatus {
     DISABLED,
 }
 
+@Immutable
 data class ActivityRecordingState(
     val status: ActivityRecordingStatus = ActivityRecordingStatus.IDLE,
     val recordingKind: ActivityRecordingKind = ActivityRecordingKind.GPS_ROUTE,
@@ -139,12 +141,14 @@ data class ActivityRecordingState(
             status == ActivityRecordingStatus.PAUSED
 }
 
+@Immutable
 data class ActivityRecordedRepetitionSet(
     val repetitions: Long,
     val restSeconds: Long,
     val activeMillis: Long,
 )
 
+@Immutable
 data class ActivityRecordingSnapshot(
     val exerciseType: Int,
     val recordingKind: ActivityRecordingKind = ActivityRecordingKind.GPS_ROUTE,

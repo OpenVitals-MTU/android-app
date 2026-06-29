@@ -22,6 +22,7 @@ Use these docs together:
 - [docs/README.md](docs/README.md): doc index
 - [docs/architecture.md](docs/architecture.md): target architecture
 - [docs/feature-playbook.md](docs/feature-playbook.md): step-by-step guide for adding a feature
+- [docs/analysis/README.md](docs/analysis/README.md): code analysis (MVVM, Clean Architecture, Compose performance, refactor backlog)
 
 If code and docs disagree, prefer the docs for new work and refactor toward them incrementally.
 

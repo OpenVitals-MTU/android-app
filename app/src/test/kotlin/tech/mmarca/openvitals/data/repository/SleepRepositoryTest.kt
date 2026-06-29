@@ -52,7 +52,7 @@ class SleepRepositoryTest {
         )
         val hc = hc(grantedPermissions = setOf(sleepPermission))
         coEvery { hc.readSleepSessions(any(), any()) } returns listOf(afterMidnight, beforeMidnight)
-        val repository = SleepRepository(hc)
+        val repository = SleepRepositoryImpl(hc)
 
         val sessions = repository.loadSleepSessions(day, day)
 

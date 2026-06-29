@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.nutrition
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 
@@ -20,6 +23,7 @@ enum class CarbsEntryError {
     WRITE_FAILED,
 }
 
+@Immutable
 data class CarbsEntryUiState(
     val inputText: String = "",
     val writePermissions: Set<String> = emptySet(),
@@ -28,7 +32,7 @@ data class CarbsEntryUiState(
     val isSavingEntry: Boolean = false,
     val saveCompleted: Boolean = false,
     val entryError: CarbsEntryError? = null,
-    val writeErrorMessage: String? = null,
+    val writeError: ScreenError? = null,
 )
 
 @HiltViewModel
@@ -48,7 +52,7 @@ class CarbsEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isCheckingPermission = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 repository.nutritionWritePermissions to repository.hasNutritionWritePermission()
@@ -64,7 +68,7 @@ class CarbsEntryViewModel @Inject constructor(
                     writePermissions = repository.nutritionWritePermissions,
                     canWrite = false,
                     entryError = CarbsEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }
@@ -75,7 +79,7 @@ class CarbsEntryViewModel @Inject constructor(
             inputText = text,
             saveCompleted = false,
             entryError = null,
-            writeErrorMessage = null,
+            writeError = null,
         )
     }
 
@@ -84,14 +88,14 @@ class CarbsEntryViewModel @Inject constructor(
         if (!current.canWrite) {
             _uiState.value = current.copy(
                 entryError = CarbsEntryError.MISSING_WRITE_PERMISSION,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
         if (carbsGrams == null || !carbsGrams.isValidCarbsGrams()) {
             _uiState.value = current.copy(
                 entryError = CarbsEntryError.INVALID_VALUE,
-                writeErrorMessage = null,
+                writeError = null,
             )
             return
         }
@@ -100,7 +104,7 @@ class CarbsEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isSavingEntry = true,
                 entryError = null,
-                writeErrorMessage = null,
+                writeError = null,
             )
             runCatching {
                 repository.writeCarbsEntry(
@@ -115,13 +119,13 @@ class CarbsEntryViewModel @Inject constructor(
                     isSavingEntry = false,
                     saveCompleted = true,
                     entryError = null,
-                    writeErrorMessage = null,
+                    writeError = null,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = CarbsEntryError.WRITE_FAILED,
-                    writeErrorMessage = error.message,
+                    writeError = error.toScreenError(),
                 )
             }
         }

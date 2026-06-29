@@ -30,7 +30,8 @@ internal fun LazyListScope.spO2Content(
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
-    if (state.spO2.isNotEmpty()) {
+    val display = state.display.metric
+    if (display.hasVitalsEntries) {
         val sorted = state.spO2.sortedBy { it.time }
         item {
             MetricLineChart(
@@ -106,8 +107,9 @@ internal fun LazyListScope.vo2MaxContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
 ) {
+    val display = state.display.metric
     val latest = state.latestVo2Max
-    if (latest != null) {
+    if (display.hasData && latest != null) {
         if (state.vo2Max.size > 1) {
             val sorted = state.vo2Max.sortedBy { it.time }
             item {
@@ -181,7 +183,8 @@ internal fun LazyListScope.respiratoryRateContent(
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
-    if (state.respiratoryRate.isNotEmpty()) {
+    val display = state.display.metric
+    if (display.hasVitalsEntries) {
         item {
             MetricLineChart(
                 title = stringResource(R.string.metric_respiratory_rate),
@@ -301,7 +304,8 @@ internal fun LazyListScope.bodyTemperatureContent(
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onDeleteVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
 ) {
-    if (state.bodyTemperature.isNotEmpty()) {
+    val display = state.display.metric
+    if (display.hasVitalsEntries) {
         val sorted = state.bodyTemperature.sortedBy { it.time }
         item {
             MetricLineChart(
@@ -377,7 +381,8 @@ internal fun LazyListScope.bloodGlucoseContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
 ) {
-    if (state.bloodGlucose.isNotEmpty()) {
+    val display = state.display.metric
+    if (display.hasVitalsEntries) {
         val sorted = state.bloodGlucose.sortedBy { it.time }
         item {
             MetricLineChart(
@@ -452,7 +457,8 @@ internal fun LazyListScope.skinTemperatureContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
 ) {
-    if (state.skinTemperature.isNotEmpty()) {
+    val display = state.display.metric
+    if (display.hasVitalsEntries) {
         val chartEntries = state.skinTemperature
             .filter { it.averageDeltaCelsius != null }
             .sortedBy { it.time }

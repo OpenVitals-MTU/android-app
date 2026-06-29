@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.activity
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -10,10 +9,6 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.domain.insights.BaselineValue
-import tech.mmarca.openvitals.domain.insights.DailyGoalValue
-import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
-import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricDetailSectionBuilder
@@ -45,6 +40,7 @@ internal fun LazyListScope.orderedActivityMetricSections(
 
 internal data class ActivityMetricOrderedContentSpec(
     val state: ActivityUiState,
+    val display: ActivityMetricDisplay,
     val period: DatePeriod,
     val unitFormatter: UnitFormatter,
     val dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -54,15 +50,8 @@ internal data class ActivityMetricOrderedContentSpec(
     val accentColor: Color,
     val goalIcon: ImageVector,
     val goalFormatter: @Composable (Double) -> DisplayValue,
-    val goalValues: List<DailyGoalValue>,
-    val trackedDates: List<LocalDate>,
-    val sampleCount: Int,
-    val values: List<Double>,
-    val previousTotal: Double,
-    val baselineValues: List<BaselineValue>,
     val statisticsIcon: ImageVector,
     val comparisonValueFormatter: @Composable (Double) -> DisplayValue,
-    val activeDays: Int,
     val onDecreaseGoal: () -> Unit,
     val onIncreaseGoal: () -> Unit,
     val intradayChart: @Composable () -> Unit,
@@ -77,12 +66,9 @@ internal data class ActivityMetricOrderedContentSpec(
 internal fun LazyListScope.renderActivityMetricOrderedContent(
     spec: ActivityMetricOrderedContentSpec,
 ) {
-    val goalProgress = dailyGoalProgress(
-        values = spec.goalValues,
-        period = spec.period,
-        target = spec.state.dailyGoal,
-        direction = spec.metric.dailyGoalKey.direction,
-    )
+    val display = spec.display
+    val goalProgress = display.goalProgress ?: return
+    val periodComparison = display.periodComparison ?: return
     val selectedDate = spec.chartDaySelection.selectedDate
     orderedActivityMetricSections(spec.sectionContext) {
         section(MetricDetailSectionId.INTRADAY_CHART, spec.state.selectedRange == TimeRange.DAY) {
@@ -105,7 +91,7 @@ internal fun LazyListScope.renderActivityMetricOrderedContent(
             )
         }
         section(MetricDetailSectionId.STATISTICS) {
-            Column {
+            androidx.compose.foundation.layout.Column {
                 ActivityGoalStatisticsContent(
                     progress = goalProgress,
                     averageGap = spec.goalFormatter(goalProgress.averageGapToGoal),
@@ -119,15 +105,12 @@ internal fun LazyListScope.renderActivityMetricOrderedContent(
                     total = spec.statisticsTotal,
                     average = spec.statisticsAverage,
                     best = spec.statisticsBest,
-                    activeDays = spec.activeDays,
-                    comparison = periodComparison(
-                        currentValue = spec.values.sum(),
-                        previousValue = spec.previousTotal,
-                    ),
+                    activeDays = display.activeDays,
+                    comparison = periodComparison,
                     selectedRange = spec.state.selectedRange,
                     comparisonValueFormatter = spec.comparisonValueFormatter,
-                    baselineCurrentValue = averageOrZero(spec.values.sum(), spec.activeDays),
-                    baselineValues = spec.baselineValues,
+                    baselineCurrentValue = display.baselineCurrentValue,
+                    baselineValues = display.baselineValues,
                     icon = spec.statisticsIcon,
                     accentColor = spec.accentColor,
                 )
@@ -136,8 +119,8 @@ internal fun LazyListScope.renderActivityMetricOrderedContent(
         section(MetricDetailSectionId.DATA_CONFIDENCE, spec.period.start != spec.period.end) {
             ActivityDataConfidenceCard(
                 period = spec.period,
-                trackedDates = spec.trackedDates,
-                sampleCount = spec.sampleCount,
+                trackedDates = display.trackedDates,
+                sampleCount = display.sampleCount,
                 accentColor = spec.accentColor,
             )
         }

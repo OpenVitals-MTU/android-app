@@ -54,6 +54,7 @@ import kotlin.math.roundToLong
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.theme.DistanceColor
@@ -120,7 +121,7 @@ fun AchievementsScreen(
                 item {
                     MessageCard(
                         title = stringResource(R.string.achievements_error_title),
-                        body = state.error,
+                        body = state.error?.resolve(),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }

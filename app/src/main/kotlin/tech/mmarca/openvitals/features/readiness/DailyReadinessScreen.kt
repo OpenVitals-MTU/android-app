@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.insights.DailyReadinessFactor
 import tech.mmarca.openvitals.domain.insights.DailyReadinessInsight
 import tech.mmarca.openvitals.domain.insights.ReadinessConfidence
@@ -93,8 +94,8 @@ fun DailyReadinessScreen(
         ) {
             when {
                 state.isLoading && state.insight == null -> FullScreenLoading()
-                state.errorMessage != null && state.insight == null ->
-                    ErrorMessage(state.errorMessage ?: stringResource(R.string.unknown_error))
+                state.error != null && state.insight == null ->
+                    ErrorMessage(state.error?.resolve() ?: stringResource(R.string.unknown_error))
                 state.insight != null -> DailyReadinessContent(
                     state = state,
                     canGoForward = state.selectedDate.isBefore(LocalDate.now()),

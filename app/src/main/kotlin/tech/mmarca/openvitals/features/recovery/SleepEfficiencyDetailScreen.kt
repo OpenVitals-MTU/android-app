@@ -42,6 +42,7 @@ import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.ErrorMessage
@@ -73,7 +74,7 @@ fun SleepEfficiencyDetailScreen(
     ) {
         when {
             state.isLoading && state.days.isEmpty() -> FullScreenLoading()
-            state.error != null && state.days.isEmpty() -> ErrorMessage(state.error ?: stringResource(R.string.unknown_error))
+            state.error != null && state.days.isEmpty() -> ErrorMessage(state.error?.resolve() ?: stringResource(R.string.unknown_error))
             else -> SleepEfficiencyDetailContent(
                 day = state.today,
                 unitFormatter = unitFormatter,

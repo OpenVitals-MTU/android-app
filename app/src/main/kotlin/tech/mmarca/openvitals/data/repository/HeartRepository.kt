@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.reducedForChart
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.query.HeartPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.Instant
@@ -354,21 +355,3 @@ enum class HeartPeriodMetric {
     RESTING_HEART_RATE,
     HRV,
 }
-
-data class HeartPeriodData(
-    val daySamples: List<HeartRateSample> = emptyList(),
-    val previousDaySamples: List<HeartRateSample> = emptyList(),
-    val dailySummaries: List<HeartRateSummary> = emptyList(),
-    val previousDailySummaries: List<HeartRateSummary> = emptyList(),
-    val baselineDailySummaries: List<HeartRateSummary> = emptyList(),
-    val dayRestingBpm: Long? = null,
-    val previousDayRestingBpm: Long? = null,
-    val dayHrvMs: Double? = null,
-    val previousDayHrvMs: Double? = null,
-    val dailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val previousDailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val baselineDailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val dailyHrv: List<DailyHrv> = emptyList(),
-    val previousDailyHrv: List<DailyHrv> = emptyList(),
-    val baselineDailyHrv: List<DailyHrv> = emptyList(),
-)

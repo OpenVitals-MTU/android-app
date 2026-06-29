@@ -19,18 +19,18 @@ import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.CycleRepository
 import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
 import tech.mmarca.openvitals.data.repository.HeartRepository
-import tech.mmarca.openvitals.data.repository.HealthRepository
+import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.data.repository.HydrationRepository
 import tech.mmarca.openvitals.data.repository.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.VitalsRepository
 import tech.mmarca.openvitals.domain.model.DashboardMetric
@@ -49,7 +49,7 @@ class MetricSummaryWarmupWorker(
                 applicationContext,
                 MetricSummaryWarmupEntryPoint::class.java,
             )
-            val repository = entryPoint.healthRepository()
+            val dashboardDataLoader = entryPoint.dashboardDataLoader()
             val prefs = entryPoint.preferencesRepository()
             val foregroundGate = entryPoint.appForegroundGate()
             val today = LocalDate.now()
@@ -61,7 +61,7 @@ class MetricSummaryWarmupWorker(
             )
 
             if (!foregroundGate.isForeground) {
-                repository.loadDashboard(baseQuery.copy(visibleMetrics = WarmupReadinessMetrics))
+                dashboardDataLoader.loadDashboard(baseQuery.copy(visibleMetrics = WarmupReadinessMetrics))
                 warmPeriodSummaries(entryPoint, prefs, today)
             }
 
@@ -136,7 +136,7 @@ private suspend fun warmPeriodSummaries(
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface MetricSummaryWarmupEntryPoint {
-    fun healthRepository(): HealthRepository
+    fun dashboardDataLoader(): DashboardDataLoader
     fun preferencesRepository(): PreferencesRepository
     fun metricSummaryCacheStore(): MetricSummaryCacheStore
     fun derivedMetricStore(): DerivedMetricStore

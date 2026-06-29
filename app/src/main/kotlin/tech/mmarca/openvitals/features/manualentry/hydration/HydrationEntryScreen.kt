@@ -70,8 +70,10 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
@@ -275,7 +277,7 @@ private fun HydrationTrackerCard(
 
             state.entryError?.let { entryError ->
                 Text(
-                    text = hydrationEntryErrorText(entryError, state.writeErrorMessage),
+                    text = hydrationEntryErrorText(entryError, state.writeError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -627,13 +629,13 @@ private fun HydrationWriteInfo(
 @Composable
 private fun hydrationEntryErrorText(
     error: HydrationEntryError,
-    message: String?,
+    writeError: ScreenError?,
 ): String = when (error) {
     HydrationEntryError.INVALID_AMOUNT -> stringResource(R.string.hydration_invalid_amount)
     HydrationEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.hydration_tracker_permission_needed)
     HydrationEntryError.WRITE_FAILED -> stringResource(
         R.string.hydration_write_failed,
-        message ?: stringResource(R.string.unknown_error),
+        writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
 

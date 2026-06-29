@@ -1,9 +1,14 @@
 package tech.mmarca.openvitals.features.heart
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -24,18 +29,17 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
-import tech.mmarca.openvitals.data.repository.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
-import tech.mmarca.openvitals.data.repository.HeartRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.VitalsPeriodData
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadRequest
+import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadResult
+import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase
+import tech.mmarca.openvitals.domain.usecase.vitalsSummary
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +47,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val HeartRateThresholdStepBpm = 5
 private const val HeartRateThresholdMinimumGapBpm = 5
@@ -59,6 +64,7 @@ data class HeartRateThresholdCheck(
     val hasData: Boolean = false,
 )
 
+@Immutable
 data class HeartUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.WEEK,
@@ -117,13 +123,15 @@ data class HeartUiState(
         type = HeartRateThresholdCheckType.LOW,
         thresholdBpm = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
     ),
-    val error: String? = null,
+    val display: HeartDisplayState = HeartDisplayState(),
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class HeartViewModel(
-    private val repository: HeartRepository,
+    private val loadHeartPeriodUseCase: LoadHeartPeriodUseCase,
     private val vitalsRepository: VitalsRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.WEEK,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val selectedMetric: HeartMetric? = HeartMetric.AVERAGE_HEART_RATE,
@@ -137,13 +145,15 @@ class HeartViewModel(
 
     @Inject
     constructor(
-        repository: HeartRepository,
+        loadHeartPeriodUseCase: LoadHeartPeriodUseCase,
         vitalsRepository: VitalsRepository,
         preferencesRepository: PreferencesRepository,
         savedStateHandle: SavedStateHandle,
+        dispatchers: DispatcherProvider,
     ) : this(
-        repository = repository,
+        loadHeartPeriodUseCase = loadHeartPeriodUseCase,
         vitalsRepository = vitalsRepository,
+        dispatchers = dispatchers,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         selectedMetric = heartMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
@@ -259,7 +269,7 @@ class HeartViewModel(
             }.onSuccess {
                 load(RefreshMode.FORCE)
             }.onFailure { error ->
-                _uiState.value = previous.copy(error = error.message)
+                _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
@@ -278,59 +288,27 @@ class HeartViewModel(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                when (val metric = selectedMetric) {
-                    null -> coroutineScope {
-                        val heart = async {
-                            if (refreshMode == RefreshMode.NORMAL) {
-                                repository.loadHeartPeriod(query, HeartPeriodMetric.ALL)
-                            } else {
-                                repository.loadHeartPeriod(query, HeartPeriodMetric.ALL, refreshMode)
-                            }
-                                .toLoadResult()
-                        }
-                        val vitals = async {
-                            if (refreshMode == RefreshMode.NORMAL) {
-                                vitalsRepository.loadVitalsPeriod(query, VitalsPeriodMetric.ALL)
-                            } else {
-                                vitalsRepository.loadVitalsPeriod(query, VitalsPeriodMetric.ALL, refreshMode)
-                            }
-                                .toLoadResult()
-                        }
-                        heart.await().merge(vitals.await())
-                    }
-                    HeartMetric.AVERAGE_HEART_RATE,
-                    HeartMetric.RESTING_HEART_RATE,
-                    HeartMetric.HRV -> if (refreshMode == RefreshMode.NORMAL) {
-                        repository.loadHeartPeriod(query, metric.toHeartPeriodMetric())
-                    } else {
-                        repository.loadHeartPeriod(query, metric.toHeartPeriodMetric(), refreshMode)
-                    }.toLoadResult()
-                    HeartMetric.BLOOD_PRESSURE,
-                    HeartMetric.SPO2,
-                    HeartMetric.VO2_MAX,
-                    HeartMetric.RESPIRATORY_RATE,
-                    HeartMetric.BODY_TEMPERATURE,
-                    HeartMetric.BLOOD_GLUCOSE,
-                    HeartMetric.SKIN_TEMPERATURE -> if (refreshMode == RefreshMode.NORMAL) {
-                        vitalsRepository.loadVitalsPeriod(query, metric.toVitalsPeriodMetric())
-                    } else {
-                        vitalsRepository.loadVitalsPeriod(query, metric.toVitalsPeriodMetric(), refreshMode)
-                    }.toLoadResult()
-                }
+                loadHeartPeriodUseCase(
+                    query = query,
+                    request = selectedMetric.toLoadRequest(),
+                    refreshMode = refreshMode,
+                )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                val highThreshold = _uiState.value.highHeartRateCheck.thresholdBpm
+                val lowThreshold = _uiState.value.lowHeartRateCheck.thresholdBpm
                 val vitalsSummary = result.vitalsSummary()
                 val highHeartRateCheck = result.heartRateThresholdCheck(
                     selectedRange = query.range,
                     type = HeartRateThresholdCheckType.HIGH,
-                    thresholdBpm = _uiState.value.highHeartRateCheck.thresholdBpm,
+                    thresholdBpm = highThreshold,
                 )
                 val lowHeartRateCheck = result.heartRateThresholdCheck(
                     selectedRange = query.range,
                     type = HeartRateThresholdCheckType.LOW,
-                    thresholdBpm = _uiState.value.lowHeartRateCheck.thresholdBpm,
+                    thresholdBpm = lowThreshold,
                 )
-                _uiState.value = _uiState.value.copy(
+                val loadedState = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
                     daySamples = result.daySamples,
@@ -381,12 +359,21 @@ class HeartViewModel(
                     highHeartRateCheck = highHeartRateCheck,
                     lowHeartRateCheck = lowHeartRateCheck,
                 )
+                val display = withContext(dispatchers.default) {
+                    HeartPresentationMapper.build(
+                        query = query,
+                        metric = selectedMetric,
+                        state = loadedState,
+                    )
+                }
+                if (!isCurrent) return@load
+                _uiState.value = loadedState.copy(display = display)
             }.onFailure {
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = date,
-                    error = it.message,
+                    error = it.toScreenError(),
                 )
             }
         }
@@ -428,8 +415,8 @@ class HeartViewModel(
             highHeartRateCheck = current.heartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.HIGH,
                 thresholdBpm = normalized,
-            )
-        )
+            ),
+        ).withDisplay(selectedMetric)
     }
 
     private fun setLowHeartRateThreshold(thresholdBpm: Int) {
@@ -445,7 +432,22 @@ class HeartViewModel(
             lowHeartRateCheck = current.heartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.LOW,
                 thresholdBpm = normalized,
-            )
+            ),
+        ).withDisplay(selectedMetric)
+    }
+
+    private fun HeartUiState.withDisplay(metric: HeartMetric?): HeartUiState {
+        val query = PeriodLoadQuery(
+            range = selectedRange,
+            anchorDate = selectedDate,
+            weekPeriodMode = weekPeriodMode,
+        )
+        return copy(
+            display = HeartPresentationMapper.build(
+                query = query,
+                metric = metric,
+                state = this,
+            ),
         )
     }
 }
@@ -473,76 +475,22 @@ private fun HeartUiState.withDeletedVitalsMeasurementEntry(
         )
     }
 
-private data class HeartLoadResult(
-    val daySamples: List<HeartRateSample> = emptyList(),
-    val previousDaySamples: List<HeartRateSample> = emptyList(),
-    val dailySummaries: List<HeartRateSummary> = emptyList(),
-    val previousDailySummaries: List<HeartRateSummary> = emptyList(),
-    val baselineDailySummaries: List<HeartRateSummary> = emptyList(),
-    val dayRestingBpm: Long? = null,
-    val previousDayRestingBpm: Long? = null,
-    val dayHrvMs: Double? = null,
-    val previousDayHrvMs: Double? = null,
-    val dailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val previousDailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val baselineDailyRestingHR: List<DailyRestingHR> = emptyList(),
-    val dailyHrv: List<DailyHrv> = emptyList(),
-    val previousDailyHrv: List<DailyHrv> = emptyList(),
-    val baselineDailyHrv: List<DailyHrv> = emptyList(),
-    val missingVitalsPermissions: Set<String> = emptySet(),
-    val bloodPressure: List<BloodPressureEntry> = emptyList(),
-    val previousBloodPressure: List<BloodPressureEntry> = emptyList(),
-    val baselineBloodPressure: List<BloodPressureEntry> = emptyList(),
-    val spO2: List<SpO2Entry> = emptyList(),
-    val previousSpO2: List<SpO2Entry> = emptyList(),
-    val baselineSpO2: List<SpO2Entry> = emptyList(),
-    val respiratoryRate: List<RespiratoryRateEntry> = emptyList(),
-    val previousRespiratoryRate: List<RespiratoryRateEntry> = emptyList(),
-    val baselineRespiratoryRate: List<RespiratoryRateEntry> = emptyList(),
-    val bodyTemperature: List<BodyTempEntry> = emptyList(),
-    val previousBodyTemperature: List<BodyTempEntry> = emptyList(),
-    val baselineBodyTemperature: List<BodyTempEntry> = emptyList(),
-    val vo2Max: List<Vo2MaxEntry> = emptyList(),
-    val previousVo2Max: List<Vo2MaxEntry> = emptyList(),
-    val baselineVo2Max: List<Vo2MaxEntry> = emptyList(),
-    val bloodGlucose: List<BloodGlucoseEntry> = emptyList(),
-    val previousBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
-    val baselineBloodGlucose: List<BloodGlucoseEntry> = emptyList(),
-    val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
-    val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
-    val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
-)
+private fun HeartMetric?.toLoadRequest(): HeartPeriodLoadRequest =
+    when (this) {
+        null -> HeartPeriodLoadRequest.Combined
+        HeartMetric.AVERAGE_HEART_RATE -> HeartPeriodLoadRequest.HeartOnly(HeartPeriodMetric.AVERAGE_HEART_RATE)
+        HeartMetric.RESTING_HEART_RATE -> HeartPeriodLoadRequest.HeartOnly(HeartPeriodMetric.RESTING_HEART_RATE)
+        HeartMetric.HRV -> HeartPeriodLoadRequest.HeartOnly(HeartPeriodMetric.HRV)
+        HeartMetric.BLOOD_PRESSURE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.BLOOD_PRESSURE)
+        HeartMetric.SPO2 -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.SPO2)
+        HeartMetric.VO2_MAX -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.VO2_MAX)
+        HeartMetric.RESPIRATORY_RATE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.RESPIRATORY_RATE)
+        HeartMetric.BODY_TEMPERATURE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.BODY_TEMPERATURE)
+        HeartMetric.BLOOD_GLUCOSE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.BLOOD_GLUCOSE)
+        HeartMetric.SKIN_TEMPERATURE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.SKIN_TEMPERATURE)
+    }
 
-private data class HeartVitalsSummary(
-    val hasVitalsData: Boolean,
-    val latestBloodPressure: BloodPressureEntry?,
-    val latestSpO2: SpO2Entry?,
-    val latestRespiratoryRate: RespiratoryRateEntry?,
-    val latestBodyTemperature: BodyTempEntry?,
-    val latestVo2Max: Vo2MaxEntry?,
-    val latestBloodGlucose: BloodGlucoseEntry?,
-    val latestSkinTemperature: SkinTemperatureEntry?,
-)
-
-private fun HeartLoadResult.vitalsSummary(): HeartVitalsSummary =
-    HeartVitalsSummary(
-        hasVitalsData = bloodPressure.isNotEmpty() ||
-            spO2.isNotEmpty() ||
-            respiratoryRate.isNotEmpty() ||
-            bodyTemperature.isNotEmpty() ||
-            vo2Max.isNotEmpty() ||
-            bloodGlucose.isNotEmpty() ||
-            skinTemperature.isNotEmpty(),
-        latestBloodPressure = bloodPressure.maxByOrNull { it.time },
-        latestSpO2 = spO2.maxByOrNull { it.time },
-        latestRespiratoryRate = respiratoryRate.maxByOrNull { it.time },
-        latestBodyTemperature = bodyTemperature.maxByOrNull { it.time },
-        latestVo2Max = vo2Max.maxByOrNull { it.time },
-        latestBloodGlucose = bloodGlucose.maxByOrNull { it.time },
-        latestSkinTemperature = skinTemperature.maxByOrNull { it.time },
-    )
-
-private fun HeartLoadResult.heartRateThresholdCheck(
+private fun HeartPeriodLoadResult.heartRateThresholdCheck(
     selectedRange: TimeRange,
     type: HeartRateThresholdCheckType,
     thresholdBpm: Int,
@@ -600,112 +548,6 @@ private fun HeartUiState.heartRateThresholdCheck(
         hasData = hasData,
     )
 }
-
-private fun HeartMetric.toHeartPeriodMetric(): HeartPeriodMetric =
-    when (this) {
-        HeartMetric.AVERAGE_HEART_RATE -> HeartPeriodMetric.AVERAGE_HEART_RATE
-        HeartMetric.RESTING_HEART_RATE -> HeartPeriodMetric.RESTING_HEART_RATE
-        HeartMetric.HRV -> HeartPeriodMetric.HRV
-        else -> error("$this is not a heart period metric")
-    }
-
-private fun HeartMetric.toVitalsPeriodMetric(): VitalsPeriodMetric =
-    when (this) {
-        HeartMetric.BLOOD_PRESSURE -> VitalsPeriodMetric.BLOOD_PRESSURE
-        HeartMetric.SPO2 -> VitalsPeriodMetric.SPO2
-        HeartMetric.VO2_MAX -> VitalsPeriodMetric.VO2_MAX
-        HeartMetric.RESPIRATORY_RATE -> VitalsPeriodMetric.RESPIRATORY_RATE
-        HeartMetric.BODY_TEMPERATURE -> VitalsPeriodMetric.BODY_TEMPERATURE
-        HeartMetric.BLOOD_GLUCOSE -> VitalsPeriodMetric.BLOOD_GLUCOSE
-        HeartMetric.SKIN_TEMPERATURE -> VitalsPeriodMetric.SKIN_TEMPERATURE
-        else -> error("$this is not a vitals period metric")
-    }
-
-private fun HeartPeriodData.toLoadResult(): HeartLoadResult =
-    HeartLoadResult(
-        daySamples = daySamples,
-        previousDaySamples = previousDaySamples,
-        dailySummaries = dailySummaries,
-        previousDailySummaries = previousDailySummaries,
-        baselineDailySummaries = baselineDailySummaries,
-        dayRestingBpm = dayRestingBpm,
-        previousDayRestingBpm = previousDayRestingBpm,
-        dayHrvMs = dayHrvMs,
-        previousDayHrvMs = previousDayHrvMs,
-        dailyRestingHR = dailyRestingHR,
-        previousDailyRestingHR = previousDailyRestingHR,
-        baselineDailyRestingHR = baselineDailyRestingHR,
-        dailyHrv = dailyHrv,
-        previousDailyHrv = previousDailyHrv,
-        baselineDailyHrv = baselineDailyHrv,
-    )
-
-private fun VitalsPeriodData.toLoadResult(): HeartLoadResult =
-    HeartLoadResult(
-        missingVitalsPermissions = missingVitalsPermissions,
-        bloodPressure = bloodPressure,
-        previousBloodPressure = previousBloodPressure,
-        baselineBloodPressure = baselineBloodPressure,
-        spO2 = spO2,
-        previousSpO2 = previousSpO2,
-        baselineSpO2 = baselineSpO2,
-        respiratoryRate = respiratoryRate,
-        previousRespiratoryRate = previousRespiratoryRate,
-        baselineRespiratoryRate = baselineRespiratoryRate,
-        bodyTemperature = bodyTemperature,
-        previousBodyTemperature = previousBodyTemperature,
-        baselineBodyTemperature = baselineBodyTemperature,
-        vo2Max = vo2Max,
-        previousVo2Max = previousVo2Max,
-        baselineVo2Max = baselineVo2Max,
-        bloodGlucose = bloodGlucose,
-        previousBloodGlucose = previousBloodGlucose,
-        baselineBloodGlucose = baselineBloodGlucose,
-        skinTemperature = skinTemperature,
-        previousSkinTemperature = previousSkinTemperature,
-        baselineSkinTemperature = baselineSkinTemperature,
-    )
-
-private fun HeartLoadResult.merge(other: HeartLoadResult): HeartLoadResult =
-    HeartLoadResult(
-        daySamples = daySamples + other.daySamples,
-        previousDaySamples = previousDaySamples + other.previousDaySamples,
-        dailySummaries = dailySummaries + other.dailySummaries,
-        previousDailySummaries = previousDailySummaries + other.previousDailySummaries,
-        baselineDailySummaries = baselineDailySummaries + other.baselineDailySummaries,
-        dayRestingBpm = dayRestingBpm ?: other.dayRestingBpm,
-        previousDayRestingBpm = previousDayRestingBpm ?: other.previousDayRestingBpm,
-        dayHrvMs = dayHrvMs ?: other.dayHrvMs,
-        previousDayHrvMs = previousDayHrvMs ?: other.previousDayHrvMs,
-        dailyRestingHR = dailyRestingHR + other.dailyRestingHR,
-        previousDailyRestingHR = previousDailyRestingHR + other.previousDailyRestingHR,
-        baselineDailyRestingHR = baselineDailyRestingHR + other.baselineDailyRestingHR,
-        dailyHrv = dailyHrv + other.dailyHrv,
-        previousDailyHrv = previousDailyHrv + other.previousDailyHrv,
-        baselineDailyHrv = baselineDailyHrv + other.baselineDailyHrv,
-        missingVitalsPermissions = missingVitalsPermissions + other.missingVitalsPermissions,
-        bloodPressure = bloodPressure + other.bloodPressure,
-        previousBloodPressure = previousBloodPressure + other.previousBloodPressure,
-        baselineBloodPressure = baselineBloodPressure + other.baselineBloodPressure,
-        spO2 = spO2 + other.spO2,
-        previousSpO2 = previousSpO2 + other.previousSpO2,
-        baselineSpO2 = baselineSpO2 + other.baselineSpO2,
-        respiratoryRate = respiratoryRate + other.respiratoryRate,
-        previousRespiratoryRate = previousRespiratoryRate + other.previousRespiratoryRate,
-        baselineRespiratoryRate = baselineRespiratoryRate + other.baselineRespiratoryRate,
-        bodyTemperature = bodyTemperature + other.bodyTemperature,
-        previousBodyTemperature = previousBodyTemperature + other.previousBodyTemperature,
-        baselineBodyTemperature = baselineBodyTemperature + other.baselineBodyTemperature,
-        vo2Max = vo2Max + other.vo2Max,
-        previousVo2Max = previousVo2Max + other.previousVo2Max,
-        baselineVo2Max = baselineVo2Max + other.baselineVo2Max,
-        bloodGlucose = bloodGlucose + other.bloodGlucose,
-        previousBloodGlucose = previousBloodGlucose + other.previousBloodGlucose,
-        baselineBloodGlucose = baselineBloodGlucose + other.baselineBloodGlucose,
-        skinTemperature = skinTemperature + other.skinTemperature,
-        previousSkinTemperature = previousSkinTemperature + other.previousSkinTemperature,
-        baselineSkinTemperature = baselineSkinTemperature + other.baselineSkinTemperature,
-    )
 
 private fun heartMetricFromRoute(metricId: String?): HeartMetric? {
     if (metricId == null) return null

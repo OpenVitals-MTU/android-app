@@ -1,8 +1,13 @@
 package tech.mmarca.openvitals.features.body
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
@@ -19,7 +24,6 @@ import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
-import tech.mmarca.openvitals.data.repository.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.BodyRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -32,7 +36,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class BodyUiState(
     val isLoading: Boolean = true,
     val selectedRange: TimeRange = TimeRange.MONTH,
@@ -41,59 +47,32 @@ data class BodyUiState(
     val weightEntries: List<WeightEntry> = emptyList(),
     val previousWeightEntries: List<WeightEntry> = emptyList(),
     val baselineWeightEntries: List<WeightEntry> = emptyList(),
-    val heightCm: Double? = null,
     val heightEntries: List<HeightEntry> = emptyList(),
     val previousHeightEntries: List<HeightEntry> = emptyList(),
     val baselineHeightEntries: List<HeightEntry> = emptyList(),
     val bodyFatEntries: List<BodyFatEntry> = emptyList(),
     val previousBodyFatEntries: List<BodyFatEntry> = emptyList(),
     val baselineBodyFatEntries: List<BodyFatEntry> = emptyList(),
-    val leanMassKg: Double? = null,
     val leanMassEntries: List<LeanBodyMassEntry> = emptyList(),
     val previousLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
     val baselineLeanMassEntries: List<LeanBodyMassEntry> = emptyList(),
-    val bmrKcal: Double? = null,
     val bmrEntries: List<BmrEntry> = emptyList(),
     val previousBmrEntries: List<BmrEntry> = emptyList(),
     val baselineBmrEntries: List<BmrEntry> = emptyList(),
-    val boneMassKg: Double? = null,
     val boneMassEntries: List<BoneMassEntry> = emptyList(),
     val previousBoneMassEntries: List<BoneMassEntry> = emptyList(),
     val baselineBoneMassEntries: List<BoneMassEntry> = emptyList(),
-    val bodyWaterMassKg: Double? = null,
     val bodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
     val previousBodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
     val baselineBodyWaterMassEntries: List<BodyWaterMassEntry> = emptyList(),
-    val latestWeightKg: Double? = weightEntries.maxByOrNull { it.time }?.weightKg,
-    val previousLatestWeightKg: Double? = previousWeightEntries.maxByOrNull { it.time }?.weightKg,
-    val firstWeightKg: Double? = weightEntries.minByOrNull { it.time }?.weightKg,
-    val weightChangKg: Double? = if (latestWeightKg != null && firstWeightKg != null && latestWeightKg != firstWeightKg) {
-        latestWeightKg - firstWeightKg
-    } else {
-        null
-    },
-    val latestBodyFatPercent: Double? = bodyFatEntries.maxByOrNull { it.time }?.percent,
-    val previousLatestBodyFatPercent: Double? = previousBodyFatEntries.maxByOrNull { it.time }?.percent,
-    val bmi: Double? = latestWeightKg.bmiWith(heightCm),
-    val ffmi: Double? = latestWeightKg.ffmiWith(heightCm, latestBodyFatPercent),
-    val adjustedFfmi: Double? = ffmi.adjustedFfmiWith(heightCm),
-    val latestHeightCm: Double? = heightEntries.maxByOrNull { it.time }?.heightCm ?: heightCm,
-    val previousLatestHeightCm: Double? = previousHeightEntries.maxByOrNull { it.time }?.heightCm,
-    val latestLeanMassKg: Double? = leanMassEntries.maxByOrNull { it.time }?.massKg ?: leanMassKg,
-    val previousLatestLeanMassKg: Double? = previousLeanMassEntries.maxByOrNull { it.time }?.massKg,
-    val latestBmrKcal: Double? = bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: bmrKcal,
-    val previousLatestBmrKcal: Double? = previousBmrEntries.maxByOrNull { it.time }?.kcalPerDay,
-    val latestBoneMassKg: Double? = boneMassEntries.maxByOrNull { it.time }?.massKg ?: boneMassKg,
-    val previousLatestBoneMassKg: Double? = previousBoneMassEntries.maxByOrNull { it.time }?.massKg,
-    val latestBodyWaterMassKg: Double? = bodyWaterMassEntries.maxByOrNull { it.time }?.massKg ?: bodyWaterMassKg,
-    val previousLatestBodyWaterMassKg: Double? = previousBodyWaterMassEntries.maxByOrNull { it.time }?.massKg,
-    val previousBmi: Double? = previousLatestWeightKg.bmiWith(heightCm),
-    val error: String? = null,
+    val display: BodyDisplayState = BodyDisplayState(),
+    val error: ScreenError? = null,
 )
 
 @HiltViewModel
 class BodyViewModel(
     private val repository: BodyRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialRange: TimeRange = TimeRange.MONTH,
     initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
@@ -104,8 +83,10 @@ class BodyViewModel(
     constructor(
         repository: BodyRepository,
         preferencesRepository: PreferencesRepository,
+        dispatchers: DispatcherProvider,
     ) : this(
         repository = repository,
+        dispatchers = dispatchers,
         initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.BODY),
         initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
         weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
@@ -200,7 +181,7 @@ class BodyViewModel(
             }.onSuccess {
                 load(RefreshMode.FORCE)
             }.onFailure { error ->
-                _uiState.value = previous.copy(error = error.message)
+                _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
@@ -223,68 +204,35 @@ class BodyViewModel(
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load
-                    val heightCm = result.heightEntries.maxByOrNull { it.time }?.heightCm ?: result.heightCm
-                    val leanMassKg = result.leanMassEntries.maxByOrNull { it.time }?.massKg ?: result.leanMassKg
-                    val bmrKcal = result.bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: result.bmrKcal
-                    val boneMassKg = result.boneMassEntries.maxByOrNull { it.time }?.massKg ?: result.boneMassKg
-                    val bodyWaterMassKg = result.bodyWaterMassEntries.maxByOrNull { it.time }?.massKg
-                        ?: result.bodyWaterMassKg
-                    val summary = result.summary(
-                        heightCm = heightCm,
-                        leanMassKg = leanMassKg,
-                        bmrKcal = bmrKcal,
-                        boneMassKg = boneMassKg,
-                        bodyWaterMassKg = bodyWaterMassKg,
-                    )
+                    val display = withContext(dispatchers.default) {
+                        BodyPresentationMapper.build(query = query, data = result)
+                    }
+                    if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
                         weightEntries = result.weightEntries,
                         previousWeightEntries = result.previousWeightEntries,
                         baselineWeightEntries = result.baselineWeightEntries,
-                        heightCm = heightCm,
                         heightEntries = result.heightEntries,
                         previousHeightEntries = result.previousHeightEntries,
                         baselineHeightEntries = result.baselineHeightEntries,
                         bodyFatEntries = result.bodyFatEntries,
                         previousBodyFatEntries = result.previousBodyFatEntries,
                         baselineBodyFatEntries = result.baselineBodyFatEntries,
-                        leanMassKg = leanMassKg,
                         leanMassEntries = result.leanMassEntries,
                         previousLeanMassEntries = result.previousLeanMassEntries,
                         baselineLeanMassEntries = result.baselineLeanMassEntries,
-                        bmrKcal = bmrKcal,
                         bmrEntries = result.bmrEntries,
                         previousBmrEntries = result.previousBmrEntries,
                         baselineBmrEntries = result.baselineBmrEntries,
-                        boneMassKg = boneMassKg,
                         boneMassEntries = result.boneMassEntries,
                         previousBoneMassEntries = result.previousBoneMassEntries,
                         baselineBoneMassEntries = result.baselineBoneMassEntries,
-                        bodyWaterMassKg = bodyWaterMassKg,
                         bodyWaterMassEntries = result.bodyWaterMassEntries,
                         previousBodyWaterMassEntries = result.previousBodyWaterMassEntries,
                         baselineBodyWaterMassEntries = result.baselineBodyWaterMassEntries,
-                        latestWeightKg = summary.latestWeightKg,
-                        previousLatestWeightKg = summary.previousLatestWeightKg,
-                        firstWeightKg = summary.firstWeightKg,
-                        weightChangKg = summary.weightChangeKg,
-                        latestBodyFatPercent = summary.latestBodyFatPercent,
-                        previousLatestBodyFatPercent = summary.previousLatestBodyFatPercent,
-                        bmi = summary.bmi,
-                        ffmi = summary.ffmi,
-                        adjustedFfmi = summary.adjustedFfmi,
-                        latestHeightCm = summary.latestHeightCm,
-                        previousLatestHeightCm = summary.previousLatestHeightCm,
-                        latestLeanMassKg = summary.latestLeanMassKg,
-                        previousLatestLeanMassKg = summary.previousLatestLeanMassKg,
-                        latestBmrKcal = summary.latestBmrKcal,
-                        previousLatestBmrKcal = summary.previousLatestBmrKcal,
-                        latestBoneMassKg = summary.latestBoneMassKg,
-                        previousLatestBoneMassKg = summary.previousLatestBoneMassKg,
-                        latestBodyWaterMassKg = summary.latestBodyWaterMassKg,
-                        previousLatestBodyWaterMassKg = summary.previousLatestBodyWaterMassKg,
-                        previousBmi = summary.previousBmi,
+                        display = display,
                     )
                 }
                 .onFailure {
@@ -292,7 +240,7 @@ class BodyViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         selectedDate = date,
-                        error = it.message,
+                        error = it.toScreenError(),
                     )
                 }
         }
@@ -304,6 +252,15 @@ class BodyViewModel(
             selectedDate = selection.selectedDate,
         )
     }
+}
+
+private fun BodyUiState.withDisplay(): BodyUiState {
+    val query = PeriodLoadQuery(
+        range = selectedRange,
+        anchorDate = selectedDate,
+        weekPeriodMode = weekPeriodMode,
+    )
+    return copy(display = BodyPresentationMapper.build(query = query, state = this))
 }
 
 private fun BodyUiState.withDeletedBodyMeasurementEntry(
@@ -323,94 +280,4 @@ private fun BodyUiState.withDeletedBodyMeasurementEntry(
             bodyFatEntries = bodyFatEntries.filterNot { it.id == entryId },
             error = null,
         )
-    }
-
-private data class BodySummary(
-    val latestWeightKg: Double?,
-    val previousLatestWeightKg: Double?,
-    val firstWeightKg: Double?,
-    val weightChangeKg: Double?,
-    val latestBodyFatPercent: Double?,
-    val previousLatestBodyFatPercent: Double?,
-    val bmi: Double?,
-    val ffmi: Double?,
-    val adjustedFfmi: Double?,
-    val latestHeightCm: Double?,
-    val previousLatestHeightCm: Double?,
-    val latestLeanMassKg: Double?,
-    val previousLatestLeanMassKg: Double?,
-    val latestBmrKcal: Double?,
-    val previousLatestBmrKcal: Double?,
-    val latestBoneMassKg: Double?,
-    val previousLatestBoneMassKg: Double?,
-    val latestBodyWaterMassKg: Double?,
-    val previousLatestBodyWaterMassKg: Double?,
-    val previousBmi: Double?,
-)
-
-private fun BodyPeriodData.summary(
-    heightCm: Double?,
-    leanMassKg: Double?,
-    bmrKcal: Double?,
-    boneMassKg: Double?,
-    bodyWaterMassKg: Double?,
-): BodySummary {
-    val latestWeightKg = weightEntries.maxByOrNull { it.time }?.weightKg ?: this.latestWeightKg
-    val previousLatestWeightKg = previousWeightEntries.maxByOrNull { it.time }?.weightKg
-    val firstWeightKg = weightEntries.minByOrNull { it.time }?.weightKg
-    val latestHeightCm = heightEntries.maxByOrNull { it.time }?.heightCm ?: heightCm
-    val latestBodyFatPercent = bodyFatEntries.maxByOrNull { it.time }?.percent ?: this.latestBodyFatPercent
-    val ffmi = latestWeightKg.ffmiWith(heightCm, latestBodyFatPercent)
-    return BodySummary(
-        latestWeightKg = latestWeightKg,
-        previousLatestWeightKg = previousLatestWeightKg,
-        firstWeightKg = firstWeightKg,
-        weightChangeKg = if (latestWeightKg != null && firstWeightKg != null && latestWeightKg != firstWeightKg) {
-            latestWeightKg - firstWeightKg
-        } else {
-            null
-        },
-        latestBodyFatPercent = latestBodyFatPercent,
-        previousLatestBodyFatPercent = previousBodyFatEntries.maxByOrNull { it.time }?.percent,
-        bmi = latestWeightKg.bmiWith(heightCm),
-        ffmi = ffmi,
-        adjustedFfmi = ffmi.adjustedFfmiWith(heightCm),
-        latestHeightCm = latestHeightCm,
-        previousLatestHeightCm = previousHeightEntries.maxByOrNull { it.time }?.heightCm,
-        latestLeanMassKg = leanMassEntries.maxByOrNull { it.time }?.massKg ?: leanMassKg,
-        previousLatestLeanMassKg = previousLeanMassEntries.maxByOrNull { it.time }?.massKg,
-        latestBmrKcal = bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: bmrKcal,
-        previousLatestBmrKcal = previousBmrEntries.maxByOrNull { it.time }?.kcalPerDay,
-        latestBoneMassKg = boneMassEntries.maxByOrNull { it.time }?.massKg ?: boneMassKg,
-        previousLatestBoneMassKg = previousBoneMassEntries.maxByOrNull { it.time }?.massKg,
-        latestBodyWaterMassKg = bodyWaterMassEntries.maxByOrNull { it.time }?.massKg ?: bodyWaterMassKg,
-        previousLatestBodyWaterMassKg = previousBodyWaterMassEntries.maxByOrNull { it.time }?.massKg,
-        previousBmi = previousLatestWeightKg.bmiWith(heightCm),
-    )
-}
-
-private fun Double?.bmiWith(heightCm: Double?): Double? {
-    val weight = this ?: return null
-    val height = heightCm ?: return null
-    if (height <= 0.0) return null
-    val heightMeters = height / 100.0
-    return weight / (heightMeters * heightMeters)
-}
-
-private fun Double?.ffmiWith(heightCm: Double?, bodyFatPercent: Double?): Double? {
-    val weight = this ?: return null
-    val height = heightCm ?: return null
-    val bodyFat = bodyFatPercent ?: return null
-    if (weight <= 0.0 || height <= 0.0 || bodyFat < 0.0 || bodyFat >= 100.0) return null
-    val heightMeters = height / 100.0
-    val fatFreeMassKg = weight * (1.0 - bodyFat / 100.0)
-    return fatFreeMassKg / (heightMeters * heightMeters)
-}
-
-private fun Double?.adjustedFfmiWith(heightCm: Double?): Double? {
-    val ffmi = this ?: return null
-    val height = heightCm ?: return null
-    if (height <= 0.0) return null
-    val heightMeters = height / 100.0
-    return ffmi + (6.3 * (1.8 - heightMeters))
-}
+    }.withDisplay()

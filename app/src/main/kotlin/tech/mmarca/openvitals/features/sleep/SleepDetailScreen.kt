@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.ErrorMessage
@@ -35,7 +36,7 @@ fun SleepDetailScreen(
 
     when {
         state.isLoading -> FullScreenLoading()
-        error != null -> ErrorMessage(message = error)
+        error != null -> ErrorMessage(message = error.resolve().orEmpty())
         session != null -> SleepDetailContent(
             session = session,
             unitFormatter = unitFormatter,
