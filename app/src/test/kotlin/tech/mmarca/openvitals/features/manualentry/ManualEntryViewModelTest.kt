@@ -28,10 +28,10 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
-import tech.mmarca.openvitals.data.repository.MindfulnessRepository
-import tech.mmarca.openvitals.data.repository.NutritionRepository
+import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)

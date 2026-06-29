@@ -19,7 +19,7 @@ import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.query.CyclePeriodData
-import tech.mmarca.openvitals.data.repository.CycleRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 

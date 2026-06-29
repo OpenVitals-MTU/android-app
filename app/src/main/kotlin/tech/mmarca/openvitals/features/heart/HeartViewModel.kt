@@ -32,7 +32,7 @@ import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
-import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadRequest
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadResult
 import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase

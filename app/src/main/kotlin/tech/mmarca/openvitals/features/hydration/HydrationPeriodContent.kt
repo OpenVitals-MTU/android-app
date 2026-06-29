@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -103,7 +104,13 @@ internal fun LazyListScope.hydrationPeriodContent(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 date = { it.date },
                 value = { it.liters },
-                modifier = modifier,
+                modifier = modifier.then(
+                    if (state.selectedRange == TimeRange.WEEK) {
+                        Modifier.testTag("hydration_week_period_content")
+                    } else {
+                        Modifier
+                    },
+                ),
                 selectedDate = chartDaySelection.selectedDate,
                 onDateSelected = chartDaySelection.onDateSelected,
                 valueFormatter = { unitFormatter.hydration(it).text },

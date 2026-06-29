@@ -84,6 +84,16 @@ See [clean-architecture-refactor.md](clean-architecture-refactor.md).
 - Room mirror of raw Health Connect records
 - General background sync beyond cache + import workers
 
+## Incremental follow-ups (June 2026)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Repository interfaces for Nutrition, Mindfulness, Cycle, Vitals | [x] | `contract/*` + `*Impl` + Hilt `@Binds` |
+| Compose UI: hydration week + entry form | [x] | `HydrationScreenWeekTest`, `HydrationEntryFormTest`; `MetricDetailScaffoldTest` already covered scaffold |
+| Split manual-entry screens | [x] partial | `MindfulnessEntryContent.kt`, `HydrationEntryFormContent.kt`; routes ~60–85 lines |
+| Split settings / achievements screens | [ ] | `SettingsScreen.kt`, `AchievementsScreen.kt` still large |
+| More granular collection pilots | [ ] | Extend beyond Dashboard + Heart if profiling shows jank |
+
 ## Migration tracker (gap closure program)
 
 Verify before each PR: `.\gradlew.bat verifyLocalApp` (see [development.md](../development.md)).
@@ -130,9 +140,9 @@ Verify before each PR: `.\gradlew.bat verifyLocalApp` (see [development.md](../d
 | 4 | `ScreenError` rollout complete | [x] |
 | 5 | `domain/query/*PeriodData` | [x] |
 | 6 | `LoadHeartPeriodUseCase`, `LoadDashboardDayUseCase`, `LoadSleepPeriodUseCase` | [x] |
-| 7 | Repository interfaces (Sleep, Activity, Health, Heart, Hydration, Body) | [x] |
+| 7 | Repository interfaces (Sleep, Activity, Health, Heart, Hydration, Body, Nutrition, Mindfulness, Cycle, Vitals) | [x] |
 | 8 | `DashboardAggregator` + slim `HealthRepository` | [x] |
-| 9 | Compose UI tests for `MetricDetailScaffold` | [x] |
+| 9 | Compose UI tests for `MetricDetailScaffold` + sleep/hydration week + hydration entry form | [x] |
 
 ## Documented exceptions
 

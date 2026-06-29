@@ -14,7 +14,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.VitalsPeriodData
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
-import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.PreferencesRepository

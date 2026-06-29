@@ -6,7 +6,7 @@ import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
-import tech.mmarca.openvitals.data.repository.NutritionRepository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify

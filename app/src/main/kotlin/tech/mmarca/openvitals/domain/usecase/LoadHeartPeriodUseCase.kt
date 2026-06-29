@@ -21,7 +21,7 @@ import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 import tech.mmarca.openvitals.domain.query.VitalsPeriodData
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
-import tech.mmarca.openvitals.data.repository.VitalsRepository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 
 sealed interface HeartPeriodLoadRequest {
     data object Combined : HeartPeriodLoadRequest

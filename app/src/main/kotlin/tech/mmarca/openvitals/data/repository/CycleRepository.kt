@@ -1,4 +1,5 @@
 package tech.mmarca.openvitals.data.repository
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
@@ -29,17 +30,17 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 
 @Singleton
-class CycleRepository @Inject constructor(
+class CycleRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : CycleRepository {
 
     companion object {
         private const val TAG = "CycleRepository"
     }
 
-    val phase4Permissions: Set<String> get() = hc.phase4Permissions
+    override val phase4Permissions: Set<String> get() = hc.phase4Permissions
 
     private val readMenstruationPermission = HealthPermission.getReadPermission(MenstruationFlowRecord::class)
     private val readOvulationTestPermission = HealthPermission.getReadPermission(OvulationTestRecord::class)
@@ -53,14 +54,14 @@ class CycleRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun missingPermissions(): Set<String> {
+    override suspend fun missingPermissions(): Set<String> {
         val granted = grantedPermissionsIfAvailable()
         return phase4Permissions.filterNot { it in granted }.toSet()
     }
 
-    suspend fun loadCyclePeriod(
+    override suspend fun loadCyclePeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): CyclePeriodData {
         val granted = grantedPermissionsIfAvailable()
         val key = periodSummaryKey(
@@ -78,10 +79,10 @@ class CycleRepository @Inject constructor(
         ) {
             coroutineScope {
             val data = async { loadCycleData(query.windows.current.start, query.windows.current.end) }
-            val missingPermissions = async { missingPermissions() }
+            val missing = async { missingPermissions() }
             CyclePeriodData(
                 data = data.await(),
-                missingPermissions = missingPermissions.await(),
+                missingPermissions = missing.await(),
             )
             }
         }
@@ -94,7 +95,7 @@ class CycleRepository @Inject constructor(
             tag = TAG,
         )
 
-    suspend fun loadCycleData(start: LocalDate, end: LocalDate): CycleData {
+    override suspend fun loadCycleData(start: LocalDate, end: LocalDate): CycleData {
         val granted = grantedPermissionsIfAvailable()
         val zone = ZoneId.systemDefault()
         val startInstant = start.atStartOfDay(zone).toInstant()

@@ -1,0 +1,630 @@
+package tech.mmarca.openvitals.features.manualentry.hydration
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.LocalCafe
+import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.features.manualentry.ManualEntryTimestampFields
+import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
+import tech.mmarca.openvitals.ui.theme.HydrationColor
+
+private val HydrationContainerIconSlotSize = 30.dp
+
+@Composable
+internal fun HydrationTrackerCard(
+    state: HydrationEntryUiState,
+    unitFormatter: UnitFormatter,
+    onSelectBeverage: (HydrationBeverage) -> Unit,
+    onSelectContainer: (HydrationContainerOption) -> Unit,
+    onAddContainerEntry: (HydrationContainerOption) -> Unit,
+    onAddSelectedEntry: () -> Unit,
+    onAddCustomEntry: (Double) -> Unit,
+    onEntryTimeChanged: (java.time.Instant) -> Unit,
+    onRequestWritePermission: () -> Unit,
+    onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val enabled = state.canWriteHydration && !state.isSavingEntry && !state.isCheckingPermission
+    var addingCustomAmount by remember { mutableStateOf(false) }
+    OpenVitalsCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("hydration_entry_tracker"),
+
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalDrink,
+                    contentDescription = null,
+                    tint = HydrationColor,
+                    modifier = Modifier.size(22.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .weight(1f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.hydration_tracker_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(
+                            if (state.canWriteHydration) {
+                                R.string.hydration_tracker_subtitle
+                            } else {
+                                R.string.hydration_tracker_permission_needed
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (!state.canWriteHydration && !state.isCheckingPermission) {
+                    OpenVitalsOutlinedButton(onClick = onRequestWritePermission) {
+                        Text(stringResource(R.string.action_grant))
+                    }
+                }
+            }
+
+            HydrationTodayCounter(
+                liters = state.todayHydrationLiters,
+                dailyGoalLiters = state.dailyGoalLiters,
+                unitFormatter = unitFormatter,
+            )
+
+            HydrationContainerCarousel(
+                options = state.containerOptions,
+                selectedContainer = state.selectedContainer,
+                unitFormatter = unitFormatter,
+                enabled = if (state.isEditMode) !state.isSavingEntry else enabled,
+                highlightSelection = state.isEditMode,
+                onSelectContainer = { container ->
+                    if (state.isEditMode) {
+                        onSelectContainer(container)
+                    } else {
+                        onAddContainerEntry(container)
+                    }
+                },
+                onUpdateContainerSize = onUpdateContainerSize,
+            )
+
+            HydrationBeverageCarousel(
+                beverages = state.beverageOptions,
+                selectedBeverage = state.selectedBeverage,
+                isSavingEntry = state.isSavingEntry,
+                onSelectBeverage = onSelectBeverage,
+            )
+
+            if (state.isEditMode) {
+                ManualEntryTimestampFields(
+                    timestamp = state.editTime,
+                    enabled = !state.isSavingEntry,
+                    onTimestampChanged = onEntryTimeChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                OpenVitalsButton(
+                    onClick = onAddSelectedEntry,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_save),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            } else {
+                OpenVitalsButton(
+                    onClick = { addingCustomAmount = true },
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.action_add_custom),
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            }
+
+            if (addingCustomAmount) {
+                HydrationCustomAmountDialog(
+                    initialMilliliters = state.lastCustomAmountMilliliters
+                        ?: state.selectedContainer.volumeMilliliters,
+                    onDismiss = { addingCustomAmount = false },
+                    onSave = { milliliters ->
+                        addingCustomAmount = false
+                        onAddCustomEntry(milliliters)
+                    },
+                )
+            }
+
+            HydrationWriteInfo(
+                originalAmount = hydrationAmountLabel(state.selectedContainer.volumeLiters, unitFormatter),
+                effectiveAmount = hydrationAmountLabel(state.selectedContainerEffectiveLiters, unitFormatter),
+            )
+
+            state.entryError?.let { entryError ->
+                Text(
+                    text = hydrationEntryErrorText(entryError, state.writeError),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun HydrationTodayCounter(
+    liters: Double,
+    dailyGoalLiters: Double,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val todayHydration = unitFormatter.hydration(liters)
+    val dailyGoal = unitFormatter.hydration(dailyGoalLiters)
+    val targetProgress = if (dailyGoalLiters > 0.0) {
+        (liters / dailyGoalLiters).toFloat().coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val progress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = tween(durationMillis = 650),
+        label = "HydrationTodayGoalProgress",
+    )
+    val trackColor = MaterialTheme.colorScheme.outlineVariant
+    val progressColor = HydrationColor.copy(alpha = 0.86f)
+    val strokeWidth = with(LocalDensity.current) { 5.dp.toPx() }
+    val progressStroke = remember(strokeWidth) {
+        Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    }
+    OpenVitalsSurface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "${todayHydration.text} / ${dailyGoal.text}",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
+            )
+            LinearWavyProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(18.dp),
+                color = progressColor,
+                trackColor = trackColor,
+                stroke = progressStroke,
+                trackStroke = progressStroke,
+                wavelength = 34.dp,
+                waveSpeed = 34.dp,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun HydrationBeverageCarousel(
+    beverages: List<HydrationBeverage>,
+    selectedBeverage: HydrationBeverage,
+    isSavingEntry: Boolean,
+    onSelectBeverage: (HydrationBeverage) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.hydration_drink_type),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 2.dp, end = 24.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            items(beverages, key = { it.name }) { beverage ->
+                FilterChip(
+                    selected = beverage == selectedBeverage,
+                    onClick = { onSelectBeverage(beverage) },
+                    label = { Text(stringResource(beverage.labelRes())) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = beverage.icon(),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    enabled = !isSavingEntry,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun HydrationContainerCarousel(
+    options: List<HydrationContainerOption>,
+    selectedContainer: HydrationContainerOption,
+    unitFormatter: UnitFormatter,
+    enabled: Boolean,
+    highlightSelection: Boolean,
+    onSelectContainer: (HydrationContainerOption) -> Unit,
+    onUpdateContainerSize: (HydrationContainerOption, Double) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var editingContainer by remember { mutableStateOf<HydrationContainerOption?>(null) }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.hydration_container_size),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 2.dp, end = 24.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            items(options, key = { it.id }) { option ->
+                HydrationContainerOptionItem(
+                    option = option,
+                    selected = highlightSelection && option == selectedContainer,
+                    unitFormatter = unitFormatter,
+                    enabled = enabled,
+                    onSelect = { onSelectContainer(option) },
+                    onEdit = { editingContainer = option },
+                )
+            }
+        }
+    }
+
+    editingContainer?.let { option ->
+        HydrationContainerSizeDialog(
+            option = option,
+            onDismiss = { editingContainer = null },
+            onSave = { milliliters ->
+                onUpdateContainerSize(option, milliliters)
+                editingContainer = null
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun HydrationContainerOptionItem(
+    option: HydrationContainerOption,
+    selected: Boolean,
+    unitFormatter: UnitFormatter,
+    enabled: Boolean,
+    onSelect: () -> Unit,
+    onEdit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
+
+    OpenVitalsSurface(
+        modifier = modifier
+            .width(132.dp)
+            .height(132.dp)
+            .combinedClickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onSelect,
+                onLongClick = onEdit,
+            ),
+        shape = MaterialTheme.shapes.medium,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(1.dp, borderColor),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(
+                modifier = Modifier.size(HydrationContainerIconSlotSize),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = option.icon(),
+                    contentDescription = null,
+                    modifier = Modifier.size(option.iconSize()),
+                )
+            }
+            Text(
+                text = stringResource(option.labelRes()),
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+                minLines = 2,
+                maxLines = 2,
+            )
+            Text(
+                text = hydrationAmountLabel(option.volumeLiters, unitFormatter),
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun HydrationContainerSizeDialog(
+    option: HydrationContainerOption,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit,
+) {
+    HydrationAmountDialog(
+        title = stringResource(R.string.hydration_container_edit_title),
+        initialMilliliters = option.volumeMilliliters,
+        onDismiss = onDismiss,
+        onSave = onSave,
+    )
+}
+
+@Composable
+internal fun HydrationCustomAmountDialog(
+    initialMilliliters: Double,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit,
+) {
+    HydrationAmountDialog(
+        title = stringResource(R.string.hydration_custom_amount_title),
+        initialMilliliters = initialMilliliters,
+        onDismiss = onDismiss,
+        onSave = onSave,
+    )
+}
+
+@Composable
+internal fun HydrationAmountDialog(
+    title: String,
+    initialMilliliters: Double,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit,
+) {
+    var amountText by remember(initialMilliliters) {
+        mutableStateOf(initialMilliliters.roundToInt().toString())
+    }
+    val amount = amountText.replace(',', '.').toDoubleOrNull()
+    val isAmountValid = amount?.let(::isValidHydrationContainerMilliliters) == true
+    val showError = amountText.isNotBlank() && !isAmountValid
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(title)
+        },
+        text = {
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { amountText = it },
+                label = { Text(stringResource(R.string.hydration_container_amount_ml)) },
+                isError = showError,
+                supportingText = if (showError) {
+                    {
+                        Text(stringResource(R.string.hydration_container_invalid_amount))
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            OpenVitalsTextButton(
+                onClick = {
+                    amount?.takeIf(::isValidHydrationContainerMilliliters)?.let(onSave)
+                },
+                enabled = isAmountValid,
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            OpenVitalsTextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+internal fun HydrationWriteInfo(
+    originalAmount: String,
+    effectiveAmount: String,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        OpenVitalsTextButton(onClick = { expanded = !expanded }) {
+            Text(stringResource(if (expanded) R.string.action_close else R.string.action_details))
+        }
+        AnimatedVisibility(visible = expanded) {
+            OpenVitalsSurface(
+                shape = MaterialTheme.shapes.medium,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                contentPadding = PaddingValues(12.dp),
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.hydration_bhi_write_explanation,
+                        originalAmount,
+                        effectiveAmount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun hydrationEntryErrorText(
+    error: HydrationEntryError,
+    writeError: ScreenError?,
+): String = when (error) {
+    HydrationEntryError.INVALID_AMOUNT -> stringResource(R.string.hydration_invalid_amount)
+    HydrationEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.hydration_tracker_permission_needed)
+    HydrationEntryError.WRITE_FAILED -> stringResource(
+        R.string.hydration_write_failed,
+        writeError.resolve() ?: stringResource(R.string.unknown_error),
+    )
+}
+
+internal fun HydrationBeverage.labelRes(): Int = when (this) {
+    HydrationBeverage.WATER -> R.string.hydration_beverage_water
+    HydrationBeverage.COFFEE -> R.string.hydration_beverage_coffee
+    HydrationBeverage.TEA -> R.string.hydration_beverage_tea
+    HydrationBeverage.SOFT_DRINK -> R.string.hydration_beverage_soft_drink
+    HydrationBeverage.ENERGY_DRINK -> R.string.hydration_beverage_energy_drink
+    HydrationBeverage.SPORTS_DRINK -> R.string.hydration_beverage_sports_drink
+    HydrationBeverage.ORAL_REHYDRATION_SOLUTION -> R.string.hydration_beverage_ors
+    HydrationBeverage.MILK -> R.string.hydration_beverage_milk
+    HydrationBeverage.FRUIT_JUICE -> R.string.hydration_beverage_fruit_juice
+}
+
+internal fun HydrationBeverage.icon(): ImageVector = when (this) {
+    HydrationBeverage.COFFEE,
+    HydrationBeverage.TEA -> Icons.Outlined.LocalCafe
+    else -> Icons.Outlined.LocalDrink
+}
+
+internal fun HydrationContainerOption.labelRes(): Int = when (id) {
+    "coffee_cup" -> R.string.hydration_container_coffee_cup
+    "tea_cup" -> R.string.hydration_container_tea_cup
+    "small_cup" -> R.string.hydration_container_small_cup
+    "medium_glass" -> R.string.hydration_container_medium_glass
+    "large_glass" -> R.string.hydration_container_large_glass
+    "water_bottle" -> R.string.hydration_container_water_bottle
+    "large_bottle" -> R.string.hydration_container_large_bottle
+    else -> R.string.hydration_container_custom
+}
+
+internal fun HydrationContainerOption.icon(): ImageVector =
+    if (id == "coffee_cup" || id == "tea_cup" || volumeMilliliters <= 180.0) {
+        Icons.Outlined.LocalCafe
+    } else {
+        Icons.Outlined.LocalDrink
+    }
+
+internal fun HydrationContainerOption.iconSize() = when {
+    volumeMilliliters <= 180.0 -> 22.dp
+    volumeMilliliters < 500.0 -> 26.dp
+    else -> 30.dp
+}
+
+internal fun hydrationAmountLabel(liters: Double, unitFormatter: UnitFormatter): String =
+    if (unitFormatter.unitSystem() == UnitSystem.METRIC && liters < 1.0) {
+        "${unitFormatter.count((liters * 1000.0).roundToInt())} ml"
+    } else {
+        unitFormatter.hydration(liters).text
+    }

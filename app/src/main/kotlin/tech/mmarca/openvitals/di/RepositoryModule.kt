@@ -7,16 +7,24 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import tech.mmarca.openvitals.data.repository.ActivityRepositoryImpl
 import tech.mmarca.openvitals.data.repository.BodyRepositoryImpl
+import tech.mmarca.openvitals.data.repository.CycleRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HealthRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HeartRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HydrationRepositoryImpl
+import tech.mmarca.openvitals.data.repository.MindfulnessRepositoryImpl
+import tech.mmarca.openvitals.data.repository.NutritionRepositoryImpl
 import tech.mmarca.openvitals.data.repository.SleepRepositoryImpl
+import tech.mmarca.openvitals.data.repository.VitalsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -45,4 +53,20 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBodyRepository(impl: BodyRepositoryImpl): BodyRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNutritionRepository(impl: NutritionRepositoryImpl): NutritionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMindfulnessRepository(impl: MindfulnessRepositoryImpl): MindfulnessRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCycleRepository(impl: CycleRepositoryImpl): CycleRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindVitalsRepository(impl: VitalsRepositoryImpl): VitalsRepository
 }

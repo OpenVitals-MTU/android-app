@@ -1,4 +1,5 @@
 package tech.mmarca.openvitals.data.repository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
@@ -26,11 +27,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class NutritionRepository @Inject constructor(
+class NutritionRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : NutritionRepository {
 
     companion object {
         private const val TAG = "NutritionRepository"
@@ -38,14 +39,14 @@ class NutritionRepository @Inject constructor(
 
     private val readNutritionPermission = HealthPermission.getReadPermission(NutritionRecord::class)
     private val writeNutritionPermission = HealthPermission.getWritePermission(NutritionRecord::class)
-    val nutritionWritePermissions: Set<String> get() = setOf(writeNutritionPermission)
+    override val nutritionWritePermissions: Set<String> get() = setOf(writeNutritionPermission)
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun loadNutritionPeriod(
+    override suspend fun loadNutritionPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): NutritionPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -84,7 +85,7 @@ class NutritionRepository @Inject constructor(
             tag = TAG,
         )
 
-    suspend fun loadDailyMacros(start: LocalDate, end: LocalDate): List<DailyMacros> {
+    override suspend fun loadDailyMacros(start: LocalDate, end: LocalDate): List<DailyMacros> {
         val granted = grantedPermissionsIfAvailable()
         return loadDailyMacros(start, end, granted)
     }
@@ -101,7 +102,7 @@ class NutritionRepository @Inject constructor(
         return hc.readDailyMacros(start, end)
     }
 
-    suspend fun loadNutritionEntries(start: LocalDate, end: LocalDate): List<NutritionEntry> {
+    override suspend fun loadNutritionEntries(start: LocalDate, end: LocalDate): List<NutritionEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadNutritionEntries(start, end, granted)
     }
@@ -121,10 +122,10 @@ class NutritionRepository @Inject constructor(
         return hc.readNutritionEntries(startInstant, endInstant)
     }
 
-    suspend fun hasNutritionWritePermission(): Boolean =
+    override suspend fun hasNutritionWritePermission(): Boolean =
         writeNutritionPermission in grantedPermissionsIfAvailable()
 
-    suspend fun writeCarbsEntry(request: NutritionWriteRequest): String {
+    override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()
         if (writeNutritionPermission !in granted) {
             Log.w(TAG, "Skipping writeCarbsEntry missingCount=1")

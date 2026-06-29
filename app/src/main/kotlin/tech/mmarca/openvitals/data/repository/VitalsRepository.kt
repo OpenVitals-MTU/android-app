@@ -1,4 +1,5 @@
 package tech.mmarca.openvitals.data.repository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
@@ -41,18 +42,18 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
-class VitalsRepository @Inject constructor(
+class VitalsRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
     @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
-) {
+) : VitalsRepository {
 
     companion object {
         private const val TAG = "VitalsRepository"
     }
 
-    val phase3Permissions: Set<String> get() = hc.phase3Permissions
+    override val phase3Permissions: Set<String> get() = hc.phase3Permissions
 
     private val readBloodPressurePermission = HealthPermission.getReadPermission(BloodPressureRecord::class)
     private val readSpO2Permission = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
@@ -66,7 +67,7 @@ class VitalsRepository @Inject constructor(
     private val writeRespiratoryRatePermission = HealthPermission.getWritePermission(RespiratoryRateRecord::class)
     private val writeBodyTemperaturePermission = HealthPermission.getWritePermission(BodyTemperatureRecord::class)
 
-    fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> = setOf(
+    override fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> = setOf(
         when (type) {
             VitalsMeasurementType.BLOOD_PRESSURE -> writeBloodPressurePermission
             VitalsMeasurementType.SPO2 -> writeSpO2Permission
@@ -78,15 +79,15 @@ class VitalsRepository @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    suspend fun missingPermissions(): Set<String> {
+    override suspend fun missingPermissions(): Set<String> {
         val granted = grantedPermissionsIfAvailable()
         return phase3Permissions.filterNot { it in granted }.toSet()
     }
 
-    suspend fun loadVitalsPeriod(
+    override suspend fun loadVitalsPeriod(
         query: PeriodLoadQuery,
         metric: VitalsPeriodMetric,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
+        refreshMode: RefreshMode,
     ): VitalsPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -215,7 +216,7 @@ class VitalsRepository @Inject constructor(
         )
     }
 
-    suspend fun loadBloodPressure(start: LocalDate, end: LocalDate): List<BloodPressureEntry> {
+    override suspend fun loadBloodPressure(start: LocalDate, end: LocalDate): List<BloodPressureEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBloodPressure(start, end, granted)
     }
@@ -232,7 +233,7 @@ class VitalsRepository @Inject constructor(
         return hc.readBloodPressureEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadSpO2(start: LocalDate, end: LocalDate): List<SpO2Entry> {
+    override suspend fun loadSpO2(start: LocalDate, end: LocalDate): List<SpO2Entry> {
         val granted = grantedPermissionsIfAvailable()
         return loadSpO2(start, end, granted)
     }
@@ -249,7 +250,7 @@ class VitalsRepository @Inject constructor(
         return hc.readSpO2Entries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadRespiratoryRate(start: LocalDate, end: LocalDate): List<RespiratoryRateEntry> {
+    override suspend fun loadRespiratoryRate(start: LocalDate, end: LocalDate): List<RespiratoryRateEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadRespiratoryRate(start, end, granted)
     }
@@ -266,7 +267,7 @@ class VitalsRepository @Inject constructor(
         return hc.readRespiratoryRateEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadBodyTemperature(start: LocalDate, end: LocalDate): List<BodyTempEntry> {
+    override suspend fun loadBodyTemperature(start: LocalDate, end: LocalDate): List<BodyTempEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBodyTemperature(start, end, granted)
     }
@@ -283,7 +284,7 @@ class VitalsRepository @Inject constructor(
         return hc.readBodyTemperatureEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadVo2Max(start: LocalDate, end: LocalDate): List<Vo2MaxEntry> {
+    override suspend fun loadVo2Max(start: LocalDate, end: LocalDate): List<Vo2MaxEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadVo2Max(start, end, granted)
     }
@@ -300,7 +301,7 @@ class VitalsRepository @Inject constructor(
         return hc.readVo2MaxEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadBloodGlucose(start: LocalDate, end: LocalDate): List<BloodGlucoseEntry> {
+    override suspend fun loadBloodGlucose(start: LocalDate, end: LocalDate): List<BloodGlucoseEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadBloodGlucose(start, end, granted)
     }
@@ -317,7 +318,7 @@ class VitalsRepository @Inject constructor(
         return hc.readBloodGlucoseEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun loadSkinTemperature(start: LocalDate, end: LocalDate): List<SkinTemperatureEntry> {
+    override suspend fun loadSkinTemperature(start: LocalDate, end: LocalDate): List<SkinTemperatureEntry> {
         val granted = grantedPermissionsIfAvailable()
         return loadSkinTemperature(start, end, granted)
     }
@@ -334,10 +335,10 @@ class VitalsRepository @Inject constructor(
         return hc.readSkinTemperatureEntries(start.toInstant(), end.plusDays(1).toInstant())
     }
 
-    suspend fun hasVitalsWritePermission(type: VitalsMeasurementType): Boolean =
+    override suspend fun hasVitalsWritePermission(type: VitalsMeasurementType): Boolean =
         vitalsWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
 
-    suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String {
+    override suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String {
         val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
@@ -348,7 +349,7 @@ class VitalsRepository @Inject constructor(
         }
     }
 
-    suspend fun loadVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? {
+    override suspend fun loadVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? {
         val readPermission = when (type) {
             VitalsMeasurementType.BLOOD_PRESSURE -> readBloodPressurePermission
             VitalsMeasurementType.SPO2 -> readSpO2Permission
@@ -363,7 +364,7 @@ class VitalsRepository @Inject constructor(
         return hc.readVitalsMeasurementEntry(type, id)
     }
 
-    suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) {
+    override suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) {
         val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
@@ -373,7 +374,7 @@ class VitalsRepository @Inject constructor(
         queryCache.invalidateOperations("dashboard")
     }
 
-    suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) {
+    override suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) {
         val missingPermissions = vitalsWritePermissions(type) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping deleteVitalsMeasurementEntry type=$type missingCount=${missingPermissions.size}")
