@@ -78,6 +78,13 @@ class OnboardingViewModel @Inject constructor(
                 required = true,
             ),
             OnboardingPermissionCategory(
+                id = "vitals",
+                titleRes = R.string.onboarding_category_vitals,
+                descriptionRes = R.string.onboarding_category_vitals_desc,
+                permissions = repository.vitalsPermissions,
+                required = true,
+            ),
+            OnboardingPermissionCategory(
                 id = "body",
                 titleRes = R.string.onboarding_category_body,
                 descriptionRes = R.string.onboarding_category_body_desc,
@@ -127,13 +134,6 @@ class OnboardingViewModel @Inject constructor(
                 descriptionRes = R.string.onboarding_category_additional_data_access_desc,
                 permissions = repository.additionalDataAccessPermissions + repository.routePermissions,
                 manualPermissions = repository.routePermissions,
-                required = false,
-            ),
-            OnboardingPermissionCategory(
-                id = "vitals",
-                titleRes = R.string.onboarding_category_vitals,
-                descriptionRes = R.string.onboarding_category_vitals_desc,
-                permissions = repository.vitalsPermissions,
                 required = false,
             ),
             OnboardingPermissionCategory(

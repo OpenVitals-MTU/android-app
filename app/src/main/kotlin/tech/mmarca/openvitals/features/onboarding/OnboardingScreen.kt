@@ -73,6 +73,7 @@ fun OnboardingScreen(
     val minimumPermissionsGranted = missingMinimumPermissions.isEmpty()
     val missingOnboardingPermissions = onboardingPermissions - state.grantedPermissions
     val missingRequestablePermissions = missingOnboardingPermissions - manualPermissions
+    val missingOptionalPermissions = missingRequestablePermissions - minimumOnboardingPermissions
     val missingManualPermissions = missingOnboardingPermissions.intersect(manualPermissions)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
@@ -219,29 +220,29 @@ fun OnboardingScreen(
                 if (minimumPermissionsGranted) {
                     viewModel.completeOnboarding()
                     onOnboardingComplete()
-                } else if (missingRequestablePermissions.isNotEmpty()) {
-                    requestPermissions.launch(missingRequestablePermissions)
+                } else if (missingMinimumPermissions.isNotEmpty()) {
+                    requestPermissions.launch(missingMinimumPermissions)
                 } else if (missingManualPermissions.isNotEmpty()) {
                     openManualPermissionSettings()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = minimumPermissionsGranted ||
-                missingRequestablePermissions.isNotEmpty() ||
+                missingMinimumPermissions.isNotEmpty() ||
                 missingManualPermissions.isNotEmpty(),
         ) {
             Text(
                 when {
                     minimumPermissionsGranted -> stringResource(R.string.action_get_started)
-                    missingRequestablePermissions.isNotEmpty() -> stringResource(R.string.onboarding_grant_all)
+                    missingMinimumPermissions.isNotEmpty() -> stringResource(R.string.onboarding_grant_all)
                     else -> stringResource(R.string.onboarding_open_required_permissions)
                 }
             )
         }
 
-        if (missingRequestablePermissions.isNotEmpty() && !minimumPermissionsGranted) {
+        if (missingOptionalPermissions.isNotEmpty() && minimumPermissionsGranted) {
             OpenVitalsTonalButton(
-                onClick = { requestPermissions.launch(missingRequestablePermissions) },
+                onClick = { requestPermissions.launch(missingOptionalPermissions) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),

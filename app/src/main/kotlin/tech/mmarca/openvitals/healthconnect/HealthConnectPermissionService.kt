@@ -235,7 +235,7 @@ internal class HealthConnectPermissionService(
     )
 
     /** Minimum permissions to complete first-run onboarding */
-    val minimumOnboardingPermissions: Set<String> = corePermissions + heartPermissions
+    val minimumOnboardingPermissions: Set<String> = corePermissions + heartPermissions + vitalsPermissions
 
     /** Phase 1 - core metrics requested on first launch */
     val phase1Permissions: Set<String> = corePermissions

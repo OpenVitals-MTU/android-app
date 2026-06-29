@@ -201,6 +201,7 @@ class OnboardingViewModelTest {
             listOf(
                 R.string.onboarding_category_activity_sleep,
                 R.string.onboarding_category_heart_recovery,
+                R.string.onboarding_category_vitals,
                 R.string.onboarding_category_body,
                 R.string.onboarding_category_activity_extras,
                 R.string.onboarding_category_nutrition_hydration,
@@ -208,7 +209,6 @@ class OnboardingViewModelTest {
                 R.string.onboarding_category_data_import_write,
                 R.string.onboarding_category_mindfulness,
                 R.string.onboarding_category_additional_data_access,
-                R.string.onboarding_category_vitals,
                 R.string.onboarding_category_cycle_tracking,
             ),
             categories.map { it.titleRes },
@@ -224,7 +224,7 @@ class OnboardingViewModelTest {
         assertEquals(setOf("import_write"), categories.single { it.id == "data_import_write" }.permissions)
         assertEquals(setOf("route"), categories.single { it.id == "additional_data_access" }.manualPermissions)
         assertEquals(
-            setOf("activity_sleep", "heart_recovery"),
+            setOf("activity_sleep", "heart_recovery", "vitals"),
             categories.filter { it.required }.map { it.id }.toSet(),
         )
         assertEquals("cycle_tracking", categories.last().id)
@@ -247,12 +247,12 @@ class OnboardingViewModelTest {
             listOf(
                 "activity_sleep",
                 "heart_recovery",
+                "vitals",
                 "activity_extras",
                 "nutrition_hydration",
                 "manual_entry_write",
                 "data_import_write",
                 "additional_data_access",
-                "vitals",
                 "cycle_tracking",
             ),
             vm.permissionCategories.map { it.id },

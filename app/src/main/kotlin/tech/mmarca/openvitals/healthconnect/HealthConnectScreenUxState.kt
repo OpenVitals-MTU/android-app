@@ -32,11 +32,8 @@ fun buildHealthConnectScreenUxState(
 ): HealthConnectScreenUxState {
     val required = feature.requiredReadPermissions(manager)
     val missing = required - grantedPermissions
-    val hasMinimum = feature.hasMinimumAccess(manager, grantedPermissions)
     val gateRequired = when {
-        showDoubleCancelRecovery && !hasMinimum -> manager.minimumOnboardingPermissions
-        feature == HealthConnectFeature.DASHBOARD -> manager.minimumOnboardingPermissions
-        !hasMinimum -> manager.minimumOnboardingPermissions
+        feature == HealthConnectFeature.DASHBOARD -> emptySet()
         feature == HealthConnectFeature.MANUAL_ENTRY || feature == HealthConnectFeature.DATA_IMPORT -> required
         else -> emptySet()
     }
@@ -49,7 +46,6 @@ fun buildHealthConnectScreenUxState(
     )
     val unacknowledgedMissing = missing - acknowledgedPermissions
     val showContextual = accessGateMode == null &&
-        hasMinimum &&
         unacknowledgedMissing.isNotEmpty() &&
         feature != HealthConnectFeature.DASHBOARD &&
         feature != HealthConnectFeature.MANUAL_ENTRY &&

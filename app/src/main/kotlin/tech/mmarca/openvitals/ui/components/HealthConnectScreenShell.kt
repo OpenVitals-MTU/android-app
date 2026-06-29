@@ -131,7 +131,7 @@ fun HealthConnectScreenShell(
                 ContextualPermissionPrompt(
                     feature = uxState.feature,
                     onGrant = { onGrantPermissions(uxState.contextualPromptPermissions) },
-                    onDismiss = onDismissContextualPrompt,
+                    onDismiss = null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -147,7 +147,7 @@ fun HealthConnectScreenShell(
 fun ContextualPermissionPrompt(
     feature: HealthConnectFeature,
     onGrant: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val (titleRes, bodyRes) = contextualPermissionCopy(feature)

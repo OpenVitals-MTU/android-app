@@ -55,16 +55,7 @@ class HealthConnectScreenUxCoordinator @Inject constructor(
         permissionUxState.recordPermissionRequestGranted()
     }
 
-    suspend fun shouldShowNewPermissionsDialog(): Boolean {
-        if (!preferencesRepository.onboardingDone) return false
-        if (HealthConnectPermissionService.PERMISSION_SET_VERSION <= preferencesRepository.lastPromptedPermissionSetVersion) {
-            return false
-        }
-        if (healthRepository.availability() != HealthConnectAvailability.AVAILABLE) return false
-        val granted = healthRepository.grantedPermissions()
-        val missingRoutes = healthConnectManager.routePermissions - granted
-        return missingRoutes.isNotEmpty()
-    }
+    suspend fun shouldShowNewPermissionsDialog(): Boolean = false
 
     fun markNewPermissionsPrompted() {
         preferencesRepository.lastPromptedPermissionSetVersion = HealthConnectPermissionService.PERMISSION_SET_VERSION

@@ -91,6 +91,7 @@ class DashboardViewModel @Inject constructor(
     private var deferredLoadGeneration = 0L
     private var requestedDeferredWidgets: Set<DashboardWidgetId> = emptySet()
     private var loadedDeferredWidgets: Set<DashboardWidgetId> = emptySet()
+    private var permissionPromptDismissedForLoad = false
 
     init {
         load(_uiState.value.selectedDate)
@@ -169,6 +170,7 @@ class DashboardViewModel @Inject constructor(
             deferredLoadContext = null
             requestedDeferredWidgets = emptySet()
             loadedDeferredWidgets = emptySet()
+            permissionPromptDismissedForLoad = false
             val current = _uiState.value
             val availability = repository.availability()
             val granted = if (availability == HealthConnectAvailability.AVAILABLE) {
@@ -257,6 +259,7 @@ class DashboardViewModel @Inject constructor(
         val missing = _uiState.value.unacknowledgedWidgetPermissions
         if (missing.isEmpty()) return
         prefs.acknowledgePermissionsFor(HealthConnectFeature.DASHBOARD, missing)
+        permissionPromptDismissedForLoad = true
         _uiState.value = _uiState.value.copy(unacknowledgedWidgetPermissions = emptySet())
     }
 
@@ -286,7 +289,8 @@ class DashboardViewModel @Inject constructor(
     }
 
     private fun unacknowledgedWidgetPermissions(missingPermissions: Set<String>): Set<String> =
-        missingPermissions - prefs.acknowledgedPermissionsFor(HealthConnectFeature.DASHBOARD)
+        if (permissionPromptDismissedForLoad) emptySet()
+        else missingPermissions - prefs.acknowledgedPermissionsFor(HealthConnectFeature.DASHBOARD)
 
     fun toggleDashboardEdit() {
         _uiState.value = _uiState.value.copy(isEditingDashboard = !_uiState.value.isEditingDashboard)

@@ -155,15 +155,12 @@ fun resolveHealthConnectAccessGateMode(
 ): HealthConnectAccessGateMode? {
     if (availability != HealthConnectAvailability.AVAILABLE) return null
     if (!syncEnabled) return HealthConnectAccessGateMode.SYNC_PAUSED
-    if (showDoubleCancelRecovery && requiredPermissions.isNotEmpty()) {
+    val missing = requiredPermissions - grantedPermissions
+    if (missing.isEmpty()) return null
+    if (showDoubleCancelRecovery) {
         return HealthConnectAccessGateMode.DOUBLE_CANCEL_RECOVERY
     }
-    val missing = requiredPermissions - grantedPermissions
-    return if (missing.isNotEmpty()) {
-        HealthConnectAccessGateMode.INSUFFICIENT_ACCESS
-    } else {
-        null
-    }
+    return HealthConnectAccessGateMode.INSUFFICIENT_ACCESS
 }
 
 fun shouldShowDashboardHealthConnectPromo(
