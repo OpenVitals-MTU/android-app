@@ -28,7 +28,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 ## Highlights
 
 - Summary dashboard for activity, recovery, intake, body, heart, vitals, mindfulness, and optional cycle data
-- Period detail screens with `Day / Week / Month / Year` navigation
+- Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
 - Daily Readiness with Body Energy, Training Readiness, physiological stress, HRV status, intensity minutes, adaptive goals, and local explanation screens
 - Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
 - Health Connect permission onboarding with clear data categories and a one-tap full setup option
@@ -36,9 +36,9 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
-- Configurable activity recording dashboard with Focus mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
+- Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
 - App language support for system default, English, Spanish, German, and Italian
-- Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress for large exports
+- Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
 - Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
 - Dedicated Calories detail screen with total, active, and BMR calorie context
@@ -69,7 +69,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Summary dashboard with grouped sections for activity, recovery, intake, body, heart, vitals, mindfulness, and optional cycle data
 - Refreshed Material 3 app shell with Settings and Achievements in the top bar plus dashboard quick actions for logging and starting activities
 - Dedicated debug app variant with a separate application ID and diagnostics for troubleshooting
-- Period-based detail screens with `Day / Week / Month / Year` navigation
+- Period-based detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
 - Feature screens for Activity, Activities, Calories, Sleep, Heart & Vitals, Body, Hydration, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
 - Categorized Health Connect onboarding permissions, with one-tap full setup, category-by-category review, and cycle data grouped as an explicit sensitive category
 - Write-permission requests available during one-tap setup or from Add entry and metric entry screens, while dashboard views stay read-only
@@ -81,7 +81,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views after Health Connect cycle permissions are granted
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Explicit manual entry logging for hydration, carbohydrates, activities with optional GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge maps, GPS recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
+- Explicit manual entry logging for hydration, carbohydrates, activities with optional GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge maps, GPS recording, high-contrast outdoor recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
 
 ## Current coverage
 
@@ -91,7 +91,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, Fat-Free Mass Index (FFMI), bone mass, body water mass, basal metabolic rate
-- Manual entry: hydration, carbohydrate entries, activity sessions with optional GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge maps, GPS recording, configurable recording dashboard, Focus mode, strength training heart-rate monitoring, or experimental Bluetooth LE sensors, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
+- Manual entry: hydration, carbohydrate entries, activity sessions with optional GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge maps, GPS recording, configurable recording dashboard, Focus mode, high-contrast outdoor mode, strength training heart-rate monitoring, or experimental Bluetooth LE sensors, mindfulness sessions, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature
 - Hydration: daily and period hydration totals, Health Connect-backed drink logging with drink choices, tap-to-save container presets, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, and macros

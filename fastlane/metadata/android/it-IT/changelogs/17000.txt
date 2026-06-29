@@ -1,0 +1,1 @@
+Personalizza i dettagli delle metriche riordinando le sezioni, usa una vista di registrazione outdoor ad alto contrasto e consulta nuovi grafici velocità/cadenza dopo l'attività. Le importazioni Apple Health grandi sono più sicure, i permessi Health Connect più affidabili e le letture cuore/grafici ridotte per evitare errori CursorWindow.

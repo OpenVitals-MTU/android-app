@@ -1,0 +1,1 @@
+Passe Metrikdetailseiten durch Sortieren der Abschnitte an, nutze eine kontrastreiche Outdoor-Aufzeichnungsansicht und prüfe neue Geschwindigkeits-/Kadenzdiagramme nach Aktivitäten. Große Apple-Health-Importe sind sicherer, Health-Connect-Berechtigungen zuverlässiger und Herz-/Diagrammabfragen kleiner, um CursorWindow-Fehler zu vermeiden.

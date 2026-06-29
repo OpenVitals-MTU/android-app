@@ -8,7 +8,7 @@ The import starts from Settings and accepts supported Apple Health `export.xml` 
 
 ## Import Flow
 
-The app scans the export, converts supported record types, requests required Health Connect write permissions, and writes accepted records into Health Connect. Progress and result counts are shown while the import runs.
+The app scans the export, converts supported record types, requests required Health Connect write permissions, and writes accepted records into Health Connect. Large exports are processed with targeted lookups and time-window chunking to reduce memory pressure. Progress and result counts are shown while the import runs.
 
 Result summaries can include parsed, imported, duplicate, unsupported, skipped, and failed counts.
 

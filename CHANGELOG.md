@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.7.0 - 2026-06-29
+
+### English
+
+- Add controls for reordering metric detail sections so charts, statistics, entries, and guidance can match your workflow.
+- Add a high-contrast outdoor recording theme and improve widget-edit scrolling while recording.
+- Add post-activity speed and cadence charts, and trim duplicated heart-rate sensor samples during recording.
+- Make Apple Health imports safer for large exports with targeted lookups and time-window chunking.
+- Fix Health Connect permission handling and reduce oversized heart/chart reads that could trigger CursorWindow errors.
+
+### Español
+
+- Añade controles para reordenar secciones de detalle de métricas, para adaptar gráficos, estadísticas, entradas y guías a tu flujo.
+- Añade un tema de alto contraste para grabar al aire libre y mejora el desplazamiento al editar widgets durante una grabación.
+- Añade gráficos de velocidad y cadencia después de la actividad, y recorta muestras duplicadas de frecuencia cardiaca de sensores.
+- Hace más seguras las importaciones grandes de Apple Health con búsquedas específicas y procesamiento por ventanas de tiempo.
+- Corrige permisos de Health Connect y reduce lecturas grandes de corazón/gráficos que podían causar errores CursorWindow.
+
+### Deutsch
+
+- Ergänzt Steuerelemente zum Sortieren von Metrikdetail-Abschnitten, damit Diagramme, Statistiken, Einträge und Hinweise besser zum eigenen Ablauf passen.
+- Ergänzt einen kontrastreichen Outdoor-Aufzeichnungsmodus und verbessert das Scrollen beim Bearbeiten von Widgets während einer Aufzeichnung.
+- Ergänzt Geschwindigkeits- und Kadenzdiagramme nach Aktivitäten und entfernt doppelte Herzfrequenz-Sensorsamples während der Aufzeichnung.
+- Macht große Apple-Health-Importe sicherer durch gezielte Lookups und Verarbeitung in Zeitfenstern.
+- Korrigiert Health-Connect-Berechtigungen und reduziert sehr große Herz-/Diagrammabfragen, die CursorWindow-Fehler auslösen konnten.
+
+### Italiano
+
+- Aggiunge controlli per riordinare le sezioni dei dettagli metriche, così grafici, statistiche, voci e guide seguono meglio il tuo flusso.
+- Aggiunge un tema ad alto contrasto per le registrazioni outdoor e migliora lo scorrimento durante la modifica dei widget in registrazione.
+- Aggiunge grafici di velocità e cadenza dopo l'attività e rimuove campioni duplicati della frequenza cardiaca dai sensori.
+- Rende più sicure le importazioni Apple Health grandi con ricerche mirate ed elaborazione a finestre temporali.
+- Corregge permessi Health Connect e riduce letture cuore/grafici troppo grandi che potevano causare errori CursorWindow.
+
 ## 1.6.3 - 2026-06-28
 
 ### English

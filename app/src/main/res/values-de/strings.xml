@@ -14,6 +14,10 @@
     <string name="cd_finish_recording_dashboard_editing">Bearbeitung der Aufzeichnungsübersicht beenden</string>
     <string name="cd_move_widget_up">Widget nach oben verschieben</string>
     <string name="cd_move_widget_down">Widget nach unten verschieben</string>
+    <string name="cd_edit_metric_sections">Metrikabschnitte bearbeiten</string>
+    <string name="cd_finish_metric_section_editing">Bearbeitung der Metrikabschnitte beenden</string>
+    <string name="cd_move_section_up">Abschnitt nach oben verschieben</string>
+    <string name="cd_move_section_down">Abschnitt nach unten verschieben</string>
     <string name="cd_remove_widget">Widget entfernen</string>
     <string name="cd_edit_metric_sections">Metrikbereiche bearbeiten</string>
     <string name="cd_finish_metric_section_editing">Bearbeitung der Metrikbereiche beenden</string>
@@ -22,7 +26,7 @@
     <string name="cd_decrease_recording_dashboard_widget_size">Widget kleiner machen</string>
     <string name="cd_increase_recording_dashboard_widget_size">Widget größer machen</string>
     <string name="cd_exit_recording_focus_mode">Fokusmodus verlassen</string>
-    <string name="cd_toggle_recording_outdoor_mode">Outdoor-Lesemodus umschalten</string>
+    <string name="cd_toggle_recording_outdoor_mode">Outdoor-Lesbarkeitsmodus umschalten</string>
     <string name="cd_recenter_map">Karte neu zentrieren</string>
     <string name="cd_delete_entry">Eintrag löschen</string>
     <string name="cd_edit_entry">Eintrag bearbeiten</string>

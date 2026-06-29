@@ -13,6 +13,10 @@
     <string name="cd_finish_recording_dashboard_editing">Termina modifica dashboard registrazione</string>
     <string name="cd_move_widget_up">Sposta widget su</string>
     <string name="cd_move_widget_down">Sposta widget giù</string>
+    <string name="cd_edit_metric_sections">Modifica sezioni metriche</string>
+    <string name="cd_finish_metric_section_editing">Termina modifica sezioni metriche</string>
+    <string name="cd_move_section_up">Sposta sezione su</string>
+    <string name="cd_move_section_down">Sposta sezione giù</string>
     <string name="cd_remove_widget">Rimuovi widget</string>
     <string name="cd_edit_metric_sections">Modifica sezioni metriche</string>
     <string name="cd_finish_metric_section_editing">Termina modifica sezioni metriche</string>
@@ -21,7 +25,7 @@
     <string name="cd_decrease_recording_dashboard_widget_size">Rendi widget più piccolo</string>
     <string name="cd_increase_recording_dashboard_widget_size">Rendi widget più grande</string>
     <string name="cd_exit_recording_focus_mode">Esci dalla modalità focus</string>
-    <string name="cd_toggle_recording_outdoor_mode">Attiva/disattiva modalità lettura esterna</string>
+    <string name="cd_toggle_recording_outdoor_mode">Cambia modalità leggibilità outdoor</string>
     <string name="cd_recenter_map">Ricentra mappa</string>
     <string name="cd_delete_entry">Elimina voce</string>
     <string name="cd_edit_entry">Modifica voce</string>
