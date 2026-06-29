@@ -12,8 +12,10 @@ The recording flow supports:
 - A persistent recording notification.
 - A configurable recording dashboard.
 - Focus mode for a cleaner in-recording view.
+- A high-contrast outdoor mode for better readability in bright conditions.
 - Keep-screen-on support when enabled.
 - Offline route maps when map packs have been imported.
+- Post-activity speed and cadence charts when compatible samples are available.
 
 ## Repetition Activity
 

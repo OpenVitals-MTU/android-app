@@ -1,0 +1,1 @@
+Customize metric detail screens by reordering sections, use a high-contrast outdoor recording view, and review new post-activity speed/cadence charts. Apple Health imports are safer for large exports, Health Connect permission handling is more reliable, and heart/chart reads are reduced to avoid CursorWindow errors.

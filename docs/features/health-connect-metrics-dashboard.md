@@ -23,6 +23,7 @@ Most Health Connect-backed metrics use the same period pattern:
 - Calendar date picking.
 - Pull to refresh.
 - Charts, entry rows, statistics, comparisons, and confidence notes.
+- Reorderable sections so frequently used cards can stay near the top.
 
 ## Privacy Model
 
