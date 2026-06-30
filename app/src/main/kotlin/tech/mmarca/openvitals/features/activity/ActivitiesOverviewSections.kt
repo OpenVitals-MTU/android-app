@@ -393,15 +393,18 @@ internal fun ActivityOverviewStrip(
                         bucket.hasActivity -> {
                             Box(
                                 modifier = Modifier
-                                    .size(12.dp)
-                                    .background(StepsColor.copy(alpha = 0.86f), CircleShape),
+                                    .size(ActivityOverviewMarkerSize)
+                                    .background(WorkoutColor, CircleShape),
                             )
                         }
                         else -> {
                             Box(
                                 modifier = Modifier
-                                    .size(9.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                                    .size(ActivityOverviewMarkerSize)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        CircleShape,
+                                    ),
                             )
                         }
                     }
