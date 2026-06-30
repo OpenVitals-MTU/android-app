@@ -34,6 +34,7 @@ val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_
 android {
     namespace = "tech.mmarca.openvitals"
     compileSdk = 37
+    buildToolsVersion = "37.0.0"
 
     defaultConfig {
         applicationId = "tech.mmarca.openvitals"

@@ -45,13 +45,13 @@ steps:
             "Release candidate built from commit $${CI_COMMIT_SHA}." \
             "" \
             "Distribution flow:" \
-            "- Codeberg prerelease with signed APK and signed Android App Bundle assets" \
+            "- Codeberg prerelease with signed APK, signed debug APK, and SHA-256 checksum assets" \
+            "- Google Play production upload with the signed Android App Bundle after approved Woodpecker deployment" \
             "- Codeberg stable release after approved Woodpecker deployment" \
-            "- Google Play production upload after approved Woodpecker deployment" \
             "" \
             "Assets:" \
             "- Signed release APK" \
-            "- Signed release Android App Bundle" \
+            "- Signed debug APK" \
             "- SHA-256 checksum" \
             > "$${notes_file}"
         fi
@@ -77,8 +77,8 @@ steps:
       - printf 'sdk.dir=%s\n' "$${sdk_root}" > local.properties
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew
-      - ./gradlew --no-daemon verifyLocalReleaseChecks
+      - chmod +x gradlew scripts/ci-gradle.sh
+      - scripts/ci-gradle.sh verifyLocalReleaseChecks
       - git diff --check
     when:
       - event: tag
@@ -115,8 +115,8 @@ steps:
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
       - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew
-      - ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease :app:bundleRelease
+      - chmod +x gradlew scripts/ci-gradle.sh
+      - scripts/ci-gradle.sh --stacktrace :app:assembleDebug :app:assembleRelease :app:bundleRelease
       - debug_apk_path="$$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)"
       - apk_path="$$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)"
       - aab_path="$$(find app/build/outputs/bundle/release -maxdepth 1 -name '*.aab' | head -n 1)"
@@ -166,17 +166,66 @@ steps:
       - event: deployment
         evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
+  - name: prune-codeberg-release-aab
+    depends_on:
+      - build-release-artifacts
+    image: alpine:3.20
+    environment:
+      CODEBERG_RELEASE_API_KEY:
+        from_secret: CODEBERG_RELEASE_API_KEY
+    commands:
+      - set -eu
+      - apk add --no-cache curl jq
+      - test -n "$${CODEBERG_RELEASE_API_KEY}"
+      - release_tag="$$(cat .woodpecker/tmp/release-tag.txt)"
+      - api_base="$${CI_FORGE_URL%/}/api/v1/repos/$${CI_REPO}"
+      - release_response=".woodpecker/tmp/codeberg-release.json"
+      - stale_asset="OpenVitals-$${release_tag}.aab"
+      - |
+        http_status="$$(curl -sS -w '%{http_code}' -o "$${release_response}" \
+          -H "Authorization: token $${CODEBERG_RELEASE_API_KEY}" \
+          "$${api_base}/releases/tags/$${release_tag}" || true)"
+        case "$${http_status}" in
+          200) ;;
+          404)
+            echo "No existing Codeberg release for $${release_tag}; nothing to prune."
+            exit 0
+            ;;
+          *)
+            echo "Failed to inspect Codeberg release $${release_tag}: HTTP $${http_status}" >&2
+            sed -n '1,120p' "$${release_response}" >&2 || true
+            exit 1
+            ;;
+        esac
+      - release_id="$$(jq -r '.id' "$${release_response}")"
+      - test -n "$${release_id}"
+      - test "$${release_id}" != "null"
+      - asset_ids="$$(jq -r --arg name "$${stale_asset}" '.assets[]? | select(.name == $name) | .id' "$${release_response}")"
+      - |
+        if [ -z "$${asset_ids}" ]; then
+          echo "No stale Codeberg AAB asset named $${stale_asset}."
+          exit 0
+        fi
+        printf '%s\n' "$${asset_ids}" | while IFS= read -r asset_id; do
+          test -n "$${asset_id}"
+          curl -fsS -X DELETE \
+            -H "Authorization: token $${CODEBERG_RELEASE_API_KEY}" \
+            "$${api_base}/releases/$${release_id}/assets/$${asset_id}" >/dev/null
+          echo "Deleted stale Codeberg AAB asset $${stale_asset} ($${asset_id})."
+        done
+    when:
+      - event: tag
+
   - name: publish-codeberg-beta
     image: woodpeckerci/plugin-release
     depends_on:
-      - build-release-artifacts
+      - prune-codeberg-release-aab
     settings:
       api_key:
         from_secret: CODEBERG_RELEASE_API_KEY
       target: main
       files:
         - '.woodpecker/tmp/OpenVitals-*.apk'
-        - '.woodpecker/tmp/OpenVitals-*.aab'
       checksum:
         - sha256
       checksum_file: '.woodpecker/tmp/SHA256SUMS.txt'

@@ -47,15 +47,17 @@ git diff --check
 
 Release CI also uses the wrapper for local app test/lint and release artifact builds.
 The tag prerelease pipeline runs `verifyLocalReleaseChecks` before publishing
-the debug APK, signed release APK, and signed Android App Bundle assets to
-Codeberg as a prerelease. That preflight includes assembling the debug APK
-first, so every release has a debug build available for troubleshooting with the
-debug-only sanitized log export in Settings. Published CI debug APKs are signed
-with the stable release signing configuration for the separate
-`tech.mmarca.openvitals.debug` application ID, so Codeberg debug-to-debug updates
-keep the same certificate across ephemeral runners. Users who installed older CI
-debug APKs signed by a runner-generated debug key may need to uninstall once
-before installing the first APK built with stable debug signing. Production
+the debug APK and signed release APK assets to Codeberg as a prerelease. The
+signed Android App Bundle is still built in the same pipeline and kept for the
+approved Google Play production deployment. The release preflight includes
+assembling the debug APK first, so every release has a debug build available for
+troubleshooting with the debug-only sanitized log export in Settings. Published
+CI debug APKs are signed with the stable release signing configuration for the
+separate `tech.mmarca.openvitals.debug` application ID, so Codeberg
+debug-to-debug updates keep the same certificate across ephemeral runners. Users
+who installed older CI debug APKs signed by a runner-generated debug key may
+need to uninstall once before installing the first APK built with stable debug
+signing. Production
 deployments are approved from the successful tag pipeline and skip rerunning that
 full prerelease test suite; they still rebuild the release artifacts from the
 tagged commit before upload.
