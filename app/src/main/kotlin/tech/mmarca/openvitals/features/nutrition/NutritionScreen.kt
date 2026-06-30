@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
@@ -26,8 +27,10 @@ fun NutritionScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(
         selectedRange = state.selectedRange,
         selectedDate = state.selectedDate,
@@ -55,8 +58,10 @@ fun NutritionScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
             nutritionContent(
+                sectionContext = sectionContext,
                 state = state,
                 period = period,
                 unitFormatter = unitFormatter,
@@ -72,12 +77,14 @@ fun CaloriesInScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.CALORIES_IN,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -86,12 +93,14 @@ fun ProteinScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.PROTEIN,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -100,12 +109,14 @@ fun CarbsScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.CARBS,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -114,12 +125,14 @@ fun FatScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.FAT,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -130,8 +143,10 @@ internal fun NutritionMetricScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: NutritionMetric,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -155,8 +170,10 @@ internal fun NutritionMetricScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
             nutritionMetricContent(
+                sectionContext = sectionContext,
                 metric = metric,
                 state = state,
                 period = period,

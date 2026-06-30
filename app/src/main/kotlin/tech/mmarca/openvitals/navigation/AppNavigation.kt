@@ -715,6 +715,9 @@ fun AppNavigation(
                     viewModel = caloriesViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                    },
                 )
             }
 
@@ -724,6 +727,9 @@ fun AppNavigation(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                    },
                 )
             }
 

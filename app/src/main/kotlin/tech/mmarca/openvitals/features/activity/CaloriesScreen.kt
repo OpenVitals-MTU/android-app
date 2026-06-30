@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -30,9 +31,12 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
@@ -46,6 +50,7 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.entryListTitle
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
+import tech.mmarca.openvitals.ui.components.renderOrderedMetricDetailSections
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
 import tech.mmarca.openvitals.ui.theme.CaloriesColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
@@ -57,8 +62,10 @@ fun CaloriesScreen(
     viewModel: CaloriesViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(
         selectedRange = state.selectedRange,
         selectedDate = state.selectedDate,
@@ -86,57 +93,44 @@ fun CaloriesScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
-        calorieStatistics(
-            state = state,
-            period = period,
-            unitFormatter = unitFormatter,
-        )
-
-        if (state.hasAnyCaloriesData()) {
-            item { SectionHeader(stringResource(R.string.section_calorie_trends)) }
-            totalCaloriesTrend(
+            renderCaloriesOrderedContent(
+                sectionContext = sectionContext,
                 state = state,
                 period = period,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
+                chartDaySelection = chartDaySelection,
             )
-            activeCaloriesTrend(
-                state = state,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-            )
-            bmrTrend(
-                entries = state.bmrEntries,
-                selectedRange = state.selectedRange,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-            )
+        }
+    }
+}
 
-            val rows = caloriesBreakdownRows(state, period)
-            chartDaySelection.selectedDate?.let { selectedDate ->
-                calorieBreakdownEntries(
-                    entries = rows.filter { it.date == selectedDate },
+private fun LazyListScope.renderCaloriesOrderedContent(
+    sectionContext: MetricDetailSectionContext,
+    state: CaloriesUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: tech.mmarca.openvitals.ui.components.ChartDaySelection,
+) {
+    val rows = if (state.hasAnyCaloriesData()) {
+        caloriesBreakdownRows(state, period)
+    } else {
+        emptyList()
+    }
+    val selectedDate = chartDaySelection.selectedDate
+    val selectedRows = selectedDate?.let { date -> rows.filter { it.date == date } }.orEmpty()
+
+    renderOrderedMetricDetailSections(sectionContext) {
+        section(MetricDetailSectionId.ACTIVITY_SUMMARY, state.hasAnyCaloriesData() || !state.isLoading) {
+            if (state.hasAnyCaloriesData()) {
+                CaloriesStatisticsContent(
+                    state = state,
                     unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    titleDate = selectedDate,
                 )
-            }
-            calorieBreakdownEntries(
-                entries = rows,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            )
-        } else if (!state.isLoading) {
-            item {
+            } else {
                 MetricCardPlaceholder(
                     title = stringResource(R.string.screen_calories),
                     icon = Icons.Outlined.LocalFireDepartment,
@@ -146,89 +140,161 @@ fun CaloriesScreen(
                 )
             }
         }
-    }
+
+        section(
+            if (state.selectedRange == TimeRange.DAY) {
+                MetricDetailSectionId.INTRADAY_CHART
+            } else {
+                MetricDetailSectionId.PERIOD_CHART
+            },
+            state.hasAnyCaloriesData(),
+        ) {
+            CaloriesTrendContent(
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+            )
+        }
+
+        section(MetricDetailSectionId.SELECTED_DAY_ENTRIES, selectedDate != null && selectedRows.isNotEmpty()) {
+            selectedDate?.let { date ->
+                CaloriesBreakdownEntriesContent(
+                    entries = selectedRows,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    titleDate = date,
+                )
+            }
+        }
+
+        section(MetricDetailSectionId.ENTRIES, rows.isNotEmpty()) {
+            CaloriesBreakdownEntriesContent(
+                entries = rows,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+            )
+        }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.calorieStatistics(
+@Composable
+private fun CaloriesStatisticsContent(
+    state: CaloriesUiState,
+    unitFormatter: UnitFormatter,
+) {
+    SectionHeader(stringResource(R.string.section_statistics))
+    val totalValues = state.nutrition.filter { it.hasCaloriesBurnedData }.map { it.caloriesBurnedKcal }
+    val activeValues = state.dailySteps.mapNotNull { it.activeCaloriesKcal }
+    val latestBmr = state.displayBmrKcal
+    val bmrReadingCount = if (state.bmrEntries.isNotEmpty()) {
+        state.bmrEntries.size
+    } else if (state.latestBmrKcal != null) {
+        1
+    } else {
+        0
+    }
+    val totalDisplay = totalValues.sumDisplay(unitFormatter)
+    val activeDisplay = activeValues.sumDisplay(unitFormatter)
+    val bmrDisplay = latestBmr?.let(unitFormatter::energy)
+    val totalAverageDisplay = totalValues.averageDisplay(unitFormatter)
+    val activeAverageDisplay = activeValues.averageDisplay(unitFormatter)
+    val noData = stringResource(R.string.no_data)
+
+    InsightStatGrid(
+        stats = listOf(
+            InsightStat(
+                title = stringResource(R.string.metric_calories_out),
+                value = totalDisplay?.value ?: noData,
+                unit = totalDisplay?.unit.orEmpty(),
+                icon = Icons.Outlined.LocalFireDepartment,
+                accentColor = CaloriesColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.metric_active_calories),
+                value = activeDisplay?.value ?: noData,
+                unit = activeDisplay?.unit.orEmpty(),
+                icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+                accentColor = ActiveCaloriesColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.metric_bmr),
+                value = bmrDisplay?.value ?: noData,
+                unit = bmrDisplay?.unit.orEmpty(),
+                icon = Icons.Outlined.MonitorWeight,
+                accentColor = WeightColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_daily_average),
+                value = totalAverageDisplay?.value ?: noData,
+                unit = totalAverageDisplay?.unit.orEmpty(),
+                icon = Icons.Outlined.Star,
+                accentColor = CaloriesColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.calories_stat_active_average),
+                value = activeAverageDisplay?.value ?: noData,
+                unit = activeAverageDisplay?.unit.orEmpty(),
+                icon = Icons.Outlined.Star,
+                accentColor = ActiveCaloriesColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.calories_stat_bmr_readings),
+                value = if (bmrReadingCount == 0) {
+                    noData
+                } else {
+                    unitFormatter.count(bmrReadingCount)
+                },
+                unit = "",
+                icon = Icons.Outlined.CheckCircle,
+                accentColor = WeightColor,
+            ),
+        ),
+        modifier = metricModifier(),
+    )
+}
+
+@Composable
+private fun CaloriesTrendContent(
     state: CaloriesUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
-    item {
-        val totalValues = state.nutrition.filter { it.hasCaloriesBurnedData }.map { it.caloriesBurnedKcal }
-        val activeValues = state.dailySteps.mapNotNull { it.activeCaloriesKcal }
-        val latestBmr = state.displayBmrKcal
-        val bmrReadingCount = if (state.bmrEntries.isNotEmpty()) {
-            state.bmrEntries.size
-        } else if (state.latestBmrKcal != null) {
-            1
-        } else {
-            0
-        }
-        val totalDisplay = totalValues.sumDisplay(unitFormatter)
-        val activeDisplay = activeValues.sumDisplay(unitFormatter)
-        val bmrDisplay = latestBmr?.let(unitFormatter::energy)
-        val totalAverageDisplay = totalValues.averageDisplay(unitFormatter)
-        val activeAverageDisplay = activeValues.averageDisplay(unitFormatter)
-        val noData = stringResource(R.string.no_data)
-
-        InsightStatGrid(
-            stats = listOf(
-                InsightStat(
-                    title = stringResource(R.string.metric_calories_out),
-                    value = totalDisplay?.value ?: noData,
-                    unit = totalDisplay?.unit.orEmpty(),
-                    icon = Icons.Outlined.LocalFireDepartment,
-                    accentColor = CaloriesColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.metric_active_calories),
-                    value = activeDisplay?.value ?: noData,
-                    unit = activeDisplay?.unit.orEmpty(),
-                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
-                    accentColor = ActiveCaloriesColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.metric_bmr),
-                    value = bmrDisplay?.value ?: noData,
-                    unit = bmrDisplay?.unit.orEmpty(),
-                    icon = Icons.Outlined.MonitorWeight,
-                    accentColor = WeightColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_daily_average),
-                    value = totalAverageDisplay?.value ?: noData,
-                    unit = totalAverageDisplay?.unit.orEmpty(),
-                    icon = Icons.Outlined.Star,
-                    accentColor = CaloriesColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.calories_stat_active_average),
-                    value = activeAverageDisplay?.value ?: noData,
-                    unit = activeAverageDisplay?.unit.orEmpty(),
-                    icon = Icons.Outlined.Star,
-                    accentColor = ActiveCaloriesColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.calories_stat_bmr_readings),
-                    value = if (bmrReadingCount == 0) {
-                        noData
-                    } else {
-                        unitFormatter.count(bmrReadingCount)
-                    },
-                    unit = "",
-                    icon = Icons.Outlined.CheckCircle,
-                    accentColor = WeightColor,
-                ),
-            ),
-            modifier = metricModifier(),
-        )
-    }
+    SectionHeader(stringResource(R.string.section_calorie_trends))
+    TotalCaloriesTrendContent(
+        state = state,
+        period = period,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+    )
+    ActiveCaloriesTrendContent(
+        state = state,
+        period = period,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+    )
+    BmrTrendContent(
+        entries = state.bmrEntries,
+        selectedRange = state.selectedRange,
+        period = period,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+    )
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.totalCaloriesTrend(
+@Composable
+private fun TotalCaloriesTrendContent(
     state: CaloriesUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
@@ -237,48 +303,47 @@ private fun androidx.compose.foundation.lazy.LazyListScope.totalCaloriesTrend(
     onDateSelected: (LocalDate) -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.nutrition.any { it.hasCaloriesBurnedData }) {
-        item {
-            if (state.selectedRange == TimeRange.DAY) {
-                val value = state.nutrition
-                    .firstOrNull { it.date == state.selectedDate && it.hasCaloriesBurnedData }
-                    ?.caloriesBurnedKcal
-                    ?: 0.0
-                IntradayActivityChartCard(
-                    selectedDate = state.selectedDate,
-                    title = stringResource(R.string.metric_calories_out),
-                    valueText = unitFormatter.energy(value).text,
-                    emptyText = stringResource(R.string.message_no_calories_burned),
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    points = state.activityProgress.mapNotNull { point ->
-                        point.totalCaloriesBurnedKcal?.let { point.time to it }
-                    },
-                    accentColor = CaloriesColor,
-                    yAxisValueFormatter = { unitFormatter.energy(it).text },
-                    modifier = metricModifier(),
-                )
-            } else {
-                MetricBarChart(
-                    title = stringResource(R.string.metric_calories_burned),
-                    data = state.nutrition,
-                    selectedRange = state.selectedRange,
-                    period = period,
-                    summaryValue = unitFormatter.energy(state.nutrition.sumOf { it.caloriesBurnedKcal }).text,
-                    accentColor = CaloriesColor,
-                    accentAlpha = 0.8f,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
-                    selectedDate = selectedDate,
-                    onDateSelected = onDateSelected,
-                    date = { it.date },
-                    value = { it.caloriesBurnedKcal },
-                    valueFormatter = { unitFormatter.energy(it).text },
-                )
-            }
+        if (state.selectedRange == TimeRange.DAY) {
+            val value = state.nutrition
+                .firstOrNull { it.date == state.selectedDate && it.hasCaloriesBurnedData }
+                ?.caloriesBurnedKcal
+                ?: 0.0
+            IntradayActivityChartCard(
+                selectedDate = state.selectedDate,
+                title = stringResource(R.string.metric_calories_out),
+                valueText = unitFormatter.energy(value).text,
+                emptyText = stringResource(R.string.message_no_calories_burned),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                points = state.activityProgress.mapNotNull { point ->
+                    point.totalCaloriesBurnedKcal?.let { point.time to it }
+                },
+                accentColor = CaloriesColor,
+                yAxisValueFormatter = { unitFormatter.energy(it).text },
+                modifier = metricModifier(),
+            )
+        } else {
+            MetricBarChart(
+                title = stringResource(R.string.metric_calories_burned),
+                data = state.nutrition,
+                selectedRange = state.selectedRange,
+                period = period,
+                summaryValue = unitFormatter.energy(state.nutrition.sumOf { it.caloriesBurnedKcal }).text,
+                accentColor = CaloriesColor,
+                accentAlpha = 0.8f,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+                selectedDate = selectedDate,
+                onDateSelected = onDateSelected,
+                date = { it.date },
+                value = { it.caloriesBurnedKcal },
+                valueFormatter = { unitFormatter.energy(it).text },
+            )
         }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.activeCaloriesTrend(
+@Composable
+private fun ActiveCaloriesTrendContent(
     state: CaloriesUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
@@ -287,48 +352,47 @@ private fun androidx.compose.foundation.lazy.LazyListScope.activeCaloriesTrend(
     onDateSelected: (LocalDate) -> Unit,
 ) {
     if (state.selectedRange == TimeRange.DAY || state.dailySteps.any { it.activeCaloriesKcal != null }) {
-        item {
-            if (state.selectedRange == TimeRange.DAY) {
-                val value = state.dailySteps
-                    .firstOrNull { it.date == state.selectedDate }
-                    ?.activeCaloriesKcal
-                    ?: 0.0
-                IntradayActivityChartCard(
-                    selectedDate = state.selectedDate,
-                    title = stringResource(R.string.metric_active_calories),
-                    valueText = unitFormatter.energy(value).text,
-                    emptyText = stringResource(R.string.message_no_active_calories),
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    points = state.activityProgress.mapNotNull { point ->
-                        point.totalActiveCaloriesKcal?.let { point.time to it }
-                    },
-                    accentColor = ActiveCaloriesColor,
-                    yAxisValueFormatter = { unitFormatter.energy(it).text },
-                    modifier = metricModifier(),
-                )
-            } else {
-                MetricBarChart(
-                    title = stringResource(R.string.metric_active_calories),
-                    data = state.dailySteps,
-                    selectedRange = state.selectedRange,
-                    period = period,
-                    summaryValue = unitFormatter.energy(state.dailySteps.sumOf { it.activeCaloriesKcal ?: 0.0 }).text,
-                    accentColor = ActiveCaloriesColor,
-                    accentAlpha = 0.8f,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
-                    selectedDate = selectedDate,
-                    onDateSelected = onDateSelected,
-                    date = { it.date },
-                    value = { it.activeCaloriesKcal ?: 0.0 },
-                    valueFormatter = { unitFormatter.energy(it).text },
-                )
-            }
+        if (state.selectedRange == TimeRange.DAY) {
+            val value = state.dailySteps
+                .firstOrNull { it.date == state.selectedDate }
+                ?.activeCaloriesKcal
+                ?: 0.0
+            IntradayActivityChartCard(
+                selectedDate = state.selectedDate,
+                title = stringResource(R.string.metric_active_calories),
+                valueText = unitFormatter.energy(value).text,
+                emptyText = stringResource(R.string.message_no_active_calories),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                points = state.activityProgress.mapNotNull { point ->
+                    point.totalActiveCaloriesKcal?.let { point.time to it }
+                },
+                accentColor = ActiveCaloriesColor,
+                yAxisValueFormatter = { unitFormatter.energy(it).text },
+                modifier = metricModifier(),
+            )
+        } else {
+            MetricBarChart(
+                title = stringResource(R.string.metric_active_calories),
+                data = state.dailySteps,
+                selectedRange = state.selectedRange,
+                period = period,
+                summaryValue = unitFormatter.energy(state.dailySteps.sumOf { it.activeCaloriesKcal ?: 0.0 }).text,
+                accentColor = ActiveCaloriesColor,
+                accentAlpha = 0.8f,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = metricModifier(),
+                selectedDate = selectedDate,
+                onDateSelected = onDateSelected,
+                date = { it.date },
+                value = { it.activeCaloriesKcal ?: 0.0 },
+                valueFormatter = { unitFormatter.energy(it).text },
+            )
         }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.bmrTrend(
+@Composable
+private fun BmrTrendContent(
     entries: List<BmrEntry>,
     selectedRange: TimeRange,
     period: DatePeriod,
@@ -339,33 +403,32 @@ private fun androidx.compose.foundation.lazy.LazyListScope.bmrTrend(
 ) {
     if (entries.isEmpty()) return
 
-    item {
-        val latest = entries.maxByOrNull { it.time }?.kcalPerDay
-        MetricBarChart(
-            title = stringResource(R.string.metric_bmr),
-            values = bmrHistoryValues(entries),
-            selectedRange = selectedRange,
-            period = period,
-            accentColor = WeightColor,
-            summaryValue = buildString {
-                if (latest != null) {
-                    append(stringResource(R.string.metric_latest))
-                    append(" ")
-                    append(unitFormatter.energy(latest).text)
-                    append(" · ")
-                }
-                append(stringResource(R.string.summary_readings, unitFormatter.count(entries.size)))
-            },
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            modifier = metricModifier(),
-            selectedDate = selectedDate,
-            onDateSelected = onDateSelected,
-            valueFormatter = { unitFormatter.energy(it).text },
-        )
-    }
+    val latest = entries.maxByOrNull { it.time }?.kcalPerDay
+    MetricBarChart(
+        title = stringResource(R.string.metric_bmr),
+        values = bmrHistoryValues(entries),
+        selectedRange = selectedRange,
+        period = period,
+        accentColor = WeightColor,
+        summaryValue = buildString {
+            if (latest != null) {
+                append(stringResource(R.string.metric_latest))
+                append(" ")
+                append(unitFormatter.energy(latest).text)
+                append(" · ")
+            }
+            append(stringResource(R.string.summary_readings, unitFormatter.count(entries.size)))
+        },
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = metricModifier(),
+        selectedDate = selectedDate,
+        onDateSelected = onDateSelected,
+        valueFormatter = { unitFormatter.energy(it).text },
+    )
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.calorieBreakdownEntries(
+@Composable
+private fun CaloriesBreakdownEntriesContent(
     entries: List<CaloriesBreakdownEntry>,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -373,18 +436,16 @@ private fun androidx.compose.foundation.lazy.LazyListScope.calorieBreakdownEntri
 ) {
     if (entries.isEmpty()) return
 
-    item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = entries.sortedByDescending { it.date },
-        ) { row, rowModifier ->
-            CaloriesBreakdownRow(
-                entry = row,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = rowModifier,
-            )
-        }
+    PaginatedEntryList(
+        title = entryListTitle(titleDate, dateTimeFormatterProvider),
+        entries = entries.sortedByDescending { it.date },
+    ) { row, rowModifier ->
+        CaloriesBreakdownRow(
+            entry = row,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            modifier = rowModifier,
+        )
     }
 }
 

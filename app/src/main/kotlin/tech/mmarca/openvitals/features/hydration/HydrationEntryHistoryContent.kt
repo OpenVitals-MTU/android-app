@@ -38,29 +38,48 @@ internal fun LazyListScope.hydrationEntries(
     onEditHydrationEntry: (String) -> Unit = {},
     onDeleteHydrationEntry: (String) -> Unit = {},
 ) {
-    val sortedEntries = entries.sortedByDescending { it.startTime }
     item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = sortedEntries,
-        ) { entry, rowModifier ->
-            HydrationEntryRow(
-                entry = entry,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEdit = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
-                    { onEditHydrationEntry(entry.id) }
-                } else {
-                    null
-                },
-                onDelete = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
-                    { onDeleteHydrationEntry(entry.id) }
-                } else {
-                    null
-                },
-                modifier = rowModifier,
-            )
-        }
+        HydrationEntriesContent(
+            entries = entries,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            titleDate = titleDate,
+            onEditHydrationEntry = onEditHydrationEntry,
+            onDeleteHydrationEntry = onDeleteHydrationEntry,
+        )
+    }
+}
+
+@Composable
+internal fun HydrationEntriesContent(
+    entries: List<HydrationEntry>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    titleDate: LocalDate? = null,
+    onEditHydrationEntry: (String) -> Unit = {},
+    onDeleteHydrationEntry: (String) -> Unit = {},
+) {
+    val sortedEntries = entries.sortedByDescending { it.startTime }
+    PaginatedEntryList(
+        title = entryListTitle(titleDate, dateTimeFormatterProvider),
+        entries = sortedEntries,
+    ) { entry, rowModifier ->
+        HydrationEntryRow(
+            entry = entry,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEdit = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
+                { onEditHydrationEntry(entry.id) }
+            } else {
+                null
+            },
+            onDelete = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
+                { onDeleteHydrationEntry(entry.id) }
+            } else {
+                null
+            },
+            modifier = rowModifier,
+        )
     }
 }
 

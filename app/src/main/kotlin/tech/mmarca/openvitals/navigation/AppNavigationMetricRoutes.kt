@@ -91,6 +91,7 @@ internal fun MetricRouteContent(
             viewModel = caloriesViewModel,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onSectionEditStateChanged = onSectionEditStateChanged,
         )
         return
     }
@@ -104,6 +105,7 @@ internal fun MetricRouteContent(
                 viewModel = nutritionViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onSectionEditStateChanged = onSectionEditStateChanged,
             )
             return
         }
@@ -195,6 +197,7 @@ internal fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onEditHydrationEntry = onEditHydrationEntry,
+                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         DashboardWidgetId.MINDFULNESS -> {
@@ -358,12 +361,33 @@ private fun NutritionMetricRouteScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
-        NutritionMetric.CALORIES_IN -> CaloriesInScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        NutritionMetric.PROTEIN -> ProteinScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        NutritionMetric.CARBS -> CarbsScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        NutritionMetric.FAT -> FatScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        NutritionMetric.CALORIES_IN -> CaloriesInScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        NutritionMetric.PROTEIN -> ProteinScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        NutritionMetric.CARBS -> CarbsScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        NutritionMetric.FAT -> FatScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
     }
 }
 

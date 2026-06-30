@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -29,8 +30,10 @@ fun HydrationScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditHydrationEntry: (String) -> Unit = {},
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
     val context = LocalContext.current
     var hasNotificationPermission by remember {
@@ -79,8 +82,10 @@ fun HydrationScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
             hydrationPeriodContent(
+                sectionContext = sectionContext,
                 state = state,
                 period = period,
                 unitFormatter = unitFormatter,

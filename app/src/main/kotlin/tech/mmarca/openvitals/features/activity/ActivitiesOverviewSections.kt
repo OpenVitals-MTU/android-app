@@ -129,17 +129,33 @@ internal fun activityPeriodTitle(
     }
 
 @Composable
-internal fun ActivityOverviewPeriodCard(
+internal fun ActivityPeriodSummaryCard(
+    workouts: List<ExerciseData>,
     days: List<ActivityOverviewDay>,
     selectedRange: TimeRange,
     activityWeekMode: ActivityWeekMode,
     period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenActivity: (String) -> Unit,
+    onEditActivity: (String) -> Unit,
+    onDeleteActivity: (String) -> Unit,
+    showEmptyState: Boolean,
 ) {
-    val stripBuckets = activityOverviewBuckets(
-        days = days,
-        selectedRange = selectedRange,
-        maxBuckets = 7,
-    )
+    var visibleCount by remember(workouts) {
+        mutableIntStateOf(workouts.size.coerceAtMost(ActivityWorkoutListPageSize))
+    }
+    val boundedVisibleCount = visibleCount.coerceAtMost(workouts.size)
+    val visibleWorkouts = workouts.take(boundedVisibleCount)
+    val stripBuckets = if (selectedRange == TimeRange.WEEK) {
+        activityOverviewBuckets(
+            days = days,
+            selectedRange = selectedRange,
+            maxBuckets = 7,
+        )
+    } else {
+        emptyList()
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(text = activityPeriodTitle(selectedRange, activityWeekMode, period))
@@ -147,83 +163,63 @@ internal fun ActivityOverviewPeriodCard(
             modifier = metricModifier(),
         ) {
             Column {
-                ActivityOverviewStrip(
-                    buckets = stripBuckets,
-                    selectedRange = selectedRange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f))
-                        .padding(horizontal = 14.dp, vertical = 14.dp),
-                )
-            }
-        }
-    }
-}
+                if (stripBuckets.isNotEmpty()) {
+                    ActivityOverviewStrip(
+                        buckets = stripBuckets,
+                        selectedRange = selectedRange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f))
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                    )
+                }
 
-@Composable
-internal fun ActivityWorkoutListCard(
-    workouts: List<ExerciseData>,
-    title: String,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onOpenActivity: (String) -> Unit,
-    onEditActivity: (String) -> Unit,
-    onDeleteActivity: (String) -> Unit,
-) {
-    var visibleCount by remember(workouts) {
-        mutableIntStateOf(workouts.size.coerceAtMost(ActivityWorkoutListPageSize))
-    }
-    val boundedVisibleCount = visibleCount.coerceAtMost(workouts.size)
-    val visibleWorkouts = workouts.take(boundedVisibleCount)
+                if (workouts.isEmpty()) {
+                    if (showEmptyState) {
+                        Text(
+                            text = stringResource(R.string.message_no_activities_period),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    return@Column
+                }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        SectionHeader(text = stringResource(R.string.section_activities))
-        OpenVitalsCard(
-            modifier = metricModifier(),
-        ) {
-            if (workouts.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.message_no_activities_period),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
-                )
-                return@OpenVitalsCard
-            }
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp),
-            )
-            visibleWorkouts.forEachIndexed { index, workout ->
-                ActivityOverviewWorkoutRow(
-                    workout = workout,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onClick = { onOpenActivity(workout.id) },
-                    onEdit = workout.editAction(onEditActivity),
-                    onDelete = workout.deleteAction(onDeleteActivity),
-                )
-                if (index < visibleWorkouts.lastIndex) {
+                if (stripBuckets.isNotEmpty()) {
                     HorizontalDivider(
-                        modifier = Modifier.padding(start = 72.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
                     )
                 }
-            }
-            if (boundedVisibleCount < workouts.size) {
-                OpenVitalsOutlinedButton(
-                    onClick = {
-                        visibleCount = (boundedVisibleCount + ActivityWorkoutListPageSize)
-                            .coerceAtMost(workouts.size)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                ) {
-                    Text(stringResource(R.string.action_load_more_entries))
+
+                visibleWorkouts.forEachIndexed { index, workout ->
+                    ActivityOverviewWorkoutRow(
+                        workout = workout,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onClick = { onOpenActivity(workout.id) },
+                        onEdit = workout.editAction(onEditActivity),
+                        onDelete = workout.deleteAction(onDeleteActivity),
+                    )
+                    if (index < visibleWorkouts.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+                        )
+                    }
+                }
+                if (boundedVisibleCount < workouts.size) {
+                    OpenVitalsOutlinedButton(
+                        onClick = {
+                            visibleCount = (boundedVisibleCount + ActivityWorkoutListPageSize)
+                                .coerceAtMost(workouts.size)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        Text(stringResource(R.string.action_load_more_entries))
+                    }
                 }
             }
         }

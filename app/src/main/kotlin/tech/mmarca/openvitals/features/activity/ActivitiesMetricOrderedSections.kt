@@ -115,19 +115,25 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
     renderOrderedMetricDetailSections(sectionContext) {
         section(
             MetricDetailSectionId.ACTIVITY_SUMMARY,
-            state.workouts.isNotEmpty() || state.plannedWorkouts.isNotEmpty() || !state.isLoading,
+            state.workouts.isNotEmpty() ||
+                sortedOverviewDays.isNotEmpty() ||
+                state.plannedWorkouts.isNotEmpty() ||
+                !state.isLoading,
         ) {
-            val periodTitle = activityPeriodTitle(state.selectedRange, state.activityWeekMode, period)
             Column(modifier = Modifier.fillMaxWidth()) {
-                if (state.workouts.isNotEmpty() || !state.isLoading) {
-                    ActivityWorkoutListCard(
+                if (state.workouts.isNotEmpty() || sortedOverviewDays.isNotEmpty() || !state.isLoading) {
+                    ActivityPeriodSummaryCard(
                         workouts = state.workouts,
-                        title = periodTitle,
+                        days = sortedOverviewDays,
+                        selectedRange = state.selectedRange,
+                        activityWeekMode = state.activityWeekMode,
+                        period = period,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onOpenActivity = onOpenActivity,
                         onEditActivity = onEditActivity,
                         onDeleteActivity = onDeleteActivity,
+                        showEmptyState = !state.isLoading,
                     )
                 }
                 if (state.plannedWorkouts.isNotEmpty()) {
@@ -138,14 +144,6 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                     )
                 }
             }
-        }
-        section(MetricDetailSectionId.ACTIVITY_WEEK_OVERVIEW, sortedOverviewDays.isNotEmpty()) {
-            ActivityOverviewPeriodCard(
-                days = sortedOverviewDays,
-                selectedRange = state.selectedRange,
-                activityWeekMode = state.activityWeekMode,
-                period = period,
-            )
         }
         section(
             MetricDetailSectionId.ACTIVITY_KEY_METRICS,
