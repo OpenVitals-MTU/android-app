@@ -1185,8 +1185,10 @@
     <string name="settings_apple_health_import_result">Importados %1$d. Duplicados %2$d. No compatibles %3$d. Omitidos %4$d. Fallidos %5$d.</string>
     <string name="settings_apple_health_import_error">Error de importación: %1$s</string>
     <string name="settings_apple_health_import_copy_report">Copiar informe</string>
+    <string name="settings_apple_health_import_copy_error">Copiar error</string>
     <string name="settings_apple_health_import_save_report">Guardar informe</string>
     <string name="settings_apple_health_import_report_copied">Informe de importación copiado.</string>
+    <string name="settings_apple_health_import_error_copied">Error de importación copiado.</string>
     <string name="settings_apple_health_import_report_saved">Informe de importación guardado.</string>
     <string name="settings_apple_health_import_report_save_failed">No se pudo guardar el informe de importación.</string>
     <string name="settings_offline_maps_title">Mapas sin conexión</string>

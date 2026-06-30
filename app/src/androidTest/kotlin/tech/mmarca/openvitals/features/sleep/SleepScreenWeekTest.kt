@@ -6,12 +6,14 @@ import androidx.compose.ui.test.onNodeWithText
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.preferences.DefaultMetricDetailSectionOrder
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.time.LocalDate
 
@@ -23,7 +25,6 @@ class SleepScreenWeekTest {
     @Test
     fun sleepWeekView_showsPeriodNavigatorAndWeekContent() {
         val anchorDate = LocalDate.of(2026, 6, 23)
-        val period = periodFor(TimeRange.WEEK, anchorDate, today = anchorDate)
         val display = SleepDisplayState(
             durationPoints = listOf(
                 SleepDurationPoint(date = anchorDate.minusDays(1), hours = 7.5),
@@ -45,6 +46,14 @@ class SleepScreenWeekTest {
         )
 
         composeRule.setContent {
+            val sectionContext = MetricDetailSectionContext(
+                listState = rememberMetricDetailSectionListState(),
+                order = DefaultMetricDetailSectionOrder,
+                isEditingSections = false,
+                onMoveSectionToTarget = { _, _ -> },
+                onMoveSection = { _, _ -> },
+            )
+
             OpenVitalsTheme {
                 MetricDetailScaffold(
                     isLoading = false,
@@ -55,8 +64,10 @@ class SleepScreenWeekTest {
                     onPreviousPeriod = {},
                     onNextPeriod = {},
                     onSelectDate = {},
+                    sectionListState = sectionContext.listState,
                 ) { period ->
                     sleepPeriodContent(
+                        sectionContext = sectionContext,
                         state = state,
                         display = display,
                         period = period,
@@ -64,6 +75,8 @@ class SleepScreenWeekTest {
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onOpenSleepSession = {},
+                        onOpenSleepScore = null,
+                        onOpenSleepEfficiency = null,
                         onDecreaseGoal = {},
                         onIncreaseGoal = {},
                     )

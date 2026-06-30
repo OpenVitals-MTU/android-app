@@ -1177,8 +1177,10 @@
     <string name="settings_apple_health_import_notification_text">%1$s. Scansionati %2$d, importati %3$d.</string>
     <string name="settings_apple_health_import_result">Importati %1$d. Duplicati %2$d. Non supportati %3$d. Ignorati %4$d. Falliti %5$d.</string>
     <string name="settings_apple_health_import_copy_report">Copia report</string>
+    <string name="settings_apple_health_import_copy_error">Copia errore</string>
     <string name="settings_apple_health_import_save_report">Salva report</string>
     <string name="settings_apple_health_import_report_copied">Report di importazione copiato.</string>
+    <string name="settings_apple_health_import_error_copied">Errore di importazione copiato.</string>
     <string name="settings_apple_health_import_report_saved">Report di importazione salvato.</string>
     <string name="settings_apple_health_import_report_save_failed">Impossibile salvare il report di importazione.</string>
     <string name="settings_apple_health_import_error">Importazione fallita: %1$s</string>

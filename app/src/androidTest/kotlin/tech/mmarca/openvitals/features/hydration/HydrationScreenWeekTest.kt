@@ -7,11 +7,14 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.preferences.DefaultMetricDetailSectionOrder
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
+import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.time.LocalDate
 
@@ -45,6 +48,14 @@ class HydrationScreenWeekTest {
         )
 
         composeRule.setContent {
+            val sectionContext = MetricDetailSectionContext(
+                listState = rememberMetricDetailSectionListState(),
+                order = DefaultMetricDetailSectionOrder,
+                isEditingSections = false,
+                onMoveSectionToTarget = { _, _ -> },
+                onMoveSection = { _, _ -> },
+            )
+
             OpenVitalsTheme {
                 MetricDetailScaffold(
                     isLoading = false,
@@ -55,8 +66,10 @@ class HydrationScreenWeekTest {
                     onPreviousPeriod = {},
                     onNextPeriod = {},
                     onSelectDate = {},
+                    sectionListState = sectionContext.listState,
                 ) { period ->
                     hydrationPeriodContent(
+                        sectionContext = sectionContext,
                         state = state,
                         period = period,
                         unitFormatter = unitFormatter,

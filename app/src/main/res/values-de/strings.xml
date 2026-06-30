@@ -1185,8 +1185,10 @@
     <string name="settings_apple_health_import_result">Importiert %1$d. Duplikate %2$d. Nicht unterstützt %3$d. Übersprungen %4$d. Fehlgeschlagen %5$d.</string>
     <string name="settings_apple_health_import_error">Import fehlgeschlagen: %1$s</string>
     <string name="settings_apple_health_import_copy_report">Bericht kopieren</string>
+    <string name="settings_apple_health_import_copy_error">Fehler kopieren</string>
     <string name="settings_apple_health_import_save_report">Bericht speichern</string>
     <string name="settings_apple_health_import_report_copied">Importbericht kopiert.</string>
+    <string name="settings_apple_health_import_error_copied">Importfehler kopiert.</string>
     <string name="settings_apple_health_import_report_saved">Importbericht gespeichert.</string>
     <string name="settings_apple_health_import_report_save_failed">Importbericht konnte nicht gespeichert werden.</string>
     <string name="settings_offline_maps_title">Offline-Karten</string>
