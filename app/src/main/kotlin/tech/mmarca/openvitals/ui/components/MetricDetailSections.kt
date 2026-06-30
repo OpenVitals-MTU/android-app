@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -58,6 +60,11 @@ private const val MetricSectionEditWiggleDegrees = 0.35f
 private const val MetricSectionEdgeScrollDelayMillis = 16L
 private val MetricSectionEdgeScrollThreshold = 96.dp
 private val MetricSectionEdgeScrollSpeed = 40.dp
+
+val LocalMetricSectionEditMode = staticCompositionLocalOf { false }
+
+@Composable
+fun metricSectionEditModeActive(): Boolean = LocalMetricSectionEditMode.current
 
 class MetricDetailSectionBuilder {
     internal val sections = linkedMapOf<MetricDetailSectionId, @Composable () -> Unit>()
@@ -478,7 +485,18 @@ private fun ReorderableMetricDetailSection(
                 },
             ),
     ) {
-        content()
+        CompositionLocalProvider(LocalMetricSectionEditMode provides isEditingSections) {
+            content()
+            if (isEditingSections && !isDragging) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { /* block card taps while reordering */ })
+                        },
+                )
+            }
+        }
     }
 }
 

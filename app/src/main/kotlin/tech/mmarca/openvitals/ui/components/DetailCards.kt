@@ -100,10 +100,11 @@ fun OpenVitalsCard(
     }
 
     val colors = CardDefaults.cardColors(containerColor = resolvedContainerColor)
+    val effectiveOnClick = onClick?.takeUnless { metricSectionEditModeActive() }
 
-    if (onClick != null) {
+    if (effectiveOnClick != null) {
         Card(
-            onClick = onClick,
+            onClick = effectiveOnClick,
             modifier = modifier,
             shape = shape,
             colors = colors,
@@ -208,11 +209,12 @@ fun OpenVitalsButton(
     style: OpenVitalsButtonStyle = OpenVitalsButtonStyle.Filled,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val interactionEnabled = enabled && !metricSectionEditModeActive()
     when (style) {
         OpenVitalsButtonStyle.Filled -> Button(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled,
+            enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.buttonColors(),
             contentPadding = contentPadding,
         ) {
@@ -221,7 +223,7 @@ fun OpenVitalsButton(
         OpenVitalsButtonStyle.Tonal -> FilledTonalButton(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled,
+            enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.filledTonalButtonColors(),
             contentPadding = contentPadding,
         ) {
@@ -230,7 +232,7 @@ fun OpenVitalsButton(
         OpenVitalsButtonStyle.Outlined -> OutlinedButton(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled,
+            enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.outlinedButtonColors(),
             border = border,
             contentPadding = contentPadding,
@@ -240,7 +242,7 @@ fun OpenVitalsButton(
         OpenVitalsButtonStyle.Text -> TextButton(
             onClick = onClick,
             modifier = modifier,
-            enabled = enabled,
+            enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.textButtonColors(),
             contentPadding = contentPadding,
         ) {
@@ -344,7 +346,8 @@ fun OpenVitalsIconButton(
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    IconButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+    val interactionEnabled = enabled && !metricSectionEditModeActive()
+    IconButton(onClick = onClick, modifier = modifier, enabled = interactionEnabled) {
         content()
     }
 }
@@ -358,17 +361,18 @@ fun OpenVitalsIconSurfaceButton(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     content: @Composable () -> Unit,
 ) {
+    val interactionEnabled = enabled && !metricSectionEditModeActive()
     OpenVitalsSurface(
         modifier = modifier
             .size(52.dp)
             .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
-        containerColor = if (enabled) {
+            .clickable(enabled = interactionEnabled, onClick = onClick),
+        containerColor = if (interactionEnabled) {
             containerColor
         } else {
             MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.55f)
         },
-        contentColor = if (enabled) {
+        contentColor = if (interactionEnabled) {
             contentColor
         } else {
             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)

@@ -42,7 +42,6 @@ import tech.mmarca.openvitals.domain.insights.workoutGuidelineProgress
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.ExerciseData
-import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
@@ -96,12 +95,31 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
         target = state.dailyGoalMinutes,
         direction = MetricDailyGoalKey.WORKOUT_MINUTES.direction,
     )
+    val sortedOverviewDays = state.overviewDays.sortedBy { it.date }
+    val overviewTotals = sortedOverviewDays.takeIf { it.isNotEmpty() }?.let(::activityOverviewTotals)
+    val hasGuidelineContext = state.workouts.isNotEmpty() &&
+        workoutGuidelineProgress(
+            if (state.selectedRange == TimeRange.MONTH || state.selectedRange == TimeRange.YEAR) {
+                state.workouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0 / period.weekCount()
+            } else {
+                state.workouts.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0
+            },
+        ) != null
+    val hasCrossMetricInsight = state.workouts.isNotEmpty() &&
+        crossMetricInsight(
+            primaryValues = workoutDailyGoalValues(state.workouts)
+                .map { CrossMetricValue(it.date, it.value) },
+            secondaryValues = state.crossDailyRestingHR.map { CrossMetricValue(it.date, it.bpm.toDouble()) },
+        ) != null
 
     renderOrderedMetricDetailSections(sectionContext) {
-        section(MetricDetailSectionId.ACTIVITY_SUMMARY) {
+        section(
+            MetricDetailSectionId.ACTIVITY_SUMMARY,
+            state.workouts.isNotEmpty() || state.plannedWorkouts.isNotEmpty() || !state.isLoading,
+        ) {
             val periodTitle = activityPeriodTitle(state.selectedRange, state.activityWeekMode, period)
             Column(modifier = Modifier.fillMaxWidth()) {
-                if (!state.workouts.isEmpty() || !state.isLoading) {
+                if (state.workouts.isNotEmpty() || !state.isLoading) {
                     ActivityWorkoutListCard(
                         workouts = state.workouts,
                         title = periodTitle,
@@ -119,21 +137,33 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                     )
                 }
-                if (state.overviewDays.isNotEmpty()) {
-                    ActivityPeriodOverviewContent(
-                        overviewDays = state.overviewDays,
-                        selectedRange = state.selectedRange,
-                        activityWeekMode = state.activityWeekMode,
-                        period = period,
-                        unitFormatter = unitFormatter,
-                        onOpenCardioLoad = onOpenCardioLoad,
-                        onOpenSteps = onOpenSteps,
-                        onOpenDistance = onOpenDistance,
-                        onOpenEnergyBurned = onOpenEnergyBurned,
-                        onOpenHrv = onOpenHrv,
-                    )
-                }
             }
+        }
+        section(MetricDetailSectionId.ACTIVITY_WEEK_OVERVIEW, sortedOverviewDays.isNotEmpty()) {
+            ActivityOverviewPeriodCard(
+                days = sortedOverviewDays,
+                selectedRange = state.selectedRange,
+                activityWeekMode = state.activityWeekMode,
+                period = period,
+            )
+        }
+        section(
+            MetricDetailSectionId.ACTIVITY_KEY_METRICS,
+            sortedOverviewDays.isNotEmpty() && overviewTotals != null,
+        ) {
+            ActivityKeyMetricsSectionContent(
+                sortedDays = sortedOverviewDays,
+                totals = overviewTotals!!,
+                selectedRange = state.selectedRange,
+                activityWeekMode = state.activityWeekMode,
+                period = period,
+                unitFormatter = unitFormatter,
+                onOpenCardioLoad = onOpenCardioLoad,
+                onOpenSteps = onOpenSteps,
+                onOpenDistance = onOpenDistance,
+                onOpenEnergyBurned = onOpenEnergyBurned,
+                onOpenHrv = onOpenHrv,
+            )
         }
         section(MetricDetailSectionId.PERIOD_CHART, state.workouts.isNotEmpty()) {
             val values = state.workouts
@@ -198,34 +228,33 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                 unitFormatter = unitFormatter,
             )
         }
+        section(MetricDetailSectionId.METRIC_CONTEXT, hasGuidelineContext) {
+            WorkoutGuidelineContextSectionContent(
+                workouts = state.workouts,
+                period = period,
+                selectedRange = state.selectedRange,
+                unitFormatter = unitFormatter,
+            )
+        }
+        section(MetricDetailSectionId.CROSS_METRIC_INSIGHTS, hasCrossMetricInsight) {
+            WorkoutRestingHrInsightSectionContent(
+                workouts = state.workouts,
+                restingHr = state.crossDailyRestingHR,
+            )
+        }
         section(MetricDetailSectionId.DATA_CONFIDENCE, state.workouts.isNotEmpty() && period.start != period.end) {
             WorkoutDataConfidenceSectionContent(
                 workouts = state.workouts,
                 period = period,
             )
         }
-        section(MetricDetailSectionId.ENTRIES, state.workouts.isNotEmpty()) {
-            PaginatedEntryList(
-                title = stringResource(R.string.section_activities),
-                entries = state.workouts.sortedByDescending { it.startTime },
-            ) { workout, rowModifier ->
-                ActivityOverviewWorkoutRow(
-                    workout = workout,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onClick = { onOpenActivity(workout.id) },
-                    onEdit = workout.editAction(onEditActivity),
-                    onDelete = workout.deleteAction(onDeleteActivity),
-                    modifier = rowModifier,
-                )
-            }
-        }
     }
 }
 
 @Composable
-private fun ActivityPeriodOverviewContent(
-    overviewDays: List<ActivityOverviewDay>,
+private fun ActivityKeyMetricsSectionContent(
+    sortedDays: List<ActivityOverviewDay>,
+    totals: ActivityOverviewTotals,
     selectedRange: TimeRange,
     activityWeekMode: ActivityWeekMode,
     period: DatePeriod,
@@ -236,21 +265,9 @@ private fun ActivityPeriodOverviewContent(
     onOpenEnergyBurned: (() -> Unit)?,
     onOpenHrv: (() -> Unit)?,
 ) {
-    val sortedDays = overviewDays.sortedBy { it.date }
-    val totals = activityOverviewTotals(sortedDays)
     val periodTitle = activityPeriodTitle(selectedRange, activityWeekMode, period)
-
     Column(modifier = Modifier.fillMaxWidth()) {
-        ActivityOverviewPeriodCard(
-            days = sortedDays,
-            selectedRange = selectedRange,
-            activityWeekMode = activityWeekMode,
-            period = period,
-        )
-        SectionHeader(
-            text = stringResource(R.string.activities_key_metrics),
-            modifier = Modifier.padding(top = 12.dp),
-        )
+        SectionHeader(text = stringResource(R.string.activities_key_metrics))
         val cardioSeries = activityOverviewMetricSeries(
             days = sortedDays,
             selectedRange = selectedRange,
@@ -442,16 +459,6 @@ private fun WorkoutStatisticsSectionContent(
                 accentColor = WorkoutColor,
             ),
             modifier = activityMetricModifier(),
-        )
-        WorkoutGuidelineContextSectionContent(
-            workouts = workouts,
-            period = period,
-            selectedRange = state.selectedRange,
-            unitFormatter = unitFormatter,
-        )
-        WorkoutRestingHrInsightSectionContent(
-            workouts = workouts,
-            restingHr = state.crossDailyRestingHR,
         )
     }
 }
