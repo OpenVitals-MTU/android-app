@@ -340,34 +340,17 @@ internal fun SleepStageBreakdownCard(
             )
         } else {
             val orderedStages = session.stages.sortedBy { it.startTime }
-            val start = orderedStages.first().startTime.atZone(ZoneId.systemDefault())
-            val end = orderedStages.last().endTime.atZone(ZoneId.systemDefault())
-            SleepStagesBar(
+            SleepStagesLaneChart(
                 stages = orderedStages,
-                totalMs = session.durationMs,
+                unitFormatter = unitFormatter,
+                timeFormatter = dateTimeFormatterProvider.shortTime(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(28.dp),
+                    .padding(top = 4.dp),
+                timelineStart = session.startTime,
+                timelineEnd = session.endTime,
             )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = dateTimeFormatterProvider.shortTime().format(start),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = dateTimeFormatterProvider.shortTime().format(end),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Spacer(Modifier.height(12.dp))
-            SleepStageLegend(stages = orderedStages, unitFormatter = unitFormatter)
-            Spacer(Modifier.height(8.dp))
             val stageTotalMs = orderedStages.sumOf { it.durationMs.coerceAtLeast(0L) }
             stageTotals(orderedStages).forEach { (stageType, durationMs) ->
                 val percent = if (stageTotalMs > 0) {
