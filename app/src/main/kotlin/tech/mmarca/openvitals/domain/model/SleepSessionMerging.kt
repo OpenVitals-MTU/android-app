@@ -6,6 +6,8 @@ import java.util.Base64
 
 private const val MERGED_SLEEP_SESSION_ID_PREFIX = "merged:"
 private const val MERGED_SLEEP_SESSION_ID_SEPARATOR = "."
+private const val DUPLICATE_SLEEP_OVERLAP_RATIO = 0.85
+private val DUPLICATE_SLEEP_BOUNDARY_TOLERANCE: Duration = Duration.ofMinutes(30)
 // Mirrors Gadgetbridge's sleep-session analysis: short quiet wake/no-data gaps keep one night together.
 private val DEFAULT_SLEEP_SESSION_MERGE_GAP: Duration = Duration.ofMinutes(60)
 
@@ -38,6 +40,7 @@ internal fun mergeSleepSessions(
 
     return groups
         .map { group -> group.toMergedSleepSession(maxGap) }
+        .deduplicateOverlappingSleepSessions()
         .sortedByDescending { it.endTime }
 }
 
@@ -104,6 +107,51 @@ private fun List<SleepData>.toMergedSleepSession(maxGap: Duration): SleepData {
         stages = mergedSleepStages(ordered, maxGap),
     )
 }
+
+private fun List<SleepData>.deduplicateOverlappingSleepSessions(): List<SleepData> {
+    if (size < 2) return this
+
+    val kept = mutableListOf<SleepData>()
+    sortedWith(compareBy<SleepData> { it.startTime }.thenBy { it.endTime })
+        .forEach { session ->
+            val duplicateIndex = kept.indexOfFirst { existing -> existing.isDuplicateSleepSession(session) }
+            if (duplicateIndex == -1) {
+                kept += session
+            } else {
+                kept[duplicateIndex] = richerSleepSession(kept[duplicateIndex], session)
+            }
+        }
+    return kept
+}
+
+private fun SleepData.isDuplicateSleepSession(other: SleepData): Boolean {
+    if (source == other.source) return false
+
+    val shorterDuration = minOf(durationMs.coerceAtLeast(0L), other.durationMs.coerceAtLeast(0L))
+    if (shorterDuration <= 0L) return false
+
+    val overlapMs = minOf(endTime.toEpochMilli(), other.endTime.toEpochMilli()) -
+        maxOf(startTime.toEpochMilli(), other.startTime.toEpochMilli())
+    if (overlapMs <= 0L) return false
+
+    val startDiff = Duration.between(startTime, other.startTime).abs()
+    val endDiff = Duration.between(endTime, other.endTime).abs()
+    return overlapMs / shorterDuration.toDouble() >= DUPLICATE_SLEEP_OVERLAP_RATIO &&
+        startDiff <= DUPLICATE_SLEEP_BOUNDARY_TOLERANCE &&
+        endDiff <= DUPLICATE_SLEEP_BOUNDARY_TOLERANCE
+}
+
+private fun richerSleepSession(first: SleepData, second: SleepData): SleepData =
+    compareBy<SleepData> { it.sleepRichnessScore() }
+        .thenBy { it.durationMs }
+        .thenBy { it.lastModifiedTime ?: Instant.EPOCH }
+        .let { comparator -> if (comparator.compare(first, second) >= 0) first else second }
+
+private fun SleepData.sleepRichnessScore(): Int =
+    stages.size.coerceAtMost(200) * 10 +
+        listOfNotNull(device, recordingMethod, clientRecordId, clientRecordVersion).size * 5 +
+        (if (!title.isNullOrBlank()) 3 else 0) +
+        (if (!notes.isNullOrBlank()) 3 else 0)
 
 private fun mergedSleepSessionId(ids: List<String>): String =
     ids.distinct()

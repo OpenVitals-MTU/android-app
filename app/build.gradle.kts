@@ -129,7 +129,7 @@ dependencies {
     // Background work
     implementation(libs.androidx.work.runtime.ktx)
 
-    // Local summary cache
+    // Local metric storage
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

@@ -170,8 +170,6 @@ internal class DashboardDeferredLoadCoordinator(
                                 activityWeekMode = context.activityWeekMode,
                                 visibleMetrics = metricGroup,
                                 refreshMode = context.refreshMode,
-                                awaitMissingDerivedMetrics =
-                                    metricGroup.none { it in DashboardWeeklyTrainingDeferredMetrics },
                             )
                         )
                     }

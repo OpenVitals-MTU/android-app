@@ -1100,9 +1100,6 @@
     <string name="privacy_reconsent_body">Our privacy policy has changed. Review and accept to continue syncing with Health Connect.</string>
     <string name="privacy_reconsent_action">Review policy</string>
     <string name="dashboard_summary_today">Today</string>
-    <string name="settings_clear_local_cache">Clear cached summaries</string>
-    <string name="settings_clear_local_cache_body">Remove locally cached dashboard summaries. Health Connect data is not affected.</string>
-    <string name="settings_clear_local_cache_done">Cached summaries cleared</string>
     <string name="settings_debug_logs_title">Sanitized debug logs</string>
     <string name="settings_debug_logs_body">Save OpenVitals debug log entries to a text file. The export drops or redacts identifiers, locations, dates, URIs, raw sensor payloads, and unrelated app logs before writing.</string>
     <string name="settings_debug_logs_save">Save logs</string>

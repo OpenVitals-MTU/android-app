@@ -1101,9 +1101,6 @@
     <string name="privacy_reconsent_action">Richtlinie ansehen</string>
     <string name="dashboard_summary_today">Heute</string>
     <string name="cd_open_calendar">Kalender öffnen</string>
-    <string name="settings_clear_local_cache">Zwischengespeicherte Übersichten löschen</string>
-    <string name="settings_clear_local_cache_body">Entfernt lokal zwischengespeicherte Dashboard-Übersichten. Health-Connect-Daten sind nicht betroffen.</string>
-    <string name="settings_clear_local_cache_done">Zwischengespeicherte Übersichten gelöscht</string>
     <string name="settings_privacy_policy_link">Datenschutzerklärung ansehen</string>
     <string name="settings_app_lock_title">App-Sperre</string>
     <string name="settings_app_lock_body">Geräteentsperrung zum Öffnen von OpenVitals verlangen.</string>

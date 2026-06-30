@@ -18,8 +18,13 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepReadData
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class SleepRepositoryTest {
@@ -60,6 +65,28 @@ class SleepRepositoryTest {
         assertEquals(beforeMidnight.startTime, sessions.single().startTime)
         assertEquals(afterMidnight.endTime, sessions.single().endTime)
         assertEquals(beforeMidnight.durationMs + afterMidnight.durationMs, sessions.single().durationMs)
+    }
+
+    @Test fun `loadSleepPeriod includes Health Connect aggregate sleep durations`() = runTest {
+        val day = LocalDate.of(2026, 5, 6)
+        val aggregateDurationMs = Duration.ofHours(8).toMillis()
+        val hc = hc(grantedPermissions = setOf(sleepPermission))
+        coEvery { hc.readSleepData(any(), any(), any()) } returns SleepReadData(
+            dailyAggregateDurations = listOf(
+                DailySleepDuration(
+                    date = day,
+                    durationMs = aggregateDurationMs,
+                )
+            ),
+        )
+        val repository = SleepRepositoryImpl(hc)
+
+        val periodData = repository.loadSleepPeriod(
+            query = PeriodLoadQuery(range = TimeRange.DAY, anchorDate = day),
+            sleepRangeMode = SleepRangeMode.EVENING_18H,
+        )
+
+        assertEquals(aggregateDurationMs, periodData.dailyDurations.single().durationMs)
     }
 
     private fun hc(

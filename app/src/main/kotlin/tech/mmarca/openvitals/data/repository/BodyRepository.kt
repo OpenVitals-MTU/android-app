@@ -13,11 +13,6 @@ import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
-import tech.mmarca.openvitals.core.performance.AppCoroutineScope
-import tech.mmarca.openvitals.data.cache.BodyPeriodDataCodec
-import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
-import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.BodyFatEntry
 import tech.mmarca.openvitals.domain.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.domain.model.BodyWaterMassEntry
@@ -31,22 +26,16 @@ import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
-import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class BodyRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
-    private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
-    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
-    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) : BodyRepository {
 
     companion object {
@@ -75,6 +64,7 @@ class BodyRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadBodyPeriod(
         query: PeriodLoadQuery,
         metric: BodyPeriodMetric,
@@ -82,102 +72,87 @@ class BodyRepositoryImpl @Inject constructor(
     ): BodyPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
-        val key = periodSummaryKey(
-            surface = BodyPeriodDataCodec.Surface,
-            query = query,
-            metricSet = metric.name,
-            permissionFingerprint = granted.permissionFingerprint(),
-            schemaVersion = BodyPeriodDataCodec.SchemaVersion,
-        )
-        return periodCacheLoader().load(
-            key = key,
-            refreshMode = refreshMode,
-            decode = BodyPeriodDataCodec::decode,
-            encode = BodyPeriodDataCodec::encode,
-        ) {
-            coroutineScope {
-        when (metric) {
-            BodyPeriodMetric.ALL -> loadAllBodyPeriod(windows, granted)
-            BodyPeriodMetric.WEIGHT -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) }
-                BodyPeriodData(
-                    weightEntries = entries.current,
-                    previousWeightEntries = entries.previous,
-                    baselineWeightEntries = entries.baseline,
-                )
-            }
-            BodyPeriodMetric.HEIGHT -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadHeightEntries(start, end, granted) }
-                BodyPeriodData(
-                    heightEntries = entries.current,
-                    previousHeightEntries = entries.previous,
-                    baselineHeightEntries = entries.baseline,
-                )
-            }
-            BodyPeriodMetric.BMI -> {
-                val entries = async { loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) } }
-                val latestWeight = async { loadLatestWeight(granted) }
-                val height = async { loadLatestHeight(granted) }
-                val weightEntries = entries.await()
-                BodyPeriodData(
-                    weightEntries = weightEntries.current,
-                    previousWeightEntries = weightEntries.previous,
-                    baselineWeightEntries = weightEntries.baseline,
-                    latestWeightKg = latestWeight.await(),
-                    heightCm = height.await(),
-                )
-            }
-            BodyPeriodMetric.BODY_FAT -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBodyFatEntries(start, end, granted) }
-                BodyPeriodData(
-                    bodyFatEntries = entries.current,
-                    previousBodyFatEntries = entries.previous,
-                    baselineBodyFatEntries = entries.baseline,
-                )
-            }
-            BodyPeriodMetric.LEAN_MASS -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadLeanBodyMassEntries(start, end, granted) }
-                BodyPeriodData(
-                    leanMassEntries = entries.current,
-                    previousLeanMassEntries = entries.previous,
-                    baselineLeanMassEntries = entries.baseline,
-                )
-            }
-            BodyPeriodMetric.BMR -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBmrEntries(start, end, granted) }
-                BodyPeriodData(
-                    bmrEntries = entries.current,
-                    previousBmrEntries = entries.previous,
-                    baselineBmrEntries = entries.baseline,
-                )
-            }
-            BodyPeriodMetric.BONE_MASS -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBoneMassEntries(start, end, granted) }
-                BodyPeriodData(
-                    boneMassEntries = entries.current,
-                    previousBoneMassEntries = entries.previous,
-                    baselineBoneMassEntries = entries.baseline,
-                )
-            }
-            BodyPeriodMetric.BODY_WATER_MASS -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBodyWaterMassEntries(start, end, granted) }
-                BodyPeriodData(
-                    bodyWaterMassEntries = entries.current,
-                    previousBodyWaterMassEntries = entries.previous,
-                    baselineBodyWaterMassEntries = entries.baseline,
-                )
-            }
-        }
+        return coroutineScope {
+            when (metric) {
+                BodyPeriodMetric.ALL -> loadAllBodyPeriod(windows, granted)
+                BodyPeriodMetric.WEIGHT -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) }
+                    BodyPeriodData(
+                        weightEntries = entries.current,
+                        previousWeightEntries = entries.previous,
+                        baselineWeightEntries = entries.baseline,
+                    )
+                }
+                BodyPeriodMetric.HEIGHT -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadHeightEntries(start, end, granted) }
+                    BodyPeriodData(
+                        heightEntries = entries.current,
+                        previousHeightEntries = entries.previous,
+                        baselineHeightEntries = entries.baseline,
+                    )
+                }
+                BodyPeriodMetric.BMI -> {
+                    val entries = async {
+                        loadPeriodTriplet(windows) { start, end -> loadWeightEntries(start, end, granted) }
+                    }
+                    val latestWeight = async { loadLatestWeight(granted) }
+                    val height = async { loadLatestHeight(granted) }
+                    val weightEntries = entries.await()
+                    BodyPeriodData(
+                        weightEntries = weightEntries.current,
+                        previousWeightEntries = weightEntries.previous,
+                        baselineWeightEntries = weightEntries.baseline,
+                        latestWeightKg = latestWeight.await(),
+                        heightCm = height.await(),
+                    )
+                }
+                BodyPeriodMetric.BODY_FAT -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadBodyFatEntries(start, end, granted) }
+                    BodyPeriodData(
+                        bodyFatEntries = entries.current,
+                        previousBodyFatEntries = entries.previous,
+                        baselineBodyFatEntries = entries.baseline,
+                    )
+                }
+                BodyPeriodMetric.LEAN_MASS -> {
+                    val entries = loadPeriodTriplet(windows) { start, end ->
+                        loadLeanBodyMassEntries(start, end, granted)
+                    }
+                    BodyPeriodData(
+                        leanMassEntries = entries.current,
+                        previousLeanMassEntries = entries.previous,
+                        baselineLeanMassEntries = entries.baseline,
+                    )
+                }
+                BodyPeriodMetric.BMR -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadBmrEntries(start, end, granted) }
+                    BodyPeriodData(
+                        bmrEntries = entries.current,
+                        previousBmrEntries = entries.previous,
+                        baselineBmrEntries = entries.baseline,
+                    )
+                }
+                BodyPeriodMetric.BONE_MASS -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadBoneMassEntries(start, end, granted) }
+                    BodyPeriodData(
+                        boneMassEntries = entries.current,
+                        previousBoneMassEntries = entries.previous,
+                        baselineBoneMassEntries = entries.baseline,
+                    )
+                }
+                BodyPeriodMetric.BODY_WATER_MASS -> {
+                    val entries = loadPeriodTriplet(windows) { start, end ->
+                        loadBodyWaterMassEntries(start, end, granted)
+                    }
+                    BodyPeriodData(
+                        bodyWaterMassEntries = entries.current,
+                        previousBodyWaterMassEntries = entries.previous,
+                        baselineBodyWaterMassEntries = entries.baseline,
+                    )
+                }
             }
         }
     }
-
-    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
-        CachedPeriodRepositoryLoader(
-            cacheStore = metricSummaryCacheStore,
-            appScope = appScope,
-            tag = TAG,
-        )
 
     private suspend fun loadAllBodyPeriod(
         windows: PeriodWindows,
@@ -438,7 +413,7 @@ class BodyRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeBodyMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect body write permission.")
         }
-        return hc.writeBodyMeasurementEntry(request).also { invalidateBodyCaches() }
+        return hc.writeBodyMeasurementEntry(request)
     }
 
     override suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? {
@@ -462,7 +437,6 @@ class BodyRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect body write permission.")
         }
         hc.updateBodyMeasurementEntry(id, request)
-        invalidateBodyCaches()
     }
 
     override suspend fun deleteBodyMeasurementEntry(type: BodyMeasurementType, id: String) {
@@ -472,12 +446,6 @@ class BodyRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect body write permission.")
         }
         hc.deleteBodyMeasurementEntry(type, id)
-        invalidateBodyCaches()
-    }
-
-    private suspend fun invalidateBodyCaches() {
-        queryCache.invalidateOperations("dashboard")
-        metricSummaryCacheStore?.invalidateSurface(BodyPeriodDataCodec.Surface)
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()

@@ -1088,9 +1088,6 @@
     <string name="privacy_reconsent_body">La nostra politica sulla privacy è cambiata. Controlla e accetta di continuare la sincronizzazione con Health Connect.</string>
     <string name="privacy_reconsent_action">Politica di revisione</string>
     <string name="dashboard_summary_today">Oggi</string>
-    <string name="settings_clear_local_cache">Svuota riepilogo cache</string>
-    <string name="settings_clear_local_cache_body">Rimuovere i sommari dal cruscotto nella cache locale. I dati di Health Connect non sono modificati.</string>
-    <string name="settings_clear_local_cache_done">Riassunti in cache cancellati</string>
     <string name="settings_debug_logs_title">Registri di debug igienizzati</string>
     <string name="settings_debug_logs_body">Salva le voci di debug di OpenVitals in un file di testo. L\'esportazione diminuisce o redatta identificatori, posizioni, date, URI, carichi di pagamento del sensore grezzo e log di app non correlati prima di scrivere.</string>
     <string name="settings_debug_logs_save">Salva log</string>

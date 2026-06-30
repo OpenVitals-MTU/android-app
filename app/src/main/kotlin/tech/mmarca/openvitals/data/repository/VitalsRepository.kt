@@ -12,11 +12,6 @@ import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
-import tech.mmarca.openvitals.core.performance.AppCoroutineScope
-import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
-import tech.mmarca.openvitals.data.cache.VitalsPeriodDataCodec
-import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
@@ -31,22 +26,16 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.domain.query.VitalsPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
-import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class VitalsRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
-    private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
-    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
-    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) : VitalsRepository {
 
     companion object {
@@ -84,6 +73,7 @@ class VitalsRepositoryImpl @Inject constructor(
         return phase3Permissions.filterNot { it in granted }.toSet()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadVitalsPeriod(
         query: PeriodLoadQuery,
         metric: VitalsPeriodMetric,
@@ -92,115 +82,94 @@ class VitalsRepositoryImpl @Inject constructor(
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         val missingPermissions = phase3Permissions.filterNot { it in granted }.toSet()
-        val key = periodSummaryKey(
-            surface = VitalsPeriodDataCodec.Surface,
-            query = query,
-            metricSet = metric.name,
-            permissionFingerprint = granted.permissionFingerprint(),
-            schemaVersion = VitalsPeriodDataCodec.SchemaVersion,
-        )
-        return periodCacheLoader().load(
-            key = key,
-            refreshMode = refreshMode,
-            decode = VitalsPeriodDataCodec::decode,
-            encode = VitalsPeriodDataCodec::encode,
-        ) {
-            coroutineScope {
-        when (metric) {
-            VitalsPeriodMetric.ALL -> {
-                val current = windows.current
-                val bloodPressure = async { loadBloodPressure(current.start, current.end, granted) }
-                val spO2 = async { loadSpO2(current.start, current.end, granted) }
-                val vo2Max = async { loadVo2Max(current.start, current.end, granted) }
-                val respiratoryRate = async { loadRespiratoryRate(current.start, current.end, granted) }
-                val bodyTemperature = async { loadBodyTemperature(current.start, current.end, granted) }
-                val bloodGlucose = async { loadBloodGlucose(current.start, current.end, granted) }
-                val skinTemperature = async { loadSkinTemperature(current.start, current.end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    bloodPressure = bloodPressure.await(),
-                    spO2 = spO2.await(),
-                    respiratoryRate = respiratoryRate.await(),
-                    bodyTemperature = bodyTemperature.await(),
-                    vo2Max = vo2Max.await(),
-                    bloodGlucose = bloodGlucose.await(),
-                    skinTemperature = skinTemperature.await(),
-                )
-            }
-            VitalsPeriodMetric.BLOOD_PRESSURE -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBloodPressure(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    bloodPressure = entries.current,
-                    previousBloodPressure = entries.previous,
-                    baselineBloodPressure = entries.baseline,
-                )
-            }
-            VitalsPeriodMetric.SPO2 -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadSpO2(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    spO2 = entries.current,
-                    previousSpO2 = entries.previous,
-                    baselineSpO2 = entries.baseline,
-                )
-            }
-            VitalsPeriodMetric.VO2_MAX -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadVo2Max(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    vo2Max = entries.current,
-                    previousVo2Max = entries.previous,
-                    baselineVo2Max = entries.baseline,
-                )
-            }
-            VitalsPeriodMetric.RESPIRATORY_RATE -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadRespiratoryRate(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    respiratoryRate = entries.current,
-                    previousRespiratoryRate = entries.previous,
-                    baselineRespiratoryRate = entries.baseline,
-                )
-            }
-            VitalsPeriodMetric.BODY_TEMPERATURE -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBodyTemperature(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    bodyTemperature = entries.current,
-                    previousBodyTemperature = entries.previous,
-                    baselineBodyTemperature = entries.baseline,
-                )
-            }
-            VitalsPeriodMetric.BLOOD_GLUCOSE -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadBloodGlucose(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    bloodGlucose = entries.current,
-                    previousBloodGlucose = entries.previous,
-                    baselineBloodGlucose = entries.baseline,
-                )
-            }
-            VitalsPeriodMetric.SKIN_TEMPERATURE -> {
-                val entries = loadPeriodTriplet(windows) { start, end -> loadSkinTemperature(start, end, granted) }
-                VitalsPeriodData(
-                    missingVitalsPermissions = missingPermissions,
-                    skinTemperature = entries.current,
-                    previousSkinTemperature = entries.previous,
-                    baselineSkinTemperature = entries.baseline,
-                )
-            }
-        }
+        return coroutineScope {
+            when (metric) {
+                VitalsPeriodMetric.ALL -> {
+                    val current = windows.current
+                    val bloodPressure = async { loadBloodPressure(current.start, current.end, granted) }
+                    val spO2 = async { loadSpO2(current.start, current.end, granted) }
+                    val vo2Max = async { loadVo2Max(current.start, current.end, granted) }
+                    val respiratoryRate = async { loadRespiratoryRate(current.start, current.end, granted) }
+                    val bodyTemperature = async { loadBodyTemperature(current.start, current.end, granted) }
+                    val bloodGlucose = async { loadBloodGlucose(current.start, current.end, granted) }
+                    val skinTemperature = async { loadSkinTemperature(current.start, current.end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        bloodPressure = bloodPressure.await(),
+                        spO2 = spO2.await(),
+                        respiratoryRate = respiratoryRate.await(),
+                        bodyTemperature = bodyTemperature.await(),
+                        vo2Max = vo2Max.await(),
+                        bloodGlucose = bloodGlucose.await(),
+                        skinTemperature = skinTemperature.await(),
+                    )
+                }
+                VitalsPeriodMetric.BLOOD_PRESSURE -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadBloodPressure(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        bloodPressure = entries.current,
+                        previousBloodPressure = entries.previous,
+                        baselineBloodPressure = entries.baseline,
+                    )
+                }
+                VitalsPeriodMetric.SPO2 -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadSpO2(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        spO2 = entries.current,
+                        previousSpO2 = entries.previous,
+                        baselineSpO2 = entries.baseline,
+                    )
+                }
+                VitalsPeriodMetric.VO2_MAX -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadVo2Max(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        vo2Max = entries.current,
+                        previousVo2Max = entries.previous,
+                        baselineVo2Max = entries.baseline,
+                    )
+                }
+                VitalsPeriodMetric.RESPIRATORY_RATE -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadRespiratoryRate(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        respiratoryRate = entries.current,
+                        previousRespiratoryRate = entries.previous,
+                        baselineRespiratoryRate = entries.baseline,
+                    )
+                }
+                VitalsPeriodMetric.BODY_TEMPERATURE -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadBodyTemperature(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        bodyTemperature = entries.current,
+                        previousBodyTemperature = entries.previous,
+                        baselineBodyTemperature = entries.baseline,
+                    )
+                }
+                VitalsPeriodMetric.BLOOD_GLUCOSE -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadBloodGlucose(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        bloodGlucose = entries.current,
+                        previousBloodGlucose = entries.previous,
+                        baselineBloodGlucose = entries.baseline,
+                    )
+                }
+                VitalsPeriodMetric.SKIN_TEMPERATURE -> {
+                    val entries = loadPeriodTriplet(windows) { start, end -> loadSkinTemperature(start, end, granted) }
+                    VitalsPeriodData(
+                        missingVitalsPermissions = missingPermissions,
+                        skinTemperature = entries.current,
+                        previousSkinTemperature = entries.previous,
+                        baselineSkinTemperature = entries.baseline,
+                    )
+                }
             }
         }
     }
-
-    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
-        CachedPeriodRepositoryLoader(
-            cacheStore = metricSummaryCacheStore,
-            appScope = appScope,
-            tag = TAG,
-        )
 
     private suspend fun <T> loadPeriodTriplet(
         windows: PeriodWindows,
@@ -344,9 +313,7 @@ class VitalsRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
         }
-        return hc.writeVitalsMeasurementEntry(request).also {
-            queryCache.invalidateOperations("dashboard")
-        }
+        return hc.writeVitalsMeasurementEntry(request)
     }
 
     override suspend fun loadVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? {
@@ -371,7 +338,6 @@ class VitalsRepositoryImpl @Inject constructor(
             throw IllegalStateException("Missing Health Connect write permission for ${request.type}")
         }
         hc.updateVitalsMeasurementEntry(id, request)
-        queryCache.invalidateOperations("dashboard")
     }
 
     override suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) {
@@ -381,7 +347,6 @@ class VitalsRepositoryImpl @Inject constructor(
             throw IllegalStateException("Missing Health Connect write permission for $type")
         }
         hc.deleteVitalsMeasurementEntry(type, id)
-        queryCache.invalidateOperations("dashboard")
     }
 
     private fun LocalDate.toInstant() = atStartOfDay(ZoneId.systemDefault()).toInstant()

@@ -7,11 +7,6 @@ import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.performance.AppCoroutineScope
-import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
-import tech.mmarca.openvitals.data.cache.HeartPeriodDataCodec
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
-import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -22,21 +17,17 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class HeartRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
-    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
-    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) : HeartRepository {
 
     companion object {
@@ -50,6 +41,7 @@ class HeartRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadHeartPeriod(
         query: PeriodLoadQuery,
         metric: HeartPeriodMetric,
@@ -57,103 +49,86 @@ class HeartRepositoryImpl @Inject constructor(
     ): HeartPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
-        val key = periodSummaryKey(
-            surface = HeartPeriodDataCodec.Surface,
-            query = query,
-            metricSet = metric.name,
-            permissionFingerprint = granted.permissionFingerprint(),
-            schemaVersion = HeartPeriodDataCodec.SchemaVersion,
-        )
-        val cached = periodCacheLoader().load(
-            key = key,
-            refreshMode = refreshMode,
-            decode = HeartPeriodDataCodec::decode,
-            encode = HeartPeriodDataCodec::encode,
-        ) {
-            coroutineScope {
-        when (metric) {
-            HeartPeriodMetric.ALL -> loadAllHeartPeriod(query, granted)
-            HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
-                val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
-                val previousDaySamples = async { loadHeartRateSamples(windows.previous.start, granted) }
-                val baselineDailySummaries = async {
-                    loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
+        val data = coroutineScope {
+            when (metric) {
+                HeartPeriodMetric.ALL -> loadAllHeartPeriod(query, granted)
+                HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
+                    val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
+                    val previousDaySamples = async { loadHeartRateSamples(windows.previous.start, granted) }
+                    val baselineDailySummaries = async {
+                        loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
+                    }
+                    HeartPeriodData(
+                        daySamples = daySamples.await(),
+                        previousDaySamples = previousDaySamples.await(),
+                        baselineDailySummaries = baselineDailySummaries.await(),
+                    )
+                } else {
+                    val dailySummaries = async {
+                        loadDailyHeartRateSummaries(windows.current.start, windows.current.end, granted)
+                    }
+                    val previousDailySummaries = async {
+                        loadDailyHeartRateSummaries(windows.previous.start, windows.previous.end, granted)
+                    }
+                    val baselineDailySummaries = async {
+                        loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
+                    }
+                    HeartPeriodData(
+                        dailySummaries = dailySummaries.await(),
+                        previousDailySummaries = previousDailySummaries.await(),
+                        baselineDailySummaries = baselineDailySummaries.await(),
+                    )
                 }
-                HeartPeriodData(
-                    daySamples = daySamples.await(),
-                    previousDaySamples = previousDaySamples.await(),
-                    baselineDailySummaries = baselineDailySummaries.await(),
-                )
-            } else {
-                val dailySummaries = async {
-                    loadDailyHeartRateSummaries(windows.current.start, windows.current.end, granted)
+                HeartPeriodMetric.RESTING_HEART_RATE -> if (query.range == TimeRange.DAY) {
+                    val dayRestingBpm = async { loadRestingHeartRate(query.selectedDate, granted) }
+                    val previousDayRestingBpm = async { loadRestingHeartRate(windows.previous.start, granted) }
+                    val baselineDailyRestingHR = async {
+                        loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted)
+                    }
+                    HeartPeriodData(
+                        dayRestingBpm = dayRestingBpm.await(),
+                        previousDayRestingBpm = previousDayRestingBpm.await(),
+                        baselineDailyRestingHR = baselineDailyRestingHR.await(),
+                    )
+                } else {
+                    val dailyRestingHR = async { loadDailyRestingHR(windows.current.start, windows.current.end, granted) }
+                    val previousDailyRestingHR = async {
+                        loadDailyRestingHR(windows.previous.start, windows.previous.end, granted)
+                    }
+                    val baselineDailyRestingHR = async {
+                        loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted)
+                    }
+                    HeartPeriodData(
+                        dailyRestingHR = dailyRestingHR.await(),
+                        previousDailyRestingHR = previousDailyRestingHR.await(),
+                        baselineDailyRestingHR = baselineDailyRestingHR.await(),
+                    )
                 }
-                val previousDailySummaries = async {
-                    loadDailyHeartRateSummaries(windows.previous.start, windows.previous.end, granted)
+                HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
+                    val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
+                    val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
+                    HeartPeriodData(
+                        dayHrvMs = dayHrvMs.await(),
+                        baselineDailyHrv = baselineDailyHrv.await(),
+                    )
+                } else {
+                    val dailyHrv = async { loadDailyHRV(windows.current.start, windows.current.end, granted) }
+                    val previousDailyHrv = async { loadDailyHRV(windows.previous.start, windows.previous.end, granted) }
+                    val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
+                    HeartPeriodData(
+                        dailyHrv = dailyHrv.await(),
+                        previousDailyHrv = previousDailyHrv.await(),
+                        baselineDailyHrv = baselineDailyHrv.await(),
+                    )
                 }
-                val baselineDailySummaries = async {
-                    loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
-                }
-                HeartPeriodData(
-                    dailySummaries = dailySummaries.await(),
-                    previousDailySummaries = previousDailySummaries.await(),
-                    baselineDailySummaries = baselineDailySummaries.await(),
-                )
-            }
-            HeartPeriodMetric.RESTING_HEART_RATE -> if (query.range == TimeRange.DAY) {
-                val dayRestingBpm = async { loadRestingHeartRate(query.selectedDate, granted) }
-                val previousDayRestingBpm = async { loadRestingHeartRate(windows.previous.start, granted) }
-                val baselineDailyRestingHR = async {
-                    loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted)
-                }
-                HeartPeriodData(
-                    dayRestingBpm = dayRestingBpm.await(),
-                    previousDayRestingBpm = previousDayRestingBpm.await(),
-                    baselineDailyRestingHR = baselineDailyRestingHR.await(),
-                )
-            } else {
-                val dailyRestingHR = async { loadDailyRestingHR(windows.current.start, windows.current.end, granted) }
-                val previousDailyRestingHR = async { loadDailyRestingHR(windows.previous.start, windows.previous.end, granted) }
-                val baselineDailyRestingHR = async { loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted) }
-                HeartPeriodData(
-                    dailyRestingHR = dailyRestingHR.await(),
-                    previousDailyRestingHR = previousDailyRestingHR.await(),
-                    baselineDailyRestingHR = baselineDailyRestingHR.await(),
-                )
-            }
-            HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
-                val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
-                val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
-                HeartPeriodData(
-                    dayHrvMs = dayHrvMs.await(),
-                    baselineDailyHrv = baselineDailyHrv.await(),
-                )
-            } else {
-                val dailyHrv = async { loadDailyHRV(windows.current.start, windows.current.end, granted) }
-                val previousDailyHrv = async { loadDailyHRV(windows.previous.start, windows.previous.end, granted) }
-                val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
-                HeartPeriodData(
-                    dailyHrv = dailyHrv.await(),
-                    previousDailyHrv = previousDailyHrv.await(),
-                    baselineDailyHrv = baselineDailyHrv.await(),
-                )
-            }
-        }
             }
         }
         return if (query.range == TimeRange.DAY) {
-            enrichDayHeartRateSamples(cached, query, metric, granted)
+            enrichDayHeartRateSamples(data, query, metric, granted)
         } else {
-            cached
+            data
         }
     }
-
-    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
-        CachedPeriodRepositoryLoader(
-            cacheStore = metricSummaryCacheStore,
-            appScope = appScope,
-            tag = TAG,
-        )
 
     private suspend fun loadAllHeartPeriod(
         query: PeriodLoadQuery,

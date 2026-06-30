@@ -13,7 +13,6 @@ data class DashboardQuery(
     val refreshMode: RefreshMode = RefreshMode.NORMAL,
     val includeHistoricalBaselines: Boolean = true,
     val includeWeeklyTrainingSignals: Boolean = true,
-    val awaitMissingDerivedMetrics: Boolean = false,
 )
 
 enum class DashboardMetric {

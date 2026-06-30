@@ -1101,9 +1101,6 @@
     <string name="privacy_reconsent_action">Ver política</string>
     <string name="dashboard_summary_today">Hoy</string>
     <string name="cd_open_calendar">Abrir calendario</string>
-    <string name="settings_clear_local_cache">Borrar resúmenes en caché</string>
-    <string name="settings_clear_local_cache_body">Elimina los resúmenes del panel guardados localmente. Los datos de Health Connect no se ven afectados.</string>
-    <string name="settings_clear_local_cache_done">Resúmenes en caché borrados</string>
     <string name="settings_privacy_policy_link">Ver política de privacidad</string>
     <string name="settings_app_lock_title">Bloqueo de la app</string>
     <string name="settings_app_lock_body">Requerir desbloqueo del dispositivo para abrir OpenVitals.</string>

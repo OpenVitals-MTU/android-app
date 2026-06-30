@@ -13,5 +13,4 @@ internal data class SettingsScreenActions(
     val onSaveDebugLogs: () -> Unit,
     val onOpenManualPermissionSettings: () -> Unit,
     val onGrantPermissions: (Set<String>) -> Unit,
-    val onClearCache: () -> Unit,
 )

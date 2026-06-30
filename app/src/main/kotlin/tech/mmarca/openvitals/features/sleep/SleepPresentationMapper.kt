@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.domain.insights.CrossMetricValue
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.domain.model.DailyHrv
+import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
@@ -34,6 +35,9 @@ object SleepPresentationMapper {
         sessions: List<SleepData>,
         previousSessions: List<SleepData>,
         baselineSessions: List<SleepData>,
+        dailyDurations: List<DailySleepDuration> = emptyList(),
+        previousDailyDurations: List<DailySleepDuration> = emptyList(),
+        baselineDailyDurations: List<DailySleepDuration> = emptyList(),
         crossDailyHrv: List<DailyHrv>,
     ): SleepDisplayState {
         val selectedPeriod = displayPeriodFor(
@@ -56,19 +60,22 @@ object SleepPresentationMapper {
             sessions = sessions,
             selectedDate = query.selectedDate,
             sleepRangeMode = sleepRangeMode,
-        )
+        ).withDurationOverride(dailyDurations, query.selectedDate)
         val durationPoints = sleepDurationPoints(
             sessions = sessions,
+            dailyDurations = dailyDurations,
             period = selectedPeriod,
             sleepRangeMode = sleepRangeMode,
         )
         val previousDurationPoints = sleepDurationPoints(
             sessions = previousSessions,
+            dailyDurations = previousDailyDurations,
             period = previousPeriod,
             sleepRangeMode = sleepRangeMode,
         )
         val baselineDurationPoints = sleepDurationPoints(
             sessions = baselineSessions,
+            dailyDurations = baselineDailyDurations,
             period = baselinePeriod,
             sleepRangeMode = sleepRangeMode,
         )
@@ -76,6 +83,7 @@ object SleepPresentationMapper {
         val overviewDays = sleepOverviewDays(
             sessions = sessions,
             scoreSessions = sleepScoreSessions,
+            dailyDurations = dailyDurations,
             period = selectedPeriod,
             sleepRangeMode = sleepRangeMode,
         )
@@ -98,22 +106,26 @@ object SleepPresentationMapper {
 
 fun sleepDurationPoints(
     sessions: List<SleepData>,
+    dailyDurations: List<DailySleepDuration> = emptyList(),
     period: DatePeriod,
     sleepRangeMode: SleepRangeMode,
 ): List<SleepDurationPoint> {
     val zone = ZoneId.systemDefault()
+    val durationsByDate = dailyDurations.associateBy { it.date }
 
     return generateSequence(period.start) { current ->
         current.plusDays(1).takeUnless { it.isAfter(period.end) }
     }.map { date ->
         SleepDurationPoint(
             date = date,
-            hours = dailySleepSummary(
-                sessions = sessions,
-                selectedDate = date,
-                sleepRangeMode = sleepRangeMode,
-                zone = zone,
-            )?.durationHours ?: 0.0,
+            hours = durationsByDate[date]?.durationHours
+                ?: dailySleepSummary(
+                    sessions = sessions,
+                    selectedDate = date,
+                    sleepRangeMode = sleepRangeMode,
+                    zone = zone,
+                )?.durationHours
+                ?: 0.0,
         )
     }.toList()
 }
@@ -121,11 +133,13 @@ fun sleepDurationPoints(
 private fun sleepOverviewDays(
     sessions: List<SleepData>,
     scoreSessions: List<SleepData>,
+    dailyDurations: List<DailySleepDuration>,
     period: DatePeriod,
     sleepRangeMode: SleepRangeMode,
 ): List<SleepOverviewDay> {
     val zone = ZoneId.systemDefault()
     val dates = datesInPeriod(period)
+    val durationsByDate = dailyDurations.associateBy { it.date }
     val sessionsByDate = dates.associateWith { date ->
         sleepSessionsForRange(
             sessions = sessions,
@@ -139,6 +153,7 @@ private fun sleepOverviewDays(
         SleepOverviewDay(
             date = date,
             sessions = sessionsByDate[date].orEmpty(),
+            aggregateDurationMs = durationsByDate[date]?.durationMs,
             sleepScore = calculateSleepScoreForDate(
                 selectedDate = date,
                 sessions = scoreSessions,
@@ -153,6 +168,16 @@ private fun datesInPeriod(period: DatePeriod): List<LocalDate> =
     generateSequence(period.start) { current ->
         current.plusDays(1).takeUnless { it.isAfter(period.end) }
     }.toList()
+
+private fun SleepData?.withDurationOverride(
+    dailyDurations: List<DailySleepDuration>,
+    date: LocalDate,
+): SleepData? {
+    val durationMs = dailyDurations.firstOrNull { it.date == date }?.durationMs
+        ?.takeIf { it > 0L }
+        ?: return this
+    return this?.copy(durationMs = durationMs)
+}
 
 fun List<SleepOverviewDay>.toSleepOverviewSummary(): SleepOverviewSummary {
     val nights = filter { it.sleepDurationMs > 0L }
@@ -190,7 +215,9 @@ fun List<SleepOverviewDay>.toSleepOverviewSummary(): SleepOverviewSummary {
 }
 
 private val SleepOverviewDay.sleepDurationMs: Long
-    get() = sessions.sumOf { sleepDurationMsFromStages(it.stages, it.durationMs) }
+    get() = aggregateDurationMs
+        ?.takeIf { it > 0L }
+        ?: sessions.sumOf { sleepDurationMsFromStages(it.stages, it.durationMs) }
 
 private val SleepOverviewDay.remDurationMs: Long
     get() = sessions.stageDurationMs(SleepStage.STAGE_REM)

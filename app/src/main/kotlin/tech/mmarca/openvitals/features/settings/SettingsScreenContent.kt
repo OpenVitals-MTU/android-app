@@ -191,12 +191,6 @@ internal fun LazyListScope.settingsScreenContent(
                 )
             }
             item { SettingsCardSpacer() }
-            item {
-                ClearCacheCard(
-                    onClear = actions.onClearCache,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
         }
         SettingsSection.PERMISSIONS -> {
             item { SectionHeader(stringResource(section.titleRes)) }

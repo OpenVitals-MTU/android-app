@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.domain.model
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 
 data class SleepData(
@@ -46,6 +47,18 @@ data class SleepStage(
         const val STAGE_AWAKE_IN_BED = 7
     }
 }
+
+data class DailySleepDuration(
+    val date: LocalDate,
+    val durationMs: Long,
+) {
+    val durationHours: Double get() = durationMs / 3_600_000.0
+}
+
+data class SleepReadData(
+    val sessions: List<SleepData> = emptyList(),
+    val dailyAggregateDurations: List<DailySleepDuration> = emptyList(),
+)
 
 internal fun sleepDurationMsFromStages(
     stages: List<SleepStage>,

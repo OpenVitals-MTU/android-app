@@ -133,6 +133,27 @@ class SleepSessionMergingTest {
         assertEquals(2, merged.size)
     }
 
+    @Test fun `mergeSleepSessions removes overlapping duplicate sessions from different sources`() {
+        val googleFit = sleep(
+            id = "google-fit",
+            source = "google-fit",
+            start = "2026-05-06T22:00:00Z",
+            end = "2026-05-07T06:00:00Z",
+        )
+        val watch = sleep(
+            id = "watch",
+            source = "watch",
+            start = "2026-05-06T22:05:00Z",
+            end = "2026-05-07T06:05:00Z",
+            stages = listOf(stage("2026-05-06T22:05:00Z", "2026-05-07T06:05:00Z", SleepStage.STAGE_LIGHT)),
+        )
+
+        val merged = mergeSleepSessions(listOf(googleFit, watch))
+
+        assertEquals(1, merged.size)
+        assertEquals("watch", merged.single().id)
+    }
+
     @Test fun `mergeSleepSessions does not merge sessions beyond the max gap`() {
         val first = sleep(
             id = "nap",

@@ -33,34 +33,22 @@ import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.performance.AppCoroutineScope
-import tech.mmarca.openvitals.data.cache.ActivitiesPeriodDataCodec
-import tech.mmarca.openvitals.data.cache.ActivityPeriodDataCodec
-import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
-import tech.mmarca.openvitals.data.cache.periodSummaryKey
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import tech.mmarca.openvitals.healthconnect.HealthConnectQueryCache
-import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class ActivityRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
-    private val queryCache: HealthConnectQueryCache = HealthConnectQueryCache(),
     private val preferencesRepository: PreferencesRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
-    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
-    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) : ActivityRepository {
 
     companion object {
@@ -100,6 +88,7 @@ class ActivityRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadActivityPeriod(
         query: PeriodLoadQuery,
         includeSteps: Boolean,
@@ -109,137 +98,111 @@ class ActivityRepositoryImpl @Inject constructor(
     ): ActivityPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
-        val key = periodSummaryKey(
-            surface = ActivityPeriodDataCodec.Surface,
-            query = query,
-            metricSet = listOf(
-                "steps=$includeSteps",
-                "nutrition=$includeNutrition",
-                "wheelchair=$includeWheelchairPushes",
-            ).joinToString(separator = ","),
-            permissionFingerprint = granted.permissionFingerprint(),
-            schemaVersion = ActivityPeriodDataCodec.SchemaVersion,
-        )
-        return periodCacheLoader().load(
-            key = key,
-            refreshMode = refreshMode,
-            decode = ActivityPeriodDataCodec::decode,
-            encode = ActivityPeriodDataCodec::encode,
-        ) {
-            coroutineScope {
-        val dailySteps = async {
-            if (includeSteps || includeWheelchairPushes) {
-                loadDailySteps(
-                    start = windows.current.start,
-                    end = windows.current.end,
-                    granted = granted,
-                    includeSteps = includeSteps,
-                    includeWheelchairPushes = includeWheelchairPushes,
-                )
-            } else {
-                emptyList()
+        return coroutineScope {
+            val dailySteps = async {
+                if (includeSteps || includeWheelchairPushes) {
+                    loadDailySteps(
+                        start = windows.current.start,
+                        end = windows.current.end,
+                        granted = granted,
+                        includeSteps = includeSteps,
+                        includeWheelchairPushes = includeWheelchairPushes,
+                    )
+                } else {
+                    emptyList()
+                }
             }
-        }
-        val previousDailySteps = async {
-            if (includeSteps || includeWheelchairPushes) {
-                loadDailySteps(
-                    start = windows.previous.start,
-                    end = windows.previous.end,
-                    granted = granted,
-                    includeSteps = includeSteps,
-                    includeWheelchairPushes = includeWheelchairPushes,
-                )
-            } else {
-                emptyList()
+            val previousDailySteps = async {
+                if (includeSteps || includeWheelchairPushes) {
+                    loadDailySteps(
+                        start = windows.previous.start,
+                        end = windows.previous.end,
+                        granted = granted,
+                        includeSteps = includeSteps,
+                        includeWheelchairPushes = includeWheelchairPushes,
+                    )
+                } else {
+                    emptyList()
+                }
             }
-        }
-        val baselineDailySteps = async {
-            if (includeSteps || includeWheelchairPushes) {
-                loadDailySteps(
-                    start = windows.baseline.start,
-                    end = windows.baseline.end,
-                    granted = granted,
-                    includeSteps = includeSteps,
-                    includeWheelchairPushes = includeWheelchairPushes,
-                )
-            } else {
-                emptyList()
+            val baselineDailySteps = async {
+                if (includeSteps || includeWheelchairPushes) {
+                    loadDailySteps(
+                        start = windows.baseline.start,
+                        end = windows.baseline.end,
+                        granted = granted,
+                        includeSteps = includeSteps,
+                        includeWheelchairPushes = includeWheelchairPushes,
+                    )
+                } else {
+                    emptyList()
+                }
             }
-        }
-        val nutrition = async {
-            if (includeNutrition) loadDailyNutrition(windows.current.start, windows.current.end, granted) else emptyList()
-        }
-        val previousNutrition = async {
-            if (includeNutrition) loadDailyNutrition(windows.previous.start, windows.previous.end, granted) else emptyList()
-        }
-        val baselineNutrition = async {
-            if (includeNutrition) loadDailyNutrition(windows.baseline.start, windows.baseline.end, granted) else emptyList()
-        }
-        val activityProgress = async {
-            if (query.range == TimeRange.DAY && (includeSteps || includeWheelchairPushes)) {
-                loadActivityProgress(
-                    date = windows.current.start,
-                    granted = granted,
-                    includeSteps = includeSteps,
-                    includeWheelchairPushes = includeWheelchairPushes,
-                )
-            } else {
-                emptyList()
+            val nutrition = async {
+                if (includeNutrition) {
+                    loadDailyNutrition(windows.current.start, windows.current.end, granted)
+                } else {
+                    emptyList()
+                }
             }
-        }
-        ActivityPeriodData(
-            dailySteps = dailySteps.await(),
-            previousDailySteps = previousDailySteps.await(),
-            baselineDailySteps = baselineDailySteps.await(),
-            nutrition = nutrition.await(),
-            previousNutrition = previousNutrition.await(),
-            baselineNutrition = baselineNutrition.await(),
-            activityProgress = activityProgress.await(),
-        )
+            val previousNutrition = async {
+                if (includeNutrition) {
+                    loadDailyNutrition(windows.previous.start, windows.previous.end, granted)
+                } else {
+                    emptyList()
+                }
             }
+            val baselineNutrition = async {
+                if (includeNutrition) {
+                    loadDailyNutrition(windows.baseline.start, windows.baseline.end, granted)
+                } else {
+                    emptyList()
+                }
+            }
+            val activityProgress = async {
+                if (query.range == TimeRange.DAY && (includeSteps || includeWheelchairPushes)) {
+                    loadActivityProgress(
+                        date = windows.current.start,
+                        granted = granted,
+                        includeSteps = includeSteps,
+                        includeWheelchairPushes = includeWheelchairPushes,
+                    )
+                } else {
+                    emptyList()
+                }
+            }
+            ActivityPeriodData(
+                dailySteps = dailySteps.await(),
+                previousDailySteps = previousDailySteps.await(),
+                baselineDailySteps = baselineDailySteps.await(),
+                nutrition = nutrition.await(),
+                previousNutrition = previousNutrition.await(),
+                baselineNutrition = baselineNutrition.await(),
+                activityProgress = activityProgress.await(),
+            )
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadActivitiesPeriod(
         query: PeriodLoadQuery,
         refreshMode: RefreshMode,
     ): ActivitiesPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
-        val key = periodSummaryKey(
-            surface = ActivitiesPeriodDataCodec.Surface,
-            query = query,
-            metricSet = "activities",
-            permissionFingerprint = granted.permissionFingerprint(),
-            schemaVersion = ActivitiesPeriodDataCodec.SchemaVersion,
-        )
-        return periodCacheLoader().load(
-            key = key,
-            refreshMode = refreshMode,
-            decode = ActivitiesPeriodDataCodec::decode,
-            encode = ActivitiesPeriodDataCodec::encode,
-        ) {
-            coroutineScope {
-        val workouts = async { loadWorkouts(windows.current.start, windows.current.end, granted) }
-        val previousWorkouts = async { loadWorkouts(windows.previous.start, windows.previous.end, granted) }
-        val baselineWorkouts = async { loadWorkouts(windows.baseline.start, windows.baseline.end, granted) }
-        val plannedWorkouts = async { loadPlannedWorkouts(windows.current.start, windows.current.end, granted) }
-        ActivitiesPeriodData(
-            workouts = workouts.await(),
-            previousWorkouts = previousWorkouts.await(),
-            baselineWorkouts = baselineWorkouts.await(),
-            plannedWorkouts = plannedWorkouts.await(),
-        )
-            }
+        return coroutineScope {
+            val workouts = async { loadWorkouts(windows.current.start, windows.current.end, granted) }
+            val previousWorkouts = async { loadWorkouts(windows.previous.start, windows.previous.end, granted) }
+            val baselineWorkouts = async { loadWorkouts(windows.baseline.start, windows.baseline.end, granted) }
+            val plannedWorkouts = async { loadPlannedWorkouts(windows.current.start, windows.current.end, granted) }
+            ActivitiesPeriodData(
+                workouts = workouts.await(),
+                previousWorkouts = previousWorkouts.await(),
+                baselineWorkouts = baselineWorkouts.await(),
+                plannedWorkouts = plannedWorkouts.await(),
+            )
         }
     }
-
-    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
-        CachedPeriodRepositoryLoader(
-            cacheStore = metricSummaryCacheStore,
-            appScope = appScope,
-            tag = TAG,
-        )
 
     override suspend fun loadDailySteps(start: LocalDate, end: LocalDate): List<DailySteps> {
         val granted = grantedPermissionsIfAvailable()
@@ -438,9 +401,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writePlannedWorkout missingCount=1")
             throw SecurityException("Missing Health Connect planned exercise write permission.")
         }
-        return hc.writePlannedExerciseSession(request).also {
-            queryCache.invalidateOperations("dashboard")
-        }
+        return hc.writePlannedExerciseSession(request)
     }
 
     private suspend fun loadPlannedWorkouts(
@@ -571,9 +532,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        return hc.writeActivityEntry(request).also {
-            queryCache.invalidateOperations("dashboard")
-        }
+        return hc.writeActivityEntry(request)
     }
 
     override suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
@@ -583,7 +542,6 @@ class ActivityRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect activity write permission.")
         }
         hc.updateActivityEntry(id, request)
-        queryCache.invalidateOperations("dashboard")
     }
 
     override suspend fun deleteActivityEntry(id: String) {
@@ -594,6 +552,5 @@ class ActivityRepositoryImpl @Inject constructor(
         }
         hc.deleteActivityEntry(id)
         markerRepository?.deleteMarkersForActivity(id)
-        queryCache.invalidateOperations("dashboard")
     }
 }

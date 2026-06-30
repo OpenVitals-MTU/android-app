@@ -521,7 +521,7 @@ class DashboardViewModelTest {
         assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
     }
 
-    @Test fun `weekly deferred dashboard loads do not await missing derived metrics`() = runTest {
+    @Test fun `weekly deferred dashboard loads request weekly cardio metric`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -550,7 +550,7 @@ class DashboardViewModelTest {
 
         assertTrue(
             queries.any {
-                DashboardMetric.WEEKLY_CARDIO_LOAD in it.visibleMetrics && !it.awaitMissingDerivedMetrics
+                DashboardMetric.WEEKLY_CARDIO_LOAD in it.visibleMetrics
             }
         )
     }

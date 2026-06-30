@@ -8,7 +8,6 @@ import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
-import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 
 data class DashboardLoadCoalesceKey(
     val date: LocalDate,
@@ -17,7 +16,6 @@ data class DashboardLoadCoalesceKey(
     val visibleMetrics: String,
     val includeHistoricalBaselines: Boolean,
     val includeWeeklyTrainingSignals: Boolean,
-    val awaitMissingDerivedMetrics: Boolean,
     val permissionFingerprint: String,
     val showOpenVitalsCalculatedCalories: Boolean,
 ) {
@@ -34,8 +32,7 @@ data class DashboardLoadCoalesceKey(
                 visibleMetrics = query.visibleMetrics.sortedBy { it.name }.joinToString(",") { it.name },
                 includeHistoricalBaselines = query.includeHistoricalBaselines,
                 includeWeeklyTrainingSignals = query.includeWeeklyTrainingSignals,
-                awaitMissingDerivedMetrics = query.awaitMissingDerivedMetrics,
-                permissionFingerprint = granted.permissionFingerprint(),
+                permissionFingerprint = granted.sorted().joinToString(separator = ","),
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
             )
     }

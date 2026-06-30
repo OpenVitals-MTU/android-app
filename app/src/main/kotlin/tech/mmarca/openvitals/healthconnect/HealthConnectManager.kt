@@ -53,6 +53,7 @@ import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SexualActivityEntry
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepReadData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.StepProgressPoint
@@ -61,6 +62,7 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.domain.model.WeightEntry
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import java.time.Instant
 import java.time.LocalDate
 import kotlin.reflect.KClass
@@ -344,6 +346,12 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readSleepSessions(start: Instant, end: Instant): List<SleepData> =
         sleepReader.readSleepSessions(start, end)
+
+    suspend fun readSleepData(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        sleepRangeMode: SleepRangeMode,
+    ): SleepReadData = sleepReader.readSleepData(startDate, endDate, sleepRangeMode)
 
     suspend fun readSleepSession(id: String): SleepData? =
         sleepReader.readSleepSession(id)

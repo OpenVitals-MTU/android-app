@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.sleep
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
@@ -54,6 +55,29 @@ class SleepPresentationMapperTest {
 
         assertNotNull(display.dailySummary)
         assertFalse(display.dailySessions.isEmpty())
+    }
+
+    @Test fun `build prefers aggregate duration for daily summary and points`() {
+        val sessions = listOf(
+            sleepSession(anchorDate),
+            sleepSession(anchorDate).copy(id = "duplicate", source = "google-fit"),
+        )
+        val aggregateDurationMs = 8 * 60 * 60 * 1000L
+        val dayQuery = weekQuery.copy(range = TimeRange.DAY, anchorDate = anchorDate)
+
+        val display = SleepPresentationMapper.build(
+            query = dayQuery,
+            sleepRangeMode = SleepRangeMode.EVENING_18H,
+            sessions = sessions,
+            previousSessions = emptyList(),
+            baselineSessions = emptyList(),
+            dailyDurations = listOf(DailySleepDuration(anchorDate, aggregateDurationMs)),
+            crossDailyHrv = emptyList(),
+        )
+
+        assertEquals(aggregateDurationMs, display.dailySummary!!.durationMs)
+        assertEquals(8.0, display.durationPoints.single().hours, 0.01)
+        assertEquals(aggregateDurationMs, display.overviewSummary.sleepDurationMs)
     }
 
     @Test fun `overview summary aggregates scored nights`() {

@@ -52,6 +52,7 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.domain.model.StepProgressPoint
+import tech.mmarca.openvitals.domain.model.deduplicateExerciseSessions
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -416,12 +417,14 @@ internal class ActivityHealthReader(
 
     suspend fun readExerciseSessions(start: Instant, end: Instant): List<ExerciseData> =
         support.withLogging("readExerciseSessions[$start..$end]", emptyList()) {
-            support.client().readRecordsPaged(
+            val sessions = support.client().readRecordsPaged(
                 recordType = ExerciseSessionRecord::class,
                 timeRangeFilter = TimeRangeFilter.between(start, end),
                 ascendingOrder = false,
                 pageSize = 50,
             ).map { it.toExerciseData(appPackageName = appPackageName) }
+
+            deduplicateExerciseSessions(sessions)
         }
 
     suspend fun readExerciseSession(

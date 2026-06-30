@@ -1557,33 +1557,6 @@ internal fun AppLockCard(
 }
 
 @Composable
-internal fun ClearCacheCard(
-    onClear: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringResource(R.string.settings_clear_local_cache),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                text = stringResource(R.string.settings_clear_local_cache_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-            )
-            OpenVitalsOutlinedButton(
-                onClick = onClear,
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(stringResource(R.string.settings_clear_local_cache))
-            }
-        }
-    }
-}
-
-@Composable
 internal fun DebugDiagnosticsCard(
     onSaveLogs: () -> Unit,
     modifier: Modifier = Modifier,

@@ -4,33 +4,24 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.core.performance.AppCoroutineScope
-import tech.mmarca.openvitals.data.cache.CachedPeriodRepositoryLoader
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
-import tech.mmarca.openvitals.data.cache.SleepPeriodDataCodec
-import tech.mmarca.openvitals.data.cache.periodSummaryKey
-import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
-import tech.mmarca.openvitals.domain.query.SleepPeriodData
 import tech.mmarca.openvitals.domain.model.mergeSleepSessions
-import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.query.SleepPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import tech.mmarca.openvitals.healthconnect.permissionFingerprint
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 @Singleton
 class SleepRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
-    private val metricSummaryCacheStore: MetricSummaryCacheStore? = null,
-    @param:AppCoroutineScope private val appScope: CoroutineScope? = null,
 ) : SleepRepository {
 
     companion object {
@@ -42,6 +33,7 @@ class SleepRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
+    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadSleepPeriod(
         query: PeriodLoadQuery,
         sleepRangeMode: SleepRangeMode,
@@ -49,39 +41,33 @@ class SleepRepositoryImpl @Inject constructor(
     ): SleepPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
-        val key = periodSummaryKey(
-            surface = SleepPeriodDataCodec.Surface,
-            query = query,
-            metricSet = "sleep",
-            permissionFingerprint = granted.permissionFingerprint(),
-            schemaVersion = SleepPeriodDataCodec.SchemaVersion,
-            extraConfig = listOf("sleepRangeMode=${sleepRangeMode.name}"),
-        )
-        return periodCacheLoader().load(
-            key = key,
-            refreshMode = refreshMode,
-            decode = SleepPeriodDataCodec::decode,
-            encode = SleepPeriodDataCodec::encode,
-        ) {
-            coroutineScope {
-        val sessions = async { loadSleepSessions(sleepQueryStart(windows.current.start, sleepRangeMode), windows.current.end, granted) }
-        val previousSessions = async { loadSleepSessions(sleepQueryStart(windows.previous.start, sleepRangeMode), windows.previous.end, granted) }
-        val baselineSessions = async { loadSleepSessions(sleepQueryStart(windows.baseline.start, sleepRangeMode), windows.baseline.end, granted) }
-        SleepPeriodData(
-            sessions = sessions.await(),
-            previousSessions = previousSessions.await(),
-            baselineSessions = baselineSessions.await(),
-        )
+        if (readSleepPermission !in granted) {
+            Log.w(TAG, "Skipping loadSleepPeriod missingCount=1")
+            return SleepPeriodData()
+        }
+        return coroutineScope {
+            val current = async {
+                hc.readSleepData(windows.current.start, windows.current.end, sleepRangeMode)
             }
+            val previous = async {
+                hc.readSleepData(windows.previous.start, windows.previous.end, sleepRangeMode)
+            }
+            val baseline = async {
+                hc.readSleepData(windows.baseline.start, windows.baseline.end, sleepRangeMode)
+            }
+            val currentData = current.await()
+            val previousData = previous.await()
+            val baselineData = baseline.await()
+            SleepPeriodData(
+                sessions = currentData.sessions,
+                previousSessions = previousData.sessions,
+                baselineSessions = baselineData.sessions,
+                dailyDurations = currentData.dailyAggregateDurations,
+                previousDailyDurations = previousData.dailyAggregateDurations,
+                baselineDailyDurations = baselineData.dailyAggregateDurations,
+            )
         }
     }
-
-    private fun periodCacheLoader(): CachedPeriodRepositoryLoader =
-        CachedPeriodRepositoryLoader(
-            cacheStore = metricSummaryCacheStore,
-            appScope = appScope,
-            tag = TAG,
-        )
 
     override suspend fun loadSleepSessions(start: LocalDate, end: LocalDate): List<SleepData> {
         val granted = grantedPermissionsIfAvailable()
@@ -115,11 +101,4 @@ class SleepRepositoryImpl @Inject constructor(
         }
         return hc.readSleepSession(id)
     }
-
-    private fun sleepQueryStart(start: LocalDate, sleepRangeMode: SleepRangeMode): LocalDate =
-        when (sleepRangeMode) {
-            SleepRangeMode.ROLLING_24H -> start
-            SleepRangeMode.NOON,
-            SleepRangeMode.EVENING_18H -> start.minusDays(1)
-        }
 }

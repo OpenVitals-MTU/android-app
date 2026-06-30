@@ -32,7 +32,6 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkControl
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
@@ -59,7 +58,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         assertEquals(setOf("steps", "write", "route", "cycle"), vm.uiState.value.visiblePermissions)
@@ -71,7 +69,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         assertEquals(setOf("write", "route", "cycle"), vm.uiState.value.missingVisiblePermissions)
@@ -84,7 +81,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         assertTrue(vm.uiState.value.missingVisiblePermissions.isEmpty())
@@ -98,7 +94,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         vm.selectAppLanguage(AppLanguage.SPANISH)
@@ -114,7 +109,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         vm.selectAppThemeMode(AppThemeMode.AMOLED)
@@ -130,7 +124,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         vm.selectSleepRangeMode(SleepRangeMode.NOON)
@@ -146,7 +139,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         vm.selectActivityWeekMode(ActivityWeekMode.LAST_7_DAYS)
@@ -162,7 +154,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
         val recordingPreferences = ActivityRecordingPreferences(
             autoIdleEnabled = false,
@@ -186,7 +177,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         vm.setShowOpenVitalsCalculatedCalories(true)
@@ -202,7 +192,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs,
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         vm.selectFavoriteActivity(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
@@ -219,7 +208,6 @@ class SettingsViewModelTest {
             preferencesRepository = prefs(),
             appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
-            metricSummaryCacheStore = cacheStore(),
         )
 
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, vm.uiState.value.availability)
@@ -234,7 +222,6 @@ class SettingsViewModelTest {
         offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
         offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
         permissionUxState: HealthConnectPermissionUxState = permissionUxState(),
-        metricSummaryCacheStore: MetricSummaryCacheStore = cacheStore(),
     ): SettingsViewModel =
         SettingsViewModel(
             repository = repository,
@@ -243,7 +230,6 @@ class SettingsViewModelTest {
             offlineMapRepository = offlineMapRepository,
             offlineMapImportWorkController = offlineMapImportWorkController,
             permissionUxState = permissionUxState,
-            metricSummaryCacheStore = metricSummaryCacheStore,
         )
 
     private fun repo(
@@ -273,9 +259,6 @@ class SettingsViewModelTest {
 
     private fun permissionUxState(): HealthConnectPermissionUxState =
         mockk<HealthConnectPermissionUxState>(relaxed = true)
-
-    private fun cacheStore(): MetricSummaryCacheStore =
-        mockk<MetricSummaryCacheStore>(relaxed = true)
 
     private fun prefs(): PreferencesRepository =
         mockk<PreferencesRepository>().also { prefs ->

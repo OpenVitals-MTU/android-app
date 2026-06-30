@@ -33,6 +33,7 @@ data class SleepDurationPoint(
 data class SleepOverviewDay(
     val date: LocalDate,
     val sessions: List<SleepData> = emptyList(),
+    val aggregateDurationMs: Long? = null,
     val sleepScore: SleepScoreEstimate = SleepScoreEstimate.NoData,
 )
 

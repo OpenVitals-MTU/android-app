@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.domain.model
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -16,20 +17,30 @@ internal fun sleepRangeWindowFor(
     sleepRangeMode: SleepRangeMode,
     zone: ZoneId = ZoneId.systemDefault(),
 ): SleepRangeWindow {
-    val start = when (sleepRangeMode) {
-        SleepRangeMode.ROLLING_24H -> selectedDate.atStartOfDay()
-        SleepRangeMode.NOON -> selectedDate.minusDays(1).atTime(LocalTime.NOON)
-        SleepRangeMode.EVENING_18H -> selectedDate.minusDays(1).atTime(18, 0)
-    }
-    val end = when (sleepRangeMode) {
-        SleepRangeMode.ROLLING_24H -> selectedDate.plusDays(1).atStartOfDay()
-        SleepRangeMode.NOON -> selectedDate.atTime(LocalTime.NOON)
-        SleepRangeMode.EVENING_18H -> selectedDate.atTime(18, 0)
-    }
+    val start = sleepRangeStartFor(selectedDate, sleepRangeMode)
+    val end = sleepRangeEndFor(selectedDate, sleepRangeMode)
     return SleepRangeWindow(
         start = start.atZone(zone).toInstant(),
         end = end.atZone(zone).toInstant(),
     )
+}
+
+internal fun sleepRangeStartFor(
+    selectedDate: LocalDate,
+    sleepRangeMode: SleepRangeMode,
+): LocalDateTime = when (sleepRangeMode) {
+    SleepRangeMode.ROLLING_24H -> selectedDate.atStartOfDay()
+    SleepRangeMode.NOON -> selectedDate.minusDays(1).atTime(LocalTime.NOON)
+    SleepRangeMode.EVENING_18H -> selectedDate.minusDays(1).atTime(18, 0)
+}
+
+internal fun sleepRangeEndFor(
+    selectedDate: LocalDate,
+    sleepRangeMode: SleepRangeMode,
+): LocalDateTime = when (sleepRangeMode) {
+    SleepRangeMode.ROLLING_24H -> selectedDate.plusDays(1).atStartOfDay()
+    SleepRangeMode.NOON -> selectedDate.atTime(LocalTime.NOON)
+    SleepRangeMode.EVENING_18H -> selectedDate.atTime(18, 0)
 }
 
 internal fun sleepSessionsForRange(

@@ -7,7 +7,6 @@ import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
-import tech.mmarca.openvitals.data.cache.MetricSummaryWarmupWorker
 
 @HiltAndroidApp
 class OpenVitalsApp : Application() {
@@ -19,6 +18,5 @@ class OpenVitalsApp : Application() {
         super.onCreate()
         AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())
         appForegroundGate.registerProcessLifecycle(ProcessLifecycleOwner.get())
-        MetricSummaryWarmupWorker.enqueue(this)
     }
 }

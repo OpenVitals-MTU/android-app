@@ -222,6 +222,9 @@ class SleepViewModel(
                             sessions = result.sessions,
                             previousSessions = result.previousSessions,
                             baselineSessions = result.baselineSessions,
+                            dailyDurations = result.dailyDurations,
+                            previousDailyDurations = result.previousDailyDurations,
+                            baselineDailyDurations = result.baselineDailyDurations,
                             crossDailyHrv = result.crossDailyHrv,
                         )
                     }

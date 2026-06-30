@@ -29,7 +29,6 @@ import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProg
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
-import tech.mmarca.openvitals.data.cache.MetricSummaryCacheStore
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -100,7 +99,6 @@ class SettingsViewModel @Inject constructor(
     private val offlineMapRepository: OfflineMapRepository,
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val permissionUxState: HealthConnectPermissionUxState,
-    private val metricSummaryCacheStore: MetricSummaryCacheStore,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -395,12 +393,6 @@ class SettingsViewModel @Inject constructor(
     fun setAppLockEnabled(enabled: Boolean) {
         preferencesRepository.appLockEnabled = enabled
         _uiState.value = _uiState.value.copy(appLockEnabled = enabled)
-    }
-
-    fun clearCachedSummaries() {
-        viewModelScope.launch {
-            metricSummaryCacheStore.clearAll()
-        }
     }
 
     fun acceptPrivacyPolicy() {
