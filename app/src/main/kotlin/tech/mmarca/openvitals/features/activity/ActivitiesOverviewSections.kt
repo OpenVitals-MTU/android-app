@@ -361,7 +361,7 @@ internal fun ActivityOverviewStrip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         buckets.forEach { bucket ->
-            val workout = bucket.workouts.firstOrNull()
+            val workout = activityOverviewMarkerWorkout(bucket)
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -386,13 +386,6 @@ internal fun ActivityOverviewStrip(
                                     modifier = Modifier.size(22.dp),
                                 )
                             }
-                        }
-                        bucket.hasActivity -> {
-                            Box(
-                                modifier = Modifier
-                                    .size(ActivityOverviewMarkerSize)
-                                    .background(WorkoutColor, CircleShape),
-                            )
                         }
                         else -> {
                             Box(
@@ -802,10 +795,10 @@ internal data class ActivityOverviewBucket(
 ) {
     val workouts: List<ExerciseData>
         get() = days.flatMap { it.workouts }.distinctBy { it.id }
-
-    val hasActivity: Boolean
-        get() = days.any { it.hasActivity }
 }
+
+internal fun activityOverviewMarkerWorkout(bucket: ActivityOverviewBucket): ExerciseData? =
+    bucket.workouts.firstOrNull()
 
 internal data class ActivityOverviewTotals(
     val steps: Long,
