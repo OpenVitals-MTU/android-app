@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -67,6 +68,7 @@ data class SettingsUiState(
     val favoriteActivityExerciseType: Int? = null,
     val healthConnectSyncEnabled: Boolean = true,
     val appLockEnabled: Boolean = false,
+    val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet()
@@ -141,6 +143,7 @@ class SettingsViewModel @Inject constructor(
                 favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
                 healthConnectSyncEnabled = preferencesRepository.healthConnectSyncEnabled,
                 appLockEnabled = preferencesRepository.appLockEnabled,
+                bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
             )
         }
     }
@@ -393,6 +396,15 @@ class SettingsViewModel @Inject constructor(
     fun setAppLockEnabled(enabled: Boolean) {
         preferencesRepository.appLockEnabled = enabled
         _uiState.value = _uiState.value.copy(appLockEnabled = enabled)
+    }
+
+    fun updateBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
+        preferencesRepository.setBodyEnergyCalibration(calibration)
+        _uiState.value = _uiState.value.copy(bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration())
+    }
+
+    fun resetBodyEnergyCalibration() {
+        updateBodyEnergyCalibration(BodyEnergyCalibration.Automatic)
     }
 
     fun acceptPrivacyPolicy() {

@@ -24,6 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
@@ -437,6 +438,8 @@ class OnboardingViewModelTest {
         mockk<PreferencesRepository>().also { prefs ->
             every { prefs.appLanguage } returns appLanguage
             every { prefs.appLanguage = any() } just runs
+            every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
+            every { prefs.setBodyEnergyCalibration(any()) } just runs
             every { prefs.acceptedPrivacyPolicyVersion = any() } just runs
             every { prefs.privacyPolicyAcceptedAtMillis = any() } just runs
             every { prefs.onboardingDone = any() } just runs

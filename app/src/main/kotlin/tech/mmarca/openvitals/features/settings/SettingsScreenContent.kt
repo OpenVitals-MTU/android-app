@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.BuildConfig
+import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyCalibrationCard
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -135,6 +136,17 @@ internal fun LazyListScope.settingsScreenContent(
                 SleepRangeModeCard(
                     selected = state.sleepRangeMode,
                     onSelect = viewModel::selectSleepRangeMode,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
+        SettingsSection.BODY_ENERGY -> {
+            item { SectionHeader(stringResource(section.titleRes)) }
+            item {
+                BodyEnergyCalibrationCard(
+                    calibration = state.bodyEnergyCalibration,
+                    onSave = actions.onSaveBodyEnergyCalibration,
+                    onUseAutomatic = actions.onResetBodyEnergyCalibration,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }

@@ -15,6 +15,8 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTempl
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
@@ -46,6 +48,7 @@ class PreferencesRepository @Inject constructor(
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     private val _showOpenVitalsCalculatedCalories = MutableStateFlow(readShowOpenVitalsCalculatedCalories())
     private val _healthConnectSyncEnabled = MutableStateFlow(readHealthConnectSyncEnabled())
+    private val _bodyEnergyCalibration = MutableStateFlow(readBodyEnergyCalibration())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
@@ -54,6 +57,7 @@ class PreferencesRepository @Inject constructor(
     val weekPeriodModeFlow = activityWeekModeFlow.map { it.toWeekPeriodMode() }
     val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
     val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
+    val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -208,6 +212,25 @@ class PreferencesRepository @Inject constructor(
                 )
             }
         }
+
+    fun bodyEnergyCalibration(): BodyEnergyCalibration = _bodyEnergyCalibration.value
+
+    fun setBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
+        val normalized = calibration.normalized()
+        prefs.edit {
+            putBoolean(KEY_BODY_ENERGY_USE_MANUAL_ZONES, normalized.useManualZones)
+            normalized.birthYear?.let { putInt(KEY_BODY_ENERGY_BIRTH_YEAR, it) }
+                ?: remove(KEY_BODY_ENERGY_BIRTH_YEAR)
+            normalized.manualMaxHeartRateBpm?.let { putInt(KEY_BODY_ENERGY_MAX_HR_BPM, it) }
+                ?: remove(KEY_BODY_ENERGY_MAX_HR_BPM)
+            normalized.manualRestingHeartRateBpm?.let { putInt(KEY_BODY_ENERGY_RESTING_HR_BPM, it) }
+                ?: remove(KEY_BODY_ENERGY_RESTING_HR_BPM)
+            normalized.manualZoneThresholdsBpm?.let {
+                putString(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM, it.toPreferenceString())
+            } ?: remove(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM)
+        }
+        _bodyEnergyCalibration.value = normalized
+    }
 
     fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
         prefs.getString(key.storageKey, null)
@@ -549,6 +572,20 @@ class PreferencesRepository @Inject constructor(
     private fun readHealthConnectSyncEnabled(): Boolean =
         prefs.getBoolean(KEY_HEALTH_CONNECT_SYNC_ENABLED, true)
 
+    private fun readBodyEnergyCalibration(): BodyEnergyCalibration =
+        BodyEnergyCalibration(
+            birthYear = prefs.getInt(KEY_BODY_ENERGY_BIRTH_YEAR, MISSING_BODY_ENERGY_INT)
+                .takeIf { it != MISSING_BODY_ENERGY_INT },
+            manualMaxHeartRateBpm = prefs.getInt(KEY_BODY_ENERGY_MAX_HR_BPM, MISSING_BODY_ENERGY_INT)
+                .takeIf { it != MISSING_BODY_ENERGY_INT },
+            manualRestingHeartRateBpm = prefs.getInt(KEY_BODY_ENERGY_RESTING_HR_BPM, MISSING_BODY_ENERGY_INT)
+                .takeIf { it != MISSING_BODY_ENERGY_INT },
+            manualZoneThresholdsBpm = HeartZoneThresholds.fromPreferenceString(
+                prefs.getString(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM, null),
+            ),
+            useManualZones = prefs.getBoolean(KEY_BODY_ENERGY_USE_MANUAL_ZONES, false),
+        ).normalized()
+
     private fun defaultUnitSystem(): UnitSystem {
         val country = Locale.getDefault().country.uppercase(Locale.US)
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
@@ -655,6 +692,11 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_HYDRATION_REMINDER_ACTIVE_END_TIME = "hydration_reminder_active_end_time"
         private const val KEY_HIGH_HEART_RATE_THRESHOLD_BPM = "high_heart_rate_threshold_bpm"
         private const val KEY_LOW_HEART_RATE_THRESHOLD_BPM = "low_heart_rate_threshold_bpm"
+        private const val KEY_BODY_ENERGY_BIRTH_YEAR = "body_energy_birth_year"
+        private const val KEY_BODY_ENERGY_MAX_HR_BPM = "body_energy_max_hr_bpm"
+        private const val KEY_BODY_ENERGY_RESTING_HR_BPM = "body_energy_resting_hr_bpm"
+        private const val KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM = "body_energy_zone_thresholds_bpm"
+        private const val KEY_BODY_ENERGY_USE_MANUAL_ZONES = "body_energy_use_manual_zones"
         private const val KEY_MINDFULNESS_TIMER_DURATION_MINUTES = "mindfulness_timer_duration_minutes"
         private const val KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES = "mindfulness_timer_interval_minutes"
         private const val KEY_MINDFULNESS_TIMER_BELL_SOUND = "mindfulness_timer_bell_sound"
@@ -678,6 +720,7 @@ class PreferencesRepository @Inject constructor(
         private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60
         private const val MISSING_EXERCISE_TYPE = Int.MIN_VALUE
         private const val MISSING_HYDRATION_AMOUNT_MILLILITERS = -1.0f
+        private const val MISSING_BODY_ENERGY_INT = Int.MIN_VALUE
         private const val ROUTE_GAP_OFF = 0
         private const val RECORDING_INTERVAL_OFF = 0
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")

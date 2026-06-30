@@ -25,8 +25,10 @@ import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -123,6 +125,26 @@ class DashboardViewModelTest {
         val vm = dashboardViewModel(loader, prefs())
 
         assertEquals(ScreenError.Message("Unknown error"), vm.uiState.value.error)
+    }
+
+    @Test fun `transient load cancellation retries without surfacing dashboard error`() = runTest {
+        val loader = mockDashboardDataLoader()
+        var loadCalls = 0
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            loadCalls += 1
+            if (loadCalls == 1) {
+                throw CancellationException("Job was cancelled")
+            }
+            DashboardData(date = today, steps = 7_200)
+        }
+
+        val vm = dashboardViewModel(loader, prefs())
+
+        val state = vm.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals(7_200L, state.data?.steps)
+        assertNull(state.error)
+        coVerify(exactly = 2) { loader.loadDashboard(any<DashboardQuery>()) }
     }
 
     // ─── Date clamping ────────────────────────────────────────────────────────
@@ -325,7 +347,7 @@ class DashboardViewModelTest {
         }
     }
 
-    @Test fun `load requests every dashboard metric`() = runTest {
+    @Test fun `load requests visible dashboard widgets first`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -343,10 +365,20 @@ class DashboardViewModelTest {
 
         dashboardViewModel(loader, prefs)
 
-        assertEquals(DashboardMetric.entries.toSet(), queries.first().visibleMetrics)
+        assertEquals(
+            setOf(
+                DashboardMetric.SLEEP,
+                DashboardMetric.STEPS,
+                DashboardMetric.HYDRATION,
+                DashboardMetric.DISTANCE,
+                DashboardMetric.WEIGHT,
+            ),
+            queries.first().visibleMetrics,
+        )
+        assertFalse(queries.first().includeHistoricalBaselines)
     }
 
-    @Test fun `dashboard widget order does not scope dashboard query`() = runTest {
+    @Test fun `dashboard widget order scopes first dashboard query`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -359,8 +391,57 @@ class DashboardViewModelTest {
 
         dashboardViewModel(loader, prefs)
 
-        assertTrue(DashboardMetric.AVG_HEART_RATE in queries.first().visibleMetrics)
+        assertEquals(setOf(DashboardMetric.AVG_HEART_RATE), queries.first().visibleMetrics)
         assertEquals(1, queries.size)
+    }
+
+    @Test fun `background dashboard query loads remaining configured widget metrics`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val queries = mutableListOf<DashboardQuery>()
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.WEEKLY_CARDIO_LOAD.name,
+            DashboardWidgetId.DISTANCE.name,
+            DashboardWidgetId.CALORIES_OUT.name,
+            DashboardWidgetId.ACTIVE_CALORIES.name,
+            DashboardWidgetId.FLOORS.name,
+            DashboardWidgetId.SLEEP.name,
+            DashboardWidgetId.HYDRATION.name,
+            DashboardWidgetId.WEIGHT.name,
+            DashboardWidgetId.AVG_HEART_RATE.name,
+        )
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val query = firstArg<DashboardQuery>()
+            queries += query
+            DashboardData(date = today, loadedMetrics = query.visibleMetrics)
+        }
+
+        dashboardViewModel(loader, prefs)
+        advanceUntilIdle()
+
+        assertEquals(2, queries.size)
+        assertEquals(
+            setOf(
+                DashboardMetric.STEPS,
+                DashboardMetric.WEEKLY_CARDIO_LOAD,
+                DashboardMetric.DISTANCE,
+                DashboardMetric.CALORIES_OUT,
+                DashboardMetric.ACTIVE_CALORIES,
+                DashboardMetric.FLOORS,
+                DashboardMetric.SLEEP,
+                DashboardMetric.HYDRATION,
+            ),
+            queries.first().visibleMetrics,
+        )
+        assertEquals(
+            setOf(
+                DashboardMetric.WEIGHT,
+                DashboardMetric.AVG_HEART_RATE,
+            ),
+            queries[1].visibleMetrics,
+        )
+        assertTrue(queries[1].includeHistoricalBaselines)
     }
 
     @Test fun `refresh passes force refresh mode`() = runTest {

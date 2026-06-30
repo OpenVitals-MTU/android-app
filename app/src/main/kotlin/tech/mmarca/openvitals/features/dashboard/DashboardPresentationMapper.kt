@@ -16,6 +16,7 @@ object DashboardPresentationMapper {
         dailyGoals: DashboardDailyGoals,
         unitFormatter: UnitFormatter,
         dateTimeFormatterProvider: DateTimeFormatterProvider,
+        loadingWidgets: Set<DashboardWidgetId> = emptySet(),
     ): DashboardDisplayState {
         val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
         val widgets = DashboardWidgetId.entries.associateWith { widgetId ->
@@ -26,7 +27,7 @@ object DashboardPresentationMapper {
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 sleepGoalMs = sleepGoalMs,
-                isLoading = false,
+                isLoading = widgetId in loadingWidgets,
             )
         }.filterValues { it != null }.mapValues { (_, value) -> value!! }
 
@@ -165,6 +166,15 @@ object DashboardPresentationMapper {
                     goalLabelValue = DisplayValue(unitFormatter.duration(sleepGoalMs), ""),
                 )
             },
+            isLoading = isLoading,
+        )
+        DashboardWidgetId.BODY_ENERGY -> optionalMetricWidget(
+            id = widgetId,
+            value = data.bodyEnergyTimeline?.let { DisplayValue(unitFormatter.count(it.currentScore), "") },
+            measurementSubtitle = data.bodyEnergyTimeline?.let { timeline ->
+                "Start ${timeline.startScore}  +${timeline.charged} / -${timeline.drained}"
+            },
+            requiresNoDataMessage = true,
             isLoading = isLoading,
         )
         DashboardWidgetId.HYDRATION -> metricWidget(

@@ -49,6 +49,7 @@ fun MetricDetailScaffold(
     weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     periodOverride: (DatePeriod) -> DatePeriod = { it },
     periodTitle: @Composable ((DatePeriod) -> String)? = null,
+    showTimeRangeSelector: Boolean = true,
     syncPaused: Boolean = false,
     sectionListState: MetricDetailSectionListState? = null,
     headerItems: LazyListScope.() -> Unit = {},
@@ -102,12 +103,14 @@ fun MetricDetailScaffold(
                         )
                     }
                 }
-                item {
-                    TimeRangeSelector(
-                        selected = selectedRange,
-                        onSelect = onSelectRange,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
+                if (showTimeRangeSelector) {
+                    item {
+                        TimeRangeSelector(
+                            selected = selectedRange,
+                            onSelect = onSelectRange,
+                            modifier = Modifier.padding(vertical = 8.dp),
+                        )
+                    }
                 }
                 item {
                     PeriodNavigator(

@@ -23,6 +23,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -270,6 +271,7 @@ class SettingsViewModelTest {
             every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
             every { prefs.showOpenVitalsCalculatedCalories } returns false
             every { prefs.favoriteActivityExerciseType } returns null
+            every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
             every { prefs.healthConnectSyncEnabled } returns true
             every { prefs.appLockEnabled } returns false
             every { prefs.appLanguage = any() } just runs
@@ -279,6 +281,7 @@ class SettingsViewModelTest {
             every { prefs.setActivityRecordingPreferences(any()) } just runs
             every { prefs.showOpenVitalsCalculatedCalories = any() } just runs
             every { prefs.favoriteActivityExerciseType = any() } just runs
+            every { prefs.setBodyEnergyCalibration(any()) } just runs
         }
 
     private fun importController(): AppleHealthImportWorkController =

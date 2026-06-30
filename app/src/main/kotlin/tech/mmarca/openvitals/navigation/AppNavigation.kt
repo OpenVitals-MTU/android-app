@@ -42,6 +42,8 @@ import tech.mmarca.openvitals.features.activity.CaloriesViewModel
 import tech.mmarca.openvitals.features.activity.CardioLoadDetailScreen
 import tech.mmarca.openvitals.features.body.BodyScreen
 import tech.mmarca.openvitals.features.body.BodyViewModel
+import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyDetailsScreen
+import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
@@ -57,7 +59,6 @@ import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.onboarding.OnboardingScreen
 import tech.mmarca.openvitals.features.onboarding.OnboardingViewModel
-import tech.mmarca.openvitals.features.readiness.BodyEnergyDetailsScreen
 import tech.mmarca.openvitals.features.readiness.DailyReadinessScreen
 import tech.mmarca.openvitals.features.readiness.DailyReadinessViewModel
 import tech.mmarca.openvitals.features.readiness.StressDetailsScreen
@@ -193,6 +194,7 @@ fun AppNavigation(
             Screen.SettingsSensors.route,
             Screen.SettingsCalories.route,
             Screen.SettingsSleep.route,
+            Screen.SettingsBodyEnergy.route,
             Screen.SettingsCycle.route,
             Screen.SettingsDataImport.route,
             Screen.SettingsHealthConnect.route,
@@ -315,6 +317,7 @@ fun AppNavigation(
         Screen.SettingsSensors.route -> stringResource(R.string.settings_sensors_group_title)
         Screen.SettingsCalories.route -> stringResource(R.string.settings_calories_group_title)
         Screen.SettingsSleep.route -> stringResource(R.string.settings_sleep_group_title)
+        Screen.SettingsBodyEnergy.route -> stringResource(R.string.settings_body_energy_group_title)
         Screen.SettingsCycle.route -> stringResource(R.string.settings_cycle_group_title)
         Screen.SettingsDataImport.route -> stringResource(R.string.settings_data_import_group_title)
         Screen.SettingsHealthConnect.route -> stringResource(R.string.settings_health_connect_group_title)
@@ -446,10 +449,11 @@ fun AppNavigation(
                 OnboardingScreen(
                     viewModel = onboardingViewModel,
                     onOnboardingComplete = {
-                        onOnboardingComplete()
                         navController.navigate(Screen.Dashboard.route) {
                             popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            launchSingleTop = true
                         }
+                        onOnboardingComplete()
                     },
                 )
             }
@@ -480,6 +484,9 @@ fun AppNavigation(
                             DashboardWidgetId.BODY_WATER_MASS -> navController.navigate(Screen.Body.route)
                             DashboardWidgetId.WORKOUT -> navController.navigate(Screen.Activity.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
+                            DashboardWidgetId.BODY_ENERGY -> {
+                                navController.navigate(Screen.BodyEnergyDetails.createRoute(java.time.LocalDate.now().toString()))
+                            }
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
                             else -> if (metricId.isHeartVitalsMetric()) {
@@ -525,13 +532,13 @@ fun AppNavigation(
                 route = Screen.BodyEnergyDetails.route,
                 arguments = listOf(navArgument(BODY_ENERGY_DATE_ARG) { type = NavType.StringType }),
             ) { entry ->
-                val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
+                val bodyEnergyViewModel = hiltViewModel<BodyEnergyViewModel>()
                 val selectedDate = entry.arguments
                     ?.getString(BODY_ENERGY_DATE_ARG)
                     ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
                     ?: java.time.LocalDate.now()
                 BodyEnergyDetailsScreen(
-                    viewModel = dailyReadinessViewModel,
+                    viewModel = bodyEnergyViewModel,
                     selectedDate = selectedDate,
                 )
             }
@@ -668,6 +675,9 @@ fun AppNavigation(
                             DashboardWidgetId.BONE_MASS,
                             DashboardWidgetId.BODY_WATER_MASS -> navController.navigate(Screen.Body.route)
                             DashboardWidgetId.SLEEP -> navController.navigate(Screen.Sleep.route)
+                            DashboardWidgetId.BODY_ENERGY -> {
+                                navController.navigate(Screen.BodyEnergyDetails.createRoute(java.time.LocalDate.now().toString()))
+                            }
                             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
                             DashboardWidgetId.CARDIO_LOAD -> navController.navigate(CardioLoadDetailRoute)
                             else -> navController.navigate(Screen.Metric.createRoute(targetMetricId.name))
@@ -897,6 +907,7 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
         DashboardWidgetId.WORKOUT -> R.string.metric_workout
         DashboardWidgetId.SLEEP -> R.string.metric_sleep
+        DashboardWidgetId.BODY_ENERGY -> R.string.metric_body_energy
         DashboardWidgetId.HYDRATION -> R.string.metric_hydration
         DashboardWidgetId.CALORIES_IN -> R.string.screen_nutrition
         DashboardWidgetId.PROTEIN -> R.string.screen_nutrition

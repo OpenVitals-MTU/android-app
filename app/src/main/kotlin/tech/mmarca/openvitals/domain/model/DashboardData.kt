@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.domain.model
 import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.roundToInt
+import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.DefaultWeeklyIntensityMinutesTarget
 import tech.mmarca.openvitals.domain.insights.IntensityMinutesConfidence
@@ -62,6 +63,7 @@ data class DashboardData(
     val menstruationPeriodDays: Int? = null,
     val ovulationTestCount: Int? = null,
     val latestBasalBodyTemperatureCelsius: Double? = null,
+    val bodyEnergyTimeline: BodyEnergyTimeline? = null,
     val missingPermissions: Set<String> = emptySet(),
     val loadedMetrics: Set<DashboardMetric> = emptySet(),
     val metricSourcePackages: Map<DashboardMetric, String> = emptyMap(),
@@ -249,6 +251,7 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         } else {
             latestBasalBodyTemperatureCelsius
         },
+        bodyEnergyTimeline = other.bodyEnergyTimeline ?: bodyEnergyTimeline,
         missingPermissions = missingPermissions + other.missingPermissions,
         loadedMetrics = loadedMetrics + other.loadedMetrics,
         metricSourcePackages = metricSourcePackages + other.metricSourcePackages,

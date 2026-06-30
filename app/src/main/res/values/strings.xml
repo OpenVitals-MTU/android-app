@@ -36,6 +36,7 @@
     <string name="action_add_custom">Add custom</string>
     <string name="action_save">Save</string>
     <string name="action_close">Close</string>
+    <string name="action_continue">Continue</string>
     <string name="action_delete">Delete</string>
     <string name="action_details">Details</string>
     <string name="action_enable">Enable</string>
@@ -1416,6 +1417,36 @@
     <string name="data_confidence_warning_manual">Manual entries are included in this period.</string>
     <string name="data_confidence_warning_calculated">This value is derived, not directly measured.</string>
     <string name="data_confidence_warning_no_sources">This aggregate does not expose source-level details.</string>
+
+    <string name="settings_body_energy_group_title">Body Energy</string>
+    <string name="settings_body_energy_group_body">Calibration for estimated intraday energy and effort zones.</string>
+    <string name="body_energy_calibration_title">Improve Body Energy estimates</string>
+    <string name="body_energy_calibration_body">OpenVitals estimates drain from heart-rate intensity over time. Age, max heart rate, resting heart rate, and zones help classify effort more accurately.</string>
+    <string name="body_energy_calibration_optional_body">This is optional. If you skip it, OpenVitals uses automatic estimates from Health Connect data and shows lower confidence when calibration is uncertain. These values stay in OpenVitals settings.</string>
+    <string name="body_energy_calibration_birth_year">Birth year</string>
+    <string name="body_energy_calibration_max_hr">Max heart rate</string>
+    <string name="body_energy_calibration_resting_hr">Resting heart rate</string>
+    <string name="body_energy_calibration_manual_zones">Manual heart zones</string>
+    <string name="body_energy_calibration_manual_zones_body">Optional bpm lower bounds for zones 1-5.</string>
+    <string name="body_energy_calibration_zone_1">Zone 1 lower bpm</string>
+    <string name="body_energy_calibration_zone_2">Zone 2 lower bpm</string>
+    <string name="body_energy_calibration_zone_3">Zone 3 lower bpm</string>
+    <string name="body_energy_calibration_zone_4">Zone 4 lower bpm</string>
+    <string name="body_energy_calibration_zone_5">Zone 5 lower bpm</string>
+    <string name="body_energy_calibration_use_auto">Use automatic estimates</string>
+    <string name="body_energy_calibration_skip">Skip for now</string>
+    <string name="body_energy_calibration_saved">Body Energy calibration saved</string>
+    <string name="body_energy_calibration_reset">Body Energy calibration reset to automatic</string>
+    <string name="body_energy_timeline_estimated">Estimated by OpenVitals</string>
+    <string name="body_energy_timeline_current">Current</string>
+    <string name="body_energy_timeline_start">Start</string>
+    <string name="body_energy_timeline_charged">Charged</string>
+    <string name="body_energy_timeline_drained">Drained</string>
+    <string name="body_energy_timeline_confidence">Confidence</string>
+    <string name="body_energy_timeline_no_data">No usable Body Energy timeline for this period.</string>
+    <string name="body_energy_timeline_day_title">Daily timeline</string>
+    <string name="body_energy_timeline_low_confidence">Some buckets are estimated because calibration or Health Connect data is incomplete.</string>
+    <string name="metric_body_energy">Body Energy</string>
 
     <string name="privacy_policy_title">Privacy policy</string>
     <string name="privacy_policy_body_1">OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log, including imported GPX/KML/KMZ/FIT activity routes, are written to Health Connect.</string>

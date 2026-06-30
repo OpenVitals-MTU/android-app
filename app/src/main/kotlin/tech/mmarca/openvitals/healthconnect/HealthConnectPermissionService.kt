@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
@@ -63,6 +64,12 @@ internal class HealthConnectPermissionService(
     private val availabilityService: HealthConnectAvailabilityService,
     private val diagnostics: HealthConnectDiagnostics,
 ) {
+    private val featureStatusCache = mutableMapOf<Int, Int>()
+    private val featureStatusCacheLock = Any()
+
+    @Volatile
+    private var grantedPermissionsCache: GrantedPermissionsCache? = null
+
     val corePermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
@@ -316,12 +323,10 @@ internal class HealthConnectPermissionService(
     fun isMindfulnessSessionAvailable(): Boolean {
         if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
 
-        val status = withLogging(
-            "features.getFeatureStatus[mindfulness]",
-            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
-        ) {
-            featureStatus(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION)
-        }
+        val status = featureStatusCached(
+            feature = HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION,
+            logName = "mindfulness",
+        )
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "mindfulnessFeatureStatus=$status available=$available ${diagnostics.summary()}")
         return available
@@ -330,12 +335,10 @@ internal class HealthConnectPermissionService(
     fun isHealthDataHistoryAvailable(): Boolean {
         if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
 
-        val status = withLogging(
-            "features.getFeatureStatus[history]",
-            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
-        ) {
-            featureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY)
-        }
+        val status = featureStatusCached(
+            feature = HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY,
+            logName = "history",
+        )
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "historyFeatureStatus=$status available=$available ${diagnostics.summary()}")
         return available
@@ -344,12 +347,10 @@ internal class HealthConnectPermissionService(
     fun isBackgroundHealthDataReadAvailable(): Boolean {
         if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
 
-        val status = withLogging(
-            "features.getFeatureStatus[background]",
-            HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
-        ) {
-            featureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
-        }
+        val status = featureStatusCached(
+            feature = HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
+            logName = "background",
+        )
         val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
         Log.d(TAG, "backgroundFeatureStatus=$status available=$available ${diagnostics.summary()}")
         return available
@@ -370,31 +371,60 @@ internal class HealthConnectPermissionService(
     private fun isFeatureAvailable(feature: Int, logName: String): Boolean {
         if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
 
+        val status = featureStatusCached(feature, logName)
+        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        Log.d(TAG, "${logName}FeatureStatus=$status available=$available ${diagnostics.summary()}")
+        return available
+    }
+
+    suspend fun grantedPermissions(): Set<String> {
+        val nowMs = SystemClock.elapsedRealtime()
+        grantedPermissionsCache
+            ?.takeIf { nowMs - it.loadedAtMs <= GrantedPermissionsCacheMillis }
+            ?.let { cached ->
+                Log.d(TAG, "grantedPermissions(cache) count=${cached.permissions.size} ${diagnostics.summary()}")
+                return cached.permissions
+            }
+
+        val granted = withContext(Dispatchers.IO) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                managedPermissions.filterTo(mutableSetOf()) { permission ->
+                    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                }.also { permissions ->
+                    Log.d(TAG, "grantedPermissions(runtime) count=${permissions.size} ${diagnostics.summary()}")
+                }
+            } else {
+                withLogging("permissionController.getGrantedPermissions", emptySet()) {
+                    clientProvider().permissionController.getGrantedPermissions()
+                }.also { permissions ->
+                    Log.d(TAG, "grantedPermissions(client) count=${permissions.size}")
+                }
+            }
+        }
+        grantedPermissionsCache = GrantedPermissionsCache(
+            permissions = granted,
+            loadedAtMs = SystemClock.elapsedRealtime(),
+        )
+        return granted
+    }
+
+    private fun featureStatusCached(feature: Int, logName: String): Int {
+        synchronized(featureStatusCacheLock) {
+            featureStatusCache[feature]?.let { cached ->
+                Log.d(TAG, "features.getFeatureStatus[$logName](cache) status=$cached ${diagnostics.summary()}")
+                return cached
+            }
+        }
         val status = withLogging(
             "features.getFeatureStatus[$logName]",
             HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE,
         ) {
             featureStatus(feature)
         }
-        val available = status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-        Log.d(TAG, "${logName}FeatureStatus=$status available=$available ${diagnostics.summary()}")
-        return available
-    }
-
-    suspend fun grantedPermissions(): Set<String> = withContext(Dispatchers.IO) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            managedPermissions.filterTo(mutableSetOf()) { permission ->
-                ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-            }.also { granted ->
-                Log.d(TAG, "grantedPermissions(runtime) count=${granted.size} ${diagnostics.summary()}")
-            }
-        } else {
-            withLogging("permissionController.getGrantedPermissions", emptySet()) {
-                clientProvider().permissionController.getGrantedPermissions()
-            }.also { granted ->
-                Log.d(TAG, "grantedPermissions(client) count=${granted.size}")
-            }
+        synchronized(featureStatusCacheLock) {
+            featureStatusCache[feature] = status
         }
+        return status
     }
 
     suspend fun hasPermission(permission: String): Boolean =
@@ -423,10 +453,16 @@ internal class HealthConnectPermissionService(
     private fun featureStatus(feature: Int): Int =
         clientProvider().features.getFeatureStatus(feature)
 
+    private data class GrantedPermissionsCache(
+        val permissions: Set<String>,
+        val loadedAtMs: Long,
+    )
+
     companion object {
         /** Bump when requestable/managed permissions change so existing users see the new-permissions prompt. */
         const val PERMISSION_SET_VERSION = 2
 
+        private const val GrantedPermissionsCacheMillis = 500L
         private const val TAG = "HealthConnectPermissions"
         private const val READ_EXERCISE_ROUTES_PERMISSION = "android.permission.health.READ_EXERCISE_ROUTES"
     }

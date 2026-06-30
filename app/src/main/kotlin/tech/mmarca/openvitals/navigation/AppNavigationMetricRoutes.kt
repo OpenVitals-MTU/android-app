@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import java.time.LocalDate
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -38,6 +39,8 @@ import tech.mmarca.openvitals.features.body.BoneMassScreen
 import tech.mmarca.openvitals.features.body.HeightScreen
 import tech.mmarca.openvitals.features.body.LeanMassScreen
 import tech.mmarca.openvitals.features.body.WeightScreen
+import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyDetailsScreen
+import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyViewModel
 import tech.mmarca.openvitals.features.cycle.CycleScreen
 import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
@@ -188,6 +191,13 @@ internal fun MetricRouteContent(
                 onOpenSleepScore = onOpenSleepScore,
                 onOpenSleepEfficiency = onOpenSleepEfficiency,
                 onSectionEditStateChanged = onSectionEditStateChanged,
+            )
+        }
+        DashboardWidgetId.BODY_ENERGY -> {
+            val bodyEnergyViewModel = hiltViewModel<BodyEnergyViewModel>()
+            BodyEnergyDetailsScreen(
+                viewModel = bodyEnergyViewModel,
+                selectedDate = LocalDate.now(),
             )
         }
         DashboardWidgetId.HYDRATION -> {

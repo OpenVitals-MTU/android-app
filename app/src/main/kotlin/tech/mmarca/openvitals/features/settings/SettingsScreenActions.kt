@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.settings
 
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+
 internal data class SettingsScreenActions(
     val onOpenSection: (SettingsSection) -> Unit,
     val onOpenPrivacyPolicy: () -> Unit,
@@ -13,4 +15,6 @@ internal data class SettingsScreenActions(
     val onSaveDebugLogs: () -> Unit,
     val onOpenManualPermissionSettings: () -> Unit,
     val onGrantPermissions: (Set<String>) -> Unit,
+    val onSaveBodyEnergyCalibration: (BodyEnergyCalibration) -> Unit,
+    val onResetBodyEnergyCalibration: () -> Unit,
 )

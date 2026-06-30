@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
@@ -29,6 +30,7 @@ data class OnboardingUiState(
     val phase3Granted: Boolean = false,
     val phase4Granted: Boolean = false,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
+    val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
     val isCheckingPermissions: Boolean = true,
 )
 
@@ -166,6 +168,7 @@ class OnboardingViewModel @Inject constructor(
                 _uiState.value = OnboardingUiState(
                     availability = avail,
                     appLanguage = preferencesRepository.appLanguage,
+                    bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
                     isCheckingPermissions = false,
                 )
                 return@launch
@@ -182,6 +185,7 @@ class OnboardingViewModel @Inject constructor(
                 phase3Granted = repository.phase3Permissions.all { it in granted },
                 phase4Granted = repository.phase4Permissions.all { it in granted },
                 appLanguage = preferencesRepository.appLanguage,
+                bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
                 isCheckingPermissions = false,
             )
         }
@@ -210,6 +214,17 @@ class OnboardingViewModel @Inject constructor(
     fun selectAppLanguage(appLanguage: AppLanguage) {
         preferencesRepository.appLanguage = appLanguage
         _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
+    }
+
+    fun saveBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
+        preferencesRepository.setBodyEnergyCalibration(calibration)
+        _uiState.value = _uiState.value.copy(
+            bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
+        )
+    }
+
+    fun useAutomaticBodyEnergyCalibration() {
+        saveBodyEnergyCalibration(BodyEnergyCalibration.Automatic)
     }
 
     fun completeOnboarding() {

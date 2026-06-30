@@ -50,6 +50,8 @@ fun SettingsScreen(
     val reportSaveFailed = stringResource(R.string.settings_apple_health_import_report_save_failed)
     val debugLogsSaved = stringResource(R.string.settings_debug_logs_saved)
     val debugLogsSaveFailed = stringResource(R.string.settings_debug_logs_save_failed)
+    val bodyEnergyCalibrationSaved = stringResource(R.string.body_energy_calibration_saved)
+    val bodyEnergyCalibrationReset = stringResource(R.string.body_energy_calibration_reset)
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
@@ -193,6 +195,14 @@ fun SettingsScreen(
         },
         onOpenManualPermissionSettings = openManualPermissionSettings,
         onGrantPermissions = requestAllPermissions::launch,
+        onSaveBodyEnergyCalibration = { calibration ->
+            viewModel.updateBodyEnergyCalibration(calibration)
+            Toast.makeText(context, bodyEnergyCalibrationSaved, Toast.LENGTH_SHORT).show()
+        },
+        onResetBodyEnergyCalibration = {
+            viewModel.resetBodyEnergyCalibration()
+            Toast.makeText(context, bodyEnergyCalibrationReset, Toast.LENGTH_SHORT).show()
+        },
     )
 
     Box(

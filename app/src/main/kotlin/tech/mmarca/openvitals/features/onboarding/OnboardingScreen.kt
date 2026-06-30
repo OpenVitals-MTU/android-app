@@ -30,6 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,6 +48,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
+import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyCalibrationCard
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -54,6 +58,11 @@ import tech.mmarca.openvitals.ui.components.FullScreenLoading
 private const val HC_PACKAGE = "com.google.android.apps.healthdata"
 private const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=$HC_PACKAGE"
 
+private enum class OnboardingStep {
+    PERMISSIONS,
+    BODY_ENERGY,
+}
+
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel,
@@ -61,6 +70,7 @@ fun OnboardingScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var onboardingStep by rememberSaveable { mutableStateOf(OnboardingStep.PERMISSIONS) }
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val permissionCategories = viewModel.permissionCategories
     val availablePermissionCategories = permissionCategories.filter { it.available }
@@ -98,6 +108,27 @@ fun OnboardingScreen(
 
     if (state.isCheckingPermissions) {
         FullScreenLoading()
+        return
+    }
+
+    fun completeOnboarding() {
+        viewModel.completeOnboarding()
+        onOnboardingComplete()
+    }
+
+    if (onboardingStep == OnboardingStep.BODY_ENERGY) {
+        BodyEnergyCalibrationOnboardingStep(
+            calibration = state.bodyEnergyCalibration,
+            onSave = { calibration ->
+                viewModel.saveBodyEnergyCalibration(calibration)
+                completeOnboarding()
+            },
+            onUseAutomatic = {
+                viewModel.useAutomaticBodyEnergyCalibration()
+                completeOnboarding()
+            },
+            onSkip = ::completeOnboarding,
+        )
         return
     }
 
@@ -218,8 +249,7 @@ fun OnboardingScreen(
         OpenVitalsButton(
             onClick = {
                 if (minimumPermissionsGranted) {
-                    viewModel.completeOnboarding()
-                    onOnboardingComplete()
+                    onboardingStep = OnboardingStep.BODY_ENERGY
                 } else if (missingMinimumPermissions.isNotEmpty()) {
                     requestPermissions.launch(missingMinimumPermissions)
                 } else if (missingManualPermissions.isNotEmpty()) {
@@ -233,7 +263,7 @@ fun OnboardingScreen(
         ) {
             Text(
                 when {
-                    minimumPermissionsGranted -> stringResource(R.string.action_get_started)
+                    minimumPermissionsGranted -> stringResource(R.string.action_continue)
                     missingMinimumPermissions.isNotEmpty() -> stringResource(R.string.onboarding_grant_all)
                     else -> stringResource(R.string.onboarding_open_required_permissions)
                 }
@@ -285,6 +315,41 @@ fun OnboardingScreen(
             Spacer(Modifier.height(8.dp))
         }
 
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun BodyEnergyCalibrationOnboardingStep(
+    calibration: tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration,
+    onSave: (tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration) -> Unit,
+    onUseAutomatic: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(32.dp))
+        Image(
+            painter = painterResource(R.drawable.open_vitals_logo_wide),
+            contentDescription = null,
+            modifier = Modifier
+                .width(152.dp)
+                .height(104.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.height(24.dp))
+        BodyEnergyCalibrationCard(
+            calibration = calibration,
+            showSkipAction = true,
+            onSave = onSave,
+            onUseAutomatic = onUseAutomatic,
+            onSkip = onSkip,
+        )
         Spacer(Modifier.height(32.dp))
     }
 }

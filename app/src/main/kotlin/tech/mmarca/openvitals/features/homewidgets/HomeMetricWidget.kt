@@ -56,10 +56,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
@@ -405,12 +409,26 @@ internal suspend fun loadSnapshot(
     metricId: DashboardWidgetId,
 ): HomeMetricWidgetSnapshot {
     val title = context.getString(metricId.homeMetricTitleRes())
-    val route = Screen.Metric.createRoute(metricId.name)
+    val today = LocalDate.now()
+    val route = if (metricId == DashboardWidgetId.BODY_ENERGY) {
+        Screen.BodyEnergyDetails.createRoute(today.toString())
+    } else {
+        Screen.Metric.createRoute(metricId.name)
+    }
     return runCatching {
         val entryPoint = EntryPointAccessors.fromApplication(
             context.applicationContext,
             HomeMetricWidgetEntryPoint::class.java,
         )
+        if (metricId == DashboardWidgetId.BODY_ENERGY) {
+            return@runCatching loadBodyEnergyMetricSnapshot(
+                context = context,
+                repository = entryPoint.bodyEnergyRepository(),
+                title = title,
+                route = route,
+                date = today,
+            )
+        }
         val metric = metricId.toDashboardMetricOrNull()
         val data = if (metric != null) {
             withTimeoutOrNull(WidgetLoadTimeoutMillis) {
@@ -463,6 +481,54 @@ internal suspend fun loadSnapshot(
     }
 }
 
+private suspend fun loadBodyEnergyMetricSnapshot(
+    context: Context,
+    repository: BodyEnergyRepository,
+    title: String,
+    route: String,
+    date: LocalDate,
+): HomeMetricWidgetSnapshot {
+    val timeline = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
+        repository.loadTimeline(
+            BodyEnergyTimelineQuery(
+                period = DatePeriod(date, date),
+                range = TimeRange.DAY,
+                refreshMode = RefreshMode.FORCE,
+            )
+        ).latestDay
+    }
+    if (timeline == null) {
+        return HomeMetricWidgetSnapshot(
+            title = title,
+            value = "--",
+            unit = "",
+            subtitle = context.getString(R.string.home_metric_widget_open_for_details),
+            route = route,
+        )
+    }
+    return HomeMetricWidgetSnapshot(
+        title = title,
+        value = timeline.currentScore.toString(),
+        unit = "",
+        subtitle = bodyEnergyStatus(context, timeline.currentScore),
+        route = route,
+        rows = listOf(
+            HomeMetricWidgetRow(
+                label = context.getString(R.string.body_energy_timeline_start),
+                value = timeline.startScore.toString(),
+            ),
+            HomeMetricWidgetRow(
+                label = context.getString(R.string.body_energy_timeline_charged),
+                value = "+${timeline.charged}",
+            ),
+            HomeMetricWidgetRow(
+                label = context.getString(R.string.body_energy_timeline_drained),
+                value = "-${timeline.drained}",
+            ),
+        ),
+    )
+}
+
 internal fun DashboardData.toSnapshot(
     context: Context,
     metricId: DashboardWidgetId,
@@ -501,6 +567,11 @@ internal fun DashboardData.toSnapshot(
         DashboardWidgetId.WHEELCHAIR_PUSHES -> countOnly(wheelchairPushes)
         DashboardWidgetId.WORKOUT -> countOnly(workouts.size.takeIf { it > 0 })
         DashboardWidgetId.SLEEP -> snapshot(sleep?.let { DisplayValue(unitFormatter.duration(it.durationMs), "") })
+        DashboardWidgetId.BODY_ENERGY -> snapshot(
+            bodyEnergyTimeline?.let { DisplayValue(unitFormatter.count(it.currentScore), "") },
+            subtitle = bodyEnergyTimeline?.let { "+${it.charged} / -${it.drained}" }
+                ?: context.getString(R.string.no_data),
+        )
         DashboardWidgetId.HYDRATION -> snapshot(unitFormatter.hydration(hydrationLiters).takeIf { hydrationLiters > 0.0 })
         DashboardWidgetId.CALORIES_IN -> snapshot(caloriesInKcal?.let(unitFormatter::energy))
         DashboardWidgetId.PROTEIN -> snapshot(proteinGrams?.let { DisplayValue(unitFormatter.decimal(it, 0), context.getString(R.string.unit_grams)) })
@@ -564,6 +635,7 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
     DashboardWidgetId.WORKOUT -> R.string.metric_workout
     DashboardWidgetId.SLEEP -> R.string.metric_sleep
+    DashboardWidgetId.BODY_ENERGY -> R.string.metric_body_energy
     DashboardWidgetId.HYDRATION -> R.string.metric_hydration
     DashboardWidgetId.CALORIES_IN -> R.string.metric_calories_in
     DashboardWidgetId.PROTEIN -> R.string.metric_protein
@@ -620,6 +692,7 @@ internal fun openMetricIntent(context: Context, route: String): Intent =
 interface HomeMetricWidgetEntryPoint {
     fun dashboardDataLoader(): DashboardDataLoader
     fun preferencesRepository(): PreferencesRepository
+    fun bodyEnergyRepository(): BodyEnergyRepository
     fun unitFormatter(): UnitFormatter
 }
 
@@ -645,4 +718,12 @@ private fun HomeMetricWidgetRow.displayText(): String =
             append(" - ")
             append(subtitle)
         }
+    }
+
+private fun bodyEnergyStatus(context: Context, score: Int): String =
+    when {
+        score >= 80 -> context.getString(R.string.home_widget_body_energy_charged)
+        score >= 60 -> context.getString(R.string.home_widget_body_energy_steady)
+        score >= 40 -> context.getString(R.string.home_widget_body_energy_limited)
+        else -> context.getString(R.string.home_widget_body_energy_low)
     }

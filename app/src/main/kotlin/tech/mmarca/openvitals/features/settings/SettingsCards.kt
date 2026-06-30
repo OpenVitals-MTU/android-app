@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -178,6 +179,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.SENSORS -> Icons.Outlined.Bluetooth
         SettingsSection.CALORIES -> Icons.Outlined.LocalFireDepartment
         SettingsSection.SLEEP -> Icons.Outlined.Bedtime
+        SettingsSection.BODY_ENERGY -> Icons.Outlined.BatteryChargingFull
         SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
         SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
         SettingsSection.HEALTH_CONNECT -> Icons.Outlined.HealthAndSafety

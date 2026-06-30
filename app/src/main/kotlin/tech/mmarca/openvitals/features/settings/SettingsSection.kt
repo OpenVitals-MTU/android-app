@@ -27,6 +27,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_sleep_group_title,
         summaryRes = R.string.settings_sleep_group_body,
     ),
+    BODY_ENERGY(
+        titleRes = R.string.settings_body_energy_group_title,
+        summaryRes = R.string.settings_body_energy_group_body,
+    ),
     CYCLE(
         titleRes = R.string.settings_cycle_group_title,
         summaryRes = R.string.settings_cycle_group_body,

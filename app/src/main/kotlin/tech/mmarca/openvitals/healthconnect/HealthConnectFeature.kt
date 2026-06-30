@@ -1,8 +1,13 @@
 package tech.mmarca.openvitals.healthconnect
 
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 
 enum class HealthConnectFeature {
@@ -19,6 +24,7 @@ enum class HealthConnectFeature {
     MINDFULNESS,
     CYCLE,
     READINESS,
+    BODY_ENERGY,
     MANUAL_ENTRY,
     DATA_IMPORT,
     ;
@@ -37,6 +43,14 @@ enum class HealthConnectFeature {
         MINDFULNESS -> manager.mindfulnessPermissions
         CYCLE -> manager.cyclePermissions
         READINESS -> manager.minimumOnboardingPermissions
+        BODY_ENERGY -> setOf(
+            HealthPermission.getReadPermission(HeartRateRecord::class),
+            HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+            HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+            HealthPermission.getReadPermission(RespiratoryRateRecord::class),
+        )
         MANUAL_ENTRY -> manager.requestableWritePermissions
         DATA_IMPORT -> manager.dataImportWritePermissions
     }

@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.reducedForChart
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
@@ -298,6 +299,15 @@ class HeartRepositoryImpl @Inject constructor(
     override suspend fun loadHrvRmssd(date: LocalDate): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadHrvRmssd(date, granted)
+    }
+
+    override suspend fun loadHrvSamples(start: Instant, end: Instant): List<HrvSample> {
+        val granted = grantedPermissionsIfAvailable()
+        if (readHrvPermission !in granted) {
+            Log.w(TAG, "Skipping loadHrvSamples missingCount=1")
+            return emptyList()
+        }
+        return hc.readHrvSamples(start, end)
     }
 
     private suspend fun loadHrvRmssd(

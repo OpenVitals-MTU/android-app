@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -19,13 +21,18 @@ import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.mergeLoaded
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +56,7 @@ data class DashboardUiState(
     val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val minimumPermissionsGranted: Boolean = true,
     val display: DashboardDisplayState = DashboardDisplayState(),
+    val loadingWidgets: Set<DashboardWidgetId> = emptySet(),
 )
 
 @Immutable
@@ -78,6 +86,7 @@ class DashboardViewModel @Inject constructor(
     private val dateTimeFormatterProvider: DateTimeFormatterProvider,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val activityRepository: ActivityRepository? = null,
+    private val bodyEnergyRepository: BodyEnergyRepository? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
@@ -95,6 +104,9 @@ class DashboardViewModel @Inject constructor(
     private val loadCoordinator = LoadCoordinator()
     private var userPinnedPastDay = false
     private var permissionPromptDismissedForLoad = false
+    private var backgroundMetricsJob: Job? = null
+    private var bodyEnergyJob: Job? = null
+    private var loadGeneration = 0L
 
     init {
         load(_uiState.value.selectedDate)
@@ -143,7 +155,7 @@ class DashboardViewModel @Inject constructor(
         ) {
             viewModelScope.launch {
                 val display = current.data?.let { data ->
-                    buildDisplay(data, dailyGoals)
+                    buildDisplay(data, dailyGoals, current.loadingWidgets)
                 } ?: current.display
                 _uiState.value = current.copy(
                     sleepRangeMode = sleepRangeMode,
@@ -168,7 +180,18 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
+        load(date = date, refreshMode = refreshMode, retryOnCancellation = true)
+    }
+
+    private fun load(
+        date: LocalDate,
+        refreshMode: RefreshMode,
+        retryOnCancellation: Boolean,
+    ) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
+        val generation = ++loadGeneration
+        backgroundMetricsJob?.cancel()
+        bodyEnergyJob?.cancel()
         loadCoordinator.launch(viewModelScope) load@{
             val sleepRangeMode = prefs.sleepRangeMode
             val activityWeekMode = prefs.activityWeekMode
@@ -194,42 +217,195 @@ class DashboardViewModel @Inject constructor(
                 healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
                 healthConnectAvailability = availability,
                 minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
+                loadingWidgets = emptySet(),
             )
-            runCatching {
-                loadDashboardDayUseCase(
-                    DashboardQuery(
+            val quickWidgetIds = firstVisibleDashboardWidgetIds(_uiState.value.dashboardWidgets)
+            val quickMetrics = quickWidgetIds.toDashboardMetrics()
+            val dashboardQuery = DashboardQuery(
+                date = clampedDate,
+                sleepRangeMode = sleepRangeMode,
+                activityWeekMode = activityWeekMode,
+                visibleMetrics = quickMetrics,
+                refreshMode = refreshMode,
+                includeHistoricalBaselines = false,
+                includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in quickMetrics,
+            )
+            val data = try {
+                loadDashboardDayUseCase(dashboardQuery)
+            } catch (error: CancellationException) {
+                if (!isCurrent) return@load
+                if (retryOnCancellation) {
+                    load(
                         date = clampedDate,
-                        sleepRangeMode = sleepRangeMode,
-                        activityWeekMode = activityWeekMode,
-                        visibleMetrics = DashboardMetric.entries.toSet(),
                         refreshMode = refreshMode,
+                        retryOnCancellation = false,
                     )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = null,
+                    )
+                }
+                return@load
+            } catch (error: Throwable) {
+                if (!isCurrent) return@load
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = error.toScreenError("Unknown error"),
+                )
+                return@load
+            }
+
+            if (!isCurrent) return@load
+            val currentData = _uiState.value.data
+            val mergedData = if (currentData?.date == clampedDate) {
+                currentData.mergeLoaded(data)
+            } else {
+                data
+            }
+            val backgroundWidgetIds = (_uiState.value.dashboardWidgets - quickWidgetIds.toSet())
+            val loadingWidgets = buildSet {
+                addAll(backgroundWidgetIds)
+                if (bodyEnergyRepository != null &&
+                    DashboardWidgetId.BODY_ENERGY in _uiState.value.dashboardWidgets &&
+                    mergedData.bodyEnergyTimeline == null
+                ) {
+                    add(DashboardWidgetId.BODY_ENERGY)
+                }
+            }
+            publishDashboardData(
+                data = mergedData,
+                loadingWidgets = loadingWidgets,
+                sleepRangeMode = sleepRangeMode,
+                activityWeekMode = activityWeekMode,
+                goals = prefs.dashboardDailyGoals(),
+            )
+            if (data.loadedMetrics.isNotEmpty() || quickMetrics.isEmpty()) {
+                launchBackgroundMetricLoad(
+                    date = clampedDate,
+                    refreshMode = refreshMode,
+                    quickMetrics = quickMetrics,
+                    generation = generation,
                 )
             }
-                .onSuccess { data ->
-                    if (!isCurrent) return@load
-                    val goals = prefs.dashboardDailyGoals()
-                    val display = buildDisplay(data, goals)
-                    _uiState.value = _uiState.value.copy(
-                        data = data,
-                        isLoading = false,
-                        unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(data.missingPermissions),
-                        sleepRangeMode = sleepRangeMode,
-                        activityWeekMode = activityWeekMode,
-                        showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
-                        dailyGoals = goals,
-                        display = display,
-                    )
-                }
-                .onFailure { error ->
-                    if (!isCurrent) return@load
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = error.toScreenError("Unknown error"),
-                    )
-                }
+            launchBodyEnergyLoad(
+                date = clampedDate,
+                refreshMode = refreshMode,
+                generation = generation,
+            )
         }
     }
+
+    private fun launchBackgroundMetricLoad(
+        date: LocalDate,
+        refreshMode: RefreshMode,
+        quickMetrics: Set<DashboardMetric>,
+        generation: Long,
+    ) {
+        val allWidgetMetrics = _uiState.value.dashboardWidgets.toDashboardMetrics()
+        val backgroundMetrics = allWidgetMetrics - quickMetrics
+        if (backgroundMetrics.isEmpty()) return
+
+        backgroundMetricsJob = viewModelScope.launch {
+            val sleepRangeMode = prefs.sleepRangeMode
+            val activityWeekMode = prefs.activityWeekMode
+            val data = runCatching {
+                loadDashboardDayUseCase(
+                    DashboardQuery(
+                        date = date,
+                        sleepRangeMode = sleepRangeMode,
+                        activityWeekMode = activityWeekMode,
+                        visibleMetrics = backgroundMetrics,
+                        refreshMode = refreshMode,
+                        includeHistoricalBaselines = true,
+                        includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in backgroundMetrics,
+                    )
+                )
+            }.getOrNull() ?: return@launch
+            if (generation != loadGeneration || _uiState.value.selectedDate != date) return@launch
+            val currentData = _uiState.value.data ?: return@launch
+            if (currentData.date != date) return@launch
+            val mergedData = currentData.mergeLoaded(data)
+            val loadedWidgetIds = _uiState.value.dashboardWidgets.filter { widgetId ->
+                widgetId.toDashboardMetricOrNull()?.let { it in backgroundMetrics } == true
+            }.toSet()
+            publishDashboardData(
+                data = mergedData,
+                loadingWidgets = _uiState.value.loadingWidgets - loadedWidgetIds,
+                sleepRangeMode = prefs.sleepRangeMode,
+                activityWeekMode = prefs.activityWeekMode,
+                goals = prefs.dashboardDailyGoals(),
+            )
+        }
+    }
+
+    private fun launchBodyEnergyLoad(
+        date: LocalDate,
+        refreshMode: RefreshMode,
+        generation: Long,
+    ) {
+        val repository = bodyEnergyRepository ?: return
+        if (DashboardWidgetId.BODY_ENERGY !in _uiState.value.dashboardWidgets) return
+
+        bodyEnergyJob = viewModelScope.launch {
+            val timeline = runCatching {
+                repository.loadTimeline(
+                    BodyEnergyTimelineQuery(
+                        period = DatePeriod(date, date),
+                        range = TimeRange.DAY,
+                        refreshMode = refreshMode,
+                    )
+                ).latestDay
+            }.getOrNull() ?: return@launch
+            if (generation != loadGeneration || _uiState.value.selectedDate != date) return@launch
+            val currentData = _uiState.value.data ?: return@launch
+            if (currentData.date != date) return@launch
+            publishDashboardData(
+                data = currentData.copy(bodyEnergyTimeline = timeline),
+                loadingWidgets = _uiState.value.loadingWidgets - DashboardWidgetId.BODY_ENERGY,
+                sleepRangeMode = prefs.sleepRangeMode,
+                activityWeekMode = prefs.activityWeekMode,
+                goals = prefs.dashboardDailyGoals(),
+            )
+        }
+    }
+
+    private suspend fun publishDashboardData(
+        data: DashboardData,
+        loadingWidgets: Set<DashboardWidgetId>,
+        sleepRangeMode: SleepRangeMode,
+        activityWeekMode: ActivityWeekMode,
+        goals: DashboardDailyGoals,
+    ) {
+        val display = buildDisplay(data, goals, loadingWidgets)
+        _uiState.value = _uiState.value.copy(
+            data = data,
+            isLoading = false,
+            unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(data.missingPermissions),
+            sleepRangeMode = sleepRangeMode,
+            activityWeekMode = activityWeekMode,
+            showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
+            dailyGoals = goals,
+            display = display,
+            loadingWidgets = loadingWidgets,
+        )
+    }
+
+    private fun firstVisibleDashboardWidgetIds(widgetIds: List<DashboardWidgetId>): List<DashboardWidgetId> {
+        val fixedIds = dashboardWidgetIdsThatFitRows(
+            widgetIds = widgetIds,
+            rows = DashboardFixedWidgetRows,
+        )
+        val fixedIdSet = fixedIds.toSet()
+        val firstCarouselPage = dashboardWidgetIdsInGridPages(
+            widgetIds = widgetIds.filterNot { it in fixedIdSet },
+            rows = DashboardCarouselWidgetRows,
+        ).firstOrNull().orEmpty()
+        return fixedIds + firstCarouselPage
+    }
+
+    private fun Collection<DashboardWidgetId>.toDashboardMetrics(): Set<DashboardMetric> =
+        mapNotNull { it.toDashboardMetricOrNull() }.toSet()
 
     fun previousDay() {
         val date = _uiState.value.selectedDate.minusDays(1)
@@ -332,12 +508,14 @@ class DashboardViewModel @Inject constructor(
     private suspend fun buildDisplay(
         data: DashboardData,
         dailyGoals: DashboardDailyGoals,
+        loadingWidgets: Set<DashboardWidgetId> = emptySet(),
     ): DashboardDisplayState = withContext(dispatchers.default) {
         DashboardPresentationMapper.build(
             data = data,
             dailyGoals = dailyGoals,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            loadingWidgets = loadingWidgets,
         )
     }
 }

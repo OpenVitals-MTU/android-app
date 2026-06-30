@@ -301,6 +301,7 @@ private fun dashboardWidgetTitle(widgetId: DashboardWidgetId): String =
             DashboardWidgetId.ELEVATION -> R.string.metric_elevation
             DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
             DashboardWidgetId.SLEEP -> R.string.metric_sleep
+            DashboardWidgetId.BODY_ENERGY -> R.string.metric_body_energy
             DashboardWidgetId.HYDRATION -> R.string.metric_hydration
             DashboardWidgetId.CALORIES_IN -> R.string.metric_calories_in
             DashboardWidgetId.PROTEIN -> R.string.metric_protein
@@ -354,6 +355,7 @@ private fun dashboardWidgetMeta(widgetId: DashboardWidgetId): DashboardWidgetMet
         DashboardWidgetId.ELEVATION -> DashboardWidgetMeta(Icons.Outlined.Terrain, ElevationColor)
         DashboardWidgetId.WHEELCHAIR_PUSHES -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.Accessible, WheelchairPushesColor)
         DashboardWidgetId.SLEEP -> DashboardWidgetMeta(Icons.Outlined.Bed, SleepColor)
+        DashboardWidgetId.BODY_ENERGY -> DashboardWidgetMeta(Icons.Outlined.FavoriteBorder, VitalsColor)
         DashboardWidgetId.HYDRATION -> DashboardWidgetMeta(Icons.Outlined.LocalDrink, HydrationColor)
         DashboardWidgetId.CALORIES_IN,
         DashboardWidgetId.PROTEIN,

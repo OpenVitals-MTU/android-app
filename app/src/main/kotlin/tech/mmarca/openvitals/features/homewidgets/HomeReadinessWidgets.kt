@@ -43,12 +43,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
+import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.DailyReadinessGoalInputs
 import tech.mmarca.openvitals.domain.insights.DailyReadinessInsight
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.domain.insights.ReadinessFactorKind
 import tech.mmarca.openvitals.domain.insights.ReadinessState
 import tech.mmarca.openvitals.domain.insights.calculateDailyReadiness
 import tech.mmarca.openvitals.domain.model.DashboardData
@@ -401,23 +404,31 @@ private suspend fun loadDailyReadinessSnapshot(context: Context): HomeMetricWidg
 }
 
 private suspend fun loadBodyEnergySnapshot(context: Context): HomeMetricWidgetSnapshot {
-    val insight = loadReadinessInsight(context)
+    val timeline = loadBodyEnergyTimeline(context)
     val title = context.getString(R.string.screen_body_energy)
     val route = Screen.BodyEnergyDetails.createRoute(LocalDate.now().toString())
-    if (insight == null || insight.state == ReadinessState.UNKNOWN) {
+    if (timeline == null) {
         return fallbackStatusSnapshot(context, title, route)
     }
     return HomeMetricWidgetSnapshot(
         title = title,
-        value = insight.bodyEnergyScore.toString(),
+        value = timeline.currentScore.toString(),
         unit = "",
-        subtitle = bodyEnergyStatus(context, insight.bodyEnergyScore),
+        subtitle = bodyEnergyStatus(context, timeline.currentScore),
         route = route,
         rows = listOf(
             HomeMetricWidgetRow(
-                label = context.getString(R.string.home_widget_context),
-                value = insight.bodyEnergyContext(context),
-            )
+                label = context.getString(R.string.body_energy_timeline_start),
+                value = timeline.startScore.toString(),
+            ),
+            HomeMetricWidgetRow(
+                label = context.getString(R.string.body_energy_timeline_charged),
+                value = "+${timeline.charged}",
+            ),
+            HomeMetricWidgetRow(
+                label = context.getString(R.string.body_energy_timeline_drained),
+                value = "-${timeline.drained}",
+            ),
         ),
     )
 }
@@ -425,11 +436,12 @@ private suspend fun loadBodyEnergySnapshot(context: Context): HomeMetricWidgetSn
 private suspend fun loadTodayVitalsSnapshot(context: Context): HomeMetricWidgetSnapshot {
     val dashboardResult = loadDashboardResult(context, TodayVitalsMetrics) ?: return todayVitalsFallbackSnapshot(context)
     val readinessInsight = loadReadinessInsight(context)
+    val bodyEnergyTimeline = loadBodyEnergyTimeline(context)
     val rows = buildList {
         if (readinessInsight != null && readinessInsight.state != ReadinessState.UNKNOWN) {
             add(readinessRow(context, readinessInsight))
-            add(bodyEnergyRow(context, readinessInsight))
         }
+        add(bodyEnergyRow(context, bodyEnergyTimeline))
         add(dashboardResult.row(context, DashboardWidgetId.SLEEP))
         add(dashboardResult.row(context, DashboardWidgetId.STEPS))
         add(dashboardResult.row(context, DashboardWidgetId.DISTANCE))
@@ -467,6 +479,24 @@ private suspend fun loadReadinessInsight(context: Context): DailyReadinessInsigh
             )
         } ?: return@runCatching null
         calculateDailyReadiness(data, preferences.homeReadinessGoals())
+    }.getOrNull()
+
+private suspend fun loadBodyEnergyTimeline(context: Context): BodyEnergyTimeline? =
+    runCatching {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            HomeMetricWidgetEntryPoint::class.java,
+        )
+        val today = LocalDate.now()
+        withTimeoutOrNull(WidgetLoadTimeoutMillis) {
+            entryPoint.bodyEnergyRepository().loadTimeline(
+                BodyEnergyTimelineQuery(
+                    period = DatePeriod(today, today),
+                    range = TimeRange.DAY,
+                    refreshMode = RefreshMode.FORCE,
+                )
+            ).latestDay
+        }
     }.getOrNull()
 
 private suspend fun loadDashboardResult(
@@ -529,14 +559,14 @@ private fun readinessRow(context: Context, insight: DailyReadinessInsight?): Hom
         )
     }
 
-private fun bodyEnergyRow(context: Context, insight: DailyReadinessInsight?): HomeMetricWidgetRow =
-    if (insight == null || insight.state == ReadinessState.UNKNOWN) {
+private fun bodyEnergyRow(context: Context, timeline: BodyEnergyTimeline?): HomeMetricWidgetRow =
+    if (timeline == null) {
         fallbackRow(context, context.getString(R.string.screen_body_energy))
     } else {
         HomeMetricWidgetRow(
             label = context.getString(R.string.screen_body_energy),
-            value = insight.bodyEnergyScore.toString(),
-            subtitle = bodyEnergyStatus(context, insight.bodyEnergyScore),
+            value = timeline.currentScore.toString(),
+            subtitle = "+${timeline.charged} / -${timeline.drained}",
         )
     }
 
@@ -599,11 +629,6 @@ private fun bodyEnergyStatus(context: Context, score: Int): String =
         else -> context.getString(R.string.home_widget_body_energy_low)
     }
 
-private fun DailyReadinessInsight.bodyEnergyContext(context: Context): String =
-    factors.firstOrNull { factor -> factor.kind in BodyEnergyWidgetFactorKinds }
-        ?.let { factor -> "${factor.label}: ${factor.detail}" }
-        ?: context.getString(R.string.body_energy_details_summary)
-
 private fun PreferencesRepository.homeReadinessGoals(): DailyReadinessGoalInputs =
     DailyReadinessGoalInputs(
         stepsGoal = dailyGoalFor(MetricDailyGoalKey.STEPS),
@@ -642,27 +667,6 @@ private val TodayVitalsMetrics = setOf(
     DashboardMetric.HRV,
     DashboardMetric.WEEKLY_CARDIO_LOAD,
     DashboardMetric.HYDRATION,
-)
-
-private val BodyEnergyWidgetFactorKinds = setOf(
-    ReadinessFactorKind.SLEEP_BELOW_BASELINE,
-    ReadinessFactorKind.SLEEP_ABOVE_BASELINE,
-    ReadinessFactorKind.RESTING_HR_ELEVATED,
-    ReadinessFactorKind.RESTING_HR_NORMAL,
-    ReadinessFactorKind.HRV_BELOW_BASELINE,
-    ReadinessFactorKind.HRV_ABOVE_BASELINE,
-    ReadinessFactorKind.HRV_NORMAL,
-    ReadinessFactorKind.PHYSIOLOGICAL_STRESS_HIGH,
-    ReadinessFactorKind.PHYSIOLOGICAL_STRESS_LOW,
-    ReadinessFactorKind.STRESS_HIGH,
-    ReadinessFactorKind.STRESS_LOW,
-    ReadinessFactorKind.TEMPERATURE_ELEVATED,
-    ReadinessFactorKind.HYDRATION_LOW,
-    ReadinessFactorKind.NUTRITION_LOGGED,
-    ReadinessFactorKind.MISSING_SLEEP_DATA,
-    ReadinessFactorKind.MISSING_HRV_DATA,
-    ReadinessFactorKind.MISSING_STRESS_DATA,
-    ReadinessFactorKind.NEW_USER_NOT_ENOUGH_BASELINE,
 )
 
 private val HomeStatusWidgetSizes = setOf(

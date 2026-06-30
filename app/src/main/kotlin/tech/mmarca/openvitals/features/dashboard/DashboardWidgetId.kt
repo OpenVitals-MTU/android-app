@@ -12,6 +12,7 @@ enum class DashboardWidgetId {
     WHEELCHAIR_PUSHES,
     WORKOUT,
     SLEEP,
+    BODY_ENERGY,
     HYDRATION,
     CALORIES_IN,
     PROTEIN,
@@ -58,6 +59,7 @@ val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.WHEELCHAIR_PUSHES,
     DashboardWidgetId.WORKOUT,
     DashboardWidgetId.SLEEP,
+    DashboardWidgetId.BODY_ENERGY,
     DashboardWidgetId.HYDRATION,
     DashboardWidgetId.CALORIES_IN,
     DashboardWidgetId.PROTEIN,
@@ -154,6 +156,7 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.WHEELCHAIR_PUSHES -> DashboardMetric.WHEELCHAIR_PUSHES
     DashboardWidgetId.WORKOUT -> DashboardMetric.WORKOUT
     DashboardWidgetId.SLEEP -> DashboardMetric.SLEEP
+    DashboardWidgetId.BODY_ENERGY -> null
     DashboardWidgetId.HYDRATION -> DashboardMetric.HYDRATION
     DashboardWidgetId.CALORIES_IN -> DashboardMetric.CALORIES_IN
     DashboardWidgetId.PROTEIN -> DashboardMetric.PROTEIN

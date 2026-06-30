@@ -173,6 +173,7 @@ private fun contextualPermissionCopy(feature: HealthConnectFeature): Pair<Int, I
     HealthConnectFeature.MINDFULNESS -> R.string.health_connect_promote_mindfulness_title to R.string.health_connect_promote_mindfulness_body
     HealthConnectFeature.CYCLE -> R.string.health_connect_promote_cycle_title to R.string.health_connect_promote_cycle_body
     HealthConnectFeature.READINESS -> R.string.health_connect_promote_readiness_title to R.string.health_connect_promote_readiness_body
+    HealthConnectFeature.BODY_ENERGY -> R.string.health_connect_promote_readiness_title to R.string.health_connect_promote_readiness_body
     HealthConnectFeature.DASHBOARD,
     HealthConnectFeature.MANUAL_ENTRY,
     HealthConnectFeature.DATA_IMPORT,

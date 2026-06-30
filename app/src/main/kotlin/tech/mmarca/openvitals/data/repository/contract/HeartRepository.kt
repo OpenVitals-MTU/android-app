@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 
@@ -31,6 +32,8 @@ interface HeartRepository {
     suspend fun loadDailyRestingHR(start: LocalDate, end: LocalDate): List<DailyRestingHR>
 
     suspend fun loadHrvRmssd(date: LocalDate): Double?
+
+    suspend fun loadHrvSamples(start: Instant, end: Instant): List<HrvSample>
 
     suspend fun loadDailyHRV(start: LocalDate, end: LocalDate): List<DailyHrv>
 }
