@@ -8,6 +8,10 @@ enum class MetricDetailSectionId {
     STATISTICS,
     DATA_CONFIDENCE,
     ENTRIES,
+    ACTIVITY_SUMMARY,
+    VITALS_HEART_SECTION,
+    VITALS_CARDIOVASCULAR_SECTION,
+    VITALS_RESPIRATORY_SECTION,
 }
 
 val DefaultMetricDetailSectionOrder: List<MetricDetailSectionId> = listOf(
@@ -18,6 +22,10 @@ val DefaultMetricDetailSectionOrder: List<MetricDetailSectionId> = listOf(
     MetricDetailSectionId.STATISTICS,
     MetricDetailSectionId.DATA_CONFIDENCE,
     MetricDetailSectionId.ENTRIES,
+    MetricDetailSectionId.ACTIVITY_SUMMARY,
+    MetricDetailSectionId.VITALS_HEART_SECTION,
+    MetricDetailSectionId.VITALS_CARDIOVASCULAR_SECTION,
+    MetricDetailSectionId.VITALS_RESPIRATORY_SECTION,
 )
 
 fun metricDetailSectionOrderFromStored(storedIds: List<String>?): List<MetricDetailSectionId> {

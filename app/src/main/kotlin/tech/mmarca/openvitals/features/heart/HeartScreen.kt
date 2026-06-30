@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import kotlinx.coroutines.flow.map
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -35,12 +36,14 @@ fun AverageHeartRateScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.AVERAGE_HEART_RATE,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -49,12 +52,14 @@ fun RestingHeartRateScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.RESTING_HEART_RATE,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -63,12 +68,14 @@ fun HrvScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.HRV,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -78,6 +85,7 @@ fun BloodPressureScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -85,6 +93,7 @@ fun BloodPressureScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BLOOD_PRESSURE,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -94,6 +103,7 @@ fun SpO2Screen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -101,6 +111,7 @@ fun SpO2Screen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.SPO2,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -109,12 +120,14 @@ fun Vo2MaxScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.VO2_MAX,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -124,6 +137,7 @@ fun RespiratoryRateScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -131,6 +145,7 @@ fun RespiratoryRateScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.RESPIRATORY_RATE,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -140,6 +155,7 @@ fun BodyTemperatureScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -147,6 +163,7 @@ fun BodyTemperatureScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BODY_TEMPERATURE,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -155,12 +172,14 @@ fun BloodGlucoseScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BLOOD_GLUCOSE,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -169,12 +188,14 @@ fun SkinTemperatureScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.SKIN_TEMPERATURE,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -186,11 +207,13 @@ private fun HeartMetricScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: HeartMetric,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     val uiState = viewModel.uiState
     val isLoading by remember(viewModel) { uiState.map { it.isLoading } }
         .collectAsStateWithLifecycle(initialValue = true)
     val state by uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -214,77 +237,99 @@ private fun HeartMetricScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
-        when (metric) {
-            HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(
-                state = state,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                chartDaySelection = chartDaySelection,
-                onDecreaseHighHeartRateThreshold = viewModel::decreaseHighHeartRateThreshold,
-                onIncreaseHighHeartRateThreshold = viewModel::increaseHighHeartRateThreshold,
-                onDecreaseLowHeartRateThreshold = viewModel::decreaseLowHeartRateThreshold,
-                onIncreaseLowHeartRateThreshold = viewModel::increaseLowHeartRateThreshold,
-            )
-            HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(
-                state,
-                period,
-                unitFormatter,
-                dateTimeFormatterProvider,
-                chartDaySelection,
-            )
-            HeartMetric.HRV -> hrvContent(state, period, unitFormatter, dateTimeFormatterProvider, chartDaySelection)
-            HeartMetric.BLOOD_PRESSURE -> bloodPressureContent(
-                state,
-                period,
-                unitFormatter,
-                dateTimeFormatterProvider,
-                onEditVitalsMeasurement,
-                viewModel::deleteVitalsMeasurementEntry,
-            )
-            HeartMetric.SPO2 -> spO2Content(
-                state,
-                period,
-                unitFormatter,
-                dateTimeFormatterProvider,
-                chartDaySelection,
-                onEditVitalsMeasurement,
-                viewModel::deleteVitalsMeasurementEntry,
-            )
-            HeartMetric.VO2_MAX -> vo2MaxContent(state, period, unitFormatter, dateTimeFormatterProvider)
-            HeartMetric.RESPIRATORY_RATE -> respiratoryRateContent(
-                state,
-                period,
-                unitFormatter,
-                dateTimeFormatterProvider,
-                chartDaySelection,
-                onEditVitalsMeasurement,
-                viewModel::deleteVitalsMeasurementEntry,
-            )
-            HeartMetric.BODY_TEMPERATURE -> bodyTemperatureContent(
-                state,
-                period,
-                unitFormatter,
-                dateTimeFormatterProvider,
-                onEditVitalsMeasurement,
-                viewModel::deleteVitalsMeasurementEntry,
-            )
-            HeartMetric.BLOOD_GLUCOSE -> bloodGlucoseContent(
-                state = state,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                chartDaySelection = chartDaySelection,
-            )
-            HeartMetric.SKIN_TEMPERATURE -> skinTemperatureContent(
-                state = state,
-                period = period,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                chartDaySelection = chartDaySelection,
-            )
+            when (metric) {
+                HeartMetric.AVERAGE_HEART_RATE -> averageHeartRateContent(
+                    state = state,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    chartDaySelection = chartDaySelection,
+                    sectionContext = sectionContext,
+                    onDecreaseHighHeartRateThreshold = viewModel::decreaseHighHeartRateThreshold,
+                    onIncreaseHighHeartRateThreshold = viewModel::increaseHighHeartRateThreshold,
+                    onDecreaseLowHeartRateThreshold = viewModel::decreaseLowHeartRateThreshold,
+                    onIncreaseLowHeartRateThreshold = viewModel::increaseLowHeartRateThreshold,
+                )
+                HeartMetric.RESTING_HEART_RATE -> restingHeartRateContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    chartDaySelection,
+                    sectionContext,
+                )
+                HeartMetric.HRV -> hrvContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    chartDaySelection,
+                    sectionContext,
+                )
+                HeartMetric.BLOOD_PRESSURE -> bloodPressureContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    sectionContext,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
+                HeartMetric.SPO2 -> spO2Content(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    chartDaySelection,
+                    sectionContext,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
+                HeartMetric.VO2_MAX -> vo2MaxContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    sectionContext,
+                )
+                HeartMetric.RESPIRATORY_RATE -> respiratoryRateContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    chartDaySelection,
+                    sectionContext,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
+                HeartMetric.BODY_TEMPERATURE -> bodyTemperatureContent(
+                    state,
+                    period,
+                    unitFormatter,
+                    dateTimeFormatterProvider,
+                    sectionContext,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
+                )
+                HeartMetric.BLOOD_GLUCOSE -> bloodGlucoseContent(
+                    state = state,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    chartDaySelection = chartDaySelection,
+                    sectionContext = sectionContext,
+                )
+                HeartMetric.SKIN_TEMPERATURE -> skinTemperatureContent(
+                    state = state,
+                    period = period,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    chartDaySelection = chartDaySelection,
+                    sectionContext = sectionContext,
+                )
+            }
         }
-    }
     }
 }

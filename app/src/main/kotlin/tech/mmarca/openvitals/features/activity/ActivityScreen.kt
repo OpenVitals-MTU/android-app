@@ -2,21 +2,19 @@ package tech.mmarca.openvitals.features.activity
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
-import tech.mmarca.openvitals.core.presentation.MetricDetailSectionOrderViewModel
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
-import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 
 enum class ActivityMetric {
     STEPS,
@@ -151,30 +149,8 @@ private fun ActivityMetricScreen(
     onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionOrderViewModel = hiltViewModel<MetricDetailSectionOrderViewModel>()
-    val sectionOrder by sectionOrderViewModel.sectionOrder.collectAsStateWithLifecycle()
-    val isEditingSections by sectionOrderViewModel.isEditingSections.collectAsStateWithLifecycle()
-    val sectionListState = rememberMetricDetailSectionListState()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
-    val sectionContext = ActivityMetricSectionContext(
-        listState = sectionListState,
-        order = sectionOrder,
-        isEditingSections = isEditingSections,
-        onMoveSectionToTarget = sectionOrderViewModel::moveSectionToTarget,
-        onMoveSection = sectionOrderViewModel::moveSection,
-    )
-
-    LaunchedEffect(isEditingSections) {
-        onSectionEditStateChanged(isEditingSections, sectionOrderViewModel::toggleSectionEdit)
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            if (isEditingSections) {
-                sectionOrderViewModel.toggleSectionEdit()
-            }
-        }
-    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentPeriod()
@@ -197,7 +173,7 @@ private fun ActivityMetricScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
-            sectionListState = sectionListState,
+            sectionListState = sectionContext.listState,
         ) { period ->
             when (metric) {
                 ActivityMetric.STEPS -> stepsContent(

@@ -19,10 +19,6 @@
     <string name="cd_move_section_up">Abschnitt nach oben verschieben</string>
     <string name="cd_move_section_down">Abschnitt nach unten verschieben</string>
     <string name="cd_remove_widget">Widget entfernen</string>
-    <string name="cd_edit_metric_sections">Metrikbereiche bearbeiten</string>
-    <string name="cd_finish_metric_section_editing">Bearbeitung der Metrikbereiche beenden</string>
-    <string name="cd_move_section_up">Abschnitt nach oben verschieben</string>
-    <string name="cd_move_section_down">Abschnitt nach unten verschieben</string>
     <string name="cd_decrease_recording_dashboard_widget_size">Widget kleiner machen</string>
     <string name="cd_increase_recording_dashboard_widget_size">Widget größer machen</string>
     <string name="cd_exit_recording_focus_mode">Fokusmodus verlassen</string>

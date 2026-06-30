@@ -93,6 +93,25 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
+@Composable
+internal fun HeartAggregateDataConfidenceContent(
+    period: DatePeriod,
+    trackedDates: Collection<LocalDate>,
+    sampleCount: Int,
+    accentColor: Color,
+) {
+    DataConfidenceCard(
+        confidence = dataConfidence(
+            period = period,
+            trackedDates = trackedDates,
+            sampleCount = sampleCount,
+            valueKind = DataValueKind.AGGREGATED,
+        ),
+        accentColor = accentColor,
+        modifier = metricModifier(),
+    )
+}
+
 internal fun LazyListScope.heartAggregateDataConfidence(
     period: DatePeriod,
     trackedDates: Collection<LocalDate>,
@@ -102,15 +121,11 @@ internal fun LazyListScope.heartAggregateDataConfidence(
     if (period.start == period.end) return
 
     item {
-        DataConfidenceCard(
-            confidence = dataConfidence(
-                period = period,
-                trackedDates = trackedDates,
-                sampleCount = sampleCount,
-                valueKind = DataValueKind.AGGREGATED,
-            ),
+        HeartAggregateDataConfidenceContent(
+            period = period,
+            trackedDates = trackedDates,
+            sampleCount = sampleCount,
             accentColor = accentColor,
-            modifier = metricModifier(),
         )
     }
 }
@@ -125,27 +140,45 @@ internal fun <T> LazyListScope.heartRawDataConfidence(
     if (period.start == period.end) return
 
     item {
-        val zone = ZoneId.systemDefault()
-        DataConfidenceCard(
-            confidence = dataConfidence(
-                period = period,
-                trackedDates = entries.map { time(it).atZone(zone).toLocalDate() },
-                sampleCount = entries.size,
-                sources = entries.map(source),
-                valueKind = DataValueKind.MEASURED,
-            ),
+        HeartRawDataConfidenceContent(
+            period = period,
+            entries = entries,
+            source = source,
+            time = time,
             accentColor = accentColor,
-            modifier = metricModifier(),
         )
     }
 }
 
-internal fun LazyListScope.bloodPressureContextCard(entry: BloodPressureEntry?) {
+@Composable
+internal fun <T> HeartRawDataConfidenceContent(
+    period: DatePeriod,
+    entries: List<T>,
+    source: (T) -> String,
+    time: (T) -> java.time.Instant,
+    accentColor: Color,
+) {
+    val zone = ZoneId.systemDefault()
+    DataConfidenceCard(
+        confidence = dataConfidence(
+            period = period,
+            trackedDates = entries.map { time(it).atZone(zone).toLocalDate() },
+            sampleCount = entries.size,
+            sources = entries.map(source),
+            valueKind = DataValueKind.MEASURED,
+        ),
+        accentColor = accentColor,
+        modifier = metricModifier(),
+    )
+}
+
+@Composable
+internal fun BloodPressureContextCardContent(entry: BloodPressureEntry?) {
     val interpretation = entry
         ?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg) }
         ?: return
-    item { SectionHeader(stringResource(R.string.section_metric_context)) }
-    item {
+    Column(modifier = metricModifier()) {
+        SectionHeader(stringResource(R.string.section_metric_context))
         val status = bloodPressureCategoryText(interpretation.category)
         MetricInterpretationCard(
             title = stringResource(R.string.interpretation_bp_title),
@@ -159,14 +192,14 @@ internal fun LazyListScope.bloodPressureContextCard(entry: BloodPressureEntry?) 
             icon = Icons.Outlined.Favorite,
             accentColor = VitalsColor,
             severity = interpretation.severity,
-            modifier = metricModifier(),
         )
     }
 }
 
-internal fun LazyListScope.restingHeartRateContextCard(bpm: Long) {
+@Composable
+internal fun RestingHeartRateContextCardContent(bpm: Long) {
     val interpretation = restingHeartRateContext(bpm) ?: return
-    vitalContextCard(
+    VitalContextCardContent(
         interpretation = interpretation,
         bodyRes = R.string.interpretation_vital_resting_hr_body,
         sourceRes = R.string.interpretation_vital_source,
@@ -175,9 +208,10 @@ internal fun LazyListScope.restingHeartRateContextCard(bpm: Long) {
     )
 }
 
-internal fun LazyListScope.oxygenSaturationContextCard(entry: SpO2Entry?) {
+@Composable
+internal fun OxygenSaturationContextCardContent(entry: SpO2Entry?) {
     val interpretation = entry?.let { oxygenSaturationContext(it.percent) } ?: return
-    vitalContextCard(
+    VitalContextCardContent(
         interpretation = interpretation,
         bodyRes = R.string.interpretation_vital_oxygen_body,
         sourceRes = R.string.interpretation_oxygen_source,
@@ -186,9 +220,10 @@ internal fun LazyListScope.oxygenSaturationContextCard(entry: SpO2Entry?) {
     )
 }
 
-internal fun LazyListScope.respiratoryRateContextCard(breathsPerMinute: Double) {
+@Composable
+internal fun RespiratoryRateContextCardContent(breathsPerMinute: Double) {
     val interpretation = respiratoryRateContext(breathsPerMinute) ?: return
-    vitalContextCard(
+    VitalContextCardContent(
         interpretation = interpretation,
         bodyRes = R.string.interpretation_vital_respiratory_body,
         sourceRes = R.string.interpretation_vital_source,
@@ -197,15 +232,63 @@ internal fun LazyListScope.respiratoryRateContextCard(breathsPerMinute: Double) 
     )
 }
 
-internal fun LazyListScope.bodyTemperatureContextCard(entry: BodyTempEntry?) {
+@Composable
+internal fun BodyTemperatureContextCardContent(entry: BodyTempEntry?) {
     val interpretation = entry?.let { bodyTemperatureContext(it.temperatureCelsius) } ?: return
-    vitalContextCard(
+    VitalContextCardContent(
         interpretation = interpretation,
         bodyRes = R.string.interpretation_vital_temperature_body,
         sourceRes = R.string.interpretation_vital_source,
         icon = Icons.Outlined.DeviceThermostat,
         accentColor = temperatureColor,
     )
+}
+
+@Composable
+internal fun VitalContextCardContent(
+    interpretation: VitalContextInterpretation,
+    bodyRes: Int,
+    sourceRes: Int,
+    icon: ImageVector,
+    accentColor: Color,
+) {
+    Column(modifier = metricModifier()) {
+        SectionHeader(stringResource(R.string.section_metric_context))
+        MetricInterpretationCard(
+            title = stringResource(R.string.interpretation_vital_title),
+            status = vitalContextStatusText(interpretation.status),
+            body = stringResource(bodyRes),
+            source = stringResource(sourceRes),
+            icon = icon,
+            accentColor = accentColor,
+            severity = interpretation.severity,
+        )
+    }
+}
+
+internal fun LazyListScope.bloodPressureContextCard(entry: BloodPressureEntry?) {
+    if (entry?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg) } == null) return
+    item { BloodPressureContextCardContent(entry) }
+}
+
+internal fun LazyListScope.restingHeartRateContextCard(bpm: Long) {
+    if (restingHeartRateContext(bpm) == null) return
+    item { RestingHeartRateContextCardContent(bpm) }
+}
+
+internal fun LazyListScope.oxygenSaturationContextCard(entry: SpO2Entry?) {
+    if (entry?.let { oxygenSaturationContext(it.percent) } == null) return
+    item { OxygenSaturationContextCardContent(entry) }
+}
+
+internal fun LazyListScope.respiratoryRateContextCard(breathsPerMinute: Double) {
+    if (respiratoryRateContext(breathsPerMinute) == null) return
+    item { RespiratoryRateContextCardContent(breathsPerMinute) }
+}
+
+internal fun LazyListScope.bodyTemperatureContextCard(entry: BodyTempEntry?) {
+    if (entry?.let { bodyTemperatureContext(it.temperatureCelsius) } == null) return
+    item { BodyTemperatureContextCardContent(entry) }
 }
 
 internal fun LazyListScope.vitalContextCard(
@@ -215,17 +298,13 @@ internal fun LazyListScope.vitalContextCard(
     icon: ImageVector,
     accentColor: Color,
 ) {
-    item { SectionHeader(stringResource(R.string.section_metric_context)) }
     item {
-        MetricInterpretationCard(
-            title = stringResource(R.string.interpretation_vital_title),
-            status = vitalContextStatusText(interpretation.status),
-            body = stringResource(bodyRes),
-            source = stringResource(sourceRes),
+        VitalContextCardContent(
+            interpretation = interpretation,
+            bodyRes = bodyRes,
+            sourceRes = sourceRes,
             icon = icon,
             accentColor = accentColor,
-            severity = interpretation.severity,
-            modifier = metricModifier(),
         )
     }
 }
@@ -253,7 +332,8 @@ internal fun vitalContextStatusText(status: VitalContextStatus): String =
             stringResource(R.string.interpretation_vital_oxygen_very_low)
     }
 
-internal fun LazyListScope.heartRateSampleStatistics(
+@Composable
+internal fun HeartRateSampleStatisticsContent(
     samples: List<HeartRateSample>,
     previousSamples: List<HeartRateSample>,
     baselineSummaries: List<HeartRateSummary>,
@@ -263,7 +343,7 @@ internal fun LazyListScope.heartRateSampleStatistics(
 ) {
     val values = samples.map { it.beatsPerMinute }
     val previousValues = previousSamples.map { it.beatsPerMinute }
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(values.average().roundToInt().toLong()),
         low = unitFormatter.heartRate(values.minOrNull() ?: 0L),
@@ -282,7 +362,8 @@ internal fun LazyListScope.heartRateSampleStatistics(
     )
 }
 
-internal fun LazyListScope.heartRateSummaryStatistics(
+@Composable
+internal fun HeartRateSummaryStatisticsContent(
     summaries: List<HeartRateSummary>,
     previousSummaries: List<HeartRateSummary>,
     baselineSummaries: List<HeartRateSummary>,
@@ -290,7 +371,7 @@ internal fun LazyListScope.heartRateSummaryStatistics(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(summaries.map { it.avgBpm }.average().roundToInt().toLong()),
         low = unitFormatter.heartRate(summaries.minOfOrNull { it.minBpm } ?: 0L),
@@ -314,7 +395,8 @@ internal fun LazyListScope.heartRateSummaryStatistics(
     )
 }
 
-internal fun LazyListScope.restingHeartRateStatistics(
+@Composable
+internal fun RestingHeartRateStatisticsContent(
     entries: List<DailyRestingHR>,
     previousEntries: List<DailyRestingHR>,
     baselineEntries: List<DailyRestingHR>,
@@ -322,7 +404,7 @@ internal fun LazyListScope.restingHeartRateStatistics(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(entries.map { it.bpm }.average().roundToInt().toLong()),
         low = unitFormatter.heartRate(entries.minOfOrNull { it.bpm } ?: 0L),
@@ -346,7 +428,8 @@ internal fun LazyListScope.restingHeartRateStatistics(
     )
 }
 
-internal fun LazyListScope.hrvStatistics(
+@Composable
+internal fun HrvStatisticsContent(
     entries: List<DailyHrv>,
     previousEntries: List<DailyHrv>,
     baselineEntries: List<DailyHrv>,
@@ -354,7 +437,7 @@ internal fun LazyListScope.hrvStatistics(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.hrv(entries.map { it.rmssdMs }.average()),
         low = unitFormatter.hrv(entries.minOfOrNull { it.rmssdMs } ?: 0.0),
@@ -378,7 +461,8 @@ internal fun LazyListScope.hrvStatistics(
     )
 }
 
-internal fun LazyListScope.bloodPressureStatistics(
+@Composable
+internal fun BloodPressureStatisticsContent(
     entries: List<BloodPressureEntry>,
     previousEntries: List<BloodPressureEntry>,
     baselineEntries: List<BloodPressureEntry>,
@@ -386,8 +470,8 @@ internal fun LazyListScope.bloodPressureStatistics(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
-    item {
+    Column(modifier = metricModifier()) {
+        SectionHeader(stringResource(R.string.section_statistics))
         val latest = entries.maxByOrNull { it.time }
         val average = unitFormatter.bloodPressure(
             entries.map { it.systolicMmHg }.average().roundToInt(),
@@ -454,12 +538,12 @@ internal fun LazyListScope.bloodPressureStatistics(
                 valueFormatter = { value -> DisplayValue(unitFormatter.count(value.roundToInt()), "mmHg") },
                 accentColor = VitalsColor,
             ),
-            modifier = metricModifier(),
         )
     }
 }
 
-internal fun LazyListScope.spO2Statistics(
+@Composable
+internal fun SpO2StatisticsContent(
     entries: List<SpO2Entry>,
     previousEntries: List<SpO2Entry>,
     baselineEntries: List<SpO2Entry>,
@@ -467,7 +551,7 @@ internal fun LazyListScope.spO2Statistics(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.percent(entries.map { it.percent }.average()),
         low = unitFormatter.percent(entries.minOfOrNull { it.percent } ?: 0.0),
@@ -489,7 +573,8 @@ internal fun LazyListScope.spO2Statistics(
     )
 }
 
-internal fun LazyListScope.vo2MaxStatistics(
+@Composable
+internal fun Vo2MaxStatisticsContent(
     entries: List<Vo2MaxEntry>,
     previousEntries: List<Vo2MaxEntry>,
     baselineEntries: List<Vo2MaxEntry>,
@@ -497,7 +582,7 @@ internal fun LazyListScope.vo2MaxStatistics(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.vo2Max(entries.map { it.vo2MaxMlPerKgPerMin }.average()),
         low = unitFormatter.vo2Max(entries.minOfOrNull { it.vo2MaxMlPerKgPerMin } ?: 0.0),
@@ -519,7 +604,8 @@ internal fun LazyListScope.vo2MaxStatistics(
     )
 }
 
-internal fun LazyListScope.respiratoryRateStatistics(
+@Composable
+internal fun RespiratoryRateStatisticsContent(
     entries: List<RespiratoryRateEntry>,
     previousEntries: List<RespiratoryRateEntry>,
     baselineEntries: List<RespiratoryRateEntry>,
@@ -529,7 +615,7 @@ internal fun LazyListScope.respiratoryRateStatistics(
 ) {
     val values = entries.map { it.breathsPerMinute }
     val previousValues = previousEntries.map { it.breathsPerMinute }
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.respiratoryRate(values.average()),
         low = unitFormatter.respiratoryRate(values.minOrNull() ?: 0.0),
@@ -548,7 +634,8 @@ internal fun LazyListScope.respiratoryRateStatistics(
     )
 }
 
-internal fun LazyListScope.bodyTemperatureStatistics(
+@Composable
+internal fun BodyTemperatureStatisticsContent(
     entries: List<BodyTempEntry>,
     previousEntries: List<BodyTempEntry>,
     baselineEntries: List<BodyTempEntry>,
@@ -558,7 +645,7 @@ internal fun LazyListScope.bodyTemperatureStatistics(
 ) {
     val values = entries.map { it.temperatureCelsius }
     val previousValues = previousEntries.map { it.temperatureCelsius }
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.temperature(values.average()),
         low = unitFormatter.temperature(values.minOrNull() ?: 0.0),
@@ -577,7 +664,8 @@ internal fun LazyListScope.bodyTemperatureStatistics(
     )
 }
 
-internal fun LazyListScope.bloodGlucoseStatistics(
+@Composable
+internal fun BloodGlucoseStatisticsContent(
     entries: List<BloodGlucoseEntry>,
     previousEntries: List<BloodGlucoseEntry>,
     baselineEntries: List<BloodGlucoseEntry>,
@@ -587,7 +675,7 @@ internal fun LazyListScope.bloodGlucoseStatistics(
 ) {
     val values = entries.map { it.millimolesPerLiter }
     val previousValues = previousEntries.map { it.millimolesPerLiter }
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.bloodGlucose(values.average()),
         low = unitFormatter.bloodGlucose(values.minOrNull() ?: 0.0),
@@ -606,7 +694,8 @@ internal fun LazyListScope.bloodGlucoseStatistics(
     )
 }
 
-internal fun LazyListScope.skinTemperatureStatistics(
+@Composable
+internal fun SkinTemperatureStatisticsContent(
     entries: List<SkinTemperatureEntry>,
     previousEntries: List<SkinTemperatureEntry>,
     baselineEntries: List<SkinTemperatureEntry>,
@@ -617,7 +706,7 @@ internal fun LazyListScope.skinTemperatureStatistics(
     val values = entries.mapNotNull { it.averageDeltaCelsius }
     if (values.isEmpty()) return
     val previousValues = previousEntries.mapNotNull { it.averageDeltaCelsius }
-    heartNumericStatistics(
+    HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.temperatureDelta(values.average()),
         low = unitFormatter.temperatureDelta(values.minOrNull() ?: 0.0),
@@ -636,6 +725,227 @@ internal fun LazyListScope.skinTemperatureStatistics(
     )
 }
 
+internal fun LazyListScope.heartRateSampleStatistics(
+    samples: List<HeartRateSample>,
+    previousSamples: List<HeartRateSample>,
+    baselineSummaries: List<HeartRateSummary>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        HeartRateSampleStatisticsContent(
+            samples = samples,
+            previousSamples = previousSamples,
+            baselineSummaries = baselineSummaries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.heartRateSummaryStatistics(
+    summaries: List<HeartRateSummary>,
+    previousSummaries: List<HeartRateSummary>,
+    baselineSummaries: List<HeartRateSummary>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        HeartRateSummaryStatisticsContent(
+            summaries = summaries,
+            previousSummaries = previousSummaries,
+            baselineSummaries = baselineSummaries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.restingHeartRateStatistics(
+    entries: List<DailyRestingHR>,
+    previousEntries: List<DailyRestingHR>,
+    baselineEntries: List<DailyRestingHR>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        RestingHeartRateStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.hrvStatistics(
+    entries: List<DailyHrv>,
+    previousEntries: List<DailyHrv>,
+    baselineEntries: List<DailyHrv>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        HrvStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.bloodPressureStatistics(
+    entries: List<BloodPressureEntry>,
+    previousEntries: List<BloodPressureEntry>,
+    baselineEntries: List<BloodPressureEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        BloodPressureStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.spO2Statistics(
+    entries: List<SpO2Entry>,
+    previousEntries: List<SpO2Entry>,
+    baselineEntries: List<SpO2Entry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        SpO2StatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.vo2MaxStatistics(
+    entries: List<Vo2MaxEntry>,
+    previousEntries: List<Vo2MaxEntry>,
+    baselineEntries: List<Vo2MaxEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        Vo2MaxStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.respiratoryRateStatistics(
+    entries: List<RespiratoryRateEntry>,
+    previousEntries: List<RespiratoryRateEntry>,
+    baselineEntries: List<RespiratoryRateEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        RespiratoryRateStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.bodyTemperatureStatistics(
+    entries: List<BodyTempEntry>,
+    previousEntries: List<BodyTempEntry>,
+    baselineEntries: List<BodyTempEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        BodyTemperatureStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.bloodGlucoseStatistics(
+    entries: List<BloodGlucoseEntry>,
+    previousEntries: List<BloodGlucoseEntry>,
+    baselineEntries: List<BloodGlucoseEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        BloodGlucoseStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+internal fun LazyListScope.skinTemperatureStatistics(
+    entries: List<SkinTemperatureEntry>,
+    previousEntries: List<SkinTemperatureEntry>,
+    baselineEntries: List<SkinTemperatureEntry>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+    unitFormatter: UnitFormatter,
+) {
+    item {
+        SkinTemperatureStatisticsContent(
+            entries = entries,
+            previousEntries = previousEntries,
+            baselineEntries = baselineEntries,
+            period = period,
+            selectedRange = selectedRange,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+
 internal fun LazyListScope.heartNumericStatistics(
     unitFormatter: UnitFormatter,
     average: DisplayValue,
@@ -653,8 +963,47 @@ internal fun LazyListScope.heartNumericStatistics(
     baselineCurrentValue: Double? = null,
     baselineValues: List<BaselineValue> = emptyList(),
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
+        HeartNumericStatisticsContent(
+            unitFormatter = unitFormatter,
+            average = average,
+            low = low,
+            high = high,
+            readings = readings,
+            comparison = comparison,
+            selectedRange = selectedRange,
+            comparisonValueFormatter = comparisonValueFormatter,
+            icon = icon,
+            accentColor = accentColor,
+            countTitleRes = countTitleRes,
+            countUnitRes = countUnitRes,
+            period = period,
+            baselineCurrentValue = baselineCurrentValue,
+            baselineValues = baselineValues,
+        )
+    }
+}
+
+@Composable
+internal fun HeartNumericStatisticsContent(
+    unitFormatter: UnitFormatter,
+    average: DisplayValue,
+    low: DisplayValue,
+    high: DisplayValue,
+    readings: Int,
+    comparison: PeriodComparison? = null,
+    selectedRange: TimeRange,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
+    icon: ImageVector,
+    accentColor: Color,
+    countTitleRes: Int = R.string.stat_readings,
+    countUnitRes: Int? = null,
+    period: DatePeriod? = null,
+    baselineCurrentValue: Double? = null,
+    baselineValues: List<BaselineValue> = emptyList(),
+) {
+    Column(modifier = metricModifier()) {
+        SectionHeader(stringResource(R.string.section_statistics))
         InsightStatGrid(
             stats = listOf(
                 InsightStat(
@@ -709,7 +1058,6 @@ internal fun LazyListScope.heartNumericStatistics(
             } else {
                 emptyList()
             },
-            modifier = metricModifier(),
         )
     }
 }
@@ -745,24 +1093,49 @@ internal fun <T> LazyListScope.heartEntryRows(
     if (entries.isEmpty()) return
 
     item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = entries.sortedByDescending(time),
-        ) { entry, rowModifier ->
-            VitalsReadingRow(
-                label = value(entry),
-                source = source(entry),
-                time = time(entry).atZone(ZoneId.systemDefault()),
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onEdit = onEdit
-                    ?.takeIf { editable(entry) }
-                    ?.let { edit -> { edit(entry) } },
-                onDelete = onDelete
-                    ?.takeIf { editable(entry) }
-                    ?.let { delete -> { delete(entry) } },
-                modifier = rowModifier,
-            )
-        }
+        HeartEntryListContent(
+            entries = entries,
+            value = value,
+            source = source,
+            time = time,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            titleDate = titleDate,
+            editable = editable,
+            onEdit = onEdit,
+            onDelete = onDelete,
+        )
+    }
+}
+
+@Composable
+internal fun <T> HeartEntryListContent(
+    entries: List<T>,
+    value: (T) -> String,
+    source: (T) -> String,
+    time: (T) -> java.time.Instant,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    titleDate: LocalDate? = null,
+    editable: (T) -> Boolean = { false },
+    onEdit: ((T) -> Unit)? = null,
+    onDelete: ((T) -> Unit)? = null,
+) {
+    PaginatedEntryList(
+        title = entryListTitle(titleDate, dateTimeFormatterProvider),
+        entries = entries.sortedByDescending(time),
+    ) { entry, rowModifier ->
+        VitalsReadingRow(
+            label = value(entry),
+            source = source(entry),
+            time = time(entry).atZone(ZoneId.systemDefault()),
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onEdit = onEdit
+                ?.takeIf { editable(entry) }
+                ?.let { edit -> { edit(entry) } },
+            onDelete = onDelete
+                ?.takeIf { editable(entry) }
+                ?.let { delete -> { delete(entry) } },
+            modifier = rowModifier,
+        )
     }
 }
 
@@ -777,18 +1150,37 @@ internal fun <T> LazyListScope.heartDailyEntries(
     if (entries.isEmpty()) return
 
     item {
-        PaginatedEntryList(
-            title = entryListTitle(titleDate, dateTimeFormatterProvider),
-            entries = entries.sortedByDescending(date),
-        ) { entry, rowModifier ->
-            HeartDailyEntryRow(
-                date = date(entry),
-                value = value(entry),
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                accentColor = accentColor,
-                modifier = rowModifier,
-            )
-        }
+        HeartDailyEntryListContent(
+            entries = entries,
+            date = date,
+            value = value,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = accentColor,
+            titleDate = titleDate,
+        )
+    }
+}
+
+@Composable
+internal fun <T> HeartDailyEntryListContent(
+    entries: List<T>,
+    date: (T) -> LocalDate,
+    value: (T) -> String,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    accentColor: Color,
+    titleDate: LocalDate? = null,
+) {
+    PaginatedEntryList(
+        title = entryListTitle(titleDate, dateTimeFormatterProvider),
+        entries = entries.sortedByDescending(date),
+    ) { entry, rowModifier ->
+        HeartDailyEntryRow(
+            date = date(entry),
+            value = value(entry),
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            accentColor = accentColor,
+            modifier = rowModifier,
+        )
     }
 }
 

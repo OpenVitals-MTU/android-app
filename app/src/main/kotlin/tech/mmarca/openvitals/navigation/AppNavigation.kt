@@ -224,8 +224,18 @@ fun AppNavigation(
         onNavigate = { route -> navController.navigate(route) },
     )
 
+    val metricSectionRoutes = remember {
+        setOf(
+            Screen.Metric.route,
+            Screen.HeartVitals.route,
+            Screen.Activity.route,
+            Screen.Sleep.route,
+            Screen.Body.route,
+        )
+    }
+
     LaunchedEffect(currentRoute) {
-        if (currentRoute != Screen.Metric.route) {
+        if (currentRoute !in metricSectionRoutes) {
             metricSectionTopBarState = null
         }
     }
@@ -337,7 +347,7 @@ fun AppNavigation(
         topBarActions = {
             val topBarEditState = when (currentRoute) {
                 Screen.ManualEntry.route -> manualEntryTopBarState
-                Screen.Metric.route -> metricSectionTopBarState
+                in metricSectionRoutes -> metricSectionTopBarState
                 Screen.ActivityEntry.route,
                 Screen.ActivityEntryEdit.route -> activityEntryTopBarEditState
                 else -> null
@@ -371,9 +381,9 @@ fun AppNavigation(
                                 currentRoute == Screen.Dashboard.route && topBarEditState.isEditing ->
                                     R.string.cd_finish_dashboard_editing
                                 currentRoute == Screen.Dashboard.route -> R.string.cd_edit_dashboard
-                                currentRoute == Screen.Metric.route && topBarEditState.isEditing ->
+                                currentRoute in metricSectionRoutes && topBarEditState.isEditing ->
                                     R.string.cd_finish_metric_section_editing
-                                currentRoute == Screen.Metric.route -> R.string.cd_edit_metric_sections
+                                currentRoute in metricSectionRoutes -> R.string.cd_edit_metric_sections
                                 topBarEditState.isEditing -> R.string.cd_finish_manual_entry_editing
                                 else -> R.string.cd_edit_manual_entry_widgets
                             }
@@ -623,6 +633,9 @@ fun AppNavigation(
                     onOpenMetric = { metric ->
                         navController.navigate(Screen.Metric.createRoute(metric.toDashboardWidgetId().name))
                     },
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                    },
                 )
             }
 
@@ -723,6 +736,9 @@ fun AppNavigation(
                     onEditBodyMeasurement = { type, entryId ->
                         navController.navigate(Screen.BodyMeasurementEntryEdit.createRoute(type.name, entryId))
                     },
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
+                    },
                 )
             }
 
@@ -752,6 +768,9 @@ fun AppNavigation(
                     },
                     onOpenHrv = {
                         navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
+                    },
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
                     },
                 )
             }
@@ -789,6 +808,9 @@ fun AppNavigation(
                     },
                     onOpenSleepEfficiency = {
                         navController.navigate(SleepEfficiencyDetailRoute)
+                    },
+                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
+                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
                     },
                 )
             }

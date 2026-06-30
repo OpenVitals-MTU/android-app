@@ -116,6 +116,7 @@ internal fun MetricRouteContent(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditBodyMeasurement = onEditBodyMeasurement,
+            onSectionEditStateChanged = onSectionEditStateChanged,
         )
         return
     }
@@ -140,6 +141,7 @@ internal fun MetricRouteContent(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditVitalsMeasurement = onEditVitalsMeasurement,
+            onSectionEditStateChanged = onSectionEditStateChanged,
         )
         return
     }
@@ -152,6 +154,7 @@ internal fun MetricRouteContent(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             onEditBodyMeasurement = onEditBodyMeasurement,
+            onSectionEditStateChanged = onSectionEditStateChanged,
         )
         return
     }
@@ -170,6 +173,7 @@ internal fun MetricRouteContent(
                 onOpenDistance = { onOpenMetric(DashboardWidgetId.DISTANCE) },
                 onOpenEnergyBurned = { onOpenMetric(DashboardWidgetId.CALORIES_OUT) },
                 onOpenHrv = { onOpenMetric(DashboardWidgetId.HRV) },
+                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         DashboardWidgetId.SLEEP -> {
@@ -181,6 +185,7 @@ internal fun MetricRouteContent(
                 onOpenSleepSession = onOpenSleepSession,
                 onOpenSleepScore = onOpenSleepScore,
                 onOpenSleepEfficiency = onOpenSleepEfficiency,
+                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         DashboardWidgetId.HYDRATION -> {
@@ -287,33 +292,63 @@ private fun HeartMetricRouteScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
-        HeartMetric.AVERAGE_HEART_RATE -> AverageHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.RESTING_HEART_RATE -> RestingHeartRateScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.AVERAGE_HEART_RATE -> AverageHeartRateScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        HeartMetric.RESTING_HEART_RATE -> RestingHeartRateScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onSectionEditStateChanged)
         HeartMetric.BLOOD_PRESSURE -> BloodPressureScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
+            onSectionEditStateChanged,
         )
-        HeartMetric.SPO2 -> SpO2Screen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditVitalsMeasurement)
-        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.SPO2 -> SpO2Screen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditVitalsMeasurement,
+            onSectionEditStateChanged,
+        )
+        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onSectionEditStateChanged)
         HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
+            onSectionEditStateChanged,
         )
         HeartMetric.BODY_TEMPERATURE -> BodyTemperatureScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
+            onSectionEditStateChanged,
         )
-        HeartMetric.BLOOD_GLUCOSE -> BloodGlucoseScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        HeartMetric.SKIN_TEMPERATURE -> SkinTemperatureScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        HeartMetric.BLOOD_GLUCOSE -> BloodGlucoseScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        HeartMetric.SKIN_TEMPERATURE -> SkinTemperatureScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
     }
 }
 
@@ -339,16 +374,56 @@ private fun BodyMetricRouteScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
-        BodyMetric.WEIGHT -> WeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.HEIGHT -> HeightScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.BMI -> BmiScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.BODY_FAT -> BodyFatScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onEditBodyMeasurement)
-        BodyMetric.LEAN_MASS -> LeanMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BONE_MASS -> BoneMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
-        BodyMetric.BODY_WATER_MASS -> BodyWaterMassScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
+        BodyMetric.WEIGHT -> WeightScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditBodyMeasurement,
+            onSectionEditStateChanged,
+        )
+        BodyMetric.HEIGHT -> HeightScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditBodyMeasurement,
+            onSectionEditStateChanged,
+        )
+        BodyMetric.BMI -> BmiScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditBodyMeasurement,
+            onSectionEditStateChanged,
+        )
+        BodyMetric.BODY_FAT -> BodyFatScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onEditBodyMeasurement,
+            onSectionEditStateChanged,
+        )
+        BodyMetric.LEAN_MASS -> LeanMassScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onSectionEditStateChanged)
+        BodyMetric.BONE_MASS -> BoneMassScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
+        BodyMetric.BODY_WATER_MASS -> BodyWaterMassScreen(
+            viewModel,
+            unitFormatter,
+            dateTimeFormatterProvider,
+            onSectionEditStateChanged,
+        )
     }
 }
 

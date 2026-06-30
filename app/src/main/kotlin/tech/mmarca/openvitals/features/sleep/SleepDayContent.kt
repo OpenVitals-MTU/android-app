@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.sleep
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.MaterialTheme
@@ -12,8 +11,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.dataSourceEducationItem
 
 internal fun LazyListScope.sleepDayContent(
@@ -22,58 +21,26 @@ internal fun LazyListScope.sleepDayContent(
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    sectionContext: MetricDetailSectionContext,
     onOpenSleepSession: (String) -> Unit,
+    onOpenSleepScore: (() -> Unit)?,
+    onOpenSleepEfficiency: (() -> Unit)?,
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
 ) {
-    val summary = display.dailySummary ?: return
-
-    item {
-        SleepSessionTimelineCard(
-            session = summary,
-            selectedDate = state.selectedDate,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            timeRangeText = dailySleepTimeRangeText(
-                sessions = display.dailySessions,
-                selectedDate = state.selectedDate,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-            ),
-            onClick = display.dailySessions.singleOrNull()?.let { session ->
-                { onOpenSleepSession(session.id) }
-            },
-            preserveTimelineGaps = display.dailySessions.size > 1,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-    }
-    sleepInsightSections(
+    renderSleepDayOrderedContent(
+        sectionContext = sectionContext,
         state = state,
-        period = period,
-        confidenceSessions = display.dailySessions,
         display = display,
+        period = period,
         unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        onOpenSleepSession = onOpenSleepSession,
+        onOpenSleepScore = onOpenSleepScore,
+        onOpenSleepEfficiency = onOpenSleepEfficiency,
         onDecreaseGoal = onDecreaseGoal,
         onIncreaseGoal = onIncreaseGoal,
     )
-
-    if (display.dailySessions.size > 1) {
-        item {
-            PaginatedEntryList(
-                title = stringResource(R.string.section_sleep_sessions),
-                entries = display.dailySessions.sortedByDescending { it.endTime },
-            ) { session, rowModifier ->
-                SleepSessionItem(
-                    session = session,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onClick = { onOpenSleepSession(session.id) },
-                    modifier = rowModifier,
-                )
-            }
-        }
-    }
     dataSourceEducationItem()
 }
 

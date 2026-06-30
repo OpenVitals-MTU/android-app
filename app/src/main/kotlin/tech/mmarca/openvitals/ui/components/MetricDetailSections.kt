@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -101,6 +102,20 @@ class MetricDetailSectionListState(
 fun rememberMetricDetailSectionListState(): MetricDetailSectionListState {
     val lazyListState = rememberLazyListState()
     return remember(lazyListState) { MetricDetailSectionListState(lazyListState) }
+}
+
+fun LazyListScope.renderOrderedMetricDetailSections(
+    sectionContext: MetricDetailSectionContext,
+    builder: MetricDetailSectionBuilder.() -> Unit,
+) {
+    orderedMetricDetailSections(
+        listState = sectionContext.listState,
+        order = sectionContext.order,
+        isEditingSections = sectionContext.isEditingSections,
+        onMoveSectionToTarget = sectionContext.onMoveSectionToTarget,
+        onMoveSection = sectionContext.onMoveSection,
+        builder = builder,
+    )
 }
 
 fun LazyListScope.orderedMetricDetailSections(

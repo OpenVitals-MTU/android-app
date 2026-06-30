@@ -53,7 +53,8 @@ private val SleepOverviewMetricCardHeight = 112.dp
 private val SleepOverviewChartWidth = 168.dp
 private val SleepOverviewChartHeight = 48.dp
 
-internal fun LazyListScope.sleepOverview(
+@Composable
+internal fun SleepOverviewSectionContent(
     summary: SleepOverviewSummary,
     selectedRange: TimeRange,
     period: DatePeriod,
@@ -62,7 +63,7 @@ internal fun LazyListScope.sleepOverview(
     onOpenSleepScore: (() -> Unit)?,
     onOpenSleepEfficiency: (() -> Unit)?,
 ) {
-    item {
+    Column(modifier = Modifier.fillMaxWidth()) {
         SleepOverviewTopCards(
             summary = summary,
             selectedRange = selectedRange,
@@ -71,14 +72,10 @@ internal fun LazyListScope.sleepOverview(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             onOpenSleepScore = onOpenSleepScore,
         )
-    }
-    item {
         SectionHeader(
             text = stringResource(R.string.activities_key_metrics),
             modifier = Modifier.padding(top = 12.dp),
         )
-    }
-    item {
         SleepOverviewMetricCard(
             title = stringResource(R.string.recovery_sleep_schedule),
             value = sleepScheduleOrNoData(summary, dateTimeFormatterProvider),
@@ -91,8 +88,6 @@ internal fun LazyListScope.sleepOverview(
             modifier = metricModifier(),
             chartContent = null,
         )
-    }
-    item {
         SleepOverviewMetricCard(
             title = stringResource(R.string.recovery_rem_sleep),
             value = durationOrNoData(summary.remDurationMs, unitFormatter),
@@ -103,8 +98,6 @@ internal fun LazyListScope.sleepOverview(
             selectedRange = selectedRange,
             modifier = metricModifier(),
         )
-    }
-    item {
         SleepOverviewMetricCard(
             title = stringResource(R.string.recovery_deep_sleep),
             value = durationOrNoData(summary.deepDurationMs, unitFormatter),
@@ -115,8 +108,6 @@ internal fun LazyListScope.sleepOverview(
             selectedRange = selectedRange,
             modifier = metricModifier(),
         )
-    }
-    item {
         SleepOverviewMetricCard(
             title = stringResource(R.string.recovery_sleep_efficiency),
             value = sleepEfficiencyOrNoData(summary, unitFormatter),
@@ -127,6 +118,28 @@ internal fun LazyListScope.sleepOverview(
             selectedRange = selectedRange,
             modifier = metricModifier(),
             onClick = onOpenSleepEfficiency,
+        )
+    }
+}
+
+internal fun LazyListScope.sleepOverview(
+    summary: SleepOverviewSummary,
+    selectedRange: TimeRange,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onOpenSleepScore: (() -> Unit)?,
+    onOpenSleepEfficiency: (() -> Unit)?,
+) {
+    item {
+        SleepOverviewSectionContent(
+            summary = summary,
+            selectedRange = selectedRange,
+            period = period,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onOpenSleepScore = onOpenSleepScore,
+            onOpenSleepEfficiency = onOpenSleepEfficiency,
         )
     }
 }

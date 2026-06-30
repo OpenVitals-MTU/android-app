@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.body
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -75,13 +76,30 @@ internal fun LazyListScope.bmiContextCard(
     adjustedFfmi: Double?,
     unitFormatter: UnitFormatter,
 ) {
+    item {
+        BmiContextCardsContent(
+            bmi = bmi,
+            ffmi = ffmi,
+            adjustedFfmi = adjustedFfmi,
+            unitFormatter = unitFormatter,
+        )
+    }
+}
+
+@Composable
+internal fun BmiContextCardsContent(
+    bmi: Double?,
+    ffmi: Double?,
+    adjustedFfmi: Double?,
+    unitFormatter: UnitFormatter,
+) {
     val bmiInterpretation = bmi?.let { bmiInterpretation(it) }
     val ffmiInterpretation = adjustedFfmi?.let { ffmiInterpretation(it) }
     if (bmiInterpretation == null && ffmiInterpretation == null) return
 
-    item { SectionHeader(stringResource(R.string.section_metric_context)) }
-    if (bmiInterpretation != null) {
-        item {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(stringResource(R.string.section_metric_context))
+        if (bmiInterpretation != null) {
             MetricInterpretationCard(
                 title = stringResource(R.string.interpretation_bmi_title),
                 status = when (bmiInterpretation.category) {
@@ -100,9 +118,7 @@ internal fun LazyListScope.bmiContextCard(
                 modifier = metricModifier(),
             )
         }
-    }
-    if (ffmiInterpretation != null && ffmi != null) {
-        item {
+        if (ffmiInterpretation != null && ffmi != null) {
             MetricInterpretationCard(
                 title = stringResource(R.string.interpretation_ffmi_title),
                 status = when (ffmiInterpretation.category) {
@@ -140,27 +156,29 @@ internal fun LazyListScope.weightStatistics(
     val values = entries.map { it.weightKg }
     val latest = entries.maxByOrNull { it.time }?.let { unitFormatter.weight(it.weightKg) } ?: unitFormatter.weight(0.0)
     val previousLatestKg = previousEntries.maxByOrNull { it.time }?.weightKg
-    bodyNumericStatistics(
-        latest = latest,
-        average = unitFormatter.weight(values.average()),
-        low = unitFormatter.weight(values.minOrNull() ?: 0.0),
-        high = unitFormatter.weight(values.maxOrNull() ?: 0.0),
-        readings = entries.size,
-        comparison = previousLatestKg?.let {
-            periodComparison(
-                currentValue = entries.maxByOrNull { entry -> entry.time }?.weightKg ?: 0.0,
-                previousValue = it,
-            )
-        },
-        selectedRange = selectedRange,
-        comparisonValueFormatter = { unitFormatter.weight(it) },
-        icon = Icons.Outlined.MonitorWeight,
-        accentColor = WeightColor,
-        unitFormatter = unitFormatter,
-        period = period,
-        baselineCurrentValue = entries.maxByOrNull { entry -> entry.time }?.weightKg ?: 0.0,
-        baselineValues = baselineEntries.map { it.weightBaselineValue() },
-    )
+    item {
+        BodyNumericStatisticsContent(
+            latest = latest,
+            average = unitFormatter.weight(values.average()),
+            low = unitFormatter.weight(values.minOrNull() ?: 0.0),
+            high = unitFormatter.weight(values.maxOrNull() ?: 0.0),
+            readings = entries.size,
+            comparison = previousLatestKg?.let {
+                periodComparison(
+                    currentValue = entries.maxByOrNull { entry -> entry.time }?.weightKg ?: 0.0,
+                    previousValue = it,
+                )
+            },
+            selectedRange = selectedRange,
+            comparisonValueFormatter = { unitFormatter.weight(it) },
+            icon = Icons.Outlined.MonitorWeight,
+            accentColor = WeightColor,
+            unitFormatter = unitFormatter,
+            period = period,
+            baselineCurrentValue = entries.maxByOrNull { entry -> entry.time }?.weightKg ?: 0.0,
+            baselineValues = baselineEntries.map { it.weightBaselineValue() },
+        )
+    }
 }
 
 internal fun LazyListScope.bodyFatStatistics(
@@ -173,27 +191,29 @@ internal fun LazyListScope.bodyFatStatistics(
 ) {
     val values = entries.map { it.percent }
     val previousLatestPercent = previousEntries.maxByOrNull { it.time }?.percent
-    bodyNumericStatistics(
-        latest = entries.maxByOrNull { it.time }?.let { unitFormatter.percent(it.percent) } ?: unitFormatter.percent(0.0),
-        average = unitFormatter.percent(values.average()),
-        low = unitFormatter.percent(values.minOrNull() ?: 0.0),
-        high = unitFormatter.percent(values.maxOrNull() ?: 0.0),
-        readings = entries.size,
-        comparison = previousLatestPercent?.let {
-            periodComparison(
-                currentValue = entries.maxByOrNull { entry -> entry.time }?.percent ?: 0.0,
-                previousValue = it,
-            )
-        },
-        selectedRange = selectedRange,
-        comparisonValueFormatter = { unitFormatter.percent(it) },
-        icon = Icons.Outlined.MonitorWeight,
-        accentColor = BodyFatColor,
-        unitFormatter = unitFormatter,
-        period = period,
-        baselineCurrentValue = entries.maxByOrNull { entry -> entry.time }?.percent ?: 0.0,
-        baselineValues = baselineEntries.map { it.bodyFatBaselineValue() },
-    )
+    item {
+        BodyNumericStatisticsContent(
+            latest = entries.maxByOrNull { it.time }?.let { unitFormatter.percent(it.percent) } ?: unitFormatter.percent(0.0),
+            average = unitFormatter.percent(values.average()),
+            low = unitFormatter.percent(values.minOrNull() ?: 0.0),
+            high = unitFormatter.percent(values.maxOrNull() ?: 0.0),
+            readings = entries.size,
+            comparison = previousLatestPercent?.let {
+                periodComparison(
+                    currentValue = entries.maxByOrNull { entry -> entry.time }?.percent ?: 0.0,
+                    previousValue = it,
+                )
+            },
+            selectedRange = selectedRange,
+            comparisonValueFormatter = { unitFormatter.percent(it) },
+            icon = Icons.Outlined.MonitorWeight,
+            accentColor = BodyFatColor,
+            unitFormatter = unitFormatter,
+            period = period,
+            baselineCurrentValue = entries.maxByOrNull { entry -> entry.time }?.percent ?: 0.0,
+            baselineValues = baselineEntries.map { it.bodyFatBaselineValue() },
+        )
+    }
 }
 
 internal fun LazyListScope.singleBodyMetricStatistics(
@@ -209,8 +229,75 @@ internal fun LazyListScope.singleBodyMetricStatistics(
     baselineValues: List<BaselineValue>,
     readings: Int,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
     item {
+        SingleBodyMetricStatisticsContent(
+            value = value,
+            comparison = comparison,
+            comparisonValueFormatter = comparisonValueFormatter,
+            icon = icon,
+            accentColor = accentColor,
+            unitFormatter = unitFormatter,
+            selectedRange = selectedRange,
+            period = period,
+            baselineCurrentValue = baselineCurrentValue,
+            baselineValues = baselineValues,
+            readings = readings,
+        )
+    }
+}
+
+internal fun LazyListScope.bodyNumericStatistics(
+    latest: DisplayValue,
+    average: DisplayValue,
+    low: DisplayValue,
+    high: DisplayValue,
+    readings: Int,
+    comparison: PeriodComparison?,
+    selectedRange: TimeRange,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
+    icon: ImageVector,
+    accentColor: Color,
+    unitFormatter: UnitFormatter,
+    period: DatePeriod,
+    baselineCurrentValue: Double,
+    baselineValues: List<BaselineValue>,
+) {
+    item {
+        BodyNumericStatisticsContent(
+            latest = latest,
+            average = average,
+            low = low,
+            high = high,
+            readings = readings,
+            comparison = comparison,
+            selectedRange = selectedRange,
+            comparisonValueFormatter = comparisonValueFormatter,
+            icon = icon,
+            accentColor = accentColor,
+            unitFormatter = unitFormatter,
+            period = period,
+            baselineCurrentValue = baselineCurrentValue,
+            baselineValues = baselineValues,
+        )
+    }
+}
+
+@Composable
+internal fun SingleBodyMetricStatisticsContent(
+    value: DisplayValue,
+    comparison: PeriodComparison?,
+    comparisonValueFormatter: @Composable (Double) -> DisplayValue,
+    icon: ImageVector,
+    accentColor: Color,
+    unitFormatter: UnitFormatter,
+    selectedRange: TimeRange?,
+    period: DatePeriod,
+    baselineCurrentValue: Double?,
+    baselineValues: List<BaselineValue>,
+    readings: Int,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(stringResource(R.string.section_statistics))
         InsightStatGrid(
             stats = listOf(
                 InsightStat(
@@ -235,7 +322,7 @@ internal fun LazyListScope.singleBodyMetricStatistics(
                         unitFormatter = unitFormatter,
                         valueFormatter = comparisonValueFormatter,
                         accentColor = accentColor,
-                    )
+                    ),
                 )
             } else {
                 emptyList()
@@ -256,7 +343,8 @@ internal fun LazyListScope.singleBodyMetricStatistics(
     }
 }
 
-internal fun LazyListScope.bodyNumericStatistics(
+@Composable
+internal fun BodyNumericStatisticsContent(
     latest: DisplayValue,
     average: DisplayValue,
     low: DisplayValue,
@@ -272,8 +360,8 @@ internal fun LazyListScope.bodyNumericStatistics(
     baselineCurrentValue: Double,
     baselineValues: List<BaselineValue>,
 ) {
-    item { SectionHeader(stringResource(R.string.section_statistics)) }
-    item {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(stringResource(R.string.section_statistics))
         InsightStatGrid(
             stats = listOf(
                 InsightStat(
@@ -319,7 +407,7 @@ internal fun LazyListScope.bodyNumericStatistics(
                         unitFormatter = unitFormatter,
                         valueFormatter = comparisonValueFormatter,
                         accentColor = accentColor,
-                    )
+                    ),
                 )
             }.orEmpty() + personalBaselineInsightStats(
                 insight = personalBaselineInsight(

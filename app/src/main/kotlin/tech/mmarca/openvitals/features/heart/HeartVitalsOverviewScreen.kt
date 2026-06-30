@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.heart
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,8 +29,11 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.dataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.MetricCard
@@ -55,8 +59,10 @@ fun HeartVitalsOverviewScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenMetric: (HeartMetric) -> Unit,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(
         selectedRange = state.selectedRange,
         selectedDate = state.selectedDate,
@@ -83,6 +89,7 @@ fun HeartVitalsOverviewScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
             VitalsOverviewContent(
                 state = state,
@@ -90,6 +97,7 @@ fun HeartVitalsOverviewScreen(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 chartDaySelection = chartDaySelection,
+                sectionContext = sectionContext,
                 onOpenMetric = onOpenMetric,
             )
         }
@@ -102,71 +110,234 @@ fun LazyListScope.VitalsOverviewContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
+    sectionContext: MetricDetailSectionContext,
     onOpenMetric: (HeartMetric) -> Unit,
 ) {
     if (state.isLoading && !state.hasOverviewData) return
 
-    item { SectionHeader(stringResource(R.string.section_heart)) }
-    overviewMetricRows(
-        metrics = heartOverviewMetrics(state, unitFormatter),
-        onOpenMetric = onOpenMetric,
-    )
-    heartOverviewCharts(
-        state = state,
-        period = period,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        chartDaySelection = chartDaySelection,
-    )
-
-    item { SectionHeader(stringResource(R.string.section_cardiovascular)) }
-    overviewMetricRows(
-        metrics = cardiovascularOverviewMetrics(state, unitFormatter),
-        onOpenMetric = onOpenMetric,
-    )
-    cardiovascularOverviewCharts(
-        state = state,
-        period = period,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        chartDaySelection = chartDaySelection,
-    )
-
-    item { SectionHeader(stringResource(R.string.section_respiratory)) }
-    overviewMetricRows(
-        metrics = respiratoryOverviewMetrics(state, period, unitFormatter),
-        onOpenMetric = onOpenMetric,
-    )
-    respiratoryOverviewCharts(
-        state = state,
-        period = period,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        chartDaySelection = chartDaySelection,
-    )
+    renderHeartMetricSections(sectionContext) {
+        section(MetricDetailSectionId.VITALS_HEART_SECTION) {
+            VitalsHeartOverviewSectionContent(
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+                onOpenMetric = onOpenMetric,
+            )
+        }
+        section(MetricDetailSectionId.VITALS_CARDIOVASCULAR_SECTION) {
+            VitalsCardiovascularOverviewSectionContent(
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+                onOpenMetric = onOpenMetric,
+            )
+        }
+        section(MetricDetailSectionId.VITALS_RESPIRATORY_SECTION) {
+            VitalsRespiratoryOverviewSectionContent(
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+                onOpenMetric = onOpenMetric,
+            )
+        }
+    }
     dataSourceEducationItem()
 }
 
-private fun LazyListScope.overviewMetricRows(
+@Composable
+private fun VitalsHeartOverviewSectionContent(
+    state: HeartUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+    onOpenMetric: (HeartMetric) -> Unit,
+) {
+    SectionHeader(stringResource(R.string.section_heart))
+    OverviewMetricRowsContent(
+        metrics = heartOverviewMetrics(state, unitFormatter),
+        onOpenMetric = onOpenMetric,
+    )
+    HeartOverviewChartsContent(
+        state = state,
+        period = period,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        chartDaySelection = chartDaySelection,
+    )
+}
+
+@Composable
+private fun HeartOverviewChartsContent(
+    state: HeartUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (state.selectedRange == TimeRange.DAY && state.daySamples.size > 1) {
+            HeartRateTimelineCard(
+                date = state.selectedDate,
+                samples = state.daySamples,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = overviewMetricModifier(),
+            )
+        }
+        if (state.selectedRange != TimeRange.DAY && state.dailySummaries.isNotEmpty()) {
+            val sorted = state.dailySummaries.sortedBy { it.date }
+            val rangeSummary = heartRateRangeSummary(sorted)
+            MetricLineChart(
+                title = stringResource(R.string.metric_average_heart_rate),
+                series = heartRateSeries(
+                    summaries = sorted,
+                    averageLabel = stringResource(R.string.summary_average),
+                    lowestLabel = stringResource(R.string.stat_lowest),
+                    highestLabel = stringResource(R.string.stat_highest),
+                ),
+                selectedRange = state.selectedRange,
+                period = period,
+                accentColor = HeartColor,
+                summaryText = rangeSummary?.let {
+                    "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                        stringResource(
+                            R.string.summary_avg_value_range,
+                            unitFormatter.heartRate(it.average).text,
+                            unitFormatter.heartRate(it.min).text,
+                            unitFormatter.heartRate(it.max).text,
+                        )
+                    }"
+                } ?: localizedPeriodTitle(state.selectedRange, period),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = overviewMetricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+                valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+            )
+        }
+        if (state.selectedRange != TimeRange.DAY && state.dailyRestingHR.isNotEmpty()) {
+            val sorted = state.dailyRestingHR.sortedBy { it.date }
+            val rangeSummary = restingHeartRateRangeSummary(sorted)
+            MetricLineChart(
+                title = stringResource(R.string.metric_resting_heart_rate),
+                points = sorted.map { MetricLinePoint(date = it.date, value = it.bpm.toDouble()) },
+                selectedRange = state.selectedRange,
+                period = period,
+                accentColor = HeartColor,
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                    stringResource(
+                        R.string.summary_avg_value_range,
+                        unitFormatter.heartRate(rangeSummary.average).text,
+                        unitFormatter.heartRate(rangeSummary.min).text,
+                        unitFormatter.heartRate(rangeSummary.max).text,
+                    )
+                }",
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = overviewMetricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+                valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+            )
+        }
+        if (state.selectedRange != TimeRange.DAY && state.dailyHrv.isNotEmpty()) {
+            val sorted = state.dailyHrv.sortedBy { it.date }
+            val rangeSummary = hrvRangeSummary(sorted)
+            MetricLineChart(
+                title = stringResource(R.string.metric_hrv),
+                points = sorted.map { MetricLinePoint(date = it.date, value = it.rmssdMs) },
+                selectedRange = state.selectedRange,
+                period = period,
+                accentColor = HeartColor.copy(alpha = 0.85f),
+                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
+                    stringResource(
+                        R.string.summary_avg_value_range,
+                        unitFormatter.hrv(rangeSummary.average).text,
+                        unitFormatter.hrv(rangeSummary.min).text,
+                        unitFormatter.hrv(rangeSummary.max).text,
+                    )
+                }",
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = overviewMetricModifier(),
+                selectedDate = chartDaySelection.selectedDate,
+                onDateSelected = chartDaySelection.onDateSelected,
+                valueFormatter = { unitFormatter.hrv(it).text },
+            )
+        }
+    }
+}
+
+@Composable
+private fun VitalsCardiovascularOverviewSectionContent(
+    state: HeartUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+    onOpenMetric: (HeartMetric) -> Unit,
+) {
+    SectionHeader(stringResource(R.string.section_cardiovascular))
+    OverviewMetricRowsContent(
+        metrics = cardiovascularOverviewMetrics(state, unitFormatter),
+        onOpenMetric = onOpenMetric,
+    )
+    CardiovascularOverviewChartsContent(
+        state = state,
+        period = period,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        chartDaySelection = chartDaySelection,
+    )
+}
+
+@Composable
+private fun VitalsRespiratoryOverviewSectionContent(
+    state: HeartUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+    onOpenMetric: (HeartMetric) -> Unit,
+) {
+    SectionHeader(stringResource(R.string.section_respiratory))
+    OverviewMetricRowsContent(
+        metrics = respiratoryOverviewMetrics(state, period, unitFormatter),
+        onOpenMetric = onOpenMetric,
+    )
+    RespiratoryOverviewChartsContent(
+        state = state,
+        period = period,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        chartDaySelection = chartDaySelection,
+    )
+}
+
+@Composable
+private fun OverviewMetricRowsContent(
     metrics: List<OverviewMetricCardData>,
     onOpenMetric: (HeartMetric) -> Unit,
 ) {
     metrics.chunked(2).forEach { row ->
-        item {
-            Row(
-                modifier = overviewMetricModifier(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                row.forEach { metric ->
-                    OverviewMetricCard(
-                        metric = metric,
-                        onOpenMetric = onOpenMetric,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (row.size == 1) {
-                    Spacer(Modifier.weight(1f))
-                }
+        Row(
+            modifier = overviewMetricModifier(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            row.forEach { metric ->
+                OverviewMetricCard(
+                    metric = metric,
+                    onOpenMetric = onOpenMetric,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (row.size == 1) {
+                Spacer(Modifier.weight(1f))
             }
         }
     }
@@ -203,121 +374,17 @@ private fun OverviewMetricCard(
     }
 }
 
-private fun LazyListScope.heartOverviewCharts(
+@Composable
+private fun CardiovascularOverviewChartsContent(
     state: HeartUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
 ) {
-    if (state.selectedRange == TimeRange.DAY && state.daySamples.size > 1) {
-        item {
-            HeartRateTimelineCard(
-                date = state.selectedDate,
-                samples = state.daySamples,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = overviewMetricModifier(),
-            )
-        }
-    }
-    if (state.selectedRange != TimeRange.DAY && state.dailySummaries.isNotEmpty()) {
-        val sorted = state.dailySummaries.sortedBy { it.date }
-        val rangeSummary = heartRateRangeSummary(sorted)
-        item {
-            MetricLineChart(
-                title = stringResource(R.string.metric_average_heart_rate),
-                series = heartRateSeries(
-                    summaries = sorted,
-                    averageLabel = stringResource(R.string.summary_average),
-                    lowestLabel = stringResource(R.string.stat_lowest),
-                    highestLabel = stringResource(R.string.stat_highest),
-                ),
-                selectedRange = state.selectedRange,
-                period = period,
-                accentColor = HeartColor,
-                summaryText = rangeSummary?.let {
-                    "${localizedPeriodTitle(state.selectedRange, period)} · ${
-                        stringResource(
-                            R.string.summary_avg_value_range,
-                            unitFormatter.heartRate(it.average).text,
-                            unitFormatter.heartRate(it.min).text,
-                            unitFormatter.heartRate(it.max).text,
-                        )
-                    }"
-                } ?: localizedPeriodTitle(state.selectedRange, period),
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = overviewMetricModifier(),
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-                valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
-            )
-        }
-    }
-    if (state.selectedRange != TimeRange.DAY && state.dailyRestingHR.isNotEmpty()) {
-        val sorted = state.dailyRestingHR.sortedBy { it.date }
-        val rangeSummary = restingHeartRateRangeSummary(sorted)
-        item {
-            MetricLineChart(
-                title = stringResource(R.string.metric_resting_heart_rate),
-                points = sorted.map { MetricLinePoint(date = it.date, value = it.bpm.toDouble()) },
-                selectedRange = state.selectedRange,
-                period = period,
-                accentColor = HeartColor,
-                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
-                    stringResource(
-                        R.string.summary_avg_value_range,
-                        unitFormatter.heartRate(rangeSummary.average).text,
-                        unitFormatter.heartRate(rangeSummary.min).text,
-                        unitFormatter.heartRate(rangeSummary.max).text,
-                    )
-                }",
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = overviewMetricModifier(),
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-                valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
-            )
-        }
-    }
-    if (state.selectedRange != TimeRange.DAY && state.dailyHrv.isNotEmpty()) {
-        val sorted = state.dailyHrv.sortedBy { it.date }
-        val rangeSummary = hrvRangeSummary(sorted)
-        item {
-            MetricLineChart(
-                title = stringResource(R.string.metric_hrv),
-                points = sorted.map { MetricLinePoint(date = it.date, value = it.rmssdMs) },
-                selectedRange = state.selectedRange,
-                period = period,
-                accentColor = HeartColor.copy(alpha = 0.85f),
-                summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · ${
-                    stringResource(
-                        R.string.summary_avg_value_range,
-                        unitFormatter.hrv(rangeSummary.average).text,
-                        unitFormatter.hrv(rangeSummary.min).text,
-                        unitFormatter.hrv(rangeSummary.max).text,
-                    )
-                }",
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = overviewMetricModifier(),
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-                valueFormatter = { unitFormatter.hrv(it).text },
-            )
-        }
-    }
-}
-
-private fun LazyListScope.cardiovascularOverviewCharts(
-    state: HeartUiState,
-    period: DatePeriod,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    chartDaySelection: ChartDaySelection,
-) {
-    if (state.bloodPressure.hasRenderableChartData(state.selectedRange) { it.time }) {
-        val sortedBloodPressure = state.bloodPressure.sortedBy { it.time }
-        item {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (state.bloodPressure.hasRenderableChartData(state.selectedRange) { it.time }) {
+            val sortedBloodPressure = state.bloodPressure.sortedBy { it.time }
             MetricLineChart(
                 title = stringResource(R.string.metric_blood_pressure),
                 series = bloodPressureSeries(
@@ -337,10 +404,8 @@ private fun LazyListScope.cardiovascularOverviewCharts(
                 valueFormatter = { "${it.roundToInt()} mmHg" },
             )
         }
-    }
-    if (state.spO2.hasRenderableChartData(state.selectedRange) { it.time }) {
-        val sortedSpO2 = state.spO2.sortedBy { it.time }
-        item {
+        if (state.spO2.hasRenderableChartData(state.selectedRange) { it.time }) {
+            val sortedSpO2 = state.spO2.sortedBy { it.time }
             MetricLineChart(
                 title = stringResource(R.string.metric_oxygen_saturation),
                 entries = sortedSpO2,
@@ -362,10 +427,8 @@ private fun LazyListScope.cardiovascularOverviewCharts(
                 onDateSelected = chartDaySelection.onDateSelected,
             )
         }
-    }
-    if (state.vo2Max.hasRenderableChartData(state.selectedRange) { it.time }) {
-        val sortedVo2Max = state.vo2Max.sortedBy { it.time }
-        item {
+        if (state.vo2Max.hasRenderableChartData(state.selectedRange) { it.time }) {
+            val sortedVo2Max = state.vo2Max.sortedBy { it.time }
             MetricLineChart(
                 title = stringResource(R.string.metric_vo2_max),
                 entries = sortedVo2Max,
@@ -384,10 +447,8 @@ private fun LazyListScope.cardiovascularOverviewCharts(
                 valueFormatter = { unitFormatter.vo2Max(it).text },
             )
         }
-    }
-    if (state.bloodGlucose.hasRenderableChartData(state.selectedRange) { it.time }) {
-        val sortedBloodGlucose = state.bloodGlucose.sortedBy { it.time }
-        item {
+        if (state.bloodGlucose.hasRenderableChartData(state.selectedRange) { it.time }) {
+            val sortedBloodGlucose = state.bloodGlucose.sortedBy { it.time }
             MetricLineChart(
                 title = stringResource(R.string.metric_blood_glucose),
                 entries = sortedBloodGlucose,
@@ -412,15 +473,16 @@ private fun LazyListScope.cardiovascularOverviewCharts(
     }
 }
 
-private fun LazyListScope.respiratoryOverviewCharts(
+@Composable
+private fun RespiratoryOverviewChartsContent(
     state: HeartUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
 ) {
-    if (state.respiratoryRate.hasRenderableChartData(state.selectedRange) { it.time }) {
-        item {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (state.respiratoryRate.hasRenderableChartData(state.selectedRange) { it.time }) {
             MetricLineChart(
                 title = stringResource(R.string.metric_respiratory_rate),
                 series = respiratoryRateSeries(
@@ -438,7 +500,9 @@ private fun LazyListScope.respiratoryOverviewCharts(
                     stringResource(
                         R.string.summary_value_avg,
                         unitFormatter.respiratoryRate(
-                            respiratoryRateAverage(respiratoryRateBuckets(state.respiratoryRate, state.selectedRange, period)),
+                            respiratoryRateAverage(
+                                respiratoryRateBuckets(state.respiratoryRate, state.selectedRange, period),
+                            ),
                         ).text,
                     )
                 }",
@@ -449,10 +513,8 @@ private fun LazyListScope.respiratoryOverviewCharts(
                 valueFormatter = { unitFormatter.respiratoryRate(it).text },
             )
         }
-    }
-    if (state.bodyTemperature.hasRenderableChartData(state.selectedRange) { it.time }) {
-        val sortedBodyTemperature = state.bodyTemperature.sortedBy { it.time }
-        item {
+        if (state.bodyTemperature.hasRenderableChartData(state.selectedRange) { it.time }) {
+            val sortedBodyTemperature = state.bodyTemperature.sortedBy { it.time }
             MetricLineChart(
                 title = stringResource(R.string.metric_body_temp),
                 entries = sortedBodyTemperature,
@@ -471,12 +533,10 @@ private fun LazyListScope.respiratoryOverviewCharts(
                 valueFormatter = { unitFormatter.temperature(it).text },
             )
         }
-    }
-    if (state.skinTemperature.hasRenderableChartData(state.selectedRange) { it.time }) {
-        val chartEntries = state.skinTemperature
-            .filter { it.averageDeltaCelsius != null }
-            .sortedBy { it.time }
-        item {
+        if (state.skinTemperature.hasRenderableChartData(state.selectedRange) { it.time }) {
+            val chartEntries = state.skinTemperature
+                .filter { it.averageDeltaCelsius != null }
+                .sortedBy { it.time }
             MetricLineChart(
                 title = stringResource(R.string.metric_skin_temperature),
                 entries = chartEntries,

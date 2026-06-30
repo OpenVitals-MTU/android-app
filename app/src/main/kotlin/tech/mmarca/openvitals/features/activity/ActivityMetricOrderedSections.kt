@@ -8,34 +8,21 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricDetailSectionBuilder
-import tech.mmarca.openvitals.ui.components.MetricDetailSectionListState
-import tech.mmarca.openvitals.ui.components.orderedMetricDetailSections
+import tech.mmarca.openvitals.ui.components.renderOrderedMetricDetailSections
 import java.time.LocalDate
 
-internal data class ActivityMetricSectionContext(
-    val listState: MetricDetailSectionListState,
-    val order: List<MetricDetailSectionId>,
-    val isEditingSections: Boolean,
-    val onMoveSectionToTarget: (MetricDetailSectionId, MetricDetailSectionId) -> Unit,
-    val onMoveSection: (MetricDetailSectionId, Int) -> Unit,
-)
+internal typealias ActivityMetricSectionContext = MetricDetailSectionContext
 
 internal fun LazyListScope.orderedActivityMetricSections(
-    context: ActivityMetricSectionContext,
+    context: MetricDetailSectionContext,
     builder: MetricDetailSectionBuilder.() -> Unit,
 ) {
-    orderedMetricDetailSections(
-        listState = context.listState,
-        order = context.order,
-        isEditingSections = context.isEditingSections,
-        onMoveSectionToTarget = context.onMoveSectionToTarget,
-        onMoveSection = context.onMoveSection,
-        builder = builder,
-    )
+    renderOrderedMetricDetailSections(context, builder)
 }
 
 internal data class ActivityMetricOrderedContentSpec(
@@ -45,7 +32,7 @@ internal data class ActivityMetricOrderedContentSpec(
     val unitFormatter: UnitFormatter,
     val dateTimeFormatterProvider: DateTimeFormatterProvider,
     val chartDaySelection: ChartDaySelection,
-    val sectionContext: ActivityMetricSectionContext,
+    val sectionContext: MetricDetailSectionContext,
     val metric: ActivityMetric,
     val accentColor: Color,
     val goalIcon: ImageVector,

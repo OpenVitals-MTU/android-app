@@ -18,10 +18,6 @@
     <string name="cd_move_section_up">Sposta sezione su</string>
     <string name="cd_move_section_down">Sposta sezione giù</string>
     <string name="cd_remove_widget">Rimuovi widget</string>
-    <string name="cd_edit_metric_sections">Modifica sezioni metriche</string>
-    <string name="cd_finish_metric_section_editing">Termina modifica sezioni metriche</string>
-    <string name="cd_move_section_up">Sposta sezione su</string>
-    <string name="cd_move_section_down">Sposta sezione giù</string>
     <string name="cd_decrease_recording_dashboard_widget_size">Rendi widget più piccolo</string>
     <string name="cd_increase_recording_dashboard_widget_size">Rendi widget più grande</string>
     <string name="cd_exit_recording_focus_mode">Esci dalla modalità focus</string>

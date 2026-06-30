@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -32,8 +33,10 @@ fun BodyScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(
         selectedRange = state.selectedRange,
         selectedDate = state.selectedDate,
@@ -61,6 +64,7 @@ fun BodyScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
             bodyContent(
                 state = state,
@@ -68,6 +72,7 @@ fun BodyScreen(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 chartDaySelection = chartDaySelection,
+                sectionContext = sectionContext,
                 onEditBodyMeasurement = onEditBodyMeasurement,
                 onDeleteBodyMeasurement = viewModel::deleteBodyMeasurementEntry,
             )
@@ -81,6 +86,7 @@ fun WeightScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
@@ -88,6 +94,7 @@ fun WeightScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.WEIGHT,
         onEditBodyMeasurement = onEditBodyMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -97,6 +104,7 @@ fun HeightScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
@@ -104,6 +112,7 @@ fun HeightScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.HEIGHT,
         onEditBodyMeasurement = onEditBodyMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -113,6 +122,7 @@ fun BmiScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
@@ -120,6 +130,7 @@ fun BmiScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BMI,
         onEditBodyMeasurement = onEditBodyMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -129,6 +140,7 @@ fun BodyFatScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
@@ -136,6 +148,7 @@ fun BodyFatScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BODY_FAT,
         onEditBodyMeasurement = onEditBodyMeasurement,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -144,12 +157,14 @@ fun LeanMassScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.LEAN_MASS,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -158,12 +173,14 @@ fun BmrScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BMR,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -172,12 +189,14 @@ fun BoneMassScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BONE_MASS,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -186,11 +205,13 @@ fun BodyWaterMassScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BODY_WATER_MASS,
+        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }

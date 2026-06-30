@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
@@ -23,9 +24,11 @@ fun SleepScreen(
     onOpenSleepSession: (String) -> Unit,
     onOpenSleepScore: (() -> Unit)? = null,
     onOpenSleepEfficiency: (() -> Unit)? = null,
+    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val display = state.display
+    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -49,19 +52,8 @@ fun SleepScreen(
             onSelectDate = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
         ) { period ->
-            if (!state.isLoading || state.sessions.isNotEmpty()) {
-                sleepOverview(
-                    summary = display.overviewSummary,
-                    selectedRange = state.selectedRange,
-                    period = period,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onOpenSleepScore = onOpenSleepScore,
-                    onOpenSleepEfficiency = onOpenSleepEfficiency,
-                )
-            }
-
             when {
                 state.selectedRange == TimeRange.DAY && display.dailySummary != null -> {
                     sleepDayContent(
@@ -70,7 +62,10 @@ fun SleepScreen(
                         period = period,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        sectionContext = sectionContext,
                         onOpenSleepSession = onOpenSleepSession,
+                        onOpenSleepScore = onOpenSleepScore,
+                        onOpenSleepEfficiency = onOpenSleepEfficiency,
                         onDecreaseGoal = viewModel::decreaseDailyGoal,
                         onIncreaseGoal = viewModel::increaseDailyGoal,
                     )
@@ -84,7 +79,10 @@ fun SleepScreen(
                         chartDaySelection = chartDaySelection,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        sectionContext = sectionContext,
                         onOpenSleepSession = onOpenSleepSession,
+                        onOpenSleepScore = onOpenSleepScore,
+                        onOpenSleepEfficiency = onOpenSleepEfficiency,
                         onDecreaseGoal = viewModel::decreaseDailyGoal,
                         onIncreaseGoal = viewModel::increaseDailyGoal,
                     )
