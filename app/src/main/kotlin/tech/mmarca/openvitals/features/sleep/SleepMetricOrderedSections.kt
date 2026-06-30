@@ -86,7 +86,6 @@ internal fun LazyListScope.renderSleepDayOrderedContent(
                 onClick = display.dailySessions.singleOrNull()?.let { session ->
                     { onOpenSleepSession(session.id) }
                 },
-                preserveTimelineGaps = display.dailySessions.size > 1,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),

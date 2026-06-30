@@ -48,7 +48,6 @@ internal fun SleepSessionTimelineCard(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     timeRangeText: String? = null,
-    preserveTimelineGaps: Boolean = false,
 ) {
     val zone = ZoneId.systemDefault()
     val start = session.startTime.atZone(zone)
@@ -67,11 +66,11 @@ internal fun SleepSessionTimelineCard(
                 selectedDate = selectedDate,
                 unitFormatter = unitFormatter,
                 dateFormatter = dateFormatter,
+                timeFormatter = timeFormatter,
                 startText = timeFormatter.format(start),
                 endText = timeFormatter.format(end),
                 timeRangeText = timeRangeText,
                 showDetails = true,
-                preserveTimelineGaps = preserveTimelineGaps,
             )
         }
     } else {
@@ -84,11 +83,11 @@ internal fun SleepSessionTimelineCard(
                 selectedDate = selectedDate,
                 unitFormatter = unitFormatter,
                 dateFormatter = dateFormatter,
+                timeFormatter = timeFormatter,
                 startText = timeFormatter.format(start),
                 endText = timeFormatter.format(end),
                 timeRangeText = timeRangeText,
                 showDetails = false,
-                preserveTimelineGaps = preserveTimelineGaps,
             )
         }
     }
@@ -100,11 +99,11 @@ private fun SleepSessionTimelineCardContent(
     selectedDate: LocalDate,
     unitFormatter: UnitFormatter,
     dateFormatter: DateTimeFormatter,
+    timeFormatter: DateTimeFormatter,
     startText: String,
     endText: String,
     timeRangeText: String?,
     showDetails: Boolean,
-    preserveTimelineGaps: Boolean,
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
         Row(
@@ -140,33 +139,16 @@ private fun SleepSessionTimelineCardContent(
 
         if (session.stages.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
-            SleepStagesBar(
-                stages = session.stages,
-                totalMs = session.durationMs,
+            SleepStagesLaneChart(
+                stages = session.stages.sortedBy { it.startTime },
+                unitFormatter = unitFormatter,
+                timeFormatter = timeFormatter,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(24.dp),
-                timelineStart = session.startTime.takeIf { preserveTimelineGaps },
-                timelineEnd = session.endTime.takeIf { preserveTimelineGaps },
+                    .padding(top = 4.dp),
+                timelineStart = session.startTime,
+                timelineEnd = session.endTime,
             )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = startText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = endText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            SleepStageLegend(stages = session.stages, unitFormatter = unitFormatter)
         }
 
         if (showDetails) {
