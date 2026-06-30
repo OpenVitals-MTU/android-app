@@ -1,0 +1,1 @@
+Adds a sleep-stage time graph for easier overnight review. Drag-and-drop reordering is smoother for dashboard widgets and metric sections, the dashboard carousel behaves more reliably, weekly activity visuals handle no-activity days correctly, and connected/visual regression coverage is broader.

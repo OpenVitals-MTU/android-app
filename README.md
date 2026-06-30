@@ -86,7 +86,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 ## Current coverage
 
 - Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, BMR context, floors climbed, elevation gain, wheelchair pushes, workout sessions, and cardio load
-- Sleep: sessions, duration, sleep stages, sleep score, sleep efficiency, and period overview cards
+- Sleep: sessions, duration, sleep stages, sleep-stage time graphs, sleep score, sleep efficiency, and period overview cards
 - Recovery: Daily Readiness, Body Energy, Training Readiness, HRV status, intensity minutes, physiological stress, adaptive goal context, and local explanation screens
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max

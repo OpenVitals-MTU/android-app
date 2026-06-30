@@ -1,0 +1,1 @@
+Aggiunge un grafico temporale delle fasi del sonno. Il riordino drag-and-drop di widget e sezioni metriche e piu fluido, il carosello della dashboard e piu affidabile, le viste settimanali gestiscono correttamente i giorni senza attivita e la copertura dei test e piu ampia.

@@ -1,0 +1,1 @@
+Fügt ein Zeitdiagramm für Schlafphasen hinzu. Drag-and-drop zum Neuordnen von Dashboard-Widgets und Metrikabschnitten läuft flüssiger, das Dashboard-Karussell ist zuverlässiger, Wochenaktivitätsansichten behandeln Tage ohne Aktivität korrekt und die Testabdeckung wurde erweitert.

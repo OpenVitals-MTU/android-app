@@ -1,0 +1,1 @@
+Añade un gráfico temporal de fases del sueño para revisar mejor la noche. La reordenación por arrastrar y soltar es más fluida en widgets y secciones de métricas, el carrusel de la dashboard es más fiable, las vistas semanales de actividad manejan bien los días sin actividad y se amplía la cobertura de pruebas.
