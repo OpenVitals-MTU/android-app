@@ -1,0 +1,1 @@
+Removes the local dashboard summary cache so refreshes read directly from Health Connect with less stale state. Dashboard loading is simpler, sleep sessions merge more reliably, past days without activity no longer look completed in weekly activity views, and long data-source names fit better.

@@ -1,0 +1,1 @@
+Rimuove la cache locale dei riepiloghi della dashboard, così gli aggiornamenti leggono direttamente da Health Connect con meno stato obsoleto. Il caricamento è più semplice, le sessioni di sonno si uniscono meglio, i giorni passati senza attività non sembrano più completati e i nomi lunghi delle fonti dati si adattano meglio.

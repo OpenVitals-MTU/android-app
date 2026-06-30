@@ -1,0 +1,1 @@
+Elimina la cache local de resúmenes del panel para que las actualizaciones lean directamente desde Health Connect con menos estado obsoleto. La carga del panel es más simple, las sesiones de sueño se fusionan mejor, los días pasados sin actividad ya no aparecen completados y los nombres largos de fuentes de datos encajan mejor.

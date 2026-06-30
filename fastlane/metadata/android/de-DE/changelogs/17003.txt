@@ -1,0 +1,1 @@
+Entfernt den lokalen Dashboard-Zusammenfassungs-Cache, damit Aktualisierungen direkter aus Health Connect lesen und weniger veralteten Zustand behalten. Das Dashboard lädt einfacher, Schlafsitzungen werden zuverlässiger zusammengeführt, vergangene Tage ohne Aktivität wirken nicht mehr abgeschlossen und lange Datenquellen-Namen passen besser.

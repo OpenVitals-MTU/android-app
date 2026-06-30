@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.7.3 - 2026-06-30
+
+### English
+
+- Remove the local dashboard summary cache and related warmup controls so metric refreshes read directly from Health Connect with less stale state.
+- Simplify dashboard refresh loading and repository queries after cache removal.
+- Improve sleep handling by merging overlapping sessions and surfacing sleep summary data more consistently.
+- Fix weekly activity progress markers so past days without activity are not drawn as completed.
+- Fix data source attribution text fitting for long provider and app names, with regression coverage.
+
+### Español
+
+- Elimina la cache local de resúmenes del panel y sus controles de precarga para que las actualizaciones lean directamente desde Health Connect con menos estado obsoleto.
+- Simplifica la carga de actualización del panel y las consultas de repositorios tras retirar la cache.
+- Mejora el manejo del sueño fusionando sesiones solapadas y mostrando los resúmenes de sueño de forma más consistente.
+- Corrige los marcadores de progreso semanal de actividad para que los días pasados sin actividad no aparezcan completados.
+- Corrige el ajuste del texto de atribución de fuente de datos para nombres largos de proveedores y apps, con cobertura de regresión.
+
+### Deutsch
+
+- Entfernt den lokalen Cache für Dashboard-Zusammenfassungen und die zugehörigen Vorwärm-Steuerelemente, sodass Aktualisierungen direkter aus Health Connect lesen und weniger veralteten Zustand behalten.
+- Vereinfacht Dashboard-Aktualisierungen und Repository-Abfragen nach dem Entfernen des Caches.
+- Verbessert die Schlafverarbeitung, indem überlappende Sitzungen zusammengeführt und Schlafzusammenfassungen konsistenter angezeigt werden.
+- Korrigiert Wochenaktivitäts-Markierungen, damit vergangene Tage ohne Aktivität nicht als abgeschlossen dargestellt werden.
+- Korrigiert die Textanpassung der Datenquellen-Zuordnung für lange Anbieter- und App-Namen, inklusive Regressionstest.
+
+### Italiano
+
+- Rimuove la cache locale dei riepiloghi della dashboard e i relativi controlli di preriscaldamento, così gli aggiornamenti leggono direttamente da Health Connect con meno stato obsoleto.
+- Semplifica il caricamento degli aggiornamenti della dashboard e le query dei repository dopo la rimozione della cache.
+- Migliora la gestione del sonno unendo le sessioni sovrapposte e mostrando i riepiloghi del sonno in modo più coerente.
+- Corregge i marcatori di avanzamento settimanale delle attività, così i giorni passati senza attività non risultano completati.
+- Corregge l'adattamento del testo di attribuzione della fonte dati per nomi lunghi di provider e app, con copertura di regressione.
+
+## 1.7.2 - 2026-06-30
+
+### English
+
+- Add a sleep-stage time graph so overnight sessions are easier to scan by time of night.
+- Improve drag-and-drop mechanics for reorderable dashboard widgets and metric detail sections.
+- Fix dashboard carousel behavior after widget and layout changes.
+- Fix weekly activity visuals when a day has no activity.
+- Expand connected-flow and visual-regression coverage for dashboard, hydration, manual entry, settings, and shared Material components.
+
+### Español
+
+- Añade un gráfico temporal de fases del sueño para revisar mejor las sesiones por hora de la noche.
+- Mejora la mecánica de arrastrar y soltar para widgets del panel y secciones de detalle de métricas reordenables.
+- Corrige el comportamiento del carrusel del panel tras cambios en widgets y diseño.
+- Corrige las visualizaciones semanales de actividad cuando un día no contiene actividad.
+- Amplía la cobertura de pruebas connected-flow y visual-regression para panel, hidratación, entrada manual, ajustes y componentes Material compartidos.
+
+### Deutsch
+
+- Ergänzt ein Zeitdiagramm für Schlafphasen, damit Nachtsitzungen nach Uhrzeit leichter zu erfassen sind.
+- Verbessert Drag-and-drop für sortierbare Dashboard-Widgets und Metrikdetail-Abschnitte.
+- Korrigiert das Verhalten des Dashboard-Karussells nach Widget- und Layoutänderungen.
+- Korrigiert Wochenaktivitätsansichten, wenn ein Tag keine Aktivität enthält.
+- Erweitert Connected-Flow- und Visual-Regression-Abdeckung für Dashboard, Hydration, manuelle Eingabe, Einstellungen und gemeinsame Material-Komponenten.
+
+### Italiano
+
+- Aggiunge un grafico temporale delle fasi del sonno per leggere più facilmente le sessioni durante la notte.
+- Migliora la meccanica di trascinamento per widget della dashboard e sezioni metriche riordinabili.
+- Corregge il comportamento del carosello della dashboard dopo le modifiche a widget e layout.
+- Corregge le visualizzazioni settimanali dell'attività quando un giorno non contiene attività.
+- Estende la copertura dei test connected-flow e visual-regression per dashboard, idratazione, inserimento manuale, impostazioni e componenti Material condivisi.
+
 ## 1.7.1 - 2026-06-30
 
 ### English
