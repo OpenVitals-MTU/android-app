@@ -5,6 +5,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -397,8 +398,9 @@ internal fun ActivityOverviewStrip(
                             Box(
                                 modifier = Modifier
                                     .size(ActivityOverviewMarkerSize)
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    .border(
+                                        width = 2.dp,
+                                        color = WorkoutColor,
                                         CircleShape,
                                     ),
                             )
