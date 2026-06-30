@@ -29,6 +29,7 @@ val hasReleaseSigning = listOf(
     effectiveReleaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 
+val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
 
 android {
     namespace = "tech.mmarca.openvitals"
@@ -57,6 +58,9 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            if (signDebugWithReleaseKey && hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
 
         release {

@@ -113,6 +113,7 @@ steps:
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
+      - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
       - test -f gradle/wrapper/gradle-wrapper.jar
       - chmod +x gradlew
       - ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease :app:bundleRelease

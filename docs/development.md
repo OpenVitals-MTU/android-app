@@ -50,10 +50,15 @@ The tag prerelease pipeline runs `verifyLocalReleaseChecks` before publishing
 the debug APK, signed release APK, and signed Android App Bundle assets to
 Codeberg as a prerelease. That preflight includes assembling the debug APK
 first, so every release has a debug build available for troubleshooting with the
-debug-only sanitized log export in Settings. Production deployments are approved
-from the successful tag pipeline and skip rerunning that full prerelease test
-suite; they still rebuild the release artifacts from the tagged commit before
-upload.
+debug-only sanitized log export in Settings. Published CI debug APKs are signed
+with the stable release signing configuration for the separate
+`tech.mmarca.openvitals.debug` application ID, so Codeberg debug-to-debug updates
+keep the same certificate across ephemeral runners. Users who installed older CI
+debug APKs signed by a runner-generated debug key may need to uninstall once
+before installing the first APK built with stable debug signing. Production
+deployments are approved from the successful tag pipeline and skip rerunning that
+full prerelease test suite; they still rebuild the release artifacts from the
+tagged commit before upload.
 
 A production deployment publishes the signed App Bundle directly to the Google
 Play production track with the Fastlane `android production` lane, including Play
