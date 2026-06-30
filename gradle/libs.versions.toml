@@ -13,6 +13,9 @@ room = "2.8.4"
 kotlinx-serialization-json = "1.11.0"
 junit4 = "4.13.2"
 mockk = "1.14.11"
+androidx-test = "1.7.0"
+androidx-test-ext-junit = "1.3.0"
+androidx-test-espresso = "3.7.0"
 kover = "0.9.8"
 hilt = "2.59.2"
 hilt-navigation-compose = "1.3.0"
@@ -88,6 +91,10 @@ hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-comp
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidx-test" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
+androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidx-test-espresso" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

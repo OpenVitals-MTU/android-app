@@ -76,7 +76,7 @@ class MaterialUxComponentsTest {
             assertEquals("sleep", selectedRoute)
         }
 
-        composeRule.onNodeWithText("Add").performClick()
+        composeRule.onNodeWithText("Add", useUnmergedTree = true).performClick()
         composeRule.runOnIdle {
             assertEquals("manual_entry", selectedRoute)
         }

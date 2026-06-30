@@ -30,18 +30,22 @@ tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
     languageVersion = JavaLanguageVersion.of(17)
 }
 
+val hasAndroidSerial = providers.environmentVariable("ANDROID_SERIAL").isPresent
+val isCiEnvironment = providers.environmentVariable("CI").isPresent ||
+    providers.environmentVariable("WOODPECKER").isPresent
+
 tasks.register("verifyAndroidTest") {
     group = "verification"
-    description = "Runs connectedDebugAndroidTest when ANDROID_SERIAL is set."
-    onlyIf {
-        providers.environmentVariable("ANDROID_SERIAL").isPresent
+    description = "Runs connectedDebugAndroidTest for local connected-device checks."
+    enabled = hasAndroidSerial && !isCiEnvironment
+    if (enabled) {
+        dependsOn(":app:connectedDebugAndroidTest")
     }
-    dependsOn(":app:connectedDebugAndroidTest")
 }
 
 tasks.register("verifyLocalApp") {
     group = "verification"
-    description = "Runs CI verification for the local internet-free OpenVitals app."
+    description = "Runs CI verification without connected-device instrumentation tests."
     dependsOn(
         ":app:testDebugUnitTest",
         ":app:lintDebug",
@@ -52,7 +56,7 @@ tasks.register("verifyLocalApp") {
 
 tasks.register("verifyLocalReleaseChecks") {
     group = "verification"
-    description = "Runs release preflight checks for the local internet-free OpenVitals app."
+    description = "Runs release preflight checks without connected-device instrumentation tests."
     dependsOn(
         ":app:assembleDebug",
         ":app:testDebugUnitTest",
