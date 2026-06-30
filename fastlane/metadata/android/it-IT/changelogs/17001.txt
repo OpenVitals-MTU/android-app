@@ -1,0 +1,1 @@
+Riordina le sezioni in più schermate di dettaglio: attività, calorie, idratazione, nutrizione, cuore, sonno e corpo. Le importazioni Apple Health hanno azioni più chiare per copiare errori/report e diagnostica migliore. I dati cardiaci caricano meglio nei giorni con molti campioni e la firma release/debug è più stabile.

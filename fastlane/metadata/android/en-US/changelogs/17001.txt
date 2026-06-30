@@ -1,0 +1,1 @@
+Reorder sections on more metric detail screens: activities, calories, hydration, nutrition, heart, sleep, and body. Apple Health imports now expose clearer error/report copy actions and richer diagnostics. Heart data loading is more reliable on high-sample days, weekly sleep/hydration layouts have extra coverage, and release/debug build signing is steadier.

@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.7.1 - 2026-06-30
+
+### English
+
+- Extend reorderable metric detail sections across activities, calories, hydration, nutrition, heart/vitals, sleep, and body screens.
+- Improve Apple Health import diagnostics with clearer error/report copy actions and more detailed import logging.
+- Fix heart data loading for days with more than 1,000 samples by paging reads before chart aggregation.
+- Refine dashboard and metric internals with feature-owned repositories, presentation mappers, and smaller screen components for steadier refreshes.
+- Stabilize release/debug build signing and add coverage for weekly sleep and hydration layouts.
+
+### Español
+
+- Extiende secciones reordenables de detalle de métricas a pantallas de actividades, calorías, hidratación, nutrición, corazón/constantes, sueño y cuerpo.
+- Mejora diagnósticos de importación de Apple Health con acciones más claras para copiar errores/informes y registros de importación más detallados.
+- Corrige la carga de datos cardíacos en días con más de 1.000 muestras paginando lecturas antes de agregar gráficos.
+- Refina internos del panel y las métricas con repositorios por función, mapeadores de presentación y componentes de pantalla más pequeños para actualizaciones más estables.
+- Estabiliza la firma de builds release/debug y añade cobertura para diseños semanales de sueño e hidratación.
+
+### Deutsch
+
+- Erweitert sortierbare Metrikdetail-Abschnitte auf Aktivitäten, Kalorien, Hydration, Ernährung, Herz/Vitalwerte, Schlaf und Körper.
+- Verbessert Apple-Health-Importdiagnosen mit klareren Aktionen zum Kopieren von Fehlern/Berichten und detaillierter Importprotokollierung.
+- Korrigiert das Laden von Herzdaten an Tagen mit mehr als 1.000 Samples, indem Lesevorgänge vor der Diagrammaggregation paginiert werden.
+- Verfeinert Dashboard- und Metrik-Interna mit featureeigenen Repositories, Presentation-Mappern und kleineren Screen-Komponenten für stabilere Aktualisierungen.
+- Stabilisiert Release-/Debug-Build-Signierung und ergänzt Tests für Wochenlayouts von Schlaf und Hydration.
+
+### Italiano
+
+- Estende le sezioni riordinabili dei dettagli metriche alle schermate attività, calorie, idratazione, nutrizione, cuore/vitali, sonno e corpo.
+- Migliora la diagnostica delle importazioni Apple Health con azioni più chiare per copiare errori/report e log di importazione più dettagliati.
+- Corregge il caricamento dei dati cardiaci nei giorni con più di 1.000 campioni paginando le letture prima dell'aggregazione dei grafici.
+- Rifinisce gli interni di dashboard e metriche con repository per funzionalità, mapper di presentazione e componenti più piccoli per aggiornamenti più stabili.
+- Stabilizza la firma delle build release/debug e aggiunge copertura per i layout settimanali di sonno e idratazione.
+
 ## 1.7.0 - 2026-06-29
 
 ### English

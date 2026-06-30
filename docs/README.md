@@ -7,6 +7,6 @@ Use these docs as the working index for product and architecture decisions.
 - [Development](development.md): local build, verification, CI, and Windows cleanup notes.
 - [Feature playbook](feature-playbook.md): checklist for adding or extending a metric feature.
 - [Features](features/README.md): user-facing feature guide with focused pages for each major capability.
-- [Release notes](releases/1.7.0.md): latest user-facing release summary.
+- [Release notes](releases/1.7.1.md): latest user-facing release summary.
 
 If code and docs disagree, prefer the docs for new work and refactor incrementally toward them.

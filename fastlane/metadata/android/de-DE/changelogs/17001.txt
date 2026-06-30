@@ -1,0 +1,1 @@
+Sortiere Abschnitte auf weiteren Metrikdetailseiten: Aktivitäten, Kalorien, Hydration, Ernährung, Herz, Schlaf und Körper. Apple-Health-Importe bieten klarere Aktionen zum Kopieren von Fehlern/Berichten und bessere Diagnosen. Herzdaten laden an sample-reichen Tagen zuverlässiger, und Release-/Debug-Signierung ist stabiler.

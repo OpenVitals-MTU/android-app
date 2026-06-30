@@ -1,0 +1,1 @@
+Reordena secciones en más pantallas de detalle de métricas: actividades, calorías, hidratación, nutrición, corazón, sueño y cuerpo. Apple Health ofrece acciones más claras para copiar errores/informes y mejores diagnósticos. La carga de datos cardíacos es más fiable en días con muchas muestras, y la firma release/debug queda más estable.
