@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -26,10 +27,15 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.HealthConnectSourceResolver
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
+
+private const val DataSourceLabelMaxCharacters = 24
+private const val DataSourceLabelOverflow = "..."
+private val DataSourceLabelMaxWidth = 168.dp
 
 @Composable
 fun DataSourceAttribution(
@@ -44,11 +50,17 @@ fun DataSourceAttribution(
     val iconPainter = remember(source.icon) {
         source.icon?.toPainter()
     }
+    val label = remember(source.label) {
+        truncatedDataSourceLabel(source.label)
+    }
     AssistChip(
         onClick = {},
         enabled = false,
         label = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.widthIn(max = DataSourceLabelMaxWidth),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 if (showIcon && iconPainter != null) {
                     Icon(
                         painter = iconPainter,
@@ -58,7 +70,9 @@ fun DataSourceAttribution(
                     Spacer(Modifier.width(6.dp))
                 }
                 Text(
-                    text = source.label,
+                    text = label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -112,6 +126,17 @@ fun LazyListScope.dataSourceEducationItem() {
     item {
         DataSourceEducationItem()
     }
+}
+
+internal fun truncatedDataSourceLabel(label: String): String {
+    val trimmedLabel = label.trim()
+    if (trimmedLabel.length <= DataSourceLabelMaxCharacters) {
+        return trimmedLabel
+    }
+
+    return trimmedLabel
+        .take(DataSourceLabelMaxCharacters - DataSourceLabelOverflow.length)
+        .trimEnd() + DataSourceLabelOverflow
 }
 
 private fun Drawable.toPainter(): Painter {
