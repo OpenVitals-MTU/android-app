@@ -5,12 +5,8 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.PlannedExerciseBlock
 import androidx.health.connect.client.records.PlannedExerciseStep
 import androidx.health.connect.client.records.ExerciseCompletionGoal
-import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
-import androidx.health.connect.client.records.metadata.Metadata
-import androidx.health.connect.client.units.kilocalories
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -186,35 +182,6 @@ class ActivityHealthReaderTest {
                 startDate = LocalDate.of(2026, 1, 10),
                 endDate = LocalDate.of(2026, 1, 1),
             ).isEmpty()
-        )
-    }
-
-    @Test
-    fun `totalCaloriesBurnedRecordDates includes every overlapping local date`() {
-        val zone = ZoneId.of("UTC")
-        val records = listOf(
-            TotalCaloriesBurnedRecord(
-                startTime = Instant.parse("2026-06-01T23:30:00Z"),
-                startZoneOffset = null,
-                endTime = Instant.parse("2026-06-02T00:30:00Z"),
-                endZoneOffset = null,
-                energy = 100.0.kilocalories,
-                metadata = Metadata.manualEntry(),
-            )
-        )
-
-        val dates = records.totalCaloriesBurnedRecordDates(
-            startDate = LocalDate.of(2026, 6, 1),
-            endDate = LocalDate.of(2026, 6, 3),
-            zone = zone,
-        )
-
-        assertEquals(
-            setOf(
-                LocalDate.of(2026, 6, 1),
-                LocalDate.of(2026, 6, 2),
-            ),
-            dates,
         )
     }
 

@@ -56,7 +56,6 @@ import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepReadData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.SpO2Entry
-import tech.mmarca.openvitals.domain.model.StepProgressPoint
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementEntry
@@ -200,9 +199,6 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readElevationGained(date: LocalDate): Double =
         activityReader.readElevationGained(date)
-
-    suspend fun readStepProgress(date: LocalDate): List<StepProgressPoint> =
-        activityReader.readStepProgress(date)
 
     suspend fun readActivityProgress(
         date: LocalDate,

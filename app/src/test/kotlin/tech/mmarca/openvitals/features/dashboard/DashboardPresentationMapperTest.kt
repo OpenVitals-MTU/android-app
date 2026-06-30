@@ -37,22 +37,6 @@ class DashboardPresentationMapperTest {
     }
 
     @Test
-    fun build_pendingWidget_marksLoading() {
-        val data = DashboardData(date = LocalDate.now(), steps = 1_000)
-
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            pendingWidgets = setOf(DashboardWidgetId.SLEEP),
-        )
-
-        assertTrue(display.widgets[DashboardWidgetId.SLEEP]?.isLoading == true)
-        assertEquals(false, display.widgets[DashboardWidgetId.STEPS]?.isLoading)
-    }
-
-    @Test
     fun build_caloriesOutWithoutData_hasNoValue() {
         val data = DashboardData(
             date = LocalDate.now(),

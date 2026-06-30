@@ -23,9 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -36,7 +34,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -46,8 +43,6 @@ internal fun DashboardWidgetCarousel(
     isEditingDashboard: Boolean,
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
-    visibleWidgetLoadToken: Long,
-    onVisibleWidgetsChanged: (Set<DashboardWidgetId>) -> Unit,
     actionContent: @Composable () -> Unit,
     hiddenContent: @Composable () -> Unit,
 ) {
@@ -70,7 +65,6 @@ internal fun DashboardWidgetCarousel(
     var draggingWidgetStartBounds by remember { mutableStateOf<Rect?>(null) }
     var draggingWidgetDragOffset by remember { mutableStateOf(Offset.Zero) }
     var draggingWidgetBounds by remember { mutableStateOf<Rect?>(null) }
-    val onVisibleWidgetsChangedState = rememberUpdatedState(onVisibleWidgetsChanged)
     val density = LocalDensity.current
     val edgeScrollThresholdPx = with(density) { DashboardCarouselEdgeScrollThreshold.toPx() }
 
@@ -96,21 +90,6 @@ internal fun DashboardWidgetCarousel(
             draggingWidgetDragOffset = Offset.Zero
             draggingWidgetBounds = null
         }
-    }
-
-    LaunchedEffect(visibleWidgetLoadToken, fixedIds, carouselPages, pagerState) {
-        fun visibleWidgetsFor(page: Int): Set<DashboardWidgetId> =
-            (
-                fixedIds +
-                    carouselPages.getOrNull(page).orEmpty()
-            ).toSet()
-
-        onVisibleWidgetsChangedState.value(visibleWidgetsFor(pagerState.currentPage))
-        snapshotFlow { pagerState.currentPage }
-            .distinctUntilChanged()
-            .collect { page ->
-                onVisibleWidgetsChangedState.value(visibleWidgetsFor(page))
-            }
     }
 
     fun projectedDraggingBounds(widgetId: DashboardWidgetId): Rect? {

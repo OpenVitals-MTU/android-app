@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.healthconnect
 
 import android.util.Log
-import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -29,16 +28,12 @@ internal class HydrationHealthReader(
         val start = date.atStartOfDay(zone).toInstant()
         val end = date.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withNullableLogging("readHydrationLiters[$date][$start..$end]") {
-            support.client().readHydrationRecordsByDateOrNull(start, end, zone)
-                ?.values
-                ?.sum()
-                ?.takeIf { it > 0.0 }
-                ?: support.client().aggregate(
-                    AggregateRequest(
-                        metrics = setOf(HydrationRecord.VOLUME_TOTAL),
-                        timeRangeFilter = TimeRangeFilter.between(start, end),
-                    )
-                )[HydrationRecord.VOLUME_TOTAL]?.inLiters
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[HydrationRecord.VOLUME_TOTAL]?.inLiters
         }
     }
 
@@ -49,27 +44,16 @@ internal class HydrationHealthReader(
         val start = startDate.atStartOfDay(zone).toInstant()
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailyHydration[$start..$end]", emptyList()) {
-            val recordHydrationByDate = support.client().readHydrationRecordsByDateOrNull(start, end, zone)
-            val aggregateBuckets = if (recordHydrationByDate.hasPositiveHydration()) {
-                emptyList()
-            } else {
-                support.client().aggregateGroupByDuration(
-                    AggregateGroupByDurationRequest(
-                        metrics = setOf(HydrationRecord.VOLUME_TOTAL),
-                        timeRangeFilter = TimeRangeFilter.between(start, end),
-                        timeRangeSlicer = Duration.ofDays(1),
-                    )
-                ).map { bucket ->
-                    DailyHydration(
-                        date = bucket.startTime.atZone(zone).toLocalDate(),
-                        liters = bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0,
-                    )
-                }
+            val hydrationByDate = support.client().aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    timeRangeSlicer = Duration.ofDays(1),
+                )
+            ).associate { bucket ->
+                bucket.startTime.atZone(zone).toLocalDate() to
+                    (bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters ?: 0.0)
             }
-            val hydrationByDate = hydrationByDateForDailySeries(
-                recordHydrationByDate = recordHydrationByDate,
-                aggregateBuckets = aggregateBuckets,
-            )
             dailyHydrationSeries(startDate, endDate, hydrationByDate)
         }
     }
@@ -181,41 +165,6 @@ internal class HydrationHealthReader(
 private const val TAG = "HydrationHealthReader"
 private const val MaxHydrationRecordLiters = 100.0
 private const val MillilitersPerLiter = 1000.0
-
-private suspend fun HealthConnectClient.readHydrationRecordsByDateOrNull(
-    start: Instant,
-    end: Instant,
-    zone: ZoneId,
-): Map<LocalDate, Double>? =
-    runCatching {
-        readHydrationRecordsByDate(start, end, zone)
-    }.onFailure { error ->
-        Log.w(TAG, "Falling back to aggregate hydration totals.", error)
-    }.getOrNull()
-
-internal suspend fun HealthConnectClient.readHydrationRecordsByDate(
-    start: Instant,
-    end: Instant,
-    zone: ZoneId,
-): Map<LocalDate, Double> =
-    readRecordsPaged(
-        recordType = HydrationRecord::class,
-        timeRangeFilter = TimeRangeFilter.between(start, end),
-        ascendingOrder = true,
-    )
-        .groupBy { record -> record.startTime.atZone(zone).toLocalDate() }
-        .mapValues { (_, records) -> records.sumOf { it.volume.inLiters } }
-
-internal fun hydrationByDateForDailySeries(
-    recordHydrationByDate: Map<LocalDate, Double>?,
-    aggregateBuckets: List<DailyHydration>,
-): Map<LocalDate, Double> =
-    recordHydrationByDate
-        ?.takeIf { it.hasPositiveHydration() }
-        ?: aggregateBuckets.associate { it.date to it.liters }
-
-private fun Map<LocalDate, Double>?.hasPositiveHydration(): Boolean =
-    this?.any { (_, liters) -> liters > 0.0 } == true
 
 internal fun dailyHydrationSeries(
     startDate: LocalDate,

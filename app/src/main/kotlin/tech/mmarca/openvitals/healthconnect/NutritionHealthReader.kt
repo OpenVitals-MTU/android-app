@@ -58,11 +58,6 @@ internal class NutritionHealthReader(
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailyNutrition[$start..$end]", emptyList()) {
             val client = support.client()
-            val totalCaloriesRecordDates = if (includeCalories) {
-                client.readTotalCaloriesBurnedRecordDates(startDate, endDate, zone)
-            } else {
-                emptySet()
-            }
             val bmrKcalPerDay = if (includeCalories && includeEstimatedCalories) {
                 client.readLatestBmrKcalPerDayBefore(end)
             } else {
@@ -81,8 +76,8 @@ internal class NutritionHealthReader(
                 )
             ).map { bucket ->
                 val date = bucket.startTime.atZone(zone).toLocalDate()
-                val totalCaloriesKcal = if (includeCalories && date in totalCaloriesRecordDates) {
-                    bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+                val totalCaloriesKcal = if (includeCalories) {
+                    bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
                 } else {
                     null
                 }
@@ -107,18 +102,7 @@ internal class NutritionHealthReader(
                     caloriesBurnedSource = caloriesBurned?.source ?: CaloriesBurnedSource.NO_DATA,
                 )
             }
-            if (!includeHydration || aggregateRows.any { it.hydrationLiters > 0.0 }) {
-                aggregateRows
-            } else {
-                val hydrationByDate = support.client().readHydrationRecordsByDate(start, end, zone)
-                if (aggregateRows.isEmpty() && hydrationByDate.isNotEmpty()) {
-                    dailyNutritionSeries(startDate, endDate, hydrationByDate)
-                } else {
-                    aggregateRows.map { row ->
-                        row.copy(hydrationLiters = hydrationByDate[row.date] ?: row.hydrationLiters)
-                    }
-                }
-            }
+            if (aggregateRows.isNotEmpty()) aggregateRows else dailyNutritionSeries(startDate, endDate)
         }
     }
 
@@ -335,7 +319,7 @@ private fun MutableMap<NutritionNutrient, Double>.putIfPositive(
 private fun dailyNutritionSeries(
     startDate: LocalDate,
     endDate: LocalDate,
-    hydrationByDate: Map<LocalDate, Double>,
+    hydrationByDate: Map<LocalDate, Double> = emptyMap(),
 ): List<DailyNutrition> =
     generateSequence(startDate) { date ->
         date.plusDays(1).takeUnless { it.isAfter(endDate) }

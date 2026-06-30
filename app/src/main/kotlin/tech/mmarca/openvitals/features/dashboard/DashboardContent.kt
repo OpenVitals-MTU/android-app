@@ -38,7 +38,6 @@ internal fun DashboardContent(
     healthConnectAvailability: HealthConnectAvailability,
     healthConnectSyncEnabled: Boolean,
     dashboardWidgets: List<DashboardWidgetId>,
-    visibleWidgetLoadToken: Long,
     isEditingDashboard: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -48,7 +47,6 @@ internal fun DashboardContent(
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     onAddWidget: (DashboardWidgetId) -> Unit,
-    onVisibleWidgetsChanged: (Set<DashboardWidgetId>) -> Unit,
     onOpenMetric: (DashboardWidgetId) -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (String) -> Unit,
@@ -147,8 +145,6 @@ internal fun DashboardContent(
                     isEditingDashboard = isEditingDashboard,
                     onMoveWidgetToTarget = onMoveWidgetToTarget,
                     onRemoveWidget = onRemoveWidget,
-                    visibleWidgetLoadToken = visibleWidgetLoadToken,
-                    onVisibleWidgetsChanged = onVisibleWidgetsChanged,
                     actionContent = {
                         DashboardQuickActions(
                             isEditingDashboard = isEditingDashboard,

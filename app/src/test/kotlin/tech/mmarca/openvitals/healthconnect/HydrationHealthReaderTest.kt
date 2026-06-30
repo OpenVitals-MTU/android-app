@@ -3,30 +3,24 @@ package tech.mmarca.openvitals.healthconnect
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import tech.mmarca.openvitals.domain.model.DailyHydration
 
 class HydrationHealthReaderTest {
 
-    @Test fun `daily hydration prefers precise record totals over aggregate buckets`() {
-        val date = LocalDate.of(2026, 6, 11)
-        val recordTotal = 0.35 + 0.35 + 0.2
+    @Test fun `daily hydration series keeps aggregate totals by date`() {
+        val start = LocalDate.of(2026, 6, 10)
+        val end = LocalDate.of(2026, 6, 12)
 
-        val result = hydrationByDateForDailySeries(
-            recordHydrationByDate = mapOf(date to recordTotal),
-            aggregateBuckets = listOf(DailyHydration(date, 1.0)),
+        val result = dailyHydrationSeries(
+            startDate = start,
+            endDate = end,
+            hydrationByDate = mapOf(
+                LocalDate.of(2026, 6, 10) to 0.5,
+                LocalDate.of(2026, 6, 12) to 1.0,
+            ),
         )
 
-        assertEquals(0.9, result.getValue(date), 0.0001)
-    }
-
-    @Test fun `daily hydration falls back to aggregate buckets without positive record totals`() {
-        val date = LocalDate.of(2026, 6, 11)
-
-        val result = hydrationByDateForDailySeries(
-            recordHydrationByDate = emptyMap(),
-            aggregateBuckets = listOf(DailyHydration(date, 1.0)),
-        )
-
-        assertEquals(1.0, result.getValue(date), 0.0001)
+        assertEquals(0.5, result[0].liters, 0.0001)
+        assertEquals(0.0, result[1].liters, 0.0001)
+        assertEquals(1.0, result[2].liters, 0.0001)
     }
 }

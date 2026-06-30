@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
@@ -44,11 +45,9 @@ data class DashboardUiState(
     val dashboardWidgets: List<DashboardWidgetId> = DefaultDashboardWidgetIds,
     val dailyGoals: DashboardDailyGoals = DashboardDailyGoals(),
     val isEditingDashboard: Boolean = false,
-    val pendingWidgets: Set<DashboardWidgetId> = emptySet(),
     val healthConnectSyncEnabled: Boolean = true,
     val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val minimumPermissionsGranted: Boolean = true,
-    val visibleWidgetLoadToken: Long = 0L,
     val display: DashboardDisplayState = DashboardDisplayState(),
 )
 
@@ -94,9 +93,7 @@ class DashboardViewModel @Inject constructor(
     )
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
-    private val deferredLoadCoordinator = DashboardDeferredLoadCoordinator(loadDashboardDayUseCase)
     private var userPinnedPastDay = false
-    private var deferredLoadGeneration = 0L
     private var permissionPromptDismissedForLoad = false
 
     init {
@@ -146,7 +143,7 @@ class DashboardViewModel @Inject constructor(
         ) {
             viewModelScope.launch {
                 val display = current.data?.let { data ->
-                    buildDisplay(data, dailyGoals, current.pendingWidgets)
+                    buildDisplay(data, dailyGoals)
                 } ?: current.display
                 _uiState.value = current.copy(
                     sleepRangeMode = sleepRangeMode,
@@ -177,9 +174,6 @@ class DashboardViewModel @Inject constructor(
             val activityWeekMode = prefs.activityWeekMode
             val showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories
             val dailyGoals = prefs.dashboardDailyGoals()
-            val primaryMetrics = DashboardFastMetrics
-            val loadGeneration = ++deferredLoadGeneration
-            deferredLoadCoordinator.reset()
             permissionPromptDismissedForLoad = false
             val current = _uiState.value
             val availability = repository.availability()
@@ -197,7 +191,6 @@ class DashboardViewModel @Inject constructor(
                 activityWeekMode = activityWeekMode,
                 showOpenVitalsCalculatedCalories = showOpenVitalsCalculatedCalories,
                 dailyGoals = dailyGoals,
-                pendingWidgets = emptySet(),
                 healthConnectSyncEnabled = prefs.healthConnectSyncEnabled,
                 healthConnectAvailability = availability,
                 minimumPermissionsGranted = repository.minimumOnboardingPermissions.all { it in granted },
@@ -208,23 +201,15 @@ class DashboardViewModel @Inject constructor(
                         date = clampedDate,
                         sleepRangeMode = sleepRangeMode,
                         activityWeekMode = activityWeekMode,
-                        visibleMetrics = primaryMetrics,
+                        visibleMetrics = DashboardMetric.entries.toSet(),
                         refreshMode = refreshMode,
                     )
                 )
             }
                 .onSuccess { data ->
                     if (!isCurrent) return@load
-                    val deferredContext = DeferredDashboardLoadContext(
-                        date = clampedDate,
-                        sleepRangeMode = sleepRangeMode,
-                        activityWeekMode = activityWeekMode,
-                        refreshMode = refreshMode,
-                        generation = loadGeneration,
-                    )
-                    deferredLoadCoordinator.beginLoad(deferredContext)
                     val goals = prefs.dashboardDailyGoals()
-                    val display = buildDisplay(data, goals, pendingWidgets = emptySet())
+                    val display = buildDisplay(data, goals)
                     _uiState.value = _uiState.value.copy(
                         data = data,
                         isLoading = false,
@@ -233,7 +218,6 @@ class DashboardViewModel @Inject constructor(
                         activityWeekMode = activityWeekMode,
                         showOpenVitalsCalculatedCalories = prefs.showOpenVitalsCalculatedCalories,
                         dailyGoals = goals,
-                        visibleWidgetLoadToken = loadGeneration,
                         display = display,
                     )
                 }
@@ -275,42 +259,6 @@ class DashboardViewModel @Inject constructor(
         prefs.acknowledgePermissionsFor(HealthConnectFeature.DASHBOARD, missing)
         permissionPromptDismissedForLoad = true
         _uiState.value = _uiState.value.copy(unacknowledgedWidgetPermissions = emptySet())
-    }
-
-    fun loadVisibleDashboardWidgets(widgetIds: Set<DashboardWidgetId>) {
-        val context = deferredLoadCoordinator.activeContext ?: return
-        if (_uiState.value.selectedDate != context.date) return
-        val currentData = _uiState.value.data ?: return
-        val widgetsToLoad = deferredLoadCoordinator.widgetsToLoad(context, widgetIds, currentData)
-        if (widgetsToLoad.isEmpty()) return
-
-        deferredLoadCoordinator.markRequested(widgetsToLoad)
-        val pending = deferredLoadCoordinator.pendingWidgets(context)
-        viewModelScope.launch {
-            val display = buildDisplay(currentData, _uiState.value.dailyGoals, pending)
-            _uiState.value = _uiState.value.copy(pendingWidgets = pending, display = display)
-        }
-        viewModelScope.launch {
-            deferredLoadCoordinator.loadDeferredMetrics(
-                context = context,
-                widgets = widgetsToLoad.toList(),
-                currentData = currentData,
-                dailyGoals = _uiState.value.dailyGoals,
-                buildDisplay = ::buildDisplay,
-                unacknowledgedPermissions = ::unacknowledgedWidgetPermissions,
-                onProgress = ::applyDeferredProgress,
-            )
-        }
-    }
-
-    private suspend fun applyDeferredProgress(update: DeferredDashboardProgressUpdate) {
-        _uiState.value = _uiState.value.copy(
-            data = update.data,
-            pendingWidgets = update.pendingWidgets,
-            display = update.display,
-            unacknowledgedWidgetPermissions = update.unacknowledgedWidgetPermissions,
-            error = update.error ?: _uiState.value.error,
-        )
     }
 
     private fun unacknowledgedWidgetPermissions(missingPermissions: Set<String>): Set<String> =
@@ -375,26 +323,21 @@ class DashboardViewModel @Inject constructor(
 
     private fun updateDashboardWidgets(widgets: List<DashboardWidgetId>) {
         val customizableWidgets = customizableDashboardWidgetIds(widgets)
-        val customizableWidgetSet = customizableWidgets.toSet()
-        deferredLoadCoordinator.retainWidgets(customizableWidgetSet)
         prefs.setDashboardWidgetOrder(customizableWidgets.map { it.name })
         _uiState.value = _uiState.value.copy(
             dashboardWidgets = customizableWidgets,
-            pendingWidgets = _uiState.value.pendingWidgets intersect customizableWidgetSet,
         )
     }
 
     private suspend fun buildDisplay(
         data: DashboardData,
         dailyGoals: DashboardDailyGoals,
-        pendingWidgets: Set<DashboardWidgetId>,
     ): DashboardDisplayState = withContext(dispatchers.default) {
         DashboardPresentationMapper.build(
             data = data,
             dailyGoals = dailyGoals,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            pendingWidgets = pendingWidgets,
         )
     }
 }

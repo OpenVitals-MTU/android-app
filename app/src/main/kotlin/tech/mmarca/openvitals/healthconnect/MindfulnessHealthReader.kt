@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.healthconnect
 
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
@@ -33,7 +34,17 @@ internal class MindfulnessHealthReader(
 
     suspend fun readMindfulnessMinutes(date: LocalDate): Int {
         val (start, end) = support.dayRange(date)
-        return readMindfulnessSessions(start, end).sumOf { it.durationMinutes }.toInt()
+        return support.withLogging("readMindfulnessMinutes[$date][$start..$end]", 0) {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(MindfulnessSessionRecord.MINDFULNESS_DURATION_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[MindfulnessSessionRecord.MINDFULNESS_DURATION_TOTAL]
+                ?.toMinutes()
+                ?.toInt()
+                ?: 0
+        }
     }
 
     suspend fun writeMindfulnessSessionEntry(request: MindfulnessSessionWriteRequest): String = withContext(Dispatchers.IO) {

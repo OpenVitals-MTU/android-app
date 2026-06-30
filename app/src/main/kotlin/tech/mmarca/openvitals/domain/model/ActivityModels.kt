@@ -201,11 +201,6 @@ data class DailySteps(
     val elevationGainedMeters: Double? = null,
 )
 
-data class StepProgressPoint(
-    val time: Instant,
-    val totalSteps: Long,
-)
-
 data class ActivityProgressPoint(
     val time: Instant,
     val totalSteps: Long,

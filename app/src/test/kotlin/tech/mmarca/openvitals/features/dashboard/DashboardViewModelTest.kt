@@ -27,7 +27,6 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -326,7 +325,7 @@ class DashboardViewModelTest {
         }
     }
 
-    @Test fun `load scopes dashboard query to dashboard focus widgets`() = runTest {
+    @Test fun `load requests every dashboard metric`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -344,272 +343,24 @@ class DashboardViewModelTest {
 
         dashboardViewModel(loader, prefs)
 
-        assertEquals(
-            setOf(
-                DashboardMetric.STEPS,
-                DashboardMetric.DISTANCE,
-                DashboardMetric.CALORIES_OUT,
-                DashboardMetric.WHEELCHAIR_PUSHES,
-                DashboardMetric.WORKOUT,
-                DashboardMetric.AVG_HEART_RATE,
-            ),
-            queries.first().visibleMetrics,
-        )
+        assertEquals(DashboardMetric.entries.toSet(), queries.first().visibleMetrics)
     }
 
-    @Test fun `average heart rate widget loads with primary dashboard query`() = runTest {
+    @Test fun `dashboard widget order does not scope dashboard query`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
             val query = firstArg<DashboardQuery>()
             queries += query
-            DashboardData(
-                date = today,
-                avgHeartRateBpm = 72L,
-                loadedMetrics = setOf(DashboardMetric.AVG_HEART_RATE),
-            )
+            DashboardData(date = today)
         }
         val prefs = prefs()
         every { prefs.dashboardWidgetOrder() } returns listOf(DashboardWidgetId.AVG_HEART_RATE.name)
 
-        val vm = dashboardViewModel(loader, prefs)
+        dashboardViewModel(loader, prefs)
 
         assertTrue(DashboardMetric.AVG_HEART_RATE in queries.first().visibleMetrics)
-        assertFalse(DashboardWidgetId.AVG_HEART_RATE in vm.uiState.value.pendingWidgets)
         assertEquals(1, queries.size)
-    }
-
-    @Test fun `deferred dashboard metrics merge after fast dashboard load`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val queries = mutableListOf<DashboardQuery>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            val query = firstArg<DashboardQuery>()
-            queries += query
-            when (query.visibleMetrics.singleOrNull()) {
-                DashboardMetric.HYDRATION -> DashboardData(
-                    date = today,
-                    hydrationLiters = 1.5,
-                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
-                )
-                else -> DashboardData(
-                    date = today,
-                    steps = 100,
-                    loadedMetrics = setOf(
-                        DashboardMetric.STEPS,
-                        DashboardMetric.DISTANCE,
-                        DashboardMetric.CALORIES_OUT,
-                        DashboardMetric.WORKOUT,
-                    ),
-                )
-            }
-        }
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.HYDRATION.name,
-        )
-
-        val vm = dashboardViewModel(loader, prefs)
-
-        assertEquals(1, queries.size)
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION))
-        advanceUntilIdle()
-
-        assertEquals(100L, vm.uiState.value.data?.steps)
-        assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
-        assertTrue(queries.first().visibleMetrics.contains(DashboardMetric.STEPS))
-        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.HYDRATION) })
-        assertTrue(vm.uiState.value.pendingWidgets.isEmpty())
-    }
-
-    @Test fun `deferred dashboard metrics coalesce ui updates`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val queries = mutableListOf<DashboardQuery>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            val query = firstArg<DashboardQuery>()
-            queries += query
-            when (query.visibleMetrics.singleOrNull()) {
-                DashboardMetric.HYDRATION -> DashboardData(
-                    date = today,
-                    hydrationLiters = 1.5,
-                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
-                )
-                DashboardMetric.SLEEP -> DashboardData(
-                    date = today,
-                    sleep = null,
-                    loadedMetrics = setOf(DashboardMetric.SLEEP),
-                )
-                else -> DashboardData(
-                    date = today,
-                    steps = 100,
-                    loadedMetrics = setOf(
-                        DashboardMetric.STEPS,
-                        DashboardMetric.DISTANCE,
-                        DashboardMetric.CALORIES_OUT,
-                        DashboardMetric.WORKOUT,
-                    ),
-                )
-            }
-        }
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.HYDRATION.name,
-            DashboardWidgetId.SLEEP.name,
-        )
-
-        val vm = dashboardViewModel(loader, prefs)
-
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION, DashboardWidgetId.SLEEP))
-        advanceUntilIdle()
-
-        assertEquals(100L, vm.uiState.value.data?.steps)
-        assertEquals(1.5, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
-        assertTrue(vm.uiState.value.pendingWidgets.isEmpty())
-        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.HYDRATION) })
-        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
-    }
-
-    @Test fun `hidden deferred dashboard widgets wait until reported visible`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val queries = mutableListOf<DashboardQuery>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            val query = firstArg<DashboardQuery>()
-            queries += query
-            when (query.visibleMetrics.singleOrNull()) {
-                DashboardMetric.HYDRATION -> DashboardData(
-                    date = today,
-                    hydrationLiters = 1.5,
-                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
-                )
-                DashboardMetric.SLEEP -> DashboardData(
-                    date = today,
-                    sleep = null,
-                    loadedMetrics = setOf(DashboardMetric.SLEEP),
-                )
-                else -> DashboardData(
-                    date = today,
-                    steps = 100,
-                    loadedMetrics = setOf(
-                        DashboardMetric.STEPS,
-                        DashboardMetric.DISTANCE,
-                        DashboardMetric.CALORIES_OUT,
-                        DashboardMetric.WORKOUT,
-                    ),
-                )
-            }
-        }
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.HYDRATION.name,
-            DashboardWidgetId.SLEEP.name,
-        )
-
-        val vm = dashboardViewModel(loader, prefs)
-
-        assertEquals(1, queries.size)
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.STEPS, DashboardWidgetId.HYDRATION))
-        advanceUntilIdle()
-
-        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.HYDRATION) })
-        assertFalse(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
-
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.SLEEP))
-        advanceUntilIdle()
-
-        assertTrue(queries.any { it.visibleMetrics == setOf(DashboardMetric.SLEEP) })
-    }
-
-    @Test fun `weekly deferred dashboard loads request weekly cardio metric`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val queries = mutableListOf<DashboardQuery>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            queries += firstArg<DashboardQuery>()
-            DashboardData(
-                date = today,
-                steps = 100,
-                loadedMetrics = setOf(
-                    DashboardMetric.STEPS,
-                    DashboardMetric.DISTANCE,
-                    DashboardMetric.CALORIES_OUT,
-                    DashboardMetric.WORKOUT,
-                ),
-            )
-        }
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.WEEKLY_CARDIO_LOAD.name,
-        )
-
-        val vm = dashboardViewModel(loader, prefs)
-
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.WEEKLY_CARDIO_LOAD))
-        advanceUntilIdle()
-
-        assertTrue(
-            queries.any {
-                DashboardMetric.WEEKLY_CARDIO_LOAD in it.visibleMetrics
-            }
-        )
-    }
-
-    @Test fun `stale deferred dashboard load cannot overwrite newer data`() = runTest {
-        val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            val query = firstArg<DashboardQuery>()
-            if (query.date == yesterday && query.visibleMetrics == setOf(DashboardMetric.HYDRATION)) {
-                delay(100)
-            }
-            when {
-                query.date == yesterday && DashboardMetric.HYDRATION in query.visibleMetrics -> DashboardData(
-                    date = yesterday,
-                    hydrationLiters = 9.0,
-                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
-                )
-                query.date == yesterday -> DashboardData(
-                    date = yesterday,
-                    steps = 1,
-                    loadedMetrics = setOf(
-                        DashboardMetric.STEPS,
-                        DashboardMetric.DISTANCE,
-                        DashboardMetric.CALORIES_OUT,
-                        DashboardMetric.WORKOUT,
-                    ),
-                )
-                query.date == today && DashboardMetric.HYDRATION in query.visibleMetrics -> DashboardData(
-                    date = today,
-                    hydrationLiters = 2.0,
-                    loadedMetrics = setOf(DashboardMetric.HYDRATION),
-                )
-                else -> DashboardData(
-                    date = today,
-                    steps = 2,
-                    loadedMetrics = setOf(
-                        DashboardMetric.STEPS,
-                        DashboardMetric.DISTANCE,
-                        DashboardMetric.CALORIES_OUT,
-                        DashboardMetric.WORKOUT,
-                    ),
-                )
-            }
-        }
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.HYDRATION.name,
-        )
-
-        val vm = dashboardViewModel(loader, prefs)
-        vm.load(yesterday)
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION))
-        vm.load(today)
-        vm.loadVisibleDashboardWidgets(setOf(DashboardWidgetId.HYDRATION))
-        advanceUntilIdle()
-
-        assertEquals(today, vm.uiState.value.data?.date)
-        assertEquals(2.0, vm.uiState.value.data?.hydrationLiters ?: 0.0, 0.001)
     }
 
     @Test fun `refresh passes force refresh mode`() = runTest {

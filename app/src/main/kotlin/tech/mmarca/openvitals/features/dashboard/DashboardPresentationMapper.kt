@@ -16,7 +16,6 @@ object DashboardPresentationMapper {
         dailyGoals: DashboardDailyGoals,
         unitFormatter: UnitFormatter,
         dateTimeFormatterProvider: DateTimeFormatterProvider,
-        pendingWidgets: Set<DashboardWidgetId> = emptySet(),
     ): DashboardDisplayState {
         val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
         val widgets = DashboardWidgetId.entries.associateWith { widgetId ->
@@ -27,7 +26,7 @@ object DashboardPresentationMapper {
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 sleepGoalMs = sleepGoalMs,
-                isLoading = widgetId in pendingWidgets,
+                isLoading = false,
             )
         }.filterValues { it != null }.mapValues { (_, value) -> value!! }
 

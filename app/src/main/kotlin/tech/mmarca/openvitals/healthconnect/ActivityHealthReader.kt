@@ -51,7 +51,6 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
-import tech.mmarca.openvitals.domain.model.StepProgressPoint
 import tech.mmarca.openvitals.domain.model.deduplicateExerciseSessions
 import java.time.Duration
 import java.time.Instant
@@ -205,24 +204,6 @@ internal class ActivityHealthReader(
         }
     }
 
-    suspend fun readStepProgress(date: LocalDate): List<StepProgressPoint> {
-        val (start, end) = support.dayRange(date)
-        return support.withLogging("readStepProgress[$date][$start..$end]", emptyList()) {
-            var runningTotal = 0L
-            support.client().readRecordsPaged(
-                recordType = StepsRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-            ).map { record ->
-                runningTotal += record.count
-                StepProgressPoint(
-                    time = record.endTime,
-                    totalSteps = runningTotal,
-                )
-            }
-        }
-    }
-
     suspend fun readActivityProgress(
         date: LocalDate,
         includeSteps: Boolean = true,
@@ -239,19 +220,17 @@ internal class ActivityHealthReader(
         val end = if (date == LocalDate.now()) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readActivityProgress[$date][$start..$end]", emptyList()) {
             val client = support.client()
-            val includeTotalCaloriesFromRecords = includeCalories && client.hasTotalCaloriesBurnedRecords(start, end)
-            val includeEstimatedCalories = includeCalories && !includeTotalCaloriesFromRecords && includeCaloriesEstimate
+            val includeEstimatedCalories = includeCalories && includeCaloriesEstimate
             val bmrKcalPerDay = if (includeEstimatedCalories) {
                 client.readLatestBmrKcalPerDayBefore(end)
             } else {
                 null
             }
-            val includeActiveCaloriesForTotalEstimate = includeEstimatedCalories && bmrKcalPerDay != null
             val metrics = buildSet {
                 if (includeSteps) add(StepsRecord.COUNT_TOTAL)
                 if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
-                if (includeTotalCaloriesFromRecords) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-                if (includeActiveCalories || includeActiveCaloriesForTotalEstimate) {
+                if (includeCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeActiveCalories || includeEstimatedCalories) {
                     add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                 }
                 if (includeWheelchairPushes) add(WheelchairPushesRecord.COUNT_TOTAL)
@@ -267,23 +246,26 @@ internal class ActivityHealthReader(
             var cumulativeFloors = 0
             var cumulativeElevation = 0.0
 
-            support.client().aggregateGroupByDuration(
+            val buckets = support.client().aggregateGroupByDuration(
                 AggregateGroupByDurationRequest(
                     metrics = metrics,
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                     timeRangeSlicer = Duration.ofHours(1),
                 )
-            ).map { bucket ->
+            )
+            val hasRecordedTotalCaloriesData = includeCalories &&
+                buckets.any { bucket -> bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL] != null }
+            buckets.map { bucket ->
                 if (includeSteps) {
                     cumulativeSteps += bucket.result[StepsRecord.COUNT_TOTAL] ?: 0L
                 }
                 if (includeDistance) {
                     cumulativeDistance += bucket.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
                 }
-                if (includeTotalCaloriesFromRecords) {
+                if (includeCalories) {
                     cumulativeCalories += bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
                 }
-                if (includeActiveCalories || includeActiveCaloriesForTotalEstimate) {
+                if (includeActiveCalories || includeEstimatedCalories) {
                     val activeCalories = bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]
                     hasActiveCaloriesData = hasActiveCaloriesData || activeCalories != null
                     cumulativeActiveCalories += activeCalories?.inKilocalories ?: 0.0
@@ -299,8 +281,8 @@ internal class ActivityHealthReader(
                 }
                 val totalCaloriesBurnedKcal = if (includeCalories) {
                     totalCaloriesRecordedOrIntervalEstimated(
-                        recordedTotalCaloriesKcal = if (includeTotalCaloriesFromRecords) cumulativeCalories else null,
-                        activeCaloriesKcal = if (includeActiveCaloriesForTotalEstimate && hasActiveCaloriesData) {
+                        recordedTotalCaloriesKcal = if (hasRecordedTotalCaloriesData) cumulativeCalories else null,
+                        activeCaloriesKcal = if (includeEstimatedCalories && hasActiveCaloriesData) {
                             cumulativeActiveCalories
                         } else {
                             null
@@ -349,13 +331,10 @@ internal class ActivityHealthReader(
         val end = if (date == LocalDate.now()) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withNullableLogging("readCaloriesBurned[$date][$start..$end]") {
             val client = support.client()
-            val includeTotalCaloriesFromRecords = client.hasTotalCaloriesBurnedRecords(start, end)
-            val includeEstimatedCaloriesFromActiveAndBmr = includeEstimatedCalories && !includeTotalCaloriesFromRecords
             val metrics = buildSet {
-                if (includeTotalCaloriesFromRecords) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-                if (includeEstimatedCaloriesFromActiveAndBmr) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
             }
-            if (metrics.isEmpty()) return@withNullableLogging null
 
             val aggregate = client.aggregate(
                 AggregateRequest(
@@ -363,18 +342,15 @@ internal class ActivityHealthReader(
                     timeRangeFilter = TimeRangeFilter.between(start, end),
                 )
             )
+            val recordedTotalCaloriesKcal = aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
             totalCaloriesRecordedOrDailyEstimated(
-                recordedTotalCaloriesKcal = if (includeTotalCaloriesFromRecords) {
-                    aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
-                } else {
-                    null
-                },
-                activeCaloriesKcal = if (includeEstimatedCaloriesFromActiveAndBmr) {
+                recordedTotalCaloriesKcal = recordedTotalCaloriesKcal,
+                activeCaloriesKcal = if (includeEstimatedCalories && recordedTotalCaloriesKcal == null) {
                     aggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
                 } else {
                     null
                 },
-                bmrKcalPerDay = if (includeEstimatedCaloriesFromActiveAndBmr) {
+                bmrKcalPerDay = if (includeEstimatedCalories && recordedTotalCaloriesKcal == null) {
                     client.readLatestBmrKcalPerDayBefore(end)
                 } else {
                     null
@@ -445,14 +421,11 @@ internal class ActivityHealthReader(
     ): ExerciseData? =
         support.withNullableLogging("readExerciseSession[$id]") {
             val record = support.client().readRecord(ExerciseSessionRecord::class, id).record
-            val includeTotalCaloriesFromRecords = includeTotalCalories &&
-                support.client().hasTotalCaloriesBurnedRecords(record.startTime, record.endTime)
-            val includeEstimatedCalories = includeTotalCalories && !includeTotalCaloriesFromRecords && includeTotalCaloriesEstimate
             val metrics = buildSet {
                 if (includeSteps) add(StepsRecord.COUNT_TOTAL)
                 if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
-                if (includeTotalCaloriesFromRecords) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-                if (includeActiveCalories || includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                if (includeTotalCalories) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                if (includeActiveCalories || includeTotalCaloriesEstimate) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                 if (includeWheelchairPushes) add(WheelchairPushesRecord.COUNT_TOTAL)
                 if (includeFloors) add(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)
                 if (includeElevation) add(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)
@@ -479,12 +452,15 @@ internal class ActivityHealthReader(
                     Log.e(TAG, "Failed readExerciseSession aggregate ${support.diagnosticsSummary()}", it)
                 }.getOrNull()
             }
-            val totalCaloriesMetricKcal = if (includeTotalCaloriesFromRecords && aggregate != null) {
-                aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+            val totalCaloriesMetricKcal = if (includeTotalCalories && aggregate != null) {
+                aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
             } else {
                 null
             }
-            val activeCaloriesMetricKcal = if ((includeActiveCalories || includeEstimatedCalories) && aggregate != null) {
+            val shouldEstimateTotalCalories = includeTotalCalories &&
+                includeTotalCaloriesEstimate &&
+                totalCaloriesMetricKcal == null
+            val activeCaloriesMetricKcal = if ((includeActiveCalories || shouldEstimateTotalCalories) && aggregate != null) {
                 aggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
             } else {
                 null
@@ -492,8 +468,8 @@ internal class ActivityHealthReader(
             val totalCalories = if (includeTotalCalories && aggregate != null) {
                 totalCaloriesRecordedOrIntervalEstimated(
                     recordedTotalCaloriesKcal = totalCaloriesMetricKcal,
-                    activeCaloriesKcal = if (includeEstimatedCalories) activeCaloriesMetricKcal else null,
-                    bmrKcalPerDay = if (includeEstimatedCalories) {
+                    activeCaloriesKcal = if (shouldEstimateTotalCalories) activeCaloriesMetricKcal else null,
+                    bmrKcalPerDay = if (shouldEstimateTotalCalories) {
                         support.client().readLatestBmrKcalPerDayBefore(record.endTime)
                     } else {
                         null
