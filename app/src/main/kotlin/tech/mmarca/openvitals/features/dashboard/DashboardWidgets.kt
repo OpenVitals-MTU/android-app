@@ -62,7 +62,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -70,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -77,6 +77,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
@@ -89,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import sh.calvin.reorderable.DragGestureDetector
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyStaggeredGridState
 import tech.mmarca.openvitals.R
@@ -187,8 +190,10 @@ internal fun DashboardWidgetGrid(
     specsById: Map<DashboardWidgetId, DashboardWidgetSpec>,
     isEditingDashboard: Boolean,
     widgetBounds: MutableMap<DashboardWidgetId, Rect>,
+    dragOverlayWidgetId: DashboardWidgetId?,
     onDraggingWidgetChanged: (DashboardWidgetId?) -> Unit,
     onDraggingWidgetBoundsChanged: (DashboardWidgetId, Rect) -> Unit,
+    onDragWidgetBy: (DashboardWidgetId, Offset) -> Unit,
     onDropWidget: (DashboardWidgetId) -> Unit,
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
@@ -228,17 +233,16 @@ internal fun DashboardWidgetGrid(
             val previousId = ids.getOrNull(visibleIndex - 1)
             val nextId = ids.getOrNull(visibleIndex + 1)
             val rowSpan = spec.id.dashboardWidgetRowSpan().coerceIn(1, rows)
+            val dragGestureDetector = remember(spec.id) {
+                DashboardDragGestureDetector { dragAmount ->
+                    onDragWidgetBy(spec.id, dragAmount)
+                }
+            }
             ReorderableItem(
                 state = reorderableState,
                 key = spec.id,
                 enabled = isEditingDashboard,
             ) { isDragging ->
-                if (isDragging) {
-                    DisposableEffect(spec.id) {
-                        onDraggingWidgetChanged(spec.id)
-                        onDispose { onDraggingWidgetChanged(null) }
-                    }
-                }
                 Box(
                     modifier = Modifier
                         .height(
@@ -258,13 +262,15 @@ internal fun DashboardWidgetGrid(
                         specsById = specsById,
                         isEditingDashboard = isEditingDashboard,
                         isDragging = isDragging,
-                        dragHandleModifier = Modifier.longPressDraggableHandle(
+                        hideContent = dragOverlayWidgetId == spec.id,
+                        dragHandleModifier = Modifier.draggableHandle(
                             enabled = isEditingDashboard,
                             onDragStarted = { onDraggingWidgetChanged(spec.id) },
                             onDragStopped = {
                                 onDropWidget(spec.id)
                                 onDraggingWidgetChanged(null)
                             },
+                            dragGestureDetector = dragGestureDetector,
                         ),
                         onRemove = { onRemoveWidget(spec.id) },
                         onMovePrevious = previousId?.let { targetId ->
@@ -277,6 +283,29 @@ internal fun DashboardWidgetGrid(
                     )
                 }
             }
+        }
+    }
+}
+
+private class DashboardDragGestureDetector(
+    private val onDragDelta: (Offset) -> Unit,
+) : DragGestureDetector {
+    override suspend fun PointerInputScope.detect(
+        onDragStart: (Offset) -> Unit,
+        onDragEnd: () -> Unit,
+        onDragCancel: () -> Unit,
+        onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit,
+    ) {
+        with(DragGestureDetector.LongPress) {
+            detect(
+                onDragStart = onDragStart,
+                onDragEnd = onDragEnd,
+                onDragCancel = onDragCancel,
+                onDrag = { change, dragAmount ->
+                    onDragDelta(dragAmount)
+                    onDrag(change, dragAmount)
+                },
+            )
         }
     }
 }
@@ -319,6 +348,7 @@ internal fun DashboardWidgetTile(
     specsById: Map<DashboardWidgetId, DashboardWidgetSpec>,
     isEditingDashboard: Boolean,
     isDragging: Boolean,
+    hideContent: Boolean = false,
     dragHandleModifier: Modifier,
     onRemove: () -> Unit,
     onMovePrevious: (() -> Unit)?,
@@ -383,6 +413,7 @@ internal fun DashboardWidgetTile(
         modifier = modifier
             .zIndex(if (isDragging) 1f else 0f)
             .graphicsLayer {
+                alpha = if (hideContent) 0f else 1f
                 rotationZ = if (isEditingDashboard && !isDragging) wiggleRotation else 0f
                 scaleX = if (isDragging) 1.02f else 1f
                 scaleY = if (isDragging) 1.02f else 1f
