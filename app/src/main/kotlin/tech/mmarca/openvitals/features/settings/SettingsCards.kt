@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -1168,6 +1169,7 @@ internal fun AppleHealthImportCard(
     onGrantPermissions: () -> Unit,
     onImport: () -> Unit,
     onCopyReport: (String) -> Unit,
+    onCopyError: (String) -> Unit,
     onSaveReport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1269,12 +1271,29 @@ internal fun AppleHealthImportCard(
             }
 
             if (!error.isNullOrBlank()) {
-                Text(
-                    text = stringResource(R.string.settings_apple_health_import_error, error),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+                val errorText = stringResource(R.string.settings_apple_health_import_error, error)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    OpenVitalsOutlinedButton(
+                        onClick = { onCopyError(errorText) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.widthIn(min = 6.dp))
+                        Text(stringResource(R.string.settings_apple_health_import_copy_error))
+                    }
+                    SelectionContainer {
+                        Text(
+                            text = errorText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                }
             }
 
             if (isImporting) {

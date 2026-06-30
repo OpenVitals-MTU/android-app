@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportErrorFormatter
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
@@ -159,13 +160,12 @@ class SettingsViewModel @Inject constructor(
 
             runCatching { appleHealthImportWorkController.enqueue(uri) }
                 .onFailure { error ->
-                    Log.e(TAG, "Apple Health import enqueue failed type=${error::class.java.simpleName}")
+                    Log.e(TAG, "Apple Health import enqueue failed", error)
                     _uiState.value = _uiState.value.copy(
                         isImportingAppleHealth = false,
                         appleHealthImportProgress = null,
                         appleHealthImportResult = null,
-                        appleHealthImportError = error.localizedMessage
-                            ?: "Apple Health import failed.",
+                        appleHealthImportError = AppleHealthImportErrorFormatter.details(error),
                     )
                 }
         }

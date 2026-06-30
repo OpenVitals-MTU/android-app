@@ -40,7 +40,7 @@ class AppleHealthImportService
 
                 val parsed =
                     input.use { rawInput ->
-                        BufferedInputStream(rawInput).use { bufferedInput ->
+                        BufferedInputStream(rawInput, ImportInputBufferSize).use { bufferedInput ->
                             progress(importState.progressSnapshot(AppleHealthImportPhase.PARSING))
                             AppleHealthImportParser.parse(bufferedInput, importState)
                         }
@@ -81,7 +81,6 @@ class AppleHealthImportService
         ) : AppleHealthXmlEventConsumer {
             private val bufferedRecords = mutableListOf<AppleRecord>()
             private val bufferedWorkouts = mutableListOf<AppleWorkout>()
-            private val bufferedCorrelations = mutableListOf<AppleCorrelation>()
             private val convertedBatch = mutableListOf<ConvertedAppleRecord>()
             private val serviceDiagnostics = mutableListOf<AppleHealthImportDiagnostic>()
             private val serviceDiagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
@@ -121,7 +120,12 @@ class AppleHealthImportService
 
             override fun onCorrelation(correlation: AppleCorrelation) {
                 parsedCorrelations += 1
-                bufferedCorrelations += correlation
+                converter.convertBufferedGroups(
+                    records = emptyList(),
+                    workouts = emptyList(),
+                    correlations = listOf(correlation),
+                    parsedActivitySummaries = 0,
+                ).forEach(::acceptConverted)
                 maybeReportProgress()
             }
 
@@ -135,12 +139,11 @@ class AppleHealthImportService
                 converter.convertBufferedGroups(
                     records = emptyList(),
                     workouts = bufferedWorkouts,
-                    correlations = bufferedCorrelations,
+                    correlations = emptyList(),
                     parsedActivitySummaries = parsedActivitySummaries,
                 ).forEach(::acceptConverted)
                 bufferedRecords.clear()
                 bufferedWorkouts.clear()
-                bufferedCorrelations.clear()
             }
 
             private fun flushBufferedRecords() {
@@ -484,8 +487,9 @@ private fun buildReportText(
 private const val DiagnosticReportLimit = 200
 private const val ConvertedBatchSize = 300
 private const val BufferedRecordBatchSize = 2_000
-private const val ProgressReportElementInterval = 500
+private const val ProgressReportElementInterval = 5_000
 private const val MaxDuplicateCheckSpanSeconds = 6L * 60L * 60L
+private const val ImportInputBufferSize = 256 * 1024
 
 private fun List<ConvertedAppleRecord>.chunkForDuplicateCheck(maxSpanSeconds: Long): List<List<ConvertedAppleRecord>> {
     if (isEmpty()) return emptyList()

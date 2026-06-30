@@ -45,8 +45,14 @@ class AppleHealthImportWorkController @Inject constructor(
         return AppleHealthImportWorker.resultFromData(workInfo.outputData, reportText)
     }
 
-    fun errorFor(workInfo: WorkInfo): String? =
-        workInfo.outputData.getString(AppleHealthImportWorker.KeyError)
+    fun errorFor(workInfo: WorkInfo): String? {
+        val reportError = AppleHealthImportReportStore.read(
+            AppleHealthImportWorker.errorReportPathFromData(workInfo.outputData),
+        )
+        return reportError.ifBlank {
+            workInfo.outputData.getString(AppleHealthImportWorker.KeyError)
+        }
+    }
 
     private fun persistReadPermission(uri: Uri) {
         runCatching {

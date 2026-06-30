@@ -45,6 +45,7 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val unableToOpenPermissions = stringResource(R.string.onboarding_unable_open_permissions)
     val reportCopied = stringResource(R.string.settings_apple_health_import_report_copied)
+    val errorCopied = stringResource(R.string.settings_apple_health_import_error_copied)
     val reportSaved = stringResource(R.string.settings_apple_health_import_report_saved)
     val reportSaveFailed = stringResource(R.string.settings_apple_health_import_report_save_failed)
     val debugLogsSaved = stringResource(R.string.settings_debug_logs_saved)
@@ -58,6 +59,14 @@ fun SettingsScreen(
                 unableToOpenPermissions,
                 Toast.LENGTH_SHORT,
             ).show()
+        }
+    }
+    fun copyAppleHealthImportText(text: String, message: String) {
+        coroutineScope.launch {
+            clipboard.setClipEntry(
+                ClipData.newPlainText("OpenVitals", text).toClipEntry()
+            )
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -172,12 +181,10 @@ fun SettingsScreen(
             offlineMapPicker.launch(OfflineMapMimeTypes)
         },
         onCopyAppleHealthReport = { reportText ->
-            coroutineScope.launch {
-                clipboard.setClipEntry(
-                    ClipData.newPlainText("OpenVitals", reportText).toClipEntry()
-                )
-                Toast.makeText(context, reportCopied, Toast.LENGTH_SHORT).show()
-            }
+            copyAppleHealthImportText(reportText, reportCopied)
+        },
+        onCopyAppleHealthError = { errorText ->
+            copyAppleHealthImportText(errorText, errorCopied)
         },
         onSaveAppleHealthReport = {
             appleHealthReportSaver.launch("openvitals-apple-health-import-report.txt")

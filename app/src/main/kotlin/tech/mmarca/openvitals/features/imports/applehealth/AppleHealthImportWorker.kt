@@ -41,15 +41,25 @@ class AppleHealthImportWorker(
                 AppleHealthImportWorkerEntryPoint::class.java,
             )
             val service = entryPoint.appleHealthImportService()
+            var lastProgressUpdateMillis = 0L
+            var lastProgressPhase: AppleHealthImportPhase? = null
             var lastNotificationUpdateMillis = 0L
+            var lastNotificationPhase: AppleHealthImportPhase? = null
             val result = service.importAppleHealthExport(uri) { progress ->
-                setProgress(progress.toData())
                 val now = System.currentTimeMillis()
+                if (now - lastProgressUpdateMillis >= WorkManagerProgressUpdateMillis ||
+                    progress.phase != lastProgressPhase
+                ) {
+                    setProgress(progress.toData())
+                    lastProgressUpdateMillis = now
+                    lastProgressPhase = progress.phase
+                }
                 if (now - lastNotificationUpdateMillis >= ForegroundNotificationUpdateMillis ||
-                    progress.phase != AppleHealthImportPhase.PARSING
+                    progress.phase != lastNotificationPhase
                 ) {
                     setForeground(foregroundInfo(progress))
                     lastNotificationUpdateMillis = now
+                    lastNotificationPhase = progress.phase
                 }
             }
             val reportPath = AppleHealthImportReportStore.write(appContext, result.shareableReportText)
@@ -57,7 +67,7 @@ class AppleHealthImportWorker(
             setProgress(completeProgress.toData())
             Result.success(result.toOutputData(reportPath))
         }.getOrElse { error ->
-            Result.failure(errorData(error.localizedMessage ?: "Apple Health import failed."))
+            Result.failure(errorData(applicationContext, error))
         }
     }
 
@@ -121,6 +131,7 @@ class AppleHealthImportWorker(
         const val KeyError = "error"
 
         private const val KeyReportPath = "report_path"
+        private const val KeyErrorReportPath = "error_report_path"
         private const val KeyPhase = "phase"
         private const val KeyParsedRecords = "parsed_records"
         private const val KeyParsedWorkouts = "parsed_workouts"
@@ -137,6 +148,9 @@ class AppleHealthImportWorker(
         private const val NotificationId = 4071
         private const val RequestOpenApp = 4072
         private const val ForegroundNotificationUpdateMillis = 1_000L
+        private const val WorkManagerProgressUpdateMillis = 1_000L
+        private const val MaxInlineErrorCharacters = 2_000
+        private const val MaxSummaryErrorCharacters = 1_000
 
         fun inputData(uri: Uri): Data =
             Data.Builder()
@@ -184,10 +198,51 @@ class AppleHealthImportWorker(
         fun reportPathFromData(data: Data): String? =
             data.getString(KeyReportPath)
 
+        fun errorReportPathFromData(data: Data): String? =
+            data.getString(KeyErrorReportPath)
+
         fun errorData(message: String): Data =
             Data.Builder()
                 .putString(KeyError, message)
                 .build()
+
+        fun errorData(context: Context, error: Throwable): Data {
+            val details = AppleHealthImportErrorFormatter.details(error)
+            val reportPath = runCatching {
+                AppleHealthImportReportStore.writeFailure(context, details)
+            }.getOrNull()
+            return Data.Builder()
+                .putString(
+                    KeyError,
+                    if (reportPath != null) {
+                        AppleHealthImportErrorFormatter.summary(error).inlineSummaryForWorkData()
+                    } else {
+                        details.inlineForWorkData()
+                    }
+                )
+                .apply {
+                    if (reportPath != null) {
+                        putString(KeyErrorReportPath, reportPath)
+                    }
+                }
+                .build()
+        }
+
+        private fun String.inlineForWorkData(): String =
+            if (length <= MaxInlineErrorCharacters) {
+                this
+            } else {
+                take(MaxInlineErrorCharacters) +
+                    "\n\n... error truncated because WorkManager output data is limited."
+            }
+
+        private fun String.inlineSummaryForWorkData(): String =
+            if (length <= MaxSummaryErrorCharacters) {
+                this
+            } else {
+                take(MaxSummaryErrorCharacters) +
+                    "\n\n... full error stored in import error report."
+            }
 
         private fun AppleHealthImportProgress.toData(reportPath: String? = null): Data {
             val builder = Data.Builder()

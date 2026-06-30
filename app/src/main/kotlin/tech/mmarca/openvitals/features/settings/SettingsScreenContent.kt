@@ -165,6 +165,7 @@ internal fun LazyListScope.settingsScreenContent(
                     onGrantPermissions = actions.onGrantDataImportPermissions,
                     onImport = actions.onImportAppleHealth,
                     onCopyReport = actions.onCopyAppleHealthReport,
+                    onCopyError = actions.onCopyAppleHealthError,
                     onSaveReport = actions.onSaveAppleHealthReport,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )

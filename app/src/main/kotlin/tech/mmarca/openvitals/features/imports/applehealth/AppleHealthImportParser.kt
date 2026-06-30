@@ -94,21 +94,21 @@ private class AppleHealthXmlHandler(
                 val type = attributes.value("type") ?: "Record"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleRecord(attributes.snapshot(), stack.lastOrNull() as? MutableAppleCorrelation))
+                stack.addLast(MutableAppleRecord(attributes, stack.lastOrNull() as? MutableAppleCorrelation))
             }
             "Workout" -> {
                 parsedWorkouts += 1
                 val type = attributes.value("workoutActivityType") ?: "Workout"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleWorkout(attributes.snapshot()))
+                stack.addLast(MutableAppleWorkout(attributes))
             }
             "Correlation" -> {
                 parsedCorrelations += 1
                 val type = attributes.value("type") ?: "Correlation"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleCorrelation(attributes.snapshot()))
+                stack.addLast(MutableAppleCorrelation(attributes))
             }
             "MetadataEntry" -> {
                 val key = attributes.value("key")
@@ -194,22 +194,30 @@ private sealed interface MutableAppleElement {
 }
 
 private class MutableAppleRecord(
-    private val attributes: Map<String, String>,
+    attributes: Attributes,
     private val parentCorrelation: MutableAppleCorrelation?,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
+    private val type = attributes.value("type") ?: "Record"
+    private val sourceName = attributes.value("sourceName")
+    private val sourceVersion = attributes.value("sourceVersion")
+    private val device = attributes.value("device")
+    private val unit = attributes.value("unit")
+    private val creationDate = attributes.value("creationDate")?.toAppleDateTime()
+    private val startDate = attributes.value("startDate")?.toAppleDateTime()
+    private val endDate = attributes.value("endDate")?.toAppleDateTime()
+    private val rawValue = attributes.value("value")
 
     fun toRecord(): AppleRecord {
-        val rawValue = attributes.value("value")
         return AppleRecord(
-            type = attributes.value("type") ?: "Record",
-            sourceName = attributes.value("sourceName"),
-            sourceVersion = attributes.value("sourceVersion"),
-            device = attributes.value("device"),
-            unit = attributes.value("unit"),
-            creationDate = attributes.value("creationDate")?.toAppleDateTime(),
-            startDate = attributes.value("startDate")?.toAppleDateTime(),
-            endDate = attributes.value("endDate")?.toAppleDateTime(),
+            type = type,
+            sourceName = sourceName,
+            sourceVersion = sourceVersion,
+            device = device,
+            unit = unit,
+            creationDate = creationDate,
+            startDate = startDate,
+            endDate = endDate,
             rawValue = rawValue,
             numericValue = rawValue?.toDoubleOrNull(),
             metadata = metadata.toMap(),
@@ -219,47 +227,66 @@ private class MutableAppleRecord(
 }
 
 private class MutableAppleWorkout(
-    private val attributes: Map<String, String>,
+    attributes: Attributes,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val events = mutableListOf<AppleWorkoutEvent>()
+    private val workoutActivityType = attributes.value("workoutActivityType") ?: "Workout"
+    private val sourceName = attributes.value("sourceName")
+    private val sourceVersion = attributes.value("sourceVersion")
+    private val device = attributes.value("device")
+    private val creationDate = attributes.value("creationDate")?.toAppleDateTime()
+    private val startDate = attributes.value("startDate")?.toAppleDateTime()
+    private val endDate = attributes.value("endDate")?.toAppleDateTime()
+    private val duration = attributes.value("duration")?.toDoubleOrNull()
+    private val durationUnit = attributes.value("durationUnit")
+    private val totalDistance = attributes.value("totalDistance")?.toDoubleOrNull()
+    private val totalDistanceUnit = attributes.value("totalDistanceUnit")
+    private val totalEnergyBurned = attributes.value("totalEnergyBurned")?.toDoubleOrNull()
+    private val totalEnergyBurnedUnit = attributes.value("totalEnergyBurnedUnit")
 
     fun toWorkout(): AppleWorkout =
         AppleWorkout(
-            workoutActivityType = attributes.value("workoutActivityType") ?: "Workout",
-            sourceName = attributes.value("sourceName"),
-            sourceVersion = attributes.value("sourceVersion"),
-            device = attributes.value("device"),
-            creationDate = attributes.value("creationDate")?.toAppleDateTime(),
-            startDate = attributes.value("startDate")?.toAppleDateTime(),
-            endDate = attributes.value("endDate")?.toAppleDateTime(),
-            duration = attributes.value("duration")?.toDoubleOrNull(),
-            durationUnit = attributes.value("durationUnit"),
-            totalDistance = attributes.value("totalDistance")?.toDoubleOrNull(),
-            totalDistanceUnit = attributes.value("totalDistanceUnit"),
-            totalEnergyBurned = attributes.value("totalEnergyBurned")?.toDoubleOrNull(),
-            totalEnergyBurnedUnit = attributes.value("totalEnergyBurnedUnit"),
+            workoutActivityType = workoutActivityType,
+            sourceName = sourceName,
+            sourceVersion = sourceVersion,
+            device = device,
+            creationDate = creationDate,
+            startDate = startDate,
+            endDate = endDate,
+            duration = duration,
+            durationUnit = durationUnit,
+            totalDistance = totalDistance,
+            totalDistanceUnit = totalDistanceUnit,
+            totalEnergyBurned = totalEnergyBurned,
+            totalEnergyBurnedUnit = totalEnergyBurnedUnit,
             metadata = metadata.toMap(),
             events = events.toList(),
         )
 }
 
 private class MutableAppleCorrelation(
-    private val attributes: Map<String, String>,
+    attributes: Attributes,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val records = mutableListOf<AppleRecord>()
-    val type: String get() = attributes.value("type") ?: "Correlation"
+    val type: String = attributes.value("type") ?: "Correlation"
+    private val sourceName = attributes.value("sourceName")
+    private val sourceVersion = attributes.value("sourceVersion")
+    private val device = attributes.value("device")
+    private val creationDate = attributes.value("creationDate")?.toAppleDateTime()
+    private val startDate = attributes.value("startDate")?.toAppleDateTime()
+    private val endDate = attributes.value("endDate")?.toAppleDateTime()
 
     fun toCorrelation(): AppleCorrelation =
         AppleCorrelation(
             type = type,
-            sourceName = attributes.value("sourceName"),
-            sourceVersion = attributes.value("sourceVersion"),
-            device = attributes.value("device"),
-            creationDate = attributes.value("creationDate")?.toAppleDateTime(),
-            startDate = attributes.value("startDate")?.toAppleDateTime(),
-            endDate = attributes.value("endDate")?.toAppleDateTime(),
+            sourceName = sourceName,
+            sourceVersion = sourceVersion,
+            device = device,
+            creationDate = creationDate,
+            startDate = startDate,
+            endDate = endDate,
             metadata = metadata.toMap(),
             records = records.toList(),
         )
@@ -287,19 +314,6 @@ internal fun String.toAppleDateTime(): AppleDateTime? {
 }
 
 private fun Attributes.value(name: String): String? = getValue(name)?.takeIf { it.isNotBlank() }
-
-private fun Attributes.snapshot(): Map<String, String> =
-    buildMap {
-        repeat(length) { index ->
-            val name = getQName(index).ifBlank { getLocalName(index) }
-            val value = getValue(index)
-            if (name.isNotBlank() && value.isNotBlank()) {
-                put(name, value)
-            }
-        }
-    }
-
-private fun Map<String, String>.value(name: String): String? = get(name)?.takeIf { it.isNotBlank() }
 
 private fun String.isAppleHealthExportXml(): Boolean {
     val normalized = replace('\\', '/').substringAfterLast('/').lowercase(Locale.US)
