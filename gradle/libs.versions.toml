@@ -23,6 +23,7 @@ core-ktx = "1.19.0"
 appcompat = "1.7.1"
 maplibre = "13.3.1"
 mapsforge = "0.25.0"
+reorderable = "3.1.0"
 
 [libraries]
 # AndroidX Core
@@ -77,6 +78,7 @@ health-connect-client = { group = "androidx.health.connect", name = "connect-cli
 maplibre-android-sdk = { group = "org.maplibre.gl", name = "android-sdk", version.ref = "maplibre" }
 mapsforge-map-android = { group = "org.mapsforge", name = "mapsforge-map-android", version.ref = "mapsforge" }
 mapsforge-themes = { group = "org.mapsforge", name = "mapsforge-themes", version.ref = "mapsforge" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 # Dependency injection
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }

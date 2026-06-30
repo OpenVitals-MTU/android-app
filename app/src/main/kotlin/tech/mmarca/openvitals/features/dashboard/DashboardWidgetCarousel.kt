@@ -16,8 +16,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -40,9 +40,6 @@ internal fun DashboardWidgetCarousel(
     visibleIds: List<DashboardWidgetId>,
     specsById: Map<DashboardWidgetId, DashboardWidgetSpec>,
     isEditingDashboard: Boolean,
-    draggingWidgetId: DashboardWidgetId?,
-    widgetBounds: MutableMap<DashboardWidgetId, Rect>,
-    onDraggingWidgetChanged: (DashboardWidgetId?) -> Unit,
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     visibleWidgetLoadToken: Long,
@@ -61,33 +58,32 @@ internal fun DashboardWidgetCarousel(
         rows = DashboardCarouselWidgetRows,
     )
     val pagerState = rememberPagerState(pageCount = { carouselPages.size.coerceAtLeast(1) })
-    var sectionBounds by remember { mutableStateOf<Rect?>(null) }
+    val widgetBounds = remember { mutableStateMapOf<DashboardWidgetId, Rect>() }
     var fixedSectionBounds by remember { mutableStateOf<Rect?>(null) }
     var carouselSectionBounds by remember { mutableStateOf<Rect?>(null) }
-    val dragOffsetState = remember { mutableStateOf(Offset.Zero) }
-    var draggedWidgetStartBounds by remember { mutableStateOf<Rect?>(null) }
+    var draggingWidgetId by remember { mutableStateOf<DashboardWidgetId?>(null) }
+    var draggingWidgetBounds by remember { mutableStateOf<Rect?>(null) }
     val onVisibleWidgetsChangedState = rememberUpdatedState(onVisibleWidgetsChanged)
     val density = LocalDensity.current
     val edgeScrollThresholdPx = with(density) { DashboardCarouselEdgeScrollThreshold.toPx() }
-    val currentDropTargetIds: (DashboardWidgetId, Offset) -> List<DashboardWidgetId> = { draggedId, droppedOffset ->
-        val currentPageIds = carouselPages.getOrNull(pagerState.currentPage).orEmpty()
-        val draggedBounds = draggedWidgetStartBounds ?: widgetBounds[draggedId]
-        val dropCenter = draggedBounds?.let { it.center + droppedOffset }
-        val isOverFixedSection = dropCenter?.let { fixedSectionBounds?.containsPoint(it) } == true
-        val isOverCarouselSection = dropCenter?.let { carouselSectionBounds?.containsPoint(it) } == true
 
-        when {
-            draggedId in fixedIds && isOverCarouselSection -> currentPageIds
-            draggedId in fixedIds -> fixedIds
-            isOverFixedSection -> fixedIds
-            else -> currentPageIds
+    LaunchedEffect(visibleIds) {
+        val visibleSet = visibleIds.toSet()
+        widgetBounds.keys.toList().forEach { widgetId ->
+            if (widgetId !in visibleSet) {
+                widgetBounds.remove(widgetId)
+            }
+        }
+        if (draggingWidgetId !in visibleSet) {
+            draggingWidgetId = null
+            draggingWidgetBounds = null
         }
     }
 
-    LaunchedEffect(draggingWidgetId) {
-        if (draggingWidgetId == null) {
-            dragOffsetState.value = Offset.Zero
-            draggedWidgetStartBounds = null
+    LaunchedEffect(isEditingDashboard) {
+        if (!isEditingDashboard) {
+            draggingWidgetId = null
+            draggingWidgetBounds = null
         }
     }
 
@@ -106,21 +102,24 @@ internal fun DashboardWidgetCarousel(
             }
     }
 
-    LaunchedEffect(draggingWidgetId, carouselPages.size, sectionBounds, edgeScrollThresholdPx) {
-        if (draggingWidgetId == null || carouselPages.size <= 1 || sectionBounds == null) {
+    LaunchedEffect(draggingWidgetId, carouselPages.size, carouselSectionBounds, edgeScrollThresholdPx) {
+        if (draggingWidgetId == null || carouselPages.size <= 1 || carouselSectionBounds == null) {
             return@LaunchedEffect
         }
 
-        val section = sectionBounds ?: return@LaunchedEffect
-        val widgetId = draggingWidgetId ?: return@LaunchedEffect
+        val carouselBounds = carouselSectionBounds ?: return@LaunchedEffect
         while (true) {
-            val draggedBounds = draggedWidgetStartBounds ?: widgetBounds[widgetId]
-            if (widgetId in carouselIds && draggedBounds != null && !pagerState.isScrollInProgress) {
-                val draggedCenterX = draggedBounds.center.x + dragOffsetState.value.x
+            val widgetId = draggingWidgetId ?: return@LaunchedEffect
+            val draggedBounds = draggingWidgetBounds ?: widgetBounds[widgetId]
+            val overlapsCarouselY = draggedBounds?.let { bounds ->
+                bounds.bottom >= carouselBounds.top && bounds.top <= carouselBounds.bottom
+            } == true
+            if (draggedBounds != null && overlapsCarouselY && !pagerState.isScrollInProgress) {
+                val draggedCenter = draggedBounds.center
                 val currentPage = pagerState.currentPage
                 val targetPage = when {
-                    draggedCenterX <= section.left + edgeScrollThresholdPx -> currentPage - 1
-                    draggedCenterX >= section.right - edgeScrollThresholdPx -> currentPage + 1
+                    draggedCenter.x <= carouselBounds.left + edgeScrollThresholdPx -> currentPage - 1
+                    draggedCenter.x >= carouselBounds.right - edgeScrollThresholdPx -> currentPage + 1
                     else -> currentPage
                 }.coerceIn(0, carouselPages.lastIndex)
 
@@ -132,28 +131,62 @@ internal fun DashboardWidgetCarousel(
         }
     }
 
+    fun dropTargetIdsFor(draggedId: DashboardWidgetId, draggedBounds: Rect): List<DashboardWidgetId> {
+        val currentPageIds = carouselPages.getOrNull(pagerState.currentPage).orEmpty()
+        val dropCenter = draggedBounds.center
+        val isOverFixedSection = fixedSectionBounds?.containsPoint(dropCenter) == true
+        val isOverCarouselSection = carouselSectionBounds?.containsPoint(dropCenter) == true
+
+        return when {
+            draggedId in fixedIds && isOverCarouselSection -> currentPageIds
+            draggedId in fixedIds -> fixedIds
+            isOverFixedSection -> fixedIds
+            else -> currentPageIds
+        }
+    }
+
+    fun dropWidget(widgetId: DashboardWidgetId) {
+        val draggedBounds = draggingWidgetBounds ?: widgetBounds[widgetId] ?: return
+        val targetIds = dropTargetIdsFor(widgetId, draggedBounds)
+        if (widgetId in targetIds) return
+
+        closestDashboardWidgetId(
+            draggedId = widgetId,
+            dropCenter = draggedBounds.center,
+            targetIds = targetIds,
+            widgetBounds = widgetBounds,
+        )?.let { targetId ->
+            onMoveWidgetToTarget(widgetId, targetId)
+        }
+    }
+
     val onGridDraggingWidgetChanged: (DashboardWidgetId?) -> Unit = { widgetId ->
-        draggedWidgetStartBounds = widgetId?.let { widgetBounds[it] }
-        onDraggingWidgetChanged(widgetId)
+        draggingWidgetId = widgetId
+        if (widgetId == null) {
+            draggingWidgetBounds = null
+        } else {
+            draggingWidgetBounds = widgetBounds[widgetId]
+        }
     }
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .onGloballyPositioned { coordinates -> sectionBounds = coordinates.boundsInRoot() },
+            .fillMaxWidth(),
     ) {
         Column {
             DashboardWidgetGrid(
                 ids = fixedIds,
                 rows = DashboardFixedWidgetRows,
                 specsById = specsById,
-                dropTargetIdsProvider = currentDropTargetIds,
                 isEditingDashboard = isEditingDashboard,
-                draggingWidgetId = draggingWidgetId,
-                draggedWidgetStartBounds = draggedWidgetStartBounds,
                 widgetBounds = widgetBounds,
                 onDraggingWidgetChanged = onGridDraggingWidgetChanged,
-                onDragOffsetChanged = { offset -> dragOffsetState.value = offset },
+                onDraggingWidgetBoundsChanged = { widgetId, bounds ->
+                    if (draggingWidgetId == widgetId) {
+                        draggingWidgetBounds = bounds
+                    }
+                },
+                onDropWidget = ::dropWidget,
                 onMoveWidgetToTarget = onMoveWidgetToTarget,
                 onRemoveWidget = onRemoveWidget,
                 modifier = Modifier
@@ -179,19 +212,22 @@ internal fun DashboardWidgetCarousel(
                         .zIndex(if (draggingWidgetId in carouselIds) 2f else 0f),
                     pageSpacing = 12.dp,
                     beyondViewportPageCount = 1.coerceAtMost(carouselPages.lastIndex),
+                    userScrollEnabled = draggingWidgetId == null,
                 ) { page ->
                     val pageIds = carouselPages.getOrNull(page).orEmpty()
                     DashboardWidgetGrid(
                         ids = pageIds,
                         rows = DashboardCarouselWidgetRows,
                         specsById = specsById,
-                        dropTargetIdsProvider = currentDropTargetIds,
                         isEditingDashboard = isEditingDashboard,
-                        draggingWidgetId = draggingWidgetId,
-                        draggedWidgetStartBounds = draggedWidgetStartBounds,
                         widgetBounds = widgetBounds,
                         onDraggingWidgetChanged = onGridDraggingWidgetChanged,
-                        onDragOffsetChanged = { offset -> dragOffsetState.value = offset },
+                        onDraggingWidgetBoundsChanged = { widgetId, bounds ->
+                            if (draggingWidgetId == widgetId) {
+                                draggingWidgetBounds = bounds
+                            }
+                        },
+                        onDropWidget = ::dropWidget,
                         onMoveWidgetToTarget = onMoveWidgetToTarget,
                         onRemoveWidget = onRemoveWidget,
                     )
@@ -226,14 +262,22 @@ internal fun DashboardWidgetCarousel(
 
             hiddenContent()
         }
-
-        DashboardDraggedWidgetOverlay(
-            draggingWidgetId = draggingWidgetId,
-            specsById = specsById,
-            widgetBounds = widgetBounds,
-            draggedWidgetStartBounds = draggedWidgetStartBounds,
-            sectionBounds = sectionBounds,
-            dragOffsetState = dragOffsetState,
-        )
     }
 }
+
+private fun closestDashboardWidgetId(
+    draggedId: DashboardWidgetId,
+    dropCenter: Offset,
+    targetIds: List<DashboardWidgetId>,
+    widgetBounds: Map<DashboardWidgetId, Rect>,
+): DashboardWidgetId? =
+    targetIds
+        .filter { widgetId -> widgetId != draggedId && widgetId in widgetBounds }
+        .minByOrNull { widgetId ->
+            val center = widgetBounds.getValue(widgetId).center
+            val delta = dropCenter - center
+            delta.x * delta.x + delta.y * delta.y
+        }
+
+private fun Rect.containsPoint(point: Offset): Boolean =
+    point.x >= left && point.x <= right && point.y >= top && point.y <= bottom

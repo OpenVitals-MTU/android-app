@@ -11,9 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
-import android.content.ClipData
 import android.graphics.Color as AndroidColor
-import android.content.ClipDescription
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -31,11 +29,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.draganddrop.dragAndDropSource
-import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -48,6 +45,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -79,33 +81,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.draganddrop.DragAndDropTarget
-import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draganddrop.mimeTypes
-import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowInsetsCompat
@@ -116,6 +108,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -124,6 +118,7 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
+import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItem
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTemplate
@@ -330,8 +325,8 @@ internal fun RecordingDashboardGrid(
     fillHeight: Boolean = false,
 ) {
     val normalizedLayout = layout.normalized()
-    val placements = normalizedLayout.placements()
-    if (placements.isEmpty()) return
+    val gridItems = normalizedLayout.items.filter { it.field in stats }
+    if (gridItems.isEmpty()) return
 
     val spacing = if (normalizedLayout.template == ActivityRecordingDashboardTemplate.THREE_BY_FOUR) {
         8.dp
@@ -343,30 +338,88 @@ internal fun RecordingDashboardGrid(
         ActivityRecordingDashboardTemplate.TWO_BY_FOUR -> 96.dp
         ActivityRecordingDashboardTemplate.THREE_BY_FOUR -> 86.dp
     }
+    val latestLayout = rememberUpdatedState(normalizedLayout)
+    val latestOnUpdateLayout = rememberUpdatedState(onUpdateLayout)
+    val lazyGridState = rememberLazyGridState()
+    val reorderableState = rememberReorderableLazyGridState(lazyGridState) { from, to ->
+        val fromField = from.key as? ActivityRecordingDashboardField
+        val toField = to.key as? ActivityRecordingDashboardField
+        if (fromField != null && toField != null && fromField != toField) {
+            latestOnUpdateLayout.value(latestLayout.value.withMovedFieldToTarget(fromField, toField))
+        }
+    }
+    val lazyGridRows = recordingDashboardLazyGridRows(
+        items = gridItems,
+        columns = normalizedLayout.template.columns,
+    )
+    val measuredRows = if (fillHeight) {
+        maxOf(normalizedLayout.template.rows, lazyGridRows)
+    } else {
+        lazyGridRows
+    }
 
-    Layout(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
             .animateContentSize(),
-        content = {
-            placements.forEach { placement ->
-                val field = placement.item.field
-                val stat = stats[field] ?: return@forEach
+    ) {
+        val effectiveCellHeight = if (fillHeight) {
+            val gapHeight = spacing * (measuredRows - 1).coerceAtLeast(0)
+            (maxHeight - gapHeight).coerceAtLeast(0.dp) / measuredRows
+        } else {
+            cellHeight
+        }
+        val gridHeight = if (fillHeight) {
+            maxHeight
+        } else {
+            effectiveCellHeight * measuredRows +
+                spacing * (measuredRows - 1).coerceAtLeast(0)
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(normalizedLayout.template.columns),
+            state = lazyGridState,
+            userScrollEnabled = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(gridHeight),
+            horizontalArrangement = Arrangement.spacedBy(spacing),
+            verticalArrangement = Arrangement.spacedBy(spacing),
+        ) {
+            itemsIndexed(
+                items = gridItems,
+                key = { _, item -> item.field },
+                span = { _, item ->
+                    GridItemSpan(item.size.columnSpan.coerceIn(1, maxLineSpan))
+                },
+            ) { _, item ->
+                val field = item.field
+                val stat = stats[field] ?: return@itemsIndexed
                 val index = normalizedLayout.fields.indexOf(field)
-                key(field) {
+                val rowSpan = item.size.rowSpan.coerceIn(1, normalizedLayout.template.rows)
+                ReorderableItem(
+                    state = reorderableState,
+                    key = field,
+                    enabled = isEditingDashboard,
+                ) { isDragging ->
+                    Box(
+                        modifier = Modifier.height(
+                            effectiveCellHeight * rowSpan +
+                                spacing * (rowSpan - 1).coerceAtLeast(0)
+                        )
+                    ) {
                     RecordingDashboardTile(
                         field = field,
                         stat = stat,
-                        size = placement.item.size,
-                        emphasized = placement.item.size.hasRoomyMetricText(),
-                        compact = placement.item.size.hasCompactMetricText(),
+                        size = item.size,
+                        emphasized = item.size.hasRoomyMetricText(),
+                        compact = item.size.hasCompactMetricText(),
                         isEditingDashboard = isEditingDashboard,
-                        onDropField = { draggedField ->
-                            if (draggedField != field) {
-                                onUpdateLayout(normalizedLayout.withMovedFieldToTarget(draggedField, field))
-                            }
-                        },
+                        isDragging = isDragging,
+                        dragHandleModifier = Modifier.longPressDraggableHandle(
+                            enabled = isEditingDashboard,
+                        ),
                         onRemove = {
                             onUpdateLayout(normalizedLayout.withRemovedField(field))
                         },
@@ -388,43 +441,6 @@ internal fun RecordingDashboardGrid(
                     )
                 }
             }
-        },
-    ) { measurables, constraints ->
-        val spacingPx = spacing.roundToPx()
-        val defaultCellHeightPx = cellHeight.roundToPx()
-        val layoutWidth = constraints.maxWidth
-        val columnWidth = (
-            (layoutWidth - spacingPx * (normalizedLayout.template.columns - 1)) /
-                normalizedLayout.template.columns
-            ).coerceAtLeast(0)
-        val cellHeightPx = if (fillHeight && constraints.hasBoundedHeight) {
-            (
-                (constraints.maxHeight - spacingPx * (normalizedLayout.template.rows - 1)) /
-                    normalizedLayout.template.rows
-                ).coerceAtLeast(0)
-        } else {
-            defaultCellHeightPx
-        }
-        val occupiedRows = if (fillHeight) {
-            normalizedLayout.template.rows
-        } else {
-            placements.maxOfOrNull { it.row + it.rowSpan } ?: normalizedLayout.template.rows
-        }
-        val layoutHeight = cellHeightPx * occupiedRows +
-            spacingPx * (occupiedRows - 1).coerceAtLeast(0)
-        val placeables = measurables.mapIndexed { index, measurable ->
-            val placement = placements[index]
-            val width = columnWidth * placement.columnSpan + spacingPx * (placement.columnSpan - 1)
-            val height = cellHeightPx * placement.rowSpan + spacingPx * (placement.rowSpan - 1)
-            measurable.measure(Constraints.fixed(width, height))
-        }
-
-        layout(layoutWidth, layoutHeight) {
-            placeables.forEachIndexed { index, placeable ->
-                val placement = placements[index]
-                val x = placement.column * (columnWidth + spacingPx)
-                val y = placement.row * (cellHeightPx + spacingPx)
-                placeable.placeRelative(x, y)
             }
         }
     }
@@ -438,14 +454,14 @@ internal fun RecordingDashboardTile(
     emphasized: Boolean,
     compact: Boolean,
     isEditingDashboard: Boolean,
-    onDropField: (ActivityRecordingDashboardField) -> Unit,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier,
     onRemove: () -> Unit,
     onResize: (ActivityRecordingDashboardItemSize) -> Unit,
     onMovePrevious: (() -> Unit)?,
     onMoveNext: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    var isDropTargetActive by remember(field, isEditingDashboard) { mutableStateOf(false) }
     val wiggleRotation = if (isEditingDashboard) {
         val wiggleTransition = rememberInfiniteTransition(label = "RecordingDashboardWiggle")
         val rotation by wiggleTransition.animateFloat(
@@ -471,54 +487,6 @@ internal fun RecordingDashboardTile(
     val shrinkLabel = stringResource(R.string.cd_decrease_recording_dashboard_widget_size)
     val growLabel = stringResource(R.string.cd_increase_recording_dashboard_widget_size)
     val latestSize = rememberUpdatedState(size)
-    val dragAndDropTarget = remember(field, isEditingDashboard) {
-        object : DragAndDropTarget {
-            override fun onEntered(event: DragAndDropEvent) {
-                isDropTargetActive = event.toRecordingDashboardField() != field
-            }
-
-            override fun onExited(event: DragAndDropEvent) {
-                isDropTargetActive = false
-            }
-
-            override fun onEnded(event: DragAndDropEvent) {
-                isDropTargetActive = false
-            }
-
-            override fun onDrop(event: DragAndDropEvent): Boolean {
-                val draggedField = event.toRecordingDashboardField() ?: return false
-                isDropTargetActive = false
-                onDropField(draggedField)
-                return true
-            }
-        }
-    }
-    val dragSourceModifier = if (isEditingDashboard) {
-        Modifier.dragAndDropSource { _ ->
-            DragAndDropTransferData(
-                clipData = ClipData(
-                    ClipDescription(
-                        RecordingDashboardDragLabel,
-                        arrayOf(RecordingDashboardDragMimeType),
-                    ),
-                    ClipData.Item(field.name),
-                ),
-                localState = field,
-            )
-        }
-    } else {
-        Modifier
-    }
-    val dropTargetModifier = if (isEditingDashboard) {
-        Modifier.dragAndDropTarget(
-            shouldStartDragAndDrop = { startEvent ->
-                RecordingDashboardDragMimeType in startEvent.mimeTypes()
-            },
-            target = dragAndDropTarget,
-        )
-    } else {
-        Modifier
-    }
     val editSemanticsModifier = if (isEditingDashboard) {
         Modifier.semantics {
             contentDescription = stat.label
@@ -569,15 +537,14 @@ internal fun RecordingDashboardTile(
 
     Box(
         modifier = modifier
-            .zIndex(if (isDropTargetActive) 1f else 0f)
+            .zIndex(if (isDragging) 1f else 0f)
             .graphicsLayer {
-                scaleX = if (isDropTargetActive) 1.02f else 1f
-                scaleY = if (isDropTargetActive) 1.02f else 1f
-                rotationZ = if (isEditingDashboard && !isDropTargetActive) wiggleRotation else 0f
-                shadowElevation = if (isDropTargetActive) 12.dp.toPx() else 0f
+                scaleX = if (isDragging) 1.02f else 1f
+                scaleY = if (isDragging) 1.02f else 1f
+                rotationZ = if (isEditingDashboard && !isDragging) wiggleRotation else 0f
+                shadowElevation = if (isDragging) 12.dp.toPx() else 0f
             }
-            .then(editSemanticsModifier)
-            .then(dropTargetModifier),
+            .then(editSemanticsModifier),
     ) {
         RecordingDashboardTileContent(
             stat = stat,
@@ -589,8 +556,8 @@ internal fun RecordingDashboardTile(
                 .then(
                     if (isEditingDashboard) {
                         Modifier.border(
-                            width = if (isDropTargetActive) 2.dp else 1.dp,
-                            color = if (isDropTargetActive) {
+                            width = if (isDragging) 2.dp else 1.dp,
+                            color = if (isDragging) {
                                 activityRecordingAccentColor()
                             } else {
                                 MaterialTheme.colorScheme.primary.copy(alpha = 0.52f)
@@ -601,7 +568,7 @@ internal fun RecordingDashboardTile(
                         Modifier
                     }
                 )
-                .then(dragSourceModifier),
+                .then(dragHandleModifier),
         )
         if (isEditingDashboard) {
             RecordingDashboardEditButton(
@@ -770,16 +737,33 @@ internal fun RecordingDashboardTileContent(
     }
 }
 
-internal fun DragAndDropEvent.toRecordingDashboardField(): ActivityRecordingDashboardField? {
-    val androidDragEvent = toAndroidDragEvent()
-    (androidDragEvent.localState as? ActivityRecordingDashboardField)?.let { return it }
-    return androidDragEvent.clipData
-        ?.getItemAt(0)
-        ?.text
-        ?.toString()
-        ?.let { fieldName ->
-            runCatching { ActivityRecordingDashboardField.valueOf(fieldName) }.getOrNull()
+internal fun recordingDashboardLazyGridRows(
+    items: List<ActivityRecordingDashboardItem>,
+    columns: Int,
+): Int {
+    var committedRows = 0
+    var lineColumns = 0
+    var lineRows = 0
+
+    items.forEach { item ->
+        val columnSpan = item.size.columnSpan.coerceIn(1, columns)
+        val rowSpan = item.size.rowSpan.coerceAtLeast(1)
+        if (lineColumns > 0 && lineColumns + columnSpan > columns) {
+            committedRows += lineRows
+            lineColumns = 0
+            lineRows = 0
         }
+
+        lineColumns += columnSpan
+        lineRows = maxOf(lineRows, rowSpan)
+        if (lineColumns >= columns) {
+            committedRows += lineRows
+            lineColumns = 0
+            lineRows = 0
+        }
+    }
+
+    return (committedRows + lineRows).coerceAtLeast(1)
 }
 
 internal fun ActivityRecordingDashboardLayout.withMovedFieldToTarget(
@@ -937,7 +921,5 @@ internal fun <T> List<T>.move(fromIndex: Int, toIndex: Int): List<T> {
     return mutable
 }
 
-internal const val RecordingDashboardDragMimeType = "application/vnd.openvitals.recording-dashboard-field"
-internal const val RecordingDashboardDragLabel = "OpenVitals recording dashboard widget"
 internal const val RecordingDashboardEditWiggleDegrees = 0.45f
 internal val RecordingDashboardResizeStep = 44.dp

@@ -14,14 +14,13 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -30,6 +29,8 @@ import tech.mmarca.openvitals.core.period.displayPeriodFor
 import java.time.LocalDate
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +60,19 @@ fun MetricDetailScaffold(
     var showDatePicker by remember { mutableStateOf(false) }
     val defaultListState = rememberLazyListState()
     val lazyListState = sectionListState?.lazyListState ?: defaultListState
-    val isSectionDragActive = sectionListState?.draggingSectionId != null
+    val reorderableSectionState = sectionListState?.let { listState ->
+        rememberReorderableLazyListState(lazyListState) { from, to ->
+            val fromId = from.key as? MetricDetailSectionId
+            val toId = to.key as? MetricDetailSectionId
+            if (fromId != null && toId != null && fromId != toId) {
+                listState.onMoveSectionToTarget?.invoke(fromId, toId)
+            }
+        }
+    }
+    SideEffect {
+        sectionListState?.reorderableState = reorderableSectionState
+    }
+    val isSectionDragActive = reorderableSectionState?.isAnyItemDragging == true
 
     PullToRefreshBox(
         isRefreshing = isLoading,
@@ -76,15 +89,7 @@ fun MetricDetailScaffold(
                 userScrollEnabled = !isSectionDragActive,
                 modifier = Modifier
                     .fillMaxSize()
-                    .widthIn(max = 920.dp)
-                    .onGloballyPositioned { coordinates ->
-                        sectionListState?.viewportBounds = coordinates.boundsInRoot()
-                    }
-                    .then(
-                        sectionListState?.let { listState ->
-                            Modifier.metricDetailSectionDragGesture(listState)
-                        } ?: Modifier,
-                    ),
+                    .widthIn(max = 920.dp),
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 headerItems()
@@ -131,8 +136,6 @@ fun MetricDetailScaffold(
                 content(period)
                 item { Spacer(Modifier.height(16.dp)) }
             }
-            sectionListState?.let { MetricDetailSectionEdgeScrollEffect(listState = it) }
-            sectionListState?.let { MetricDetailSectionDragOverlay(listState = it) }
         }
     }
 

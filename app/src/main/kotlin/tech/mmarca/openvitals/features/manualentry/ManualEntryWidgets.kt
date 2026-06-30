@@ -9,17 +9,21 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,29 +39,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -80,7 +73,6 @@ import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 internal const val ManualEntryGridColumns = 3
-internal const val ManualEntryDragLongPressMillis = 500L
 internal const val ManualEntryEditWiggleDegrees = 0.45f
 internal val ManualEntryTileIconSize = 34.dp
 
@@ -234,51 +226,68 @@ internal fun ManualEntryWidgetGrid(
     onMoveWidgetToTarget: (ManualEntryWidgetId, ManualEntryWidgetId) -> Unit,
     onRemoveWidget: (ManualEntryWidgetId) -> Unit,
 ) {
-    val widgetBounds = remember { mutableStateMapOf<ManualEntryWidgetId, Rect>() }
+    val visibleSpecs = remember(visibleIds, specsById) {
+        visibleIds.mapNotNull { specsById[it] }
+    }
+    if (visibleSpecs.isEmpty()) return
 
-    LaunchedEffect(visibleIds) {
-        val visibleSet = visibleIds.toSet()
-        widgetBounds.keys.toList().forEach { widgetId ->
-            if (widgetId !in visibleSet) {
-                widgetBounds.remove(widgetId)
-            }
+    val lazyGridState = rememberLazyGridState()
+    val reorderableState = rememberReorderableLazyGridState(lazyGridState) { from, to ->
+        val fromId = from.key as? ManualEntryWidgetId
+        val toId = to.key as? ManualEntryWidgetId
+        if (fromId != null && toId != null && fromId != toId) {
+            onMoveWidgetToTarget(fromId, toId)
         }
     }
+    val rowCount = (visibleSpecs.size + ManualEntryGridColumns - 1) / ManualEntryGridColumns
+    val horizontalPadding = 12.dp
+    val verticalPadding = 4.dp
+    val spacing = 8.dp
 
-    Column {
-        visibleIds
-            .mapNotNull { specsById[it] }
-            .chunked(ManualEntryGridColumns)
-            .forEach { rowSpecs ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .animateContentSize(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    rowSpecs.forEach { spec ->
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val tileSize = (
+            maxWidth - horizontalPadding * 2 - spacing * (ManualEntryGridColumns - 1)
+            ).coerceAtLeast(0.dp) / ManualEntryGridColumns
+        val gridHeight = tileSize * rowCount +
+            spacing * (rowCount - 1).coerceAtLeast(0) +
+            verticalPadding * 2
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(ManualEntryGridColumns),
+            state = lazyGridState,
+            userScrollEnabled = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(gridHeight)
+                .animateContentSize(),
+            contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = verticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(spacing),
+            verticalArrangement = Arrangement.spacedBy(spacing),
+        ) {
+            itemsIndexed(
+                items = visibleSpecs,
+                key = { _, spec -> spec.id },
+            ) { _, spec ->
+                ReorderableItem(
+                    state = reorderableState,
+                    key = spec.id,
+                    enabled = isEditingWidgets,
+                ) { isDragging ->
+                    Box(modifier = Modifier.aspectRatio(1f)) {
                         ManualEntryWidgetTile(
                             spec = spec,
                             isEditingWidgets = isEditingWidgets,
-                            widgetBounds = widgetBounds,
-                            onPositioned = { bounds -> widgetBounds[spec.id] = bounds },
-                            onMoveWidgetToTarget = onMoveWidgetToTarget,
+                            isDragging = isDragging,
+                            dragHandleModifier = Modifier.longPressDraggableHandle(
+                                enabled = isEditingWidgets,
+                            ),
                             onRemove = { onRemoveWidget(spec.id) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f),
-                        )
-                    }
-                    repeat(ManualEntryGridColumns - rowSpecs.size) {
-                        Spacer(
-                            Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }
             }
+        }
     }
 }
 
@@ -286,15 +295,11 @@ internal fun ManualEntryWidgetGrid(
 internal fun ManualEntryWidgetTile(
     spec: ManualEntryWidgetSpec,
     isEditingWidgets: Boolean,
-    widgetBounds: Map<ManualEntryWidgetId, Rect>,
-    onPositioned: (Rect) -> Unit,
-    onMoveWidgetToTarget: (ManualEntryWidgetId, ManualEntryWidgetId) -> Unit,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var dragOffset by remember(spec.id, isEditingWidgets) { mutableStateOf(Offset.Zero) }
-    var isDragging by remember(spec.id, isEditingWidgets) { mutableStateOf(false) }
-    val density = LocalDensity.current
     val wiggleRotation = if (isEditingWidgets) {
         val wiggleTransition = rememberInfiniteTransition(label = "ManualEntryWidgetWiggle")
         val rotation by wiggleTransition.animateFloat(
@@ -314,86 +319,41 @@ internal fun ManualEntryWidgetTile(
     } else {
         0f
     }
-    val viewConfiguration = LocalViewConfiguration.current
-    val dragViewConfiguration = remember(viewConfiguration) {
-        object : ViewConfiguration by viewConfiguration {
-            override val longPressTimeoutMillis: Long = ManualEntryDragLongPressMillis
-        }
-    }
-    val dragModifier = if (isEditingWidgets) {
-        Modifier.pointerInput(spec.id) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = {
-                    isDragging = true
-                    dragOffset = Offset.Zero
-                },
-                onDragCancel = {
-                    isDragging = false
-                    dragOffset = Offset.Zero
-                },
-                onDragEnd = {
-                    val droppedOffset = dragOffset
-                    closestManualEntryWidgetId(
-                        draggedId = spec.id,
-                        dragOffset = droppedOffset,
-                        widgetBounds = widgetBounds,
-                    )?.let { targetId ->
-                        onMoveWidgetToTarget(spec.id, targetId)
-                    }
-                    isDragging = false
-                    dragOffset = Offset.Zero
-                },
-                onDrag = { change, dragAmount ->
-                    change.consume()
-                    dragOffset += dragAmount
-                },
-            )
-        }
-    } else {
-        Modifier
-    }
 
-    CompositionLocalProvider(
-        LocalViewConfiguration provides if (isEditingWidgets) dragViewConfiguration else viewConfiguration,
+    Box(
+        modifier = modifier
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                rotationZ = if (isEditingWidgets && !isDragging) wiggleRotation else 0f
+                scaleX = if (isDragging) 1.02f else 1f
+                scaleY = if (isDragging) 1.02f else 1f
+                shadowElevation = if (isDragging) 12.dp.toPx() else 0f
+            }
+            .then(dragHandleModifier),
     ) {
-        Box(
-            modifier = modifier
-                .onGloballyPositioned { coordinates -> onPositioned(coordinates.boundsInRoot()) }
-                .zIndex(if (isDragging) 1f else 0f)
-                .graphicsLayer {
-                    translationX = if (isDragging) dragOffset.x else 0f
-                    translationY = if (isDragging) dragOffset.y else 0f
-                    rotationZ = if (isEditingWidgets && !isDragging) wiggleRotation else 0f
-                    scaleX = if (isDragging) 1.02f else 1f
-                    scaleY = if (isDragging) 1.02f else 1f
-                    shadowElevation = if (isDragging) with(density) { 12.dp.toPx() } else 0f
-                }
-                .then(dragModifier),
-        ) {
-            spec.content(Modifier.fillMaxSize())
-            if (isEditingWidgets) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(24.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                            shape = CircleShape,
-                        )
-                        .clickable(
-                            onClickLabel = stringResource(R.string.cd_remove_widget),
-                            onClick = onRemove,
-                        ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(15.dp),
+        spec.content(Modifier.fillMaxSize())
+        if (isEditingWidgets) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                        shape = CircleShape,
                     )
-                }
+                    .clickable(
+                        onClickLabel = stringResource(R.string.cd_remove_widget),
+                        onClick = onRemove,
+                    ),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(15.dp),
+                )
             }
         }
     }
@@ -631,23 +591,6 @@ internal fun ManualEntryMetricTile(
             )
         }
     }
-}
-
-private fun closestManualEntryWidgetId(
-    draggedId: ManualEntryWidgetId,
-    dragOffset: Offset,
-    widgetBounds: Map<ManualEntryWidgetId, Rect>,
-): ManualEntryWidgetId? {
-    val draggedBounds = widgetBounds[draggedId] ?: return null
-    val dropCenter = draggedBounds.center + dragOffset
-
-    return widgetBounds.keys
-        .filter { it != draggedId }
-        .minByOrNull { widgetId ->
-            val center = widgetBounds.getValue(widgetId).center
-            val delta = dropCenter - center
-            delta.x * delta.x + delta.y * delta.y
-        }
 }
 
 internal data class ManualEntryWidgetSpec(

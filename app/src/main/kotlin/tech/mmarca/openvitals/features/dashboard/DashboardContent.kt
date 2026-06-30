@@ -9,15 +9,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -86,27 +83,7 @@ internal fun DashboardContent(
             emptyList()
         }
     }
-    val widgetBounds = remember { mutableStateMapOf<DashboardWidgetId, Rect>() }
-    var draggingWidgetId by remember { mutableStateOf<DashboardWidgetId?>(null) }
     var activityPendingDelete by remember { mutableStateOf<ExerciseData?>(null) }
-
-    LaunchedEffect(visibleIds) {
-        val visibleSet = visibleIds.toSet()
-        widgetBounds.keys.toList().forEach { widgetId ->
-            if (widgetId !in visibleSet) {
-                widgetBounds.remove(widgetId)
-            }
-        }
-        if (draggingWidgetId !in visibleSet) {
-            draggingWidgetId = null
-        }
-    }
-
-    LaunchedEffect(isEditingDashboard) {
-        if (!isEditingDashboard) {
-            draggingWidgetId = null
-        }
-    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -168,9 +145,6 @@ internal fun DashboardContent(
                     visibleIds = visibleIds,
                     specsById = specsById,
                     isEditingDashboard = isEditingDashboard,
-                    draggingWidgetId = draggingWidgetId,
-                    widgetBounds = widgetBounds,
-                    onDraggingWidgetChanged = { widgetId -> draggingWidgetId = widgetId },
                     onMoveWidgetToTarget = onMoveWidgetToTarget,
                     onRemoveWidget = onRemoveWidget,
                     visibleWidgetLoadToken = visibleWidgetLoadToken,

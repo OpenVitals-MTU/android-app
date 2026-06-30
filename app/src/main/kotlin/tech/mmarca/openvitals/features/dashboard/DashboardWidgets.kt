@@ -9,11 +9,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,8 +27,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Accessible
@@ -62,20 +62,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
+import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -83,25 +77,20 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import kotlinx.coroutines.delay
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyStaggeredGridState
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -196,58 +185,87 @@ internal fun DashboardWidgetGrid(
     ids: List<DashboardWidgetId>,
     rows: Int,
     specsById: Map<DashboardWidgetId, DashboardWidgetSpec>,
-    dropTargetIdsProvider: (DashboardWidgetId, Offset) -> List<DashboardWidgetId>,
     isEditingDashboard: Boolean,
-    draggingWidgetId: DashboardWidgetId?,
-    draggedWidgetStartBounds: Rect?,
     widgetBounds: MutableMap<DashboardWidgetId, Rect>,
     onDraggingWidgetChanged: (DashboardWidgetId?) -> Unit,
-    onDragOffsetChanged: (Offset) -> Unit,
+    onDraggingWidgetBoundsChanged: (DashboardWidgetId, Rect) -> Unit,
+    onDropWidget: (DashboardWidgetId) -> Unit,
     onMoveWidgetToTarget: (DashboardWidgetId, DashboardWidgetId) -> Unit,
     onRemoveWidget: (DashboardWidgetId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val placements = remember(ids, rows) {
-        dashboardGridPlacements(
-            ids = ids,
-            rows = rows,
-        )
+    val visibleSpecs = remember(ids, specsById) { ids.mapNotNull { specsById[it] } }
+    if (visibleSpecs.isEmpty()) return
+
+    val lazyGridState = rememberLazyStaggeredGridState()
+    val reorderableState = rememberReorderableLazyStaggeredGridState(lazyGridState) { from, to ->
+        val fromId = from.key as? DashboardWidgetId
+        val toId = to.key as? DashboardWidgetId
+        if (fromId != null && toId != null && fromId != toId) {
+            onMoveWidgetToTarget(fromId, toId)
+        }
     }
+    val gridHeight = DashboardCompactWidgetHeight * rows +
+        DashboardWidgetGridSpacing * (rows - 1).coerceAtLeast(0)
 
-    if (placements.isEmpty()) return
-
-    Layout(
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(DashboardWidgetGridColumns),
+        state = lazyGridState,
+        userScrollEnabled = false,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = DashboardWidgetHorizontalPadding, vertical = DashboardWidgetSectionPadding)
+            .height(gridHeight)
             .animateContentSize(),
-        content = {
-            placements.forEach { placement ->
-                val spec = specsById[placement.id] ?: return@forEach
-                val visibleIndex = ids.indexOf(spec.id)
-                val previousId = ids.getOrNull(visibleIndex - 1)
-                val nextId = ids.getOrNull(visibleIndex + 1)
-                key(spec.id) {
+        horizontalArrangement = Arrangement.spacedBy(DashboardWidgetGridSpacing),
+        verticalItemSpacing = DashboardWidgetGridSpacing,
+    ) {
+        itemsIndexed(
+            items = visibleSpecs,
+            key = { _, spec -> spec.id },
+        ) { _, spec ->
+            val visibleIndex = ids.indexOf(spec.id)
+            val previousId = ids.getOrNull(visibleIndex - 1)
+            val nextId = ids.getOrNull(visibleIndex + 1)
+            val rowSpan = spec.id.dashboardWidgetRowSpan().coerceIn(1, rows)
+            ReorderableItem(
+                state = reorderableState,
+                key = spec.id,
+                enabled = isEditingDashboard,
+            ) { isDragging ->
+                if (isDragging) {
+                    DisposableEffect(spec.id) {
+                        onDraggingWidgetChanged(spec.id)
+                        onDispose { onDraggingWidgetChanged(null) }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .height(
+                            DashboardCompactWidgetHeight * rowSpan +
+                                DashboardWidgetGridSpacing * (rowSpan - 1).coerceAtLeast(0)
+                        )
+                        .onGloballyPositioned { coordinates ->
+                            val bounds = coordinates.boundsInRoot()
+                            widgetBounds[spec.id] = bounds
+                            if (isDragging) {
+                                onDraggingWidgetBoundsChanged(spec.id, bounds)
+                            }
+                        },
+                ) {
                     DashboardWidgetTile(
                         spec = spec,
                         specsById = specsById,
                         isEditingDashboard = isEditingDashboard,
-                        onPositioned = { bounds -> widgetBounds[spec.id] = bounds },
-                        onDraggingChanged = { isDragging ->
-                            onDraggingWidgetChanged(if (isDragging) spec.id else null)
-                        },
-                        onDragOffsetChanged = onDragOffsetChanged,
-                        onDrop = { dragOffset ->
-                            closestDashboardWidgetId(
-                                draggedId = spec.id,
-                                dragOffset = dragOffset,
-                                draggedBounds = draggedWidgetStartBounds,
-                                targetIds = dropTargetIdsProvider(spec.id, dragOffset),
-                                widgetBounds = widgetBounds,
-                            )?.let { targetId ->
-                                onMoveWidgetToTarget(spec.id, targetId)
-                            }
-                        },
+                        isDragging = isDragging,
+                        dragHandleModifier = Modifier.longPressDraggableHandle(
+                            enabled = isEditingDashboard,
+                            onDragStarted = { onDraggingWidgetChanged(spec.id) },
+                            onDragStopped = {
+                                onDropWidget(spec.id)
+                                onDraggingWidgetChanged(null)
+                            },
+                        ),
                         onRemove = { onRemoveWidget(spec.id) },
                         onMovePrevious = previousId?.let { targetId ->
                             { onMoveWidgetToTarget(spec.id, targetId) }
@@ -259,58 +277,6 @@ internal fun DashboardWidgetGrid(
                     )
                 }
             }
-        },
-    ) { measurables, constraints ->
-        val spacingPx = DashboardWidgetGridSpacing.roundToPx()
-        val cellHeightPx = DashboardCompactWidgetHeight.roundToPx()
-        val layoutWidth = constraints.maxWidth
-        val cellWidth = (
-            (layoutWidth - spacingPx * (DashboardWidgetGridColumns - 1)) / DashboardWidgetGridColumns
-            ).coerceAtLeast(0)
-        val layoutHeight = cellHeightPx * rows + spacingPx * (rows - 1)
-        val placeables = measurables.mapIndexed { index, measurable ->
-            val rowSpan = placements[index].rowSpan
-            val widgetHeight = cellHeightPx * rowSpan + spacingPx * (rowSpan - 1)
-            measurable.measure(Constraints.fixed(cellWidth, widgetHeight))
-        }
-
-        layout(layoutWidth, layoutHeight) {
-            placeables.forEachIndexed { index, placeable ->
-                val placement = placements[index]
-                val x = placement.column * (cellWidth + spacingPx)
-                val y = placement.row * (cellHeightPx + spacingPx)
-                placeable.placeRelative(x, y)
-            }
-        }
-    }
-}
-
-internal data class DashboardGridPlacement(
-    val id: DashboardWidgetId,
-    val row: Int,
-    val column: Int,
-    val rowSpan: Int,
-)
-
-internal fun dashboardGridPlacements(
-    ids: List<DashboardWidgetId>,
-    rows: Int,
-): List<DashboardGridPlacement> {
-    val usedRows = IntArray(DashboardWidgetGridColumns)
-    return buildList {
-        ids.forEach { widgetId ->
-            val rowSpan = widgetId.dashboardWidgetRowSpan().coerceIn(1, rows)
-            val column = usedRows.indices.firstOrNull { usedRows[it] + rowSpan <= rows } ?: return@forEach
-            val row = usedRows[column]
-            usedRows[column] += rowSpan
-            add(
-                DashboardGridPlacement(
-                    id = widgetId,
-                    row = row,
-                    column = column,
-                    rowSpan = rowSpan,
-                )
-            )
         }
     }
 }
@@ -352,17 +318,13 @@ internal fun DashboardWidgetTile(
     spec: DashboardWidgetSpec,
     specsById: Map<DashboardWidgetId, DashboardWidgetSpec>,
     isEditingDashboard: Boolean,
-    onPositioned: (Rect) -> Unit,
-    onDraggingChanged: (Boolean) -> Unit,
-    onDragOffsetChanged: (Offset) -> Unit,
-    onDrop: (Offset) -> Unit,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier,
     onRemove: () -> Unit,
     onMovePrevious: (() -> Unit)?,
     onMoveNext: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    var dragOffset by remember(spec.id, isEditingDashboard) { mutableStateOf(Offset.Zero) }
-    var isDragging by remember(spec.id, isEditingDashboard) { mutableStateOf(false) }
     val wiggleRotation = if (isEditingDashboard) {
         val wiggleTransition = rememberInfiniteTransition(label = "DashboardWidgetWiggle")
         val rotation by wiggleTransition.animateFloat(
@@ -381,45 +343,6 @@ internal fun DashboardWidgetTile(
         rotation
     } else {
         0f
-    }
-    val viewConfiguration = LocalViewConfiguration.current
-    val dragViewConfiguration = remember(viewConfiguration) {
-        object : ViewConfiguration by viewConfiguration {
-            override val longPressTimeoutMillis: Long = DashboardDragLongPressMillis
-        }
-    }
-    val dragModifier = if (isEditingDashboard) {
-        Modifier.pointerInput(spec.id) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = {
-                    isDragging = true
-                    onDraggingChanged(true)
-                    dragOffset = Offset.Zero
-                    onDragOffsetChanged(Offset.Zero)
-                },
-                onDragCancel = {
-                    isDragging = false
-                    onDraggingChanged(false)
-                    dragOffset = Offset.Zero
-                    onDragOffsetChanged(Offset.Zero)
-                },
-                onDragEnd = {
-                    val droppedOffset = dragOffset
-                    onDrop(droppedOffset)
-                    isDragging = false
-                    onDraggingChanged(false)
-                    dragOffset = Offset.Zero
-                    onDragOffsetChanged(Offset.Zero)
-                },
-                onDrag = { change, dragAmount ->
-                    change.consume()
-                    dragOffset += dragAmount
-                    onDragOffsetChanged(dragOffset)
-                },
-            )
-        }
-    } else {
-        Modifier
     }
     val removeWidgetLabel = stringResource(R.string.cd_remove_widget)
     val movePreviousLabel = stringResource(R.string.cd_move_widget_up)
@@ -456,121 +379,52 @@ internal fun DashboardWidgetTile(
         Modifier
     }
 
-    CompositionLocalProvider(
-        LocalViewConfiguration provides if (isEditingDashboard) dragViewConfiguration else viewConfiguration,
-    ) {
-        Box(
-            modifier = modifier
-                .onGloballyPositioned { coordinates -> onPositioned(coordinates.boundsInRoot()) }
-                .zIndex(if (isDragging) 1f else 0f)
-                .graphicsLayer {
-                    alpha = if (isDragging) 0f else 1f
-                    rotationZ = if (isEditingDashboard && !isDragging) wiggleRotation else 0f
-                }
-                .then(editSemanticsModifier)
-                .then(dragModifier),
-        ) {
-            AnimatedContent(
-                targetState = spec.id,
-                modifier = Modifier.fillMaxSize(),
-                label = "DashboardWidgetSwap",
-            ) { widgetId ->
-                val displayedSpec = specsById[widgetId] ?: spec
-                displayedSpec.content(Modifier.fillMaxSize())
-            }
-            if (isEditingDashboard) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(48.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                            shape = CircleShape,
-                        )
-                        .clickable(
-                            onClickLabel = removeWidgetLabel,
-                            onClick = onRemove,
-                        ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun DashboardDraggedWidgetOverlay(
-    draggingWidgetId: DashboardWidgetId?,
-    specsById: Map<DashboardWidgetId, DashboardWidgetSpec>,
-    widgetBounds: Map<DashboardWidgetId, Rect>,
-    draggedWidgetStartBounds: Rect?,
-    sectionBounds: Rect?,
-    dragOffsetState: State<Offset>,
-) {
-    val widgetId = draggingWidgetId ?: return
-    val spec = specsById[widgetId] ?: return
-    val bounds = draggedWidgetStartBounds ?: widgetBounds[widgetId] ?: return
-    val section = sectionBounds ?: return
-    val density = LocalDensity.current
-    val dragOffset by dragOffsetState
-
     Box(
-        modifier = Modifier
-            .width(with(density) { bounds.width.toDp() })
-            .height(with(density) { bounds.height.toDp() })
-            .zIndex(10f)
+        modifier = modifier
+            .zIndex(if (isDragging) 1f else 0f)
             .graphicsLayer {
-                translationX = bounds.left - section.left + dragOffset.x
-                translationY = bounds.top - section.top + dragOffset.y
-                scaleX = 1.02f
-                scaleY = 1.02f
-                shadowElevation = with(density) { 12.dp.toPx() }
-            },
+                rotationZ = if (isEditingDashboard && !isDragging) wiggleRotation else 0f
+                scaleX = if (isDragging) 1.02f else 1f
+                scaleY = if (isDragging) 1.02f else 1f
+                shadowElevation = if (isDragging) 12.dp.toPx() else 0f
+            }
+            .then(editSemanticsModifier)
+            .then(dragHandleModifier),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = MaterialTheme.shapes.medium,
+        AnimatedContent(
+            targetState = spec.id,
+            modifier = Modifier.fillMaxSize(),
+            label = "DashboardWidgetSwap",
+        ) { widgetId ->
+            val displayedSpec = specsById[widgetId] ?: spec
+            displayedSpec.content(Modifier.fillMaxSize())
+        }
+        if (isEditingDashboard) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(48.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                        shape = CircleShape,
+                    )
+                    .clickable(
+                        onClickLabel = removeWidgetLabel,
+                        onClick = onRemove,
+                    ),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp),
                 )
-        ) {
-            spec.content(Modifier.fillMaxSize())
+            }
         }
     }
 }
-
-internal fun closestDashboardWidgetId(
-    draggedId: DashboardWidgetId,
-    dragOffset: Offset,
-    draggedBounds: Rect?,
-    targetIds: List<DashboardWidgetId>,
-    widgetBounds: Map<DashboardWidgetId, Rect>,
-): DashboardWidgetId? {
-    val draggedBounds = draggedBounds ?: widgetBounds[draggedId] ?: return null
-    val dropCenter = draggedBounds.center + dragOffset
-
-    return targetIds
-        .filter { it in widgetBounds }
-        .minByOrNull { widgetId ->
-            val center = widgetBounds.getValue(widgetId).center
-            val delta = dropCenter - center
-            delta.x * delta.x + delta.y * delta.y
-        }
-}
-
-internal fun Rect.containsPoint(point: Offset): Boolean =
-    point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
-
 
 @Composable
 internal fun DashboardMetricStatWidget(
