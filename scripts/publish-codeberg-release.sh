@@ -54,6 +54,16 @@ release_response="$tmp_dir/codeberg-release-${release_tag}.json"
 release_payload="$tmp_dir/codeberg-release-${release_tag}-payload.json"
 release_title="$(sed -n '1p' "$title_file")"
 
+print_response_body() {
+    response_file="$1"
+    if [ -s "$response_file" ]; then
+        echo "Response body:" >&2
+        sed -n '1,200p' "$response_file" >&2 || true
+    else
+        echo "Response body was empty." >&2
+    fi
+}
+
 http_status="$(
     curl -sS -w '%{http_code}' -o "$release_response" \
         -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
@@ -100,7 +110,7 @@ case "$http_status" in
         ;;
     *)
         echo "Failed to inspect Codeberg release $release_tag: HTTP $http_status" >&2
-        sed -n '1,120p' "$release_response" >&2 || true
+        print_response_body "$release_response"
         exit 1
         ;;
 esac
@@ -126,10 +136,21 @@ $asset_ids
 EOF
     fi
 
-    curl -fsS -X POST \
-        -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
-        -F "attachment=@${asset_path}" \
-        "$api_base/releases/$release_id/assets?name=$asset_name" >/dev/null
+    asset_response="$tmp_dir/codeberg-release-${release_tag}-asset-${asset_name}.response"
+    asset_status="$(
+        curl -sS -w '%{http_code}' -o "$asset_response" -X POST \
+            -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
+            -F "attachment=@${asset_path}" \
+            "$api_base/releases/$release_id/assets?name=$asset_name" || true
+    )"
+    case "$asset_status" in
+        2??) ;;
+        *)
+            echo "Failed to upload release asset $asset_name: HTTP $asset_status" >&2
+            print_response_body "$asset_response"
+            exit 1
+            ;;
+    esac
 done
 
 echo "Published $release_tag with $(($#)) asset(s)."
