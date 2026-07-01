@@ -28,6 +28,7 @@ steps:
             prerelease="true"
             build_aab="true"
             play_track="beta"
+            minify_debug_for_ci="false"
             version_name="$$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
             version_core="$${version_name%%-*}"
             if ! printf '%s\n' "$${version_core}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -72,6 +73,7 @@ steps:
             play_track=""
             nightly_version_code=""
             nightly_version_name_suffix=""
+            minify_debug_for_ci="false"
             ;;
           manual)
             release_channel="debug"
@@ -88,6 +90,7 @@ steps:
             play_track=""
             nightly_version_code=""
             nightly_version_name_suffix=""
+            minify_debug_for_ci="true"
             ;;
           *)
             echo "Unsupported release event: $${CI_PIPELINE_EVENT}" >&2
@@ -145,6 +148,7 @@ steps:
           printf 'OPENVITALS_PLAY_TRACK=%s\n' "$${play_track}"
           printf 'OPENVITALS_NIGHTLY_VERSION_CODE=%s\n' "$${nightly_version_code}"
           printf 'OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX=%s\n' "$${nightly_version_name_suffix}"
+          printf 'OPENVITALS_MINIFY_DEBUG_FOR_CI=%s\n' "$${minify_debug_for_ci}"
         } > .woodpecker/tmp/release-context.env
 
   - name: test
@@ -197,6 +201,7 @@ steps:
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
+      - export OPENVITALS_MINIFY_DEBUG_FOR_CI
       - if [ -n "$${OPENVITALS_NIGHTLY_VERSION_CODE:-}" ]; then export OPENVITALS_NIGHTLY_VERSION_CODE; fi
       - if [ -n "$${OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX:-}" ]; then export OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX; fi
       - test -f gradle/wrapper/gradle-wrapper.jar

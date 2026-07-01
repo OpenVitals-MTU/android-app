@@ -30,6 +30,7 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
+val minifyDebugForCi = System.getenv("OPENVITALS_MINIFY_DEBUG_FOR_CI") == "true"
 val nightlyVersionCode = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_CODE")
     .map { it.toInt() }
 val nightlyVersionNameSuffix = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX")
@@ -66,6 +67,13 @@ android {
             if (signDebugWithReleaseKey && hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            if (minifyDebugForCi) {
+                isMinifyEnabled = true
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
+            }
         }
 
         release {
@@ -99,6 +107,12 @@ android {
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     lint {
