@@ -258,7 +258,7 @@ steps:
         from_secret: CODEBERG_RELEASE_API_KEY
     commands:
       - set -eu
-      - apk add --no-cache curl jq
+      - apk add --no-cache bash curl jq
       - . .woodpecker/tmp/release-context.env
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/publish-codeberg-release.sh
