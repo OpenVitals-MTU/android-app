@@ -13,6 +13,7 @@ steps:
       - apk add --no-cache git
       - git fetch --tags --force origin
       - mkdir -p .woodpecker/tmp
+      - apk_abi_filters="armeabi-v7a,arm64-v8a"
       - |
         case "$${CI_PIPELINE_EVENT}" in
           cron)
@@ -28,7 +29,6 @@ steps:
             prerelease="true"
             build_aab="true"
             play_track="beta"
-            minify_debug_for_ci="false"
             version_name="$$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
             version_core="$${version_name%%-*}"
             if ! printf '%s\n' "$${version_core}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -73,14 +73,13 @@ steps:
             play_track=""
             nightly_version_code=""
             nightly_version_name_suffix=""
-            minify_debug_for_ci="false"
             ;;
           manual)
             release_channel="diagnostics"
             release_tag="diagnostics"
-            gradle_task=":app:assembleDebug"
+            gradle_task=":app:assembleDiagnostics"
             bundle_task=""
-            apk_variant_dir="debug"
+            apk_variant_dir="diagnostics"
             apk_basename="OpenVitals-diagnostics.apk"
             aab_variant_dir=""
             aab_basename=""
@@ -90,7 +89,6 @@ steps:
             play_track=""
             nightly_version_code=""
             nightly_version_name_suffix=""
-            minify_debug_for_ci="true"
             ;;
           *)
             echo "Unsupported release event: $${CI_PIPELINE_EVENT}" >&2
@@ -115,7 +113,7 @@ steps:
               "Release build from commit $${CI_COMMIT_SHA}." \
               "" \
               "Assets:" \
-              "- Signed release APK" \
+              "- Signed release APK ($${apk_abi_filters})" \
               "- SHA-256 checksum" \
               > "$${notes_file}"
           fi
@@ -128,7 +126,7 @@ steps:
             "This release keeps a stable download page. The APK and checksum assets are replaced by the next $${release_channel} build." \
             "" \
             "Assets:" \
-            "- Signed $${release_channel} APK" \
+            "- Signed $${release_channel} APK ($${apk_abi_filters})" \
             "- SHA-256 checksum" \
             > "$${notes_file}"
         fi
@@ -142,13 +140,13 @@ steps:
           printf 'OPENVITALS_APK_BASENAME=%s\n' "$${apk_basename}"
           printf 'OPENVITALS_AAB_VARIANT_DIR=%s\n' "$${aab_variant_dir}"
           printf 'OPENVITALS_AAB_BASENAME=%s\n' "$${aab_basename}"
+          printf 'OPENVITALS_APK_ABI_FILTERS=%s\n' "$${apk_abi_filters}"
           printf 'OPENVITALS_RELEASE_PRERELEASE=%s\n' "$${prerelease}"
           printf 'OPENVITALS_RELEASE_TARGET=%s\n' "$${CI_COMMIT_SHA}"
           printf 'OPENVITALS_BUILD_AAB=%s\n' "$${build_aab}"
           printf 'OPENVITALS_PLAY_TRACK=%s\n' "$${play_track}"
           printf 'OPENVITALS_NIGHTLY_VERSION_CODE=%s\n' "$${nightly_version_code}"
           printf 'OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX=%s\n' "$${nightly_version_name_suffix}"
-          printf 'OPENVITALS_MINIFY_DEBUG_FOR_CI=%s\n' "$${minify_debug_for_ci}"
         } > .woodpecker/tmp/release-context.env
 
   - name: test
@@ -200,29 +198,25 @@ steps:
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
-      - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
-      - export OPENVITALS_MINIFY_DEBUG_FOR_CI
       - if [ -n "$${OPENVITALS_NIGHTLY_VERSION_CODE:-}" ]; then export OPENVITALS_NIGHTLY_VERSION_CODE; fi
       - if [ -n "$${OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX:-}" ]; then export OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX; fi
+      - test -n "$${OPENVITALS_APK_ABI_FILTERS}"
       - test -f gradle/wrapper/gradle-wrapper.jar
       - chmod +x gradlew scripts/ci-gradle.sh
       - |
         if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          scripts/ci-gradle.sh --stacktrace "$${OPENVITALS_GRADLE_TASK}" "$${OPENVITALS_BUNDLE_TASK}"
-        else
-          scripts/ci-gradle.sh --stacktrace "$${OPENVITALS_GRADLE_TASK}"
+          scripts/ci-gradle.sh --stacktrace "$${OPENVITALS_BUNDLE_TASK}"
+          aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
+          test -n "$${aab_path}"
+          cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
         fi
+        env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" \
+          scripts/ci-gradle.sh --stacktrace "$${OPENVITALS_GRADLE_TASK}"
       - apk_path="$$(find "app/build/outputs/apk/$${OPENVITALS_APK_VARIANT_DIR}" -maxdepth 1 -name '*.apk' | head -n 1)"
       - test -n "$${apk_path}"
       - artifact_path=".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"
       - cp "$${apk_path}" "$${artifact_path}"
       - (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_APK_BASENAME}" > "$${OPENVITALS_APK_BASENAME}.sha256")
-      - |
-        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
-          test -n "$${aab_path}"
-          cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
-        fi
 
   - name: publish-play-open-testing
     depends_on:

@@ -29,8 +29,12 @@ val hasReleaseSigning = listOf(
     effectiveReleaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 
-val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
-val minifyDebugForCi = System.getenv("OPENVITALS_MINIFY_DEBUG_FOR_CI") == "true"
+val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
+    ?.split(',')
+    ?.map { it.trim() }
+    ?.filter { it.isNotEmpty() }
+    ?.toSet()
+    ?: emptySet()
 val nightlyVersionCode = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_CODE")
     .map { it.toInt() }
 val nightlyVersionNameSuffix = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX")
@@ -48,6 +52,11 @@ android {
         versionCode = 17003
         versionName = "1.7.3"
         buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "false")
+        if (apkAbiFilters.isNotEmpty()) {
+            ndk {
+                abiFilters.addAll(apkAbiFilters)
+            }
+        }
     }
 
     signingConfigs {
@@ -65,18 +74,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            if (signDebugWithReleaseKey && hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
-            }
             buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
-            if (minifyDebugForCi) {
-                isDebuggable = false
-                isMinifyEnabled = true
-                proguardFiles(
-                    getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro"
-                )
-            }
         }
 
         release {
@@ -88,6 +86,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        create("diagnostics") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
+            matchingFallbacks += listOf("release")
         }
 
         create("nightly") {
