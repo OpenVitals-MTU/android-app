@@ -29,7 +29,9 @@ import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportErro
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,6 +110,7 @@ class SettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private var currentAppleHealthImportWorkId: UUID? = null
 
     init {
         refresh()
@@ -160,8 +163,11 @@ class SettingsViewModel @Inject constructor(
             )
 
             runCatching { appleHealthImportWorkController.enqueue(uri) }
+                .onSuccess { workId ->
+                    currentAppleHealthImportWorkId = workId
+                }
                 .onFailure { error ->
-                    Log.e(TAG, "Apple Health import enqueue failed", error)
+                    Log.e(AppleHealthImportWorker.LogTag, "Apple Health import enqueue failed", error)
                     _uiState.value = _uiState.value.copy(
                         isImportingAppleHealth = false,
                         appleHealthImportProgress = null,
@@ -211,7 +217,11 @@ class SettingsViewModel @Inject constructor(
     private fun observeAppleHealthImportWork() {
         viewModelScope.launch {
             appleHealthImportWorkController.workInfos.collect { workInfos ->
-                val workInfo = workInfos.firstOrNull() ?: return@collect
+                val workInfo = workInfos.currentAppleHealthImportWork(currentAppleHealthImportWorkId)
+                    ?: return@collect
+                if (!workInfo.state.isFinished) {
+                    currentAppleHealthImportWorkId = workInfo.id
+                }
                 when (workInfo.state) {
                     WorkInfo.State.ENQUEUED,
                     WorkInfo.State.BLOCKED,
@@ -242,7 +252,10 @@ class SettingsViewModel @Inject constructor(
                     WorkInfo.State.FAILED -> {
                         val error = appleHealthImportWorkController.errorFor(workInfo)
                             ?: "Apple Health import failed."
-                        Log.e(TAG, "Apple Health import failed")
+                        Log.e(
+                            AppleHealthImportWorker.LogTag,
+                            "Apple Health import failed workId=${workInfo.id}\n$error",
+                        )
                         _uiState.value = _uiState.value.copy(
                             isImportingAppleHealth = false,
                             appleHealthImportProgress = null,
@@ -481,4 +494,11 @@ class SettingsViewModel @Inject constructor(
             ),
         ).filter { it.permissions.isNotEmpty() }
     }
+}
+
+internal fun List<WorkInfo>.currentAppleHealthImportWork(currentWorkId: UUID?): WorkInfo? {
+    if (currentWorkId != null) {
+        firstOrNull { workInfo -> workInfo.id == currentWorkId }?.let { return it }
+    }
+    return firstOrNull { workInfo -> !workInfo.state.isFinished }
 }

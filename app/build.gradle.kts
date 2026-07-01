@@ -90,6 +90,10 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+
+    lint {
+        disable += "LogNotTimber"
+    }
 }
 
 dependencies {

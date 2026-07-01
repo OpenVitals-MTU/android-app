@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 @Singleton
 class AppleHealthImportWorkController @Inject constructor(
@@ -21,7 +22,7 @@ class AppleHealthImportWorkController @Inject constructor(
     val workInfos: Flow<List<WorkInfo>> =
         workManager.getWorkInfosForUniqueWorkFlow(AppleHealthImportWorker.UniqueWorkName)
 
-    fun enqueue(uri: Uri) {
+    fun enqueue(uri: Uri): UUID {
         persistReadPermission(uri)
         val request = OneTimeWorkRequestBuilder<AppleHealthImportWorker>()
             .setInputData(AppleHealthImportWorker.inputData(uri))
@@ -31,6 +32,7 @@ class AppleHealthImportWorkController @Inject constructor(
             ExistingWorkPolicy.KEEP,
             request,
         )
+        return request.id
     }
 
     fun progressFor(workInfo: WorkInfo): AppleHealthImportProgress? =

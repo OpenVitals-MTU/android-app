@@ -1,7 +1,10 @@
 package tech.mmarca.openvitals.features.settings
 
+import android.net.Uri
 import android.util.Log
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.work.Data
+import androidx.work.WorkInfo
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -11,11 +14,14 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -34,9 +40,12 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
+import java.util.UUID
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 
     @get:Rule
@@ -46,6 +55,8 @@ class SettingsViewModelTest {
     fun setUp() {
         mockkStatic(Log::class)
         every { Log.d(any(), any()) } returns 0
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
     }
 
     @After
@@ -216,6 +227,56 @@ class SettingsViewModelTest {
         coVerify(exactly = 0) { repository.grantedPermissions() }
     }
 
+    @Test fun `apple import observer ignores stale finished failures without current work`() = runTest {
+        val staleFailure = workInfo(state = WorkInfo.State.FAILED)
+        val importController = importController(
+            workInfos = MutableStateFlow(listOf(staleFailure)),
+        )
+
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs(),
+            appleHealthImportWorkController = importController,
+            permissionUxState = permissionUxState(),
+        )
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.appleHealthImportError)
+        verify(exactly = 0) { importController.errorFor(staleFailure) }
+    }
+
+    @Test fun `apple import observer uses current import work over older failures`() = runTest {
+        val workInfos = MutableStateFlow<List<WorkInfo>>(emptyList())
+        val staleFailure = workInfo(state = WorkInfo.State.FAILED)
+        val currentWorkId = UUID.randomUUID()
+        val currentFailure = workInfo(id = currentWorkId, state = WorkInfo.State.FAILED)
+        val importController = importController(workInfos = workInfos)
+        val uri = mockk<Uri>()
+        every { importController.enqueue(uri) } returns currentWorkId
+        every { importController.errorFor(currentFailure) } returns "current failure"
+
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs(),
+            appleHealthImportWorkController = importController,
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.importAppleHealthExport(uri)
+        advanceUntilIdle()
+        workInfos.value = listOf(staleFailure, currentFailure)
+        advanceUntilIdle()
+
+        assertEquals("current failure", vm.uiState.value.appleHealthImportError)
+        verify(exactly = 0) { importController.errorFor(staleFailure) }
+        verify {
+            Log.e(
+                AppleHealthImportWorker.LogTag,
+                match { message -> message.contains("current failure") && message.contains(currentWorkId.toString()) },
+            )
+        }
+    }
+
     private fun viewModel(
         repository: HealthRepository = repo(),
         preferencesRepository: PreferencesRepository = prefs(),
@@ -284,9 +345,12 @@ class SettingsViewModelTest {
             every { prefs.setBodyEnergyCalibration(any()) } just runs
         }
 
-    private fun importController(): AppleHealthImportWorkController =
+    private fun importController(
+        workInfos: MutableStateFlow<List<WorkInfo>>? = null,
+    ): AppleHealthImportWorkController =
         mockk<AppleHealthImportWorkController>(relaxed = true).also { controller ->
-            every { controller.workInfos } returns emptyFlow()
+            every { controller.workInfos } returns (workInfos ?: emptyFlow())
+            every { controller.enqueue(any()) } returns UUID.randomUUID()
         }
 
     private fun offlineMapRepository(): OfflineMapRepository =
@@ -297,5 +361,16 @@ class SettingsViewModelTest {
     private fun offlineMapImportController(): OfflineMapImportWorkController =
         mockk<OfflineMapImportWorkController>(relaxed = true).also { controller ->
             every { controller.workInfos } returns emptyFlow()
+        }
+
+    private fun workInfo(
+        id: UUID = UUID.randomUUID(),
+        state: WorkInfo.State,
+    ): WorkInfo =
+        mockk<WorkInfo>().also { workInfo ->
+            every { workInfo.id } returns id
+            every { workInfo.state } returns state
+            every { workInfo.outputData } returns Data.EMPTY
+            every { workInfo.progress } returns Data.EMPTY
         }
 }

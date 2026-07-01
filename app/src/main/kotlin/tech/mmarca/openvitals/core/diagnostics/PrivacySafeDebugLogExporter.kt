@@ -16,6 +16,7 @@ data class DebugLogExportResult(
 object PrivacySafeDebugLogExporter {
     private const val MaxLines = 2_000
     private const val Redacted = "[redacted]"
+    private const val UnsanitizedAppleImporterTag = "AppleHealthImporter"
 
     private val logLinePattern = Regex("""^([VDIWEAF])/([A-Za-z0-9_.-]+)\s*:\s*(.*)$""")
     private val macAddressPattern = Regex("""\b[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}\b""")
@@ -31,6 +32,7 @@ object PrivacySafeDebugLogExporter {
     private val keyValueIdPattern = Regex(
         """(?i)\b(clientRecordId|recordId|deviceId|widgetId|token|secret|password|api[_-]?key)=\S+"""
     )
+    private val unsanitizedAppleImporterLevels = setOf("W", "E", "A", "F")
 
     private val dropKeywords = listOf(
         " latitude",
@@ -84,7 +86,10 @@ object PrivacySafeDebugLogExporter {
             writer.appendLine("OpenVitals debug log export")
             writer.appendLine("package=${context.packageName}")
             writer.appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-            writer.appendLine("privacy=only app log tags are included; sensitive lines are dropped or redacted")
+            writer.appendLine(
+                "privacy=only app log tags are included; sensitive lines are dropped or redacted; " +
+                    "AppleHealthImporter W/E/A/F lines are unsanitized",
+            )
             writer.appendLine("writtenLines=${sanitized.writtenLines}")
             writer.appendLine("droppedLines=${sanitized.droppedLines}")
             writer.appendLine()
@@ -118,6 +123,7 @@ object PrivacySafeDebugLogExporter {
         val level = match.groupValues[1]
         val tag = match.groupValues[2]
         val message = match.groupValues[3]
+        if (isUnsanitizedAppleImporterLine(level, tag)) return line.trim()
         if (!isAllowedTag(tag)) return null
         if (message.isBlank()) return null
         if (shouldDrop(message)) return null
@@ -163,6 +169,9 @@ object PrivacySafeDebugLogExporter {
             tag.endsWith("Repository") ||
             tag.endsWith("ViewModel") ||
             tag in explicitAllowedTags
+
+    private fun isUnsanitizedAppleImporterLine(level: String, tag: String): Boolean =
+        tag == UnsanitizedAppleImporterTag && level in unsanitizedAppleImporterLevels
 
     private fun shouldDrop(message: String): Boolean {
         val lower = " ${message.lowercase()} "

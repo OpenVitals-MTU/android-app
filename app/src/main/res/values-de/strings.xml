@@ -1419,4 +1419,35 @@
     <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KML/KMZ/FIT-Aktivitätsrouten, werden in Health Connect geschrieben.</string>
     <string name="privacy_policy_body_2">Diese App lädt deine Gesundheitsdaten nicht in einen Cloud-Dienst hoch, enthält keine Werbung und teilt keine Daten mit Dritten.</string>
     <string name="privacy_policy_body_3">OpenVitals ist kein Medizinprodukt und diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Es ersetzt keine medizinische Beratung, Diagnose oder Behandlung durch qualifiziertes medizinisches Fachpersonal.</string>
+
+    <string name="action_continue">Weiter</string>
+    <string name="settings_body_energy_group_title">Body Energy</string>
+    <string name="settings_body_energy_group_body">Kalibrierung für geschätzte Energie im Tagesverlauf und Belastungszonen.</string>
+    <string name="body_energy_calibration_title">Body-Energy-Schätzungen verbessern</string>
+    <string name="body_energy_calibration_body">OpenVitals schätzt den Verbrauch anhand der Herzfrequenzintensität über die Zeit. Alter, maximale Herzfrequenz, Ruhepuls und Zonen helfen, Belastung genauer einzuordnen.</string>
+    <string name="body_energy_calibration_optional_body">Dies ist optional. Wenn du es überspringst, verwendet OpenVitals automatische Schätzungen aus Health-Connect-Daten und zeigt geringeres Vertrauen, wenn die Kalibrierung unsicher ist. Diese Werte bleiben in den OpenVitals-Einstellungen.</string>
+    <string name="body_energy_calibration_birth_year">Geburtsjahr</string>
+    <string name="body_energy_calibration_max_hr">Maximale Herzfrequenz</string>
+    <string name="body_energy_calibration_resting_hr">Ruhepuls</string>
+    <string name="body_energy_calibration_manual_zones">Manuelle Herzfrequenzzonen</string>
+    <string name="body_energy_calibration_manual_zones_body">Optionale bpm-Untergrenzen für Zonen 1-5.</string>
+    <string name="body_energy_calibration_zone_1">Untere bpm-Grenze für Zone 1</string>
+    <string name="body_energy_calibration_zone_2">Untere bpm-Grenze für Zone 2</string>
+    <string name="body_energy_calibration_zone_3">Untere bpm-Grenze für Zone 3</string>
+    <string name="body_energy_calibration_zone_4">Untere bpm-Grenze für Zone 4</string>
+    <string name="body_energy_calibration_zone_5">Untere bpm-Grenze für Zone 5</string>
+    <string name="body_energy_calibration_use_auto">Automatische Schätzungen verwenden</string>
+    <string name="body_energy_calibration_skip">Vorerst überspringen</string>
+    <string name="body_energy_calibration_saved">Body-Energy-Kalibrierung gespeichert</string>
+    <string name="body_energy_calibration_reset">Body-Energy-Kalibrierung auf automatisch zurückgesetzt</string>
+    <string name="body_energy_timeline_estimated">Von OpenVitals geschätzt</string>
+    <string name="body_energy_timeline_current">Aktuell</string>
+    <string name="body_energy_timeline_start">Start</string>
+    <string name="body_energy_timeline_charged">Aufgeladen</string>
+    <string name="body_energy_timeline_drained">Verbraucht</string>
+    <string name="body_energy_timeline_confidence">Vertrauen</string>
+    <string name="body_energy_timeline_no_data">Keine verwendbare Body-Energy-Zeitleiste für diesen Zeitraum.</string>
+    <string name="body_energy_timeline_day_title">Tagesverlauf</string>
+    <string name="body_energy_timeline_low_confidence">Einige Abschnitte sind geschätzt, weil Kalibrierung oder Health-Connect-Daten unvollständig sind.</string>
+    <string name="metric_body_energy">Body Energy</string>
 </resources>

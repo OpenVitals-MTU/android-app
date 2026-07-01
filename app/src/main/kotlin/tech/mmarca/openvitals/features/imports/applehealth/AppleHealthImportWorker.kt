@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -31,7 +32,10 @@ class AppleHealthImportWorker(
 
     override suspend fun doWork(): Result {
         val uri = inputData.getString(KeyInputUri)?.let(Uri::parse)
-            ?: return Result.failure(errorData("Missing Apple Health export URI."))
+        if (uri == null) {
+            Log.w(LogTag, "Missing Apple Health export URI.")
+            return Result.failure(errorData("Missing Apple Health export URI."))
+        }
         setForeground(foregroundInfo(AppleHealthImportProgress()))
 
         return runCatching {
@@ -67,6 +71,7 @@ class AppleHealthImportWorker(
             setProgress(completeProgress.toData())
             Result.success(result.toOutputData(reportPath))
         }.getOrElse { error ->
+            Log.e(LogTag, "Apple Health import failed", error)
             Result.failure(errorData(applicationContext, error))
         }
     }
@@ -126,6 +131,7 @@ class AppleHealthImportWorker(
     }
 
     companion object {
+        const val LogTag = "AppleHealthImporter"
         const val UniqueWorkName = "apple_health_import"
         const val KeyInputUri = "input_uri"
         const val KeyError = "error"

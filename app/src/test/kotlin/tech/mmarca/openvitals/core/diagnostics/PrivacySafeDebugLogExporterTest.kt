@@ -47,6 +47,15 @@ class PrivacySafeDebugLogExporterTest {
     }
 
     @Test
+    fun `sanitize keeps Apple Health importer warnings and errors unsanitized`() {
+        val error = "E/AppleHealthImporter: failed uri=content://example/export.xml email=user@example.com"
+        val warning = "W/AppleHealthImporter: retrying file:///storage/emulated/0/export.zip"
+
+        assertEquals(error, PrivacySafeDebugLogExporter.sanitizeLogLine(error))
+        assertEquals(warning, PrivacySafeDebugLogExporter.sanitizeLogLine(warning))
+    }
+
+    @Test
     fun `sanitize excludes unrelated tags`() {
         val result = PrivacySafeDebugLogExporter.sanitizeLogcat(
             listOf(
