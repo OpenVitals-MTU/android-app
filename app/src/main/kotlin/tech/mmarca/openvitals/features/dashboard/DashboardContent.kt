@@ -38,6 +38,7 @@ internal fun DashboardContent(
     healthConnectAvailability: HealthConnectAvailability,
     healthConnectSyncEnabled: Boolean,
     dashboardWidgets: List<DashboardWidgetId>,
+    sensorStatus: DashboardSensorStatus,
     isEditingDashboard: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -54,6 +55,7 @@ internal fun DashboardContent(
     onDeleteActivity: (String) -> Unit,
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
+    onOpenDeviceStatus: () -> Unit,
     onToggleDashboardEdit: () -> Unit,
     onHealthConnectPromoAction: () -> Unit,
 ) {
@@ -108,6 +110,19 @@ internal fun DashboardContent(
                         vertical = 4.dp,
                     ),
                 )
+            }
+
+            if (sensorStatus.hasDevices) {
+                item {
+                    DashboardSensorStatusCard(
+                        status = sensorStatus,
+                        onOpenDeviceStatus = onOpenDeviceStatus,
+                        modifier = Modifier.padding(
+                            horizontal = DashboardScreenPadding,
+                            vertical = 4.dp,
+                        ),
+                    )
+                }
             }
 
             if (showHealthConnectPromo) {

@@ -111,6 +111,23 @@ class BleDeviceRepository @Inject constructor(
         updateDevice(deviceId = deviceId, enabled = enabled)
     }
 
+    fun updateBatteryLevel(deviceId: String, batteryPercent: Int) {
+        val percent = batteryPercent.coerceIn(0, 100)
+        val nextDevices = devices.map { device ->
+            if (device.id == deviceId) {
+                device.copy(
+                    batteryPercent = percent,
+                    batteryUpdatedAt = Instant.now(),
+                ).normalized()
+            } else {
+                device
+            }
+        }
+        if (nextDevices != devices) {
+            persist(nextDevices)
+        }
+    }
+
     private fun persist(nextDevices: List<BleSensorDevice>) {
         prefs.edit {
             putString(KEY_DEVICES, nextDevices.encodeDevices())
@@ -141,6 +158,11 @@ class BleDeviceRepository @Inject constructor(
                         .put(
                             "wheelCircumferenceMm",
                             device.wheelCircumferenceMm ?: JSONObject.NULL,
+                        )
+                        .put("batteryPercent", device.batteryPercent ?: JSONObject.NULL)
+                        .put(
+                            "batteryUpdatedAt",
+                            device.batteryUpdatedAt?.toEpochMilli() ?: JSONObject.NULL,
                         )
                         .put("addedAt", device.addedAt.toEpochMilli())
                 },
@@ -173,6 +195,12 @@ class BleDeviceRepository @Inject constructor(
                                     .takeIf { it != JSONObject.NULL }
                                     ?.let { (it as Number).toInt() }
                                     ?.takeIf { it > 0 },
+                                batteryPercent = item.opt("batteryPercent")
+                                    .takeIf { it != null && it != JSONObject.NULL }
+                                    ?.let { (it as Number).toInt() },
+                                batteryUpdatedAt = item.opt("batteryUpdatedAt")
+                                    .takeIf { it != null && it != JSONObject.NULL }
+                                    ?.let { Instant.ofEpochMilli((it as Number).toLong()) },
                                 addedAt = Instant.ofEpochMilli(item.getLong("addedAt")),
                             ).normalized(),
                         )

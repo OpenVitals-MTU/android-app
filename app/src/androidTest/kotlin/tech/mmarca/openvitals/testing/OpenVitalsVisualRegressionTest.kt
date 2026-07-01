@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.preferences.DefaultMetricDetailSectionOrder
 import tech.mmarca.openvitals.features.dashboard.DashboardContent
 import tech.mmarca.openvitals.features.dashboard.DashboardDailyGoals
 import tech.mmarca.openvitals.features.dashboard.DashboardPresentationMapper
+import tech.mmarca.openvitals.features.dashboard.DashboardSensorStatus
 import tech.mmarca.openvitals.features.hydration.HydrationDisplayState
 import tech.mmarca.openvitals.features.hydration.HydrationPeriodSummary
 import tech.mmarca.openvitals.features.hydration.HydrationUiState
@@ -63,6 +64,7 @@ class OpenVitalsVisualRegressionTest {
                     healthConnectAvailability = HealthConnectAvailability.AVAILABLE,
                     healthConnectSyncEnabled = true,
                     dashboardWidgets = dashboardFlowWidgetIds,
+                    sensorStatus = DashboardSensorStatus(),
                     isEditingDashboard = false,
                     onPreviousDay = {},
                     onNextDay = {},
@@ -79,6 +81,7 @@ class OpenVitalsVisualRegressionTest {
                     onDeleteActivity = {},
                     onOpenLog = {},
                     onStartActivity = {},
+                    onOpenDeviceStatus = {},
                     onToggleDashboardEdit = {},
                     onHealthConnectPromoAction = {},
                 )

@@ -5,10 +5,16 @@ import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.model.BleConnectionStatus
+import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
+import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
+import tech.mmarca.openvitals.domain.model.BleSensorCapability
+import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -18,6 +24,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -28,6 +35,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -145,6 +153,59 @@ class DashboardViewModelTest {
         assertEquals(7_200L, state.data?.steps)
         assertNull(state.error)
         coVerify(exactly = 2) { loader.loadDashboard(any<DashboardQuery>()) }
+    }
+
+    @Test fun `sensor status includes saved battery and live connection status`() = runTest {
+        val loader = mockDashboardDataLoader()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+        val devicesFlow = MutableStateFlow(
+            listOf(
+                BleSensorDevice(
+                    id = "hr",
+                    displayName = "Heart strap",
+                    address = "AA:BB:CC:DD:EE:01",
+                    bluetoothName = null,
+                    capabilities = setOf(BleSensorCapability.HEART_RATE),
+                    enabled = true,
+                    wheelCircumferenceMm = null,
+                    batteryPercent = 72,
+                    batteryUpdatedAt = Instant.EPOCH,
+                    addedAt = Instant.EPOCH,
+                ),
+            ),
+        )
+        val metricsFlow = MutableStateFlow(BleRecordingMetrics())
+        val deviceRepository = mockk<BleDeviceRepository>()
+        every { deviceRepository.devicesFlow } returns devicesFlow
+        val sensorCoordinator = mockk<BleSensorCoordinator>()
+        every { sensorCoordinator.metrics } returns metricsFlow
+
+        val vm = dashboardViewModel(
+            loader = loader,
+            prefs = prefs(),
+            bleDeviceRepository = deviceRepository,
+            bleSensorCoordinator = sensorCoordinator,
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.sensorStatus.hasDevices)
+        assertEquals(72, vm.uiState.value.sensorStatus.lowestBatteryPercent)
+        metricsFlow.value = BleRecordingMetrics(
+            deviceStatuses = listOf(
+                BleDeviceConnectionStatus(
+                    deviceId = "hr",
+                    displayName = "Heart strap",
+                    address = "AA:BB:CC:DD:EE:01",
+                    status = BleConnectionStatus.CONNECTED,
+                    capabilities = setOf(BleSensorCapability.HEART_RATE),
+                    batteryPercent = 38,
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(38, vm.uiState.value.sensorStatus.lowestBatteryPercent)
+        assertEquals(1, vm.uiState.value.sensorStatus.connectedCount)
     }
 
     // ─── Date clamping ────────────────────────────────────────────────────────
@@ -725,6 +786,8 @@ class DashboardViewModelTest {
         prefs: PreferencesRepository = prefs(),
         activityRepo: ActivityRepository? = null,
         repo: HealthRepository = mockHealthRepository(),
+        bleDeviceRepository: BleDeviceRepository? = null,
+        bleSensorCoordinator: BleSensorCoordinator? = null,
     ): DashboardViewModel =
         DashboardViewModel(
             loadDashboardDayUseCase = LoadDashboardDayUseCase(loader),
@@ -734,6 +797,8 @@ class DashboardViewModelTest {
             dateTimeFormatterProvider = DateTimeFormatterProvider(),
             dispatchers = mainDispatcherRule.dispatcherProvider,
             activityRepository = activityRepo,
+            bleDeviceRepository = bleDeviceRepository,
+            bleSensorCoordinator = bleSensorCoordinator,
         )
 
     private fun mockDashboardDataLoader(configure: DashboardDataLoader.() -> Unit = {}): DashboardDataLoader =

@@ -68,7 +68,8 @@ internal fun ActivityRecordingSensorStatusCard(
                         onClick = {},
                         enabled = false,
                         label = {
-                            Text(text = "${status.displayName} · ${statusLabel(status.status)}")
+                            val battery = status.batteryPercent?.let { " · $it%" }.orEmpty()
+                            Text(text = "${status.displayName} · ${statusLabel(status.status)}$battery")
                         },
                         leadingIcon = {
                             Icon(

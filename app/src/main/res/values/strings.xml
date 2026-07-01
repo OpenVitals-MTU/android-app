@@ -6,6 +6,7 @@
     <string name="cd_settings">Settings</string>
     <string name="cd_achievements">Achievements</string>
     <string name="cd_daily_readiness">Daily Readiness</string>
+    <string name="cd_sensor_battery_status">Sensor battery status</string>
     <string name="cd_edit_dashboard">Edit summary</string>
     <string name="cd_finish_dashboard_editing">Finish editing summary</string>
     <string name="cd_edit_manual_entry_widgets">Edit add entry widgets</string>
@@ -856,6 +857,11 @@
     <string name="dashboard_all_widgets_added">All widgets are already on the summary.</string>
     <string name="dashboard_action_log">Log</string>
     <string name="dashboard_activities_today">Activities</string>
+    <string name="dashboard_sensor_status_title">Sensor battery</string>
+    <string name="dashboard_sensor_battery_lowest">%1$d%% lowest</string>
+    <string name="dashboard_sensor_battery_unknown">Battery pending</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d active &#8226; %2$d connected</string>
+    <string name="dashboard_sensor_status_all_disabled">All sensors disabled</string>
     <string name="dashboard_delete_activity_title">Delete activity?</string>
     <string name="dashboard_delete_activity_message">Delete this %1$s activity from OpenVitals?</string>
     <string name="dashboard_readiness_title">Daily Readiness</string>
@@ -1005,6 +1011,8 @@
     <string name="settings_sensors_remove_device">Remove sensor</string>
     <string name="settings_sensors_device_name">Device name</string>
     <string name="settings_sensors_enabled">Enabled</string>
+    <string name="settings_sensors_battery_percent">Battery %1$d%%</string>
+    <string name="settings_sensors_battery_unknown">Battery pending</string>
     <string name="settings_sensors_scanning">Scanning for nearby sensors…</string>
     <string name="settings_sensors_scan_stopped">Scan stopped</string>
     <string name="settings_sensors_scan_empty">No sensors found yet. Make sure your sensor is awake and close to your phone.</string>

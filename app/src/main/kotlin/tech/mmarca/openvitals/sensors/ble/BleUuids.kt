@@ -11,6 +11,12 @@ internal object BleUuids {
     val CLIENT_CHARACTERISTIC_CONFIG: UUID =
         UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
+    val BATTERY_SERVICE: UUID =
+        UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
+
+    val BATTERY_LEVEL: UUID =
+        UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
+
     val HEART_RATE = BleServiceMeasurementUuid(
         serviceUuid = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb"),
         measurementUuid = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb"),

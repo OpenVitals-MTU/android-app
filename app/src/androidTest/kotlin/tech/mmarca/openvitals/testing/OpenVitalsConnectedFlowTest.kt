@@ -40,6 +40,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.dashboard.DashboardContent
 import tech.mmarca.openvitals.features.dashboard.DashboardDailyGoals
 import tech.mmarca.openvitals.features.dashboard.DashboardPresentationMapper
+import tech.mmarca.openvitals.features.dashboard.DashboardSensorStatus
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.manualentry.ManualEntryWidgetGrid
 import tech.mmarca.openvitals.features.manualentry.ManualEntryWidgetId
@@ -87,6 +88,7 @@ class OpenVitalsConnectedFlowTest {
                     healthConnectAvailability = HealthConnectAvailability.AVAILABLE,
                     healthConnectSyncEnabled = true,
                     dashboardWidgets = dashboardFlowWidgetIds,
+                    sensorStatus = DashboardSensorStatus(),
                     isEditingDashboard = false,
                     onPreviousDay = {},
                     onNextDay = {},
@@ -103,6 +105,7 @@ class OpenVitalsConnectedFlowTest {
                     onDeleteActivity = {},
                     onOpenLog = { openLogCount += 1 },
                     onStartActivity = { startActivityCount += 1 },
+                    onOpenDeviceStatus = {},
                     onToggleDashboardEdit = { editToggleCount += 1 },
                     onHealthConnectPromoAction = {},
                 )

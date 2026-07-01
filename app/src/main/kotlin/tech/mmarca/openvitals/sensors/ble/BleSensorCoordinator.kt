@@ -298,6 +298,12 @@ class BleSensorCoordinator @Inject constructor(
             publishMetrics(recordSamples = true)
             scheduleMetricsTimeoutTicker()
         }
+
+        override fun onBatteryLevelChanged(deviceId: String, batteryPercent: Int) {
+            deviceRepository.updateBatteryLevel(deviceId, batteryPercent)
+            publishMetrics()
+            scheduleMetricsTimeoutTicker()
+        }
     }
 
     private fun collectMetrics(now: Instant = Instant.now()): BleRecordingMetrics {
@@ -309,6 +315,7 @@ class BleSensorCoordinator @Inject constructor(
                 address = address,
                 status = connection.connectionStatus,
                 capabilities = capabilityOwners.filterValues { it.address == address }.keys,
+                batteryPercent = connection.batteryPercent ?: device?.batteryPercent,
             )
         }
         val hrConnection = connectionForCapability(BleSensorCapability.HEART_RATE)

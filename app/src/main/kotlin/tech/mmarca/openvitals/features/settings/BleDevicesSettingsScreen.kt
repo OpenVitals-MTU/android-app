@@ -224,6 +224,13 @@ private fun BleDeviceRow(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Text(
+                        text = device.batteryPercent?.let { percent ->
+                            stringResource(R.string.settings_sensors_battery_percent, percent)
+                        } ?: stringResource(R.string.settings_sensors_battery_unknown),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Switch(checked = device.enabled, onCheckedChange = onToggleEnabled)
             }

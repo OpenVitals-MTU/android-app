@@ -25,6 +25,8 @@ data class BleSensorDevice(
     val capabilities: Set<BleSensorCapability>,
     val enabled: Boolean,
     val wheelCircumferenceMm: Int?,
+    val batteryPercent: Int? = null,
+    val batteryUpdatedAt: Instant? = null,
     val addedAt: Instant,
 ) {
     fun normalized(): BleSensorDevice =
@@ -34,6 +36,7 @@ data class BleSensorDevice(
                 DefaultWheelCircumferenceMm,
                 MaxWheelCircumferenceMm,
             ),
+            batteryPercent = batteryPercent?.coerceIn(0, 100),
         )
 
     companion object {
@@ -48,6 +51,7 @@ data class BleDeviceConnectionStatus(
     val address: String,
     val status: BleConnectionStatus,
     val capabilities: Set<BleSensorCapability>,
+    val batteryPercent: Int? = null,
 )
 
 data class BleRecordingMetrics(

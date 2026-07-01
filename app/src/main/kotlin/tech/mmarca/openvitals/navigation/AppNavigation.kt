@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Edit
@@ -125,6 +126,7 @@ fun AppNavigation(
     var activityRecordingOutdoorTopBarState by remember { mutableStateOf<TopBarOutdoorModeState?>(null) }
     var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
+    var dashboardDeviceActionVisible by remember { mutableStateOf(false) }
 
     fun markDashboardDirty() {
         dashboardRefreshRequest += 1
@@ -412,6 +414,20 @@ fun AppNavigation(
                         contentDescription = stringResource(R.string.cd_daily_readiness),
                     )
                 }
+                if (dashboardDeviceActionVisible) {
+                    OpenVitalsIconButton(
+                        onClick = {
+                            navController.navigate(Screen.SettingsSensors.route) {
+                                launchSingleTop = true
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.BatteryChargingFull,
+                            contentDescription = stringResource(R.string.cd_sensor_battery_status),
+                        )
+                    }
+                }
                 OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.Achievements.route) {
@@ -508,6 +524,14 @@ fun AppNavigation(
                     onOpenLog = { navController.navigate(Screen.ManualEntry.route) },
                     onStartActivity = {
                         navController.navigate(Screen.ActivityEntry.route)
+                    },
+                    onOpenDeviceStatus = {
+                        navController.navigate(Screen.SettingsSensors.route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onSensorStatusVisibilityChanged = { visible ->
+                        dashboardDeviceActionVisible = visible
                     },
                 )
             }

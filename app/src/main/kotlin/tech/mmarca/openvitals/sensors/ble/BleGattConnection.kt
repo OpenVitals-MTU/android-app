@@ -28,6 +28,7 @@ import tech.mmarca.openvitals.sensors.ble.parsers.BleRunningSpeedCadenceParser
 internal interface BleConnectionListener {
     fun onConnectionStatusChanged(status: BleConnectionStatus)
     fun onMetricsUpdated()
+    fun onBatteryLevelChanged(deviceId: String, batteryPercent: Int)
 }
 
 internal class BleGattConnection(
@@ -57,7 +58,10 @@ internal class BleGattConnection(
     val runningAggregator = BleRunningSpeedCadenceAggregator()
 
     private val subscribedCharacteristics = mutableSetOf<UUID>()
+    private var pendingNotificationCharacteristics: List<BluetoothGattCharacteristic> = emptyList()
     var heartRateNoSignal: Boolean = false
+        private set
+    var batteryPercent: Int? = null
         private set
 
     @SuppressLint("MissingPermission")
@@ -85,6 +89,7 @@ internal class BleGattConnection(
     fun disconnect() {
         closed = true
         subscribedCharacteristics.clear()
+        pendingNotificationCharacteristics = emptyList()
         resetAggregators()
         gatt?.let { currentGatt ->
             runCatching { currentGatt.disconnect() }
@@ -109,6 +114,16 @@ internal class BleGattConnection(
     }
 
     @SuppressLint("MissingPermission")
+    private fun readBatteryLevel(
+        gatt: BluetoothGatt,
+    ): Boolean {
+        val characteristic = gatt.getService(BleUuids.BATTERY_SERVICE)
+            ?.getCharacteristic(BleUuids.BATTERY_LEVEL)
+            ?: return false
+        return runCatching { gatt.readCharacteristic(characteristic) }.getOrDefault(false)
+    }
+
+    @SuppressLint("MissingPermission")
     private fun enableNotifications(
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic,
@@ -118,6 +133,15 @@ internal class BleGattConnection(
         val descriptor = characteristic.getDescriptor(BleUuids.CLIENT_CHARACTERISTIC_CONFIG) ?: return
         descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
         gatt.writeDescriptor(descriptor)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enablePendingNotifications(gatt: BluetoothGatt) {
+        val characteristics = pendingNotificationCharacteristics
+        pendingNotificationCharacteristics = emptyList()
+        characteristics.forEach { characteristic ->
+            enableNotifications(gatt, characteristic)
+        }
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -151,14 +175,66 @@ internal class BleGattConnection(
                 Log.w(TAG, "Service discovery failed status=$status")
                 return
             }
-            gatt.services.forEach { service ->
-                service.characteristics.forEach { characteristic ->
-                    val charCapabilities = BleUuids.capabilitiesForCharacteristic(characteristic.uuid)
-                    if (charCapabilities.any { it in capabilities }) {
-                        enableNotifications(gatt, characteristic)
+            val notificationCharacteristics = buildList {
+                gatt.services.forEach { service ->
+                    service.characteristics.forEach { characteristic ->
+                        val charCapabilities = BleUuids.capabilitiesForCharacteristic(characteristic.uuid)
+                        if (charCapabilities.any { it in capabilities }) {
+                            add(characteristic)
+                        }
                     }
                 }
             }
+            pendingNotificationCharacteristics = notificationCharacteristics
+            if (!readBatteryLevel(gatt)) {
+                enablePendingNotifications(gatt)
+            }
+        }
+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int,
+        ) {
+            handleCharacteristicRead(gatt, characteristic, value, status)
+        }
+
+        @Deprecated("Deprecated in API 33")
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int,
+        ) {
+            handleCharacteristicRead(
+                gatt,
+                characteristic,
+                @Suppress("DEPRECATION")
+                characteristic.value ?: byteArrayOf(),
+                status,
+            )
+        }
+
+        private fun handleCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int,
+        ) {
+            if (characteristic.uuid == BleUuids.BATTERY_LEVEL && status == BluetoothGatt.GATT_SUCCESS) {
+                updateBatteryLevel(value)
+            }
+            enablePendingNotifications(gatt)
+        }
+
+        private fun updateBatteryLevel(value: ByteArray) {
+            val percent = value.firstOrNull()
+                ?.toInt()
+                ?.and(0xff)
+                ?.coerceIn(0, 100)
+                ?: return
+            batteryPercent = percent
+            listener.onBatteryLevelChanged(deviceId, percent)
         }
 
         override fun onCharacteristicChanged(

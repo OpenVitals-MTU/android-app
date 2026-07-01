@@ -14,10 +14,15 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
+import tech.mmarca.openvitals.domain.model.BleConnectionStatus
+import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
+import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
+import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
@@ -30,12 +35,16 @@ import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import java.time.LocalDate
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -57,6 +66,33 @@ data class DashboardUiState(
     val minimumPermissionsGranted: Boolean = true,
     val display: DashboardDisplayState = DashboardDisplayState(),
     val loadingWidgets: Set<DashboardWidgetId> = emptySet(),
+    val sensorStatus: DashboardSensorStatus = DashboardSensorStatus(),
+)
+
+@Immutable
+data class DashboardSensorStatus(
+    val devices: List<DashboardSensorDeviceStatus> = emptyList(),
+) {
+    val hasDevices: Boolean
+        get() = devices.isNotEmpty()
+
+    val enabledCount: Int
+        get() = devices.count { it.enabled }
+
+    val connectedCount: Int
+        get() = devices.count { it.connectionStatus == BleConnectionStatus.CONNECTED }
+
+    val lowestBatteryPercent: Int?
+        get() = devices.mapNotNull { it.batteryPercent }.minOrNull()
+}
+
+@Immutable
+data class DashboardSensorDeviceStatus(
+    val id: String,
+    val displayName: String,
+    val enabled: Boolean,
+    val connectionStatus: BleConnectionStatus,
+    val batteryPercent: Int?,
 )
 
 @Immutable
@@ -87,6 +123,8 @@ class DashboardViewModel @Inject constructor(
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val activityRepository: ActivityRepository? = null,
     private val bodyEnergyRepository: BodyEnergyRepository? = null,
+    private val bleDeviceRepository: BleDeviceRepository? = null,
+    private val bleSensorCoordinator: BleSensorCoordinator? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
@@ -109,11 +147,27 @@ class DashboardViewModel @Inject constructor(
     private var loadGeneration = 0L
 
     init {
+        observeSensorStatus()
         load(_uiState.value.selectedDate)
     }
 
     fun refresh() {
         load(_uiState.value.selectedDate, RefreshMode.FORCE)
+    }
+
+    private fun observeSensorStatus() {
+        val deviceRepository = bleDeviceRepository ?: return
+        val metricsFlow = bleSensorCoordinator?.metrics ?: flowOf(BleRecordingMetrics())
+        viewModelScope.launch {
+            combine(
+                deviceRepository.devicesFlow,
+                metricsFlow,
+            ) { devices, metrics ->
+                devices.toDashboardSensorStatus(metrics.deviceStatuses)
+            }.collect { sensorStatus ->
+                _uiState.update { it.copy(sensorStatus = sensorStatus) }
+            }
+        }
     }
 
     fun deleteActivityEntry(entryId: String) {
@@ -518,6 +572,25 @@ class DashboardViewModel @Inject constructor(
             loadingWidgets = loadingWidgets,
         )
     }
+}
+
+private fun List<BleSensorDevice>.toDashboardSensorStatus(
+    connectionStatuses: List<BleDeviceConnectionStatus>,
+): DashboardSensorStatus {
+    val statusesById = connectionStatuses.associateBy { it.deviceId }
+    val statusesByAddress = connectionStatuses.associateBy { it.address }
+    return DashboardSensorStatus(
+        devices = map { device ->
+            val liveStatus = statusesById[device.id] ?: statusesByAddress[device.address]
+            DashboardSensorDeviceStatus(
+                id = device.id,
+                displayName = device.displayName,
+                enabled = device.enabled,
+                connectionStatus = liveStatus?.status ?: BleConnectionStatus.DISCONNECTED,
+                batteryPercent = liveStatus?.batteryPercent ?: device.batteryPercent,
+            )
+        },
+    )
 }
 
 private fun PreferencesRepository.dashboardDailyGoals(): DashboardDailyGoals =

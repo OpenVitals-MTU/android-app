@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.dashboard
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,8 @@ fun DashboardScreen(
     onEditActivity: (String) -> Unit = {},
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
+    onOpenDeviceStatus: () -> Unit,
+    onSensorStatusVisibilityChanged: (Boolean) -> Unit = {},
 ) {
     val uiState = viewModel.uiState
     val isLoading by remember(viewModel) { uiState.map { it.isLoading } }
@@ -77,6 +80,12 @@ fun DashboardScreen(
             viewModel.refresh()
         }
     }
+    androidx.compose.runtime.LaunchedEffect(state.sensorStatus.hasDevices) {
+        onSensorStatusVisibilityChanged(state.sensorStatus.hasDevices)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onSensorStatusVisibilityChanged(false) }
+    }
 
     WithHealthConnectFeatureScreen(
         feature = HealthConnectFeature.DASHBOARD,
@@ -103,6 +112,7 @@ fun DashboardScreen(
                     healthConnectAvailability = state.healthConnectAvailability,
                     healthConnectSyncEnabled = state.healthConnectSyncEnabled,
                     dashboardWidgets = state.dashboardWidgets,
+                    sensorStatus = state.sensorStatus,
                     isEditingDashboard = state.isEditingDashboard,
                     onPreviousDay = viewModel::previousDay,
                     onNextDay = viewModel::nextDay,
@@ -121,6 +131,7 @@ fun DashboardScreen(
                     onDeleteActivity = viewModel::deleteActivityEntry,
                     onOpenLog = onOpenLog,
                     onStartActivity = onStartActivity,
+                    onOpenDeviceStatus = onOpenDeviceStatus,
                     onToggleDashboardEdit = viewModel::toggleDashboardEdit,
                     onHealthConnectPromoAction = {
                         permissionLauncher.launch(viewModel.minimumOnboardingPermissions)
