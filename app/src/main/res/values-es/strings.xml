@@ -6,6 +6,7 @@
     <string name="cd_settings">Ajustes</string>
     <string name="cd_achievements">Logros</string>
     <string name="cd_daily_readiness">Preparación diaria</string>
+    <string name="cd_sensor_battery_status">Estado de batería del sensor</string>
     <string name="cd_edit_dashboard">Editar resumen</string>
     <string name="cd_finish_dashboard_editing">Terminar edición del resumen</string>
     <string name="cd_edit_manual_entry_widgets">Editar widgets de añadir entrada</string>
@@ -854,6 +855,11 @@
     <string name="dashboard_all_widgets_added">Todos los widgets ya están en el resumen.</string>
     <string name="dashboard_action_log">Registrar</string>
     <string name="dashboard_activities_today">Actividades</string>
+    <string name="dashboard_sensor_status_title">Batería de sensores</string>
+    <string name="dashboard_sensor_battery_lowest">%1$d%% mínimo</string>
+    <string name="dashboard_sensor_battery_unknown">Batería pendiente</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d activos &#8226; %2$d conectados</string>
+    <string name="dashboard_sensor_status_all_disabled">Todos los sensores desactivados</string>
     <string name="dashboard_delete_activity_title">¿Borrar actividad?</string>
     <string name="dashboard_delete_activity_message">¿Borrar esta actividad de %1$s de OpenVitals?</string>
     <string name="dashboard_readiness_title">Preparación diaria</string>
@@ -1004,6 +1010,8 @@
     <string name="settings_sensors_remove_device">Eliminar sensor</string>
     <string name="settings_sensors_device_name">Nombre del dispositivo</string>
     <string name="settings_sensors_enabled">Activado</string>
+    <string name="settings_sensors_battery_percent">Batería %1$d%%</string>
+    <string name="settings_sensors_battery_unknown">Batería pendiente</string>
     <string name="settings_sensors_scanning">Buscando sensores…</string>
     <string name="settings_sensors_scan_stopped">Búsqueda detenida</string>
     <string name="settings_sensors_scan_empty">No se encontraron sensores. Asegúrate de que el sensor esté activo y cerca.</string>

@@ -5,6 +5,7 @@
     <string name="cd_settings">Impostazioni</string>
     <string name="cd_achievements">Obiettivi</string>
     <string name="cd_daily_readiness">Prontezza Giornaliera</string>
+    <string name="cd_sensor_battery_status">Stato batteria sensore</string>
     <string name="cd_edit_dashboard">Modifica riepilogo</string>
     <string name="cd_finish_dashboard_editing">Termina modifica riepilogo</string>
     <string name="cd_edit_manual_entry_widgets">Modifica</string>
@@ -845,6 +846,11 @@
     <string name="dashboard_all_widgets_added">Tutti i widget sono già nel riepilogo.</string>
     <string name="dashboard_action_log">Registra</string>
     <string name="dashboard_activities_today">Attività</string>
+    <string name="dashboard_sensor_status_title">Batteria sensori</string>
+    <string name="dashboard_sensor_battery_lowest">%1$d%% minimo</string>
+    <string name="dashboard_sensor_battery_unknown">Batteria non ancora disponibile</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d attivi &#8226; %2$d connessi</string>
+    <string name="dashboard_sensor_status_all_disabled">Tutti i sensori disabilitati</string>
     <string name="dashboard_delete_activity_title">Eliminare l\'attività?</string>
     <string name="dashboard_delete_activity_message">Eliminare questa attività %1$s da OpenVitals?</string>
     <string name="dashboard_readiness_title">Prontezza Giornaliera</string>
@@ -992,6 +998,8 @@
     <string name="settings_sensors_remove_device">Rimuovi sensore</string>
     <string name="settings_sensors_device_name">Nome dispositivo</string>
     <string name="settings_sensors_enabled">Abilita</string>
+    <string name="settings_sensors_battery_percent">Batteria %1$d%%</string>
+    <string name="settings_sensors_battery_unknown">Batteria non ancora disponibile</string>
     <string name="settings_sensors_scanning">Scansione per sensori nelle vicinanze…</string>
     <string name="settings_sensors_scan_stopped">Scansione interrotta</string>
     <string name="settings_sensors_scan_empty">Nessun sensore trovato. Assicurati che il sensore sia attivo e vicino al tuo telefono.</string>

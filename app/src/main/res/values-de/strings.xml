@@ -6,6 +6,7 @@
     <string name="cd_settings">Einstellungen</string>
     <string name="cd_achievements">Auszeichnungen</string>
     <string name="cd_daily_readiness">Tägliche Bereitschaft</string>
+    <string name="cd_sensor_battery_status">Sensor-Akkustatus</string>
     <string name="cd_edit_dashboard">Übersicht bearbeiten</string>
     <string name="cd_finish_dashboard_editing">Übersichtsbearbeitung beenden</string>
     <string name="cd_edit_manual_entry_widgets">Widgets zum Hinzufügen von Einträgen bearbeiten</string>
@@ -854,6 +855,11 @@
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
     <string name="dashboard_action_log">Eintragen</string>
     <string name="dashboard_activities_today">Aktivitäten</string>
+    <string name="dashboard_sensor_status_title">Sensorakku</string>
+    <string name="dashboard_sensor_battery_lowest">%1$d%% niedrigster Stand</string>
+    <string name="dashboard_sensor_battery_unknown">Akkustand wird ermittelt</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d aktiv &#8226; %2$d verbunden</string>
+    <string name="dashboard_sensor_status_all_disabled">Alle Sensoren deaktiviert</string>
     <string name="dashboard_delete_activity_title">Aktivität löschen?</string>
     <string name="dashboard_delete_activity_message">Diese %1$s-Aktivität aus OpenVitals löschen?</string>
     <string name="dashboard_readiness_title">Tägliche Bereitschaft</string>
@@ -1004,6 +1010,8 @@
     <string name="settings_sensors_remove_device">Sensor entfernen</string>
     <string name="settings_sensors_device_name">Gerätename</string>
     <string name="settings_sensors_enabled">Aktiviert</string>
+    <string name="settings_sensors_battery_percent">Akku %1$d%%</string>
+    <string name="settings_sensors_battery_unknown">Akkustand wird ermittelt</string>
     <string name="settings_sensors_scanning">Suche nach Sensoren…</string>
     <string name="settings_sensors_scan_stopped">Suche beendet</string>
     <string name="settings_sensors_scan_empty">Noch keine Sensoren gefunden. Stelle sicher, dass der Sensor aktiv und in der Nähe ist.</string>
