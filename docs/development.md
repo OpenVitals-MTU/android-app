@@ -46,50 +46,44 @@ git diff --check
 ```
 
 Release CI also uses the wrapper for local app test/lint and APK builds. There
-are three release channels:
+are two release channels:
 
-- A manually triggered Woodpecker run builds `:app:assembleDiagnostics` and publishes
-  `OpenVitals-diagnostics.apk` to the fixed Codeberg `diagnostics` prerelease.
-- The Woodpecker cron job named `nightly` builds `:app:assembleNightly` and
+- A pushed or moved `nightly` tag builds `:app:assembleRelease` and
   publishes `OpenVitals-nightly.apk` to the fixed Codeberg `nightly`
-  prerelease. The same run builds `:app:bundleNightly` and uploads the signed
+  prerelease. The same run builds `:app:bundleRelease` and uploads the signed
   AAB to the Google Play open testing track, whose Play Developer API track name
   is `beta`.
-- A pushed `vX.Y.Z` tag builds `:app:assembleRelease` and publishes
-  `OpenVitals-vX.Y.Z.apk` to its own stable Codeberg release.
+- A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and publishes
+  `OpenVitals-vX.Y.Z.apk` to its own versioned Codeberg prerelease, which can
+  be promoted after validation by an approved Woodpecker deployment to
+  `production`.
 
-The Codeberg diagnostics, nightly, and release APKs all use release-derived
-build types with the same minification, packaging, and signing model. Diagnostics
-keeps the separate `tech.mmarca.openvitals.debug` application ID and enables the
-diagnostics flag for extra logging and log export. Nightly keeps the production
-app ID and differs from release only by its CI-generated nightly version
-metadata. Codeberg APK artifacts compress bundled native libraries and include
-only ARM 32/64-bit ABIs (`armeabi-v7a` and `arm64-v8a`) so direct-download APKs
-stay below the forge upload limit.
+Both Codeberg APKs use the release build type with the same production
+application ID, minification, packaging, and signing model. Codeberg APK
+artifacts compress bundled native libraries and include only ARM 32/64-bit ABIs
+(`armeabi-v7a` and `arm64-v8a`) so direct-download APKs stay below the forge
+upload limit.
 
-The diagnostics and nightly releases are intentionally mutable: each successful
-run replaces the existing APK and checksum assets instead of creating another
-release page. Nightly uses the production
-`tech.mmarca.openvitals` application ID so the signed AAB can be published to
-the existing Play app's open testing track.
-The Codeberg nightly APK and Play open testing AAB are both signed with the same
-stable release signing configuration when CI secrets are present; the Play AAB
-is built before applying the Codeberg APK ABI filter. CI assigns nightly builds
-a unique Play-safe `versionCode` using
-`major * 100000000 + minor * 1000000 + patch * 10000 + nightlySequence`; stable
-releases use the same formula without the nightly sequence.
+The nightly release is intentionally mutable: each successful `nightly` tag run
+replaces the existing APK and checksum assets instead of creating another
+release page. Its Play AAB uses the same release build type with a CI-generated
+Play-safe `versionCode` using
+`major * 100000000 + minor * 1000000 + patch * 10000 + nightlySequence`.
+Version tags create or update the matching versioned prerelease page. The
+approved production deployment uploads the signed release AAB to Google Play
+production and then promotes the matching Codeberg prerelease to stable.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
 edit repository releases. Configure the release signing secrets
 `OPENVITALS_RELEASE_KEYSTORE_BASE64`, `OPENVITALS_RELEASE_STORE_PASSWORD`,
 `OPENVITALS_RELEASE_KEY_ALIAS`, and `OPENVITALS_RELEASE_KEY_PASSWORD` so CI can
-produce updateable diagnostics, nightly, and release APKs. Configure
+produce updateable nightly and release APKs. Configure
 `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with the base64-encoded JSON key for a
-Google Play service account that can release to open testing for
+Google Play service account that can release to open testing and production for
 `tech.mmarca.openvitals`. If the account is allowed to stage edits but not send
 them for review, set `OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true`; the
-open testing release will then need to be sent for review manually in Play
-Console.
+open testing or production release will then need to be sent for review manually
+in Play Console.
 
 After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
 `git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
@@ -98,11 +92,11 @@ write-enabled deploy key on the GitHub mirror repository.
 
 ## Release Checklist
 
-For a stable release:
+For a versioned prerelease:
 
 1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`. Use
-   `major * 100000000 + minor * 1000000 + patch * 10000` for stable release
-   version codes.
+   `major * 100000000 + minor * 1000000 + patch * 10000` for versioned release
+   codes.
 2. When preparing a store release, add Play changelog files under
    `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
 3. Add the user-facing release summary to `CHANGELOG.md`.
@@ -117,7 +111,16 @@ git diff --check
 6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag
    such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag
    message, and push both the branch and tag. The tag pipeline runs the release
-   checks and publishes the stable Codeberg release APK.
+   checks and publishes the versioned Codeberg prerelease APK.
+7. After validation, use the approved Woodpecker deployment button with target
+   `production` from the version tag commit. The deployment uploads the signed
+   release AAB to Google Play production and then promotes the matching Codeberg
+   prerelease to stable.
+
+For a nightly release, move the fixed `nightly` tag to the desired commit and
+push it. The tag pipeline runs the same release checks, publishes the APK to the
+mutable Codeberg `nightly` prerelease, and uploads the signed AAB to Google Play
+open testing.
 
 Use the exact `versionName` for release notes, changelog references, and tags.
 For a final release, that means file name, `versionName`, and tag such as

@@ -35,10 +35,9 @@ val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
     ?.filter { it.isNotEmpty() }
     ?.toSet()
     ?: emptySet()
-val nightlyVersionCode = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_CODE")
+val versionCodeOverride = providers.environmentVariable("OPENVITALS_VERSION_CODE")
     .map { it.toInt() }
-val nightlyVersionNameSuffix = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX")
-    .orElse("-nightly")
+val baseVersionCode = 17003
 
 android {
     namespace = "tech.mmarca.openvitals"
@@ -49,7 +48,7 @@ android {
         applicationId = "tech.mmarca.openvitals"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17003
+        versionCode = versionCodeOverride.orElse(baseVersionCode).get()
         versionName = "1.7.3"
         buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "false")
         if (apkAbiFilters.isNotEmpty()) {
@@ -87,19 +86,6 @@ android {
                 "proguard-rules.pro"
             )
         }
-
-        create("diagnostics") {
-            initWith(getByName("release"))
-            applicationIdSuffix = ".debug"
-            buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
-            matchingFallbacks += listOf("release")
-        }
-
-        create("nightly") {
-            initWith(getByName("release"))
-            versionNameSuffix = nightlyVersionNameSuffix.get()
-            matchingFallbacks += listOf("release")
-        }
     }
 
     compileOptions {
@@ -125,16 +111,6 @@ android {
 
     lint {
         disable += "LogNotTimber"
-    }
-}
-
-androidComponents {
-    onVariants(selector().withBuildType("nightly")) { variant ->
-        if (nightlyVersionCode.isPresent) {
-            variant.outputs.forEach { output ->
-                output.versionCode.set(nightlyVersionCode)
-            }
-        }
     }
 }
 
