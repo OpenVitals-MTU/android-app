@@ -53,6 +53,7 @@ fun SettingsScreen(
     val bodyEnergyCalibrationSaved = stringResource(R.string.body_energy_calibration_saved)
     val bodyEnergyCalibrationReset = stringResource(R.string.body_energy_calibration_reset)
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
+    val supportUrl = stringResource(R.string.settings_support_url)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
             Toast.makeText(
@@ -68,6 +69,16 @@ fun SettingsScreen(
                 ClipData.newPlainText("OpenVitals", text).toClipEntry()
             )
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+    fun openExternalUrl(url: String) {
+        runCatching {
+            context.startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url),
+                ),
+            )
         }
     }
 
@@ -158,14 +169,10 @@ fun SettingsScreen(
     val actions = SettingsScreenActions(
         onOpenSection = onOpenSection,
         onOpenPrivacyPolicy = {
-            runCatching {
-                context.startActivity(
-                    android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse(privacyPolicyUrl),
-                    ),
-                )
-            }
+            openExternalUrl(privacyPolicyUrl)
+        },
+        onOpenSupport = {
+            openExternalUrl(supportUrl)
         },
         onGrantCyclePermissions = {
             if (state.availability == HealthConnectAvailability.AVAILABLE) {

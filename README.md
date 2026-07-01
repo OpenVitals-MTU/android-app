@@ -4,6 +4,11 @@
 
 # OpenVitals
 
+<p align="center">
+    <a href="https://liberapay.com/manuel.mmarca.tech/donate"><img alt="Liberapay receiving" src="https://img.shields.io/liberapay/receives/manuel.mmarca.tech.svg?logo=liberapay"></a>
+    <a href="https://liberapay.com/manuel.mmarca.tech/donate"><img alt="Liberapay patrons" src="https://img.shields.io/liberapay/patrons/manuel.mmarca.tech.svg?logo=liberapay"></a>
+</p>
+
 Privacy-first Health Connect dashboard, activity tracker, and manual entry app for Android.
 
 OpenVitals helps you review Health Connect data, record or import workouts, import supported Apple Health exports, and add supported manual entries without creating an account or sending health data to an OpenVitals server. The dashboard is read-only by default; writes happen only when you explicitly save or import records back to Health Connect.
@@ -54,6 +59,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Report bugs and feature requests on [Codeberg issues](https://codeberg.org/mmarca-tech/OpenVitals/issues)
 - Star or follow the project on [Codeberg](https://codeberg.org/mmarca-tech/OpenVitals) or the [GitHub mirror](https://github.com/mmarca-tech/OpenVitals)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
+- Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)
 
 ## Screenshots
 

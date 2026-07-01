@@ -1216,6 +1216,10 @@
     <string name="settings_offline_maps_import_notification_text_with_percent">%1$s • %2$d%%.</string>
     <string name="settings_offline_maps_help_prompt">Vuoi imparare come aggiungere mappe offline? Vai a:</string>
     <string name="settings_offline_maps_help_link">Apri la guida alle mappe offline</string>
+    <string name="section_support">Supporto</string>
+    <string name="settings_support_title">Supporta OpenVitals</string>
+    <string name="settings_support_body">Aiuta a finanziare lo sviluppo continuo di OpenVitals tramite Liberapay.</string>
+    <string name="settings_support_action">Apri Liberapay</string>
     <string name="settings_privacy_no_account">Nessun account richiesto</string>
     <string name="settings_privacy_no_cloud">Nessuna sincronizzazione cloud dei dati sanitari</string>
     <string name="settings_privacy_no_analytics">Nessun SDK di analisi</string>

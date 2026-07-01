@@ -5,6 +5,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 internal data class SettingsScreenActions(
     val onOpenSection: (SettingsSection) -> Unit,
     val onOpenPrivacyPolicy: () -> Unit,
+    val onOpenSupport: () -> Unit,
     val onGrantCyclePermissions: () -> Unit,
     val onGrantDataImportPermissions: () -> Unit,
     val onImportAppleHealth: () -> Unit,

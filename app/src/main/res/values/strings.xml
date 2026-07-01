@@ -1231,6 +1231,11 @@
     <string name="settings_offline_maps_help_prompt">Do you want to learn how to add offline maps? Go to:</string>
     <string name="settings_offline_maps_help_link">Open offline maps guide</string>
     <string name="settings_offline_maps_help_url" translatable="false">https://openvitals.codeberg.page/website/how-to/offline-maps/</string>
+    <string name="section_support">Support</string>
+    <string name="settings_support_title">Support OpenVitals</string>
+    <string name="settings_support_body">Help fund ongoing OpenVitals development through Liberapay.</string>
+    <string name="settings_support_action">Open Liberapay</string>
+    <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
     <string name="settings_privacy_no_account">No account required</string>
     <string name="settings_privacy_no_cloud">No cloud sync of health data</string>
     <string name="settings_privacy_no_analytics">No analytics SDK</string>

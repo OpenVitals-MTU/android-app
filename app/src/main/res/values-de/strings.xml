@@ -1223,6 +1223,10 @@
     <string name="settings_offline_maps_import_notification_text_with_percent">%1$s • %2$d%%.</string>
     <string name="settings_offline_maps_help_prompt">Möchtest du lernen, wie du Offline-Karten hinzufügst? Gehe zu:</string>
     <string name="settings_offline_maps_help_link">Anleitung für Offline-Karten öffnen</string>
+    <string name="section_support">Unterstützen</string>
+    <string name="settings_support_title">OpenVitals unterstützen</string>
+    <string name="settings_support_body">Hilf, die laufende Entwicklung von OpenVitals über Liberapay zu finanzieren.</string>
+    <string name="settings_support_action">Liberapay öffnen</string>
     <string name="settings_privacy_no_account">Kein Konto erforderlich</string>
     <string name="settings_privacy_no_cloud">Keine Cloud-Synchronisierung von Gesundheitsdaten</string>
     <string name="settings_privacy_no_analytics">Kein Analyse-SDK</string>

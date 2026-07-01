@@ -35,6 +35,15 @@ internal fun LazyListScope.settingsScreenContent(
                     }
                 }
 
+            item { SectionHeader(stringResource(R.string.section_support)) }
+
+            item {
+                SupportOpenVitalsCard(
+                    onOpenSupport = actions.onOpenSupport,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+
             item { SectionHeader(stringResource(R.string.section_privacy)) }
 
             item {

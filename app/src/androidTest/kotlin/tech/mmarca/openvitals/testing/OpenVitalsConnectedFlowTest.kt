@@ -47,6 +47,7 @@ import tech.mmarca.openvitals.features.manualentry.ManualEntryWidgetId
 import tech.mmarca.openvitals.features.manualentry.manualEntryWidgetSpecs
 import tech.mmarca.openvitals.features.settings.SettingsCategoryCard
 import tech.mmarca.openvitals.features.settings.SettingsSection
+import tech.mmarca.openvitals.features.settings.SupportOpenVitalsCard
 import tech.mmarca.openvitals.ui.components.MetricAction
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
@@ -275,6 +276,26 @@ class OpenVitalsConnectedFlowTest {
                 ),
                 openedSections,
             )
+        }
+    }
+
+    @Test
+    fun supportCard_opensLiberapayAction() {
+        var openCount = 0
+
+        composeRule.setContent {
+            OpenVitalsTheme {
+                SupportOpenVitalsCard(
+                    onOpenSupport = { openCount += 1 },
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Open Liberapay").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(1, openCount)
         }
     }
 }
