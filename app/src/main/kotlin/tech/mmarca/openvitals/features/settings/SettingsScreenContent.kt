@@ -24,7 +24,7 @@ internal fun LazyListScope.settingsScreenContent(
     when (section) {
         null -> {
             SettingsSection.entries
-                .filter { BuildConfig.DEBUG || it != SettingsSection.DEBUG_DIAGNOSTICS }
+                .filter { BuildConfig.OPENVITALS_DIAGNOSTICS || it != SettingsSection.DEBUG_DIAGNOSTICS }
                 .forEach { settingsSection ->
                     item {
                         SettingsCategoryCard(
@@ -255,7 +255,7 @@ internal fun LazyListScope.settingsScreenContent(
             }
         }
         SettingsSection.DEBUG_DIAGNOSTICS -> {
-            if (BuildConfig.DEBUG) {
+            if (BuildConfig.OPENVITALS_DIAGNOSTICS) {
                 item { SectionHeader(stringResource(section.titleRes)) }
                 item {
                     DebugDiagnosticsCard(

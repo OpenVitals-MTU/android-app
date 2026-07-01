@@ -47,6 +47,7 @@ android {
         targetSdk = 36
         versionCode = 17003
         versionName = "1.7.3"
+        buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "false")
     }
 
     signingConfigs {
@@ -67,7 +68,9 @@ android {
             if (signDebugWithReleaseKey && hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
             if (minifyDebugForCi) {
+                isDebuggable = false
                 isMinifyEnabled = true
                 proguardFiles(
                     getDefaultProguardFile("proguard-android-optimize.txt"),

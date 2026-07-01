@@ -49,7 +49,7 @@ Release CI also uses the wrapper for local app test/lint and APK builds. There
 are three release channels:
 
 - A manually triggered Woodpecker run builds `:app:assembleDebug` and publishes
-  `OpenVitals-debug.apk` to the fixed Codeberg `debug` prerelease.
+  `OpenVitals-diagnostics.apk` to the fixed Codeberg `diagnostics` prerelease.
 - The Woodpecker cron job named `nightly` builds `:app:assembleNightly` and
   publishes `OpenVitals-nightly.apk` to the fixed Codeberg `nightly`
   prerelease. The same run builds `:app:bundleNightly` and uploads the signed
@@ -58,17 +58,18 @@ are three release channels:
 - A pushed `vX.Y.Z` tag builds `:app:assembleRelease` and publishes
   `OpenVitals-vX.Y.Z.apk` to its own stable Codeberg release.
 
-The debug and nightly releases are intentionally mutable: each successful run
-replaces the existing APK and checksum assets instead of creating another
-release page. Published CI debug APKs are signed with the stable release signing
-configuration for the separate `tech.mmarca.openvitals.debug` application ID, so
-Codeberg debug-to-debug updates keep the same certificate across ephemeral
-runners. The CI debug APK is minified to keep the mutable Codeberg release asset
-below the forge upload limit while still using the debug build type and
-`BuildConfig.DEBUG=true`. APK release artifacts compress bundled native
-libraries so the all-ABI direct-download APKs stay below the forge upload limit.
-Nightly uses the production `tech.mmarca.openvitals` application ID so the
-signed AAB can be published to the existing Play app's open testing track.
+The diagnostics and nightly releases are intentionally mutable: each successful
+run replaces the existing APK and checksum assets instead of creating another
+release page. Published CI diagnostics APKs are signed with the stable release
+signing configuration for the separate `tech.mmarca.openvitals.debug`
+application ID, so Codeberg diagnostics-to-diagnostics updates keep the same
+certificate across ephemeral runners. The CI diagnostics APK keeps the debug
+build type and diagnostics flag, but is non-debuggable and minified so the
+mutable Codeberg release asset stays below the forge upload limit. APK release
+artifacts compress bundled native libraries so the all-ABI direct-download APKs
+stay below the forge upload limit. Nightly uses the production
+`tech.mmarca.openvitals` application ID so the signed AAB can be published to
+the existing Play app's open testing track.
 The Codeberg nightly APK and Play open testing AAB are both signed with the same
 stable release signing configuration when CI secrets are present. CI assigns
 nightly builds a unique Play-safe `versionCode` using

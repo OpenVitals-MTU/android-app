@@ -112,6 +112,8 @@ fi
 
 for asset_path in "$@"; do
     asset_name="$(basename "$asset_path")"
+    asset_size="$(wc -c < "$asset_path" | tr -d ' ')"
+    echo "Uploading release asset $asset_name ($asset_size bytes)."
     asset_ids="$(jq -r --arg name "$asset_name" '.assets[]? | select(.name == $name) | .id' "$release_response")"
     if [ -n "$asset_ids" ]; then
         while IFS= read -r asset_id; do

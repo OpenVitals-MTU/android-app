@@ -1048,7 +1048,7 @@
     <string name="settings_health_connect_group_title">Health Connect</string>
     <string name="settings_health_connect_group_body">Synchronisation, Zugriff und Datenquellen</string>
     <string name="settings_debug_diagnostics_group_title">Debug-Diagnose</string>
-    <string name="settings_debug_diagnostics_group_body">Bereinigte Debug-Protokolle zur Fehlerbehebung speichern</string>
+    <string name="settings_debug_diagnostics_group_body">Bereinigte Diagnoseprotokolle zur Fehlerbehebung speichern</string>
     <string name="settings_health_connect_sync_title">Mit Health Connect synchronisieren</string>
     <string name="settings_health_connect_sync_body">Wenn aktiviert, liest und schreibt OpenVitals Gesundheitsdaten gemäß deinen Berechtigungen. Wenn deaktiviert, pausiert die Synchronisation, ohne den Zugriff zu widerrufen.</string>
     <string name="settings_health_connect_manage_access">Zugriff verwalten</string>
@@ -1219,11 +1219,11 @@
     <string name="settings_privacy_no_ads">Keine Werbung oder Drittanbieter-Tracking</string>
     <string name="settings_privacy_on_device">Daten bleiben auf deinem Gerät</string>
     <string name="settings_privacy_read_only">Schreibgeschützt, außer bei Einträgen, die du ausdrücklich protokollierst</string>
-    <string name="settings_debug_logs_title">Bereinigte Debug-Protokolle</string>
-    <string name="settings_debug_logs_body">Speichere OpenVitals-Debug-Protokolle als Textdatei. Der Export entfernt oder maskiert Kennungen, Orte, Daten, URIs, rohe Sensordaten und fremde App-Protokolle vor dem Schreiben.</string>
+    <string name="settings_debug_logs_title">Bereinigte Diagnoseprotokolle</string>
+    <string name="settings_debug_logs_body">Speichere OpenVitals-Diagnoseprotokolle als Textdatei. Der Export entfernt oder maskiert Kennungen, Orte, Daten, URIs, rohe Sensordaten und fremde App-Protokolle vor dem Schreiben.</string>
     <string name="settings_debug_logs_save">Protokolle speichern</string>
     <string name="settings_debug_logs_saved">Debug-Protokolle gespeichert</string>
-    <string name="settings_debug_logs_save_failed">Debug-Protokolle konnten nicht gespeichert werden</string>
+    <string name="settings_debug_logs_save_failed">Diagnoseprotokolle konnten nicht gespeichert werden</string>
     <string name="settings_app_version">Version %1$s (%2$d)</string>
 
     <string name="detail_metrics">Metriken</string>

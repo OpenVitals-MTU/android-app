@@ -75,7 +75,9 @@ object PrivacySafeDebugLogExporter {
         context: Context,
         outputStream: OutputStream,
     ): DebugLogExportResult = withContext(Dispatchers.IO) {
-        check(BuildConfig.DEBUG) { "Debug log export is only available in debug builds." }
+        check(BuildConfig.OPENVITALS_DIAGNOSTICS) {
+            "Debug log export is only available in diagnostics builds."
+        }
 
         val rawLines = runCatching { readCurrentProcessLogcat() }
             .getOrElse { throwable ->
@@ -83,7 +85,7 @@ object PrivacySafeDebugLogExporter {
             }
         val sanitized = sanitizeLogcat(rawLines)
         outputStream.writer(Charsets.UTF_8).use { writer ->
-            writer.appendLine("OpenVitals debug log export")
+            writer.appendLine("OpenVitals diagnostics log export")
             writer.appendLine("package=${context.packageName}")
             writer.appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             writer.appendLine(

@@ -109,7 +109,7 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
         )
     }
 
-    if (BuildConfig.DEBUG) {
+    if (BuildConfig.OPENVITALS_DIAGNOSTICS) {
         composable(Screen.SettingsDebugDiagnostics.route) {
             val settingsViewModel = hiltViewModel<SettingsViewModel>()
             SettingsScreen(

@@ -191,7 +191,7 @@ fun SettingsScreen(
             appleHealthReportSaver.launch("openvitals-apple-health-import-report.txt")
         },
         onSaveDebugLogs = {
-            debugLogSaver.launch("openvitals-debug-logs.txt")
+            debugLogSaver.launch("openvitals-diagnostics-logs.txt")
         },
         onOpenManualPermissionSettings = openManualPermissionSettings,
         onGrantPermissions = requestAllPermissions::launch,

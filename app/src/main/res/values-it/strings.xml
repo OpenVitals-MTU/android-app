@@ -1036,7 +1036,7 @@
     <string name="settings_health_connect_group_title">Health Connect</string>
     <string name="settings_health_connect_group_body">Sincronizzazione, accesso e fonti di dati</string>
     <string name="settings_debug_diagnostics_group_title">Diagnostica di debug</string>
-    <string name="settings_debug_diagnostics_group_body">Salva i log di debug igienizzati per risolvere i problemi</string>
+    <string name="settings_debug_diagnostics_group_body">Salva i log diagnostici igienizzati per risolvere i problemi</string>
     <string name="settings_health_connect_sync_title">Sincronizza con Health Connect</string>
     <string name="settings_health_connect_sync_body">Quando attivo, OpenVitals legge e scrive i dati di salute in base ai tuoi permessi. Quando disattivo, sincronizza la pausa senza revocare l\'accesso.</string>
     <string name="settings_health_connect_manage_access">Gestisci accesso</string>
@@ -1088,11 +1088,11 @@
     <string name="privacy_reconsent_body">La nostra politica sulla privacy è cambiata. Controlla e accetta di continuare la sincronizzazione con Health Connect.</string>
     <string name="privacy_reconsent_action">Politica di revisione</string>
     <string name="dashboard_summary_today">Oggi</string>
-    <string name="settings_debug_logs_title">Registri di debug igienizzati</string>
-    <string name="settings_debug_logs_body">Salva le voci di debug di OpenVitals in un file di testo. L\'esportazione diminuisce o redatta identificatori, posizioni, date, URI, carichi di pagamento del sensore grezzo e log di app non correlati prima di scrivere.</string>
+    <string name="settings_debug_logs_title">Log diagnostici igienizzati</string>
+    <string name="settings_debug_logs_body">Salva le voci diagnostiche di OpenVitals in un file di testo. L\'esportazione rimuove o oscura identificatori, posizioni, date, URI, dati grezzi dei sensori e log di app non correlate prima di scrivere.</string>
     <string name="settings_debug_logs_save">Salva log</string>
     <string name="settings_debug_logs_saved">Log di debug salvati</string>
-    <string name="settings_debug_logs_save_failed">Impossibile salvare i log di debug</string>
+    <string name="settings_debug_logs_save_failed">Impossibile salvare i log diagnostici</string>
     <string name="settings_privacy_policy_link">Visualizza l\'informativa privacy</string>
     <string name="settings_app_lock_title">Blocco app</string>
     <string name="settings_app_lock_body">Richiede sblocco dispositivo per aprire OpenVitals.</string>
