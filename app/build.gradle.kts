@@ -30,6 +30,10 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
+val nightlyVersionCode = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_CODE")
+    .map { it.toInt() }
+val nightlyVersionNameSuffix = providers.environmentVariable("OPENVITALS_NIGHTLY_VERSION_NAME_SUFFIX")
+    .orElse("-nightly")
 
 android {
     namespace = "tech.mmarca.openvitals"
@@ -74,6 +78,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+
+        create("nightly") {
+            initWith(getByName("release"))
+            versionNameSuffix = nightlyVersionNameSuffix.get()
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
@@ -93,6 +103,16 @@ android {
 
     lint {
         disable += "LogNotTimber"
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("nightly")) { variant ->
+        if (nightlyVersionCode.isPresent) {
+            variant.outputs.forEach { output ->
+                output.versionCode.set(nightlyVersionCode)
+            }
+        }
     }
 }
 

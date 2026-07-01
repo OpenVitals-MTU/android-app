@@ -17,6 +17,48 @@ def openvitals_project_path(path)
 end
 
 platform :android do
+  desc "Upload the signed nightly Android App Bundle to Google Play open testing"
+  lane :open_testing do |options|
+    json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
+    aab = options[:aab] || ENV["OPENVITALS_NIGHTLY_AAB"]
+    version_code = options[:version_code] || ENV["OPENVITALS_VERSION_CODE"]
+
+    UI.user_error!("json_key is required") if json_key.to_s.empty?
+    UI.user_error!("aab is required") if aab.to_s.empty?
+
+    json_key = openvitals_project_path(json_key)
+    aab = openvitals_project_path(aab)
+
+    UI.user_error!("aab does not exist: #{aab}") unless File.file?(aab)
+
+    if version_code.to_s.length > 0
+      existing_codes = google_play_track_version_codes(
+        package_name: OPENVITALS_PACKAGE_NAME,
+        json_key: json_key,
+        track: "beta"
+      ).map(&:to_i)
+
+      if existing_codes.include?(version_code.to_i)
+        UI.message("Version code #{version_code} is already on Google Play open testing; skipping upload.")
+        next
+      end
+    end
+
+    supply(
+      package_name: OPENVITALS_PACKAGE_NAME,
+      json_key: json_key,
+      aab: aab,
+      track: "beta",
+      release_status: "completed",
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      changes_not_sent_for_review: ENV["OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW"] == "true",
+      timeout: 600
+    )
+  end
+
   desc "Upload the signed Android App Bundle directly to Google Play production with store metadata"
   lane :production do |options|
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]

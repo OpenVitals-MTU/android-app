@@ -45,52 +45,43 @@ Woodpecker uses the Gradle wrapper directly. The test pipeline runs:
 git diff --check
 ```
 
-Release CI also uses the wrapper for local app test/lint and release artifact builds.
-The tag prerelease pipeline runs `verifyLocalReleaseChecks` before publishing
-the debug APK and signed release APK assets to Codeberg as a prerelease. The
-signed Android App Bundle is still built in the same pipeline and kept for the
-approved Google Play production deployment. The release preflight includes
-assembling the debug APK first, so every release has a debug build available for
-troubleshooting with the debug-only sanitized log export in Settings. Published
-CI debug APKs are signed with the stable release signing configuration for the
-separate `tech.mmarca.openvitals.debug` application ID, so Codeberg
-debug-to-debug updates keep the same certificate across ephemeral runners. Users
-who installed older CI debug APKs signed by a runner-generated debug key may
-need to uninstall once before installing the first APK built with stable debug
-signing. Production
-deployments are approved from the successful tag pipeline and skip rerunning that
-full prerelease test suite; they still rebuild the release artifacts from the
-tagged commit before upload.
+Release CI also uses the wrapper for local app test/lint and APK builds. There
+are three release channels:
 
-A production deployment publishes the signed App Bundle directly to the Google
-Play production track with the Fastlane `android production` lane, including Play
-metadata and screenshots from `fastlane/metadata/android`. The lane assembles
-the debug APK before any Play upload work, matching the release preflight order.
-If the deployment is rerun after Google Play already has the release version
-code in production, the Fastlane lane skips the duplicate AAB upload. After the
-Play upload succeeds, the pipeline marks the existing Codeberg release as stable
-through the Forgejo API.
-Prerelease-suffixed tags such as `-alpha`, `-beta`, and `-rc` are beta-only and
-are rejected by the production deployment path.
+- A manually triggered Woodpecker run builds `:app:assembleDebug` and publishes
+  `OpenVitals-debug.apk` to the fixed Codeberg `debug` prerelease.
+- The Woodpecker cron job named `nightly` builds `:app:assembleNightly` and
+  publishes `OpenVitals-nightly.apk` to the fixed Codeberg `nightly`
+  prerelease. The same run builds `:app:bundleNightly` and uploads the signed
+  AAB to the Google Play open testing track, whose Play Developer API track name
+  is `beta`.
+- A pushed `vX.Y.Z` tag builds `:app:assembleRelease` and publishes
+  `OpenVitals-vX.Y.Z.apk` to its own stable Codeberg release.
 
-Configure the Woodpecker secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with
-the base64-encoded JSON key for a Google Play service account that has release
-access to `tech.mmarca.openvitals`. For the current release pipeline, that
-service account needs app-level Play Console permissions to manage store
-presence and release to production. The store-presence
-permission is required because Fastlane uploads listing text, changelogs, icon,
-and screenshots. If Google Play fails at the final "Uploading all changes to
-Google Play" step with `The caller does not have permission`, check that the
-service account is linked in Play Console API access and has permissions for
-viewing app information, managing store presence, releasing to production, and
-sending changes for review. If the account is
-allowed to stage edits but not send them for review, set the Woodpecker
-environment variable `OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true`; the
-release will then need to be sent for review manually in Play Console.
+The debug and nightly releases are intentionally mutable: each successful run
+replaces the existing APK and checksum assets instead of creating another
+release page. Published CI debug APKs are signed with the stable release signing
+configuration for the separate `tech.mmarca.openvitals.debug` application ID, so
+Codeberg debug-to-debug updates keep the same certificate across ephemeral
+runners. Nightly uses the production `tech.mmarca.openvitals` application ID so
+the signed AAB can be published to the existing Play app's open testing track.
+The Codeberg nightly APK and Play open testing AAB are both signed with the same
+stable release signing configuration when CI secrets are present. CI assigns
+nightly builds a unique Play-safe `versionCode` using
+`major * 100000000 + minor * 1000000 + patch * 10000 + nightlySequence`; stable
+releases use the same formula without the nightly sequence.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
-edit repository releases. In Woodpecker project settings, enable deployments so a
-successful tag pipeline can be released with the `production` deploy target.
+edit repository releases. Configure the release signing secrets
+`OPENVITALS_RELEASE_KEYSTORE_BASE64`, `OPENVITALS_RELEASE_STORE_PASSWORD`,
+`OPENVITALS_RELEASE_KEY_ALIAS`, and `OPENVITALS_RELEASE_KEY_PASSWORD` so CI can
+produce updateable debug, nightly, and release APKs. Configure
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with the base64-encoded JSON key for a
+Google Play service account that can release to open testing for
+`tech.mmarca.openvitals`. If the account is allowed to stage edits but not send
+them for review, set `OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true`; the
+open testing release will then need to be sent for review manually in Play
+Console.
 
 After a successful `main` push pipeline, Woodpecker mirrors the checked commit to
 `git@github.com:mmarca-tech/OpenVitals.git`. Configure the Woodpecker secret
@@ -101,8 +92,11 @@ write-enabled deploy key on the GitHub mirror repository.
 
 For a stable release:
 
-1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
-2. Add Play changelog files under `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`. Use
+   `major * 100000000 + minor * 1000000 + patch * 10000` for stable release
+   version codes.
+2. When preparing a store release, add Play changelog files under
+   `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
 3. Add the user-facing release summary to `CHANGELOG.md`.
 4. Update README or docs when the user-facing navigation, permissions, screenshots, or bundled assets change.
 5. Run:
@@ -112,13 +106,13 @@ For a stable release:
 git diff --check
 ```
 
-6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag message, and push both the branch and tag. The tag pipeline runs the prerelease checks and publishes the Codeberg prerelease assets.
-7. Start a Woodpecker deployment from the successful tag pipeline with deploy target `production`. The deployment skips rerunning the prerelease test suite, uploads the signed App Bundle to Google Play production, and marks the Codeberg release stable.
+6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag
+   such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag
+   message, and push both the branch and tag. The tag pipeline runs the release
+   checks and publishes the stable Codeberg release APK.
 
 Use the exact `versionName` for release notes, changelog references, and tags.
 For a final release, that means file name, `versionName`, and tag such as
-`1.0.0` / `v1.0.0`; for beta-only prereleases, include the suffix everywhere,
-such as `1.0.0-beta.1` / `v1.0.0-beta.1`. Keep the Play `versionCode` unique
-and increasing, and add matching Fastlane changelog files for that exact code.
-The tag pipeline publishes beta tags to Codeberg prerelease, while the production
-deployment path rejects `-alpha`, `-beta`, and `-rc` tags.
+`1.0.0` / `v1.0.0`. Keep the Play `versionCode` unique and increasing, and add
+matching Fastlane changelog files for that exact code when preparing a store
+release.
