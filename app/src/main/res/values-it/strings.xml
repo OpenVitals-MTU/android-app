@@ -1134,6 +1134,8 @@
     <string name="settings_activity_recording_distance_interval_title">Intervallo di registrazione per distanza</string>
     <string name="settings_activity_recording_barometer_title">Dislivello barometrico</string>
     <string name="settings_activity_recording_barometer_body">Usa le variazioni di pressione per il dislivello quando il dispositivo ha un barometro.</string>
+    <string name="settings_activity_recording_rest_bell_title">Campana timer di recupero</string>
+    <string name="settings_activity_recording_rest_bell_body">Riproduce una campana leggera quando termina il conto alla rovescia del recupero tra le serie.</string>
     <string name="settings_activity_recording_voice_title">Annunci vocali</string>
     <string name="settings_activity_recording_voice_body">Pronuncia aggiornamenti periodici sul progresso, sulla pausa/ripresa e sui giri durante la registrazione.</string>
     <string name="settings_activity_recording_voice_time_title">Annuncia per tempo</string>

@@ -1141,6 +1141,8 @@
     <string name="settings_activity_recording_distance_interval_title">Intervalo de distancia de grabación</string>
     <string name="settings_activity_recording_barometer_title">Ascenso con barómetro</string>
     <string name="settings_activity_recording_barometer_body">Usa cambios de presión para el ascenso cuando el dispositivo tenga barómetro.</string>
+    <string name="settings_activity_recording_rest_bell_title">Campana de descanso</string>
+    <string name="settings_activity_recording_rest_bell_body">Reproduce una campana suave cuando termine la cuenta atrás de descanso entre series.</string>
     <string name="settings_activity_recording_voice_title">Anuncios de voz</string>
     <string name="settings_activity_recording_voice_body">Lee el progreso, pausa/reanudación y vueltas durante la grabación.</string>
     <string name="settings_activity_recording_voice_time_title">Anunciar por tiempo</string>

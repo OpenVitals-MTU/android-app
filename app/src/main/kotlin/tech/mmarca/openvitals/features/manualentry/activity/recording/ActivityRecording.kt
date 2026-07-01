@@ -20,6 +20,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.location.altitude.AltitudeConverter
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
@@ -898,8 +899,28 @@ class ActivityRecordingController @Inject constructor(
                 current.restStartedAt == state.restStartedAt
             ) {
                 restCompletionJob = null
+                playRestTimerBellIfEnabled()
                 startNextRepetitionSet(current, Instant.now())
             }
+        }
+    }
+
+    private fun playRestTimerBellIfEnabled() {
+        if (!preferencesRepository.activityRecordingPreferences().restTimerBellEnabled) return
+        val player = runCatching { MediaPlayer.create(context, R.raw.bowl_struck) }.getOrNull()
+            ?: return
+        player.setOnCompletionListener { completedPlayer ->
+            completedPlayer.release()
+        }
+        player.setOnErrorListener { errorPlayer, _, _ ->
+            errorPlayer.release()
+            true
+        }
+        runCatching {
+            player.setVolume(RestTimerBellVolume, RestTimerBellVolume)
+            player.start()
+        }.onFailure {
+            player.release()
         }
     }
 
@@ -1034,6 +1055,7 @@ internal const val MinSampleIntervalMillis = 500L
 internal const val MinElevationGainIncrementMeters = 1.0
 internal const val BarometerSmoothingAlpha = 0.3
 internal const val MinBarometerElevationStepMeters = 3.0
+internal const val RestTimerBellVolume = 0.42f
 internal const val MissingInt = Int.MIN_VALUE
 internal const val MissingLong = Long.MIN_VALUE
 internal const val MissingFloat = -1f

@@ -19,6 +19,7 @@ class ActivityRecordingPreferencesTest {
         assertEquals(false, preferences.voiceAnnouncementsEnabled)
         assertEquals(5, preferences.voiceAnnouncementTimeIntervalMinutes)
         assertEquals(1_000, preferences.voiceAnnouncementDistanceIntervalMeters)
+        assertEquals(true, preferences.restTimerBellEnabled)
     }
 
     @Test fun `normalized coerces timeout and closest practical options`() {

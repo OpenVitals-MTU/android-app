@@ -14,6 +14,7 @@ data class ActivityRecordingPreferences(
     val voiceAnnouncementDistanceIntervalMeters: Int? = DefaultVoiceAnnouncementDistanceIntervalMeters,
     val voiceIdleAnnouncementsEnabled: Boolean = DefaultVoiceIdleAnnouncementsEnabled,
     val voiceLapAnnouncementsEnabled: Boolean = DefaultVoiceLapAnnouncementsEnabled,
+    val restTimerBellEnabled: Boolean = DefaultRestTimerBellEnabled,
 ) {
     fun normalized(): ActivityRecordingPreferences =
         copy(
@@ -48,6 +49,7 @@ data class ActivityRecordingPreferences(
         val DefaultVoiceAnnouncementDistanceIntervalMeters: Int? = 1_000
         const val DefaultVoiceIdleAnnouncementsEnabled = true
         const val DefaultVoiceLapAnnouncementsEnabled = true
+        const val DefaultRestTimerBellEnabled = true
         val DefaultRouteGapMeters: Int? = 200
         val AllowedGpsAccuracyMeters = listOf(10, 30, 50, 100)
         val AllowedRouteGapMeters = listOf(100, 200, 500)

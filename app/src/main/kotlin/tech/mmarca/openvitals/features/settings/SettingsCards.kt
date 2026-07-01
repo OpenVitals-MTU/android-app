@@ -526,6 +526,13 @@ internal fun ActivityRecordingPreferencesCard(
             )
 
             SettingsSwitchRow(
+                title = stringResource(R.string.settings_activity_recording_rest_bell_title),
+                body = stringResource(R.string.settings_activity_recording_rest_bell_body),
+                checked = preferences.restTimerBellEnabled,
+                onCheckedChange = { enabled -> onChange(preferences.copy(restTimerBellEnabled = enabled)) },
+            )
+
+            SettingsSwitchRow(
                 title = stringResource(R.string.settings_activity_recording_voice_title),
                 body = stringResource(R.string.settings_activity_recording_voice_body),
                 checked = preferences.voiceAnnouncementsEnabled,

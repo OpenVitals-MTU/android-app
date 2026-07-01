@@ -1141,6 +1141,8 @@
     <string name="settings_activity_recording_distance_interval_title">Aufzeichnungs-Distanzintervall</string>
     <string name="settings_activity_recording_barometer_title">Anstieg per Barometer</string>
     <string name="settings_activity_recording_barometer_body">Nutzt Druckänderungen für den Anstieg, wenn das Gerät ein Barometer hat.</string>
+    <string name="settings_activity_recording_rest_bell_title">Pausen-Timer-Glocke</string>
+    <string name="settings_activity_recording_rest_bell_body">Spielt einen leisen Glockenton, wenn der Pausen-Countdown zwischen Sätzen endet.</string>
     <string name="settings_activity_recording_voice_title">Sprachansagen</string>
     <string name="settings_activity_recording_voice_body">Spricht Fortschritt, Leerlauf/Fortsetzung und Runden während der Aufzeichnung.</string>
     <string name="settings_activity_recording_voice_time_title">Nach Zeit ansagen</string>

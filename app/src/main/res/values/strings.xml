@@ -1148,6 +1148,8 @@
     <string name="settings_activity_recording_distance_interval_title">Recording distance interval</string>
     <string name="settings_activity_recording_barometer_title">Barometer climb</string>
     <string name="settings_activity_recording_barometer_body">Use pressure changes for climb when the device has a barometer.</string>
+    <string name="settings_activity_recording_rest_bell_title">Rest timer bell</string>
+    <string name="settings_activity_recording_rest_bell_body">Play a soft bell when set rest countdowns finish.</string>
     <string name="settings_activity_recording_voice_title">Voice announcements</string>
     <string name="settings_activity_recording_voice_body">Speak periodic progress, idle/resume, and lap updates while recording.</string>
     <string name="settings_activity_recording_voice_time_title">Announce by time</string>
