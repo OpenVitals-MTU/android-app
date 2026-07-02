@@ -39,7 +39,15 @@ data class HydrationEntry(
     val id: String = "",
     val clientRecordId: String? = null,
     val isOpenVitalsEntry: Boolean = false,
+    val recordType: HydrationEntryRecordType = HydrationEntryRecordType.HYDRATION,
+    val displayName: String? = null,
+    val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
 )
+
+enum class HydrationEntryRecordType {
+    HYDRATION,
+    NUTRITION_ONLY,
+}
 
 data class HydrationWriteRequest(
     val time: Instant,
@@ -72,6 +80,9 @@ data class NutritionEntry(
     val sugarGrams: Double?,
     val source: String,
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
+    val id: String = "",
+    val clientRecordId: String? = null,
+    val isOpenVitalsEntry: Boolean = false,
 )
 
 data class NutritionWriteRequest(

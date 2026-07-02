@@ -67,9 +67,11 @@ import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.dashboard.toDashboardMetricOrNull
+import tech.mmarca.openvitals.features.nutrition.displayValue
 import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
 import tech.mmarca.openvitals.navigation.Screen
 
@@ -410,10 +412,10 @@ internal suspend fun loadSnapshot(
 ): HomeMetricWidgetSnapshot {
     val title = context.getString(metricId.homeMetricTitleRes())
     val today = LocalDate.now()
-    val route = if (metricId == DashboardWidgetId.BODY_ENERGY) {
-        Screen.BodyEnergyDetails.createRoute(today.toString())
-    } else {
-        Screen.Metric.createRoute(metricId.name)
+    val route = when (metricId) {
+        DashboardWidgetId.BODY_ENERGY -> Screen.BodyEnergyDetails.createRoute(today.toString())
+        DashboardWidgetId.CAFFEINE -> Screen.Dashboard.route
+        else -> Screen.Metric.createRoute(metricId.name)
     }
     return runCatching {
         val entryPoint = EntryPointAccessors.fromApplication(
@@ -577,6 +579,9 @@ internal fun DashboardData.toSnapshot(
         DashboardWidgetId.PROTEIN -> snapshot(proteinGrams?.let { DisplayValue(unitFormatter.decimal(it, 0), context.getString(R.string.unit_grams)) })
         DashboardWidgetId.CARBS -> snapshot(carbsGrams?.let { DisplayValue(unitFormatter.decimal(it, 0), context.getString(R.string.unit_grams)) })
         DashboardWidgetId.FAT -> snapshot(fatGrams?.let { DisplayValue(unitFormatter.decimal(it, 0), context.getString(R.string.unit_grams)) })
+        DashboardWidgetId.CAFFEINE -> snapshot(
+            caffeineGrams?.let { NutritionNutrient.CAFFEINE.displayValue(it, unitFormatter) },
+        )
         DashboardWidgetId.WEIGHT -> snapshot(weightKg?.let(unitFormatter::weight))
         DashboardWidgetId.HEIGHT -> snapshot(heightCm?.let(unitFormatter::height))
         DashboardWidgetId.BMI -> snapshot(bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") })
@@ -641,6 +646,7 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.PROTEIN -> R.string.metric_protein
     DashboardWidgetId.CARBS -> R.string.metric_carbs
     DashboardWidgetId.FAT -> R.string.metric_fat
+    DashboardWidgetId.CAFFEINE -> R.string.metric_caffeine
     DashboardWidgetId.WEIGHT -> R.string.metric_weight
     DashboardWidgetId.HEIGHT -> R.string.metric_height
     DashboardWidgetId.BMI -> R.string.metric_bmi
@@ -667,7 +673,7 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
 }
 
 fun homeMetricWidgetCatalog(): List<DashboardWidgetId> =
-    DashboardWidgetId.entries.filterNot { it == DashboardWidgetId.CARDIO_LOAD }
+    DashboardWidgetId.entries.filterNot { it == DashboardWidgetId.CARDIO_LOAD || it == DashboardWidgetId.CAFFEINE }
 
 private fun String?.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
     this?.let { stored -> runCatching { DashboardWidgetId.valueOf(stored) }.getOrNull() }

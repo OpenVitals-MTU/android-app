@@ -18,6 +18,7 @@ enum class DashboardWidgetId {
     PROTEIN,
     CARBS,
     FAT,
+    CAFFEINE,
     WEIGHT,
     HEIGHT,
     BMI,
@@ -65,6 +66,7 @@ val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.PROTEIN,
     DashboardWidgetId.CARBS,
     DashboardWidgetId.FAT,
+    DashboardWidgetId.CAFFEINE,
     DashboardWidgetId.WEIGHT,
     DashboardWidgetId.HEIGHT,
     DashboardWidgetId.BMI,
@@ -162,6 +164,7 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.PROTEIN -> DashboardMetric.PROTEIN
     DashboardWidgetId.CARBS -> DashboardMetric.CARBS
     DashboardWidgetId.FAT -> DashboardMetric.FAT
+    DashboardWidgetId.CAFFEINE -> DashboardMetric.CAFFEINE
     DashboardWidgetId.WEIGHT -> DashboardMetric.WEIGHT
     DashboardWidgetId.HEIGHT -> DashboardMetric.HEIGHT
     DashboardWidgetId.BMI -> DashboardMetric.BMI

@@ -67,6 +67,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
@@ -303,7 +304,7 @@ class DashboardDataLoader @Inject constructor(
             hc.readCaloriesInKcal(date)
         }
         val macros = readIfNeeded(
-            wantsAny(DashboardMetric.PROTEIN, DashboardMetric.CARBS, DashboardMetric.FAT),
+            wantsAny(DashboardMetric.PROTEIN, DashboardMetric.CARBS, DashboardMetric.FAT, DashboardMetric.CAFFEINE),
             readNutritionPermission,
             "macros",
         ) {
@@ -546,6 +547,10 @@ class DashboardDataLoader @Inject constructor(
             proteinGrams = dailyMacros?.proteinGrams?.takeIf { it > 0.0 },
             carbsGrams = dailyMacros?.carbsGrams?.takeIf { it > 0.0 },
             fatGrams = dailyMacros?.fatGrams?.takeIf { it > 0.0 },
+            caffeineGrams = dailyMacros
+                ?.nutrientValues
+                ?.get(NutritionNutrient.CAFFEINE)
+                ?.takeIf { it > 0.0 },
             hydrationLiters = hydration?.await() ?: 0.0,
             workout = dayWorkouts.firstOrNull(),
             workouts = dayWorkouts,
@@ -897,7 +902,9 @@ class DashboardDataLoader @Inject constructor(
                 DashboardMetric.CALORIES_IN,
                 DashboardMetric.PROTEIN,
                 DashboardMetric.CARBS,
-                DashboardMetric.FAT -> setOf(readNutritionPermission)
+                DashboardMetric.FAT,
+                DashboardMetric.CAFFEINE,
+                -> setOf(readNutritionPermission)
                 DashboardMetric.WEIGHT -> setOf(readWeightPermission)
                 DashboardMetric.HEIGHT -> setOf(readHeightPermission)
                 DashboardMetric.BMI -> setOf(readWeightPermission, readHeightPermission)

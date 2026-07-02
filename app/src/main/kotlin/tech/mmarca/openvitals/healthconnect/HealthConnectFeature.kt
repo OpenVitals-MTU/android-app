@@ -4,7 +4,6 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
-import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
@@ -38,7 +37,7 @@ enum class HealthConnectFeature {
         HEART -> manager.heartPermissions
         HEART_VITALS -> manager.heartPermissions + manager.vitalsPermissions
         BODY -> manager.bodyPermissions
-        HYDRATION -> setOf(HealthPermission.getReadPermission(HydrationRecord::class))
+        HYDRATION -> manager.nutritionHydrationPermissions
         NUTRITION -> setOf(HealthPermission.getReadPermission(NutritionRecord::class))
         MINDFULNESS -> manager.mindfulnessPermissions
         CYCLE -> manager.cyclePermissions

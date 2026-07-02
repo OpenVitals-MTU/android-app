@@ -46,6 +46,7 @@ data class DashboardData(
     val proteinGrams: Double? = null,
     val carbsGrams: Double? = null,
     val fatGrams: Double? = null,
+    val caffeineGrams: Double? = null,
     val latestSystolicMmHg: Int? = null,
     val latestDiastolicMmHg: Int? = null,
     val latestSpO2Percent: Double? = null,
@@ -182,6 +183,7 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
         proteinGrams = if (DashboardMetric.PROTEIN in other.loadedMetrics) other.proteinGrams else proteinGrams,
         carbsGrams = if (DashboardMetric.CARBS in other.loadedMetrics) other.carbsGrams else carbsGrams,
         fatGrams = if (DashboardMetric.FAT in other.loadedMetrics) other.fatGrams else fatGrams,
+        caffeineGrams = if (DashboardMetric.CAFFEINE in other.loadedMetrics) other.caffeineGrams else caffeineGrams,
         latestSystolicMmHg = if (DashboardMetric.BLOOD_PRESSURE in other.loadedMetrics) {
             other.latestSystolicMmHg
         } else {

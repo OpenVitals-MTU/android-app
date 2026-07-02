@@ -832,6 +832,8 @@
     <string name="hydration_saved_drink_amount_no_hydration">%1$s • No cuenta como hidratación</string>
     <string name="hydration_saved_drink_amount_partial_hydration">%1$s • Cuenta %2$d%% como hidratación</string>
     <string name="hydration_non_hydrating_drink_saved_hint">Guardada solo como nutrición. No se añadió hidratación.</string>
+    <string name="hydration_entry_nutrition_only">Solo nutrición</string>
+    <string name="hydration_entry_no_hydration">Sin hidratación</string>
     <string name="hydration_custom_drink_amount_grams">Cantidad (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Cantidad (kcal)</string>
     <string name="hydration_custom_drink_invalid">Introduce un nombre de bebida, una cantidad y cantidades positivas de nutrientes.</string>
@@ -937,6 +939,7 @@
     <string name="message_heart_empty_hint">Prueba otra fecha o comprueba que un dispositivo conectado haya sincronizado datos puntuales de frecuencia cardiaca.</string>
     <string name="message_no_weight_period">No hay datos de peso en el periodo seleccionado.\n\nSincroniza una báscula o un wearable que informe peso a Health Connect.</string>
     <string name="message_no_hydration_period">No se registraron entradas de hidratación en este periodo.</string>
+    <string name="message_no_hydration_added_period">No se añadió hidratación en este periodo.</string>
     <string name="message_no_nutrition_period">No se registraron entradas de nutrición en este periodo.</string>
     <string name="message_no_mindfulness_period">No se registraron sesiones de mindfulness en este periodo.</string>
     <string name="message_no_vitals_period">No se registraron constantes en este periodo.</string>

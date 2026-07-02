@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationEntryRecordType
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SourceChip
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
@@ -68,7 +69,11 @@ internal fun HydrationEntriesContent(
             entry = entry,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onEdit = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
+            onEdit = if (
+                entry.recordType == HydrationEntryRecordType.HYDRATION &&
+                entry.isOpenVitalsEntry &&
+                entry.id.isNotBlank()
+            ) {
                 { onEditHydrationEntry(entry.id) }
             } else {
                 null
@@ -126,6 +131,29 @@ private fun HydrationEntryRowContent(
     val zone = ZoneId.systemDefault()
     val start = entry.startTime.atZone(zone)
     val end = entry.endTime.atZone(zone)
+    val isNutritionOnly = entry.recordType == HydrationEntryRecordType.NUTRITION_ONLY
+    val dateText = dateTimeFormatterProvider.mediumDate().format(start)
+    val titleText = if (isNutritionOnly) {
+        entry.displayName?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.hydration_entry_nutrition_only)
+    } else {
+        dateText
+    }
+    val timeText = if (isNutritionOnly) {
+        "$dateText • ${dateTimeFormatterProvider.shortTime().format(start)}"
+    } else {
+        "${dateTimeFormatterProvider.shortTime().format(start)} - ${dateTimeFormatterProvider.shortTime().format(end)}"
+    }
+    val amountText = if (isNutritionOnly) {
+        stringResource(R.string.hydration_entry_no_hydration)
+    } else {
+        unitFormatter.hydration(entry.liters).text
+    }
+    val amountColor = if (isNutritionOnly) {
+        MaterialTheme.colorScheme.secondary
+    } else {
+        HydrationColor
+    }
     OpenVitalsCard(
         modifier = modifier,
 
@@ -138,20 +166,20 @@ private fun HydrationEntryRowContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = dateTimeFormatterProvider.mediumDate().format(start),
+                    text = titleText,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "${dateTimeFormatterProvider.shortTime().format(start)} - ${dateTimeFormatterProvider.shortTime().format(end)}",
+                    text = timeText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 SourceChip(source = entry.source)
             }
             Text(
-                text = unitFormatter.hydration(entry.liters).text,
+                text = amountText,
                 style = MaterialTheme.typography.titleMedium,
-                color = HydrationColor,
+                color = amountColor,
             )
             if (onEdit != null) {
                 OpenVitalsIconButton(onClick = onEdit) {

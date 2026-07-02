@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
@@ -45,6 +46,7 @@ import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
+import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.ExerciseData
@@ -53,6 +55,7 @@ import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepReadData
 import tech.mmarca.openvitals.domain.model.WeightEntry
@@ -73,6 +76,7 @@ class DashboardDataLoaderTest {
     private val heartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
     private val restingHeartRatePermission = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
     private val hrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
+    private val nutritionPermission = HealthPermission.getReadPermission(NutritionRecord::class)
 
     @Before
     fun setUp() {
@@ -373,6 +377,31 @@ class DashboardDataLoaderTest {
         coVerify(exactly = 0) {
             hc.readCaloriesBurned(date = date, includeEstimatedCalories = true)
         }
+    }
+
+    @Test fun `loadDashboard reads caffeine from daily macros when requested`() = runTest {
+        val date = LocalDate.of(2026, 6, 5)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.requestableAllPermissions } returns setOf(nutritionPermission)
+        coEvery { hc.grantedPermissions() } returns setOf(nutritionPermission)
+        coEvery { hc.readDailyMacros(date, date) } returns listOf(
+            DailyMacros(
+                date = date,
+                nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.095),
+            )
+        )
+
+        val data = dashboardDataLoader(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                visibleMetrics = setOf(DashboardMetric.CAFFEINE),
+            )
+        )
+
+        assertEquals(0.095, data.caffeineGrams ?: 0.0, 0.0001)
+        assertEquals(setOf(DashboardMetric.CAFFEINE), data.loadedMetrics)
+        coVerify(exactly = 1) { hc.readDailyMacros(date, date) }
     }
 
     @Test fun `loadDashboard enables OpenVitals calorie calculations when preference is on`() = runTest {

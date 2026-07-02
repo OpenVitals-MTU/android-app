@@ -937,6 +937,7 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.PROTEIN -> R.string.screen_nutrition
         DashboardWidgetId.CARBS -> R.string.screen_nutrition
         DashboardWidgetId.FAT -> R.string.screen_nutrition
+        DashboardWidgetId.CAFFEINE -> R.string.metric_caffeine
         DashboardWidgetId.WEIGHT -> R.string.screen_body
         DashboardWidgetId.HEIGHT -> R.string.screen_body
         DashboardWidgetId.BMI -> R.string.screen_body

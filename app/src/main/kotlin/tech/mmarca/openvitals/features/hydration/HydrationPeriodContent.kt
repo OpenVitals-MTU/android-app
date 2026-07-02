@@ -70,14 +70,30 @@ internal fun LazyListScope.hydrationPeriodContent(
     }.orEmpty()
 
     if (!display.hasData) {
+        val hasHistoryEntries = state.hydrationEntries.isNotEmpty()
         renderOrderedMetricDetailSections(sectionContext) {
             section(MetricDetailSectionId.ACTIVITY_SUMMARY) {
                 MetricCardPlaceholder(
                     title = stringResource(R.string.metric_hydration),
                     icon = Icons.Outlined.LocalDrink,
                     accentColor = HydrationColor,
-                    message = stringResource(R.string.message_no_hydration_period),
+                    message = stringResource(
+                        if (hasHistoryEntries) {
+                            R.string.message_no_hydration_added_period
+                        } else {
+                            R.string.message_no_hydration_period
+                        },
+                    ),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            section(MetricDetailSectionId.ENTRIES, hasHistoryEntries) {
+                HydrationEntriesContent(
+                    entries = state.hydrationEntries,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditHydrationEntry = onEditHydrationEntry,
+                    onDeleteHydrationEntry = onDeleteHydrationEntry,
                 )
             }
             section(MetricDetailSectionId.DAILY_GOAL) {

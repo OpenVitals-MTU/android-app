@@ -6,6 +6,8 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.features.nutrition.displayValue
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
@@ -233,6 +235,11 @@ object DashboardPresentationMapper {
                     goalLabelValue = gramDisplayValue(dailyGoals.fatGrams, unitFormatter),
                 )
             },
+            isLoading = isLoading,
+        )
+        DashboardWidgetId.CAFFEINE -> optionalMetricWidget(
+            id = widgetId,
+            value = data.caffeineGrams?.let { NutritionNutrient.CAFFEINE.displayValue(it, unitFormatter) },
             isLoading = isLoading,
         )
         DashboardWidgetId.WEIGHT -> optionalMetricWidget(

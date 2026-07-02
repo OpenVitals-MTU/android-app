@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 
 internal class NutritionHealthReader(
     private val support: HealthConnectReaderSupport,
+    private val appPackageName: String,
 ) {
     suspend fun readCaloriesInKcal(date: LocalDate): Double? {
         val zone = ZoneId.systemDefault()
@@ -148,6 +149,9 @@ internal class NutritionHealthReader(
                     sugarGrams = nutrientValues[NutritionNutrient.SUGAR],
                     source = record.metadata.dataOrigin.packageName,
                     nutrientValues = nutrientValues,
+                    id = record.metadata.id,
+                    clientRecordId = record.metadata.clientRecordId,
+                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
         }
@@ -245,6 +249,20 @@ internal class NutritionHealthReader(
             recordIdsList = emptyList(),
             clientRecordIdsList = listOf(hydrationNutritionClientRecordId(hydrationClientRecordId)),
         )
+    }
+
+    suspend fun deleteNutritionEntry(id: String): String? = withContext(Dispatchers.IO) {
+        val existing = support.client().readRecord(NutritionRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+        val clientRecordId = existing.metadata.clientRecordId
+
+        Log.d(TAG, "Deleting nutrition record ${support.diagnosticsSummary()}")
+        support.client().deleteRecords(
+            recordType = NutritionRecord::class,
+            recordIdsList = listOf(existing.metadata.id),
+            clientRecordIdsList = emptyList(),
+        )
+        clientRecordId
     }
 }
 

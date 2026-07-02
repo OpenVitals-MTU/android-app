@@ -150,7 +150,7 @@ internal fun dashboardWidgetSpecs(
 ): List<DashboardWidgetSpec> = buildList {
     val loadingMessage = stringResource(R.string.loading)
     val openMetric: (DashboardWidgetId) -> (() -> Unit)? = { widgetId ->
-        if (isEditingDashboard) null else ({ onOpenMetric(widgetId) })
+        if (isEditingDashboard || widgetId == DashboardWidgetId.CAFFEINE) null else ({ onOpenMetric(widgetId) })
     }
     widgetIds.forEach { widgetId ->
         val model = display.widgets[widgetId] ?: return@forEach
@@ -307,6 +307,7 @@ private fun dashboardWidgetTitle(widgetId: DashboardWidgetId): String =
             DashboardWidgetId.PROTEIN -> R.string.metric_protein
             DashboardWidgetId.CARBS -> R.string.metric_carbs
             DashboardWidgetId.FAT -> R.string.metric_fat
+            DashboardWidgetId.CAFFEINE -> R.string.metric_caffeine
             DashboardWidgetId.WEIGHT -> R.string.metric_latest_weight
             DashboardWidgetId.HEIGHT -> R.string.metric_height
             DashboardWidgetId.BMI -> R.string.metric_bmi
@@ -361,6 +362,7 @@ private fun dashboardWidgetMeta(widgetId: DashboardWidgetId): DashboardWidgetMet
         DashboardWidgetId.PROTEIN,
         DashboardWidgetId.CARBS,
         DashboardWidgetId.FAT,
+        DashboardWidgetId.CAFFEINE,
         -> DashboardWidgetMeta(Icons.Outlined.Restaurant, NutritionColor)
         DashboardWidgetId.WEIGHT,
         DashboardWidgetId.HEIGHT,

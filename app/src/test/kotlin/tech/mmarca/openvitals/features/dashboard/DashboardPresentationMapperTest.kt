@@ -71,6 +71,24 @@ class DashboardPresentationMapperTest {
     }
 
     @Test
+    fun build_caffeineWidget_usesAdaptiveMassDisplayWithoutProgress() {
+        val data = DashboardData(date = LocalDate.now(), caffeineGrams = 0.095)
+
+        val display = DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+
+        val caffeine = display.widgets[DashboardWidgetId.CAFFEINE]
+        assertNotNull(caffeine)
+        assertEquals("95", caffeine?.value?.value)
+        assertEquals("mg", caffeine?.value?.unit)
+        assertNull(caffeine?.progress)
+    }
+
+    @Test
     fun build_excludesWorkoutWidget() {
         val data = DashboardData(date = LocalDate.now())
 

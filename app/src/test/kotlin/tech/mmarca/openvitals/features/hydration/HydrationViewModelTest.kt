@@ -3,11 +3,15 @@ package tech.mmarca.openvitals.features.hydration
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationEntryRecordType
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.query.HydrationPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
@@ -61,8 +65,16 @@ class HydrationViewModelTest {
         }
     }
 
+    private fun emptyNutritionRepo(
+        entries: List<NutritionEntry> = emptyList(),
+    ) = mockk<NutritionRepository>().also { repo ->
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns entries
+        coEvery { repo.deleteNutritionEntry(any()) } returns Unit
+    }
+
     private fun hydrationViewModel(
         repository: HydrationRepository,
+        nutritionRepository: NutritionRepository? = null,
         initialRange: TimeRange = TimeRange.WEEK,
         initialDailyGoalLiters: Double = 2.0,
         initialReminderConfig: HydrationReminderConfig = HydrationReminderConfig(),
@@ -72,6 +84,7 @@ class HydrationViewModelTest {
     ) = HydrationViewModel(
         repository = repository,
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        nutritionRepository = nutritionRepository,
         initialRange = initialRange,
         initialDailyGoalLiters = initialDailyGoalLiters,
         initialReminderConfig = initialReminderConfig,
@@ -158,6 +171,68 @@ class HydrationViewModelTest {
         assertEquals(entries, vm.uiState.value.hydrationEntries)
     }
 
+    @Test fun `load adds OpenVitals standalone nutrition drinks to hydration entries`() = runTest {
+        val start = today.atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
+        val hydrationEntry = HydrationEntry(
+            startTime = start,
+            endTime = start.plusSeconds(1),
+            liters = 0.5,
+            source = "tech.mmarca.openvitals.debug",
+            id = "hydration-id",
+            isOpenVitalsEntry = true,
+        )
+        val caffeineEntry = NutritionEntry(
+            time = start.plusSeconds(60),
+            mealType = 0,
+            name = "Coffee",
+            energyKcal = null,
+            proteinGrams = null,
+            carbsGrams = null,
+            fatGrams = null,
+            fiberGrams = null,
+            sugarGrams = null,
+            source = "tech.mmarca.openvitals.debug",
+            nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.095),
+            id = "nutrition-id",
+            clientRecordId = "openvitals_nutrition_1000_uuid",
+            isOpenVitalsEntry = true,
+        )
+        val carbsEntry = caffeineEntry.copy(
+            name = "OpenVitals carbs",
+            id = "carbs-id",
+            clientRecordId = "openvitals_nutrition_1100_uuid",
+        )
+        val pairedEntry = caffeineEntry.copy(
+            id = "paired-id",
+            clientRecordId = "openvitals_hydration_nutrition_hydration-client-id",
+        )
+        val noClientIdStandaloneEntry = caffeineEntry.copy(
+            time = start.plusSeconds(120),
+            name = "Espresso",
+            id = "no-client-id-standalone",
+            clientRecordId = null,
+        )
+        val noClientIdPairedEntry = caffeineEntry.copy(
+            time = start,
+            id = "no-client-id-paired",
+            clientRecordId = null,
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadHydrationEntries(any(), any()) } returns listOf(hydrationEntry)
+        val nutritionRepo = emptyNutritionRepo(
+            listOf(caffeineEntry, carbsEntry, pairedEntry, noClientIdStandaloneEntry, noClientIdPairedEntry)
+        )
+
+        val vm = hydrationViewModel(repo, nutritionRepository = nutritionRepo, initialRange = TimeRange.DAY)
+
+        val entries = vm.uiState.value.hydrationEntries
+        assertEquals(listOf("hydration-id", "nutrition-id", "no-client-id-standalone"), entries.map { it.id })
+        assertEquals(HydrationEntryRecordType.NUTRITION_ONLY, entries[1].recordType)
+        assertEquals("Coffee", entries[1].displayName)
+        assertEquals("Espresso", entries[2].displayName)
+        assertEquals(0.0, entries[1].liters, 0.01)
+    }
+
     @Test fun `deleteHydrationEntry removes entry and reloads period data`() = runTest {
         val start = today.atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
         val entry = HydrationEntry(
@@ -185,6 +260,42 @@ class HydrationViewModelTest {
         assertTrue(vm.uiState.value.hydrationEntries.isEmpty())
         assertEquals(0.0, vm.uiState.value.display.summary.totalLiters, 0.01)
         coVerify { repo.deleteHydrationEntry("hydration-id") }
+        coVerify { repo.loadHydrationPeriod(any(), RefreshMode.FORCE) }
+    }
+
+    @Test fun `deleteHydrationEntry removes nutrition only drink through nutrition repository`() = runTest {
+        val start = today.atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
+        val nutritionEntry = NutritionEntry(
+            time = start,
+            mealType = 0,
+            name = "Coffee",
+            energyKcal = null,
+            proteinGrams = null,
+            carbsGrams = null,
+            fatGrams = null,
+            fiberGrams = null,
+            sugarGrams = null,
+            source = "tech.mmarca.openvitals.debug",
+            nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.095),
+            id = "nutrition-id",
+            clientRecordId = "openvitals_nutrition_1000_uuid",
+            isOpenVitalsEntry = true,
+        )
+        var nutritionEntries = listOf(nutritionEntry)
+        val repo = emptyRepo()
+        val nutritionRepo = emptyNutritionRepo()
+        coEvery { nutritionRepo.loadNutritionEntries(any(), any()) } answers { nutritionEntries }
+        coEvery { nutritionRepo.deleteNutritionEntry("nutrition-id") } coAnswers {
+            nutritionEntries = emptyList()
+        }
+        val vm = hydrationViewModel(repo, nutritionRepository = nutritionRepo, initialRange = TimeRange.DAY)
+
+        vm.deleteHydrationEntry("nutrition-id")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.hydrationEntries.isEmpty())
+        coVerify { nutritionRepo.deleteNutritionEntry("nutrition-id") }
+        coVerify(exactly = 0) { repo.deleteHydrationEntry("nutrition-id") }
         coVerify { repo.loadHydrationPeriod(any(), RefreshMode.FORCE) }
     }
 

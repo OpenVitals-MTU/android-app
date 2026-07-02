@@ -105,7 +105,7 @@ class HealthConnectManager @Inject constructor(
     private val sleepReader = SleepHealthReader(readerSupport)
     private val heartReader = HeartHealthReader(readerSupport)
     private val bodyReader = BodyHealthReader(readerSupport, context.packageName)
-    private val nutritionReader = NutritionHealthReader(readerSupport)
+    private val nutritionReader = NutritionHealthReader(readerSupport, context.packageName)
     private val mindfulnessReader = MindfulnessHealthReader(readerSupport, context.packageName)
     private val cycleReader = CycleHealthReader(readerSupport)
     private val vitalsReader = VitalsHealthReader(readerSupport, context.packageName)
@@ -501,6 +501,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun deleteHydrationNutritionEntry(hydrationClientRecordId: String) =
         withSyncEnabled { nutritionReader.deleteHydrationNutritionEntry(hydrationClientRecordId) }
+
+    suspend fun deleteNutritionEntry(id: String): String? =
+        withSyncEnabled { nutritionReader.deleteNutritionEntry(id) }
 
     suspend fun readMindfulnessSessions(start: Instant, end: Instant): List<MindfulnessSession> =
         mindfulnessReader.readMindfulnessSessions(start, end)

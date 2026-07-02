@@ -25,4 +25,6 @@ interface NutritionRepository {
     suspend fun writeCarbsEntry(request: NutritionWriteRequest): String
 
     suspend fun writeNutritionEntry(request: NutritionWriteRequest): String
+
+    suspend fun deleteNutritionEntry(id: String)
 }

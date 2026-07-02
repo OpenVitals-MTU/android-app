@@ -30,6 +30,7 @@ enum class DashboardMetric {
     PROTEIN,
     CARBS,
     FAT,
+    CAFFEINE,
     WEIGHT,
     HEIGHT,
     BMI,

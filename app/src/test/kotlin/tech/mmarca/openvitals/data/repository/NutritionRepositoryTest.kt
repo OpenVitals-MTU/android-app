@@ -1,15 +1,21 @@
 package tech.mmarca.openvitals.data.repository
 
+import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.NutritionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -21,7 +27,19 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class NutritionRepositoryTest {
 
-    private val nutritionPermission = HealthPermission.getReadPermission(NutritionRecord::class)
+    private val readNutritionPermission = HealthPermission.getReadPermission(NutritionRecord::class)
+    private val writeNutritionPermission = HealthPermission.getWritePermission(NutritionRecord::class)
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.w(any(), any<String>()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
+    }
 
     @Test
     fun `DAY nutrition uses raw full entries for selected day metrics`() = runTest {
@@ -73,13 +91,42 @@ class NutritionRepositoryTest {
         coVerify(exactly = 0) { hc.readDailyMacros(date, date) }
     }
 
+    @Test
+    fun `deleteNutritionEntry delegates when write permission exists`() = runTest {
+        val hc = hc(
+            entries = emptyList(),
+            grantedPermissions = setOf(writeNutritionPermission),
+        )
+        coEvery { hc.deleteNutritionEntry("nutrition-id") } returns "nutrition-client-id"
+
+        NutritionRepositoryImpl(hc).deleteNutritionEntry("nutrition-id")
+
+        coVerify { hc.deleteNutritionEntry("nutrition-id") }
+    }
+
+    @Test
+    fun `deleteNutritionEntry throws when write permission is missing`() = runTest {
+        val hc = hc(
+            entries = emptyList(),
+            grantedPermissions = setOf(readNutritionPermission),
+        )
+
+        val error = runCatching {
+            NutritionRepositoryImpl(hc).deleteNutritionEntry("nutrition-id")
+        }.exceptionOrNull()
+
+        assertTrue(error is SecurityException)
+        coVerify(exactly = 0) { hc.deleteNutritionEntry(any()) }
+    }
+
     private fun hc(
         entries: List<NutritionEntry>,
         dailyMacros: List<DailyMacros> = emptyList(),
+        grantedPermissions: Set<String> = setOf(readNutritionPermission),
     ): HealthConnectManager =
         mockk<HealthConnectManager>().also { hc ->
             every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-            coEvery { hc.grantedPermissions() } returns setOf(nutritionPermission)
+            coEvery { hc.grantedPermissions() } returns grantedPermissions
             coEvery { hc.readNutritionEntries(any(), any()) } returns entries
             coEvery { hc.readDailyMacros(any(), any()) } returns dailyMacros
         }
