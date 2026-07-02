@@ -13,7 +13,7 @@ steps:
     image: alpine:3.20
     commands:
       - set -eu
-      - apk add --no-cache git
+      - apk add --no-cache curl git python3
       - git fetch --tags --force origin
       - mkdir -p .woodpecker/tmp
       - apk_abi_filters="armeabi-v7a,arm64-v8a"
@@ -38,6 +38,17 @@ steps:
         build_aab="false"
         play_track=""
         version_code=""
+        version_name_override=""
+        configured_version_code="$$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
+        if [ -z "$${configured_version_code}" ]; then
+          echo "Could not read baseVersionCode from app/build.gradle.kts." >&2
+          exit 1
+        fi
+        version_name="$$(sed -n 's/.*baseVersionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+        if ! printf '%s\n' "$${version_name}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "Release builds require a numeric baseVersionName, found $${version_name}." >&2
+          exit 1
+        fi
 
         if [ "$${release_tag}" = "nightly" ]; then
           release_channel="nightly"
@@ -49,19 +60,13 @@ steps:
           prerelease="true"
           build_aab="true"
           play_track="beta"
-          version_name="$$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
-          version_core="$${version_name%%-*}"
-          if ! printf '%s\n' "$${version_core}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Nightly builds require a numeric base versionName, found $${version_name}." >&2
+          pipeline_number="$${CI_PIPELINE_NUMBER:-1}"
+          if ! printf '%s\n' "$${pipeline_number}" | grep -Eq '^[0-9][0-9]*$$'; then
+            echo "CI_PIPELINE_NUMBER must be numeric for nightly versionName generation, found $${pipeline_number}." >&2
             exit 1
           fi
-          major="$${version_core%%.*}"
-          minor_patch="$${version_core#*.}"
-          minor="$${minor_patch%%.*}"
-          patch="$${minor_patch#*.}"
-          pipeline_number="$${CI_PIPELINE_NUMBER:-0}"
-          nightly_sequence="$$(($${pipeline_number} % 9999 + 1))"
-          version_code="$$(($${major} * 100000000 + $${minor} * 1000000 + $${patch} * 10000 + $${nightly_sequence}))"
+          version_code="$$(sh scripts/version-code.sh next --floor "$${configured_version_code}")"
+          version_name_override="$${version_name}-nightly.$${pipeline_number}"
         else
           release_channel="release"
           apk_basename="OpenVitals-$${release_tag}.apk"
@@ -78,15 +83,8 @@ steps:
             exit 1
           fi
 
-          version_name="$$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           if [ "$${version_name}" != "$${release_tag#[vV]}" ]; then
             echo "Release tag $${release_tag} does not match app versionName $${version_name}." >&2
-            exit 1
-          fi
-
-          version_code="$$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
-          if [ -z "$${version_code}" ]; then
-            echo "Could not read baseVersionCode from app/build.gradle.kts." >&2
             exit 1
           fi
 
@@ -97,6 +95,15 @@ steps:
             aab_basename="OpenVitals-$${release_tag}.aab"
             build_aab="true"
             play_track="production"
+            version_code="$$(sh scripts/version-code.sh for-tag "$${release_tag}" --floor "$${configured_version_code}")"
+          else
+            previous_configured_version_code="$$(($${configured_version_code} - 1))"
+            expected_version_code="$$(sh scripts/version-code.sh next --floor "$${previous_configured_version_code}")"
+            if [ "$${expected_version_code}" != "$${configured_version_code}" ]; then
+              echo "baseVersionCode $${configured_version_code} is stale; next expected versionCode is $${expected_version_code}." >&2
+              exit 1
+            fi
+            version_code="$${configured_version_code}"
           fi
         fi
       - printf '%s\n' "$${release_title}" > .woodpecker/tmp/release-title.txt
@@ -134,6 +141,10 @@ steps:
             "- SHA-256 checksum" \
             > "$${notes_file}"
         fi
+        {
+          printf '\n'
+          sh scripts/version-code.sh marker "$${version_code}"
+        } >> "$${notes_file}"
       - |
         {
           printf 'OPENVITALS_RELEASE_CHANNEL=%s\n' "$${release_channel}"
@@ -150,6 +161,7 @@ steps:
           printf 'OPENVITALS_BUILD_AAB=%s\n' "$${build_aab}"
           printf 'OPENVITALS_PLAY_TRACK=%s\n' "$${play_track}"
           printf 'OPENVITALS_VERSION_CODE=%s\n' "$${version_code}"
+          printf 'OPENVITALS_VERSION_NAME=%s\n' "$${version_name_override}"
         } > .woodpecker/tmp/release-context.env
 
   - name: test
@@ -208,6 +220,7 @@ steps:
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - if [ -n "$${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
+      - if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
       - test -n "$${OPENVITALS_APK_ABI_FILTERS}"
       - test -f gradle/wrapper/gradle-wrapper.jar
       - chmod +x gradlew scripts/ci-gradle.sh
@@ -312,6 +325,23 @@ steps:
         ref: refs/tags/v*
       - event: tag
         ref: refs/tags/V*
+      - event: tag
+        ref: refs/tags/nightly
+
+  - name: prune-codeberg-releases
+    depends_on:
+      - publish-codeberg-release
+    image: alpine:3.20
+    environment:
+      CODEBERG_RELEASE_API_KEY:
+        from_secret: CODEBERG_RELEASE_API_KEY
+    commands:
+      - set -eu
+      - apk add --no-cache bash curl python3
+      - test -n "$${CODEBERG_RELEASE_API_KEY}"
+      - chmod +x scripts/prune-codeberg-releases.sh
+      - DRY_RUN=false KEEP_RELEASES=9 scripts/prune-codeberg-releases.sh
+    when:
       - event: tag
         ref: refs/tags/nightly
 

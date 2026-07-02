@@ -37,7 +37,10 @@ val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
     ?: emptySet()
 val versionCodeOverride = providers.environmentVariable("OPENVITALS_VERSION_CODE")
     .map { it.toInt() }
-val baseVersionCode = 17004
+val versionNameOverride = providers.environmentVariable("OPENVITALS_VERSION_NAME")
+// versionCode is a monotonic release counter, independent of versionName.
+val baseVersionCode = 107030328
+val baseVersionName = "1.7.4"
 
 android {
     namespace = "tech.mmarca.openvitals"
@@ -49,7 +52,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = versionCodeOverride.orElse(baseVersionCode).get()
-        versionName = "1.7.4"
+        versionName = versionNameOverride.orElse(baseVersionName).get()
         buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "false")
         if (apkAbiFilters.isNotEmpty()) {
             ndk {

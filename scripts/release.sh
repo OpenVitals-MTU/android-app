@@ -10,16 +10,19 @@ if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
     exit 1
 fi
 
-MAJOR=$(echo "$VERSION" | cut -d. -f1)
-MINOR=$(echo "$VERSION" | cut -d. -f2)
-PATCH=$(echo "$VERSION" | cut -d. -f3)
-VERSION_CODE=$((MAJOR * 10000 + MINOR * 1000 + PATCH))
+CURRENT_VERSION_CODE="$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
+if [ -z "$CURRENT_VERSION_CODE" ]; then
+    echo "Could not read baseVersionCode from app/build.gradle.kts" >&2
+    exit 1
+fi
+
+VERSION_CODE="$(sh scripts/version-code.sh next --floor "$CURRENT_VERSION_CODE")"
 
 sed -i "s/baseVersionCode = [0-9]*/baseVersionCode = $VERSION_CODE/" app/build.gradle.kts
-sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION\"/" app/build.gradle.kts
+sed -i "s/baseVersionName = \"[^\"]*\"/baseVersionName = \"$VERSION\"/" app/build.gradle.kts
 sed -i "s/\\.orElse(\"[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*-SNAPSHOT\")/.orElse(\"$VERSION-SNAPSHOT\")/" build.gradle.kts
 
-git add app/build.gradle.kts build.gradle.kts CHANGELOG.md README.md docs fastlane .woodpecker/release.yml scripts/release.sh
+git add app/build.gradle.kts build.gradle.kts CHANGELOG.md README.md docs fastlane .woodpecker/release.yml scripts/release.sh scripts/version-code.sh
 git commit -m "chore: release $VERSION"
 if [ -f "$RELEASE_NOTES_FILE" ]; then
     git tag -a "$TAG" -F "$RELEASE_NOTES_FILE"

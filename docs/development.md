@@ -66,12 +66,19 @@ upload limit.
 
 The nightly release is intentionally mutable: each successful `nightly` tag run
 replaces the existing APK and checksum assets instead of creating another
-release page. Its Play AAB uses the same release build type with a CI-generated
-Play-safe `versionCode` using
-`major * 100000000 + minor * 1000000 + patch * 10000 + nightlySequence`.
-Version tags create or update the matching versioned prerelease page. The
-approved production deployment uploads the signed release AAB to Google Play
-production and then promotes the matching Codeberg prerelease to stable.
+release page. `versionName` and `versionCode` are intentionally detached:
+`versionName` carries the human release name (`1.7.4`, `1.7.4-nightly.328`),
+while `versionCode` is only a monotonic Android update counter. Both nightly and
+versioned releases use the same counter line. CI reads
+`OpenVitals-Version-Code` markers from existing Codeberg release notes, uses
+`max(previous markers, baseVersionCode) + 1` for new release artifacts, and
+stores the chosen code back into the release notes. Production deployments reuse
+the marker from the already published `vX.Y.Z` release so the Play AAB matches
+the Codeberg APK's install order. The nightly release job also prunes old
+versioned Codeberg release pages so only the newest nine remain, while
+preserving the fixed `nightly` release and all Git tags. The approved production
+deployment uploads the signed release AAB to Google Play production and then
+promotes the matching Codeberg prerelease to stable.
 
 Configure the Woodpecker cron named `nightly` to run at `00:00 UTC`. The
 cron-only workflow moves the fixed `nightly` tag to the cron commit and pushes
@@ -100,8 +107,9 @@ write-enabled deploy key on the GitHub mirror repository.
 
 For a versioned prerelease:
 
-1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`. Use the
-   compact Play release-code series, for example `1.7.4` -> `17004`.
+1. Bump `baseVersionName` in `app/build.gradle.kts`. Let `scripts/release.sh`
+   bump `baseVersionCode` with `scripts/version-code.sh next`; do not derive the
+   code from `vX.Y.Z`.
 2. When preparing a store release, add Play changelog files under
    `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
 3. Add the user-facing release summary to `CHANGELOG.md`.

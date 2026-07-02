@@ -1,0 +1,1 @@
+Aggiunge un dettaglio Body Energy con calibrazione, timeline, dashboard e widget. I sensori Bluetooth LE mostrano connessione e batteria, le registrazioni a ripetizioni hanno il campanello di riposo, le viste giornaliere usano campioni più completi e l'app locale resta senza internet dopo la rimozione dell'accesso ereditato.
