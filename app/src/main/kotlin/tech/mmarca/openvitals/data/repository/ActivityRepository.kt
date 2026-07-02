@@ -269,7 +269,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping loadActivityProgress missingCount=${missingRequired.size}")
             return emptyList()
         }
-        return hc.readActivityProgress(
+        return hc.readRawActivityProgress(
             date = date,
             includeSteps = includeSteps,
             includeDistance = readDistancePermission in granted,

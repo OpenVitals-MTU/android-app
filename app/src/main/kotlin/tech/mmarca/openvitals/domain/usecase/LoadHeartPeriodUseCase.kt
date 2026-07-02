@@ -13,7 +13,9 @@ import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SpO2Entry
@@ -37,8 +39,10 @@ data class HeartPeriodLoadResult(
     val dailySummaries: List<HeartRateSummary> = emptyList(),
     val previousDailySummaries: List<HeartRateSummary> = emptyList(),
     val baselineDailySummaries: List<HeartRateSummary> = emptyList(),
+    val dayRestingSamples: List<RestingHeartRateSample> = emptyList(),
     val dayRestingBpm: Long? = null,
     val previousDayRestingBpm: Long? = null,
+    val dayHrvSamples: List<HrvSample> = emptyList(),
     val dayHrvMs: Double? = null,
     val previousDayHrvMs: Double? = null,
     val dailyRestingHR: List<DailyRestingHR> = emptyList(),
@@ -161,8 +165,10 @@ private fun HeartPeriodData.toLoadResult(): HeartPeriodLoadResult =
         dailySummaries = dailySummaries,
         previousDailySummaries = previousDailySummaries,
         baselineDailySummaries = baselineDailySummaries,
+        dayRestingSamples = dayRestingSamples,
         dayRestingBpm = dayRestingBpm,
         previousDayRestingBpm = previousDayRestingBpm,
+        dayHrvSamples = dayHrvSamples,
         dayHrvMs = dayHrvMs,
         previousDayHrvMs = previousDayHrvMs,
         dailyRestingHR = dailyRestingHR,
@@ -206,8 +212,10 @@ private fun HeartPeriodLoadResult.merge(other: HeartPeriodLoadResult): HeartPeri
         dailySummaries = dailySummaries + other.dailySummaries,
         previousDailySummaries = previousDailySummaries + other.previousDailySummaries,
         baselineDailySummaries = baselineDailySummaries + other.baselineDailySummaries,
+        dayRestingSamples = dayRestingSamples + other.dayRestingSamples,
         dayRestingBpm = dayRestingBpm ?: other.dayRestingBpm,
         previousDayRestingBpm = previousDayRestingBpm ?: other.previousDayRestingBpm,
+        dayHrvSamples = dayHrvSamples + other.dayHrvSamples,
         dayHrvMs = dayHrvMs ?: other.dayHrvMs,
         previousDayHrvMs = previousDayHrvMs ?: other.previousDayHrvMs,
         dailyRestingHR = dailyRestingHR + other.dailyRestingHR,

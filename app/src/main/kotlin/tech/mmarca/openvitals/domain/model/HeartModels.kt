@@ -9,6 +9,12 @@ data class HeartRateSample(
     val source: String,
 )
 
+data class RestingHeartRateSample(
+    val time: Instant,
+    val beatsPerMinute: Long,
+    val source: String,
+)
+
 data class HrvSample(
     val time: Instant,
     val rmssdMs: Double,

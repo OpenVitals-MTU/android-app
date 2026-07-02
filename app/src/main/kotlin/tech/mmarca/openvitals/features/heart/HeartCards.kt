@@ -23,6 +23,8 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.HrvSample
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.MetricLinePlot
 import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
@@ -58,7 +60,6 @@ internal fun HeartRateTimelineCard(
 
     OpenVitalsCard(
         modifier = modifier,
-
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -96,6 +97,123 @@ internal fun HeartRateTimelineCard(
                 accentColor = HeartColor,
                 chartHeight = chartHeight,
                 valueFormatter = { unitFormatter.heartRate(it.roundToLong()).text },
+                pointRadius = 3.dp,
+            )
+            Spacer(Modifier.height(8.dp))
+            ChartXAxisWithYAxis {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    listOf("00:00", "06:00", "12:00", "18:00", "24:00").forEach { label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(
+                    R.string.summary_recorded,
+                    timeFormatter.format(firstSample),
+                    timeFormatter.format(lastSample),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun RestingHeartRateTimelineCard(
+    date: LocalDate,
+    samples: List<RestingHeartRateSample>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    HeartRateTimelineCard(
+        date = date,
+        samples = samples.map { sample ->
+            HeartRateSample(
+                time = sample.time,
+                beatsPerMinute = sample.beatsPerMinute,
+                source = sample.source,
+            )
+        },
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun HrvTimelineCard(
+    date: LocalDate,
+    samples: List<HrvSample>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val zone = ZoneId.systemDefault()
+    val sorted = samples.sortedBy { it.time }
+    val minMs = sorted.minOfOrNull { it.rmssdMs } ?: 0.0
+    val maxMs = sorted.maxOfOrNull { it.rmssdMs } ?: 1.0
+    val avgMs = sorted.map { it.rmssdMs }.average()
+    val paddedMin = (minMs - 5.0).coerceAtLeast(0.0)
+    val paddedMax = maxMs + 5.0
+    val dayStart = date.atStartOfDay(zone).toInstant()
+    val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
+    val dayDurationMillis = Duration.between(dayStart, dayEnd).toMillis().coerceAtLeast(1L)
+    val firstSample = sorted.first().time.atZone(zone)
+    val lastSample = sorted.last().time.atZone(zone)
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
+    val chartHeight = 180.dp
+
+    OpenVitalsCard(
+        modifier = modifier,
+
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                HeartRateStat(
+                    label = stringResource(R.string.summary_average),
+                    value = unitFormatter.hrv(avgMs).text,
+                    modifier = Modifier.weight(1f),
+                )
+                HeartRateStat(
+                    label = stringResource(R.string.summary_range),
+                    value = "${unitFormatter.hrv(minMs).text}-${unitFormatter.hrv(maxMs).text}",
+                    modifier = Modifier.weight(1f),
+                )
+                HeartRateStat(
+                    label = stringResource(R.string.summary_samples),
+                    value = unitFormatter.count(sorted.size),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            MetricLinePlot(
+                points = sorted.map { sample ->
+                    val elapsed = Duration.between(dayStart, sample.time).toMillis()
+                        .coerceIn(0L, dayDurationMillis)
+                    MetricLinePlotPoint(
+                        xFraction = elapsed.toFloat() / dayDurationMillis.toFloat(),
+                        value = sample.rmssdMs,
+                    )
+                },
+                minValue = paddedMin,
+                maxValue = paddedMax,
+                accentColor = HeartColor,
+                chartHeight = chartHeight,
+                valueFormatter = { unitFormatter.hrv(it).text },
                 pointRadius = 3.dp,
             )
             Spacer(Modifier.height(8.dp))

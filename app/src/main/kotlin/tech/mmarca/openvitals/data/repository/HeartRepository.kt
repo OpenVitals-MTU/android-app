@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.reducedForChart
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -23,6 +24,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToLong
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -54,7 +56,7 @@ class HeartRepositoryImpl @Inject constructor(
             when (metric) {
                 HeartPeriodMetric.ALL -> loadAllHeartPeriod(query, granted)
                 HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
-                    val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
+                    val daySamples = async { loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted) }
                     val previousDaySamples = async { loadHeartRateSamples(windows.previous.start, granted) }
                     val baselineDailySummaries = async {
                         loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
@@ -81,13 +83,15 @@ class HeartRepositoryImpl @Inject constructor(
                     )
                 }
                 HeartPeriodMetric.RESTING_HEART_RATE -> if (query.range == TimeRange.DAY) {
-                    val dayRestingBpm = async { loadRestingHeartRate(query.selectedDate, granted) }
+                    val dayRestingSamples = async { loadRestingHeartRateSamplesForDay(query.selectedDate, granted) }
                     val previousDayRestingBpm = async { loadRestingHeartRate(windows.previous.start, granted) }
                     val baselineDailyRestingHR = async {
                         loadDailyRestingHR(windows.baseline.start, windows.baseline.end, granted)
                     }
+                    val samples = dayRestingSamples.await()
                     HeartPeriodData(
-                        dayRestingBpm = dayRestingBpm.await(),
+                        dayRestingSamples = samples,
+                        dayRestingBpm = samples.averageRestingBpm(),
                         previousDayRestingBpm = previousDayRestingBpm.await(),
                         baselineDailyRestingHR = baselineDailyRestingHR.await(),
                     )
@@ -106,10 +110,12 @@ class HeartRepositoryImpl @Inject constructor(
                     )
                 }
                 HeartPeriodMetric.HRV -> if (query.range == TimeRange.DAY) {
-                    val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
+                    val dayHrvSamples = async { loadHrvSamplesForDay(query.selectedDate, granted) }
                     val baselineDailyHrv = async { loadDailyHRV(windows.baseline.start, windows.baseline.end, granted) }
+                    val samples = dayHrvSamples.await()
                     HeartPeriodData(
-                        dayHrvMs = dayHrvMs.await(),
+                        dayHrvSamples = samples,
+                        dayHrvMs = samples.averageRmssdMs(),
                         baselineDailyHrv = baselineDailyHrv.await(),
                     )
                 } else {
@@ -136,13 +142,17 @@ class HeartRepositoryImpl @Inject constructor(
         granted: Set<String>,
     ): HeartPeriodData = coroutineScope {
         if (query.range == TimeRange.DAY) {
-            val daySamples = async { loadHeartRateSamples(query.selectedDate, granted) }
-            val dayRestingBpm = async { loadRestingHeartRate(query.selectedDate, granted) }
-            val dayHrvMs = async { loadHrvRmssd(query.selectedDate, granted) }
+            val daySamples = async { loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted) }
+            val dayRestingSamples = async { loadRestingHeartRateSamplesForDay(query.selectedDate, granted) }
+            val dayHrvSamples = async { loadHrvSamplesForDay(query.selectedDate, granted) }
+            val restingSamples = dayRestingSamples.await()
+            val hrvSamples = dayHrvSamples.await()
             HeartPeriodData(
                 daySamples = daySamples.await(),
-                dayRestingBpm = dayRestingBpm.await(),
-                dayHrvMs = dayHrvMs.await(),
+                dayRestingSamples = restingSamples,
+                dayRestingBpm = restingSamples.averageRestingBpm(),
+                dayHrvSamples = hrvSamples,
+                dayHrvMs = hrvSamples.averageRmssdMs(),
             )
         } else {
             val current = query.windows.current
@@ -186,13 +196,13 @@ class HeartRepositoryImpl @Inject constructor(
     ): HeartPeriodData = coroutineScope {
         when (metric) {
             HeartPeriodMetric.ALL -> if (data.daySamples.isEmpty()) {
-                data.copy(daySamples = loadHeartRateSamples(query.selectedDate, granted))
+                data.copy(daySamples = loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted))
             } else {
                 data
             }
             HeartPeriodMetric.AVERAGE_HEART_RATE -> {
                 val daySamples = if (data.daySamples.isEmpty()) {
-                    async { loadHeartRateSamples(query.selectedDate, granted) }
+                    async { loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted) }
                 } else {
                     null
                 }
@@ -208,6 +218,48 @@ class HeartRepositoryImpl @Inject constructor(
             }
             else -> data
         }
+    }
+
+    private suspend fun loadRawHeartRateSamplesForDayGraph(
+        date: LocalDate,
+        granted: Set<String>,
+    ): List<HeartRateSample> {
+        if (readHeartRatePermission !in granted) {
+            Log.w(TAG, "Skipping loadRawHeartRateSamplesForDayGraph missingCount=1")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return hc.readRawHeartRateSamples(start, end)
+    }
+
+    private suspend fun loadRestingHeartRateSamplesForDay(
+        date: LocalDate,
+        granted: Set<String>,
+    ): List<RestingHeartRateSample> {
+        if (readRestingHRPermission !in granted) {
+            Log.w(TAG, "Skipping loadRestingHeartRateSamplesForDay missingCount=1")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return hc.readRestingHeartRateSamples(start, end)
+    }
+
+    private suspend fun loadHrvSamplesForDay(
+        date: LocalDate,
+        granted: Set<String>,
+    ): List<HrvSample> {
+        if (readHrvPermission !in granted) {
+            Log.w(TAG, "Skipping loadHrvSamplesForDay missingCount=1")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return hc.readHrvSamples(start, end)
     }
 
     override suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample> {
@@ -334,6 +386,12 @@ class HeartRepositoryImpl @Inject constructor(
         return hc.readDailyHRV(start, end)
     }
 }
+
+private fun List<RestingHeartRateSample>.averageRestingBpm(): Long? =
+    takeIf { it.isNotEmpty() }?.map { it.beatsPerMinute }?.average()?.roundToLong()
+
+private fun List<HrvSample>.averageRmssdMs(): Double? =
+    takeIf { it.isNotEmpty() }?.map { it.rmssdMs }?.average()
 
 enum class HeartPeriodMetric {
     ALL,

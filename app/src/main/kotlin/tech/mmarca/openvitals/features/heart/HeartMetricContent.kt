@@ -373,54 +373,92 @@ internal fun LazyListScope.restingHeartRateContent(
     val display = state.display.metric
     when {
         display.hasDayRestingRate -> {
+            val dayRestingSamples = state.dayRestingSamples.sortedBy { it.time }
+            val restingBpm = state.dayRestingBpm
+                ?: dayRestingSamples.map { it.beatsPerMinute }.average().roundToLong()
+            val lowRestingBpm = dayRestingSamples.minOfOrNull { it.beatsPerMinute } ?: restingBpm
+            val highRestingBpm = dayRestingSamples.maxOfOrNull { it.beatsPerMinute } ?: restingBpm
             renderChartMetricSections(
                 sectionContext = sectionContext,
                 selectedRange = state.selectedRange,
                 period = period,
                 selectedDate = null,
+                intradayChart = if (dayRestingSamples.size > 1) {
+                    {
+                        RestingHeartRateTimelineCard(
+                            date = state.selectedDate,
+                            samples = dayRestingSamples,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = metricModifier(),
+                        )
+                    }
+                } else {
+                    null
+                },
                 highlightCard = {
                     Column {
                         RestingHRDayCard(
-                            bpm = state.dayRestingBpm!!,
+                            bpm = restingBpm,
                             unitFormatter = unitFormatter,
                             modifier = metricModifier(),
                         )
-                        RestingHeartRateContextCardContent(state.dayRestingBpm!!)
+                        RestingHeartRateContextCardContent(restingBpm)
                     }
                 },
                 dataConfidence = {
-                    HeartAggregateDataConfidenceContent(
-                        period = period,
-                        trackedDates = display.vitalsTrackedDates,
-                        sampleCount = display.vitalsSampleCount,
-                        accentColor = HeartColor,
-                    )
+                    if (dayRestingSamples.isNotEmpty()) {
+                        HeartRawDataConfidenceContent(
+                            period = period,
+                            entries = dayRestingSamples,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = HeartColor,
+                        )
+                    } else {
+                        HeartAggregateDataConfidenceContent(
+                            period = period,
+                            trackedDates = display.vitalsTrackedDates,
+                            sampleCount = display.vitalsSampleCount,
+                            accentColor = HeartColor,
+                        )
+                    }
                 },
                 statistics = {
                     HeartNumericStatisticsContent(
                         unitFormatter = unitFormatter,
-                        average = unitFormatter.heartRate(state.dayRestingBpm!!),
-                        low = unitFormatter.heartRate(state.dayRestingBpm!!),
-                        high = unitFormatter.heartRate(state.dayRestingBpm!!),
-                        readings = 1,
+                        average = unitFormatter.heartRate(restingBpm),
+                        low = unitFormatter.heartRate(lowRestingBpm),
+                        high = unitFormatter.heartRate(highRestingBpm),
+                        readings = dayRestingSamples.size.coerceAtLeast(1),
                         comparison = display.restingDayComparison,
                         selectedRange = state.selectedRange,
                         comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
                         icon = Icons.Outlined.FavoriteBorder,
                         accentColor = HeartColor,
                         period = period,
-                        baselineCurrentValue = state.dayRestingBpm!!.toDouble(),
+                        baselineCurrentValue = restingBpm.toDouble(),
                         baselineValues = display.restingBaselineValues,
                     )
                 },
                 entries = {
-                    HeartDailyEntryListContent(
-                        entries = listOf(DailyRestingHR(state.selectedDate, state.dayRestingBpm!!)),
-                        date = { it.date },
-                        value = { unitFormatter.heartRate(it.bpm).text },
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        accentColor = HeartColor,
-                    )
+                    if (dayRestingSamples.isNotEmpty()) {
+                        HeartEntryListContent(
+                            entries = dayRestingSamples,
+                            value = { unitFormatter.heartRate(it.beatsPerMinute).text },
+                            source = { it.source },
+                            time = { it.time },
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        )
+                    } else {
+                        HeartDailyEntryListContent(
+                            entries = listOf(DailyRestingHR(state.selectedDate, restingBpm)),
+                            date = { it.date },
+                            value = { unitFormatter.heartRate(it.bpm).text },
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            accentColor = HeartColor,
+                        )
+                    }
                 },
             )
         }
@@ -518,51 +556,88 @@ internal fun LazyListScope.hrvContent(
     val display = state.display.metric
     when {
         display.hasDayHrv -> {
+            val dayHrvSamples = state.dayHrvSamples.sortedBy { it.time }
+            val hrvMs = state.dayHrvMs ?: dayHrvSamples.map { it.rmssdMs }.average()
+            val lowHrvMs = dayHrvSamples.minOfOrNull { it.rmssdMs } ?: hrvMs
+            val highHrvMs = dayHrvSamples.maxOfOrNull { it.rmssdMs } ?: hrvMs
             renderChartMetricSections(
                 sectionContext = sectionContext,
                 selectedRange = state.selectedRange,
                 period = period,
                 selectedDate = null,
+                intradayChart = if (dayHrvSamples.size > 1) {
+                    {
+                        HrvTimelineCard(
+                            date = state.selectedDate,
+                            samples = dayHrvSamples,
+                            unitFormatter = unitFormatter,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            modifier = metricModifier(),
+                        )
+                    }
+                } else {
+                    null
+                },
                 highlightCard = {
                     HRVDayCard(
-                        rmssdMs = state.dayHrvMs!!,
+                        rmssdMs = hrvMs,
                         unitFormatter = unitFormatter,
                         modifier = metricModifier(),
                     )
                 },
                 dataConfidence = {
-                    HeartAggregateDataConfidenceContent(
-                        period = period,
-                        trackedDates = display.vitalsTrackedDates,
-                        sampleCount = display.vitalsSampleCount,
-                        accentColor = HeartColor,
-                    )
+                    if (dayHrvSamples.isNotEmpty()) {
+                        HeartRawDataConfidenceContent(
+                            period = period,
+                            entries = dayHrvSamples,
+                            source = { it.source },
+                            time = { it.time },
+                            accentColor = HeartColor,
+                        )
+                    } else {
+                        HeartAggregateDataConfidenceContent(
+                            period = period,
+                            trackedDates = display.vitalsTrackedDates,
+                            sampleCount = display.vitalsSampleCount,
+                            accentColor = HeartColor,
+                        )
+                    }
                 },
                 statistics = {
                     HeartNumericStatisticsContent(
                         unitFormatter = unitFormatter,
-                        average = unitFormatter.hrv(state.dayHrvMs!!),
-                        low = unitFormatter.hrv(state.dayHrvMs!!),
-                        high = unitFormatter.hrv(state.dayHrvMs!!),
-                        readings = 1,
+                        average = unitFormatter.hrv(hrvMs),
+                        low = unitFormatter.hrv(lowHrvMs),
+                        high = unitFormatter.hrv(highHrvMs),
+                        readings = dayHrvSamples.size.coerceAtLeast(1),
                         comparison = display.hrvDayComparison,
                         selectedRange = state.selectedRange,
                         comparisonValueFormatter = { unitFormatter.hrv(it) },
                         icon = Icons.Outlined.FavoriteBorder,
                         accentColor = HeartColor,
                         period = period,
-                        baselineCurrentValue = state.dayHrvMs!!,
+                        baselineCurrentValue = hrvMs,
                         baselineValues = display.hrvBaselineValues,
                     )
                 },
                 entries = {
-                    HeartDailyEntryListContent(
-                        entries = listOf(DailyHrv(state.selectedDate, state.dayHrvMs!!)),
-                        date = { it.date },
-                        value = { unitFormatter.hrv(it.rmssdMs).text },
-                        dateTimeFormatterProvider = dateTimeFormatterProvider,
-                        accentColor = HeartColor,
-                    )
+                    if (dayHrvSamples.isNotEmpty()) {
+                        HeartEntryListContent(
+                            entries = dayHrvSamples,
+                            value = { unitFormatter.hrv(it.rmssdMs).text },
+                            source = { it.source },
+                            time = { it.time },
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        )
+                    } else {
+                        HeartDailyEntryListContent(
+                            entries = listOf(DailyHrv(state.selectedDate, hrvMs)),
+                            date = { it.date },
+                            value = { unitFormatter.hrv(it.rmssdMs).text },
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            accentColor = HeartColor,
+                        )
+                    }
                 },
             )
         }

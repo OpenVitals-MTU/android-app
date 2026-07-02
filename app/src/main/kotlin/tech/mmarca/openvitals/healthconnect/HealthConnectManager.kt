@@ -49,6 +49,7 @@ import tech.mmarca.openvitals.domain.model.OvulationTestEntry
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SexualActivityEntry
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
@@ -223,6 +224,29 @@ class HealthConnectManager @Inject constructor(
             includeElevation = includeElevation,
         )
 
+    suspend fun readRawActivityProgress(
+        date: LocalDate,
+        includeSteps: Boolean = true,
+        includeDistance: Boolean,
+        includeCalories: Boolean,
+        includeActiveCalories: Boolean,
+        includeCaloriesEstimate: Boolean = false,
+        includeWheelchairPushes: Boolean,
+        includeFloors: Boolean,
+        includeElevation: Boolean,
+    ): List<ActivityProgressPoint> =
+        activityReader.readRawActivityProgress(
+            date = date,
+            includeSteps = includeSteps,
+            includeDistance = includeDistance,
+            includeCalories = includeCalories,
+            includeActiveCalories = includeActiveCalories,
+            includeCaloriesEstimate = includeCaloriesEstimate,
+            includeWheelchairPushes = includeWheelchairPushes,
+            includeFloors = includeFloors,
+            includeElevation = includeElevation,
+        )
+
     suspend fun readDistanceMeters(date: LocalDate): Double =
         activityReader.readDistanceMeters(date)
 
@@ -361,6 +385,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun readHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         heartReader.readHeartRateSamples(start, end)
 
+    suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
+        heartReader.readRawHeartRateSamples(start, end)
+
     suspend fun readDailyHeartRateSummaries(
         startDate: LocalDate,
         endDate: LocalDate,
@@ -369,6 +396,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readRestingHeartRate(date: LocalDate): Long? =
         heartReader.readRestingHeartRate(date)
+
+    suspend fun readRestingHeartRateSamples(start: Instant, end: Instant): List<RestingHeartRateSample> =
+        heartReader.readRestingHeartRateSamples(start, end)
 
     suspend fun readDailyRestingHR(startDate: LocalDate, endDate: LocalDate): List<DailyRestingHR> =
         heartReader.readDailyRestingHR(startDate, endDate)

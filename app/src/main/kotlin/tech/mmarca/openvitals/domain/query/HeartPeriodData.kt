@@ -4,6 +4,8 @@ import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.HrvSample
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 
 data class HeartPeriodData(
     val daySamples: List<HeartRateSample> = emptyList(),
@@ -11,8 +13,10 @@ data class HeartPeriodData(
     val dailySummaries: List<HeartRateSummary> = emptyList(),
     val previousDailySummaries: List<HeartRateSummary> = emptyList(),
     val baselineDailySummaries: List<HeartRateSummary> = emptyList(),
+    val dayRestingSamples: List<RestingHeartRateSample> = emptyList(),
     val dayRestingBpm: Long? = null,
     val previousDayRestingBpm: Long? = null,
+    val dayHrvSamples: List<HrvSample> = emptyList(),
     val dayHrvMs: Double? = null,
     val previousDayHrvMs: Double? = null,
     val dailyRestingHR: List<DailyRestingHR> = emptyList(),

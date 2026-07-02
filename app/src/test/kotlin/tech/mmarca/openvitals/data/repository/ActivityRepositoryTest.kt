@@ -10,10 +10,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -97,6 +101,70 @@ class ActivityRepositoryTest {
     }
 
     @Test
+    fun `DAY activity metric progress uses raw full data for selected day graph`() = runTest {
+        val date = LocalDate.of(2026, 6, 1)
+        val progress = listOf(
+            ActivityProgressPoint(
+                time = Instant.parse("2026-06-01T08:15:00Z"),
+                totalSteps = 250L,
+                totalDistanceMeters = 180.0,
+                totalCaloriesBurnedKcal = 32.0,
+                totalActiveCaloriesKcal = 18.0,
+            ),
+            ActivityProgressPoint(
+                time = Instant.parse("2026-06-01T08:20:00Z"),
+                totalSteps = 430L,
+                totalDistanceMeters = 310.0,
+                totalCaloriesBurnedKcal = 49.0,
+                totalActiveCaloriesKcal = 30.0,
+            ),
+        )
+        val hc = hc(
+            granted = setOf(
+                stepsPermission,
+                distancePermission,
+                totalCaloriesPermission,
+                activeCaloriesPermission,
+            ),
+            activityProgress = progress,
+        )
+
+        val result = ActivityRepositoryImpl(hc).loadActivityPeriod(
+            query = PeriodLoadQuery(range = TimeRange.DAY, anchorDate = date),
+            includeSteps = true,
+            includeNutrition = false,
+        )
+
+        assertEquals(progress, result.activityProgress)
+        coVerify {
+            hc.readRawActivityProgress(
+                date = date,
+                includeSteps = true,
+                includeDistance = true,
+                includeCalories = true,
+                includeActiveCalories = true,
+                includeCaloriesEstimate = false,
+                includeWheelchairPushes = false,
+                includeFloors = false,
+                includeElevation = false,
+            )
+        }
+        coVerify(exactly = 0) {
+            hc.readActivityProgress(
+                date = any(),
+                includeSteps = any(),
+                includeDistance = any(),
+                includeCalories = any(),
+                includeActiveCalories = any(),
+                includeCaloriesEstimate = any(),
+                includeWheelchairPushes = any(),
+                includeFloors = any(),
+                includeElevation = any(),
+            )
+        }
+    }
+
+    @Test
     fun `loadDailyNutrition reads plain Health Connect total calories by default`() = runTest {
         val start = LocalDate.of(2026, 6, 1)
         val end = LocalDate.of(2026, 6, 7)
@@ -164,6 +232,7 @@ class ActivityRepositoryTest {
     private fun hc(
         granted: Set<String>,
         dailySteps: List<DailySteps> = emptyList(),
+        activityProgress: List<ActivityProgressPoint> = emptyList(),
         additionalDataAccessPermissions: Set<String> = emptySet(),
     ): HealthConnectManager =
         mockk<HealthConnectManager>().also { hc ->
@@ -180,5 +249,31 @@ class ActivityRepositoryTest {
                     includeElevation = any(),
                 )
             } returns dailySteps
+            coEvery {
+                hc.readRawActivityProgress(
+                    date = any(),
+                    includeSteps = any(),
+                    includeDistance = any(),
+                    includeCalories = any(),
+                    includeActiveCalories = any(),
+                    includeCaloriesEstimate = any(),
+                    includeWheelchairPushes = any(),
+                    includeFloors = any(),
+                    includeElevation = any(),
+                )
+            } returns activityProgress
+            coEvery {
+                hc.readActivityProgress(
+                    date = any(),
+                    includeSteps = any(),
+                    includeDistance = any(),
+                    includeCalories = any(),
+                    includeActiveCalories = any(),
+                    includeCaloriesEstimate = any(),
+                    includeWheelchairPushes = any(),
+                    includeFloors = any(),
+                    includeElevation = any(),
+                )
+            } returns emptyList()
         }
 }

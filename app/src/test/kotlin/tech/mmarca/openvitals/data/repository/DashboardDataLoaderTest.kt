@@ -130,6 +130,7 @@ class DashboardDataLoaderTest {
         assertNull(data.heartRateSampleStartTime)
         assertNull(data.heartRateSampleEndTime)
         coVerify(exactly = 1) { hc.readAvgHeartRate(date) }
+        coVerify(exactly = 0) { hc.readRawHeartRateSamples(any(), any()) }
         coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }
     }
 

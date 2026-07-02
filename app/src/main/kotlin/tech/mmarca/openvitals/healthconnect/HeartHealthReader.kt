@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
+import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.heartRateSampleFromAggregateBucket
 import tech.mmarca.openvitals.domain.model.shouldUseAggregatedHeartRateSamples
 import java.time.Duration
@@ -46,8 +47,13 @@ internal class HeartHealthReader(
             if (shouldUseAggregatedHeartRateSamples(range)) {
                 readAggregatedHeartRateSamples(start, end)
             } else {
-                readRawHeartRateSamples(start, end)
+                readRawHeartRateSamplesPaged(start, end)
             }
+        }
+
+    suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
+        support.withLogging("readRawHeartRateSamples[$start..$end]", emptyList()) {
+            readRawHeartRateSamplesPaged(start, end)
         }
 
     /**
@@ -72,7 +78,7 @@ internal class HeartHealthReader(
             )
         }
 
-    private suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> {
+    private suspend fun readRawHeartRateSamplesPaged(start: Instant, end: Instant): List<HeartRateSample> {
         var chunkStart = start
         val accumulated = mutableListOf<HeartRateSample>()
         while (chunkStart < end) {
@@ -144,6 +150,22 @@ internal class HeartHealthReader(
             )[RestingHeartRateRecord.BPM_AVG]
         }
     }
+
+    suspend fun readRestingHeartRateSamples(start: Instant, end: Instant): List<RestingHeartRateSample> =
+        support.withLogging("readRestingHeartRateSamples[$start..$end]", emptyList()) {
+            support.client().readRecordsPaged(
+                recordType = RestingHeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+                pageSize = 500,
+            ).map { record ->
+                RestingHeartRateSample(
+                    time = record.time,
+                    beatsPerMinute = record.beatsPerMinute,
+                    source = record.metadata.dataOrigin.packageName,
+                )
+            }
+        }
 
     suspend fun readDailyRestingHR(startDate: LocalDate, endDate: LocalDate): List<DailyRestingHR> {
         val zone = ZoneId.systemDefault()

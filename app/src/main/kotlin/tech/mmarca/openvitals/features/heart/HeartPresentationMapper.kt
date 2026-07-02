@@ -29,8 +29,10 @@ object HeartPresentationMapper {
             dailySummaries = result.dailySummaries,
             previousDailySummaries = result.previousDailySummaries,
             baselineDailySummaries = result.baselineDailySummaries,
+            dayRestingSamples = result.dayRestingSamples,
             dayRestingBpm = result.dayRestingBpm,
             previousDayRestingBpm = result.previousDayRestingBpm,
+            dayHrvSamples = result.dayHrvSamples,
             dayHrvMs = result.dayHrvMs,
             previousDayHrvMs = result.previousDayHrvMs,
             dailyRestingHR = result.dailyRestingHR,
@@ -132,8 +134,10 @@ private fun HeartUiState.toLoadResult(): HeartPeriodLoadResult =
         dailySummaries = dailySummaries,
         previousDailySummaries = previousDailySummaries,
         baselineDailySummaries = baselineDailySummaries,
+        dayRestingSamples = dayRestingSamples,
         dayRestingBpm = dayRestingBpm,
         previousDayRestingBpm = previousDayRestingBpm,
+        dayHrvSamples = dayHrvSamples,
         dayHrvMs = dayHrvMs,
         previousDayHrvMs = previousDayHrvMs,
         dailyRestingHR = dailyRestingHR,
@@ -193,7 +197,8 @@ private fun restingHeartRateDisplay(
     query: PeriodLoadQuery,
     result: HeartPeriodLoadResult,
 ): HeartMetricDisplay {
-    val hasDayResting = query.range == TimeRange.DAY && result.dayRestingBpm != null
+    val hasDayRestingSamples = query.range == TimeRange.DAY && result.dayRestingSamples.isNotEmpty()
+    val hasDayResting = query.range == TimeRange.DAY && (hasDayRestingSamples || result.dayRestingBpm != null)
     val sorted = result.dailyRestingHR.sortedBy { it.date }
     val hasPeriodResting = query.range != TimeRange.DAY && sorted.isNotEmpty()
     return HeartMetricDisplay(
@@ -214,7 +219,7 @@ private fun restingHeartRateDisplay(
             ?.toLong(),
         restingBaselineValues = result.baselineDailyRestingHR.map { BaselineValue(it.date, it.bpm.toDouble()) },
         vitalsTrackedDates = if (hasDayResting) listOf(query.selectedDate) else sorted.map { it.date },
-        vitalsSampleCount = if (hasDayResting) 1 else sorted.size,
+        vitalsSampleCount = if (hasDayResting) result.dayRestingSamples.size.coerceAtLeast(1) else sorted.size,
     )
 }
 
@@ -222,7 +227,8 @@ private fun hrvDisplay(
     query: PeriodLoadQuery,
     result: HeartPeriodLoadResult,
 ): HeartMetricDisplay {
-    val hasDayHrv = query.range == TimeRange.DAY && result.dayHrvMs != null
+    val hasDayHrvSamples = query.range == TimeRange.DAY && result.dayHrvSamples.isNotEmpty()
+    val hasDayHrv = query.range == TimeRange.DAY && (hasDayHrvSamples || result.dayHrvMs != null)
     val sorted = result.dailyHrv.sortedBy { it.date }
     val hasPeriodHrv = query.range != TimeRange.DAY && sorted.isNotEmpty()
     return HeartMetricDisplay(
@@ -235,7 +241,7 @@ private fun hrvDisplay(
         },
         hrvBaselineValues = result.baselineDailyHrv.map { BaselineValue(it.date, it.rmssdMs) },
         vitalsTrackedDates = if (hasDayHrv) listOf(query.selectedDate) else sorted.map { it.date },
-        vitalsSampleCount = if (hasDayHrv) 1 else sorted.size,
+        vitalsSampleCount = if (hasDayHrv) result.dayHrvSamples.size.coerceAtLeast(1) else sorted.size,
     )
 }
 
