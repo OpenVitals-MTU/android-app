@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -64,7 +65,13 @@ class HydrationRepositoryImpl @Inject constructor(
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         return coroutineScope {
-            val dailyHydration = async { loadDailyHydration(windows.current.start, windows.current.end, granted) }
+            val dailyHydration = async {
+                if (query.range == TimeRange.DAY) {
+                    emptyList()
+                } else {
+                    loadDailyHydration(windows.current.start, windows.current.end, granted)
+                }
+            }
             val previousDailyHydration = async {
                 loadDailyHydration(windows.previous.start, windows.previous.end, granted)
             }
@@ -72,11 +79,16 @@ class HydrationRepositoryImpl @Inject constructor(
                 loadDailyHydration(windows.baseline.start, windows.baseline.end, granted)
             }
             val hydrationEntries = async { loadHydrationEntries(windows.current.start, windows.current.end, granted) }
+            val currentEntries = hydrationEntries.await()
             HydrationPeriodData(
-                dailyHydration = dailyHydration.await(),
+                dailyHydration = if (query.range == TimeRange.DAY) {
+                    currentEntries.toDailyHydrationForDay(query.selectedDate)
+                } else {
+                    dailyHydration.await()
+                },
                 previousDailyHydration = previousDailyHydration.await(),
                 baselineDailyHydration = baselineDailyHydration.await(),
-                hydrationEntries = hydrationEntries.await(),
+                hydrationEntries = currentEntries,
             )
         }
     }
@@ -121,6 +133,16 @@ class HydrationRepositoryImpl @Inject constructor(
 
     override suspend fun hasHydrationWritePermission(): Boolean =
         writeHydrationPermission in grantedPermissionsIfAvailable()
+
+    private fun List<HydrationEntry>.toDailyHydrationForDay(date: LocalDate): List<DailyHydration> {
+        val zone = ZoneId.systemDefault()
+        val liters = filter { it.startTime.atZone(zone).toLocalDate() == date }.sumOf { it.liters }
+        return if (liters > 0.0) {
+            listOf(DailyHydration(date = date, liters = liters))
+        } else {
+            emptyList()
+        }
+    }
 
     override suspend fun writeHydrationEntry(request: HydrationWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()

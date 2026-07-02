@@ -1,6 +1,11 @@
 package tech.mmarca.openvitals.features.mindfulness
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
@@ -8,6 +13,9 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -19,6 +27,8 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.insights.DataValueKind
 import tech.mmarca.openvitals.domain.insights.dataConfidence
+import tech.mmarca.openvitals.domain.model.MindfulnessSession
+import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.DailyGoalCard
@@ -28,6 +38,9 @@ import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricBarChart
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.MetricLinePlot
+import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -36,6 +49,9 @@ import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.personalBaselineInsightStats
 import tech.mmarca.openvitals.ui.components.previousPeriodInsightStat
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.roundToLong
@@ -91,24 +107,32 @@ internal fun LazyListScope.mindfulnessPeriodContent(
             )
         }
         item {
-            val chartValues = display.dailyMinutes.map {
-                PeriodChartValue(date = it.date, value = it.minutes)
+            if (state.selectedRange == TimeRange.DAY) {
+                MindfulnessIntradayChartCard(
+                    selectedDate = state.selectedDate,
+                    sessions = state.sessions,
+                    unitFormatter = unitFormatter,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = metricModifier(),
+                )
+            } else {
+                val chartValues = display.dailyMinutes.map {
+                    PeriodChartValue(date = it.date, value = it.minutes)
+                }
+                MetricBarChart(
+                    title = stringResource(R.string.metric_mindfulness),
+                    values = chartValues,
+                    selectedRange = state.selectedRange,
+                    period = period,
+                    accentColor = MindfulnessColor,
+                    summaryValue = unitFormatter.minutes(display.summary.totalMinutes).text,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = metricModifier(),
+                    selectedDate = chartDaySelection.selectedDate,
+                    onDateSelected = chartDaySelection.onDateSelected,
+                    valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
+                )
             }
-            MetricBarChart(
-                title = stringResource(R.string.metric_mindfulness),
-                values = chartValues,
-                selectedRange = state.selectedRange,
-                period = period,
-                accentColor = MindfulnessColor,
-                summaryValue = unitFormatter.minutes(display.summary.totalMinutes).text,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-                valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
-            )
         }
         chartDaySelection.selectedDate?.let { selectedDate ->
             item {
@@ -172,9 +196,130 @@ internal fun LazyListScope.mindfulnessPeriodContent(
     }
 }
 
+@Composable
+private fun MindfulnessIntradayChartCard(
+    selectedDate: LocalDate,
+    sessions: List<MindfulnessSession>,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val zone = ZoneId.systemDefault()
+    val dayStart = selectedDate.atStartOfDay(zone).toInstant()
+    val isToday = selectedDate == LocalDate.now()
+    val chartEnd = if (isToday) Instant.now() else selectedDate.plusDays(1).atStartOfDay(zone).toInstant()
+    val elapsedToday = Duration.between(dayStart, chartEnd).toMillis().coerceAtLeast(1L)
+    val points = sessions.cumulativeMindfulnessPoints()
+    val totalMinutes = points.lastOrNull()?.second ?: 0.0
+    val maxValue = totalMinutes.coerceAtLeast(1.0)
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
+
+    OpenVitalsCard(modifier = modifier) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = unitFormatter.minutes(totalMinutes.roundToLong()).text,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MindfulnessColor,
+            )
+            Text(
+                text = if (isToday) {
+                    stringResource(R.string.summary_today, stringResource(R.string.metric_mindfulness))
+                } else {
+                    stringResource(
+                        R.string.summary_on_date,
+                        stringResource(R.string.metric_mindfulness),
+                        dateFormatter.format(selectedDate),
+                    )
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+
+            if (points.isNotEmpty()) {
+                val chartPoints = buildList {
+                    add(MetricLinePlotPoint(xFraction = 0f, value = 0.0))
+                    points.forEach { point ->
+                        val elapsed = Duration.between(dayStart, point.first)
+                            .toMillis()
+                            .coerceIn(0L, elapsedToday)
+                        add(
+                            MetricLinePlotPoint(
+                                xFraction = elapsed.toFloat() / elapsedToday.toFloat(),
+                                value = point.second,
+                            )
+                        )
+                    }
+                    add(MetricLinePlotPoint(xFraction = 1f, value = totalMinutes))
+                }
+
+                MetricLinePlot(
+                    points = chartPoints,
+                    minValue = 0.0,
+                    maxValue = maxValue,
+                    accentColor = MindfulnessColor,
+                    chartHeight = 180.dp,
+                    valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
+                    lineStrokeWidth = 3.dp,
+                )
+                Spacer(Modifier.height(8.dp))
+                ChartXAxisWithYAxis {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        listOf(
+                            "00:00",
+                            "06:00",
+                            "12:00",
+                            "18:00",
+                            if (isToday) stringResource(R.string.summary_now) else "24:00",
+                        ).forEach { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(
+                        R.string.summary_last_update,
+                        timeFormatter.format(points.last().first.atZone(zone)),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    text = if (isToday) {
+                        stringResource(R.string.summary_empty_today, stringResource(R.string.metric_mindfulness))
+                    } else {
+                        stringResource(R.string.summary_empty_day, stringResource(R.string.metric_mindfulness))
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+private fun List<MindfulnessSession>.cumulativeMindfulnessPoints(): List<Pair<Instant, Double>> {
+    var cumulativeMinutes = 0.0
+    return sortedBy { it.endTime }
+        .map { session ->
+            cumulativeMinutes += session.durationMs.coerceAtLeast(0L).toDouble() / 60_000.0
+            session.endTime to cumulativeMinutes
+        }
+}
+
 private fun LazyListScope.mindfulnessDataConfidence(
     display: MindfulnessDisplayState,
-    sessions: List<tech.mmarca.openvitals.domain.model.MindfulnessSession>,
+    sessions: List<MindfulnessSession>,
     period: DatePeriod,
 ) {
     if (period.start == period.end) return

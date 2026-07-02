@@ -220,6 +220,11 @@ class HeartRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun loadRawHeartRateSamplesForDayGraph(date: LocalDate): List<HeartRateSample> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadRawHeartRateSamplesForDayGraph(date, granted)
+    }
+
     private suspend fun loadRawHeartRateSamplesForDayGraph(
         date: LocalDate,
         granted: Set<String>,

@@ -21,6 +21,8 @@ interface HeartRepository {
 
     suspend fun loadHeartRateSamples(date: LocalDate): List<HeartRateSample>
 
+    suspend fun loadRawHeartRateSamplesForDayGraph(date: LocalDate): List<HeartRateSample>
+
     suspend fun loadHeartRateSamples(start: LocalDate, end: LocalDate): List<HeartRateSample>
 
     suspend fun loadHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample>

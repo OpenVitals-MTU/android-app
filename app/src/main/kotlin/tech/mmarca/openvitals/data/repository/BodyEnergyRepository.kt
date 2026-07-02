@@ -73,7 +73,7 @@ class BodyEnergyRepositoryImpl @Inject constructor(
                 signature = baselineSignature(permissionSignature),
             )
         }
-        val heartRate = async { heartRepository.loadHeartRateSamples(dayStart, dayEnd) }
+        val heartRate = async { heartRepository.loadRawHeartRateSamplesForDayGraph(date) }
         val hrvSamples = async { heartRepository.loadHrvSamples(dayStart, dayEnd) }
         val sleep = async { sleepRepository.loadSleepSessions(date.minusDays(1), date) }
         val workouts = async { activityRepository.loadWorkouts(date, date) }

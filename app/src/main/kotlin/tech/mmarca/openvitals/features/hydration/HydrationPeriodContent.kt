@@ -1,10 +1,17 @@
 package tech.mmarca.openvitals.features.hydration
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -16,14 +23,22 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
+import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.CrossMetricInsightCard
 import tech.mmarca.openvitals.ui.components.MetricBarChart
+import tech.mmarca.openvitals.ui.components.MetricLinePlot
+import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
+import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.renderOrderedMetricDetailSections
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -188,11 +203,12 @@ private fun HydrationTrendContent(
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
     if (state.selectedRange == TimeRange.DAY) {
-        HydrationDayGoalProgress(
-            liters = display.dayLiters,
+        HydrationIntradayChartCard(
+            selectedDate = state.selectedDate,
+            entries = state.hydrationEntries,
             dailyGoalLiters = state.dailyGoalLiters,
-            period = period,
             unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = modifier,
         )
     } else {
@@ -220,6 +236,128 @@ private fun HydrationTrendContent(
             valueFormatter = { unitFormatter.hydration(it).text },
         )
     }
+}
+
+@Composable
+private fun HydrationIntradayChartCard(
+    selectedDate: LocalDate,
+    entries: List<HydrationEntry>,
+    dailyGoalLiters: Double,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    modifier: Modifier = Modifier,
+) {
+    val zone = ZoneId.systemDefault()
+    val dayStart = selectedDate.atStartOfDay(zone).toInstant()
+    val isToday = selectedDate == LocalDate.now()
+    val chartEnd = if (isToday) Instant.now() else selectedDate.plusDays(1).atStartOfDay(zone).toInstant()
+    val elapsedToday = Duration.between(dayStart, chartEnd).toMillis().coerceAtLeast(1L)
+    val points = entries.cumulativeHydrationPoints()
+    val totalLiters = points.lastOrNull()?.second ?: 0.0
+    val maxValue = maxOf(totalLiters, dailyGoalLiters, 0.5)
+    val dateFormatter = dateTimeFormatterProvider.mediumDate()
+    val timeFormatter = dateTimeFormatterProvider.shortTime()
+
+    OpenVitalsCard(modifier = modifier) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = unitFormatter.hydration(totalLiters).text,
+                style = MaterialTheme.typography.headlineMedium,
+                color = HydrationColor,
+            )
+            Text(
+                text = if (isToday) {
+                    stringResource(R.string.summary_today, stringResource(R.string.metric_hydration))
+                } else {
+                    stringResource(
+                        R.string.summary_on_date,
+                        stringResource(R.string.metric_hydration),
+                        dateFormatter.format(selectedDate),
+                    )
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+
+            if (points.isNotEmpty()) {
+                val chartPoints = buildList {
+                    add(MetricLinePlotPoint(xFraction = 0f, value = 0.0))
+                    points.forEach { point ->
+                        val elapsed = Duration.between(dayStart, point.first)
+                            .toMillis()
+                            .coerceIn(0L, elapsedToday)
+                        add(
+                            MetricLinePlotPoint(
+                                xFraction = elapsed.toFloat() / elapsedToday.toFloat(),
+                                value = point.second,
+                            )
+                        )
+                    }
+                    add(MetricLinePlotPoint(xFraction = 1f, value = totalLiters))
+                }
+
+                MetricLinePlot(
+                    points = chartPoints,
+                    minValue = 0.0,
+                    maxValue = maxValue,
+                    accentColor = HydrationColor,
+                    chartHeight = 180.dp,
+                    valueFormatter = { unitFormatter.hydration(it).text },
+                    lineStrokeWidth = 3.dp,
+                )
+                Spacer(Modifier.height(8.dp))
+                ChartXAxisWithYAxis {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        listOf(
+                            "00:00",
+                            "06:00",
+                            "12:00",
+                            "18:00",
+                            if (isToday) stringResource(R.string.summary_now) else "24:00",
+                        ).forEach { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(
+                        R.string.summary_last_update,
+                        timeFormatter.format(points.last().first.atZone(zone)),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    text = if (isToday) {
+                        stringResource(R.string.summary_empty_today, stringResource(R.string.metric_hydration))
+                    } else {
+                        stringResource(R.string.summary_empty_day, stringResource(R.string.metric_hydration))
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+private fun List<HydrationEntry>.cumulativeHydrationPoints(): List<Pair<Instant, Double>> {
+    var cumulativeLiters = 0.0
+    return sortedBy { it.endTime }
+        .map { entry ->
+            cumulativeLiters += entry.liters
+            entry.endTime to cumulativeLiters
+        }
 }
 
 @Composable

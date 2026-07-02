@@ -508,12 +508,18 @@ internal data class BodyMetricData(
     val titleRes: Int,
     val latest: DisplayValue?,
     val values: List<PeriodChartValue>,
+    val dayValues: List<BodyMetricDayValue> = emptyList(),
     val color: Color,
     val icon: ImageVector,
     val valueDisplayFormatter: (Double) -> DisplayValue,
 ) {
     val hasTrackedValues: Boolean = values.isNotEmpty()
 }
+
+internal data class BodyMetricDayValue(
+    val time: Instant,
+    val value: Double,
+)
 
 internal data class BodyReadingItem(
     val value: String,
@@ -535,6 +541,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_weight,
             latest = summary.latestWeightKg?.let(unitFormatter::weight),
             values = dailyLatestValues(state.weightEntries, time = { it.time }, value = { it.weightKg }),
+            dayValues = state.weightEntries.map { BodyMetricDayValue(it.time, it.weightKg) },
             color = WeightColor,
             icon = Icons.Outlined.MonitorWeight,
             valueDisplayFormatter = { unitFormatter.weight(it) },
@@ -544,6 +551,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_height,
             latest = summary.latestHeightCm?.let(unitFormatter::height),
             values = dailyLatestValues(state.heightEntries, time = { it.time }, value = { it.heightCm }),
+            dayValues = state.heightEntries.map { BodyMetricDayValue(it.time, it.heightCm) },
             color = WeightColor,
             icon = Icons.Outlined.Straighten,
             valueDisplayFormatter = { unitFormatter.height(it) },
@@ -553,6 +561,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_bmi,
             latest = summary.bmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
             values = bmiHistoryValues(state.weightEntries, summary.heightCm),
+            dayValues = bmiDayValues(state.weightEntries, summary.heightCm),
             color = WeightColor,
             icon = Icons.Outlined.MonitorWeight,
             valueDisplayFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
@@ -571,6 +580,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_body_fat,
             latest = summary.latestBodyFatPercent?.let(unitFormatter::percent),
             values = dailyLatestValues(state.bodyFatEntries, time = { it.time }, value = { it.percent }),
+            dayValues = state.bodyFatEntries.map { BodyMetricDayValue(it.time, it.percent) },
             color = BodyFatColor,
             icon = Icons.Outlined.MonitorWeight,
             valueDisplayFormatter = { unitFormatter.percent(it) },
@@ -580,6 +590,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_lean_mass,
             latest = summary.latestLeanMassKg?.let(unitFormatter::bodyMass),
             values = dailyLatestValues(state.leanMassEntries, time = { it.time }, value = { it.massKg }),
+            dayValues = state.leanMassEntries.map { BodyMetricDayValue(it.time, it.massKg) },
             color = WeightColor,
             icon = Icons.Outlined.MonitorWeight,
             valueDisplayFormatter = { unitFormatter.bodyMass(it) },
@@ -589,6 +600,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_bone_mass,
             latest = summary.latestBoneMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
             values = dailyLatestValues(state.boneMassEntries, time = { it.time }, value = { it.massKg }),
+            dayValues = state.boneMassEntries.map { BodyMetricDayValue(it.time, it.massKg) },
             color = WeightColor,
             icon = Icons.Outlined.MonitorWeight,
             valueDisplayFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
@@ -598,6 +610,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_body_water_mass,
             latest = summary.latestBodyWaterMassKg?.let { unitFormatter.bodyMass(it, decimals = 2) },
             values = dailyLatestValues(state.bodyWaterMassEntries, time = { it.time }, value = { it.massKg }),
+            dayValues = state.bodyWaterMassEntries.map { BodyMetricDayValue(it.time, it.massKg) },
             color = WeightColor,
             icon = Icons.Outlined.LocalDrink,
             valueDisplayFormatter = { unitFormatter.bodyMass(it, decimals = 2) },
@@ -607,6 +620,7 @@ internal fun bodyMetricData(
             titleRes = R.string.metric_bmr,
             latest = summary.latestBmrKcal?.let(unitFormatter::energy),
             values = dailyLatestValues(state.bmrEntries, time = { it.time }, value = { it.kcalPerDay }),
+            dayValues = state.bmrEntries.map { BodyMetricDayValue(it.time, it.kcalPerDay) },
             color = CaloriesColor,
             icon = Icons.Outlined.LocalFireDepartment,
             valueDisplayFormatter = { unitFormatter.energy(it) },
@@ -763,6 +777,19 @@ internal fun bmiHistoryValues(
             }
         }
         .sortedBy { it.date }
+}
+
+private fun bmiDayValues(
+    entries: List<WeightEntry>,
+    heightCm: Double?,
+): List<BodyMetricDayValue> {
+    val heightMeters = heightCm?.takeIf { it > 0.0 }?.let { it / 100.0 } ?: return emptyList()
+    return entries.map { entry ->
+        BodyMetricDayValue(
+            time = entry.time,
+            value = entry.weightKg / (heightMeters * heightMeters),
+        )
+    }
 }
 
 internal fun WeightEntry.editAction(

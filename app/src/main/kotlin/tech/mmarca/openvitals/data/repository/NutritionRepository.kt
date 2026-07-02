@@ -5,11 +5,14 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.NutritionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.model.valueFor
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -43,15 +46,26 @@ class NutritionRepositoryImpl @Inject constructor(
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
         return coroutineScope {
-            val dailyMacros = async { loadDailyMacros(windows.current.start, windows.current.end, granted) }
+            val dailyMacros = async {
+                if (query.range == TimeRange.DAY) {
+                    emptyList()
+                } else {
+                    loadDailyMacros(windows.current.start, windows.current.end, granted)
+                }
+            }
             val previousDailyMacros = async { loadDailyMacros(windows.previous.start, windows.previous.end, granted) }
             val baselineDailyMacros = async { loadDailyMacros(windows.baseline.start, windows.baseline.end, granted) }
             val entries = async { loadNutritionEntries(windows.current.start, windows.current.end, granted) }
+            val currentEntries = entries.await()
             NutritionPeriodData(
-                dailyMacros = dailyMacros.await(),
+                dailyMacros = if (query.range == TimeRange.DAY) {
+                    currentEntries.toDailyMacrosForDay(query.selectedDate)
+                } else {
+                    dailyMacros.await()
+                },
                 previousDailyMacros = previousDailyMacros.await(),
                 baselineDailyMacros = baselineDailyMacros.await(),
-                entries = entries.await(),
+                entries = currentEntries,
             )
         }
     }
@@ -95,6 +109,20 @@ class NutritionRepositoryImpl @Inject constructor(
 
     override suspend fun hasNutritionWritePermission(): Boolean =
         writeNutritionPermission in grantedPermissionsIfAvailable()
+
+    private fun List<NutritionEntry>.toDailyMacrosForDay(date: LocalDate): List<DailyMacros> {
+        val zone = ZoneId.systemDefault()
+        val dayEntries = filter { it.time.atZone(zone).toLocalDate() == date }
+        if (dayEntries.isEmpty()) return emptyList()
+        return listOf(
+            DailyMacros(
+                date = date,
+                nutrientValues = NutritionNutrient.entries.associateWith { nutrient ->
+                    dayEntries.sumOf { entry -> entry.valueFor(nutrient) ?: 0.0 }
+                },
+            )
+        )
+    }
 
     override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()
