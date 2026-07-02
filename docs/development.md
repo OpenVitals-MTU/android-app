@@ -73,6 +73,12 @@ Version tags create or update the matching versioned prerelease page. The
 approved production deployment uploads the signed release AAB to Google Play
 production and then promotes the matching Codeberg prerelease to stable.
 
+Configure the Woodpecker cron named `nightly` to run at `00:00 UTC`. The
+cron-only workflow moves the fixed `nightly` tag to the cron commit and pushes
+it back to Codeberg; that tag push triggers the normal nightly release workflow.
+Configure `CODEBERG_NIGHTLY_TAG_SSH_KEY` with a write-enabled Codeberg deploy
+key that can move `refs/tags/nightly`.
+
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
 edit repository releases. Configure the release signing secrets
 `OPENVITALS_RELEASE_KEYSTORE_BASE64`, `OPENVITALS_RELEASE_STORE_PASSWORD`,
@@ -117,10 +123,11 @@ git diff --check
    release AAB to Google Play production and then promotes the matching Codeberg
    prerelease to stable.
 
-For a nightly release, move the fixed `nightly` tag to the desired commit and
-push it. The tag pipeline runs the same release checks, publishes the APK to the
-mutable Codeberg `nightly` prerelease, and uploads the signed AAB to Google Play
-open testing.
+For an immediate nightly release, move the fixed `nightly` tag to the desired
+commit and push it. The tag pipeline runs the same release checks, publishes the
+APK to the mutable Codeberg `nightly` prerelease, and uploads the signed AAB to
+Google Play open testing. The scheduled Woodpecker cron performs the same tag
+move automatically at midnight UTC.
 
 Use the exact `versionName` for release notes, changelog references, and tags.
 For a final release, that means file name, `versionName`, and tag such as

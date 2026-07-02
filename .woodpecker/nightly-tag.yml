@@ -1,0 +1,24 @@
+when:
+  - event: cron
+    cron: nightly
+
+steps:
+  - name: move-nightly-tag
+    image: alpine:3.20
+    environment:
+      CODEBERG_NIGHTLY_TAG_SSH_KEY:
+        from_secret: CODEBERG_NIGHTLY_TAG_SSH_KEY
+    commands:
+      - set -eu
+      - apk add --no-cache git openssh-client
+      - test -n "$${CODEBERG_NIGHTLY_TAG_SSH_KEY}"
+      - mkdir -p "$${HOME}/.ssh"
+      - printf '%s\n' "$${CODEBERG_NIGHTLY_TAG_SSH_KEY}" > "$${HOME}/.ssh/id_ed25519"
+      - chmod 600 "$${HOME}/.ssh/id_ed25519"
+      - ssh-keyscan -t ed25519 codeberg.org >> "$${HOME}/.ssh/known_hosts"
+      - git config user.name "OpenVitals CI"
+      - git config user.email "ci@openvitals.local"
+      - git remote set-url origin ssh://git@codeberg.org/OpenVitals/android-app.git
+      - git fetch --tags --force origin
+      - git tag -fa nightly "$${CI_COMMIT_SHA}" -m "OpenVitals nightly $${CI_PIPELINE_NUMBER}"
+      - git push --force origin refs/tags/nightly
