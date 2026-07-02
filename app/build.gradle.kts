@@ -37,7 +37,7 @@ val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
     ?: emptySet()
 val versionCodeOverride = providers.environmentVariable("OPENVITALS_VERSION_CODE")
     .map { it.toInt() }
-val baseVersionCode = 17003
+val baseVersionCode = 17004
 
 android {
     namespace = "tech.mmarca.openvitals"
@@ -49,7 +49,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = versionCodeOverride.orElse(baseVersionCode).get()
-        versionName = "1.7.3"
+        versionName = "1.7.4"
         buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "false")
         if (apkAbiFilters.isNotEmpty()) {
             ndk {

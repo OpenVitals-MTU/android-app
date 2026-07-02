@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.7.4 - 2026-07-02
+
+### English
+
+- Add a dedicated Body Energy detail flow with calibration controls, timeline loading, dashboard support, and widget data.
+- Show saved Bluetooth LE sensor connection status and battery levels in dashboard and recording surfaces.
+- Add a rest-timer bell for repetition activity recordings.
+- Use fuller raw samples in day metric views so same-day charts and detail data stay more accurate.
+- Keep the local app internet-free by removing inherited network access, while improving diagnostics, Apple Health import logging, and release automation.
+
+### Español
+
+- Añade un flujo de detalle de Body Energy con controles de calibración, carga de línea temporal, soporte en el panel y datos para widgets.
+- Muestra el estado de conexión y batería de sensores Bluetooth LE guardados en el panel y en las superficies de grabación.
+- Añade una campana de temporizador de descanso para grabaciones de actividad por repeticiones.
+- Usa muestras sin procesar más completas en las vistas diarias de métricas para que los gráficos y detalles del mismo día sean más precisos.
+- Mantiene la app local sin internet al eliminar acceso de red heredado, con mejores diagnósticos, registros de importación de Apple Health y automatización de publicación.
+
+### Deutsch
+
+- Fügt einen eigenen Body-Energy-Detailfluss mit Kalibrierung, Zeitachsenladung, Dashboard-Unterstützung und Widget-Daten hinzu.
+- Zeigt Verbindungsstatus und Akkustand gespeicherter Bluetooth-LE-Sensoren im Dashboard und in Aufnahmeansichten.
+- Ergänzt einen Signalton für den Pausentimer bei Wiederholungs-Aktivitätsaufnahmen.
+- Nutzt vollständigere Rohdaten in Tagesansichten, damit Diagramme und Detaildaten für denselben Tag genauer bleiben.
+- Hält die lokale App internetfrei, indem geerbter Netzwerkzugriff entfernt wird, und verbessert Diagnosen, Apple-Health-Importprotokolle und Release-Automatisierung.
+
+### Italiano
+
+- Aggiunge un flusso di dettaglio Body Energy con controlli di calibrazione, caricamento della timeline, supporto nella dashboard e dati per i widget.
+- Mostra stato di connessione e batteria dei sensori Bluetooth LE salvati nella dashboard e nelle schermate di registrazione.
+- Aggiunge un campanello per il timer di riposo nelle registrazioni di attività a ripetizioni.
+- Usa campioni grezzi più completi nelle viste giornaliere delle metriche, così grafici e dettagli dello stesso giorno restano più accurati.
+- Mantiene l'app locale senza accesso a internet rimuovendo l'accesso di rete ereditato, con diagnostica, log di importazione Apple Health e automazione di rilascio migliori.
+
 ## 1.7.3 - 2026-06-30
 
 ### English

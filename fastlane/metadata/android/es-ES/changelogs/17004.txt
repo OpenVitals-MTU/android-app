@@ -1,0 +1,1 @@
+Añade un flujo de detalle de Body Energy con calibración, línea temporal, panel y widgets. Los sensores Bluetooth LE muestran conexión y batería, las grabaciones por repeticiones tienen campana de descanso, las vistas diarias usan muestras más completas y la app local sigue sin internet tras eliminar acceso heredado.

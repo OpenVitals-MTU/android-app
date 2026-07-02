@@ -13,7 +13,7 @@ fi
 MAJOR=$(echo "$VERSION" | cut -d. -f1)
 MINOR=$(echo "$VERSION" | cut -d. -f2)
 PATCH=$(echo "$VERSION" | cut -d. -f3)
-VERSION_CODE=$((MAJOR * 100000000 + MINOR * 1000000 + PATCH * 10000))
+VERSION_CODE=$((MAJOR * 10000 + MINOR * 1000 + PATCH))
 
 sed -i "s/baseVersionCode = [0-9]*/baseVersionCode = $VERSION_CODE/" app/build.gradle.kts
 sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION\"/" app/build.gradle.kts

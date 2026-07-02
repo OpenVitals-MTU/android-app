@@ -1,0 +1,1 @@
+Ergänzt einen Body-Energy-Detailfluss mit Kalibrierung, Zeitachse, Dashboard und Widget-Daten. Bluetooth-LE-Sensoren zeigen Verbindung und Akku, Wiederholungsaufnahmen erhalten einen Pausenton, Tagesansichten nutzen vollständigere Rohdaten und die lokale App bleibt nach entferntem geerbtem Netzwerkzugriff internetfrei.

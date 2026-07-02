@@ -1,0 +1,1 @@
+Adds a dedicated Body Energy detail flow with calibration, timeline data, dashboard support, and widget data. BLE sensor status now shows saved connection and battery info, repetition activity recordings get a rest-timer bell, day metric views use fuller raw samples, and the local app stays internet-free after removing inherited network access.

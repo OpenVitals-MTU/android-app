@@ -100,9 +100,8 @@ write-enabled deploy key on the GitHub mirror repository.
 
 For a versioned prerelease:
 
-1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`. Use
-   `major * 100000000 + minor * 1000000 + patch * 10000` for versioned release
-   codes.
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`. Use the
+   compact Play release-code series, for example `1.7.4` -> `17004`.
 2. When preparing a store release, add Play changelog files under
    `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`.
 3. Add the user-facing release summary to `CHANGELOG.md`.
