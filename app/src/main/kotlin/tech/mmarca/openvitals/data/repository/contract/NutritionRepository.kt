@@ -23,4 +23,6 @@ interface NutritionRepository {
     suspend fun hasNutritionWritePermission(): Boolean
 
     suspend fun writeCarbsEntry(request: NutritionWriteRequest): String
+
+    suspend fun writeNutritionEntry(request: NutritionWriteRequest): String
 }

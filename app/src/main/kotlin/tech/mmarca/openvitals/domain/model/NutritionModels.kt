@@ -37,6 +37,7 @@ data class HydrationEntry(
     val liters: Double,
     val source: String,
     val id: String = "",
+    val clientRecordId: String? = null,
     val isOpenVitalsEntry: Boolean = false,
 )
 
@@ -44,6 +45,20 @@ data class HydrationWriteRequest(
     val time: Instant,
     val volumeLiters: Double,
 )
+
+data class CustomHydrationDrink(
+    val id: String,
+    val name: String,
+    val volumeMilliliters: Double,
+    val hydrationMultiplier: Double = 1.0,
+    val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
+) {
+    val volumeLiters: Double
+        get() = volumeMilliliters / 1000.0
+
+    val effectiveHydrationLiters: Double
+        get() = volumeLiters * hydrationMultiplier
+}
 
 data class NutritionEntry(
     val time: Instant,
@@ -61,8 +76,19 @@ data class NutritionEntry(
 
 data class NutritionWriteRequest(
     val time: Instant,
-    val carbsGrams: Double,
-)
+    val nutrientValues: Map<NutritionNutrient, Double>,
+    val name: String? = null,
+    val associatedHydrationClientRecordId: String? = null,
+) {
+    constructor(time: Instant, carbsGrams: Double) : this(
+        time = time,
+        nutrientValues = mapOf(NutritionNutrient.TOTAL_CARBOHYDRATE to carbsGrams),
+        name = "OpenVitals carbs",
+    )
+
+    val carbsGrams: Double
+        get() = nutrientValues[NutritionNutrient.TOTAL_CARBOHYDRATE] ?: 0.0
+}
 
 data class DailyMacros(
     val date: LocalDate,

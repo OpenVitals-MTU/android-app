@@ -125,11 +125,15 @@ class NutritionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String {
+        return writeNutritionEntry(request)
+    }
+
+    override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()
         if (writeNutritionPermission !in granted) {
-            Log.w(TAG, "Skipping writeCarbsEntry missingCount=1")
+            Log.w(TAG, "Skipping writeNutritionEntry missingCount=1")
             throw SecurityException("Missing Health Connect nutrition write permission.")
         }
-        return hc.writeCarbsEntry(request)
+        return hc.writeNutritionEntry(request)
     }
 }

@@ -20,12 +20,16 @@ import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
+import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import java.net.URLDecoder
+import java.net.URLEncoder
 import java.time.LocalTime
 import java.util.Locale
 import javax.inject.Inject
@@ -429,6 +433,60 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    fun customHydrationDrinks(): List<CustomHydrationDrink> {
+        val drinks = prefs.getStringSet(KEY_CUSTOM_HYDRATION_DRINKS, emptySet())
+            .orEmpty()
+            .mapNotNull { it.toCustomHydrationDrink() }
+        if (drinks.isEmpty()) return emptyList()
+
+        val drinksById = drinks.associateBy { it.id }
+        val orderedIds = customHydrationDrinkOrder()
+            .filter { it in drinksById }
+            .distinct()
+        val orderedDrinks = orderedIds.mapNotNull(drinksById::get)
+        val orderedIdSet = orderedIds.toSet()
+        val missingOrderDrinks = drinks
+            .filterNot { it.id in orderedIdSet }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+        return orderedDrinks + missingOrderDrinks
+    }
+
+    fun saveCustomHydrationDrink(drink: CustomHydrationDrink) {
+        val normalized = drink.normalizedCustomHydrationDrink() ?: return
+        val current = customHydrationDrinks()
+        val existingIndex = current.indexOfFirst {
+            it.id == normalized.id || it.name.equals(normalized.name, ignoreCase = true)
+        }
+        val values = current
+            .filterNot { it.id == normalized.id || it.name.equals(normalized.name, ignoreCase = true) }
+            .toMutableList()
+            .apply {
+                if (existingIndex >= 0) {
+                    add(existingIndex.coerceIn(0, size), normalized)
+                } else {
+                    add(normalized)
+                }
+            }
+            .takeLast(MAX_CUSTOM_HYDRATION_DRINKS)
+        persistCustomHydrationDrinks(values)
+    }
+
+    fun deleteCustomHydrationDrink(drinkId: String) {
+        if (drinkId.isBlank()) return
+        persistCustomHydrationDrinks(customHydrationDrinks().filterNot { it.id == drinkId })
+    }
+
+    fun reorderCustomHydrationDrinks(drinkIds: List<String>) {
+        val current = customHydrationDrinks()
+        val drinksById = current.associateBy { it.id }
+        val orderedIds = drinkIds
+            .filter { it in drinksById }
+            .distinct()
+        val orderedDrinks = orderedIds.mapNotNull(drinksById::get)
+        val orderedIdSet = orderedIds.toSet()
+        persistCustomHydrationDrinks(orderedDrinks + current.filterNot { it.id in orderedIdSet })
+    }
+
     fun mindfulnessReminderConfig(): MindfulnessReminderConfig =
         MindfulnessReminderConfig(
             enabled = prefs.getBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, false),
@@ -609,6 +667,93 @@ class PreferencesRepository @Inject constructor(
     private fun String?.toReminderTimeOrDefault(default: LocalTime): LocalTime =
         this?.let { value -> runCatching { LocalTime.parse(value) }.getOrNull() } ?: default
 
+    private fun CustomHydrationDrink.normalizedCustomHydrationDrink(): CustomHydrationDrink? {
+        val normalizedName = name.trim()
+        if (id.isBlank() || normalizedName.isBlank()) return null
+        if (volumeMilliliters <= 0.0 || !volumeMilliliters.isFinite()) return null
+        if (hydrationMultiplier < 0.0 || hydrationMultiplier > 1.0 || !hydrationMultiplier.isFinite()) return null
+        val normalizedNutrients = nutrientValues
+            .filterValues { it > 0.0 && it.isFinite() }
+            .toSortedMap(compareBy { it.name })
+        return copy(
+            name = normalizedName,
+            nutrientValues = normalizedNutrients,
+        )
+    }
+
+    private fun CustomHydrationDrink.toPreferenceString(): String =
+        listOf(
+            id.encodePreferenceValue(),
+            name.encodePreferenceValue(),
+            volumeMilliliters.toString(),
+            hydrationMultiplier.toString(),
+            nutrientValues.entries.joinToString(KEY_NUTRIENT_SEPARATOR) { (nutrient, value) ->
+                "${nutrient.name}$KEY_VALUE_PAIR_SEPARATOR$value"
+            }.encodePreferenceValue(),
+        ).joinToString(KEY_LAYOUT_SECTION_SEPARATOR)
+
+    private fun String.toCustomHydrationDrink(): CustomHydrationDrink? {
+        val parts = split(KEY_LAYOUT_SECTION_SEPARATOR, limit = 5)
+        if (parts.size < 4) return null
+        val id = parts[0].decodePreferenceValue().takeIf { it.isNotBlank() } ?: return null
+        val name = parts[1].decodePreferenceValue().takeIf { it.isNotBlank() } ?: return null
+        val volumeMilliliters = parts[2].toDoubleOrNull()
+            ?.takeIf { it > 0.0 && it.isFinite() }
+            ?: return null
+        val hydrationMultiplier = parts[3].toDoubleOrNull()
+            ?.takeIf { it >= 0.0 && it <= 1.0 && it.isFinite() }
+            ?: 1.0
+        val nutrientValues = parts.getOrNull(4)
+            ?.decodePreferenceValue()
+            ?.split(KEY_NUTRIENT_SEPARATOR)
+            .orEmpty()
+            .mapNotNull { value ->
+                val sections = value.split(KEY_VALUE_PAIR_SEPARATOR, limit = 2)
+                val nutrient = sections.getOrNull(0)
+                    ?.let { runCatching { NutritionNutrient.valueOf(it) }.getOrNull() }
+                    ?: return@mapNotNull null
+                val amount = sections.getOrNull(1)
+                    ?.toDoubleOrNull()
+                    ?.takeIf { it > 0.0 && it.isFinite() }
+                    ?: return@mapNotNull null
+                nutrient to amount
+            }
+            .toMap()
+        return CustomHydrationDrink(
+            id = id,
+            name = name,
+            volumeMilliliters = volumeMilliliters,
+            hydrationMultiplier = hydrationMultiplier,
+            nutrientValues = nutrientValues,
+        )
+    }
+
+    private fun customHydrationDrinkOrder(): List<String> =
+        prefs.getString(KEY_CUSTOM_HYDRATION_DRINK_ORDER, null)
+            ?.split(KEY_VALUE_SEPARATOR)
+            .orEmpty()
+            .map { it.decodePreferenceValue() }
+            .filter { it.isNotBlank() }
+
+    private fun persistCustomHydrationDrinks(drinks: List<CustomHydrationDrink>) {
+        prefs.edit {
+            putStringSet(
+                KEY_CUSTOM_HYDRATION_DRINKS,
+                drinks.mapTo(mutableSetOf()) { it.toPreferenceString() },
+            )
+            putString(
+                KEY_CUSTOM_HYDRATION_DRINK_ORDER,
+                drinks.joinToString(KEY_VALUE_SEPARATOR) { it.id.encodePreferenceValue() },
+            )
+        }
+    }
+
+    private fun String.encodePreferenceValue(): String =
+        URLEncoder.encode(this, Charsets.UTF_8.name())
+
+    private fun String.decodePreferenceValue(): String =
+        URLDecoder.decode(this, Charsets.UTF_8.name())
+
     private fun activityRecordingDashboardLayoutKey(activityTypeId: String): String =
         "$KEY_ACTIVITY_RECORDING_DASHBOARD_LAYOUT_PREFIX$activityTypeId"
 
@@ -692,6 +837,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_HYDRATION_CONTAINER_VOLUME_MILLILITERS = "hydration_container_volume_milliliters"
         private const val KEY_LAST_CUSTOM_HYDRATION_AMOUNT_MILLILITERS =
             "last_custom_hydration_amount_milliliters"
+        private const val KEY_CUSTOM_HYDRATION_DRINKS = "custom_hydration_drinks"
+        private const val KEY_CUSTOM_HYDRATION_DRINK_ORDER = "custom_hydration_drink_order"
         private const val KEY_HYDRATION_REMINDERS_ENABLED = "hydration_reminders_enabled"
         private const val KEY_HYDRATION_REMINDER_INTERVAL_MINUTES = "hydration_reminder_interval_minutes"
         private const val KEY_HYDRATION_REMINDER_ACTIVE_START_TIME = "hydration_reminder_active_start_time"
@@ -711,6 +858,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_MINDFULNESS_REMINDER_TIME = "mindfulness_reminder_time"
         private const val KEY_VALUE_SEPARATOR = ","
         private const val KEY_VALUE_PAIR_SEPARATOR = "="
+        private const val KEY_NUTRIENT_SEPARATOR = ";"
         private const val KEY_LAYOUT_SECTION_SEPARATOR = "|"
         private const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
@@ -727,6 +875,7 @@ class PreferencesRepository @Inject constructor(
         private const val MISSING_EXERCISE_TYPE = Int.MIN_VALUE
         private const val MISSING_HYDRATION_AMOUNT_MILLILITERS = -1.0f
         private const val MISSING_BODY_ENERGY_INT = Int.MIN_VALUE
+        private const val MAX_CUSTOM_HYDRATION_DRINKS = 25
         private const val ROUTE_GAP_OFF = 0
         private const val RECORDING_INTERVAL_OFF = 0
         private val IMPERIAL_COUNTRIES = setOf("US", "LR", "MM")

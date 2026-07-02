@@ -18,6 +18,7 @@ class HydrationEntryFormTest {
         val state = HydrationEntryUiState(
             isCheckingPermission = false,
             canWriteHydration = true,
+            canWriteNutrition = true,
         )
         val unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
 
@@ -26,14 +27,13 @@ class HydrationEntryFormTest {
                 HydrationTrackerCard(
                     state = state,
                     unitFormatter = unitFormatter,
-                    onSelectBeverage = {},
-                    onSelectContainer = {},
-                    onAddContainerEntry = {},
                     onAddSelectedEntry = {},
-                    onAddCustomEntry = {},
+                    onSaveCustomDrink = { _, _ -> },
+                    onAddSavedCustomDrinkEntry = {},
+                    onDeleteCustomDrink = {},
+                    onMoveCustomDrinkToTarget = { _, _ -> },
                     onEntryTimeChanged = {},
                     onRequestWritePermission = {},
-                    onUpdateContainerSize = { _, _ -> },
                 )
             }
         }

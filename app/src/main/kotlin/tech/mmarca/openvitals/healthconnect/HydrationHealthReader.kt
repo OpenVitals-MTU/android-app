@@ -72,6 +72,7 @@ internal class HydrationHealthReader(
                     liters = record.volume.inLiters,
                     source = record.metadata.dataOrigin.packageName,
                     id = record.metadata.id,
+                    clientRecordId = record.metadata.clientRecordId,
                     isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
                 )
             }
@@ -139,9 +140,10 @@ internal class HydrationHealthReader(
         support.client().updateRecords(listOf(record))
     }
 
-    suspend fun deleteHydrationEntry(id: String) = withContext(Dispatchers.IO) {
+    suspend fun deleteHydrationEntry(id: String): String? = withContext(Dispatchers.IO) {
         val existing = support.client().readRecord(HydrationRecord::class, id).record
         existing.requireOpenVitalsOrigin(appPackageName)
+        val clientRecordId = existing.metadata.clientRecordId
 
         Log.d(TAG, "Deleting hydration record ${support.diagnosticsSummary()}")
         support.client().deleteRecords(
@@ -149,6 +151,7 @@ internal class HydrationHealthReader(
             recordIdsList = listOf(existing.metadata.id),
             clientRecordIdsList = emptyList(),
         )
+        clientRecordId
     }
 
     private fun HydrationRecord.toHydrationEntry(): HydrationEntry =
@@ -158,6 +161,7 @@ internal class HydrationHealthReader(
             liters = volume.inLiters,
             source = metadata.dataOrigin.packageName,
             id = metadata.id,
+            clientRecordId = metadata.clientRecordId,
             isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 }

@@ -1,16 +1,5 @@
 package tech.mmarca.openvitals.features.manualentry.hydration
 
-import tech.mmarca.openvitals.features.manualentry.*
-import tech.mmarca.openvitals.features.manualentry.activity.*
-import tech.mmarca.openvitals.features.manualentry.activity.recording.*
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
-import tech.mmarca.openvitals.features.manualentry.body.*
-import tech.mmarca.openvitals.features.manualentry.hydration.*
-import tech.mmarca.openvitals.features.manualentry.mindfulness.*
-import tech.mmarca.openvitals.features.manualentry.vitals.*
-
-
-
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -18,51 +7,34 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
-import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
+import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
+import tech.mmarca.openvitals.domain.model.DailyMacros
+import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
+import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
+import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.query.NutritionPeriodData
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
 
 internal const val MillilitersPerLiter = 1000.0
 private const val MaxHealthConnectHydrationLiters = 100.0
+private const val MaxCustomDrinkNutrientValue = 10000.0
+private const val DefaultCustomDrinkHydrationMultiplier = 1.0
 internal const val MinHydrationContainerMilliliters = 1.0
 internal const val MaxHydrationContainerMilliliters =
     MaxHealthConnectHydrationLiters * MillilitersPerLiter
-
-enum class HydrationBeverage(
-    val hydrationMultiplier: Double,
-) {
-    WATER(1.0),
-    COFFEE(1.0),
-    TEA(1.0),
-    SOFT_DRINK(1.0),
-    ENERGY_DRINK(1.0),
-    SPORTS_DRINK(1.1),
-    ORAL_REHYDRATION_SOLUTION(1.5),
-    MILK(1.5),
-    FRUIT_JUICE(1.3);
-
-    companion object {
-        val DisplayOrder = listOf(
-            WATER,
-            COFFEE,
-            ENERGY_DRINK,
-            FRUIT_JUICE,
-            MILK,
-            ORAL_REHYDRATION_SOLUTION,
-            SOFT_DRINK,
-            SPORTS_DRINK,
-            TEA,
-        )
-    }
-}
 
 data class HydrationContainerOption(
     val id: String,
@@ -84,49 +56,76 @@ data class HydrationContainerOption(
     }
 }
 
+data class CustomHydrationDrinkInput(
+    val name: String,
+    val volumeMilliliters: Double,
+    val hydrationMultiplier: Double = 1.0,
+    val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
+)
+
 enum class HydrationEntryError {
     INVALID_AMOUNT,
+    INVALID_CUSTOM_DRINK,
     MISSING_WRITE_PERMISSION,
+    MISSING_NUTRITION_WRITE_PERMISSION,
     WRITE_FAILED,
+}
+
+enum class HydrationEntryNotice {
+    NON_HYDRATING_DRINK_SAVED,
 }
 
 @Immutable
 data class HydrationEntryUiState(
     val isCheckingPermission: Boolean = true,
     val hydrationWritePermissions: Set<String> = emptySet(),
+    val nutritionWritePermissions: Set<String> = emptySet(),
     val canWriteHydration: Boolean = false,
+    val canWriteNutrition: Boolean = false,
     val todayHydrationLiters: Double = 0.0,
     val dailyGoalLiters: Double = 2.0,
     val isSavingEntry: Boolean = false,
-    val beverageOptions: List<HydrationBeverage> = HydrationBeverage.DisplayOrder,
-    val selectedBeverage: HydrationBeverage = HydrationBeverage.WATER,
     val containerOptions: List<HydrationContainerOption> = HydrationContainerOption.Defaults,
     val selectedContainer: HydrationContainerOption = HydrationContainerOption.Defaults.first(),
     val lastCustomAmountMilliliters: Double? = null,
+    val customDrinkOptions: List<CustomHydrationDrink> = emptyList(),
     val editRecordId: String? = null,
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
+    val entryNotice: HydrationEntryNotice? = null,
     val entryError: HydrationEntryError? = null,
     val writeError: ScreenError? = null,
 ) {
     val isEditMode: Boolean
         get() = editRecordId != null
 
-    val selectedContainerEffectiveLiters: Double
-        get() = selectedContainer.volumeLiters * selectedBeverage.hydrationMultiplier
+    val writePermissions: Set<String>
+        get() = hydrationWritePermissions + nutritionWritePermissions
 }
 
 @HiltViewModel
 class HydrationEntryViewModel @Inject constructor(
     private val repository: HydrationRepository,
+    private val nutritionRepository: NutritionRepository,
     savedStateHandle: SavedStateHandle,
     private val reminderController: HydrationReminderController? = null,
 ) : ViewModel() {
-    constructor(repository: HydrationRepository) : this(repository, SavedStateHandle(), null)
+    constructor(repository: HydrationRepository) : this(
+        repository,
+        NoopNutritionRepository,
+        SavedStateHandle(),
+        null,
+    )
+
+    constructor(
+        repository: HydrationRepository,
+        nutritionRepository: NutritionRepository,
+    ) : this(repository, nutritionRepository, SavedStateHandle(), null)
+
     constructor(
         repository: HydrationRepository,
         reminderController: HydrationReminderController,
-    ) : this(repository, SavedStateHandle(), reminderController)
+    ) : this(repository, NoopNutritionRepository, SavedStateHandle(), reminderController)
 
     private val editRecordId: String? = savedStateHandle[HYDRATION_ENTRY_ID_ARG]
 
@@ -154,18 +153,27 @@ class HydrationEntryViewModel @Inject constructor(
                 writeError = null,
             )
             runCatching {
-                repository.hydrationWritePermissions to repository.hasHydrationWritePermission()
-            }.onSuccess { (hydrationWritePermissions, canWriteHydration) ->
+                HydrationEntryPermissionState(
+                    hydrationWritePermissions = repository.hydrationWritePermissions,
+                    nutritionWritePermissions = nutritionRepository.nutritionWritePermissions,
+                    canWriteHydration = repository.hasHydrationWritePermission(),
+                    canWriteNutrition = nutritionRepository.hasNutritionWritePermission(),
+                )
+            }.onSuccess { permissions ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingPermission = false,
-                    hydrationWritePermissions = hydrationWritePermissions,
-                    canWriteHydration = canWriteHydration,
+                    hydrationWritePermissions = permissions.hydrationWritePermissions,
+                    nutritionWritePermissions = permissions.nutritionWritePermissions,
+                    canWriteHydration = permissions.canWriteHydration,
+                    canWriteNutrition = permissions.canWriteNutrition,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingPermission = false,
                     hydrationWritePermissions = repository.hydrationWritePermissions,
+                    nutritionWritePermissions = nutritionRepository.nutritionWritePermissions,
                     canWriteHydration = false,
+                    canWriteNutrition = false,
                     entryError = HydrationEntryError.WRITE_FAILED,
                     writeError = error.toScreenError(),
                 )
@@ -189,19 +197,11 @@ class HydrationEntryViewModel @Inject constructor(
         }
     }
 
-    fun selectBeverage(beverage: HydrationBeverage) {
-        _uiState.value = _uiState.value.copy(
-            selectedBeverage = beverage,
-            saveCompleted = false,
-            entryError = null,
-            writeError = null,
-        )
-    }
-
     fun selectContainer(container: HydrationContainerOption) {
         _uiState.value = _uiState.value.copy(
             selectedContainer = container,
             saveCompleted = false,
+            entryNotice = null,
             entryError = null,
             writeError = null,
         )
@@ -211,6 +211,7 @@ class HydrationEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             editTime = time.coerceAtMost(Instant.now()),
             saveCompleted = false,
+            entryNotice = null,
             entryError = null,
             writeError = null,
         )
@@ -220,6 +221,7 @@ class HydrationEntryViewModel @Inject constructor(
         if (!isValidHydrationContainerMilliliters(milliliters)) {
             _uiState.value = _uiState.value.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
+                entryNotice = null,
                 writeError = null,
             )
             return
@@ -235,6 +237,7 @@ class HydrationEntryViewModel @Inject constructor(
             },
             selectedContainer = updatedContainer,
             saveCompleted = false,
+            entryNotice = null,
             entryError = null,
             writeError = null,
         )
@@ -252,6 +255,7 @@ class HydrationEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             selectedContainer = container,
             saveCompleted = false,
+            entryNotice = null,
             entryError = null,
             writeError = null,
         )
@@ -262,19 +266,107 @@ class HydrationEntryViewModel @Inject constructor(
         if (!isValidHydrationContainerMilliliters(milliliters)) {
             _uiState.value = _uiState.value.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
+                entryNotice = null,
                 writeError = null,
             )
             return
         }
         _uiState.value = _uiState.value.copy(
             lastCustomAmountMilliliters = milliliters,
+            entryNotice = null,
         )
         repository.setLastCustomHydrationAmountMilliliters(milliliters)
         saveHydrationEntry(milliliters / MillilitersPerLiter)
     }
 
+    fun saveCustomDrink(
+        input: CustomHydrationDrinkInput,
+        existingDrinkId: String? = null,
+    ) {
+        val drink = input.toCustomHydrationDrink(
+            id = existingDrinkId ?: UUID.randomUUID().toString(),
+        )
+        if (drink == null) {
+            _uiState.value = _uiState.value.copy(
+                entryError = HydrationEntryError.INVALID_CUSTOM_DRINK,
+                entryNotice = null,
+                writeError = null,
+            )
+            return
+        }
+        repository.saveCustomHydrationDrink(drink)
+        _uiState.value = _uiState.value.copy(
+            customDrinkOptions = repository.customHydrationDrinks()
+                .filter(CustomHydrationDrink::isValidCustomHydrationDrink),
+            entryError = null,
+            entryNotice = null,
+            writeError = null,
+            saveCompleted = false,
+        )
+    }
+
+    fun deleteCustomDrink(drink: CustomHydrationDrink) {
+        repository.deleteCustomHydrationDrink(drink.id)
+        _uiState.value = _uiState.value.copy(
+            customDrinkOptions = _uiState.value.customDrinkOptions.filterNot { it.id == drink.id },
+            entryError = null,
+            entryNotice = null,
+            writeError = null,
+            saveCompleted = false,
+        )
+    }
+
+    fun moveCustomDrinkToTarget(
+        drinkId: String,
+        targetDrinkId: String,
+    ) {
+        if (drinkId == targetDrinkId) return
+        val current = _uiState.value.customDrinkOptions
+        val fromIndex = current.indexOfFirst { it.id == drinkId }
+        val targetIndex = current.indexOfFirst { it.id == targetDrinkId }
+        if (fromIndex < 0 || targetIndex < 0) return
+        val updated = current.toMutableList().apply {
+            val drink = removeAt(fromIndex)
+            add(targetIndex.coerceIn(0, size), drink)
+        }
+        repository.reorderCustomHydrationDrinks(updated.map { it.id })
+        _uiState.value = _uiState.value.copy(
+            customDrinkOptions = updated,
+            entryError = null,
+            entryNotice = null,
+            writeError = null,
+            saveCompleted = false,
+        )
+    }
+
+    fun addSavedCustomDrinkEntry(drink: CustomHydrationDrink) {
+        logCustomDrinkEntry(drink)
+    }
+
     fun onSaveCompletedHandled() {
         _uiState.value = _uiState.value.copy(saveCompleted = false)
+    }
+
+    private fun logCustomDrinkEntry(drink: CustomHydrationDrink) {
+        if (!drink.isValidCustomHydrationDrink()) {
+            _uiState.value = _uiState.value.copy(
+                entryError = HydrationEntryError.INVALID_CUSTOM_DRINK,
+                entryNotice = null,
+                writeError = null,
+            )
+            return
+        }
+        _uiState.value = _uiState.value.copy(
+            lastCustomAmountMilliliters = drink.volumeMilliliters,
+            entryNotice = null,
+        )
+        repository.setLastCustomHydrationAmountMilliliters(drink.volumeMilliliters)
+        saveHydrationEntry(
+            rawLiters = drink.volumeLiters,
+            hydrationMultiplier = drink.hydrationMultiplier,
+            nutritionName = drink.name,
+            nutrientValues = drink.nutrientValues,
+        )
     }
 
     private fun loadEditEntry() {
@@ -297,7 +389,6 @@ class HydrationEntryViewModel @Inject constructor(
                 val options = (listOf(option) + existingOptions)
                     .distinctBy { it.id }
                 _uiState.value = _uiState.value.copy(
-                    selectedBeverage = HydrationBeverage.WATER,
                     containerOptions = options,
                     selectedContainer = option,
                     editTime = entry.startTime.coerceAtMost(Instant.now()),
@@ -313,20 +404,61 @@ class HydrationEntryViewModel @Inject constructor(
         }
     }
 
-    private fun saveHydrationEntry(rawLiters: Double) {
+    private fun saveHydrationEntry(
+        rawLiters: Double,
+        hydrationMultiplier: Double = DefaultCustomDrinkHydrationMultiplier,
+        nutritionName: String? = null,
+        nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
+    ) {
         val current = _uiState.value
-        if (!current.canWriteHydration) {
+        if (!isValidCustomDrinkHydrationMultiplier(hydrationMultiplier)) {
             _uiState.value = current.copy(
-                entryError = HydrationEntryError.MISSING_WRITE_PERMISSION,
+                entryError = HydrationEntryError.INVALID_CUSTOM_DRINK,
+                entryNotice = null,
                 writeError = null,
             )
             return
         }
 
-        val effectiveLiters = rawLiters * current.selectedBeverage.hydrationMultiplier
-        if (effectiveLiters <= 0.0 || effectiveLiters > MaxHealthConnectHydrationLiters) {
+        val effectiveLiters = rawLiters * hydrationMultiplier
+        val writesHydration = effectiveLiters > 0.0
+        val writesNutrition = nutrientValues.isNotEmpty()
+        if (current.editRecordId != null && !writesHydration) {
             _uiState.value = current.copy(
                 entryError = HydrationEntryError.INVALID_AMOUNT,
+                entryNotice = null,
+                writeError = null,
+            )
+            return
+        }
+        if (writesHydration && !current.canWriteHydration) {
+            _uiState.value = current.copy(
+                entryError = HydrationEntryError.MISSING_WRITE_PERMISSION,
+                entryNotice = null,
+                writeError = null,
+            )
+            return
+        }
+        if (writesNutrition && !current.canWriteNutrition) {
+            _uiState.value = current.copy(
+                entryError = HydrationEntryError.MISSING_NUTRITION_WRITE_PERMISSION,
+                entryNotice = null,
+                writeError = null,
+            )
+            return
+        }
+        if (writesHydration && effectiveLiters > MaxHealthConnectHydrationLiters) {
+            _uiState.value = current.copy(
+                entryError = HydrationEntryError.INVALID_AMOUNT,
+                entryNotice = null,
+                writeError = null,
+            )
+            return
+        }
+        if (!writesHydration && !writesNutrition) {
+            _uiState.value = current.copy(
+                entryError = HydrationEntryError.INVALID_CUSTOM_DRINK,
+                entryNotice = null,
                 writeError = null,
             )
             return
@@ -336,18 +468,41 @@ class HydrationEntryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isSavingEntry = true,
                 saveCompleted = false,
+                entryNotice = null,
                 entryError = null,
                 writeError = null,
             )
             runCatching {
-                val request = HydrationWriteRequest(
-                    time = current.editTime?.coerceAtMost(Instant.now()) ?: Instant.now(),
-                    volumeLiters = effectiveLiters,
-                )
+                val entryTime = current.editTime?.coerceAtMost(Instant.now()) ?: Instant.now()
                 if (current.editRecordId == null) {
-                    repository.writeHydrationEntry(request)
+                    val hydrationClientRecordId = if (writesHydration) {
+                        repository.writeHydrationEntry(
+                            HydrationWriteRequest(
+                                time = entryTime,
+                                volumeLiters = effectiveLiters,
+                            )
+                        )
+                    } else {
+                        null
+                    }
+                    if (writesNutrition) {
+                        nutritionRepository.writeNutritionEntry(
+                            NutritionWriteRequest(
+                                time = entryTime,
+                                nutrientValues = nutrientValues,
+                                name = nutritionName,
+                                associatedHydrationClientRecordId = hydrationClientRecordId,
+                            )
+                        )
+                    }
                 } else {
-                    repository.updateHydrationEntry(current.editRecordId, request)
+                    repository.updateHydrationEntry(
+                        current.editRecordId,
+                        HydrationWriteRequest(
+                            time = entryTime,
+                            volumeLiters = effectiveLiters,
+                        )
+                    )
                 }
             }.onSuccess {
                 _uiState.value = _uiState.value.copy(
@@ -358,14 +513,22 @@ class HydrationEntryViewModel @Inject constructor(
                         _uiState.value.todayHydrationLiters + effectiveLiters
                     },
                     saveCompleted = true,
+                    entryNotice = if (!writesHydration && writesNutrition) {
+                        HydrationEntryNotice.NON_HYDRATING_DRINK_SAVED
+                    } else {
+                        null
+                    },
                     entryError = null,
                     writeError = null,
                 )
-                runCatching { reminderController?.hideReminderNotification() }
+                if (effectiveLiters > 0.0) {
+                    runCatching { reminderController?.hideReminderNotification() }
+                }
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSavingEntry = false,
                     entryError = HydrationEntryError.WRITE_FAILED,
+                    entryNotice = null,
                     writeError = error.toScreenError(),
                 )
             }
@@ -384,6 +547,8 @@ private fun initialHydrationEntryState(
         dailyGoalLiters = repository.hydrationDailyGoalLiters(),
         lastCustomAmountMilliliters = repository.lastCustomHydrationAmountMilliliters()
             ?.takeIf(::isValidHydrationContainerMilliliters),
+        customDrinkOptions = repository.customHydrationDrinks()
+            .filter(CustomHydrationDrink::isValidCustomHydrationDrink),
         editRecordId = editRecordId,
     )
 }
@@ -403,3 +568,74 @@ internal fun isValidHydrationContainerMilliliters(milliliters: Double): Boolean 
         milliliters <= MaxHydrationContainerMilliliters &&
         !milliliters.isNaN() &&
         !milliliters.isInfinite()
+
+private data class HydrationEntryPermissionState(
+    val hydrationWritePermissions: Set<String>,
+    val nutritionWritePermissions: Set<String>,
+    val canWriteHydration: Boolean,
+    val canWriteNutrition: Boolean,
+)
+
+private fun CustomHydrationDrinkInput.toCustomHydrationDrink(
+    id: String,
+): CustomHydrationDrink? {
+    val normalizedName = name.trim()
+    if (normalizedName.isBlank()) return null
+    if (!isValidHydrationContainerMilliliters(volumeMilliliters)) return null
+    if (!isValidCustomDrinkHydrationMultiplier(hydrationMultiplier)) return null
+    val normalizedNutrients = nutrientValues
+        .filterValues(::isValidCustomDrinkNutrientValue)
+        .toSortedMap(compareBy { it.name })
+    if (normalizedNutrients.size != nutrientValues.size) return null
+    return CustomHydrationDrink(
+        id = id,
+        name = normalizedName,
+        volumeMilliliters = volumeMilliliters,
+        hydrationMultiplier = hydrationMultiplier,
+        nutrientValues = normalizedNutrients,
+    )
+}
+
+private fun CustomHydrationDrink.isValidCustomHydrationDrink(): Boolean =
+    id.isNotBlank() &&
+        name.isNotBlank() &&
+        isValidHydrationContainerMilliliters(volumeMilliliters) &&
+        isValidCustomDrinkHydrationMultiplier(hydrationMultiplier) &&
+        nutrientValues.values.all(::isValidCustomDrinkNutrientValue)
+
+internal fun isValidCustomDrinkHydrationMultiplier(value: Double): Boolean =
+    value >= 0.0 &&
+        value <= 1.0 &&
+        value.isFinite()
+
+internal fun isValidCustomDrinkNutrientValue(value: Double): Boolean =
+    value > 0.0 &&
+        value <= MaxCustomDrinkNutrientValue &&
+        value.isFinite()
+
+private object NoopNutritionRepository : NutritionRepository {
+    override val nutritionWritePermissions: Set<String> = emptySet()
+
+    override suspend fun loadNutritionPeriod(
+        query: tech.mmarca.openvitals.core.period.PeriodLoadQuery,
+        refreshMode: RefreshMode,
+    ): NutritionPeriodData = NutritionPeriodData()
+
+    override suspend fun loadDailyMacros(
+        start: LocalDate,
+        end: LocalDate,
+    ): List<DailyMacros> = emptyList()
+
+    override suspend fun loadNutritionEntries(
+        start: LocalDate,
+        end: LocalDate,
+    ): List<NutritionEntry> = emptyList()
+
+    override suspend fun hasNutritionWritePermission(): Boolean = true
+
+    override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String =
+        error("Nutrition repository is not configured.")
+
+    override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =
+        error("Nutrition repository is not configured.")
+}

@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import java.time.Duration
 import java.time.Instant
@@ -151,18 +152,30 @@ internal class NutritionHealthReader(
             }
         }
 
-    suspend fun writeCarbsEntry(request: NutritionWriteRequest): String = withContext(Dispatchers.IO) {
-        require(request.carbsGrams.isFinite() && request.carbsGrams > 0.0) {
-            "Carbs must be greater than zero."
+    suspend fun writeCarbsEntry(request: NutritionWriteRequest): String =
+        writeNutritionEntry(request)
+
+    suspend fun writeNutritionEntry(request: NutritionWriteRequest): String = withContext(Dispatchers.IO) {
+        val nutrientValues = request.nutrientValues
+        require(nutrientValues.isNotEmpty()) {
+            "At least one nutrient must be greater than zero."
         }
-        require(request.carbsGrams <= MaxNutritionCarbsGrams) {
-            "Carbs must not exceed ${MaxNutritionCarbsGrams.toInt()} g."
+        nutrientValues.forEach { (nutrient, value) ->
+            require(value > 0.0 && value.isFinite()) {
+                "${nutrient.name} must be greater than zero."
+            }
+            require(value <= MaxNutritionNutrientValue) {
+                "${nutrient.name} must not exceed ${MaxNutritionNutrientValue.toInt()}."
+            }
         }
 
         val startTime = request.time
         val endTime = startTime.plusSeconds(1)
         val zone = ZoneId.systemDefault()
-        val clientRecordId = "openvitals_carbs_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
+        val clientRecordId = request.associatedHydrationClientRecordId
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::hydrationNutritionClientRecordId)
+            ?: "openvitals_nutrition_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
         val record = NutritionRecord(
             startTime = startTime,
             startZoneOffset = zone.rules.getOffset(startTime),
@@ -172,19 +185,89 @@ internal class NutritionHealthReader(
                 device = Device(type = Device.TYPE_PHONE),
                 clientRecordId = clientRecordId,
             ),
-            totalCarbohydrate = Mass.grams(request.carbsGrams),
-            name = "OpenVitals carbs",
+            energy = nutrientValues.energy(NutritionNutrient.ENERGY),
+            energyFromFat = nutrientValues.energy(NutritionNutrient.ENERGY_FROM_FAT),
+            biotin = nutrientValues.mass(NutritionNutrient.BIOTIN),
+            caffeine = nutrientValues.mass(NutritionNutrient.CAFFEINE),
+            calcium = nutrientValues.mass(NutritionNutrient.CALCIUM),
+            chloride = nutrientValues.mass(NutritionNutrient.CHLORIDE),
+            cholesterol = nutrientValues.mass(NutritionNutrient.CHOLESTEROL),
+            chromium = nutrientValues.mass(NutritionNutrient.CHROMIUM),
+            copper = nutrientValues.mass(NutritionNutrient.COPPER),
+            dietaryFiber = nutrientValues.mass(NutritionNutrient.DIETARY_FIBER),
+            folate = nutrientValues.mass(NutritionNutrient.FOLATE),
+            folicAcid = nutrientValues.mass(NutritionNutrient.FOLIC_ACID),
+            iodine = nutrientValues.mass(NutritionNutrient.IODINE),
+            iron = nutrientValues.mass(NutritionNutrient.IRON),
+            magnesium = nutrientValues.mass(NutritionNutrient.MAGNESIUM),
+            manganese = nutrientValues.mass(NutritionNutrient.MANGANESE),
+            molybdenum = nutrientValues.mass(NutritionNutrient.MOLYBDENUM),
+            monounsaturatedFat = nutrientValues.mass(NutritionNutrient.MONOUNSATURATED_FAT),
+            niacin = nutrientValues.mass(NutritionNutrient.NIACIN),
+            pantothenicAcid = nutrientValues.mass(NutritionNutrient.PANTOTHENIC_ACID),
+            phosphorus = nutrientValues.mass(NutritionNutrient.PHOSPHORUS),
+            polyunsaturatedFat = nutrientValues.mass(NutritionNutrient.POLYUNSATURATED_FAT),
+            potassium = nutrientValues.mass(NutritionNutrient.POTASSIUM),
+            protein = nutrientValues.mass(NutritionNutrient.PROTEIN),
+            riboflavin = nutrientValues.mass(NutritionNutrient.RIBOFLAVIN),
+            saturatedFat = nutrientValues.mass(NutritionNutrient.SATURATED_FAT),
+            selenium = nutrientValues.mass(NutritionNutrient.SELENIUM),
+            sodium = nutrientValues.mass(NutritionNutrient.SODIUM),
+            sugar = nutrientValues.mass(NutritionNutrient.SUGAR),
+            thiamin = nutrientValues.mass(NutritionNutrient.THIAMIN),
+            totalCarbohydrate = nutrientValues.mass(NutritionNutrient.TOTAL_CARBOHYDRATE),
+            totalFat = nutrientValues.mass(NutritionNutrient.TOTAL_FAT),
+            transFat = nutrientValues.mass(NutritionNutrient.TRANS_FAT),
+            unsaturatedFat = nutrientValues.mass(NutritionNutrient.UNSATURATED_FAT),
+            vitaminA = nutrientValues.mass(NutritionNutrient.VITAMIN_A),
+            vitaminB12 = nutrientValues.mass(NutritionNutrient.VITAMIN_B12),
+            vitaminB6 = nutrientValues.mass(NutritionNutrient.VITAMIN_B6),
+            vitaminC = nutrientValues.mass(NutritionNutrient.VITAMIN_C),
+            vitaminD = nutrientValues.mass(NutritionNutrient.VITAMIN_D),
+            vitaminE = nutrientValues.mass(NutritionNutrient.VITAMIN_E),
+            vitaminK = nutrientValues.mass(NutritionNutrient.VITAMIN_K),
+            zinc = nutrientValues.mass(NutritionNutrient.ZINC),
+            name = request.name?.trim()?.takeIf { it.isNotBlank() } ?: "OpenVitals nutrition",
             mealType = MealType.MEAL_TYPE_UNKNOWN,
         )
 
-        Log.d(TAG, "Writing carbs nutrition record ${support.diagnosticsSummary()}")
+        Log.d(TAG, "Writing nutrition record ${support.diagnosticsSummary()}")
         support.client().insertRecords(listOf(record))
         clientRecordId
+    }
+
+    suspend fun deleteHydrationNutritionEntry(hydrationClientRecordId: String) = withContext(Dispatchers.IO) {
+        if (hydrationClientRecordId.isBlank()) return@withContext
+
+        Log.d(TAG, "Deleting paired hydration nutrition record ${support.diagnosticsSummary()}")
+        support.client().deleteRecords(
+            recordType = NutritionRecord::class,
+            recordIdsList = emptyList(),
+            clientRecordIdsList = listOf(hydrationNutritionClientRecordId(hydrationClientRecordId)),
+        )
     }
 }
 
 private const val TAG = "NutritionHealthReader"
-private const val MaxNutritionCarbsGrams = 10000.0
+private const val MaxNutritionNutrientValue = 10000.0
+private const val HydrationNutritionClientRecordIdPrefix = "openvitals_hydration_nutrition_"
+
+internal fun hydrationNutritionClientRecordId(hydrationClientRecordId: String): String =
+    "$HydrationNutritionClientRecordIdPrefix$hydrationClientRecordId"
+
+private fun Map<NutritionNutrient, Double>.energy(nutrient: NutritionNutrient): Energy? {
+    require(nutrient.unit == NutritionNutrientUnit.ENERGY_KCAL) {
+        "${nutrient.name} is not a Health Connect energy nutrient."
+    }
+    return this[nutrient]?.let(Energy::kilocalories)
+}
+
+private fun Map<NutritionNutrient, Double>.mass(nutrient: NutritionNutrient): Mass? {
+    require(nutrient.unit != NutritionNutrientUnit.ENERGY_KCAL) {
+        "${nutrient.name} is not a Health Connect mass nutrient."
+    }
+    return this[nutrient]?.let(Mass::grams)
+}
 
 private data class NutritionEnergyAggregate(
     val nutrient: NutritionNutrient,

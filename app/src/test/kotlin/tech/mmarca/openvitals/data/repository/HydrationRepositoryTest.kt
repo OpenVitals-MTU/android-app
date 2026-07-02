@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.data.repository
 
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.NutritionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -21,6 +22,8 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 class HydrationRepositoryTest {
 
     private val hydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
+    private val hydrationWritePermission = HealthPermission.getWritePermission(HydrationRecord::class)
+    private val nutritionWritePermission = HealthPermission.getWritePermission(NutritionRecord::class)
 
     @Test
     fun `DAY hydration uses raw full entries for selected day total`() = runTest {
@@ -49,6 +52,35 @@ class HydrationRepositoryTest {
         assertEquals(entries, result.hydrationEntries)
         assertEquals(listOf(DailyHydration(date = date, liters = 0.85)), result.dailyHydration)
         coVerify(exactly = 0) { hc.readDailyHydration(date, date) }
+    }
+
+    @Test
+    fun `deleteHydrationEntry deletes paired nutrition record when nutrition write permission exists`() = runTest {
+        val hc = mockk<HealthConnectManager>().also { hc ->
+            every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+            coEvery { hc.grantedPermissions() } returns setOf(hydrationWritePermission, nutritionWritePermission)
+            coEvery { hc.deleteHydrationEntry("hydration-id") } returns "hydration-client-id"
+            coEvery { hc.deleteHydrationNutritionEntry("hydration-client-id") } returns Unit
+        }
+
+        HydrationRepositoryImpl(hc).deleteHydrationEntry("hydration-id")
+
+        coVerify { hc.deleteHydrationEntry("hydration-id") }
+        coVerify { hc.deleteHydrationNutritionEntry("hydration-client-id") }
+    }
+
+    @Test
+    fun `deleteHydrationEntry skips paired nutrition cleanup without nutrition write permission`() = runTest {
+        val hc = mockk<HealthConnectManager>().also { hc ->
+            every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+            coEvery { hc.grantedPermissions() } returns setOf(hydrationWritePermission)
+            coEvery { hc.deleteHydrationEntry("hydration-id") } returns "hydration-client-id"
+        }
+
+        HydrationRepositoryImpl(hc).deleteHydrationEntry("hydration-id")
+
+        coVerify { hc.deleteHydrationEntry("hydration-id") }
+        coVerify(exactly = 0) { hc.deleteHydrationNutritionEntry(any()) }
     }
 
     private fun hc(

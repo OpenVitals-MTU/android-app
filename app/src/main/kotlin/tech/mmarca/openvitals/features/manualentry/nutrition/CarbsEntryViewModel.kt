@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 
 private const val MaxCarbsGrams = 10000.0
@@ -110,7 +111,8 @@ class CarbsEntryViewModel @Inject constructor(
                 repository.writeCarbsEntry(
                     NutritionWriteRequest(
                         time = Instant.now(),
-                        carbsGrams = carbsGrams,
+                        nutrientValues = mapOf(NutritionNutrient.TOTAL_CARBOHYDRATE to carbsGrams),
+                        name = "OpenVitals carbs",
                     )
                 )
             }.onSuccess {

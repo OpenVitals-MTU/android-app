@@ -27,10 +27,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -46,16 +50,30 @@ class HydrationEntryViewModelTest {
         dailyGoalLiters: Double = 2.0,
         containerVolumeMilliliters: Map<String, Double> = emptyMap(),
         lastCustomAmountMilliliters: Double? = null,
+        customDrinks: List<CustomHydrationDrink> = emptyList(),
     ) = mockk<HydrationRepository>().also { repo ->
         every { repo.hydrationWritePermissions } returns setOf("write_hydration")
         every { repo.hydrationContainerVolumeMilliliters() } returns containerVolumeMilliliters
         every { repo.lastCustomHydrationAmountMilliliters() } returns lastCustomAmountMilliliters
+        every { repo.customHydrationDrinks() } returns customDrinks
         every { repo.hydrationDailyGoalLiters() } returns dailyGoalLiters
         every { repo.setHydrationContainerVolumeMilliliters(any(), any()) } returns Unit
         every { repo.setLastCustomHydrationAmountMilliliters(any()) } returns Unit
+        every { repo.saveCustomHydrationDrink(any()) } returns Unit
+        every { repo.deleteCustomHydrationDrink(any()) } returns Unit
+        every { repo.reorderCustomHydrationDrinks(any()) } returns Unit
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
         coEvery { repo.loadDailyHydration(any(), any()) } returns dailyHydration
+    }
+
+    private fun nutritionRepo(
+        canWrite: Boolean = true,
+    ) = mockk<NutritionRepository>().also { repo ->
+        every { repo.nutritionWritePermissions } returns setOf("write_nutrition")
+        coEvery { repo.hasNutritionWritePermission() } returns canWrite
+        coEvery { repo.writeNutritionEntry(any()) } returns "nutrition-record-id"
+        coEvery { repo.writeCarbsEntry(any()) } returns "nutrition-record-id"
     }
 
     @Test fun `initial load checks write permission`() = runTest {
@@ -258,6 +276,287 @@ class HydrationEntryViewModelTest {
         assertTrue(vm.uiState.value.saveCompleted)
     }
 
+    @Test fun `saving custom drink creates reusable drink without writing entry`() = runTest {
+        var savedDrinks = emptyList<CustomHydrationDrink>()
+        val repo = entryRepo()
+        every { repo.customHydrationDrinks() } answers { savedDrinks }
+        every { repo.saveCustomHydrationDrink(any()) } answers {
+            val savedDrink = firstArg<CustomHydrationDrink>()
+            savedDrinks = listOf(savedDrink)
+        }
+        val nutritionRepo = nutritionRepo()
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        vm.saveCustomDrink(
+            CustomHydrationDrinkInput(
+                name = "Coffee",
+                volumeMilliliters = 150.0,
+                nutrientValues = mapOf(
+                    NutritionNutrient.CAFFEINE to 10.0,
+                    NutritionNutrient.VITAMIN_B6 to 1.0,
+                    NutritionNutrient.VITAMIN_C to 2.0,
+                ),
+            )
+        )
+        advanceUntilIdle()
+
+        verify {
+            repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
+                drink.name == "Coffee" &&
+                    drink.volumeMilliliters == 150.0 &&
+                    drink.nutrientValues[NutritionNutrient.CAFFEINE] == 10.0
+            })
+        }
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
+        coVerify(exactly = 0) { nutritionRepo.writeNutritionEntry(any()) }
+        assertEquals("Coffee", vm.uiState.value.customDrinkOptions.single().name)
+        assertEquals(0.0, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `saved custom drink entry writes hydration nutrients`() = runTest {
+        val drink = CustomHydrationDrink(
+            id = "coffee",
+            name = "Coffee",
+            volumeMilliliters = 150.0,
+            nutrientValues = mapOf(
+                NutritionNutrient.CAFFEINE to 10.0,
+                NutritionNutrient.VITAMIN_B6 to 1.0,
+                NutritionNutrient.VITAMIN_C to 2.0,
+            ),
+        )
+        val repo = entryRepo(customDrinks = listOf(drink))
+        val nutritionRepo = nutritionRepo()
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        vm.addSavedCustomDrinkEntry(drink)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
+                request.volumeLiters == 0.15
+            })
+        }
+        coVerify {
+            nutritionRepo.writeNutritionEntry(match<NutritionWriteRequest> { request ->
+                request.name == "Coffee" &&
+                    request.associatedHydrationClientRecordId == "record-id" &&
+                    request.nutrientValues[NutritionNutrient.CAFFEINE] == 10.0 &&
+                    request.nutrientValues[NutritionNutrient.VITAMIN_B6] == 1.0 &&
+                    request.nutrientValues[NutritionNutrient.VITAMIN_C] == 2.0
+            })
+        }
+        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        assertEquals(0.15, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertTrue(vm.uiState.value.saveCompleted)
+        assertNull(vm.uiState.value.entryNotice)
+    }
+
+    @Test fun `zero impact saved custom drink writes nutrients without hydration entry`() = runTest {
+        val drink = CustomHydrationDrink(
+            id = "wine",
+            name = "Wine",
+            volumeMilliliters = 150.0,
+            hydrationMultiplier = 0.0,
+            nutrientValues = mapOf(NutritionNutrient.ENERGY to 120.0),
+        )
+        val repo = entryRepo(customDrinks = listOf(drink))
+        val nutritionRepo = nutritionRepo()
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        vm.addSavedCustomDrinkEntry(drink)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
+        coVerify {
+            nutritionRepo.writeNutritionEntry(match<NutritionWriteRequest> { request ->
+                request.name == "Wine" &&
+                    request.associatedHydrationClientRecordId == null &&
+                    request.nutrientValues[NutritionNutrient.ENERGY] == 120.0
+            })
+        }
+        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        assertEquals(0.0, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertTrue(vm.uiState.value.saveCompleted)
+        assertEquals(
+            HydrationEntryNotice.NON_HYDRATING_DRINK_SAVED,
+            vm.uiState.value.entryNotice,
+        )
+    }
+
+    @Test fun `zero impact custom drink without nutrients saves reusable drink only`() = runTest {
+        var savedDrinks = emptyList<CustomHydrationDrink>()
+        val repo = entryRepo()
+        every { repo.customHydrationDrinks() } answers { savedDrinks }
+        every { repo.saveCustomHydrationDrink(any()) } answers {
+            val savedDrink = firstArg<CustomHydrationDrink>()
+            savedDrinks = listOf(savedDrink)
+        }
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.saveCustomDrink(
+            CustomHydrationDrinkInput(
+                name = "Whiskey",
+                volumeMilliliters = 45.0,
+                hydrationMultiplier = 0.0,
+            )
+        )
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
+        verify {
+            repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
+                drink.name == "Whiskey" &&
+                    drink.volumeMilliliters == 45.0 &&
+                    drink.hydrationMultiplier == 0.0 &&
+                drink.nutrientValues.isEmpty()
+            })
+        }
+        assertEquals(0.0, vm.uiState.value.todayHydrationLiters, 0.0001)
+        assertEquals("Whiskey", vm.uiState.value.customDrinkOptions.single().name)
+        assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `saved custom drink entry reuses stored nutrients`() = runTest {
+        val drink = CustomHydrationDrink(
+            id = "coffee",
+            name = "Coffee",
+            volumeMilliliters = 150.0,
+            nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 10.0),
+        )
+        val repo = entryRepo(customDrinks = listOf(drink))
+        val nutritionRepo = nutritionRepo()
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        vm.addSavedCustomDrinkEntry(drink)
+        advanceUntilIdle()
+
+        coVerify {
+            nutritionRepo.writeNutritionEntry(match<NutritionWriteRequest> { request ->
+                request.name == "Coffee" &&
+                    request.nutrientValues[NutritionNutrient.CAFFEINE] == 10.0
+            })
+        }
+        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+    }
+
+    @Test fun `saving custom drink edit updates saved drink without writing hydration entry`() = runTest {
+        var savedDrinks = listOf(
+            CustomHydrationDrink(
+                id = "coffee",
+                name = "Coffee",
+                volumeMilliliters = 150.0,
+                nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 10.0),
+            )
+        )
+        val repo = entryRepo()
+        every { repo.customHydrationDrinks() } answers { savedDrinks }
+        every { repo.saveCustomHydrationDrink(any()) } answers {
+            val savedDrink = firstArg<CustomHydrationDrink>()
+            savedDrinks = listOf(savedDrink)
+        }
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.saveCustomDrink(
+            CustomHydrationDrinkInput(
+                name = "Latte",
+                volumeMilliliters = 200.0,
+                nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 20.0),
+            ),
+            "coffee",
+        )
+
+        verify {
+            repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
+                drink.id == "coffee" &&
+                    drink.name == "Latte" &&
+                    drink.volumeMilliliters == 200.0 &&
+                    drink.nutrientValues[NutritionNutrient.CAFFEINE] == 20.0
+            })
+        }
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
+        assertEquals("Latte", vm.uiState.value.customDrinkOptions.single().name)
+        assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `delete custom drink removes saved drink`() = runTest {
+        val coffee = CustomHydrationDrink(
+            id = "coffee",
+            name = "Coffee",
+            volumeMilliliters = 150.0,
+        )
+        val tea = CustomHydrationDrink(
+            id = "tea",
+            name = "Tea",
+            volumeMilliliters = 200.0,
+        )
+        val repo = entryRepo(customDrinks = listOf(coffee, tea))
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.deleteCustomDrink(coffee)
+
+        verify { repo.deleteCustomHydrationDrink("coffee") }
+        assertEquals(listOf("tea"), vm.uiState.value.customDrinkOptions.map { it.id })
+        assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `move custom drink to target reorders and persists`() = runTest {
+        val coffee = CustomHydrationDrink(
+            id = "coffee",
+            name = "Coffee",
+            volumeMilliliters = 150.0,
+        )
+        val tea = CustomHydrationDrink(
+            id = "tea",
+            name = "Tea",
+            volumeMilliliters = 200.0,
+        )
+        val juice = CustomHydrationDrink(
+            id = "juice",
+            name = "Juice",
+            volumeMilliliters = 250.0,
+        )
+        val repo = entryRepo(customDrinks = listOf(coffee, tea, juice))
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.moveCustomDrinkToTarget("juice", "coffee")
+
+        val expectedOrder = listOf("juice", "coffee", "tea")
+        verify { repo.reorderCustomHydrationDrinks(expectedOrder) }
+        assertEquals(expectedOrder, vm.uiState.value.customDrinkOptions.map { it.id })
+        assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `missing nutrition write permission prevents nutrient drink writes`() = runTest {
+        val repo = entryRepo()
+        val nutritionRepo = nutritionRepo(canWrite = false)
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        vm.addSavedCustomDrinkEntry(
+            CustomHydrationDrink(
+                id = "coffee",
+                name = "Coffee",
+                volumeMilliliters = 150.0,
+                nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 10.0),
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(HydrationEntryError.MISSING_NUTRITION_WRITE_PERMISSION, vm.uiState.value.entryError)
+        coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
+        coVerify(exactly = 0) { nutritionRepo.writeNutritionEntry(any()) }
+        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+    }
+
     @Test fun `invalid custom hydration entry keeps last custom amount`() = runTest {
         val repo = entryRepo()
         val vm = HydrationEntryViewModel(repo)
@@ -283,23 +582,6 @@ class HydrationEntryViewModelTest {
 
         assertEquals(HydrationEntryError.INVALID_AMOUNT, vm.uiState.value.entryError)
         coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
-    }
-
-    @Test fun `beverage multiplier adjusts written hydration volume`() = runTest {
-        val repo = entryRepo()
-        val vm = HydrationEntryViewModel(repo)
-        advanceUntilIdle()
-
-        vm.selectBeverage(HydrationBeverage.MILK)
-        vm.selectContainer(HydrationContainerOption.Defaults.first { it.id == "medium_glass" })
-        vm.addSelectedHydrationEntry()
-        advanceUntilIdle()
-
-        coVerify {
-            repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
-                abs(request.volumeLiters - 0.3) < 0.001
-            })
-        }
     }
 
     @Test fun `missing write permission prevents hydration entry writes`() = runTest {

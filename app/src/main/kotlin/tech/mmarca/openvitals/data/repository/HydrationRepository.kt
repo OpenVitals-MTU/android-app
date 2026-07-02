@@ -3,8 +3,10 @@ package tech.mmarca.openvitals.data.repository
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.NutritionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -33,6 +35,7 @@ class HydrationRepositoryImpl @Inject constructor(
 
     private val readHydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
     private val writeHydrationPermission = HealthPermission.getWritePermission(HydrationRecord::class)
+    private val writeNutritionPermission = HealthPermission.getWritePermission(NutritionRecord::class)
     override val hydrationWritePermissions: Set<String> get() = setOf(writeHydrationPermission)
 
     override fun hydrationContainerVolumeMilliliters(): Map<String, Double> =
@@ -47,6 +50,21 @@ class HydrationRepositoryImpl @Inject constructor(
 
     override fun setLastCustomHydrationAmountMilliliters(milliliters: Double) {
         preferencesRepository?.setLastCustomHydrationAmountMilliliters(milliliters)
+    }
+
+    override fun customHydrationDrinks(): List<CustomHydrationDrink> =
+        preferencesRepository?.customHydrationDrinks().orEmpty()
+
+    override fun saveCustomHydrationDrink(drink: CustomHydrationDrink) {
+        preferencesRepository?.saveCustomHydrationDrink(drink)
+    }
+
+    override fun deleteCustomHydrationDrink(drinkId: String) {
+        preferencesRepository?.deleteCustomHydrationDrink(drinkId)
+    }
+
+    override fun reorderCustomHydrationDrinks(drinkIds: List<String>) {
+        preferencesRepository?.reorderCustomHydrationDrinks(drinkIds)
     }
 
     override fun hydrationDailyGoalLiters(): Double =
@@ -177,6 +195,13 @@ class HydrationRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping deleteHydrationEntry missingCount=1")
             throw SecurityException("Missing Health Connect hydration write permission.")
         }
-        hc.deleteHydrationEntry(id)
+        val hydrationClientRecordId = hc.deleteHydrationEntry(id)
+        if (hydrationClientRecordId != null && writeNutritionPermission in granted) {
+            runCatching {
+                hc.deleteHydrationNutritionEntry(hydrationClientRecordId)
+            }.onFailure { error ->
+                Log.w(TAG, "Could not delete paired nutrition record.", error)
+            }
+        }
     }
 }

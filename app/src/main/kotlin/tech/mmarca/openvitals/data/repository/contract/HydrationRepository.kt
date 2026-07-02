@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.data.repository.contract
 
 import java.time.LocalDate
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -18,6 +19,14 @@ interface HydrationRepository {
     fun lastCustomHydrationAmountMilliliters(): Double?
 
     fun setLastCustomHydrationAmountMilliliters(milliliters: Double)
+
+    fun customHydrationDrinks(): List<CustomHydrationDrink>
+
+    fun saveCustomHydrationDrink(drink: CustomHydrationDrink)
+
+    fun deleteCustomHydrationDrink(drinkId: String)
+
+    fun reorderCustomHydrationDrinks(drinkIds: List<String>)
 
     fun hydrationDailyGoalLiters(): Double
 

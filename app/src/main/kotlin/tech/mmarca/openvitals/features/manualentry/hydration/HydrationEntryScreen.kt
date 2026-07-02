@@ -42,16 +42,15 @@ fun HydrationEntryScreen(
             HydrationTrackerCard(
                 state = state,
                 unitFormatter = unitFormatter,
-                onSelectBeverage = viewModel::selectBeverage,
-                onSelectContainer = viewModel::selectContainer,
-                onAddContainerEntry = viewModel::addContainerHydrationEntry,
                 onAddSelectedEntry = viewModel::addSelectedHydrationEntry,
-                onAddCustomEntry = viewModel::addCustomHydrationEntry,
+                onSaveCustomDrink = viewModel::saveCustomDrink,
+                onAddSavedCustomDrinkEntry = viewModel::addSavedCustomDrinkEntry,
+                onDeleteCustomDrink = viewModel::deleteCustomDrink,
+                onMoveCustomDrinkToTarget = viewModel::moveCustomDrinkToTarget,
                 onEntryTimeChanged = viewModel::updateEntryTime,
                 onRequestWritePermission = {
-                    requestWritePermissions.launch(state.hydrationWritePermissions)
+                    requestWritePermissions.launch(state.writePermissions)
                 },
-                onUpdateContainerSize = viewModel::updateContainerSize,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }

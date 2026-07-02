@@ -292,7 +292,7 @@ class HealthConnectManager @Inject constructor(
     suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) =
         withSyncEnabled { hydrationReader.updateHydrationEntry(id, request) }
 
-    suspend fun deleteHydrationEntry(id: String) =
+    suspend fun deleteHydrationEntry(id: String): String? =
         withSyncEnabled { hydrationReader.deleteHydrationEntry(id) }
 
     suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
@@ -495,6 +495,12 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun writeCarbsEntry(request: NutritionWriteRequest): String =
         withSyncEnabled { nutritionReader.writeCarbsEntry(request) }
+
+    suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =
+        withSyncEnabled { nutritionReader.writeNutritionEntry(request) }
+
+    suspend fun deleteHydrationNutritionEntry(hydrationClientRecordId: String) =
+        withSyncEnabled { nutritionReader.deleteHydrationNutritionEntry(hydrationClientRecordId) }
 
     suspend fun readMindfulnessSessions(start: Instant, end: Instant): List<MindfulnessSession> =
         mindfulnessReader.readMindfulnessSessions(start, end)
