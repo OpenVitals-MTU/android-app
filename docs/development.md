@@ -88,12 +88,11 @@ promotes the matching Codeberg prerelease to stable.
 Configure the Woodpecker cron named `nightly` to run at `00:00 UTC` on the
 default branch. The cron-triggered release workflow and the manual release
 workflow both build and publish the nightly artifacts directly, then move the
-fixed `nightly` tag to the published commit. Configure
-`CODEBERG_NIGHTLY_TAG_SSH_KEY` with a write-enabled Codeberg deploy key that can
-move `refs/tags/nightly`.
+fixed `nightly` tag to the published commit.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
-edit repository releases. Configure the release signing secrets
+edit repository releases and has repository write access so CI can move
+`refs/tags/nightly` over HTTPS. Configure the release signing secrets
 `OPENVITALS_RELEASE_KEYSTORE_BASE64`, `OPENVITALS_RELEASE_STORE_PASSWORD`,
 `OPENVITALS_RELEASE_KEY_ALIAS`, and `OPENVITALS_RELEASE_KEY_PASSWORD` so CI can
 produce updateable Debug, nightly, and release APKs. Configure
