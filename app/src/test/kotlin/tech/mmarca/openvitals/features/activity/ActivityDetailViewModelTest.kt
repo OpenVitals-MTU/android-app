@@ -1,8 +1,13 @@
 package tech.mmarca.openvitals.features.activity
 
 import tech.mmarca.openvitals.core.presentation.ScreenError
-import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
+import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
+import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,6 +37,41 @@ class ActivityDetailViewModelTest {
         assertEquals(workout, vm.uiState.value.workout)
         assertNull(vm.uiState.value.error)
         coVerify(exactly = 1) { repo.loadWorkout("activity-1") }
+    }
+
+    @Test fun `initial load backfills missing averages from samples`() = runTest {
+        val workout = workout(id = "activity-1")
+        val repo = mockk<ActivityRepository>()
+        val heartRepo = mockk<HeartRepository>()
+        val heartSamples = listOf(
+            HeartRateSample(workout.startTime, 100L, "test"),
+            HeartRateSample(workout.startTime.plusSeconds(60), 110L, "test"),
+        )
+        val speedSamples = listOf(
+            SpeedSample(workout.startTime, 2.0, "test"),
+            SpeedSample(workout.startTime.plusSeconds(60), 4.0, "test"),
+        )
+        val cadenceSamples = listOf(
+            ActivityCadenceSample(workout.startTime, 160.0, ActivityCadenceKind.STEPS, "test"),
+            ActivityCadenceSample(workout.startTime.plusSeconds(60), 180.0, ActivityCadenceKind.STEPS, "test"),
+            ActivityCadenceSample(workout.startTime, 80.0, ActivityCadenceKind.CYCLING, "test"),
+            ActivityCadenceSample(workout.startTime.plusSeconds(60), 100.0, ActivityCadenceKind.CYCLING, "test"),
+        )
+        coEvery { repo.loadWorkout("activity-1") } returns workout
+        coEvery { heartRepo.loadHeartRateSamples(workout.startTime, workout.endTime) } returns heartSamples
+        coEvery { repo.loadSpeedSamples(workout.startTime, workout.endTime) } returns speedSamples
+        coEvery { repo.loadActivityCadenceSamples(workout.startTime, workout.endTime) } returns cadenceSamples
+
+        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo)
+        val backfilled = requireNotNull(vm.uiState.value.workout)
+
+        assertEquals(105L, backfilled.averageHeartRateBpm)
+        assertEquals(3.0, backfilled.averageSpeedMetersPerSecond ?: 0.0, 0.001)
+        assertEquals(170.0, backfilled.averageStepsCadenceRate ?: 0.0, 0.001)
+        assertEquals(90.0, backfilled.averageCyclingCadenceRpm ?: 0.0, 0.001)
+        assertEquals(heartSamples, vm.uiState.value.heartRateSamples)
+        assertEquals(speedSamples, vm.uiState.value.speedSamples)
+        assertEquals(cadenceSamples, vm.uiState.value.cadenceSamples)
     }
 
     @Test fun `missing activity sets not found error`() = runTest {

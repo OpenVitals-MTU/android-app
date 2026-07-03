@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepDeviceData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
+import tech.mmarca.openvitals.domain.model.withRouteBackfilledMetrics
 
 internal fun ExerciseSessionRecord.toExerciseData(
     steps: Long? = null,
@@ -37,6 +38,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
     averageCyclingCadenceRpm: Double? = null,
     averageHeartRateBpm: Long? = null,
     appPackageName: String? = null,
+    backfillRouteMetrics: Boolean = false,
 ) = ExerciseData(
     id = metadata.id,
     title = title,
@@ -91,7 +93,9 @@ internal fun ExerciseSessionRecord.toExerciseData(
     },
     route = exerciseRouteResult.toExerciseRouteData(),
     isOpenVitalsEntry = appPackageName?.let { isOpenVitalsRecord(metadata.dataOrigin.packageName, it) } ?: false,
-)
+).let { exercise ->
+    if (backfillRouteMetrics) exercise.withRouteBackfilledMetrics() else exercise
+}
 
 private fun ExerciseRouteResult.toExerciseRouteData(): ExerciseRouteData = when (this) {
     is ExerciseRouteResult.Data -> ExerciseRouteData(

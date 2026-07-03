@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.SpeedSample
+import tech.mmarca.openvitals.domain.model.withSampleBackfilledMetrics
 import tech.mmarca.openvitals.navigation.ACTIVITY_DETAIL_ID_ARG
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,9 +95,14 @@ class ActivityDetailViewModel(
                     } else {
                         emptyList()
                     }
+                    val backfilledWorkout = workout?.withSampleBackfilledMetrics(
+                        heartRateSamples = heartRateSamples,
+                        speedSamples = speedSamples,
+                        cadenceSamples = cadenceSamples,
+                    )
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
-                        workout = workout,
+                        workout = backfilledWorkout,
                         heartRateSamples = heartRateSamples,
                         speedSamples = speedSamples,
                         cadenceSamples = cadenceSamples,

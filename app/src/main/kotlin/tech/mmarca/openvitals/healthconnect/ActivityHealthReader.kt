@@ -755,6 +755,7 @@ internal class ActivityHealthReader(
                     null
                 },
                 appPackageName = appPackageName,
+                backfillRouteMetrics = true,
             )
         }
 
