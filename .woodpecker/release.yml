@@ -13,12 +13,6 @@ variables:
   - &alpine_image alpine:3.20
   - &android_image ghcr.io/cirruslabs/android-sdk:tools
   - &ruby_image ruby:3.3
-  - &android_environment
-    GRADLE_USER_HOME: /woodpecker/cache/gradle
-  - &android_volumes
-    - openvitals-gradle-cache:/woodpecker/cache/gradle
-    - openvitals-android-platforms:/opt/android-sdk-linux/platforms
-    - openvitals-android-build-tools:/opt/android-sdk-linux/build-tools
   - &fastlane_environment
     FASTLANE_DISABLE_COLORS: "1"
     FASTLANE_OPT_OUT_USAGE: "1"
@@ -37,8 +31,6 @@ steps:
     depends_on:
       - resolve-release-context
     image: *android_image
-    environment: *android_environment
-    volumes: *android_volumes
     commands:
       - set -eu
       - |
@@ -55,8 +47,6 @@ steps:
     depends_on:
       - unit-tests
     image: *android_image
-    environment: *android_environment
-    volumes: *android_volumes
     commands:
       - set -eu
       - |
@@ -76,7 +66,6 @@ steps:
       - release-preflight
     image: *android_image
     environment:
-      <<: *android_environment
       OPENVITALS_RELEASE_KEYSTORE_BASE64:
         from_secret: OPENVITALS_RELEASE_KEYSTORE_BASE64
       OPENVITALS_RELEASE_STORE_PASSWORD:
@@ -87,7 +76,6 @@ steps:
         from_secret: OPENVITALS_RELEASE_KEY_PASSWORD
       CODEBERG_RELEASE_API_KEY:
         from_secret: CODEBERG_RELEASE_API_KEY
-    volumes: *android_volumes
     commands:
       - set -eu
       - . .woodpecker/tmp/release-context.env

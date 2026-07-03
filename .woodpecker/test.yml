@@ -5,18 +5,10 @@ when:
 
 variables:
   - &android_image ghcr.io/cirruslabs/android-sdk:tools
-  - &android_environment
-    GRADLE_USER_HOME: /woodpecker/cache/gradle
-  - &android_volumes
-    - openvitals-gradle-cache:/woodpecker/cache/gradle
-    - openvitals-android-platforms:/opt/android-sdk-linux/platforms
-    - openvitals-android-build-tools:/opt/android-sdk-linux/build-tools
 
 steps:
   - name: unit-tests
     image: *android_image
-    environment: *android_environment
-    volumes: *android_volumes
     commands:
       - set -eu
       - test -f gradle/wrapper/gradle-wrapper.jar
@@ -28,8 +20,6 @@ steps:
     depends_on:
       - unit-tests
     image: *android_image
-    environment: *android_environment
-    volumes: *android_volumes
     commands:
       - set -eu
       - test -f gradle/wrapper/gradle-wrapper.jar
