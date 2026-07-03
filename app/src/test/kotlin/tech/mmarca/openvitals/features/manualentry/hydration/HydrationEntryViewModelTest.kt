@@ -31,7 +31,9 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
+import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.core.presentation.ScreenError
@@ -53,6 +55,7 @@ class HydrationEntryViewModelTest {
         containerVolumeMilliliters: Map<String, Double> = emptyMap(),
         lastCustomAmountMilliliters: Double? = null,
         customDrinks: List<CustomHydrationDrink> = emptyList(),
+        hydrationEntries: List<HydrationEntry> = emptyList(),
     ) = mockk<HydrationRepository>().also { repo ->
         every { repo.hydrationWritePermissions } returns setOf("write_hydration")
         every { repo.hydrationContainerVolumeMilliliters() } returns containerVolumeMilliliters
@@ -68,15 +71,18 @@ class HydrationEntryViewModelTest {
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
         coEvery { repo.loadDailyHydration(any(), any()) } returns dailyHydration
+        coEvery { repo.loadHydrationEntries(any(), any()) } returns hydrationEntries
     }
 
     private fun nutritionRepo(
         canWrite: Boolean = true,
+        nutritionEntries: List<NutritionEntry> = emptyList(),
     ) = mockk<NutritionRepository>().also { repo ->
         every { repo.nutritionWritePermissions } returns setOf("write_nutrition")
         coEvery { repo.hasNutritionWritePermission() } returns canWrite
         coEvery { repo.writeNutritionEntry(any()) } returns "nutrition-record-id"
         coEvery { repo.writeCarbsEntry(any()) } returns "nutrition-record-id"
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns nutritionEntries
     }
 
     @Test fun `initial load checks write permission`() = runTest {
@@ -137,6 +143,47 @@ class HydrationEntryViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.uiState.value.lastCustomAmountMilliliters)
+    }
+
+    @Test fun `frequent drink options rank consumed beverages by history`() = runTest {
+        val water = CustomHydrationDrink(
+            id = "water",
+            name = "Water",
+            volumeMilliliters = 250.0,
+        )
+        val tea = CustomHydrationDrink(
+            id = "tea",
+            name = "Tea",
+            volumeMilliliters = 200.0,
+        )
+        val coffee = CustomHydrationDrink(
+            id = "coffee",
+            name = "Coffee",
+            volumeMilliliters = 150.0,
+        )
+        val repo = entryRepo(
+            customDrinks = listOf(water, tea, coffee),
+            hydrationEntries = listOf(
+                hydrationEntry(drinkId = "water", time = "2026-05-20T08:00:00Z"),
+                hydrationEntry(drinkId = "water", time = "2026-05-21T08:00:00Z"),
+            ),
+        )
+        val nutritionRepo = nutritionRepo(
+            nutritionEntries = listOf(
+                nutritionEntry(name = "Coffee", time = "2026-05-22T08:00:00Z"),
+                nutritionEntry(name = "coffee", time = "2026-05-23T08:00:00Z"),
+                nutritionEntry(name = "Coffee", time = "2026-05-24T08:00:00Z"),
+                nutritionEntry(name = "Tea", time = "2026-05-25T08:00:00Z"),
+            ),
+        )
+
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("coffee", "water", "tea"),
+            vm.uiState.value.frequentDrinkOptions.map { drink -> drink.id },
+        )
     }
 
     @Test fun `container size update changes and selects preset option`() = runTest {
@@ -339,7 +386,8 @@ class HydrationEntryViewModelTest {
 
         coVerify {
             repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
-                request.volumeLiters == 0.15
+                request.volumeLiters == 0.15 &&
+                    request.drinkId == "coffee"
             })
         }
         coVerify {
@@ -657,5 +705,42 @@ class HydrationEntryViewModelTest {
         assertFalse(vm.uiState.value.isSavingEntry)
         assertEquals(HydrationEntryError.WRITE_FAILED, vm.uiState.value.entryError)
         assertEquals(ScreenError.Message("denied"), vm.uiState.value.writeError)
+    }
+
+    private fun hydrationEntry(
+        drinkId: String,
+        time: String,
+    ): HydrationEntry {
+        val instant = Instant.parse(time)
+        return HydrationEntry(
+            startTime = instant,
+            endTime = instant.plusSeconds(1),
+            liters = 0.25,
+            source = "OpenVitals",
+            clientRecordId = "openvitals_hydration_${instant.toEpochMilli()}_drink_${drinkId}_record",
+            isOpenVitalsEntry = true,
+        )
+    }
+
+    private fun nutritionEntry(
+        name: String,
+        time: String,
+        clientRecordId: String = "openvitals_nutrition_${Instant.parse(time).toEpochMilli()}",
+    ): NutritionEntry {
+        val instant = Instant.parse(time)
+        return NutritionEntry(
+            time = instant,
+            mealType = 0,
+            name = name,
+            energyKcal = null,
+            proteinGrams = null,
+            carbsGrams = null,
+            fatGrams = null,
+            fiberGrams = null,
+            sugarGrams = null,
+            source = "OpenVitals",
+            clientRecordId = clientRecordId,
+            isOpenVitalsEntry = true,
+        )
     }
 }

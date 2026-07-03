@@ -42,6 +42,7 @@ internal suspend fun logCustomHydrationDrinkEntry(
         nutritionRepository = nutritionRepository,
         rawLiters = amountMilliliters / MillilitersPerLiter,
         hydrationMultiplier = drink.hydrationMultiplier,
+        drinkId = drink.id,
         nutritionName = drink.name,
         nutrientValues = drink.nutrientValues.mapValues { (_, value) -> value * portionMultiplier },
         requestedEntryTime = requestedEntryTime,
@@ -55,6 +56,7 @@ internal suspend fun writeHydrationAndNutritionEntry(
     nutritionRepository: NutritionRepository,
     rawLiters: Double,
     hydrationMultiplier: Double,
+    drinkId: String? = null,
     nutritionName: String?,
     nutrientValues: Map<NutritionNutrient, Double>,
     requestedEntryTime: Instant? = null,
@@ -98,6 +100,7 @@ internal suspend fun writeHydrationAndNutritionEntry(
                 HydrationWriteRequest(
                     time = entryTime,
                     volumeLiters = effectiveLiters,
+                    drinkId = drinkId,
                 )
             )
         } else {

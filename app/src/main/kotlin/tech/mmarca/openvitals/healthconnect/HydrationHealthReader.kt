@@ -92,7 +92,11 @@ internal class HydrationHealthReader(
         val startTime = request.time
         val endTime = startTime.plusSeconds(1)
         val zone = ZoneId.systemDefault()
-        val clientRecordId = "openvitals_hydration_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
+        val drinkSegment = request.drinkId
+            ?.toHydrationDrinkClientRecordSegment()
+            ?.let { "_drink_$it" }
+            .orEmpty()
+        val clientRecordId = "openvitals_hydration_${startTime.toEpochMilli()}${drinkSegment}_${UUID.randomUUID()}"
         val volumeMilliliters = request.volumeLiters * MillilitersPerLiter
         val record = HydrationRecord(
             startTime = startTime,
@@ -169,6 +173,11 @@ internal class HydrationHealthReader(
 private const val TAG = "HydrationHealthReader"
 private const val MaxHydrationRecordLiters = 100.0
 private const val MillilitersPerLiter = 1000.0
+
+private fun String.toHydrationDrinkClientRecordSegment(): String? =
+    trim()
+        .filter { character -> character.isLetterOrDigit() || character == '-' }
+        .takeIf { it.isNotBlank() }
 
 internal fun dailyHydrationSeries(
     startDate: LocalDate,

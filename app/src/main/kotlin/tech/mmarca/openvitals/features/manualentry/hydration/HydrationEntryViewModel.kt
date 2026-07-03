@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyMacros
+import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
@@ -33,6 +35,12 @@ internal const val MillilitersPerLiter = 1000.0
 private const val MaxHealthConnectHydrationLiters = 100.0
 private const val MaxCustomDrinkNutrientValue = 10000.0
 private const val DefaultCustomDrinkHydrationMultiplier = 1.0
+private const val FrequentHydrationDrinkLimit = 6
+private const val FrequentHydrationDrinkLookbackDays = 90L
+private const val OpenVitalsHydrationClientRecordPrefix = "openvitals_hydration_"
+private const val OpenVitalsHydrationDrinkClientRecordMarker = "_drink_"
+private const val OpenVitalsStandaloneNutritionPrefix = "openvitals_nutrition_"
+private const val OpenVitalsPairedHydrationNutritionPrefix = "openvitals_hydration_nutrition_"
 internal const val MinHydrationContainerMilliliters = 1.0
 internal const val MaxHydrationContainerMilliliters =
     MaxHealthConnectHydrationLiters * MillilitersPerLiter
@@ -91,6 +99,7 @@ data class HydrationEntryUiState(
     val selectedContainer: HydrationContainerOption = HydrationContainerOption.Defaults.first(),
     val lastCustomAmountMilliliters: Double? = null,
     val customDrinkOptions: List<CustomHydrationDrink> = emptyList(),
+    val frequentDrinkOptions: List<CustomHydrationDrink> = emptyList(),
     val editRecordId: String? = null,
     val editTime: Instant? = null,
     val saveCompleted: Boolean = false,
@@ -145,6 +154,7 @@ class HydrationEntryViewModel @Inject constructor(
         refreshPermission()
         refreshDailyGoal()
         refreshTodayHydration()
+        refreshFrequentDrinkOptions()
     }
 
     fun refreshPermission() {
@@ -410,6 +420,7 @@ class HydrationEntryViewModel @Inject constructor(
         saveHydrationEntry(
             rawLiters = amountMilliliters / MillilitersPerLiter,
             hydrationMultiplier = drink.hydrationMultiplier,
+            drinkId = drink.id,
             nutritionName = drink.name,
             nutrientValues = scaledNutrientValues,
             requestedEntryTime = entryTime,
@@ -454,15 +465,45 @@ class HydrationEntryViewModel @Inject constructor(
     private fun refreshDrinkOptions(
         transform: HydrationEntryUiState.() -> HydrationEntryUiState = { this },
     ) {
+        val drinkOptions = repository.customHydrationDrinks()
+            .filter(CustomHydrationDrink::isValidCustomHydrationDrink)
+        val drinkOptionIds = drinkOptions.mapTo(mutableSetOf()) { it.id }
         _uiState.value = _uiState.value.transform().copy(
-            customDrinkOptions = repository.customHydrationDrinks()
-                .filter(CustomHydrationDrink::isValidCustomHydrationDrink),
+            customDrinkOptions = drinkOptions,
+            frequentDrinkOptions = _uiState.value.frequentDrinkOptions
+                .filter { drink -> drink.id in drinkOptionIds },
         )
+        refreshFrequentDrinkOptions()
+    }
+
+    private fun refreshFrequentDrinkOptions() {
+        if (_uiState.value.customDrinkOptions.isEmpty()) {
+            _uiState.value = _uiState.value.copy(frequentDrinkOptions = emptyList())
+            return
+        }
+        viewModelScope.launch {
+            val endDate = LocalDate.now()
+            val startDate = endDate.minusDays(FrequentHydrationDrinkLookbackDays - 1)
+            runCatching {
+                val hydrationEntries = repository.loadHydrationEntries(startDate, endDate)
+                val nutritionEntries = nutritionRepository.loadNutritionEntries(startDate, endDate)
+                hydrationEntries to nutritionEntries
+            }.onSuccess { (hydrationEntries, nutritionEntries) ->
+                _uiState.value = _uiState.value.copy(
+                    frequentDrinkOptions = frequentHydrationDrinkOptions(
+                        drinks = _uiState.value.customDrinkOptions,
+                        hydrationEntries = hydrationEntries,
+                        nutritionEntries = nutritionEntries,
+                    ),
+                )
+            }
+        }
     }
 
     private fun saveHydrationEntry(
         rawLiters: Double,
         hydrationMultiplier: Double = DefaultCustomDrinkHydrationMultiplier,
+        drinkId: String? = null,
         nutritionName: String? = null,
         nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
         requestedEntryTime: Instant? = null,
@@ -482,6 +523,7 @@ class HydrationEntryViewModel @Inject constructor(
                     nutritionRepository = nutritionRepository,
                     rawLiters = rawLiters,
                     hydrationMultiplier = hydrationMultiplier,
+                    drinkId = drinkId,
                     nutritionName = nutritionName,
                     nutrientValues = nutrientValues,
                     requestedEntryTime = requestedEntryTime,
@@ -517,6 +559,7 @@ class HydrationEntryViewModel @Inject constructor(
                         if (result.effectiveLiters > 0.0) {
                             runCatching { reminderController?.hideReminderNotification() }
                         }
+                        refreshFrequentDrinkOptions()
                     }
                 }
             }.onFailure { error ->
@@ -557,6 +600,99 @@ private fun hydrationContainerOptions(repository: HydrationRepository): List<Hyd
             ?: option
     }
 }
+
+private data class HydrationDrinkUsageScore(
+    val count: Int,
+    val latestTime: Instant,
+)
+
+private fun frequentHydrationDrinkOptions(
+    drinks: List<CustomHydrationDrink>,
+    hydrationEntries: List<HydrationEntry>,
+    nutritionEntries: List<NutritionEntry>,
+): List<CustomHydrationDrink> {
+    if (drinks.isEmpty()) return emptyList()
+    val drinkById = drinks.associateBy { drink -> drink.id }
+    val drinkOrder = drinks.mapIndexed { index, drink -> drink.id to index }.toMap()
+    val drinkIdByName = drinks.fold(mutableMapOf<String, String>()) { nameMap, drink ->
+        nameMap.apply {
+            putIfAbsent(drink.name.normalizedHydrationDrinkName(), drink.id)
+        }
+    }
+    val scores = mutableMapOf<String, HydrationDrinkUsageScore>()
+    val countedHydrationClientRecordIds = mutableSetOf<String>()
+
+    fun increment(drinkId: String, time: Instant) {
+        if (drinkId !in drinkById) return
+        val current = scores[drinkId]
+        scores[drinkId] = HydrationDrinkUsageScore(
+            count = (current?.count ?: 0) + 1,
+            latestTime = maxOf(current?.latestTime ?: Instant.EPOCH, time),
+        )
+    }
+
+    hydrationEntries.forEach { entry ->
+        if (!entry.isOpenVitalsHydrationEntry()) return@forEach
+        val clientRecordId = entry.clientRecordId ?: return@forEach
+        val drinkId = clientRecordId.hydrationDrinkIdFromClientRecordId() ?: return@forEach
+        increment(drinkId, entry.startTime)
+        countedHydrationClientRecordIds += clientRecordId
+    }
+
+    nutritionEntries.forEach { entry ->
+        if (!entry.isOpenVitalsNutritionEntry()) return@forEach
+        val pairedHydrationClientRecordId = entry.clientRecordId?.pairedHydrationClientRecordIdOrNull()
+        val pairedDrinkId = pairedHydrationClientRecordId?.hydrationDrinkIdFromClientRecordId()
+        if (pairedDrinkId != null) {
+            if (pairedHydrationClientRecordId !in countedHydrationClientRecordIds) {
+                increment(pairedDrinkId, entry.time)
+            }
+            return@forEach
+        }
+        val drinkId = entry.name
+            ?.normalizedHydrationDrinkName()
+            ?.takeIf { it.isNotBlank() }
+            ?.let(drinkIdByName::get)
+            ?: return@forEach
+        increment(drinkId, entry.time)
+    }
+
+    return scores.keys
+        .sortedWith(
+            compareByDescending<String> { drinkId -> scores.getValue(drinkId).count }
+                .thenByDescending { drinkId -> scores.getValue(drinkId).latestTime }
+                .thenBy { drinkId -> drinkOrder[drinkId] ?: Int.MAX_VALUE }
+        )
+        .take(FrequentHydrationDrinkLimit)
+        .mapNotNull(drinkById::get)
+}
+
+private fun HydrationEntry.isOpenVitalsHydrationEntry(): Boolean =
+    isOpenVitalsEntry || clientRecordId?.startsWith(OpenVitalsHydrationClientRecordPrefix) == true
+
+private fun NutritionEntry.isOpenVitalsNutritionEntry(): Boolean =
+    isOpenVitalsEntry ||
+        clientRecordId?.startsWith(OpenVitalsStandaloneNutritionPrefix) == true ||
+        clientRecordId?.startsWith(OpenVitalsPairedHydrationNutritionPrefix) == true
+
+private fun String.hydrationDrinkIdFromClientRecordId(): String? {
+    if (!startsWith(OpenVitalsHydrationClientRecordPrefix)) return null
+    val markerStart = indexOf(OpenVitalsHydrationDrinkClientRecordMarker)
+        .takeIf { it >= 0 }
+        ?: return null
+    val drinkIdStart = markerStart + OpenVitalsHydrationDrinkClientRecordMarker.length
+    val drinkIdEnd = indexOf('_', startIndex = drinkIdStart)
+        .takeIf { it > drinkIdStart }
+        ?: return null
+    return substring(drinkIdStart, drinkIdEnd).takeIf { it.isNotBlank() }
+}
+
+private fun String.pairedHydrationClientRecordIdOrNull(): String? =
+    takeIf { it.startsWith(OpenVitalsPairedHydrationNutritionPrefix) }
+        ?.removePrefix(OpenVitalsPairedHydrationNutritionPrefix)
+
+private fun String.normalizedHydrationDrinkName(): String =
+    trim().lowercase(Locale.ROOT)
 
 internal fun isValidHydrationContainerMilliliters(milliliters: Double): Boolean =
     milliliters >= MinHydrationContainerMilliliters &&

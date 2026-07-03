@@ -828,6 +828,7 @@
     <string name="hydration_custom_drinks_title">Saved drinks</string>
     <string name="hydration_catalog_drinks_title">Drink catalog</string>
     <string name="hydration_catalog_search">Search drinks</string>
+    <string name="hydration_catalog_frequently_consumed">Frequently consumed</string>
     <string name="hydration_catalog_saved_outside">Saved drinks</string>
     <string name="hydration_catalog_section_water">Water</string>
     <string name="hydration_catalog_section_coffees">Coffees</string>

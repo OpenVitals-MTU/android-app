@@ -817,6 +817,7 @@
     <string name="hydration_custom_drinks_title">Bebidas guardadas</string>
     <string name="hydration_catalog_drinks_title">Catálogo de bebidas</string>
     <string name="hydration_catalog_search">Buscar bebidas</string>
+    <string name="hydration_catalog_frequently_consumed">Bebidas frecuentes</string>
     <string name="hydration_catalog_saved_outside">Bebidas guardadas</string>
     <string name="hydration_catalog_section_coffees">Cafés</string>
     <string name="hydration_catalog_section_energy_drinks">Bebidas energéticas</string>

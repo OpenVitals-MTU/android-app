@@ -195,6 +195,7 @@ private data class HydrationCatalogRowItem(
 )
 
 private data class HydrationCatalogGroupedDrinks(
+    val frequentRows: List<HydrationCatalogRowItem>,
     val unassignedSavedRows: List<HydrationCatalogRowItem>,
     val sections: List<HydrationCatalogSectionDrinks>,
 )
@@ -341,6 +342,7 @@ internal fun HydrationTrackerCard(
                 HydrationCatalogDrinkCarousel(
                     catalogDrinks = emptyList(),
                     savedDrinks = state.customDrinkOptions,
+                    frequentDrinks = state.frequentDrinkOptions,
                     unitFormatter = unitFormatter,
                     isEditingSavedDrinks = isEditingSavedDrinks,
                     canEditSavedDrinks = canEditSavedDrinks,
@@ -521,6 +523,7 @@ internal fun HydrationTodayCounter(
 private fun HydrationCatalogDrinkCarousel(
     catalogDrinks: List<CustomHydrationDrink>,
     savedDrinks: List<CustomHydrationDrink>,
+    frequentDrinks: List<CustomHydrationDrink>,
     unitFormatter: UnitFormatter,
     isEditingSavedDrinks: Boolean,
     canEditSavedDrinks: Boolean,
@@ -535,7 +538,7 @@ private fun HydrationCatalogDrinkCarousel(
     onMoveSavedDrinkToCategory: (String, CaffeineSourceCategory?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (catalogDrinks.isEmpty() && savedDrinks.isEmpty()) return
+    if (catalogDrinks.isEmpty() && savedDrinks.isEmpty() && frequentDrinks.isEmpty()) return
 
     var query by remember { mutableStateOf("") }
     var savedDrinkCategories by remember { mutableStateOf<Map<String, HydrationCatalogSectionKey>>(emptyMap()) }
@@ -546,6 +549,7 @@ private fun HydrationCatalogDrinkCarousel(
     val groupedDrinks = remember(
         catalogDrinks,
         savedDrinks,
+        frequentDrinks,
         savedDrinkCategories,
         unassignedSavedOrder,
         sectionOrders,
@@ -554,6 +558,7 @@ private fun HydrationCatalogDrinkCarousel(
         hydrationCatalogGroupedDrinks(
             catalogDrinks = catalogDrinks,
             savedDrinks = savedDrinks,
+            frequentDrinks = frequentDrinks,
             savedDrinkCategories = savedDrinkCategories,
             unassignedSavedOrder = unassignedSavedOrder,
             sectionOrders = sectionOrders,
@@ -667,6 +672,18 @@ private fun HydrationCatalogDrinkCarousel(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (groupedDrinks.frequentRows.isNotEmpty()) {
+            HydrationCatalogFrequentRows(
+                rows = groupedDrinks.frequentRows,
+                unitFormatter = unitFormatter,
+                isEditingSavedDrinks = isEditingSavedDrinks,
+                canSelectDrink = canSelectDrink,
+                onSelectDrink = onSelectDrink,
+                onEditDrink = onEditDrink,
+                onDeleteDrink = onDeleteDrink,
+                onMoveSavedDrinkToSection = ::moveSavedDrinkToSection,
+            )
+        }
         if (groupedDrinks.unassignedSavedRows.isNotEmpty()) {
             HydrationCatalogStandaloneSavedRows(
                 rows = groupedDrinks.unassignedSavedRows,
@@ -698,6 +715,44 @@ private fun HydrationCatalogDrinkCarousel(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun HydrationCatalogFrequentRows(
+    rows: List<HydrationCatalogRowItem>,
+    unitFormatter: UnitFormatter,
+    isEditingSavedDrinks: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
+    onSelectDrink: (CustomHydrationDrink) -> Unit,
+    onEditDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteDrink: (CustomHydrationDrink) -> Unit,
+    onMoveSavedDrinkToSection: (String, HydrationCatalogSectionKey?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.hydration_catalog_frequently_consumed),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HydrationCatalogDrinkRows(
+            rows = rows,
+            unitFormatter = unitFormatter,
+            isEditingSavedDrinks = isEditingSavedDrinks,
+            canSelectDrink = canSelectDrink,
+            onSelectDrink = onSelectDrink,
+            onEditDrink = onEditDrink,
+            onDeleteDrink = onDeleteDrink,
+            onEditCatalogDrink = {},
+            onDeleteCatalogDrink = {},
+            onMoveSavedDrinkToSection = onMoveSavedDrinkToSection,
+            onMoveRowToTarget = { _, _ -> },
+            canReorderRows = false,
+        )
     }
 }
 
@@ -847,12 +902,13 @@ private fun HydrationCatalogDrinkRows(
     onMoveSavedDrinkToSection: (String, HydrationCatalogSectionKey?) -> Unit,
     onMoveRowToTarget: (String, String) -> Unit,
     modifier: Modifier = Modifier,
+    canReorderRows: Boolean = true,
 ) {
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         val fromKey = from.key as? String
         val toKey = to.key as? String
-        if (fromKey != null && toKey != null && fromKey != toKey) {
+        if (canReorderRows && fromKey != null && toKey != null && fromKey != toKey) {
             onMoveRowToTarget(fromKey, toKey)
         }
     }
@@ -875,7 +931,7 @@ private fun HydrationCatalogDrinkRows(
             ReorderableItem(
                 state = reorderableState,
                 key = row.rowKey,
-                enabled = true,
+                enabled = canReorderRows,
             ) { isDragging ->
                 HydrationCatalogDrinkRow(
                     row = row,
@@ -883,7 +939,7 @@ private fun HydrationCatalogDrinkRows(
                     enabled = canSelectDrink(row.drink),
                     isDragging = isDragging,
                     isEditingSavedDrinks = isEditingSavedDrinks,
-                    dragHandleModifier = Modifier.longPressDraggableHandle(),
+                    dragHandleModifier = Modifier.longPressDraggableHandle(enabled = canReorderRows),
                     onSelectDrink = { onSelectDrink(row.drink) },
                     onEditDrink = { onEditDrink(row.drink) },
                     onDeleteDrink = { onDeleteDrink(row.drink) },
@@ -1037,6 +1093,7 @@ private fun HydrationCatalogDrinkRow(
 private fun hydrationCatalogGroupedDrinks(
     catalogDrinks: List<CustomHydrationDrink>,
     savedDrinks: List<CustomHydrationDrink>,
+    frequentDrinks: List<CustomHydrationDrink>,
     savedDrinkCategories: Map<String, HydrationCatalogSectionKey>,
     unassignedSavedOrder: List<String>,
     sectionOrders: Map<HydrationCatalogSectionKey, List<String>>,
@@ -1044,6 +1101,26 @@ private fun hydrationCatalogGroupedDrinks(
 ): HydrationCatalogGroupedDrinks {
     val rowsBySection = HydrationCatalogSections.associate { it.key to mutableListOf<HydrationCatalogRowItem>() }
     val unassignedSavedRows = mutableListOf<HydrationCatalogRowItem>()
+    val savedDrinkIds = savedDrinks.mapTo(mutableSetOf()) { drink -> drink.id }
+    val catalogDrinkIds = catalogDrinks.mapTo(mutableSetOf()) { drink -> drink.id }
+    val frequentRows = frequentDrinks
+        .filterByCatalogQuery(normalizedQuery)
+        .mapNotNull { drink ->
+            when (drink.id) {
+                in savedDrinkIds -> HydrationCatalogRowItem(
+                    rowKey = drink.id.toSavedCatalogRowKey(),
+                    drink = drink,
+                    isSavedDrink = true,
+                )
+                in catalogDrinkIds -> HydrationCatalogRowItem(
+                    rowKey = drink.id.toPresetCatalogRowKey(),
+                    drink = drink,
+                    isSavedDrink = false,
+                )
+                else -> null
+            }
+        }
+    val frequentRowKeys = frequentRows.mapTo(mutableSetOf()) { row -> row.rowKey }
     val filteredSavedDrinks = savedDrinks.filterByCatalogQuery(normalizedQuery)
     val filteredCatalogDrinks = catalogDrinks
         .filterByCatalogQuery(normalizedQuery)
@@ -1056,6 +1133,7 @@ private fun hydrationCatalogGroupedDrinks(
             drink = drink,
             isSavedDrink = true,
         )
+        if (row.rowKey in frequentRowKeys) return@forEach
         val sectionKey = savedDrinkCategories[drink.id] ?: drink.category?.toHydrationCatalogSectionKey()
         if (sectionKey == null) {
             unassignedSavedRows.add(row)
@@ -1066,16 +1144,17 @@ private fun hydrationCatalogGroupedDrinks(
     filteredCatalogDrinks.forEach { drink ->
         val sectionKey = drink.category?.toHydrationCatalogSectionKey()
             ?: HydrationCatalogSectionKey.OTHER
-        rowsBySection.getValue(sectionKey).add(
-            HydrationCatalogRowItem(
-                rowKey = drink.id.toPresetCatalogRowKey(),
-                drink = drink,
-                isSavedDrink = false,
-            )
+        val row = HydrationCatalogRowItem(
+            rowKey = drink.id.toPresetCatalogRowKey(),
+            drink = drink,
+            isSavedDrink = false,
         )
+        if (row.rowKey in frequentRowKeys) return@forEach
+        rowsBySection.getValue(sectionKey).add(row)
     }
 
     return HydrationCatalogGroupedDrinks(
+        frequentRows = frequentRows,
         unassignedSavedRows = unassignedSavedRows.orderedByCatalogSectionOrder(unassignedSavedOrder),
         sections = HydrationCatalogSections.map { section ->
             HydrationCatalogSectionDrinks(

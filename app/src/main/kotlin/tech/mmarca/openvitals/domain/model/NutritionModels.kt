@@ -52,6 +52,7 @@ enum class HydrationEntryRecordType {
 data class HydrationWriteRequest(
     val time: Instant,
     val volumeLiters: Double,
+    val drinkId: String? = null,
 )
 
 data class CustomHydrationDrink(
