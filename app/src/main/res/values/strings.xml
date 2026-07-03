@@ -1449,6 +1449,12 @@
     <string name="caffeine_current_title">Active caffeine</string>
     <string name="caffeine_today_total">Today total</string>
     <string name="caffeine_time_to_safe">Time to safe</string>
+    <string name="caffeine_sleep_status_unlikely">Sleep impact unlikely</string>
+    <string name="caffeine_sleep_status_unlikely_body">%1$s active now, below your %2$s sleep threshold.</string>
+    <string name="caffeine_sleep_status_elevated_now">Elevated now</string>
+    <string name="caffeine_sleep_status_elevated_now_body">%1$s active now. Estimated below threshold in %2$s; bedtime forecast is %3$s at %4$s.</string>
+    <string name="caffeine_sleep_status_may_affect">May affect sleep</string>
+    <string name="caffeine_sleep_status_may_affect_body">Bedtime forecast is %1$s at %2$s, above your %3$s threshold.</string>
     <string name="caffeine_period_total">Period total</string>
     <string name="caffeine_daily_average">Daily average</string>
     <string name="caffeine_logged_days">Logged days</string>

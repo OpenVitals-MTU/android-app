@@ -22,10 +22,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -363,6 +365,11 @@ private fun CaffeineHomeOverviewCard(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            CaffeineCurrentSleepStatus(
+                insights = insights,
+                unitFormatter = unitFormatter,
+                modifier = Modifier.padding(top = 12.dp),
+            )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -384,6 +391,108 @@ private fun CaffeineHomeOverviewCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CaffeineCurrentSleepStatus(
+    insights: CaffeineInsights,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val status = caffeineSleepImpactStatus(insights)
+    val color = when (status) {
+        CaffeineSleepImpactStatus.UNLIKELY -> MaterialTheme.colorScheme.primary
+        CaffeineSleepImpactStatus.ELEVATED_NOW -> MaterialTheme.colorScheme.tertiary
+        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> MaterialTheme.colorScheme.error
+    }
+    val icon = when (status) {
+        CaffeineSleepImpactStatus.UNLIKELY -> Icons.Outlined.CheckCircle
+        CaffeineSleepImpactStatus.ELEVATED_NOW -> Icons.Outlined.QueryStats
+        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> Icons.Outlined.WarningAmber
+    }
+    val title = stringResource(
+        when (status) {
+            CaffeineSleepImpactStatus.UNLIKELY -> R.string.caffeine_sleep_status_unlikely
+            CaffeineSleepImpactStatus.ELEVATED_NOW -> R.string.caffeine_sleep_status_elevated_now
+            CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> R.string.caffeine_sleep_status_may_affect
+        }
+    )
+    val body = when (status) {
+        CaffeineSleepImpactStatus.UNLIKELY -> stringResource(
+            R.string.caffeine_sleep_status_unlikely_body,
+            formatMg(insights.currentMg, unitFormatter),
+            formatMg(insights.sleepThresholdMg.toDouble(), unitFormatter),
+        )
+        CaffeineSleepImpactStatus.ELEVATED_NOW -> {
+            val timeToSafe = insights.timeToThresholdMinutes
+                ?.takeIf { it > 0L }
+                ?.let(::formatDurationMinutes)
+                ?: stringResource(R.string.not_available)
+            stringResource(
+                R.string.caffeine_sleep_status_elevated_now_body,
+                formatMg(insights.currentMg, unitFormatter),
+                timeToSafe,
+                formatMg(insights.bedtimeMg, unitFormatter),
+                insights.bedtime.toString(),
+            )
+        }
+        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> stringResource(
+            R.string.caffeine_sleep_status_may_affect_body,
+            formatMg(insights.bedtimeMg, unitFormatter),
+            insights.bedtime.toString(),
+            formatMg(insights.sleepThresholdMg.toDouble(), unitFormatter),
+        )
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = color.copy(alpha = if (color.luminance() > 0.5f) 0.12f else 0.18f),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(22.dp),
+        )
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .weight(1f),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = color,
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+private enum class CaffeineSleepImpactStatus {
+    UNLIKELY,
+    ELEVATED_NOW,
+    MAY_AFFECT_SLEEP,
+}
+
+private fun caffeineSleepImpactStatus(insights: CaffeineInsights): CaffeineSleepImpactStatus {
+    val threshold = insights.sleepThresholdMg.toDouble()
+    return when {
+        insights.bedtimeMg > threshold -> CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP
+        insights.currentMg > threshold -> CaffeineSleepImpactStatus.ELEVATED_NOW
+        else -> CaffeineSleepImpactStatus.UNLIKELY
     }
 }
 
