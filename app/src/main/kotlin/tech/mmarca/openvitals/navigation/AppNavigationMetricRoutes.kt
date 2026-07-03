@@ -47,17 +47,10 @@ import tech.mmarca.openvitals.features.cycle.CycleScreen
 import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.AverageHeartRateScreen
-import tech.mmarca.openvitals.features.heart.BloodGlucoseScreen
-import tech.mmarca.openvitals.features.heart.BloodPressureScreen
-import tech.mmarca.openvitals.features.heart.BodyTemperatureScreen
 import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.features.heart.HrvScreen
-import tech.mmarca.openvitals.features.heart.RespiratoryRateScreen
 import tech.mmarca.openvitals.features.heart.RestingHeartRateScreen
-import tech.mmarca.openvitals.features.heart.SkinTemperatureScreen
-import tech.mmarca.openvitals.features.heart.SpO2Screen
-import tech.mmarca.openvitals.features.heart.Vo2MaxScreen
 import tech.mmarca.openvitals.features.hydration.HydrationScreen
 import tech.mmarca.openvitals.features.hydration.HydrationViewModel
 import tech.mmarca.openvitals.features.mindfulness.MindfulnessScreen
@@ -71,6 +64,13 @@ import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
 import tech.mmarca.openvitals.features.nutrition.ProteinScreen
 import tech.mmarca.openvitals.features.sleep.SleepScreen
 import tech.mmarca.openvitals.features.sleep.SleepViewModel
+import tech.mmarca.openvitals.features.vitals.BloodGlucoseScreen
+import tech.mmarca.openvitals.features.vitals.BloodPressureScreen
+import tech.mmarca.openvitals.features.vitals.BodyTemperatureScreen
+import tech.mmarca.openvitals.features.vitals.RespiratoryRateScreen
+import tech.mmarca.openvitals.features.vitals.SkinTemperatureScreen
+import tech.mmarca.openvitals.features.vitals.SpO2Screen
+import tech.mmarca.openvitals.features.vitals.Vo2MaxScreen
 
 @Composable
 internal fun MetricRouteContent(

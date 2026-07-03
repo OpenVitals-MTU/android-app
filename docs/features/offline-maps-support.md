@@ -2,6 +2,8 @@
 
 Offline maps let activity routes render without app-level internet access.
 
+For detailed download, import, and troubleshooting steps, see [Add offline maps](../how-to/offline-maps.md).
+
 ## Map Pack Import
 
 Map packs are imported from Settings. OpenVitals supports:

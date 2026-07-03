@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.features.heart
+package tech.mmarca.openvitals.features.vitals
 
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange

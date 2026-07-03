@@ -72,6 +72,12 @@ import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
+import tech.mmarca.openvitals.features.vitals.glucoseColor
+import tech.mmarca.openvitals.features.vitals.oxygenColor
+import tech.mmarca.openvitals.features.vitals.respiratoryColor
+import tech.mmarca.openvitals.features.vitals.temperatureColor
+import tech.mmarca.openvitals.features.vitals.VitalsReadingRow
+import tech.mmarca.openvitals.features.vitals.vo2Color
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat

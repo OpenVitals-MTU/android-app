@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.features.heart
+package tech.mmarca.openvitals.features.vitals
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector

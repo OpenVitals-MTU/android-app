@@ -49,7 +49,7 @@ import tech.mmarca.openvitals.features.dashboard.DashboardScreen
 import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartViewModel
-import tech.mmarca.openvitals.features.heart.HeartVitalsOverviewScreen
+import tech.mmarca.openvitals.features.vitals.HeartVitalsOverviewScreen
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType

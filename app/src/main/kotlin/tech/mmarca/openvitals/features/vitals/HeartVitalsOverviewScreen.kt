@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.features.heart
+package tech.mmarca.openvitals.features.vitals
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,6 +34,11 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
+import tech.mmarca.openvitals.features.heart.HeartMetric
+import tech.mmarca.openvitals.features.heart.HeartRateTimelineCard
+import tech.mmarca.openvitals.features.heart.HeartUiState
+import tech.mmarca.openvitals.features.heart.HeartViewModel
+import tech.mmarca.openvitals.features.heart.renderHeartMetricSections
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.dataSourceEducationItem
 import tech.mmarca.openvitals.ui.components.MetricCard

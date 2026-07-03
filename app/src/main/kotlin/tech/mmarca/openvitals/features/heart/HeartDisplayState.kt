@@ -5,6 +5,8 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.PeriodComparison
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.features.vitals.DoubleRangeSummary
+import tech.mmarca.openvitals.features.vitals.LongRangeSummary
 import java.time.LocalDate
 
 @Immutable

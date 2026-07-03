@@ -12,6 +12,13 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
+import tech.mmarca.openvitals.features.vitals.bloodGlucoseContent
+import tech.mmarca.openvitals.features.vitals.bloodPressureContent
+import tech.mmarca.openvitals.features.vitals.bodyTemperatureContent
+import tech.mmarca.openvitals.features.vitals.respiratoryRateContent
+import tech.mmarca.openvitals.features.vitals.skinTemperatureContent
+import tech.mmarca.openvitals.features.vitals.spO2Content
+import tech.mmarca.openvitals.features.vitals.vo2MaxContent
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
@@ -80,128 +87,8 @@ fun HrvScreen(
 }
 
 @Composable
-fun BloodPressureScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.BLOOD_PRESSURE,
-        onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
-fun SpO2Screen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.SPO2,
-        onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
-fun Vo2MaxScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.VO2_MAX,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
-fun RespiratoryRateScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.RESPIRATORY_RATE,
-        onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
-fun BodyTemperatureScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.BODY_TEMPERATURE,
-        onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
-fun BloodGlucoseScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.BLOOD_GLUCOSE,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
-fun SkinTemperatureScreen(
-    viewModel: HeartViewModel,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
-) {
-    HeartMetricScreen(
-        viewModel = viewModel,
-        unitFormatter = unitFormatter,
-        dateTimeFormatterProvider = dateTimeFormatterProvider,
-        metric = HeartMetric.SKIN_TEMPERATURE,
-        onSectionEditStateChanged = onSectionEditStateChanged,
-    )
-}
-
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun HeartMetricScreen(
+internal fun HeartMetricScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,

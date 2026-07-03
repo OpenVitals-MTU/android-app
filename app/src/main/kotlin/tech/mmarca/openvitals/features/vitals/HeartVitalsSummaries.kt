@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.features.heart
+package tech.mmarca.openvitals.features.vitals
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource

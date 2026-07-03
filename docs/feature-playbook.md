@@ -51,9 +51,9 @@ Use the sleep feature as the template for splitting a period-based detail screen
 | `SleepDayContent.kt` | `LazyListScope` extensions for `Day` mode (timeline, sessions, education) |
 | `SleepPeriodContent.kt` | `LazyListScope` extensions for `Week / Month / Year` (bar chart, drill-down list, sessions) |
 | `SleepCharts.kt` | Overview top cards, metric cards, sparklines, and `sleepOverview` list section |
-| `SleepSharedSections.kt` | Reusable insight sections (confidence, goal, statistics, target context, HRV) |
+| `SleepSharedSections.kt` | Reusable insight sections (confidence, goal, statistics, target context, HRV, caffeine) |
 | `SleepDisplayState.kt` | UI-ready display models produced by the ViewModel |
-| `SleepPresentationMapper.kt` | Maps repository/domain data into `SleepDisplayState` |
+| `SleepPresentationMapper.kt` | Maps repository/domain data, including optional cross-metric signals, into `SleepDisplayState` |
 | `SleepViewModel.kt` | Period selection, loading, and `display` state |
 | `SleepCards.kt` | Session timeline and list row composables |
 

@@ -15,7 +15,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../app/src/main/kotlin/tech/mmarca/openvitals/domain)
 - Shared period shell: in place and used by all metric detail/list screens
-- Feature repositories: in place for activity, sleep, heart, body, hydration, nutrition, mindfulness, cycle, and vitals
+- Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
 - Room is present for derived metric summary caching only; Health Connect remains the source of truth
@@ -221,13 +221,25 @@ Responsibilities:
 
 Current feature packages:
 
+- [`features/achievements`](../app/src/main/kotlin/tech/mmarca/openvitals/features/achievements)
 - [`features/onboarding`](../app/src/main/kotlin/tech/mmarca/openvitals/features/onboarding)
 - [`features/dashboard`](../app/src/main/kotlin/tech/mmarca/openvitals/features/dashboard)
 - [`features/activity`](../app/src/main/kotlin/tech/mmarca/openvitals/features/activity)
 - [`features/sleep`](../app/src/main/kotlin/tech/mmarca/openvitals/features/sleep)
 - [`features/heart`](../app/src/main/kotlin/tech/mmarca/openvitals/features/heart)
+- [`features/vitals`](../app/src/main/kotlin/tech/mmarca/openvitals/features/vitals)
 - [`features/body`](../app/src/main/kotlin/tech/mmarca/openvitals/features/body)
+- [`features/bodyenergy`](../app/src/main/kotlin/tech/mmarca/openvitals/features/bodyenergy)
+- [`features/caffeine`](../app/src/main/kotlin/tech/mmarca/openvitals/features/caffeine)
+- [`features/cycle`](../app/src/main/kotlin/tech/mmarca/openvitals/features/cycle)
+- [`features/homewidgets`](../app/src/main/kotlin/tech/mmarca/openvitals/features/homewidgets)
+- [`features/hydration`](../app/src/main/kotlin/tech/mmarca/openvitals/features/hydration)
+- [`features/imports/applehealth`](../app/src/main/kotlin/tech/mmarca/openvitals/features/imports/applehealth)
 - [`features/manualentry`](../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry)
+- [`features/mindfulness`](../app/src/main/kotlin/tech/mmarca/openvitals/features/mindfulness)
+- [`features/nutrition`](../app/src/main/kotlin/tech/mmarca/openvitals/features/nutrition)
+- [`features/readiness`](../app/src/main/kotlin/tech/mmarca/openvitals/features/readiness)
+- [`features/recovery`](../app/src/main/kotlin/tech/mmarca/openvitals/features/recovery)
 - [`features/settings`](../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 
 One practical note: `features/activity` currently contains two screen families:
@@ -236,6 +248,17 @@ One practical note: `features/activity` currently contains two screen families:
 - `ActivitiesScreen` for workout sessions
 
 That is a reasonable local compromise today because these screens share `ActivityRepository`, but route-facing composables should stay metric-specific. Shared renderers inside a feature package are acceptable when they only remove local duplication and do not make the user-facing detail screen show several metrics at once.
+
+Two implemented features intentionally do not follow the canonical period-detail interaction:
+
+- `features/caffeine` is a caffeine-specific analytics and setup experience with custom ranges, active-caffeine modeling, timing guidance, and beverage/nutrition context.
+- `features/bodyenergy` is a selected-day derived wellness detail, not a `Day / Week / Month / Year` metric screen.
+
+### Cross-metric insights
+
+Cross-metric insight calculations should live in `domain/insights`, even when the card is rendered by one feature. The feature ViewModel or use case can load the secondary signal, and the presentation mapper can attach the resulting insight to the feature display state.
+
+This keeps metric UI declarative: composables render precomputed insight models and do not own thresholds, correlation rules, or score adjustments. Missing secondary data should remain neutral. For example, planned caffeine-aware sleep insights should attach caffeine signals to sleep presentation state only after the domain signal and mapper are implemented; missing caffeine records must not reduce sleep scores. Today, caffeine timing guidance lives in the standalone caffeine feature.
 
 ## Screen Families
 
@@ -300,6 +323,7 @@ The aligned detail/list screens are:
 - nutrition
 - mindfulness
 - cycle
+- vitals
 
 They all use [`MetricDetailScaffold`](../app/src/main/kotlin/tech/mmarca/openvitals/ui/components/MetricDetailScaffold.kt) as the shared shell.
 
@@ -414,6 +438,8 @@ Follow the current pattern:
 - `NutritionRepository`
 - `MindfulnessRepository`
 - `CycleRepository`
+- `CaffeineRepository`
+- `BodyEnergyRepository`
 - `VitalsRepository`
 
 Each repository should:

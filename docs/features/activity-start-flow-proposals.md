@@ -1,12 +1,14 @@
 # Activity Start Flow Simplification Proposals
 
+Status: planning proposal, not the current implemented flow.
+
 This document explains the proposed improvements for making activity recording, manual activity logging, and planned-workout starts faster and easier to understand.
 
 The core product goal is:
 
 > When the user taps a button, the next screen should match the intent of that button.
 
-Today, many activity-related actions open the same generic Activity Entry source chooser. That keeps the code centralized, but it adds extra screens and makes the user decide again what they already meant to do.
+Today, many activity-related actions open the same generic Activity Entry source chooser. That keeps the code centralized, but it adds extra screens and makes the user decide again what they already meant to do. The sections below describe intended improvements, not behavior that should be assumed to exist in the app today.
 
 ## 1. Intent-Specific Activity Entry Routes
 

@@ -7,6 +7,9 @@ import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadResult
 import tech.mmarca.openvitals.domain.usecase.vitalsSummary
+import tech.mmarca.openvitals.features.vitals.heartRateRangeSummary
+import tech.mmarca.openvitals.features.vitals.hrvRangeSummary
+import tech.mmarca.openvitals.features.vitals.restingHeartRateRangeSummary
 import java.time.LocalDate
 import kotlin.math.roundToInt
 

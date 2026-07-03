@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.features.heart
+package tech.mmarca.openvitals.features.vitals
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyListScope
@@ -17,6 +17,22 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
+import tech.mmarca.openvitals.features.heart.BodyTemperatureContextCardContent
+import tech.mmarca.openvitals.features.heart.BodyTemperatureStatisticsContent
+import tech.mmarca.openvitals.features.heart.BloodGlucoseStatisticsContent
+import tech.mmarca.openvitals.features.heart.HeartEntryListContent
+import tech.mmarca.openvitals.features.heart.HeartRawDataConfidenceContent
+import tech.mmarca.openvitals.features.heart.HeartUiState
+import tech.mmarca.openvitals.features.heart.OxygenSaturationContextCardContent
+import tech.mmarca.openvitals.features.heart.RespiratoryRateContextCardContent
+import tech.mmarca.openvitals.features.heart.RespiratoryRateStatisticsContent
+import tech.mmarca.openvitals.features.heart.SkinTemperatureStatisticsContent
+import tech.mmarca.openvitals.features.heart.SpO2StatisticsContent
+import tech.mmarca.openvitals.features.heart.Vo2MaxStatisticsContent
+import tech.mmarca.openvitals.features.heart.metricModifier
+import tech.mmarca.openvitals.features.heart.noHeartMetricData
+import tech.mmarca.openvitals.features.heart.renderChartMetricSections
+import tech.mmarca.openvitals.features.heart.skinTemperatureValue
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricLineChart

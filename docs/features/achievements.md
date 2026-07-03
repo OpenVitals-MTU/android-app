@@ -4,12 +4,15 @@ Achievements turn long-term activity and wellness patterns into local badge prog
 
 ## What Can Be Tracked
 
-Achievement categories include:
+Implemented achievement categories include:
 
 - Daily steps.
 - Lifetime distance.
 - Daily floors.
 - Lifetime floors.
+
+Planned categories include:
+
 - Workouts.
 - Hydration.
 - Sleep.
@@ -17,7 +20,7 @@ Achievement categories include:
 
 ## Views
 
-The achievement screen shows unlocked and locked badges, category filters, progress values, tracked days, best daily values, and lifetime totals where available.
+The achievement screen shows unlocked and locked badges, category filters, progress values, tracked days, best daily values, and lifetime totals where available for implemented categories.
 
 ## Data Model
 
