@@ -46,27 +46,32 @@ git diff --check
 ```
 
 Release CI also uses the wrapper for local app test/lint and APK builds. There
-are two release channels:
+are two Codeberg release outputs:
 
-- A pushed or moved `nightly` tag builds `:app:assembleRelease` and
-  publishes `OpenVitals-nightly.apk` to the fixed Codeberg `nightly`
-  prerelease. The same run builds `:app:bundleRelease` and uploads the signed
-  AAB to the Google Play open testing track, whose Play Developer API track name
-  is `beta`.
-- A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and publishes
-  `OpenVitals-vX.Y.Z.apk` to its own versioned Codeberg prerelease, which can
-  be promoted after validation by an approved Woodpecker deployment to
+- The Woodpecker cron job named `nightly`, or a manually triggered Woodpecker
+  run, builds `:app:assembleNightly` and `:app:assembleDebug`, then publishes
+  `OpenVitals-nightly.apk` and `OpenVitals-nightly-debug.apk` to the fixed
+  Codeberg `nightly` prerelease. The same run builds `:app:bundleNightly` and
+  uploads the signed AAB to the Google Play open testing track, whose Play
+  Developer API track name is `beta`.
+- A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and
+  `:app:assembleDebug`, then publishes `OpenVitals-vX.Y.Z.apk` and
+  `OpenVitals-vX.Y.Z-debug.apk` to its own versioned Codeberg prerelease, which
+  can be promoted after validation by an approved Woodpecker deployment to
   `production`.
 
-Both Codeberg APKs use the release build type with the same production
-application ID, minification, packaging, and signing model. Codeberg APK
-artifacts compress bundled native libraries and include only ARM 32/64-bit ABIs
-(`armeabi-v7a` and `arm64-v8a`) so direct-download APKs stay below the forge
-upload limit.
+Nightly and release APKs use the release-style production application ID,
+minification, packaging, and signing model. Published Debug APKs use the
+separate `tech.mmarca.openvitals.debug` application ID and are signed with the
+stable release signing configuration so Codeberg Debug-to-Debug updates keep the
+same certificate across ephemeral runners. Codeberg APK artifacts compress
+bundled native libraries and include only ARM 32/64-bit ABIs (`armeabi-v7a` and
+`arm64-v8a`) so direct-download APKs stay below the forge upload limit.
 
-The nightly release is intentionally mutable: each successful `nightly` tag run
-replaces the existing APK and checksum assets instead of creating another
-release page. `versionName` and `versionCode` are intentionally detached:
+The nightly release is intentionally mutable: each successful `nightly` cron or
+manual run updates the fixed `nightly` tag and replaces the existing APK and
+checksum assets instead of creating another release page. `versionName` and
+`versionCode` are intentionally detached:
 `versionName` carries the human release name (`1.7.4`, `1.7.4-nightly.328`),
 while `versionCode` is only a monotonic Android update counter. Both nightly and
 versioned releases use the same counter line. CI reads
@@ -80,17 +85,18 @@ preserving the fixed `nightly` release and all Git tags. The approved production
 deployment uploads the signed release AAB to Google Play production and then
 promotes the matching Codeberg prerelease to stable.
 
-Configure the Woodpecker cron named `nightly` to run at `00:00 UTC`. The
-cron-only workflow moves the fixed `nightly` tag to the cron commit and pushes
-it back to Codeberg; that tag push triggers the normal nightly release workflow.
-Configure `CODEBERG_NIGHTLY_TAG_SSH_KEY` with a write-enabled Codeberg deploy
-key that can move `refs/tags/nightly`.
+Configure the Woodpecker cron named `nightly` to run at `00:00 UTC` on the
+default branch. The cron-triggered release workflow and the manual release
+workflow both build and publish the nightly artifacts directly, then move the
+fixed `nightly` tag to the published commit. Configure
+`CODEBERG_NIGHTLY_TAG_SSH_KEY` with a write-enabled Codeberg deploy key that can
+move `refs/tags/nightly`.
 
 Configure `CODEBERG_RELEASE_API_KEY` with a Codeberg token that can create and
 edit repository releases. Configure the release signing secrets
 `OPENVITALS_RELEASE_KEYSTORE_BASE64`, `OPENVITALS_RELEASE_STORE_PASSWORD`,
 `OPENVITALS_RELEASE_KEY_ALIAS`, and `OPENVITALS_RELEASE_KEY_PASSWORD` so CI can
-produce updateable nightly and release APKs. Configure
+produce updateable Debug, nightly, and release APKs. Configure
 `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` with the base64-encoded JSON key for a
 Google Play service account that can release to open testing and production for
 `tech.mmarca.openvitals`. If the account is allowed to stage edits but not send

@@ -1,10 +1,11 @@
 when:
+  - event: manual
+  - event: cron
+    cron: nightly
   - event: tag
     ref: refs/tags/v*
   - event: tag
     ref: refs/tags/V*
-  - event: tag
-    ref: refs/tags/nightly
   - event: deployment
     evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
@@ -19,7 +20,9 @@ steps:
       - apk_abi_filters="armeabi-v7a,arm64-v8a"
       - |
         release_tag="$${CI_COMMIT_TAG:-}"
-        if [ -z "$${release_tag}" ]; then
+        if [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; then
+          release_tag="nightly"
+        elif [ -z "$${release_tag}" ]; then
           case "$${CI_COMMIT_REF:-}" in
             refs/tags/*) release_tag="$${CI_COMMIT_REF#refs/tags/}" ;;
             *)
@@ -36,9 +39,11 @@ steps:
         aab_variant_dir=""
         aab_basename=""
         build_aab="false"
+        build_debug_apk="false"
         play_track=""
         version_code=""
         version_name_override=""
+        debug_apk_basename=""
         configured_version_code="$$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
         if [ -z "$${configured_version_code}" ]; then
           echo "Could not read baseVersionCode from app/build.gradle.kts." >&2
@@ -52,14 +57,18 @@ steps:
 
         if [ "$${release_tag}" = "nightly" ]; then
           release_channel="nightly"
+          gradle_task=":app:assembleNightly"
+          apk_variant_dir="nightly"
           apk_basename="OpenVitals-nightly.apk"
-          bundle_task=":app:bundleRelease"
-          aab_variant_dir="release"
+          bundle_task=":app:bundleNightly"
+          aab_variant_dir="nightly"
           aab_basename="OpenVitals-nightly.aab"
           release_title="OpenVitals Nightly"
           prerelease="true"
           build_aab="true"
+          build_debug_apk="true"
           play_track="beta"
+          debug_apk_basename="OpenVitals-nightly-debug.apk"
           pipeline_number="$${CI_PIPELINE_NUMBER:-1}"
           if ! printf '%s\n' "$${pipeline_number}" | grep -Eq '^[0-9][0-9]*$$'; then
             echo "CI_PIPELINE_NUMBER must be numeric for nightly versionName generation, found $${pipeline_number}." >&2
@@ -79,7 +88,7 @@ steps:
           fi
 
           if ! printf '%s\n' "$${release_tag}" | grep -Eq '^[vV][0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Release tags must use vX.Y.Z semantic version format, for example v1.8.0 or V1.8.0, or the fixed nightly tag." >&2
+            echo "Release tags must use vX.Y.Z semantic version format, for example v1.8.0 or V1.8.0." >&2
             exit 1
           fi
 
@@ -97,6 +106,8 @@ steps:
             play_track="production"
             version_code="$$(sh scripts/version-code.sh for-tag "$${release_tag}" --floor "$${configured_version_code}")"
           else
+            build_debug_apk="true"
+            debug_apk_basename="OpenVitals-$${release_tag}-debug.apk"
             previous_configured_version_code="$$(($${configured_version_code} - 1))"
             expected_version_code="$$(sh scripts/version-code.sh next --floor "$${previous_configured_version_code}")"
             if [ "$${expected_version_code}" != "$${configured_version_code}" ]; then
@@ -125,8 +136,13 @@ steps:
               "" \
               "Assets:" \
               "- Signed release APK ($${apk_abi_filters})" \
-              "- SHA-256 checksum" \
               > "$${notes_file}"
+            if [ "$${build_debug_apk}" = "true" ]; then
+              printf '%s\n' "- Signed Debug APK ($${apk_abi_filters})" >> "$${notes_file}"
+              printf '%s\n' "- SHA-256 checksums" >> "$${notes_file}"
+            else
+              printf '%s\n' "- SHA-256 checksum" >> "$${notes_file}"
+            fi
           fi
         else
           printf '%s\n' \
@@ -138,13 +154,20 @@ steps:
             "" \
             "Assets:" \
             "- Signed $${release_channel} APK ($${apk_abi_filters})" \
-            "- SHA-256 checksum" \
             > "$${notes_file}"
+          if [ "$${build_debug_apk}" = "true" ]; then
+            printf '%s\n' "- Signed Debug APK ($${apk_abi_filters})" >> "$${notes_file}"
+            printf '%s\n' "- SHA-256 checksums" >> "$${notes_file}"
+          else
+            printf '%s\n' "- SHA-256 checksum" >> "$${notes_file}"
+          fi
         fi
-        {
-          printf '\n'
-          sh scripts/version-code.sh marker "$${version_code}"
-        } >> "$${notes_file}"
+        if [ -n "$${version_code}" ]; then
+          {
+            printf '\n'
+            sh scripts/version-code.sh marker "$${version_code}"
+          } >> "$${notes_file}"
+        fi
       - |
         {
           printf 'OPENVITALS_RELEASE_CHANNEL=%s\n' "$${release_channel}"
@@ -159,9 +182,11 @@ steps:
           printf 'OPENVITALS_RELEASE_PRERELEASE=%s\n' "$${prerelease}"
           printf 'OPENVITALS_RELEASE_TARGET=%s\n' "$${CI_COMMIT_SHA}"
           printf 'OPENVITALS_BUILD_AAB=%s\n' "$${build_aab}"
+          printf 'OPENVITALS_BUILD_DEBUG_APK=%s\n' "$${build_debug_apk}"
           printf 'OPENVITALS_PLAY_TRACK=%s\n' "$${play_track}"
           printf 'OPENVITALS_VERSION_CODE=%s\n' "$${version_code}"
           printf 'OPENVITALS_VERSION_NAME=%s\n' "$${version_name_override}"
+          printf 'OPENVITALS_DEBUG_APK_BASENAME=%s\n' "$${debug_apk_basename}"
         } > .woodpecker/tmp/release-context.env
 
   - name: test
@@ -201,6 +226,8 @@ steps:
         from_secret: OPENVITALS_RELEASE_KEY_ALIAS
       OPENVITALS_RELEASE_KEY_PASSWORD:
         from_secret: OPENVITALS_RELEASE_KEY_PASSWORD
+      CODEBERG_NIGHTLY_TAG_SSH_KEY:
+        from_secret: CODEBERG_NIGHTLY_TAG_SSH_KEY
     commands:
       - set -eu
       - . .woodpecker/tmp/release-context.env
@@ -219,24 +246,65 @@ steps:
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
       - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
+      - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
+      - export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
       - if [ -n "$${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
       - if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
       - test -n "$${OPENVITALS_APK_ABI_FILTERS}"
       - test -f gradle/wrapper/gradle-wrapper.jar
       - chmod +x gradlew scripts/ci-gradle.sh
       - |
+        set -- "$${OPENVITALS_GRADLE_TASK}"
         if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          scripts/ci-gradle.sh --stacktrace "$${OPENVITALS_BUNDLE_TASK}"
-          aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
-          test -n "$${aab_path}"
-          cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
+          set -- "$${@}" "$${OPENVITALS_BUNDLE_TASK}"
         fi
-      - env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" scripts/ci-gradle.sh --stacktrace "$${OPENVITALS_GRADLE_TASK}"
+        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
+          set -- "$${@}" ":app:assembleDebug"
+        fi
+        env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" scripts/ci-gradle.sh --stacktrace "$${@}"
       - apk_path="$$(find "app/build/outputs/apk/$${OPENVITALS_APK_VARIANT_DIR}" -maxdepth 1 -name '*.apk' | head -n 1)"
       - test -n "$${apk_path}"
       - artifact_path=".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"
       - cp "$${apk_path}" "$${artifact_path}"
       - (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_APK_BASENAME}" > "$${OPENVITALS_APK_BASENAME}.sha256")
+      - |
+        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
+          debug_apk_path="$$(find "app/build/outputs/apk/debug" -maxdepth 1 -name '*.apk' | head -n 1)"
+          test -n "$${debug_apk_path}"
+          cp "$${debug_apk_path}" ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}"
+          (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_DEBUG_APK_BASENAME}" > "$${OPENVITALS_DEBUG_APK_BASENAME}.sha256")
+        fi
+      - |
+        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
+          aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
+          test -n "$${aab_path}"
+          cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
+        fi
+      - |
+        if { [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; } && [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
+          test -n "$${CODEBERG_NIGHTLY_TAG_SSH_KEY}"
+          if ! command -v git >/dev/null 2>&1 || ! command -v ssh-keyscan >/dev/null 2>&1; then
+            if command -v apk >/dev/null 2>&1; then
+              apk add --no-cache git openssh-client
+            elif command -v apt-get >/dev/null 2>&1; then
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git openssh-client
+            else
+              echo "Could not install git and openssh-client in this image." >&2
+              exit 1
+            fi
+          fi
+          mkdir -p "$${HOME}/.ssh"
+          printf '%s\n' "$${CODEBERG_NIGHTLY_TAG_SSH_KEY}" > "$${HOME}/.ssh/id_ed25519"
+          chmod 600 "$${HOME}/.ssh/id_ed25519"
+          ssh-keyscan -t ed25519 codeberg.org >> "$${HOME}/.ssh/known_hosts"
+          git config user.name "OpenVitals CI"
+          git config user.email "ci@openvitals.local"
+          git remote set-url origin ssh://git@codeberg.org/OpenVitals/android-app.git
+          git fetch --tags --force origin
+          git tag -fa nightly "$${CI_COMMIT_SHA}" -m "OpenVitals nightly $${CI_PIPELINE_NUMBER}"
+          git push --force origin refs/tags/nightly
+        fi
 
   - name: publish-play-open-testing
     depends_on:
@@ -265,8 +333,9 @@ steps:
           aab:"$${nightly_aab_path}" \
           version_code:"$${OPENVITALS_VERSION_CODE}"
     when:
-      - event: tag
-        ref: refs/tags/nightly
+      - event: manual
+      - event: cron
+        cron: nightly
 
   - name: publish-play-production
     depends_on:
@@ -312,21 +381,35 @@ steps:
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/publish-codeberg-release.sh
       - |
-        scripts/publish-codeberg-release.sh \
-          "$${OPENVITALS_RELEASE_TAG}" \
-          .woodpecker/tmp/release-title.txt \
-          .woodpecker/tmp/release-notes.md \
-          "$${OPENVITALS_RELEASE_PRERELEASE}" \
-          "$${OPENVITALS_RELEASE_TARGET}" \
-          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
-          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
+        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
+          scripts/publish-codeberg-release.sh \
+            "$${OPENVITALS_RELEASE_TAG}" \
+            .woodpecker/tmp/release-title.txt \
+            .woodpecker/tmp/release-notes.md \
+            "$${OPENVITALS_RELEASE_PRERELEASE}" \
+            "$${OPENVITALS_RELEASE_TARGET}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256" \
+            ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}.sha256"
+        else
+          scripts/publish-codeberg-release.sh \
+            "$${OPENVITALS_RELEASE_TAG}" \
+            .woodpecker/tmp/release-title.txt \
+            .woodpecker/tmp/release-notes.md \
+            "$${OPENVITALS_RELEASE_PRERELEASE}" \
+            "$${OPENVITALS_RELEASE_TARGET}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
+        fi
     when:
+      - event: manual
+      - event: cron
+        cron: nightly
       - event: tag
         ref: refs/tags/v*
       - event: tag
         ref: refs/tags/V*
-      - event: tag
-        ref: refs/tags/nightly
 
   - name: prune-codeberg-releases
     depends_on:
@@ -342,8 +425,9 @@ steps:
       - chmod +x scripts/prune-codeberg-releases.sh
       - DRY_RUN=false KEEP_RELEASES=9 scripts/prune-codeberg-releases.sh
     when:
-      - event: tag
-        ref: refs/tags/nightly
+      - event: manual
+      - event: cron
+        cron: nightly
 
   - name: publish-codeberg-stable
     depends_on:

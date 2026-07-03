@@ -29,6 +29,8 @@ val hasReleaseSigning = listOf(
     effectiveReleaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 
+val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
+val minifyDebugForCi = System.getenv("OPENVITALS_MINIFY_DEBUG_FOR_CI") == "true"
 val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
     ?.split(',')
     ?.map { it.trim() }
@@ -38,6 +40,9 @@ val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
 val versionCodeOverride = providers.environmentVariable("OPENVITALS_VERSION_CODE")
     .map { it.toInt() }
 val versionNameOverride = providers.environmentVariable("OPENVITALS_VERSION_NAME")
+val nightlyVersionNameSuffix = versionNameOverride
+    .map { "" }
+    .orElse("-nightly")
 // versionCode is a monotonic release counter, independent of versionName.
 val baseVersionCode = 107030328
 val baseVersionName = "1.7.4"
@@ -77,6 +82,17 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
+            if (signDebugWithReleaseKey && hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            if (minifyDebugForCi) {
+                isDebuggable = false
+                isMinifyEnabled = true
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
+            }
         }
 
         release {
@@ -88,6 +104,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        create("nightly") {
+            initWith(getByName("release"))
+            versionNameSuffix = nightlyVersionNameSuffix.get()
+            matchingFallbacks += listOf("release")
         }
     }
 
