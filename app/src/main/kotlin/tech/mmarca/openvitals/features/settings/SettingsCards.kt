@@ -1676,6 +1676,8 @@ internal fun DebugDiagnosticsCard(
 
 @Composable
 internal fun SupportOpenVitalsCard(
+    onOpenIssues: () -> Unit,
+    onOpenDiscussion: () -> Unit,
     onOpenSupport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1707,21 +1709,42 @@ internal fun SupportOpenVitalsCard(
                     )
                 }
             }
-            OpenVitalsOutlinedButton(
+            SupportLinkButton(
+                labelRes = R.string.settings_support_issues_action,
+                onClick = onOpenIssues,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+            SupportLinkButton(
+                labelRes = R.string.settings_support_discussion_action,
+                onClick = onOpenDiscussion,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            SupportLinkButton(
+                labelRes = R.string.settings_support_action,
                 onClick = onOpenSupport,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.widthIn(min = 6.dp))
-                Text(stringResource(R.string.settings_support_action))
-            }
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
+    }
+}
+
+@Composable
+private fun SupportLinkButton(
+    @StringRes labelRes: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsOutlinedButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.widthIn(min = 6.dp))
+        Text(stringResource(labelRes))
     }
 }
 

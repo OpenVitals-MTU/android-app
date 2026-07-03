@@ -1253,7 +1253,9 @@
     <string name="settings_offline_maps_help_link">Abrir guía de mapas sin conexión</string>
     <string name="section_support">Apoyo</string>
     <string name="settings_support_title">Apoya OpenVitals</string>
-    <string name="settings_support_body">Ayuda a financiar el desarrollo continuo de OpenVitals mediante Liberapay.</string>
+    <string name="settings_support_body">Informa errores, únete a debates de soporte de la comunidad o ayuda a financiar el desarrollo continuo.</string>
+    <string name="settings_support_issues_action">Informar de un problema</string>
+    <string name="settings_support_discussion_action">Unirse a debates en Zulip</string>
     <string name="settings_support_action">Abrir Liberapay</string>
     <string name="settings_privacy_no_account">No hace falta cuenta</string>
     <string name="settings_privacy_no_cloud">Sin sincronización en la nube de datos de salud</string>

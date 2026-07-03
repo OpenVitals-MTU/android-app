@@ -53,6 +53,8 @@ fun SettingsScreen(
     val bodyEnergyCalibrationSaved = stringResource(R.string.body_energy_calibration_saved)
     val bodyEnergyCalibrationReset = stringResource(R.string.body_energy_calibration_reset)
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
+    val issuesUrl = stringResource(R.string.settings_support_issues_url)
+    val discussionUrl = stringResource(R.string.settings_support_discussion_url)
     val supportUrl = stringResource(R.string.settings_support_url)
     val openManualPermissionSettings = {
         if (!openHealthConnectPermissionSettings(context)) {
@@ -170,6 +172,12 @@ fun SettingsScreen(
         onOpenSection = onOpenSection,
         onOpenPrivacyPolicy = {
             openExternalUrl(privacyPolicyUrl)
+        },
+        onOpenIssues = {
+            openExternalUrl(issuesUrl)
+        },
+        onOpenDiscussion = {
+            openExternalUrl(discussionUrl)
         },
         onOpenSupport = {
             openExternalUrl(supportUrl)

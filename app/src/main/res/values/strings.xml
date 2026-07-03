@@ -1261,8 +1261,12 @@
     <string name="settings_offline_maps_help_url" translatable="false">https://openvitals.codeberg.page/website/how-to/offline-maps/</string>
     <string name="section_support">Support</string>
     <string name="settings_support_title">Support OpenVitals</string>
-    <string name="settings_support_body">Help fund ongoing OpenVitals development through Liberapay.</string>
+    <string name="settings_support_body">Report bugs, join community support discussions, or help fund ongoing development.</string>
+    <string name="settings_support_issues_action">Report an issue</string>
+    <string name="settings_support_discussion_action">Join Zulip discussions</string>
     <string name="settings_support_action">Open Liberapay</string>
+    <string name="settings_support_issues_url" translatable="false">https://codeberg.org/mmarca-tech/OpenVitals/issues</string>
+    <string name="settings_support_discussion_url" translatable="false">http://openvitals.zulipchat.com/</string>
     <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
     <string name="settings_privacy_no_account">No account required</string>
     <string name="settings_privacy_no_cloud">No cloud sync of health data</string>

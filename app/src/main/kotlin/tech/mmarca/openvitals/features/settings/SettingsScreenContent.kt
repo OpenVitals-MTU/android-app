@@ -39,6 +39,8 @@ internal fun LazyListScope.settingsScreenContent(
 
             item {
                 SupportOpenVitalsCard(
+                    onOpenIssues = actions.onOpenIssues,
+                    onOpenDiscussion = actions.onOpenDiscussion,
                     onOpenSupport = actions.onOpenSupport,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )

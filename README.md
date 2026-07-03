@@ -57,6 +57,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 - Try the latest beta from Google Play or Codeberg releases
 - Report bugs and feature requests on [Codeberg issues](https://codeberg.org/mmarca-tech/OpenVitals/issues)
+- Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
 - Star or follow the project on [Codeberg](https://codeberg.org/mmarca-tech/OpenVitals) or the [GitHub mirror](https://github.com/mmarca-tech/OpenVitals)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
 - Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)

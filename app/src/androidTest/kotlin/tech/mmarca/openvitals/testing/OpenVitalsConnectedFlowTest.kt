@@ -280,22 +280,30 @@ class OpenVitalsConnectedFlowTest {
     }
 
     @Test
-    fun supportCard_opensLiberapayAction() {
-        var openCount = 0
+    fun supportCard_opensSupportActions() {
+        var issuesOpenCount = 0
+        var discussionOpenCount = 0
+        var supportOpenCount = 0
 
         composeRule.setContent {
             OpenVitalsTheme {
                 SupportOpenVitalsCard(
-                    onOpenSupport = { openCount += 1 },
+                    onOpenIssues = { issuesOpenCount += 1 },
+                    onOpenDiscussion = { discussionOpenCount += 1 },
+                    onOpenSupport = { supportOpenCount += 1 },
                     modifier = Modifier.padding(16.dp),
                 )
             }
         }
 
+        composeRule.onNodeWithText("Report an issue").performClick()
+        composeRule.onNodeWithText("Join Zulip discussions").performClick()
         composeRule.onNodeWithText("Open Liberapay").performClick()
 
         composeRule.runOnIdle {
-            assertEquals(1, openCount)
+            assertEquals(1, issuesOpenCount)
+            assertEquals(1, discussionOpenCount)
+            assertEquals(1, supportOpenCount)
         }
     }
 }
