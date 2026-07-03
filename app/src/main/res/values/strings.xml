@@ -47,6 +47,7 @@
     <string name="action_continue">Continue</string>
     <string name="action_delete">Delete</string>
     <string name="action_details">Details</string>
+    <string name="action_edit">Edit</string>
     <string name="action_enable">Enable</string>
     <string name="action_get_started">Get started</string>
     <string name="action_grant">Grant</string>
@@ -85,6 +86,14 @@
     <string name="home_metric_widget_update_failed">Unable to update</string>
     <string name="home_metric_widget_open_for_details">Open for details</string>
     <string name="home_metric_widget_not_configured">Select a metric</string>
+    <string name="home_quick_beverage_widget_description">Quick beverage</string>
+    <string name="home_quick_beverage_widget_config_title">Choose beverage</string>
+    <string name="home_quick_beverage_widget_config_prompt">Choose the beverage for the widget:</string>
+    <string name="home_quick_beverage_widget_no_drinks">No beverages available.</string>
+    <string name="home_quick_beverage_widget_not_configured">Select a beverage</string>
+    <string name="home_quick_beverage_widget_tap_to_log">Tap to log</string>
+    <string name="home_quick_beverage_widget_saved">Saved now</string>
+    <string name="home_quick_beverage_widget_saved_nutrition">Saved as nutrition</string>
     <string name="home_daily_readiness_widget_description">OpenVitals daily readiness</string>
     <string name="home_body_energy_widget_description">OpenVitals body energy</string>
     <string name="home_today_vitals_widget_description">OpenVitals today vitals</string>
@@ -820,6 +829,7 @@
     <string name="hydration_catalog_drinks_title">Drink catalog</string>
     <string name="hydration_catalog_search">Search drinks</string>
     <string name="hydration_catalog_saved_outside">Saved drinks</string>
+    <string name="hydration_catalog_section_water">Water</string>
     <string name="hydration_catalog_section_coffees">Coffees</string>
     <string name="hydration_catalog_section_energy_drinks">Energy drinks</string>
     <string name="hydration_catalog_section_teas">Teas</string>
@@ -830,6 +840,7 @@
     <string name="hydration_new_drink_action">New drink</string>
     <string name="hydration_new_drink_title">New drink</string>
     <string name="hydration_edit_drink_title">Edit drink</string>
+    <string name="hydration_log_saved_drink_title">Log %1$s</string>
     <string name="hydration_custom_drink_name">Name</string>
     <string name="hydration_custom_drink_category">Category</string>
     <string name="hydration_custom_drink_no_category">No category</string>

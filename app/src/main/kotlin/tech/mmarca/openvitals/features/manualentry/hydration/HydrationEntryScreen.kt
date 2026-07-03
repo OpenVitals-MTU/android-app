@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 fun HydrationEntryScreen(
     viewModel: HydrationEntryViewModel,
     unitFormatter: UnitFormatter,
+    initialLogDrinkId: String? = null,
     onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -44,7 +45,9 @@ fun HydrationEntryScreen(
                 unitFormatter = unitFormatter,
                 onAddSelectedEntry = viewModel::addSelectedHydrationEntry,
                 onSaveCustomDrink = viewModel::saveCustomDrink,
-                onAddSavedCustomDrinkEntry = viewModel::addSavedCustomDrinkEntry,
+                onAddSavedCustomDrinkEntry = { drink, amountMilliliters, entryTime ->
+                    viewModel.addSavedCustomDrinkEntry(drink, amountMilliliters, entryTime)
+                },
                 onDeleteCustomDrink = viewModel::deleteCustomDrink,
                 onMoveCustomDrinkToTarget = viewModel::moveCustomDrinkToTarget,
                 onMoveCustomDrinkToCategory = viewModel::moveCustomDrinkToCategory,
@@ -52,6 +55,7 @@ fun HydrationEntryScreen(
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.writePermissions)
                 },
+                initialLogDrinkId = initialLogDrinkId,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }

@@ -16,6 +16,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -354,6 +355,49 @@ class HydrationEntryViewModelTest {
         assertEquals(0.15, vm.uiState.value.todayHydrationLiters, 0.0001)
         assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryNotice)
+    }
+
+    @Test fun `saved custom drink entry scales nutrients for selected portion and time`() = runTest {
+        val entryTime = Instant.parse("2024-01-01T08:00:00Z")
+        val drink = CustomHydrationDrink(
+            id = "sports-drink",
+            name = "Sports drink",
+            volumeMilliliters = 100.0,
+            nutrientValues = mapOf(
+                NutritionNutrient.ENERGY to 40.0,
+                NutritionNutrient.TOTAL_CARBOHYDRATE to 8.0,
+            ),
+        )
+        val repo = entryRepo(customDrinks = listOf(drink))
+        val nutritionRepo = nutritionRepo()
+        val vm = HydrationEntryViewModel(repo, nutritionRepo)
+        advanceUntilIdle()
+
+        vm.addSavedCustomDrinkEntry(
+            drink = drink,
+            amountMilliliters = 250.0,
+            entryTime = entryTime,
+        )
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeHydrationEntry(match<HydrationWriteRequest> { request ->
+                request.time == entryTime &&
+                    request.volumeLiters == 0.25
+            })
+        }
+        coVerify {
+            nutritionRepo.writeNutritionEntry(match<NutritionWriteRequest> { request ->
+                request.time == entryTime &&
+                    request.name == "Sports drink" &&
+                    request.associatedHydrationClientRecordId == "record-id" &&
+                    request.nutrientValues[NutritionNutrient.ENERGY] == 100.0 &&
+                    request.nutrientValues[NutritionNutrient.TOTAL_CARBOHYDRATE] == 20.0
+            })
+        }
+        verify { repo.setLastCustomHydrationAmountMilliliters(250.0) }
+        assertEquals(250.0, vm.uiState.value.lastCustomAmountMilliliters ?: 0.0, 0.0001)
+        assertTrue(vm.uiState.value.saveCompleted)
     }
 
     @Test fun `zero impact saved custom drink writes nutrients without hydration entry`() = runTest {

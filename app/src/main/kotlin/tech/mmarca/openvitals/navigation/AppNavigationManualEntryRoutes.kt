@@ -83,6 +83,19 @@ internal fun NavGraphBuilder.manualEntryRoutes(
     }
 
     composable(
+        route = Screen.HydrationEntryLogDrink.route,
+        arguments = listOf(navArgument(HYDRATION_DRINK_ID_ARG) { type = NavType.StringType }),
+    ) { backStackEntry ->
+        val hydrationViewModel = hiltViewModel<HydrationEntryViewModel>()
+        HydrationEntryScreen(
+            viewModel = hydrationViewModel,
+            unitFormatter = unitFormatter,
+            initialLogDrinkId = backStackEntry.arguments?.getString(HYDRATION_DRINK_ID_ARG),
+            onEntrySaved = onEntrySavedAndPopBack,
+        )
+    }
+
+    composable(
         route = Screen.HydrationEntryEdit.route,
         arguments = listOf(navArgument(HYDRATION_ENTRY_ID_ARG) { type = NavType.StringType }),
     ) {

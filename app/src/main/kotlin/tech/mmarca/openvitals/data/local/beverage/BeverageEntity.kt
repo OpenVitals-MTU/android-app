@@ -68,27 +68,45 @@ data class BeverageEntity(
 
     companion object {
         fun preloadedDefaults(): List<BeverageEntity> =
-            listOf(waterDefault()) + CaffeineHealthDrinkCatalog.items
+            waterDefaults() + CaffeineHealthDrinkCatalog.items
                 .asSequence()
                 .filter { item -> item.defaultServingMilliliters != null }
                 .filterNot { item -> item.category == CaffeineSourceCategory.SUPPLEMENT }
-                .mapIndexed { index, item -> item.toPreloadedEntity(index + 1) }
+                .mapIndexed { index, item -> item.toPreloadedEntity(index + 2) }
                 .toList()
 
-        private fun waterDefault(): BeverageEntity =
+        private fun waterDefaults(): List<BeverageEntity> =
+            listOf(
+                waterDefault(
+                    id = "openvitals-still-water",
+                    name = "Still water",
+                    sortOrder = 0,
+                ),
+                waterDefault(
+                    id = "openvitals-gasified-water",
+                    name = "Gasified water",
+                    sortOrder = 1,
+                ),
+            )
+
+        private fun waterDefault(
+            id: String,
+            name: String,
+            sortOrder: Int,
+        ): BeverageEntity =
             fromDomain(
                 drink = CustomHydrationDrink(
-                    id = "openvitals-water",
-                    name = "Water",
+                    id = id,
+                    name = name,
                     volumeMilliliters = 100.0,
                     hydrationMultiplier = 1.0,
                     nutrientValues = emptyMap(),
-                    category = null,
+                    category = CaffeineSourceCategory.WATER,
                     isPreloaded = true,
                 ),
-                sortOrder = 0,
+                sortOrder = sortOrder,
                 isPreloaded = true,
-                category = null,
+                category = CaffeineSourceCategory.WATER,
             )
 
         fun fromDomain(

@@ -76,6 +76,7 @@ data class CaffeineInsights(
 )
 
 enum class CaffeineSourceCategory {
+    WATER,
     COFFEE,
     TEA,
     ENERGY_DRINK,
@@ -115,6 +116,7 @@ enum class CaffeineCatalogMatchConfidence {
 
 val CaffeineSourceCategory.displayLabel: String
     get() = when (this) {
+        CaffeineSourceCategory.WATER -> "Water"
         CaffeineSourceCategory.COFFEE -> "Coffee"
         CaffeineSourceCategory.TEA -> "Tea"
         CaffeineSourceCategory.ENERGY_DRINK -> "Energy drink"

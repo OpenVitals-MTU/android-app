@@ -177,6 +177,7 @@ fun AppNavigation(
             Screen.ManualEntry.route,
             Screen.HydrationEntry.route,
             Screen.HydrationEntryEdit.route,
+            Screen.HydrationEntryLogDrink.route,
             Screen.CarbsEntry.route,
             Screen.ActivityEntry.route,
             Screen.ActivityEntryEdit.route,
@@ -288,6 +289,7 @@ fun AppNavigation(
         Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
         Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
         Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
+        Screen.HydrationEntryLogDrink.route -> stringResource(R.string.screen_hydration_entry)
         Screen.CarbsEntry.route -> stringResource(R.string.screen_carbs_entry)
         Screen.ActivityEntry.route -> activityEntryTopBarTitleRes
             ?.let { stringResource(it) }

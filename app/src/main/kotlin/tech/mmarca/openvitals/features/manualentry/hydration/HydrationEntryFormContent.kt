@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,6 +59,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +78,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -114,9 +117,15 @@ private val HydrationSavedDrinkGridSpacing = 8.dp
 private val HydrationCatalogRowHeight = 76.dp
 private val HydrationCatalogRowSpacing = 6.dp
 private const val HydrationCatalogMaxVisibleRows = 4
+private val HydrationDrinkDialogContentMaxHeight = 340.dp
 private const val HydrationCatalogSavedRowPrefix = "saved:"
 private const val HydrationCatalogPresetRowPrefix = "preset:"
 private val HydrationCatalogSections = listOf(
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.WATER,
+        category = CaffeineSourceCategory.WATER,
+        titleRes = R.string.hydration_catalog_section_water,
+    ),
     HydrationCatalogSectionSpec(
         key = HydrationCatalogSectionKey.COFFEE,
         category = CaffeineSourceCategory.COFFEE,
@@ -150,6 +159,7 @@ private val HydrationCatalogSections = listOf(
 )
 
 private enum class HydrationCatalogSectionKey {
+    WATER,
     COFFEE,
     ENERGY_DRINK,
     TEA,
@@ -205,12 +215,13 @@ internal fun HydrationTrackerCard(
     unitFormatter: UnitFormatter,
     onAddSelectedEntry: () -> Unit,
     onSaveCustomDrink: (CustomHydrationDrinkInput, String?) -> Unit,
-    onAddSavedCustomDrinkEntry: (CustomHydrationDrink) -> Unit,
+    onAddSavedCustomDrinkEntry: (CustomHydrationDrink, Double, Instant) -> Unit,
     onDeleteCustomDrink: (CustomHydrationDrink) -> Unit,
     onMoveCustomDrinkToTarget: (String, String) -> Unit,
     onMoveCustomDrinkToCategory: (String, CaffeineSourceCategory?) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
     onRequestWritePermission: () -> Unit,
+    initialLogDrinkId: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val canInteract = !state.isSavingEntry && !state.isCheckingPermission
@@ -225,7 +236,16 @@ internal fun HydrationTrackerCard(
     val canEditSavedDrinks = !state.isSavingEntry && !state.isCheckingPermission
     var addingNewDrink by remember { mutableStateOf(false) }
     var editingSavedDrink by remember { mutableStateOf<CustomHydrationDrink?>(null) }
+    var loggingSavedDrink by remember { mutableStateOf<CustomHydrationDrink?>(null) }
+    var handledInitialLogDrinkId by remember(initialLogDrinkId) { mutableStateOf<String?>(null) }
     var isEditingSavedDrinks by remember { mutableStateOf(false) }
+    LaunchedEffect(initialLogDrinkId, state.customDrinkOptions) {
+        val drinkId = initialLogDrinkId ?: return@LaunchedEffect
+        if (handledInitialLogDrinkId == drinkId) return@LaunchedEffect
+        val drink = state.customDrinkOptions.firstOrNull { it.id == drinkId } ?: return@LaunchedEffect
+        loggingSavedDrink = drink
+        handledInitialLogDrinkId = drinkId
+    }
     OpenVitalsCard(
         modifier = modifier
             .fillMaxWidth()
@@ -326,7 +346,7 @@ internal fun HydrationTrackerCard(
                     canEditSavedDrinks = canEditSavedDrinks,
                     canSelectDrink = ::canLogDrink,
                     onToggleEditSavedDrinks = { isEditingSavedDrinks = !isEditingSavedDrinks },
-                    onSelectDrink = onAddSavedCustomDrinkEntry,
+                    onSelectDrink = { drink -> loggingSavedDrink = drink },
                     onEditDrink = { editingSavedDrink = it },
                     onDeleteDrink = onDeleteCustomDrink,
                     onEditCatalogDrink = { editingSavedDrink = it },
@@ -379,6 +399,18 @@ internal fun HydrationTrackerCard(
                     onSave = { input ->
                         editingSavedDrink = null
                         onSaveCustomDrink(input, drink.id)
+                    },
+                )
+            }
+            loggingSavedDrink?.let { drink ->
+                HydrationSavedDrinkEntryDialog(
+                    drink = drink,
+                    unitFormatter = unitFormatter,
+                    enabled = !state.isSavingEntry,
+                    onDismiss = { loggingSavedDrink = null },
+                    onSave = { amountMilliliters, entryTime ->
+                        loggingSavedDrink = null
+                        onAddSavedCustomDrinkEntry(drink, amountMilliliters, entryTime)
                     },
                 )
             }
@@ -1076,6 +1108,7 @@ private fun List<HydrationCatalogRowItem>.orderedByCatalogSectionOrder(
 
 private fun CaffeineSourceCategory.toHydrationCatalogSectionKey(): HydrationCatalogSectionKey =
     when (this) {
+        CaffeineSourceCategory.WATER -> HydrationCatalogSectionKey.WATER
         CaffeineSourceCategory.COFFEE -> HydrationCatalogSectionKey.COFFEE
         CaffeineSourceCategory.ENERGY_DRINK -> HydrationCatalogSectionKey.ENERGY_DRINK
         CaffeineSourceCategory.TEA -> HydrationCatalogSectionKey.TEA
@@ -1364,6 +1397,88 @@ private fun HydrationDrinkEditControl(
 }
 
 @Composable
+private fun HydrationSavedDrinkEntryDialog(
+    drink: CustomHydrationDrink,
+    unitFormatter: UnitFormatter,
+    enabled: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (Double, Instant) -> Unit,
+) {
+    var amountText by remember(drink.id, unitFormatter.unitSystem()) {
+        mutableStateOf(hydrationInputAmountText(drink.volumeMilliliters, unitFormatter))
+    }
+    var entryTime by remember(drink.id) { mutableStateOf(Instant.now()) }
+    val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem())
+    val isAmountValid = amountMilliliters?.let(::isValidHydrationContainerMilliliters) == true
+    val isFormValid = amountText.isNotBlank() && isAmountValid
+
+    AlertDialog(
+        modifier = Modifier.imePadding(),
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(R.string.hydration_log_saved_drink_title, drink.name))
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = HydrationDrinkDialogContentMaxHeight)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string.hydration_drink_amount_label,
+                                hydrationInputUnitLabel(unitFormatter.unitSystem()),
+                            )
+                        )
+                    },
+                    isError = amountText.isNotBlank() && !isAmountValid,
+                    supportingText = if (amountText.isNotBlank() && !isAmountValid) {
+                        {
+                            Text(hydrationInputInvalidAmountText(unitFormatter))
+                        }
+                    } else {
+                        null
+                    },
+                    enabled = enabled,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ManualEntryTimestampFields(
+                    timestamp = entryTime,
+                    enabled = enabled,
+                    onTimestampChanged = { entryTime = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            OpenVitalsTextButton(
+                onClick = {
+                    amountMilliliters?.takeIf(::isValidHydrationContainerMilliliters)?.let { milliliters ->
+                        onSave(milliliters, entryTime)
+                    }
+                },
+                enabled = enabled && isFormValid,
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            OpenVitalsTextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
 internal fun HydrationCustomDrinkDialog(
     titleRes: Int,
     unitFormatter: UnitFormatter,
@@ -1428,6 +1543,7 @@ internal fun HydrationCustomDrinkDialog(
     val isFormValid = nameText.trim().isNotBlank() && isAmountValid && areNutrientsValid && isHydrationImpactValid
 
     AlertDialog(
+        modifier = Modifier.imePadding(),
         onDismissRequest = onDismiss,
         title = {
             Text(stringResource(titleRes))
@@ -1436,6 +1552,7 @@ internal fun HydrationCustomDrinkDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = HydrationDrinkDialogContentMaxHeight)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

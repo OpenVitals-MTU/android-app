@@ -10,6 +10,7 @@ object BeverageNutritionDefaults {
         val name = item.name.lowercase(Locale.ROOT)
         val volumeMilliliters = item.defaultServingMilliliters ?: 240.0
         val base = when (item.category) {
+            CaffeineSourceCategory.WATER -> emptyMap()
             CaffeineSourceCategory.COFFEE -> coffeeDefaults(name, volumeMilliliters)
             CaffeineSourceCategory.TEA -> teaDefaults(name, volumeMilliliters)
             CaffeineSourceCategory.ENERGY_DRINK -> energyDrinkDefaults(name, volumeMilliliters)

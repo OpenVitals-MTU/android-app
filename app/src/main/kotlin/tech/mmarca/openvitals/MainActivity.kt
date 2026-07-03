@@ -173,6 +173,11 @@ private fun isSupportedOpenVitalsRoute(route: String): Boolean {
     if (route == Screen.Dashboard.route) return true
     if (route == Screen.DailyReadiness.route) return true
     if (route == Screen.ActivityEntry.route) return true
+    if (route == Screen.HydrationEntry.route) return true
+    val hydrationDrinkLogPrefix = "manual_entry/hydration/log/"
+    if (route.startsWith(hydrationDrinkLogPrefix)) {
+        return Uri.decode(route.removePrefix(hydrationDrinkLogPrefix)).isNotBlank()
+    }
     if (route.startsWith("daily_readiness/body_energy/")) return true
     val metricPrefix = "metric/"
     if (!route.startsWith(metricPrefix)) return false

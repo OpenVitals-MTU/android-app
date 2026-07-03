@@ -275,6 +275,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".features.homewidgets.HomeQuickBeverageWidgetConfigurationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".features.manualentry.activity.recording.ActivityRecordingService"
             android:exported="false"
@@ -320,6 +329,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/home_metric_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeQuickBeverageWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_quick_beverage_widget_info" />
         </receiver>
 
         <receiver
