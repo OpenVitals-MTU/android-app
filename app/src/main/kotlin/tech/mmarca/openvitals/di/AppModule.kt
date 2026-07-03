@@ -31,6 +31,9 @@ object AppModule {
             context,
             OpenVitalsDatabase::class.java,
             "openvitals.db",
+        ).addMigrations(
+            OpenVitalsDatabase.MIGRATION_1_3,
+            OpenVitalsDatabase.MIGRATION_2_3,
         ).build()
 
     @Provides

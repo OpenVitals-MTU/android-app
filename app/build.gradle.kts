@@ -116,6 +116,7 @@ android {
         create("nightly") {
             initWith(getByName("release"))
             versionNameSuffix = nightlyVersionNameSuffix.get()
+            buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
             matchingFallbacks += listOf("release")
         }
     }

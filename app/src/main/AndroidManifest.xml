@@ -166,6 +166,10 @@
         <intent>
             <action android:name="androidx.health.ACTION_MANAGE_HEALTH_DATA" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
     </queries>
 
     <application
@@ -238,6 +242,18 @@
                 <data android:mimeType="application/vnd.garmin.fit" />
                 <data android:mimeType="application/fit" />
                 <data android:mimeType="application/x-fit" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".core.diagnostics.CrashReportEmailActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.OpenVitals">
+            <intent-filter>
+                <action android:name="android.intent.action.APP_ERROR" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

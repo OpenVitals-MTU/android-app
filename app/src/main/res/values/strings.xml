@@ -1268,6 +1268,16 @@
     <string name="settings_support_issues_url" translatable="false">https://codeberg.org/mmarca-tech/OpenVitals/issues</string>
     <string name="settings_support_discussion_url" translatable="false">http://openvitals.zulipchat.com/</string>
     <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
+    <string name="crash_report_email_chooser_title">Email OpenVitals report</string>
+    <string name="crash_report_fallback_title">No email app found</string>
+    <string name="crash_report_fallback_body">Copy the report or save it as a text file, then send it to %1$s later.</string>
+    <string name="crash_report_fallback_copy">Copy report</string>
+    <string name="crash_report_fallback_save">Save text file</string>
+    <string name="crash_report_fallback_copied">Report copied.</string>
+    <string name="crash_report_fallback_saved">Report saved.</string>
+    <string name="crash_report_fallback_save_failed">Could not save report.</string>
+    <string name="crash_report_fallback_save_unavailable">No file saver found. Report copied.</string>
+    <string name="crash_report_clipboard_label">OpenVitals report</string>
     <string name="settings_privacy_no_account">No account required</string>
     <string name="settings_privacy_no_cloud">No cloud sync of health data</string>
     <string name="settings_privacy_no_analytics">No analytics SDK</string>

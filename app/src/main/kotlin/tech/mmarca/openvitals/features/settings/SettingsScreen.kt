@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.diagnostics.CrashReportEmailActivity
 import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
@@ -53,7 +54,6 @@ fun SettingsScreen(
     val bodyEnergyCalibrationSaved = stringResource(R.string.body_energy_calibration_saved)
     val bodyEnergyCalibrationReset = stringResource(R.string.body_energy_calibration_reset)
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
-    val issuesUrl = stringResource(R.string.settings_support_issues_url)
     val discussionUrl = stringResource(R.string.settings_support_discussion_url)
     val supportUrl = stringResource(R.string.settings_support_url)
     val openManualPermissionSettings = {
@@ -174,7 +174,7 @@ fun SettingsScreen(
             openExternalUrl(privacyPolicyUrl)
         },
         onOpenIssues = {
-            openExternalUrl(issuesUrl)
+            context.startActivity(CrashReportEmailActivity.createIssueReportIntent(context))
         },
         onOpenDiscussion = {
             openExternalUrl(discussionUrl)

@@ -13,6 +13,11 @@ data class DebugLogExportResult(
     val droppedLines: Int,
 )
 
+private data class DebugLogExportPayload(
+    val text: String,
+    val result: DebugLogExportResult,
+)
+
 object PrivacySafeDebugLogExporter {
     private const val MaxLines = 2_000
     private const val Redacted = "[redacted]"
@@ -75,6 +80,21 @@ object PrivacySafeDebugLogExporter {
         context: Context,
         outputStream: OutputStream,
     ): DebugLogExportResult = withContext(Dispatchers.IO) {
+        val payload = currentProcessLogcatPayload(context)
+        outputStream.writer(Charsets.UTF_8).use { writer ->
+            writer.append(payload.text)
+        }
+        payload.result
+    }
+
+    suspend fun currentProcessLogcatText(context: Context): String = withContext(Dispatchers.IO) {
+        currentProcessLogcatTextBlocking(context)
+    }
+
+    internal fun currentProcessLogcatTextBlocking(context: Context): String =
+        currentProcessLogcatPayload(context).text
+
+    private fun currentProcessLogcatPayload(context: Context): DebugLogExportPayload {
         check(BuildConfig.OPENVITALS_DIAGNOSTICS) {
             "Debug log export is only available in diagnostics builds."
         }
@@ -84,22 +104,25 @@ object PrivacySafeDebugLogExporter {
                 listOf("E/OpenVitalsDiagnostics: logcat capture failed type=${throwable::class.java.simpleName}")
             }
         val sanitized = sanitizeLogcat(rawLines)
-        outputStream.writer(Charsets.UTF_8).use { writer ->
-            writer.appendLine("OpenVitals diagnostics log export")
-            writer.appendLine("package=${context.packageName}")
-            writer.appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-            writer.appendLine(
+        val text = buildString {
+            appendLine("OpenVitals diagnostics log export")
+            appendLine("package=${context.packageName}")
+            appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine(
                 "privacy=only app log tags are included; sensitive lines are dropped or redacted; " +
                     "AppleHealthImporter W/E/A/F lines are unsanitized",
             )
-            writer.appendLine("writtenLines=${sanitized.writtenLines}")
-            writer.appendLine("droppedLines=${sanitized.droppedLines}")
-            writer.appendLine()
-            sanitized.lines.forEach(writer::appendLine)
+            appendLine("writtenLines=${sanitized.writtenLines}")
+            appendLine("droppedLines=${sanitized.droppedLines}")
+            appendLine()
+            sanitized.lines.forEach(::appendLine)
         }
-        DebugLogExportResult(
-            writtenLines = sanitized.writtenLines,
-            droppedLines = sanitized.droppedLines,
+        return DebugLogExportPayload(
+            text = text,
+            result = DebugLogExportResult(
+                writtenLines = sanitized.writtenLines,
+                droppedLines = sanitized.droppedLines,
+            ),
         )
     }
 
