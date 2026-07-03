@@ -45,6 +45,7 @@
     <string name="action_close">Cerrar</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_details">Detalles</string>
+    <string name="action_edit">Editar</string>
     <string name="action_enable">Activar</string>
     <string name="action_get_started">Empezar</string>
     <string name="action_grant">Conceder</string>
@@ -83,6 +84,14 @@
     <string name="home_metric_widget_update_failed">No se puede actualizar</string>
     <string name="home_metric_widget_open_for_details">Abrir detalles</string>
     <string name="home_metric_widget_not_configured">Selecciona una métrica</string>
+    <string name="home_quick_beverage_widget_description">Bebida rápida</string>
+    <string name="home_quick_beverage_widget_config_title">Elegir bebida</string>
+    <string name="home_quick_beverage_widget_config_prompt">Elige la bebida para el widget:</string>
+    <string name="home_quick_beverage_widget_no_drinks">No hay bebidas disponibles.</string>
+    <string name="home_quick_beverage_widget_not_configured">Selecciona una bebida</string>
+    <string name="home_quick_beverage_widget_tap_to_log">Toca para registrar</string>
+    <string name="home_quick_beverage_widget_saved">Guardada ahora</string>
+    <string name="home_quick_beverage_widget_saved_nutrition">Guardada como nutrición</string>
     <string name="home_daily_readiness_widget_description">Preparación diaria de OpenVitals</string>
     <string name="home_body_energy_widget_description">Energía corporal de OpenVitals</string>
     <string name="home_today_vitals_widget_description">Constantes de hoy en OpenVitals</string>
@@ -819,6 +828,7 @@
     <string name="hydration_catalog_search">Buscar bebidas</string>
     <string name="hydration_catalog_frequently_consumed">Bebidas frecuentes</string>
     <string name="hydration_catalog_saved_outside">Bebidas guardadas</string>
+    <string name="hydration_catalog_section_water">Agua</string>
     <string name="hydration_catalog_section_coffees">Cafés</string>
     <string name="hydration_catalog_section_energy_drinks">Bebidas energéticas</string>
     <string name="hydration_catalog_section_teas">Tés</string>
@@ -829,6 +839,7 @@
     <string name="hydration_new_drink_action">Nueva bebida</string>
     <string name="hydration_new_drink_title">Nueva bebida</string>
     <string name="hydration_edit_drink_title">Editar bebida</string>
+    <string name="hydration_log_saved_drink_title">Registrar %1$s</string>
     <string name="hydration_custom_drink_name">Nombre</string>
     <string name="hydration_custom_drink_category">Categoría</string>
     <string name="hydration_custom_drink_no_category">Sin categoría</string>
@@ -1433,6 +1444,12 @@
     <string name="caffeine_current_title">Cafeína activa</string>
     <string name="caffeine_today_total">Total de hoy</string>
     <string name="caffeine_time_to_safe">Tiempo hasta seguro</string>
+    <string name="caffeine_sleep_status_unlikely">Impacto en el sueño improbable</string>
+    <string name="caffeine_sleep_status_unlikely_body">%1$s activa ahora, por debajo de tu umbral de sueño de %2$s.</string>
+    <string name="caffeine_sleep_status_elevated_now">Elevada ahora</string>
+    <string name="caffeine_sleep_status_elevated_now_body">%1$s activa ahora. Estimada por debajo del umbral en %2$s; la previsión de hora de dormir es %3$s a las %4$s.</string>
+    <string name="caffeine_sleep_status_may_affect">Puede afectar al sueño</string>
+    <string name="caffeine_sleep_status_may_affect_body">La previsión de hora de dormir es %1$s a las %2$s, por encima de tu umbral de %3$s.</string>
     <string name="caffeine_period_total">Total del periodo</string>
     <string name="caffeine_daily_average">Media diaria</string>
     <string name="caffeine_logged_days">Días registrados</string>

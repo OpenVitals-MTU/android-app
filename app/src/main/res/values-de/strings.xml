@@ -45,6 +45,7 @@
     <string name="action_close">Schließen</string>
     <string name="action_delete">Löschen</string>
     <string name="action_details">Details</string>
+    <string name="action_edit">Bearbeiten</string>
     <string name="action_enable">Aktivieren</string>
     <string name="action_get_started">Loslegen</string>
     <string name="action_grant">Erteilen</string>
@@ -83,6 +84,14 @@
     <string name="home_metric_widget_update_failed">Aktualisierung nicht möglich</string>
     <string name="home_metric_widget_open_for_details">Für Details öffnen</string>
     <string name="home_metric_widget_not_configured">Metrik auswählen</string>
+    <string name="home_quick_beverage_widget_description">Schnelles Getränk</string>
+    <string name="home_quick_beverage_widget_config_title">Getränk auswählen</string>
+    <string name="home_quick_beverage_widget_config_prompt">Wähle das Getränk für das Widget:</string>
+    <string name="home_quick_beverage_widget_no_drinks">Keine Getränke verfügbar.</string>
+    <string name="home_quick_beverage_widget_not_configured">Getränk auswählen</string>
+    <string name="home_quick_beverage_widget_tap_to_log">Zum Protokollieren tippen</string>
+    <string name="home_quick_beverage_widget_saved">Jetzt gespeichert</string>
+    <string name="home_quick_beverage_widget_saved_nutrition">Als Ernährung gespeichert</string>
     <string name="home_daily_readiness_widget_description">OpenVitals tägliche Bereitschaft</string>
     <string name="home_body_energy_widget_description">OpenVitals Körperenergie</string>
     <string name="home_today_vitals_widget_description">OpenVitals Vitalwerte heute</string>
@@ -819,6 +828,7 @@
     <string name="hydration_catalog_search">Getränke suchen</string>
     <string name="hydration_catalog_frequently_consumed">Häufig getrunken</string>
     <string name="hydration_catalog_saved_outside">Gespeicherte Getränke</string>
+    <string name="hydration_catalog_section_water">Wasser</string>
     <string name="hydration_catalog_section_coffees">Kaffee</string>
     <string name="hydration_catalog_section_energy_drinks">Energydrinks</string>
     <string name="hydration_catalog_section_teas">Tees</string>
@@ -829,6 +839,7 @@
     <string name="hydration_new_drink_action">Neues Getränk</string>
     <string name="hydration_new_drink_title">Neues Getränk</string>
     <string name="hydration_edit_drink_title">Getränk bearbeiten</string>
+    <string name="hydration_log_saved_drink_title">%1$s protokollieren</string>
     <string name="hydration_custom_drink_name">Name</string>
     <string name="hydration_custom_drink_category">Kategorie</string>
     <string name="hydration_custom_drink_no_category">Keine Kategorie</string>
@@ -1433,6 +1444,12 @@
     <string name="caffeine_current_title">Aktives Koffein</string>
     <string name="caffeine_today_total">Heute gesamt</string>
     <string name="caffeine_time_to_safe">Zeit bis sicher</string>
+    <string name="caffeine_sleep_status_unlikely">Schlafauswirkung unwahrscheinlich</string>
+    <string name="caffeine_sleep_status_unlikely_body">%1$s jetzt aktiv, unter deiner Schlafschwelle von %2$s.</string>
+    <string name="caffeine_sleep_status_elevated_now">Jetzt erhöht</string>
+    <string name="caffeine_sleep_status_elevated_now_body">%1$s jetzt aktiv. Voraussichtlich in %2$s unter der Schwelle; Schlafenszeitprognose: %3$s um %4$s.</string>
+    <string name="caffeine_sleep_status_may_affect">Kann den Schlaf beeinflussen</string>
+    <string name="caffeine_sleep_status_may_affect_body">Schlafenszeitprognose: %1$s um %2$s, über deiner Schwelle von %3$s.</string>
     <string name="caffeine_period_total">Zeitraum gesamt</string>
     <string name="caffeine_daily_average">Tagesdurchschnitt</string>
     <string name="caffeine_logged_days">Protokollierte Tage</string>
