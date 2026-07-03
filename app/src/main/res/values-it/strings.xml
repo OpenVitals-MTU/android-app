@@ -1250,6 +1250,16 @@
     <string name="settings_support_issues_action">Segnala un problema</string>
     <string name="settings_support_discussion_action">Unisciti alle discussioni Zulip</string>
     <string name="settings_support_action">Apri Liberapay</string>
+    <string name="crash_report_email_chooser_title">Invia report OpenVitals via email</string>
+    <string name="crash_report_fallback_title">Nessuna app email trovata</string>
+    <string name="crash_report_fallback_body">Copia il report o salvalo come file di testo, poi invialo a %1$s più tardi.</string>
+    <string name="crash_report_fallback_copy">Copia report</string>
+    <string name="crash_report_fallback_save">Salva file di testo</string>
+    <string name="crash_report_fallback_copied">Report copiato.</string>
+    <string name="crash_report_fallback_saved">Report salvato.</string>
+    <string name="crash_report_fallback_save_failed">Impossibile salvare il report.</string>
+    <string name="crash_report_fallback_save_unavailable">Nessuna app per salvare file trovata. Report copiato.</string>
+    <string name="crash_report_clipboard_label">Report OpenVitals</string>
     <string name="settings_privacy_no_account">Nessun account richiesto</string>
     <string name="settings_privacy_no_cloud">Nessuna sincronizzazione cloud dei dati sanitari</string>
     <string name="settings_privacy_no_analytics">Nessun SDK di analisi</string>

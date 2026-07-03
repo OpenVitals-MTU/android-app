@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.7.5 - 2026-07-03
+
+### English
+
+- Add a dedicated Caffeine detail flow with active-caffeine modeling, source and time-of-day insights, bedtime guidance, dashboard support, and configurable sensitivity and limits.
+- Expand beverage logging with a Room-backed drink catalog, 215 preset drinks, editable categories, custom drinks, and nutrition defaults while keeping Health Connect records as the source of truth.
+- Save richer beverage entries by pairing effective hydration with caffeine and nutrition values, and preserve custom drink ordering and categories across app launches.
+- Backfill activity detail data from related Health Connect records so historical workouts can show more complete sessions and metrics.
+- Improve support and release stability with crash-report email drafts, database migration coverage, Zulip links, and cleaner Gradle/Woodpecker release steps.
+
+### Español
+
+- Añade un flujo de detalle de cafeína con modelo de cafeína activa, análisis por fuente y hora del día, guía para la hora de dormir, soporte en el panel y sensibilidad y límites configurables.
+- Amplía el registro de bebidas con un catálogo respaldado por Room, 215 bebidas predefinidas, categorías editables, bebidas personalizadas y valores nutricionales por defecto, manteniendo Health Connect como fuente de verdad.
+- Guarda entradas de bebidas más completas combinando hidratación efectiva con valores de cafeína y nutrición, y conserva el orden y las categorías de bebidas personalizadas entre inicios de la app.
+- Rellena datos de detalle de actividades desde registros relacionados de Health Connect para que los entrenamientos históricos puedan mostrar sesiones y métricas más completas.
+- Mejora el soporte y la estabilidad de publicación con borradores de informes de fallo por email, cobertura de migración de base de datos, enlaces de Zulip y pasos de Gradle/Woodpecker más limpios.
+
+### Deutsch
+
+- Fügt einen eigenen Koffein-Detailfluss mit Aktiv-Koffein-Modell, Auswertungen nach Quelle und Tageszeit, Schlafenszeit-Hinweisen, Dashboard-Unterstützung sowie konfigurierbarer Empfindlichkeit und Grenzwerten hinzu.
+- Erweitert die Getränkeerfassung um einen Room-gestützten Getränkekatalog, 215 Presets, bearbeitbare Kategorien, eigene Getränke und Standard-Nährwerte, während Health Connect die Quelle der Wahrheit bleibt.
+- Speichert reichere Getränkeeinträge, indem effektive Flüssigkeit mit Koffein- und Nährwerten kombiniert wird, und erhält Reihenfolge und Kategorien eigener Getränke über App-Starts hinweg.
+- Füllt Aktivitätsdetails aus verwandten Health-Connect-Datensätzen auf, damit historische Trainings vollständigere Sitzungen und Messwerte zeigen können.
+- Verbessert Support und Release-Stabilität mit E-Mail-Entwürfen für Absturzberichte, Datenbank-Migrationsabdeckung, Zulip-Links und saubereren Gradle/Woodpecker-Schritten.
+
+### Italiano
+
+- Aggiunge un flusso di dettaglio Caffeina con modello di caffeina attiva, analisi per fonte e fascia oraria, indicazioni per l'ora di andare a dormire, supporto nella dashboard e sensibilità e limiti configurabili.
+- Estende la registrazione delle bevande con un catalogo basato su Room, 215 bevande predefinite, categorie modificabili, bevande personalizzate e valori nutrizionali predefiniti, mantenendo Health Connect come fonte di verità.
+- Salva voci bevanda più complete unendo idratazione effettiva, caffeina e valori nutrizionali, e conserva ordine e categorie delle bevande personalizzate tra gli avvii dell'app.
+- Recupera dettagli attività da record Health Connect collegati, così gli allenamenti storici possono mostrare sessioni e metriche più complete.
+- Migliora supporto e stabilità di rilascio con bozze email per i report di crash, copertura delle migrazioni database, link Zulip e passaggi Gradle/Woodpecker più puliti.
+
 ## 1.7.4 - 2026-07-02
 
 ### English

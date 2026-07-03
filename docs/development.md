@@ -72,7 +72,7 @@ The nightly release is intentionally mutable: each successful `nightly` cron or
 manual run updates the fixed `nightly` tag and replaces the existing APK and
 checksum assets instead of creating another release page. `versionName` and
 `versionCode` are intentionally detached:
-`versionName` carries the human release name (`1.7.4`, `1.7.4-nightly.328`),
+`versionName` carries the human release name (`1.7.5`, `1.7.5-nightly.330`),
 while `versionCode` is only a monotonic Android update counter. Both nightly and
 versioned releases use the same counter line. CI reads
 `OpenVitals-Version-Code` markers from existing Codeberg release notes, uses

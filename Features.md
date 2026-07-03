@@ -22,7 +22,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 
 - View configurable summary widgets for the main health categories.
 - View activity widgets for steps, distance, calories out, active calories, floors, elevation, wheelchair pushes, and workouts.
-- View sleep, hydration, nutrition, body, vitals, mindfulness, cycle, and cardio load widgets.
+- View sleep, beverages, hydration, caffeine, nutrition, body, vitals, mindfulness, cycle, and cardio load widgets.
 - Reorder or remove dashboard widgets through the dashboard customization flow.
 - Open the relevant metric detail screen from supported widgets.
 
@@ -33,13 +33,15 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - View summary progress, tracked days, best daily steps, total distance, best daily floors, and total floors.
 - View badge progress toward daily steps, lifetime distance, daily floors, and lifetime floors targets.
 
-### Hydration
+### Beverages, Hydration, And Caffeine
 
 - View total hydration for the selected period.
 - View metric hydration totals with two decimal places in liters.
 - View hydration history charts by day, week, month, and year.
 - View selected-day hydration entries.
 - View each entry's amount, date/time, and source.
+- View active caffeine estimates, caffeine intake totals, source and time-of-day insights, and bedtime guidance when caffeine nutrition records are available.
+- View configured caffeine sensitivity, daily limit, and bedtime preferences.
 - View daily goal progress, goal streaks, goals met, longest streak, success rate, average daily intake, total intake, best day, previous-period comparison, and personal baseline.
 - View hydration reminders and daily goal configuration from the hydration detail screen.
 - View a cross-metric insight comparing hydration with weight fluctuation.
@@ -219,21 +221,23 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 ### Manual Entry Screen
 
 - Open a centralized manual entry area with configurable entry widgets.
-- Show entry widgets for hydration, activity, carbohydrate, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
+- Show entry widgets for beverages/hydration, activity, carbohydrate, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
 - Reorder, remove, and manage manual entry widgets.
 
-### Hydration
+### Beverages And Hydration
 
-- Add hydration entries.
-- Tap a container size to save a hydration entry immediately.
-- Select beverage type: water, coffee, tea, soft drink, energy drink, sports drink, oral rehydration solution, milk, or fruit juice.
+- Add beverage/hydration entries.
+- Tap a container size to save a beverage entry immediately.
+- Select beverage presets such as water, coffee, tea, soft drinks, energy drinks, sports drinks, oral rehydration solution, milk, fruit juice, and custom drinks.
+- Save caffeine and selected nutrition defaults with supported beverages as Health Connect nutrition records.
 - Select container sizes such as coffee cup, tea cup, small cup, medium glass, large glass, water bottle, and large bottle.
 - Use beverage hydration multipliers for effective hydration amount.
+- Manage preset/custom drink categories and ordering.
 - Add custom container sizes.
 - View today's intake against the daily goal while adding an entry.
-- Update OpenVitals-created hydration entries.
-- Delete OpenVitals-created hydration entries.
-- Request Health Connect hydration write permission from the entry flow.
+- Update OpenVitals-created beverage/hydration entries.
+- Delete OpenVitals-created beverage/hydration entries.
+- Request Health Connect hydration and nutrition write permissions from the entry flow.
 
 ### Nutrition
 
@@ -377,6 +381,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 
 - Configure daily goals for supported metrics, including hydration, activity metrics, workout minutes, sleep, nutrition metrics, and mindfulness.
 - Configure hydration reminders, reminder interval, and active reminder window.
+- Configure caffeine sensitivity, daily limit, and bedtime guidance.
 - Configure mindfulness reminders and reminder time.
 - Store custom hydration container sizes.
 

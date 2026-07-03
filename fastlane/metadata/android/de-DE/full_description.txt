@@ -9,9 +9,10 @@ Was du tun kannst
 * Daily Readiness mit Body Energy, Training Readiness, HRV-Status, Intensitätsminuten, physiologischem Stress, adaptiven Zielen und lokalen Erklärungen prüfen
 * Schritte, Distanz, Kalorien, Etagen, Höhenmeter und Trainings prüfen
 * Schlafsitzungen, Dauer und Schlafphasen prüfen
-* Herzfrequenz, Ruhepuls, HRV, Blutdruck, SpO2, Atemfrequenz, Körpertemperatur, VO2 max, Körperwerte, Flüssigkeit, Ernährung und Achtsamkeit prüfen, wenn Daten verfügbar sind
+* Herzfrequenz, Ruhepuls, HRV, Blutdruck, SpO2, Atemfrequenz, Körpertemperatur, VO2 max, Körperwerte, Getränke, Flüssigkeit, Koffein, Ernährung und Achtsamkeit prüfen, wenn Daten verfügbar sind
 * Den Fat-Free Mass Index (FFMI) prüfen, wenn Gewicht, Größe und Körperfett verfügbar sind
-* Von OpenVitals erstellte Einträge für Flüssigkeit, Körpermessungen, Vitalwerte, Achtsamkeit und Aktivitäten direkt in Health Connect hinzufügen und bearbeiten
+* Von OpenVitals erstellte Einträge für Getränke, Körpermessungen, Vitalwerte, Achtsamkeit und Aktivitäten direkt in Health Connect hinzufügen und bearbeiten
+* Getränke aus Presets oder eigenen Einträgen mit Flüssigkeit, Koffein und ausgewählten Nährwerten protokollieren
 * Erfolgsabzeichen für Aktivität, Distanz, Etagen, Trainings, Flüssigkeit, Schlaf und Achtsamkeit verfolgen
 * GPX-, KML-, KMZ- und FIT-Routen importieren, vorab ansehen und routenbasierte Trainings speichern
 * Unterstützte Apple-Health-Exportdaten in Health Connect importieren

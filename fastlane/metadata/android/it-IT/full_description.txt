@@ -9,9 +9,10 @@ Cosa puoi fare
 * Consultare Daily Readiness con Body Energy, Training Readiness, stato HRV, minuti di intensità, stress fisiologico, obiettivi adattivi e spiegazioni locali
 * Consultare passi, distanza, calorie, piani saliti, dislivello e allenamenti
 * Consultare sessioni di sonno, durata e fasi del sonno
-* Consultare frequenza cardiaca, frequenza a riposo, HRV, pressione sanguigna, SpO2, frequenza respiratoria, temperatura corporea, VO2 max, metriche corporee, idratazione, nutrizione e mindfulness quando disponibili
+* Consultare frequenza cardiaca, frequenza a riposo, HRV, pressione sanguigna, SpO2, frequenza respiratoria, temperatura corporea, VO2 max, metriche corporee, bevande, idratazione, caffeina, nutrizione e mindfulness quando disponibili
 * Consultare il Fat-Free Mass Index (FFMI) quando sono disponibili peso, altezza e grasso corporeo
-* Aggiungere e modificare direttamente in Health Connect le voci create da OpenVitals per idratazione, misure corporee, parametri vitali, mindfulness e attività
+* Aggiungere e modificare direttamente in Health Connect le voci create da OpenVitals per bevande, misure corporee, parametri vitali, mindfulness e attività
+* Registrare bevande da preset o personalizzate con idratazione, caffeina e valori nutrizionali selezionati
 * Seguire badge obiettivo per attività, distanza, piani, allenamenti, idratazione, sonno e mindfulness
 * Importare percorsi GPX, KML, KMZ e FIT, visualizzarli in anteprima e salvare allenamenti con percorso
 * Importare record supportati da esportazioni Apple Health in Health Connect

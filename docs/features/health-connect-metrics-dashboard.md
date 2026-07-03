@@ -5,7 +5,7 @@ OpenVitals treats Health Connect as the source of truth. The dashboard reads gra
 ## What It Shows
 
 - Activity metrics such as steps, distance, calories, active calories, floors, elevation, wheelchair pushes, and workouts.
-- Recovery and body areas such as sleep, heart, HRV, body composition, vitals, hydration, nutrition, mindfulness, and optional cycle data.
+- Recovery, intake, and body areas such as sleep, heart, HRV, body composition, vitals, beverages, hydration, caffeine, nutrition, mindfulness, and optional cycle data.
 - Data source labels, empty states, permission states, and confidence context where they help explain why a number is present or missing.
 
 ## Steps

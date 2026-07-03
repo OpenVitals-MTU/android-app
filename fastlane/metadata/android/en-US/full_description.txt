@@ -9,9 +9,10 @@ What you can do
 * Review Daily Readiness with Body Energy, Training Readiness, HRV status, intensity minutes, physiological stress, adaptive goals, and local explanations
 * Review steps, distance, calories, floors, elevation, and workout sessions
 * Review sleep sessions, duration, and sleep stages
-* Review heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, VO2 max, body metrics, hydration, nutrition, and mindfulness data when available
+* Review heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, VO2 max, body metrics, beverages, hydration, caffeine, nutrition, and mindfulness data when available
 * Review Fat-Free Mass Index (FFMI) when weight, height, and body fat data are available
-* Add and edit OpenVitals-created hydration, body measurement, vitals, mindfulness, and activity entries directly in Health Connect
+* Add and edit OpenVitals-created beverage, body measurement, vitals, mindfulness, and activity entries directly in Health Connect
+* Log beverages from presets or custom drinks with hydration, caffeine, and selected nutrition defaults
 * Track achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 * Import GPX, KML, KMZ, and FIT activity routes, preview them, and save route-backed workouts
 * Import supported Apple Health export records into Health Connect
