@@ -38,10 +38,7 @@ steps:
           echo "Skipping prerelease unit tests for production deployment."
           exit 0
         fi
-      - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
-      - scripts/ci-android-setup.sh
-      - scripts/ci-gradle.sh :app:testDebugUnitTest
+      - scripts/ci-android-gradle.sh verifyCiUnitTest
 
   - name: release-preflight
     depends_on:
@@ -55,10 +52,7 @@ steps:
           git diff --check
           exit 0
         fi
-      - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
-      - scripts/ci-android-setup.sh
-      - scripts/ci-gradle.sh verifyLocalReleasePreflight
+      - scripts/ci-android-gradle.sh verifyCiPreflight
       - git diff --check
 
   - name: build-apk
@@ -79,9 +73,6 @@ steps:
     commands:
       - set -eu
       - . .woodpecker/tmp/release-context.env
-      - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
-      - scripts/ci-android-setup.sh
       - test -n "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}"
       - test -n "$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - test -n "$${OPENVITALS_RELEASE_KEY_ALIAS}"
@@ -103,7 +94,7 @@ steps:
         if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
           set -- "$${@}" ":app:assembleDebug"
         fi
-        env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" scripts/ci-gradle.sh --stacktrace "$${@}"
+        env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" scripts/ci-android-gradle.sh --stacktrace "$${@}"
       - apk_path="$$(find "app/build/outputs/apk/$${OPENVITALS_APK_VARIANT_DIR}" -maxdepth 1 -name '*.apk' | head -n 1)"
       - test -n "$${apk_path}"
       - artifact_path=".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"

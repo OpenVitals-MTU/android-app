@@ -13,14 +13,14 @@ The wrapper jar is intentionally tracked. `.gitignore` allows this file even tho
 Run the main checks before pushing architecture or feature changes:
 
 ```bash
-./gradlew verifyLocalApp
+./gradlew verifyCi
 git diff --check
 ```
 
 On Windows, use `gradlew.bat`:
 
 ```powershell
-.\gradlew.bat verifyLocalApp
+.\gradlew.bat verifyCi
 git diff --check
 ```
 
@@ -41,7 +41,7 @@ AGP 9 built-in Kotlin currently requires `android.disallowKotlinSourceSets=false
 Woodpecker uses the Gradle wrapper directly. The test pipeline runs:
 
 ```bash
-./gradlew --no-daemon verifyLocalApp
+./gradlew --no-daemon verifyCi
 git diff --check
 ```
 
@@ -122,7 +122,7 @@ For a versioned prerelease:
 5. Run:
 
 ```bash
-./gradlew verifyLocalApp
+./gradlew verifyCi
 git diff --check
 ```
 

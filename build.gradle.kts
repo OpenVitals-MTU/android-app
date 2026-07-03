@@ -36,52 +36,40 @@ val isCiEnvironment = providers.environmentVariable("CI").isPresent ||
 
 tasks.register("verifyAndroidTest") {
     group = "verification"
-    description = "Runs connectedDebugAndroidTest for local connected-device checks."
+    description = "Runs connectedCiAndroidTest for local connected-device checks."
     enabled = hasAndroidSerial && !isCiEnvironment
     if (enabled) {
-        dependsOn(":app:connectedDebugAndroidTest")
+        dependsOn(":app:connectedCiAndroidTest")
     }
 }
 
-tasks.register("verifyLocalApp") {
+tasks.register("verifyCiUnitTest") {
+    group = "verification"
+    description = "Runs app unit tests against the CI build type."
+    dependsOn(":app:testCiUnitTest")
+}
+
+tasks.register("verifyCiPreflight") {
+    group = "verification"
+    description = "Runs Android app build, lint, and android-test compile checks for CI."
+    dependsOn(
+        ":app:lintCi",
+        ":app:assembleCi",
+        ":app:compileCiAndroidTestKotlin",
+    )
+}
+
+tasks.register("verifyCi") {
     group = "verification"
     description = "Runs CI verification without connected-device instrumentation tests."
     dependsOn(
-        ":app:testDebugUnitTest",
-        "verifyLocalAppPreflight",
-    )
-}
-
-tasks.register("verifyLocalAppPreflight") {
-    group = "verification"
-    description = "Runs Android app build and lint checks without unit or connected-device tests."
-    dependsOn(
-        ":app:lintDebug",
-        ":app:assembleDebug",
-        ":app:compileDebugAndroidTestKotlin",
-    )
-}
-
-tasks.register("verifyLocalReleaseChecks") {
-    group = "verification"
-    description = "Runs release preflight checks without connected-device instrumentation tests."
-    dependsOn(
-        ":app:testDebugUnitTest",
-        "verifyLocalReleasePreflight",
-    )
-}
-
-tasks.register("verifyLocalReleasePreflight") {
-    group = "verification"
-    description = "Runs release app build and lint checks without unit or connected-device tests."
-    dependsOn(
-        ":app:assembleDebug",
-        ":app:lintDebug",
+        "verifyCiUnitTest",
+        "verifyCiPreflight",
     )
 }
 
 project(":app").tasks.configureEach {
-    if (name == "lintDebug") {
-        mustRunAfter("assembleDebug")
+    if (name == "lintCi") {
+        mustRunAfter("assembleCi")
     }
 }

@@ -11,10 +11,7 @@ steps:
     image: *android_image
     commands:
       - set -eu
-      - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
-      - scripts/ci-android-setup.sh
-      - scripts/ci-gradle.sh :app:testDebugUnitTest
+      - scripts/ci-android-gradle.sh verifyCiUnitTest
 
   - name: app-preflight
     depends_on:
@@ -22,8 +19,5 @@ steps:
     image: *android_image
     commands:
       - set -eu
-      - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
-      - scripts/ci-android-setup.sh
-      - scripts/ci-gradle.sh verifyLocalAppPreflight
+      - scripts/ci-android-gradle.sh verifyCiPreflight
       - git diff --check

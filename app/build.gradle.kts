@@ -51,6 +51,7 @@ android {
     namespace = "tech.mmarca.openvitals"
     compileSdk = 37
     buildToolsVersion = "37.0.0"
+    testBuildType = "ci"
 
     defaultConfig {
         applicationId = "tech.mmarca.openvitals"
@@ -93,6 +94,12 @@ android {
                     "proguard-rules.pro"
                 )
             }
+        }
+
+        create("ci") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".ci"
+            versionNameSuffix = "-ci"
         }
 
         release {

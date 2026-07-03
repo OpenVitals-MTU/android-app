@@ -155,7 +155,7 @@ In a complete checkout:
 To run the same basic checks used by CI:
 
 ```bash
-./gradlew verifyLocalApp
+./gradlew verifyCi
 git diff --check
 ```
 
