@@ -8,7 +8,9 @@ import android.util.Log
 import androidx.core.content.edit
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -16,6 +18,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
+import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
@@ -36,7 +40,6 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
@@ -49,15 +52,16 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlin.math.roundToInt
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationDrinkLogOutcome
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryError
-import tech.mmarca.openvitals.features.manualentry.hydration.hydrationAmountLabel
 import tech.mmarca.openvitals.features.manualentry.hydration.isValidCustomHydrationDrink
 import tech.mmarca.openvitals.features.manualentry.hydration.logCustomHydrationDrinkEntry
 import tech.mmarca.openvitals.navigation.Screen
@@ -330,6 +334,17 @@ private fun GlanceId.appWidgetIdOrNull(): Int? = (this as? AppWidgetId)?.appWidg
 @Composable
 private fun HomeQuickBeverageWidgetContent(snapshot: HomeQuickBeverageSnapshot) {
     val context = LocalContext.current
+    val size = LocalSize.current
+    val isCompact = size.width <= 220.dp || size.height <= 110.dp
+    val horizontalPadding = if (isCompact) 8.dp else 16.dp
+    val verticalPadding = if (isCompact) 4.dp else 12.dp
+    val titleFontSize = if (isCompact) 14.sp else 18.sp
+    val amountFontSize = if (isCompact) 22.sp else 28.sp
+    val actionFontSize = if (isCompact) 14.sp else 16.sp
+    val amountBottomSpacing = if (isCompact) 3.dp else 10.dp
+    val actionWidth = if (isCompact) 52.dp else 64.dp
+    val actionHeight = if (isCompact) 28.dp else 36.dp
+    val actionGap = if (isCompact) 12.dp else 14.dp
     val logAction = if (snapshot.drinkId.isBlank()) {
         actionStartActivity(openMetricIntent(context, snapshot.route))
     } else {
@@ -337,69 +352,81 @@ private fun HomeQuickBeverageWidgetContent(snapshot: HomeQuickBeverageSnapshot) 
             actionParametersOf(QuickBeverageDrinkIdParameterKey to snapshot.drinkId)
         )
     }
-    Row(
+    Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(ColorProvider(WidgetBackground))
-            .padding(16.dp),
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
         verticalAlignment = Alignment.Vertical.CenterVertically,
     ) {
-        Column(
-            modifier = GlanceModifier
-                .defaultWeight()
-                .clickable(logAction),
+        Text(
+            text = snapshot.title,
+            maxLines = 1,
+            style = TextStyle(
+                color = ColorProvider(WidgetPrimaryText),
+                fontSize = titleFontSize,
+                fontWeight = FontWeight.Medium,
+            ),
+        )
+        Text(
+            text = snapshot.amount,
+            maxLines = 1,
+            style = TextStyle(
+                color = ColorProvider(WidgetPrimaryText),
+                fontSize = amountFontSize,
+                fontWeight = FontWeight.Bold,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(amountBottomSpacing))
+        Row(
             verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
-            Text(
-                text = snapshot.title,
-                maxLines = 1,
-                style = TextStyle(
-                    color = ColorProvider(WidgetMutedText),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
+            HomeQuickBeverageWidgetButton(
+                text = context.getString(R.string.action_add),
+                action = logAction,
+                width = actionWidth,
+                height = actionHeight,
+                fontSize = actionFontSize,
             )
-            Text(
-                text = snapshot.amount,
-                maxLines = 1,
-                style = TextStyle(
-                    color = ColorProvider(WidgetPrimaryText),
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
-            if (snapshot.subtitle.isNotBlank()) {
-                Text(
-                    text = snapshot.subtitle,
-                    maxLines = 1,
-                    style = TextStyle(
-                        color = ColorProvider(WidgetMutedText),
-                        fontSize = 12.sp,
-                    ),
-                )
-            }
-        }
-        Spacer(modifier = GlanceModifier.width(10.dp))
-        Column(
-            modifier = GlanceModifier
-                .width(54.dp)
-                .height(64.dp)
-                .background(ColorProvider(WidgetActionBackground))
-                .clickable(actionStartActivity(openMetricIntent(context, snapshot.route)))
-                .padding(horizontal = 8.dp),
-            horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
-            verticalAlignment = Alignment.Vertical.CenterVertically,
-        ) {
-            Text(
+            Spacer(modifier = GlanceModifier.width(actionGap))
+            HomeQuickBeverageWidgetButton(
                 text = context.getString(R.string.action_edit),
-                maxLines = 1,
-                style = TextStyle(
-                    color = ColorProvider(WidgetPrimaryText),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                action = actionStartActivity(openMetricIntent(context, snapshot.route)),
+                width = actionWidth,
+                height = actionHeight,
+                fontSize = actionFontSize,
             )
         }
+    }
+}
+
+@Composable
+private fun HomeQuickBeverageWidgetButton(
+    text: String,
+    action: Action,
+    width: Dp,
+    height: Dp,
+    fontSize: TextUnit,
+) {
+    Column(
+        modifier = GlanceModifier
+            .width(width)
+            .height(height)
+            .background(ColorProvider(WidgetActionBackground))
+            .clickable(action),
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            maxLines = 1,
+            style = TextStyle(
+                color = ColorProvider(WidgetPrimaryText),
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold,
+            ),
+        )
     }
 }
 
@@ -428,12 +455,22 @@ internal suspend fun loadQuickBeverageSnapshot(
         HomeQuickBeverageSnapshot(
             drinkId = drink.id,
             title = drink.name,
-            amount = hydrationAmountLabel(drink.volumeLiters, entryPoint.unitFormatter()),
+            amount = quickBeverageAmountLabel(drink, entryPoint.unitFormatter()),
             subtitle = subtitleOverride ?: context.getString(R.string.home_quick_beverage_widget_tap_to_log),
             route = route,
         )
     }
 }
+
+private fun quickBeverageAmountLabel(
+    drink: CustomHydrationDrink,
+    unitFormatter: UnitFormatter,
+): String =
+    if (unitFormatter.unitSystem() == UnitSystem.METRIC && drink.volumeLiters < 1.0) {
+        "${unitFormatter.count(drink.volumeMilliliters.roundToInt())}ml"
+    } else {
+        unitFormatter.hydration(drink.volumeLiters).text
+    }
 
 private suspend fun updateQuickBeverageWidgetStatus(
     context: Context,
