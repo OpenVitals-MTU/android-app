@@ -195,6 +195,7 @@ fun AppNavigation(
             Screen.SettingsActivities.route,
             Screen.SettingsSensors.route,
             Screen.SettingsCalories.route,
+            Screen.SettingsCaffeine.route,
             Screen.SettingsSleep.route,
             Screen.SettingsBodyEnergy.route,
             Screen.SettingsCycle.route,
@@ -318,6 +319,7 @@ fun AppNavigation(
         Screen.SettingsActivities.route -> stringResource(R.string.settings_activities_group_title)
         Screen.SettingsSensors.route -> stringResource(R.string.settings_sensors_group_title)
         Screen.SettingsCalories.route -> stringResource(R.string.settings_calories_group_title)
+        Screen.SettingsCaffeine.route -> stringResource(R.string.settings_caffeine_group_title)
         Screen.SettingsSleep.route -> stringResource(R.string.settings_sleep_group_title)
         Screen.SettingsBodyEnergy.route -> stringResource(R.string.settings_body_energy_group_title)
         Screen.SettingsCycle.route -> stringResource(R.string.settings_cycle_group_title)

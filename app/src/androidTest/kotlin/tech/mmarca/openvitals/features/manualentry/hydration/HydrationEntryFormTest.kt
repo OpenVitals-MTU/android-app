@@ -32,6 +32,7 @@ class HydrationEntryFormTest {
                     onAddSavedCustomDrinkEntry = {},
                     onDeleteCustomDrink = {},
                     onMoveCustomDrinkToTarget = { _, _ -> },
+                    onMoveCustomDrinkToCategory = { _, _ -> },
                     onEntryTimeChanged = {},
                     onRequestWritePermission = {},
                 )

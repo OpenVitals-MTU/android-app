@@ -23,6 +23,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_calories_group_title,
         summaryRes = R.string.settings_calories_group_body,
     ),
+    CAFFEINE(
+        titleRes = R.string.settings_caffeine_group_title,
+        summaryRes = R.string.settings_caffeine_group_body,
+    ),
     SLEEP(
         titleRes = R.string.settings_sleep_group_title,
         summaryRes = R.string.settings_sleep_group_body,

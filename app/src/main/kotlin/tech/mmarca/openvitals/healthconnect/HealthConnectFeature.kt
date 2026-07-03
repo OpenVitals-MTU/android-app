@@ -19,6 +19,7 @@ enum class HealthConnectFeature {
     HEART_VITALS,
     BODY,
     HYDRATION,
+    CAFFEINE,
     NUTRITION,
     MINDFULNESS,
     CYCLE,
@@ -38,6 +39,7 @@ enum class HealthConnectFeature {
         HEART_VITALS -> manager.heartPermissions + manager.vitalsPermissions
         BODY -> manager.bodyPermissions
         HYDRATION -> manager.nutritionHydrationPermissions
+        CAFFEINE -> setOf(HealthPermission.getReadPermission(NutritionRecord::class))
         NUTRITION -> setOf(HealthPermission.getReadPermission(NutritionRecord::class))
         MINDFULNESS -> manager.mindfulnessPermissions
         CYCLE -> manager.cyclePermissions

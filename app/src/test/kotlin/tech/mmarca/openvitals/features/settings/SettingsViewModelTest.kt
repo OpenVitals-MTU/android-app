@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -197,6 +198,26 @@ class SettingsViewModelTest {
         assertTrue(vm.uiState.value.showOpenVitalsCalculatedCalories)
     }
 
+    @Test fun `updateCaffeinePreferences persists preference and updates ui state`() = runTest {
+        val prefs = prefs()
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+        )
+        val caffeinePreferences = CaffeinePreferences(
+            profileCompleted = true,
+            halfLifeMinutes = 360,
+            sleepThresholdMg = 45,
+        )
+
+        vm.updateCaffeinePreferences(caffeinePreferences)
+
+        verify { prefs.setCaffeinePreferences(caffeinePreferences) }
+        assertEquals(caffeinePreferences, vm.uiState.value.caffeinePreferences)
+    }
+
     @Test fun `selectFavoriteActivity persists preference and updates ui state`() = runTest {
         val prefs = prefs()
         val vm = viewModel(
@@ -322,8 +343,9 @@ class SettingsViewModelTest {
     private fun permissionUxState(): HealthConnectPermissionUxState =
         mockk<HealthConnectPermissionUxState>(relaxed = true)
 
-    private fun prefs(): PreferencesRepository =
-        mockk<PreferencesRepository>().also { prefs ->
+    private fun prefs(): PreferencesRepository {
+        var caffeinePreferences = CaffeinePreferences()
+        return mockk<PreferencesRepository>().also { prefs ->
             every { prefs.unitSystem } returns UnitSystem.METRIC
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
@@ -333,6 +355,7 @@ class SettingsViewModelTest {
             every { prefs.showOpenVitalsCalculatedCalories } returns false
             every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
+            every { prefs.caffeinePreferences() } answers { caffeinePreferences }
             every { prefs.healthConnectSyncEnabled } returns true
             every { prefs.appLockEnabled } returns false
             every { prefs.appLanguage = any() } just runs
@@ -343,7 +366,11 @@ class SettingsViewModelTest {
             every { prefs.showOpenVitalsCalculatedCalories = any() } just runs
             every { prefs.favoriteActivityExerciseType = any() } just runs
             every { prefs.setBodyEnergyCalibration(any()) } just runs
+            every { prefs.setCaffeinePreferences(any()) } answers {
+                caffeinePreferences = firstArg<CaffeinePreferences>()
+            }
         }
+    }
 
     private fun importController(
         workInfos: MutableStateFlow<List<WorkInfo>>? = null,

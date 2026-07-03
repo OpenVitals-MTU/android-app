@@ -47,6 +47,7 @@ fun HydrationEntryScreen(
                 onAddSavedCustomDrinkEntry = viewModel::addSavedCustomDrinkEntry,
                 onDeleteCustomDrink = viewModel::deleteCustomDrink,
                 onMoveCustomDrinkToTarget = viewModel::moveCustomDrinkToTarget,
+                onMoveCustomDrinkToCategory = viewModel::moveCustomDrinkToCategory,
                 onEntryTimeChanged = viewModel::updateEntryTime,
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.writePermissions)

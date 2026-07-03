@@ -62,6 +62,7 @@ class HydrationEntryViewModelTest {
         every { repo.saveCustomHydrationDrink(any()) } returns Unit
         every { repo.deleteCustomHydrationDrink(any()) } returns Unit
         every { repo.reorderCustomHydrationDrinks(any()) } returns Unit
+        every { repo.moveCustomHydrationDrinkToCategory(any(), any()) } returns Unit
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
         coEvery { repo.loadDailyHydration(any(), any()) } returns dailyHydration
@@ -497,6 +498,7 @@ class HydrationEntryViewModelTest {
             volumeMilliliters = 200.0,
         )
         val repo = entryRepo(customDrinks = listOf(coffee, tea))
+        every { repo.customHydrationDrinks() } returnsMany listOf(listOf(coffee, tea), listOf(tea))
         val vm = HydrationEntryViewModel(repo)
         advanceUntilIdle()
 

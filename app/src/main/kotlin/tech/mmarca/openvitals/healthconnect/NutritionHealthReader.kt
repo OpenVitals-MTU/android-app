@@ -139,6 +139,7 @@ internal class NutritionHealthReader(
                 val nutrientValues = record.nutritionNutrientValues()
                 NutritionEntry(
                     time = record.startTime,
+                    endTime = record.endTime,
                     mealType = record.mealType,
                     name = record.name,
                     energyKcal = nutrientValues[NutritionNutrient.ENERGY],

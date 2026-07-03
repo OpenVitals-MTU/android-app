@@ -50,6 +50,12 @@ class HealthConnectFeatureTest {
     }
 
     @Test
+    fun caffeineFeatureRequiresNutritionReadPermission() {
+        val permissions = HealthConnectFeature.CAFFEINE.requiredReadPermissions(manager())
+        assertEquals(setOf(HealthPermission.getReadPermission(NutritionRecord::class)), permissions)
+    }
+
+    @Test
     fun buildStateShowsContextualPromptWhenCoreGrantedButFeatureMissing() {
         val state = buildHealthConnectScreenUxState(
             feature = HealthConnectFeature.SLEEP,

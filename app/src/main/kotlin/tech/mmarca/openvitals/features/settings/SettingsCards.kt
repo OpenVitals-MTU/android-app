@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
@@ -84,6 +85,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -95,6 +97,7 @@ import tech.mmarca.openvitals.features.activity.maps.labelRes
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.labelRes
+import tech.mmarca.openvitals.features.caffeine.CaffeinePreferencesEditor
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
@@ -180,6 +183,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.ACTIVITIES -> Icons.AutoMirrored.Outlined.DirectionsRun
         SettingsSection.SENSORS -> Icons.Outlined.Bluetooth
         SettingsSection.CALORIES -> Icons.Outlined.LocalFireDepartment
+        SettingsSection.CAFFEINE -> Icons.Outlined.LocalDrink
         SettingsSection.SLEEP -> Icons.Outlined.Bedtime
         SettingsSection.BODY_ENERGY -> Icons.Outlined.BatteryChargingFull
         SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
@@ -209,7 +213,59 @@ private val OfflineMapPackFormat.settingsLabelRes: Int
     get() = when (this) {
         OfflineMapPackFormat.PMTILES -> R.string.settings_offline_maps_format_pmtiles
         OfflineMapPackFormat.MAPSFORGE -> R.string.settings_offline_maps_format_mapsforge
+}
+
+@Composable
+internal fun CaffeinePreferencesCard(
+    preferences: CaffeinePreferences,
+    unitSystem: UnitSystem,
+    onSave: (CaffeinePreferences) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var draft by remember(preferences) { mutableStateOf(preferences) }
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalDrink,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.settings_caffeine_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_caffeine_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            CaffeinePreferencesEditor(
+                preferences = draft,
+                unitSystem = unitSystem,
+                onChange = { draft = it },
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                OpenVitalsTonalButton(onClick = { onSave(draft.copy(profileCompleted = true)) }) {
+                    Text(stringResource(R.string.action_save))
+                }
+            }
+        }
     }
+}
 
 @Composable
 internal fun CalorieDataSourceCard(

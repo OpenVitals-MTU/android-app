@@ -8,6 +8,7 @@ import javax.inject.Singleton
 import tech.mmarca.openvitals.data.repository.ActivityRepositoryImpl
 import tech.mmarca.openvitals.data.repository.BodyEnergyRepositoryImpl
 import tech.mmarca.openvitals.data.repository.BodyRepositoryImpl
+import tech.mmarca.openvitals.data.repository.CaffeineRepositoryImpl
 import tech.mmarca.openvitals.data.repository.CycleRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HealthRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HeartRepositoryImpl
@@ -19,6 +20,7 @@ import tech.mmarca.openvitals.data.repository.VitalsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
@@ -63,6 +65,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNutritionRepository(impl: NutritionRepositoryImpl): NutritionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCaffeineRepository(impl: CaffeineRepositoryImpl): CaffeineRepository
 
     @Binds
     @Singleton

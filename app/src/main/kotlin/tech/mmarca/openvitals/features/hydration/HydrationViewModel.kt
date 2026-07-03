@@ -20,12 +20,15 @@ import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationEntryRecordType
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
+import tech.mmarca.openvitals.domain.model.valueFor
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.insights.CaffeineHealthDrinkCatalog
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import java.time.LocalDate
 import java.time.LocalTime
@@ -367,7 +370,7 @@ private fun List<NutritionEntry>.toHydrationNutritionOnlyEntries(
     hydrationEntries: List<HydrationEntry>,
 ): List<HydrationEntry> =
     filter { entry ->
-        entry.isOpenVitalsEntry &&
+        entry.shouldAppearInBeverageHistory() &&
             entry.id.isNotBlank() &&
             entry.name != OpenVitalsCarbsEntryName &&
             entry.isStandaloneHydrationNutrition(hydrationEntries)
@@ -385,6 +388,11 @@ private fun List<NutritionEntry>.toHydrationNutritionOnlyEntries(
             nutrientValues = entry.nutrientValues,
         )
     }
+
+private fun NutritionEntry.shouldAppearInBeverageHistory(): Boolean =
+    isOpenVitalsEntry ||
+        valueFor(NutritionNutrient.CAFFEINE)?.let { it > 0.0 && it.isFinite() } == true ||
+        CaffeineHealthDrinkCatalog.matchName(name) != null
 
 private fun NutritionEntry.isStandaloneHydrationNutrition(
     hydrationEntries: List<HydrationEntry>,

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.hydration
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -41,9 +42,14 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,13 +77,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
+import java.util.Locale
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
@@ -95,8 +108,82 @@ private const val MillilitersPerFluidOunce = 29.5735295625
 private const val FullHydrationImpactMultiplier = 1.0
 private const val DefaultPartialHydrationImpactPercent = 50
 private const val HydrationSavedDrinkGridColumns = 2
+private const val HydrationCatalogSearchLimit = 48
 private const val HydrationSavedDrinkEditWiggleDegrees = 0.45f
 private val HydrationSavedDrinkGridSpacing = 8.dp
+private val HydrationCatalogRowHeight = 76.dp
+private val HydrationCatalogRowSpacing = 6.dp
+private const val HydrationCatalogMaxVisibleRows = 4
+private const val HydrationCatalogSavedRowPrefix = "saved:"
+private const val HydrationCatalogPresetRowPrefix = "preset:"
+private val HydrationCatalogSections = listOf(
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.COFFEE,
+        category = CaffeineSourceCategory.COFFEE,
+        titleRes = R.string.hydration_catalog_section_coffees,
+    ),
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.ENERGY_DRINK,
+        category = CaffeineSourceCategory.ENERGY_DRINK,
+        titleRes = R.string.hydration_catalog_section_energy_drinks,
+    ),
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.TEA,
+        category = CaffeineSourceCategory.TEA,
+        titleRes = R.string.hydration_catalog_section_teas,
+    ),
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.CHOCOLATE,
+        category = CaffeineSourceCategory.CHOCOLATE,
+        titleRes = R.string.hydration_catalog_section_chocolate_drinks,
+    ),
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.CARBONATED_SOFT_DRINK,
+        category = CaffeineSourceCategory.SODA,
+        titleRes = R.string.hydration_catalog_section_carbonated_soft_drinks,
+    ),
+    HydrationCatalogSectionSpec(
+        key = HydrationCatalogSectionKey.OTHER,
+        category = CaffeineSourceCategory.OTHER,
+        titleRes = R.string.hydration_catalog_section_other_drinks,
+    ),
+)
+
+private enum class HydrationCatalogSectionKey {
+    COFFEE,
+    ENERGY_DRINK,
+    TEA,
+    CHOCOLATE,
+    CARBONATED_SOFT_DRINK,
+    OTHER,
+}
+
+private data class HydrationCatalogSectionSpec(
+    val key: HydrationCatalogSectionKey,
+    val category: CaffeineSourceCategory?,
+    @param:StringRes val titleRes: Int,
+)
+
+private data class HydrationCatalogRowItem(
+    val rowKey: String,
+    val drink: CustomHydrationDrink,
+    val isSavedDrink: Boolean,
+)
+
+private data class HydrationCatalogGroupedDrinks(
+    val unassignedSavedRows: List<HydrationCatalogRowItem>,
+    val sections: List<HydrationCatalogSectionDrinks>,
+)
+
+private data class HydrationCatalogSectionDrinks(
+    val spec: HydrationCatalogSectionSpec,
+    val rows: List<HydrationCatalogRowItem>,
+)
+
+private data class HydrationCatalogEditingDrink(
+    val drink: CustomHydrationDrink,
+    val isSavedDrink: Boolean,
+)
 
 @Composable
 internal fun HydrationTrackerCard(
@@ -107,11 +194,20 @@ internal fun HydrationTrackerCard(
     onAddSavedCustomDrinkEntry: (CustomHydrationDrink) -> Unit,
     onDeleteCustomDrink: (CustomHydrationDrink) -> Unit,
     onMoveCustomDrinkToTarget: (String, String) -> Unit,
+    onMoveCustomDrinkToCategory: (String, CaffeineSourceCategory?) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val canLogEntry = state.canWriteHydration && !state.isSavingEntry && !state.isCheckingPermission
+    val canInteract = !state.isSavingEntry && !state.isCheckingPermission
+    val canLogHydrationEntry = state.canWriteHydration && canInteract
+    fun canLogDrink(drink: CustomHydrationDrink): Boolean {
+        val writesHydration = drink.volumeLiters * drink.hydrationMultiplier > 0.0
+        val writesNutrition = drink.nutrientValues.hasPositiveValues()
+        return canInteract &&
+            (!writesHydration || state.canWriteHydration) &&
+            (!writesNutrition || state.canWriteNutrition)
+    }
     val canEditSavedDrinks = !state.isSavingEntry && !state.isCheckingPermission
     var addingNewDrink by remember { mutableStateOf(false) }
     var editingSavedDrink by remember { mutableStateOf<CustomHydrationDrink?>(null) }
@@ -194,7 +290,7 @@ internal fun HydrationTrackerCard(
 
                 OpenVitalsButton(
                     onClick = onAddSelectedEntry,
-                    enabled = canLogEntry,
+                    enabled = canLogHydrationEntry,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(
@@ -208,16 +304,21 @@ internal fun HydrationTrackerCard(
                     )
                 }
             } else {
-                HydrationCustomDrinkCarousel(
-                    drinks = state.customDrinkOptions,
+                HydrationCatalogDrinkCarousel(
+                    catalogDrinks = emptyList(),
+                    savedDrinks = state.customDrinkOptions,
                     unitFormatter = unitFormatter,
-                    enabled = canLogEntry,
-                    isEditingDrinks = isEditingSavedDrinks,
-                    onToggleEdit = { isEditingSavedDrinks = !isEditingSavedDrinks },
+                    isEditingSavedDrinks = isEditingSavedDrinks,
+                    canEditSavedDrinks = canEditSavedDrinks,
+                    canSelectDrink = ::canLogDrink,
+                    onToggleEditSavedDrinks = { isEditingSavedDrinks = !isEditingSavedDrinks },
                     onSelectDrink = onAddSavedCustomDrinkEntry,
                     onEditDrink = { editingSavedDrink = it },
                     onDeleteDrink = onDeleteCustomDrink,
-                    onMoveDrinkToTarget = onMoveCustomDrinkToTarget,
+                    onEditCatalogDrink = { editingSavedDrink = it },
+                    onDeleteCatalogDrink = onDeleteCustomDrink,
+                    onMoveSavedDrinkToTarget = onMoveCustomDrinkToTarget,
+                    onMoveSavedDrinkToCategory = onMoveCustomDrinkToCategory,
                 )
 
                 OpenVitalsButton(
@@ -266,7 +367,6 @@ internal fun HydrationTrackerCard(
                     },
                 )
             }
-
             state.entryError?.let { entryError ->
                 Text(
                     text = hydrationEntryErrorText(entryError, state.writeError),
@@ -370,12 +470,628 @@ internal fun HydrationTodayCounter(
     }
 }
 
+@Composable
+private fun HydrationCatalogDrinkCarousel(
+    catalogDrinks: List<CustomHydrationDrink>,
+    savedDrinks: List<CustomHydrationDrink>,
+    unitFormatter: UnitFormatter,
+    isEditingSavedDrinks: Boolean,
+    canEditSavedDrinks: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
+    onToggleEditSavedDrinks: () -> Unit,
+    onSelectDrink: (CustomHydrationDrink) -> Unit,
+    onEditDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteDrink: (CustomHydrationDrink) -> Unit,
+    onEditCatalogDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteCatalogDrink: (CustomHydrationDrink) -> Unit,
+    onMoveSavedDrinkToTarget: (String, String) -> Unit,
+    onMoveSavedDrinkToCategory: (String, CaffeineSourceCategory?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (catalogDrinks.isEmpty() && savedDrinks.isEmpty()) return
+
+    var query by remember { mutableStateOf("") }
+    var savedDrinkCategories by remember { mutableStateOf<Map<String, HydrationCatalogSectionKey>>(emptyMap()) }
+    var unassignedSavedOrder by remember { mutableStateOf<List<String>>(emptyList()) }
+    var sectionOrders by remember { mutableStateOf<Map<HydrationCatalogSectionKey, List<String>>>(emptyMap()) }
+    val normalizedQuery = query.trim().lowercase(Locale.ROOT)
+    val isSearching = normalizedQuery.isNotBlank()
+    val groupedDrinks = remember(
+        catalogDrinks,
+        savedDrinks,
+        savedDrinkCategories,
+        unassignedSavedOrder,
+        sectionOrders,
+        normalizedQuery,
+    ) {
+        hydrationCatalogGroupedDrinks(
+            catalogDrinks = catalogDrinks,
+            savedDrinks = savedDrinks,
+            savedDrinkCategories = savedDrinkCategories,
+            unassignedSavedOrder = unassignedSavedOrder,
+            sectionOrders = sectionOrders,
+            normalizedQuery = normalizedQuery,
+        )
+    }
+    val sectionByKey = remember(groupedDrinks) { groupedDrinks.sections.associateBy { it.spec.key } }
+
+    fun moveSavedRowToTargetIfNeeded(
+        rowKey: String,
+        targetRowKey: String,
+    ) {
+        val movedSavedId = rowKey.catalogDrinkIdOrNull()
+        val targetSavedId = targetRowKey.catalogDrinkIdOrNull()
+        if (movedSavedId != null && targetSavedId != null) {
+            onMoveSavedDrinkToTarget(movedSavedId, targetSavedId)
+        }
+    }
+
+    fun moveUnassignedRowToTarget(
+        rowKey: String,
+        targetRowKey: String,
+    ) {
+        if (rowKey == targetRowKey) return
+        val currentRows = groupedDrinks.unassignedSavedRows
+        val fromIndex = currentRows.indexOfFirst { it.rowKey == rowKey }
+        val targetIndex = currentRows.indexOfFirst { it.rowKey == targetRowKey }
+        if (fromIndex < 0 || targetIndex < 0) return
+        val updatedRows = currentRows.toMutableList().apply {
+            val row = removeAt(fromIndex)
+            add(targetIndex.coerceIn(0, size), row)
+        }
+        unassignedSavedOrder = updatedRows.map { it.rowKey }
+        moveSavedRowToTargetIfNeeded(rowKey, targetRowKey)
+    }
+
+    fun moveSectionRowToTarget(
+        sectionKey: HydrationCatalogSectionKey,
+        rowKey: String,
+        targetRowKey: String,
+    ) {
+        if (rowKey == targetRowKey) return
+        val currentRows = sectionByKey[sectionKey]?.rows ?: return
+        val fromIndex = currentRows.indexOfFirst { it.rowKey == rowKey }
+        val targetIndex = currentRows.indexOfFirst { it.rowKey == targetRowKey }
+        if (fromIndex < 0 || targetIndex < 0) return
+        val updatedRows = currentRows.toMutableList().apply {
+            val row = removeAt(fromIndex)
+            add(targetIndex.coerceIn(0, size), row)
+        }
+        sectionOrders = sectionOrders + (sectionKey to updatedRows.map { it.rowKey })
+        moveSavedRowToTargetIfNeeded(rowKey, targetRowKey)
+    }
+
+    fun moveSavedDrinkToSection(
+        drinkId: String,
+        sectionKey: HydrationCatalogSectionKey?,
+    ) {
+        savedDrinkCategories = if (sectionKey == null) {
+            savedDrinkCategories - drinkId
+        } else {
+            savedDrinkCategories + (drinkId to sectionKey)
+        }
+        unassignedSavedOrder = unassignedSavedOrder.filterNot { it == drinkId.toSavedCatalogRowKey() }
+        sectionOrders = sectionOrders.mapValues { (_, order) ->
+            order.filterNot { it == drinkId.toSavedCatalogRowKey() }
+        }
+        onMoveSavedDrinkToCategory(
+            drinkId,
+            sectionKey?.let { key -> HydrationCatalogSections.firstOrNull { it.key == key }?.category },
+        )
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.hydration_catalog_drinks_title),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (savedDrinks.isNotEmpty() || catalogDrinks.isNotEmpty()) {
+                val editLabel = stringResource(
+                    if (isEditingSavedDrinks) {
+                        R.string.cd_done_editing_saved_drinks
+                    } else {
+                        R.string.cd_edit_saved_drinks
+                    }
+                )
+                IconButton(
+                    onClick = onToggleEditSavedDrinks,
+                    enabled = canEditSavedDrinks,
+                ) {
+                    Icon(
+                        imageVector = if (isEditingSavedDrinks) Icons.Outlined.Check else Icons.Outlined.Edit,
+                        contentDescription = editLabel,
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text(stringResource(R.string.hydration_catalog_search)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (groupedDrinks.unassignedSavedRows.isNotEmpty()) {
+            HydrationCatalogStandaloneSavedRows(
+                rows = groupedDrinks.unassignedSavedRows,
+                unitFormatter = unitFormatter,
+                isEditingSavedDrinks = isEditingSavedDrinks,
+                canSelectDrink = canSelectDrink,
+                onSelectDrink = onSelectDrink,
+                onEditDrink = onEditDrink,
+                onDeleteDrink = onDeleteDrink,
+                onMoveSavedDrinkToSection = ::moveSavedDrinkToSection,
+                onMoveRowToTarget = ::moveUnassignedRowToTarget,
+            )
+        }
+        groupedDrinks.sections.forEach { section ->
+            HydrationCatalogDrinkSection(
+                section = section,
+                unitFormatter = unitFormatter,
+                forceExpanded = isSearching,
+                isEditingSavedDrinks = isEditingSavedDrinks,
+                canSelectDrink = canSelectDrink,
+                onSelectDrink = onSelectDrink,
+                onEditDrink = onEditDrink,
+                onDeleteDrink = onDeleteDrink,
+                onEditCatalogDrink = onEditCatalogDrink,
+                onDeleteCatalogDrink = onDeleteCatalogDrink,
+                onMoveSavedDrinkToSection = ::moveSavedDrinkToSection,
+                onMoveRowToTarget = { rowKey, targetRowKey ->
+                    moveSectionRowToTarget(section.spec.key, rowKey, targetRowKey)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun HydrationCatalogStandaloneSavedRows(
+    rows: List<HydrationCatalogRowItem>,
+    unitFormatter: UnitFormatter,
+    isEditingSavedDrinks: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
+    onSelectDrink: (CustomHydrationDrink) -> Unit,
+    onEditDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteDrink: (CustomHydrationDrink) -> Unit,
+    onMoveSavedDrinkToSection: (String, HydrationCatalogSectionKey?) -> Unit,
+    onMoveRowToTarget: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.hydration_catalog_saved_outside),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HydrationCatalogDrinkRows(
+            rows = rows,
+            unitFormatter = unitFormatter,
+            isEditingSavedDrinks = isEditingSavedDrinks,
+            canSelectDrink = canSelectDrink,
+            onSelectDrink = onSelectDrink,
+            onEditDrink = onEditDrink,
+            onDeleteDrink = onDeleteDrink,
+            onEditCatalogDrink = {},
+            onDeleteCatalogDrink = {},
+            onMoveSavedDrinkToSection = onMoveSavedDrinkToSection,
+            onMoveRowToTarget = onMoveRowToTarget,
+        )
+    }
+}
+
+@Composable
+private fun HydrationCatalogDrinkSection(
+    section: HydrationCatalogSectionDrinks,
+    unitFormatter: UnitFormatter,
+    forceExpanded: Boolean,
+    isEditingSavedDrinks: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
+    onSelectDrink: (CustomHydrationDrink) -> Unit,
+    onEditDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteDrink: (CustomHydrationDrink) -> Unit,
+    onEditCatalogDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteCatalogDrink: (CustomHydrationDrink) -> Unit,
+    onMoveSavedDrinkToSection: (String, HydrationCatalogSectionKey?) -> Unit,
+    onMoveRowToTarget: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (section.rows.isEmpty()) return
+
+    var expanded by remember(section.spec.key) { mutableStateOf(section.spec.key == HydrationCatalogSectionKey.OTHER) }
+    val isExpanded = forceExpanded || expanded
+    val title = stringResource(section.spec.titleRes)
+    val toggleLabel = stringResource(
+        if (isExpanded) {
+            R.string.cd_collapse_drink_category
+        } else {
+            R.string.cd_expand_drink_category
+        },
+        title,
+    )
+
+    OpenVitalsSurface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        role = Role.Button,
+                        onClick = { expanded = !expanded },
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.hydration_catalog_section_count,
+                            section.rows.size,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        imageVector = if (isExpanded) {
+                            Icons.Outlined.ExpandLess
+                        } else {
+                            Icons.Outlined.ExpandMore
+                        },
+                        contentDescription = toggleLabel,
+                    )
+                }
+            }
+            AnimatedVisibility(visible = isExpanded) {
+                HydrationCatalogDrinkRows(
+                    rows = section.rows,
+                    unitFormatter = unitFormatter,
+                    isEditingSavedDrinks = isEditingSavedDrinks,
+                    canSelectDrink = canSelectDrink,
+                    onSelectDrink = onSelectDrink,
+                    onEditDrink = onEditDrink,
+                    onDeleteDrink = onDeleteDrink,
+                    onEditCatalogDrink = onEditCatalogDrink,
+                    onDeleteCatalogDrink = onDeleteCatalogDrink,
+                    onMoveSavedDrinkToSection = onMoveSavedDrinkToSection,
+                    onMoveRowToTarget = onMoveRowToTarget,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HydrationCatalogDrinkRows(
+    rows: List<HydrationCatalogRowItem>,
+    unitFormatter: UnitFormatter,
+    isEditingSavedDrinks: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
+    onSelectDrink: (CustomHydrationDrink) -> Unit,
+    onEditDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteDrink: (CustomHydrationDrink) -> Unit,
+    onEditCatalogDrink: (CustomHydrationDrink) -> Unit,
+    onDeleteCatalogDrink: (CustomHydrationDrink) -> Unit,
+    onMoveSavedDrinkToSection: (String, HydrationCatalogSectionKey?) -> Unit,
+    onMoveRowToTarget: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val fromKey = from.key as? String
+        val toKey = to.key as? String
+        if (fromKey != null && toKey != null && fromKey != toKey) {
+            onMoveRowToTarget(fromKey, toKey)
+        }
+    }
+    val visibleRows = min(rows.size, HydrationCatalogMaxVisibleRows)
+    val listHeight = HydrationCatalogRowHeight * visibleRows.toFloat() +
+        HydrationCatalogRowSpacing * (visibleRows - 1).coerceAtLeast(0).toFloat()
+
+    LazyColumn(
+        state = lazyListState,
+        userScrollEnabled = rows.size > HydrationCatalogMaxVisibleRows,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(listHeight),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        items(
+            items = rows,
+            key = { row -> row.rowKey },
+        ) { row ->
+            ReorderableItem(
+                state = reorderableState,
+                key = row.rowKey,
+                enabled = true,
+            ) { isDragging ->
+                HydrationCatalogDrinkRow(
+                    row = row,
+                    unitFormatter = unitFormatter,
+                    enabled = canSelectDrink(row.drink),
+                    isDragging = isDragging,
+                    isEditingSavedDrinks = isEditingSavedDrinks,
+                    dragHandleModifier = Modifier.longPressDraggableHandle(),
+                    onSelectDrink = { onSelectDrink(row.drink) },
+                    onEditDrink = { onEditDrink(row.drink) },
+                    onDeleteDrink = { onDeleteDrink(row.drink) },
+                    onEditCatalogDrink = { onEditCatalogDrink(row.drink) },
+                    onDeleteCatalogDrink = { onDeleteCatalogDrink(row.drink) },
+                    onMoveSavedDrinkToSection = onMoveSavedDrinkToSection,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HydrationCatalogDrinkRow(
+    row: HydrationCatalogRowItem,
+    unitFormatter: UnitFormatter,
+    enabled: Boolean,
+    isDragging: Boolean,
+    isEditingSavedDrinks: Boolean,
+    dragHandleModifier: Modifier,
+    onSelectDrink: () -> Unit,
+    onEditDrink: () -> Unit,
+    onDeleteDrink: () -> Unit,
+    onEditCatalogDrink: () -> Unit,
+    onDeleteCatalogDrink: () -> Unit,
+    onMoveSavedDrinkToSection: (String, HydrationCatalogSectionKey?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val drink = row.drink
+    var showMoveMenu by remember { mutableStateOf(false) }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(HydrationCatalogRowHeight)
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                alpha = if (enabled || isEditingSavedDrinks) 1f else 0.48f
+                scaleX = if (isDragging) 1.01f else 1f
+                scaleY = if (isDragging) 1.01f else 1f
+                shadowElevation = if (isDragging) 10.dp.toPx() else 0f
+            }
+            .then(dragHandleModifier),
+    ) {
+        OpenVitalsSurface(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    enabled = enabled && !(row.isSavedDrink && isEditingSavedDrinks),
+                    role = Role.Button,
+                    onClick = onSelectDrink,
+                ),
+            shape = MaterialTheme.shapes.small,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalDrink,
+                    contentDescription = null,
+                    tint = HydrationColor,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = drink.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = hydrationSavedDrinkAmountImpactLabel(drink, unitFormatter),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = if (drink.nutrientValues.isEmpty()) {
+                            stringResource(R.string.hydration_custom_drink_liquid_only)
+                        } else {
+                            stringResource(
+                                R.string.hydration_custom_drink_nutrient_count,
+                                drink.nutrientValues.size,
+                            )
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                    )
+                }
+                if (isEditingSavedDrinks) {
+                    IconButton(
+                        onClick = if (row.isSavedDrink) onEditDrink else onEditCatalogDrink,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = stringResource(R.string.cd_edit_drink),
+                        )
+                    }
+                    if (row.isSavedDrink) {
+                        IconButton(onClick = { showMoveMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = stringResource(R.string.cd_move_drink_category),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMoveMenu,
+                            onDismissRequest = { showMoveMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.hydration_catalog_saved_outside)) },
+                                onClick = {
+                                    showMoveMenu = false
+                                    onMoveSavedDrinkToSection(drink.id, null)
+                                },
+                            )
+                            HydrationCatalogSections.forEach { section ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(section.titleRes)) },
+                                    onClick = {
+                                        showMoveMenu = false
+                                        onMoveSavedDrinkToSection(drink.id, section.key)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    if (row.isSavedDrink) {
+                        IconButton(onClick = onDeleteDrink) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = stringResource(R.string.cd_delete_drink),
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = onDeleteCatalogDrink) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = stringResource(R.string.cd_delete_drink),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun hydrationCatalogGroupedDrinks(
+    catalogDrinks: List<CustomHydrationDrink>,
+    savedDrinks: List<CustomHydrationDrink>,
+    savedDrinkCategories: Map<String, HydrationCatalogSectionKey>,
+    unassignedSavedOrder: List<String>,
+    sectionOrders: Map<HydrationCatalogSectionKey, List<String>>,
+    normalizedQuery: String,
+): HydrationCatalogGroupedDrinks {
+    val rowsBySection = HydrationCatalogSections.associate { it.key to mutableListOf<HydrationCatalogRowItem>() }
+    val unassignedSavedRows = mutableListOf<HydrationCatalogRowItem>()
+    val filteredSavedDrinks = savedDrinks.filterByCatalogQuery(normalizedQuery)
+    val filteredCatalogDrinks = catalogDrinks
+        .filterByCatalogQuery(normalizedQuery)
+        .takeIf { normalizedQuery.isBlank() }
+        ?: catalogDrinks.filterByCatalogQuery(normalizedQuery).take(HydrationCatalogSearchLimit)
+
+    filteredSavedDrinks.forEach { drink ->
+        val row = HydrationCatalogRowItem(
+            rowKey = drink.id.toSavedCatalogRowKey(),
+            drink = drink,
+            isSavedDrink = true,
+        )
+        val sectionKey = savedDrinkCategories[drink.id] ?: drink.category?.toHydrationCatalogSectionKey()
+        if (sectionKey == null) {
+            unassignedSavedRows.add(row)
+        } else {
+            rowsBySection.getValue(sectionKey).add(row)
+        }
+    }
+    filteredCatalogDrinks.forEach { drink ->
+        val sectionKey = drink.category?.toHydrationCatalogSectionKey()
+            ?: HydrationCatalogSectionKey.OTHER
+        rowsBySection.getValue(sectionKey).add(
+            HydrationCatalogRowItem(
+                rowKey = drink.id.toPresetCatalogRowKey(),
+                drink = drink,
+                isSavedDrink = false,
+            )
+        )
+    }
+
+    return HydrationCatalogGroupedDrinks(
+        unassignedSavedRows = unassignedSavedRows.orderedByCatalogSectionOrder(unassignedSavedOrder),
+        sections = HydrationCatalogSections.map { section ->
+            HydrationCatalogSectionDrinks(
+                spec = section,
+                rows = rowsBySection.getValue(section.key)
+                    .orderedByCatalogSectionOrder(sectionOrders[section.key].orEmpty()),
+            )
+        },
+    )
+}
+
+private fun List<CustomHydrationDrink>.filterByCatalogQuery(
+    normalizedQuery: String,
+): List<CustomHydrationDrink> =
+    if (normalizedQuery.isBlank()) {
+        this
+    } else {
+        filter { drink -> drink.name.lowercase(Locale.ROOT).contains(normalizedQuery) }
+    }
+
+private fun List<HydrationCatalogRowItem>.orderedByCatalogSectionOrder(
+    order: List<String>,
+): List<HydrationCatalogRowItem> {
+    if (order.isEmpty()) return this
+    val rowByKey = associateBy { it.rowKey }
+    val orderedRows = order.mapNotNull(rowByKey::get)
+    val orderedKeys = orderedRows.mapTo(mutableSetOf()) { it.rowKey }
+    return orderedRows + filterNot { it.rowKey in orderedKeys }
+}
+
+private fun CaffeineSourceCategory.toHydrationCatalogSectionKey(): HydrationCatalogSectionKey =
+    when (this) {
+        CaffeineSourceCategory.COFFEE -> HydrationCatalogSectionKey.COFFEE
+        CaffeineSourceCategory.ENERGY_DRINK -> HydrationCatalogSectionKey.ENERGY_DRINK
+        CaffeineSourceCategory.TEA -> HydrationCatalogSectionKey.TEA
+        CaffeineSourceCategory.CHOCOLATE -> HydrationCatalogSectionKey.CHOCOLATE
+        CaffeineSourceCategory.SODA -> HydrationCatalogSectionKey.CARBONATED_SOFT_DRINK
+        CaffeineSourceCategory.SUPPLEMENT,
+        CaffeineSourceCategory.OTHER,
+        -> HydrationCatalogSectionKey.OTHER
+    }
+
+private fun String.toSavedCatalogRowKey(): String =
+    "$HydrationCatalogSavedRowPrefix$this"
+
+private fun String.toPresetCatalogRowKey(): String =
+    "$HydrationCatalogPresetRowPrefix$this"
+
+private fun String.savedDrinkIdOrNull(): String? =
+    takeIf { it.startsWith(HydrationCatalogSavedRowPrefix) }
+        ?.removePrefix(HydrationCatalogSavedRowPrefix)
+
+private fun String.catalogDrinkIdOrNull(): String? =
+    savedDrinkIdOrNull()
+        ?: takeIf { it.startsWith(HydrationCatalogPresetRowPrefix) }
+            ?.removePrefix(HydrationCatalogPresetRowPrefix)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun HydrationCustomDrinkCarousel(
     drinks: List<CustomHydrationDrink>,
     unitFormatter: UnitFormatter,
-    enabled: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
     isEditingDrinks: Boolean,
     onToggleEdit: () -> Unit,
     onSelectDrink: (CustomHydrationDrink) -> Unit,
@@ -418,7 +1134,7 @@ internal fun HydrationCustomDrinkCarousel(
         HydrationSavedDrinkGrid(
             drinks = drinks,
             unitFormatter = unitFormatter,
-            enabled = enabled,
+            canSelectDrink = canSelectDrink,
             isEditingDrinks = isEditingDrinks,
             onSelectDrink = onSelectDrink,
             onEditDrink = onEditDrink,
@@ -432,7 +1148,7 @@ internal fun HydrationCustomDrinkCarousel(
 private fun HydrationSavedDrinkGrid(
     drinks: List<CustomHydrationDrink>,
     unitFormatter: UnitFormatter,
-    enabled: Boolean,
+    canSelectDrink: (CustomHydrationDrink) -> Boolean,
     isEditingDrinks: Boolean,
     onSelectDrink: (CustomHydrationDrink) -> Unit,
     onEditDrink: (CustomHydrationDrink) -> Unit,
@@ -480,7 +1196,7 @@ private fun HydrationSavedDrinkGrid(
                     HydrationSavedDrinkTile(
                         drink = drink,
                         unitFormatter = unitFormatter,
-                        enabled = enabled,
+                        enabled = canSelectDrink(drink),
                         isEditingDrinks = isEditingDrinks,
                         isDragging = isDragging,
                         onSelectDrink = { onSelectDrink(drink) },
@@ -1161,6 +1877,9 @@ private fun hydrationImpactPercentText(multiplier: Double): String =
     } else {
         DefaultPartialHydrationImpactPercent.toString()
     }
+
+private fun Map<NutritionNutrient, Double>.hasPositiveValues(): Boolean =
+    values.any { it > 0.0 && it.isFinite() }
 
 private fun hydrationImpactMultiplier(
     option: HydrationImpactOption,

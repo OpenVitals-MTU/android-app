@@ -6,7 +6,9 @@ import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.local.beverage.BeverageStore
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
+import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -26,6 +28,7 @@ import kotlinx.coroutines.coroutineScope
 class HydrationRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val preferencesRepository: PreferencesRepository? = null,
+    private val beverageStore: BeverageStore? = null,
 ) : HydrationRepository {
 
     companion object {
@@ -53,18 +56,26 @@ class HydrationRepositoryImpl @Inject constructor(
     }
 
     override fun customHydrationDrinks(): List<CustomHydrationDrink> =
-        preferencesRepository?.customHydrationDrinks().orEmpty()
+        beverageStore?.beverages()
+            ?: preferencesRepository?.customHydrationDrinks().orEmpty()
 
     override fun saveCustomHydrationDrink(drink: CustomHydrationDrink) {
-        preferencesRepository?.saveCustomHydrationDrink(drink)
+        beverageStore?.save(drink) ?: preferencesRepository?.saveCustomHydrationDrink(drink)
     }
 
     override fun deleteCustomHydrationDrink(drinkId: String) {
-        preferencesRepository?.deleteCustomHydrationDrink(drinkId)
+        beverageStore?.delete(drinkId) ?: preferencesRepository?.deleteCustomHydrationDrink(drinkId)
     }
 
     override fun reorderCustomHydrationDrinks(drinkIds: List<String>) {
-        preferencesRepository?.reorderCustomHydrationDrinks(drinkIds)
+        beverageStore?.reorder(drinkIds) ?: preferencesRepository?.reorderCustomHydrationDrinks(drinkIds)
+    }
+
+    override fun moveCustomHydrationDrinkToCategory(
+        drinkId: String,
+        category: CaffeineSourceCategory?,
+    ) {
+        beverageStore?.moveToCategory(drinkId, category)
     }
 
     override fun hydrationDailyGoalLiters(): Double =

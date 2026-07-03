@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.data.repository.contract
 
 import java.time.LocalDate
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
@@ -27,6 +28,8 @@ interface HydrationRepository {
     fun deleteCustomHydrationDrink(drinkId: String)
 
     fun reorderCustomHydrationDrinks(drinkIds: List<String>)
+
+    fun moveCustomHydrationDrinkToCategory(drinkId: String, category: CaffeineSourceCategory?)
 
     fun hydrationDailyGoalLiters(): Double
 

@@ -60,6 +60,8 @@ data class CustomHydrationDrink(
     val volumeMilliliters: Double,
     val hydrationMultiplier: Double = 1.0,
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
+    val category: CaffeineSourceCategory? = null,
+    val isPreloaded: Boolean = false,
 ) {
     val volumeLiters: Double
         get() = volumeMilliliters / 1000.0
@@ -70,6 +72,7 @@ data class CustomHydrationDrink(
 
 data class NutritionEntry(
     val time: Instant,
+    val endTime: Instant = time,
     val mealType: Int,
     val name: String?,
     val energyKcal: Double?,

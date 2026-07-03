@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
+import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -283,8 +284,13 @@ class HydrationEntryViewModel @Inject constructor(
         input: CustomHydrationDrinkInput,
         existingDrinkId: String? = null,
     ) {
+        val existingDrink = existingDrinkId
+            ?.let { id -> _uiState.value.customDrinkOptions.firstOrNull { it.id == id } }
         val drink = input.toCustomHydrationDrink(
             id = existingDrinkId ?: UUID.randomUUID().toString(),
+        )?.copy(
+            category = existingDrink?.category,
+            isPreloaded = existingDrink?.isPreloaded ?: false,
         )
         if (drink == null) {
             _uiState.value = _uiState.value.copy(
@@ -295,25 +301,26 @@ class HydrationEntryViewModel @Inject constructor(
             return
         }
         repository.saveCustomHydrationDrink(drink)
-        _uiState.value = _uiState.value.copy(
-            customDrinkOptions = repository.customHydrationDrinks()
-                .filter(CustomHydrationDrink::isValidCustomHydrationDrink),
-            entryError = null,
-            entryNotice = null,
-            writeError = null,
-            saveCompleted = false,
-        )
+        refreshDrinkOptions {
+            copy(
+                entryError = null,
+                entryNotice = null,
+                writeError = null,
+                saveCompleted = false,
+            )
+        }
     }
 
     fun deleteCustomDrink(drink: CustomHydrationDrink) {
         repository.deleteCustomHydrationDrink(drink.id)
-        _uiState.value = _uiState.value.copy(
-            customDrinkOptions = _uiState.value.customDrinkOptions.filterNot { it.id == drink.id },
-            entryError = null,
-            entryNotice = null,
-            writeError = null,
-            saveCompleted = false,
-        )
+        refreshDrinkOptions {
+            copy(
+                entryError = null,
+                entryNotice = null,
+                writeError = null,
+                saveCompleted = false,
+            )
+        }
     }
 
     fun moveCustomDrinkToTarget(
@@ -337,6 +344,21 @@ class HydrationEntryViewModel @Inject constructor(
             writeError = null,
             saveCompleted = false,
         )
+    }
+
+    fun moveCustomDrinkToCategory(
+        drinkId: String,
+        category: CaffeineSourceCategory?,
+    ) {
+        repository.moveCustomHydrationDrinkToCategory(drinkId, category)
+        refreshDrinkOptions {
+            copy(
+                entryError = null,
+                entryNotice = null,
+                writeError = null,
+                saveCompleted = false,
+            )
+        }
     }
 
     fun addSavedCustomDrinkEntry(drink: CustomHydrationDrink) {
@@ -402,6 +424,15 @@ class HydrationEntryViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun refreshDrinkOptions(
+        transform: HydrationEntryUiState.() -> HydrationEntryUiState = { this },
+    ) {
+        _uiState.value = _uiState.value.transform().copy(
+            customDrinkOptions = repository.customHydrationDrinks()
+                .filter(CustomHydrationDrink::isValidCustomHydrationDrink),
+        )
     }
 
     private fun saveHydrationEntry(

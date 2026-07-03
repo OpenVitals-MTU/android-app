@@ -41,6 +41,8 @@ import tech.mmarca.openvitals.features.body.LeanMassScreen
 import tech.mmarca.openvitals.features.body.WeightScreen
 import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyDetailsScreen
 import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyViewModel
+import tech.mmarca.openvitals.features.caffeine.CaffeineScreen
+import tech.mmarca.openvitals.features.caffeine.CaffeineViewModel
 import tech.mmarca.openvitals.features.cycle.CycleScreen
 import tech.mmarca.openvitals.features.cycle.CycleViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
@@ -207,6 +209,15 @@ internal fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onEditHydrationEntry = onEditHydrationEntry,
+                onSectionEditStateChanged = onSectionEditStateChanged,
+            )
+        }
+        DashboardWidgetId.CAFFEINE -> {
+            val caffeineViewModel = hiltViewModel<CaffeineViewModel>()
+            CaffeineScreen(
+                viewModel = caffeineViewModel,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }

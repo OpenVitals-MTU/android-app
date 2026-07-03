@@ -150,7 +150,7 @@ internal fun dashboardWidgetSpecs(
 ): List<DashboardWidgetSpec> = buildList {
     val loadingMessage = stringResource(R.string.loading)
     val openMetric: (DashboardWidgetId) -> (() -> Unit)? = { widgetId ->
-        if (isEditingDashboard || widgetId == DashboardWidgetId.CAFFEINE) null else ({ onOpenMetric(widgetId) })
+        if (isEditingDashboard) null else ({ onOpenMetric(widgetId) })
     }
     widgetIds.forEach { widgetId ->
         val model = display.widgets[widgetId] ?: return@forEach

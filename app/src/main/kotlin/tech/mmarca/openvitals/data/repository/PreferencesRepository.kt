@@ -16,6 +16,12 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.CaffeineAlcoholUse
+import tech.mmarca.openvitals.domain.preferences.CaffeineGenotype
+import tech.mmarca.openvitals.domain.preferences.CaffeineHabituation
+import tech.mmarca.openvitals.domain.preferences.CaffeineHormonalStatus
+import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
+import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -53,6 +59,7 @@ class PreferencesRepository @Inject constructor(
     private val _showOpenVitalsCalculatedCalories = MutableStateFlow(readShowOpenVitalsCalculatedCalories())
     private val _healthConnectSyncEnabled = MutableStateFlow(readHealthConnectSyncEnabled())
     private val _bodyEnergyCalibration = MutableStateFlow(readBodyEnergyCalibration())
+    private val _caffeinePreferences = MutableStateFlow(readCaffeinePreferences())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
@@ -62,6 +69,7 @@ class PreferencesRepository @Inject constructor(
     val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
     val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
     val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
+    val caffeinePreferencesFlow: StateFlow<CaffeinePreferences> = _caffeinePreferences.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -234,6 +242,33 @@ class PreferencesRepository @Inject constructor(
             } ?: remove(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM)
         }
         _bodyEnergyCalibration.value = normalized
+    }
+
+    fun caffeinePreferences(): CaffeinePreferences = _caffeinePreferences.value
+
+    fun setCaffeinePreferences(preferences: CaffeinePreferences) {
+        val normalized = preferences.normalized()
+        prefs.edit {
+            putBoolean(KEY_CAFFEINE_PROFILE_COMPLETED, normalized.profileCompleted)
+            putInt(KEY_CAFFEINE_HALF_LIFE_MINUTES, normalized.halfLifeMinutes)
+            putInt(KEY_CAFFEINE_ABSORPTION_MINUTES, normalized.absorptionMinutes)
+            putInt(KEY_CAFFEINE_SLEEP_THRESHOLD_MG, normalized.sleepThresholdMg)
+            putString(KEY_CAFFEINE_BEDTIME, normalized.bedtime.toString())
+            normalized.ageYears?.let { putInt(KEY_CAFFEINE_AGE_YEARS, it) }
+                ?: remove(KEY_CAFFEINE_AGE_YEARS)
+            normalized.weightKg?.let { putFloat(KEY_CAFFEINE_WEIGHT_KG, it.toFloat()) }
+                ?: remove(KEY_CAFFEINE_WEIGHT_KG)
+            putString(KEY_CAFFEINE_SLEEP_SENSITIVITY, normalized.sleepSensitivity.name)
+            putBoolean(KEY_CAFFEINE_SMOKER, normalized.smoker)
+            putString(KEY_CAFFEINE_ALCOHOL_USE, normalized.alcoholUse.name)
+            putString(KEY_CAFFEINE_HABITUATION, normalized.caffeineHabituation.name)
+            putBoolean(KEY_CAFFEINE_LIVER_IMPAIRMENT, normalized.liverImpairment)
+            putBoolean(KEY_CAFFEINE_MEDICATION_INTERACTION, normalized.medicationInteraction)
+            putString(KEY_CAFFEINE_CYP1A2_GENOTYPE, normalized.cyp1a2Genotype.name)
+            putString(KEY_CAFFEINE_AHR_GENOTYPE, normalized.ahrGenotype.name)
+            putString(KEY_CAFFEINE_HORMONAL_STATUS, normalized.hormonalStatus.name)
+        }
+        _caffeinePreferences.value = normalized
     }
 
     fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
@@ -487,6 +522,13 @@ class PreferencesRepository @Inject constructor(
         persistCustomHydrationDrinks(orderedDrinks + current.filterNot { it.id in orderedIdSet })
     }
 
+    fun hasMigratedHydrationBeveragesToRoom(): Boolean =
+        prefs.getBoolean(KEY_HYDRATION_BEVERAGES_ROOM_MIGRATED, false)
+
+    fun setMigratedHydrationBeveragesToRoom() {
+        prefs.edit { putBoolean(KEY_HYDRATION_BEVERAGES_ROOM_MIGRATED, true) }
+    }
+
     fun mindfulnessReminderConfig(): MindfulnessReminderConfig =
         MindfulnessReminderConfig(
             enabled = prefs.getBoolean(KEY_MINDFULNESS_REMINDERS_ENABLED, false),
@@ -649,6 +691,45 @@ class PreferencesRepository @Inject constructor(
             useManualZones = prefs.getBoolean(KEY_BODY_ENERGY_USE_MANUAL_ZONES, false),
         ).normalized()
 
+    private fun readCaffeinePreferences(): CaffeinePreferences =
+        CaffeinePreferences(
+            profileCompleted = prefs.getBoolean(KEY_CAFFEINE_PROFILE_COMPLETED, false),
+            halfLifeMinutes = prefs.getInt(
+                KEY_CAFFEINE_HALF_LIFE_MINUTES,
+                CaffeinePreferences.DefaultHalfLifeMinutes,
+            ),
+            absorptionMinutes = prefs.getInt(
+                KEY_CAFFEINE_ABSORPTION_MINUTES,
+                CaffeinePreferences.DefaultAbsorptionMinutes,
+            ),
+            sleepThresholdMg = prefs.getInt(
+                KEY_CAFFEINE_SLEEP_THRESHOLD_MG,
+                CaffeinePreferences.DefaultSleepThresholdMg,
+            ),
+            bedtime = prefs.getString(KEY_CAFFEINE_BEDTIME, null)
+                .toReminderTimeOrDefault(CaffeinePreferences.DefaultBedtime),
+            ageYears = prefs.getInt(KEY_CAFFEINE_AGE_YEARS, MISSING_CAFFEINE_INT)
+                .takeIf { it != MISSING_CAFFEINE_INT },
+            weightKg = prefs.getFloat(KEY_CAFFEINE_WEIGHT_KG, MISSING_CAFFEINE_FLOAT)
+                .takeIf { it != MISSING_CAFFEINE_FLOAT }
+                ?.toDouble(),
+            sleepSensitivity = prefs.getString(KEY_CAFFEINE_SLEEP_SENSITIVITY, null)
+                .toEnumOrDefault(CaffeineSleepSensitivity.NORMAL),
+            smoker = prefs.getBoolean(KEY_CAFFEINE_SMOKER, false),
+            alcoholUse = prefs.getString(KEY_CAFFEINE_ALCOHOL_USE, null)
+                .toEnumOrDefault(CaffeineAlcoholUse.NONE),
+            caffeineHabituation = prefs.getString(KEY_CAFFEINE_HABITUATION, null)
+                .toEnumOrDefault(CaffeineHabituation.MODERATE),
+            liverImpairment = prefs.getBoolean(KEY_CAFFEINE_LIVER_IMPAIRMENT, false),
+            medicationInteraction = prefs.getBoolean(KEY_CAFFEINE_MEDICATION_INTERACTION, false),
+            cyp1a2Genotype = prefs.getString(KEY_CAFFEINE_CYP1A2_GENOTYPE, null)
+                .toEnumOrDefault(CaffeineGenotype.UNKNOWN),
+            ahrGenotype = prefs.getString(KEY_CAFFEINE_AHR_GENOTYPE, null)
+                .toEnumOrDefault(CaffeineGenotype.UNKNOWN),
+            hormonalStatus = prefs.getString(KEY_CAFFEINE_HORMONAL_STATUS, null)
+                .toEnumOrDefault(CaffeineHormonalStatus.NONE),
+        ).normalized()
+
     private fun defaultUnitSystem(): UnitSystem {
         val country = Locale.getDefault().country.uppercase(Locale.US)
         return if (country in IMPERIAL_COUNTRIES) UnitSystem.IMPERIAL else UnitSystem.METRIC
@@ -666,6 +747,9 @@ class PreferencesRepository @Inject constructor(
 
     private fun String?.toReminderTimeOrDefault(default: LocalTime): LocalTime =
         this?.let { value -> runCatching { LocalTime.parse(value) }.getOrNull() } ?: default
+
+    private inline fun <reified T : Enum<T>> String?.toEnumOrDefault(default: T): T =
+        this?.let { value -> runCatching { enumValueOf<T>(value) }.getOrNull() } ?: default
 
     private fun CustomHydrationDrink.normalizedCustomHydrationDrink(): CustomHydrationDrink? {
         val normalizedName = name.trim()
@@ -839,6 +923,7 @@ class PreferencesRepository @Inject constructor(
             "last_custom_hydration_amount_milliliters"
         private const val KEY_CUSTOM_HYDRATION_DRINKS = "custom_hydration_drinks"
         private const val KEY_CUSTOM_HYDRATION_DRINK_ORDER = "custom_hydration_drink_order"
+        private const val KEY_HYDRATION_BEVERAGES_ROOM_MIGRATED = "hydration_beverages_room_migrated"
         private const val KEY_HYDRATION_REMINDERS_ENABLED = "hydration_reminders_enabled"
         private const val KEY_HYDRATION_REMINDER_INTERVAL_MINUTES = "hydration_reminder_interval_minutes"
         private const val KEY_HYDRATION_REMINDER_ACTIVE_START_TIME = "hydration_reminder_active_start_time"
@@ -850,6 +935,22 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_BODY_ENERGY_RESTING_HR_BPM = "body_energy_resting_hr_bpm"
         private const val KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM = "body_energy_zone_thresholds_bpm"
         private const val KEY_BODY_ENERGY_USE_MANUAL_ZONES = "body_energy_use_manual_zones"
+        private const val KEY_CAFFEINE_PROFILE_COMPLETED = "caffeine_profile_completed"
+        private const val KEY_CAFFEINE_HALF_LIFE_MINUTES = "caffeine_half_life_minutes"
+        private const val KEY_CAFFEINE_ABSORPTION_MINUTES = "caffeine_absorption_minutes"
+        private const val KEY_CAFFEINE_SLEEP_THRESHOLD_MG = "caffeine_sleep_threshold_mg"
+        private const val KEY_CAFFEINE_BEDTIME = "caffeine_bedtime"
+        private const val KEY_CAFFEINE_AGE_YEARS = "caffeine_age_years"
+        private const val KEY_CAFFEINE_WEIGHT_KG = "caffeine_weight_kg"
+        private const val KEY_CAFFEINE_SLEEP_SENSITIVITY = "caffeine_sleep_sensitivity"
+        private const val KEY_CAFFEINE_SMOKER = "caffeine_smoker"
+        private const val KEY_CAFFEINE_ALCOHOL_USE = "caffeine_alcohol_use"
+        private const val KEY_CAFFEINE_HABITUATION = "caffeine_habituation"
+        private const val KEY_CAFFEINE_LIVER_IMPAIRMENT = "caffeine_liver_impairment"
+        private const val KEY_CAFFEINE_MEDICATION_INTERACTION = "caffeine_medication_interaction"
+        private const val KEY_CAFFEINE_CYP1A2_GENOTYPE = "caffeine_cyp1a2_genotype"
+        private const val KEY_CAFFEINE_AHR_GENOTYPE = "caffeine_ahr_genotype"
+        private const val KEY_CAFFEINE_HORMONAL_STATUS = "caffeine_hormonal_status"
         private const val KEY_MINDFULNESS_TIMER_DURATION_MINUTES = "mindfulness_timer_duration_minutes"
         private const val KEY_MINDFULNESS_TIMER_INTERVAL_MINUTES = "mindfulness_timer_interval_minutes"
         private const val KEY_MINDFULNESS_TIMER_BELL_SOUND = "mindfulness_timer_bell_sound"
@@ -875,6 +976,8 @@ class PreferencesRepository @Inject constructor(
         private const val MISSING_EXERCISE_TYPE = Int.MIN_VALUE
         private const val MISSING_HYDRATION_AMOUNT_MILLILITERS = -1.0f
         private const val MISSING_BODY_ENERGY_INT = Int.MIN_VALUE
+        private const val MISSING_CAFFEINE_INT = Int.MIN_VALUE
+        private const val MISSING_CAFFEINE_FLOAT = -1.0f
         private const val MAX_CUSTOM_HYDRATION_DRINKS = 25
         private const val ROUTE_GAP_OFF = 0
         private const val RECORDING_INTERVAL_OFF = 0

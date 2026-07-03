@@ -217,19 +217,49 @@ class HydrationViewModelTest {
             id = "no-client-id-paired",
             clientRecordId = null,
         )
+        val externalCaffeineEntry = caffeineEntry.copy(
+            time = start.plusSeconds(180),
+            name = "Red Bull",
+            source = "other.source",
+            id = "external-caffeine",
+            clientRecordId = null,
+            isOpenVitalsEntry = false,
+        )
+        val externalFoodEntry = caffeineEntry.copy(
+            time = start.plusSeconds(240),
+            name = "Sandwich",
+            source = "other.source",
+            nutrientValues = mapOf(NutritionNutrient.SUGAR to 8.0),
+            id = "external-food",
+            clientRecordId = null,
+            isOpenVitalsEntry = false,
+        )
         val repo = emptyRepo()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns listOf(hydrationEntry)
         val nutritionRepo = emptyNutritionRepo(
-            listOf(caffeineEntry, carbsEntry, pairedEntry, noClientIdStandaloneEntry, noClientIdPairedEntry)
+            listOf(
+                caffeineEntry,
+                carbsEntry,
+                pairedEntry,
+                noClientIdStandaloneEntry,
+                noClientIdPairedEntry,
+                externalCaffeineEntry,
+                externalFoodEntry,
+            )
         )
 
         val vm = hydrationViewModel(repo, nutritionRepository = nutritionRepo, initialRange = TimeRange.DAY)
 
         val entries = vm.uiState.value.hydrationEntries
-        assertEquals(listOf("hydration-id", "nutrition-id", "no-client-id-standalone"), entries.map { it.id })
+        assertEquals(
+            listOf("hydration-id", "nutrition-id", "no-client-id-standalone", "external-caffeine"),
+            entries.map { it.id },
+        )
         assertEquals(HydrationEntryRecordType.NUTRITION_ONLY, entries[1].recordType)
         assertEquals("Coffee", entries[1].displayName)
         assertEquals("Espresso", entries[2].displayName)
+        assertEquals("Red Bull", entries[3].displayName)
+        assertEquals(false, entries[3].isOpenVitalsEntry)
         assertEquals(0.0, entries[1].liters, 0.01)
     }
 

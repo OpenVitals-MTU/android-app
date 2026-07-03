@@ -139,6 +139,17 @@ internal fun LazyListScope.settingsScreenContent(
                 )
             }
         }
+        SettingsSection.CAFFEINE -> {
+            item { SectionHeader(stringResource(section.titleRes)) }
+            item {
+                CaffeinePreferencesCard(
+                    preferences = state.caffeinePreferences,
+                    unitSystem = state.unitSystem,
+                    onSave = viewModel::updateCaffeinePreferences,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
         SettingsSection.SLEEP -> {
             item { SectionHeader(stringResource(section.titleRes)) }
             item {

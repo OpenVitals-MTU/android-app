@@ -169,6 +169,7 @@ private fun contextualPermissionCopy(feature: HealthConnectFeature): Pair<Int, I
     HealthConnectFeature.HEART_VITALS -> R.string.health_connect_promote_vitals_title to R.string.health_connect_promote_vitals_body
     HealthConnectFeature.BODY -> R.string.health_connect_promote_body_title to R.string.health_connect_promote_body_body
     HealthConnectFeature.HYDRATION -> R.string.health_connect_promote_hydration_title to R.string.health_connect_promote_hydration_body
+    HealthConnectFeature.CAFFEINE -> R.string.health_connect_promote_nutrition_title to R.string.health_connect_promote_nutrition_body
     HealthConnectFeature.NUTRITION -> R.string.health_connect_promote_nutrition_title to R.string.health_connect_promote_nutrition_body
     HealthConnectFeature.MINDFULNESS -> R.string.health_connect_promote_mindfulness_title to R.string.health_connect_promote_mindfulness_body
     HealthConnectFeature.CYCLE -> R.string.health_connect_promote_cycle_title to R.string.health_connect_promote_cycle_body

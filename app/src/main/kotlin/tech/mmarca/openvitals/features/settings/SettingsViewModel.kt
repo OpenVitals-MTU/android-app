@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -71,6 +72,7 @@ data class SettingsUiState(
     val healthConnectSyncEnabled: Boolean = true,
     val appLockEnabled: Boolean = false,
     val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
+    val caffeinePreferences: CaffeinePreferences = CaffeinePreferences(),
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet()
@@ -147,6 +149,7 @@ class SettingsViewModel @Inject constructor(
                 healthConnectSyncEnabled = preferencesRepository.healthConnectSyncEnabled,
                 appLockEnabled = preferencesRepository.appLockEnabled,
                 bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
+                caffeinePreferences = preferencesRepository.caffeinePreferences(),
             )
         }
     }
@@ -414,6 +417,11 @@ class SettingsViewModel @Inject constructor(
     fun updateBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
         preferencesRepository.setBodyEnergyCalibration(calibration)
         _uiState.value = _uiState.value.copy(bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration())
+    }
+
+    fun updateCaffeinePreferences(preferences: CaffeinePreferences) {
+        preferencesRepository.setCaffeinePreferences(preferences)
+        _uiState.value = _uiState.value.copy(caffeinePreferences = preferencesRepository.caffeinePreferences())
     }
 
     fun resetBodyEnergyCalibration() {

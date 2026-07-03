@@ -80,6 +80,7 @@ sealed class Screen(val route: String) {
     data object SettingsActivities : Screen("settings/activities")
     data object SettingsSensors : Screen("settings/sensors")
     data object SettingsCalories : Screen("settings/calories")
+    data object SettingsCaffeine : Screen("settings/caffeine")
     data object SettingsSleep : Screen("settings/sleep")
     data object SettingsBodyEnergy : Screen("settings/body_energy")
     data object SettingsCycle : Screen("settings/cycle")
