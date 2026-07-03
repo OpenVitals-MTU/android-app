@@ -14,6 +14,7 @@ OpenVitals is a local-first Android app for Health Connect data, activity loggin
 - [Activity and training plans](activity-training-plans.md): view planned workouts from Health Connect and use activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [GPX/KML/KMZ/FIT import](route-file-import.md): import route and activity files for review before saving route-backed activities.
 - [Daily readiness](daily-readiness.md): calculate a local readiness view with Body Energy, Training Readiness, HRV status, stress context, and adaptive guidance.
+- [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md): map the imported caffeine beverage presets to nutrition families, common serving values, and source links for default entry data.
 - [Achievements](achievements.md): track local badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness.
 - [Reminders](reminders.md): configure local hydration and mindfulness reminders with Android notification handling.
 - [Statistics](statistics.md): use day/week/month/year ranges, comparisons, baselines, confidence, and trends across metric detail screens.
