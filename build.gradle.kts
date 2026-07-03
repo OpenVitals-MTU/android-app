@@ -48,6 +48,14 @@ tasks.register("verifyLocalApp") {
     description = "Runs CI verification without connected-device instrumentation tests."
     dependsOn(
         ":app:testDebugUnitTest",
+        "verifyLocalAppPreflight",
+    )
+}
+
+tasks.register("verifyLocalAppPreflight") {
+    group = "verification"
+    description = "Runs Android app build and lint checks without unit or connected-device tests."
+    dependsOn(
         ":app:lintDebug",
         ":app:assembleDebug",
         ":app:compileDebugAndroidTestKotlin",
@@ -58,14 +66,22 @@ tasks.register("verifyLocalReleaseChecks") {
     group = "verification"
     description = "Runs release preflight checks without connected-device instrumentation tests."
     dependsOn(
-        ":app:assembleDebug",
         ":app:testDebugUnitTest",
+        "verifyLocalReleasePreflight",
+    )
+}
+
+tasks.register("verifyLocalReleasePreflight") {
+    group = "verification"
+    description = "Runs release app build and lint checks without unit or connected-device tests."
+    dependsOn(
+        ":app:assembleDebug",
         ":app:lintDebug",
     )
 }
 
 project(":app").tasks.configureEach {
-    if (name == "testDebugUnitTest" || name == "lintDebug") {
+    if (name == "lintDebug") {
         mustRunAfter("assembleDebug")
     }
 }

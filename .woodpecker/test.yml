@@ -3,19 +3,37 @@ when:
   - event: push
     branch: main
 
+variables:
+  - &android_image ghcr.io/cirruslabs/android-sdk:tools
+  - &android_environment
+    GRADLE_USER_HOME: /woodpecker/cache/gradle
+  - &android_volumes
+    - openvitals-gradle-cache:/woodpecker/cache/gradle
+    - openvitals-android-platforms:/opt/android-sdk-linux/platforms
+    - openvitals-android-build-tools:/opt/android-sdk-linux/build-tools
+
 steps:
-  - name: test
-    image: ghcr.io/cirruslabs/android-sdk:tools
+  - name: unit-tests
+    image: *android_image
+    environment: *android_environment
+    volumes: *android_volumes
     commands:
       - set -eu
-      - sdk_root="$${ANDROID_HOME:-$${ANDROID_SDK_ROOT:-}}"
-      - test -n "$${sdk_root}"
-      - yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
-      - test -d "$${sdk_root}/platforms/android-37.0"
-      - test -d "$${sdk_root}/build-tools/37.0.0"
-      - printf 'sdk.dir=%s\n' "$${sdk_root}" > local.properties
-      - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh
-      - scripts/ci-gradle.sh verifyLocalApp
+      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
+      - scripts/ci-android-setup.sh
+      - scripts/ci-gradle.sh :app:testDebugUnitTest
+
+  - name: app-preflight
+    depends_on:
+      - unit-tests
+    image: *android_image
+    environment: *android_environment
+    volumes: *android_volumes
+    commands:
+      - set -eu
+      - test -f gradle/wrapper/gradle-wrapper.jar
+      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
+      - scripts/ci-android-setup.sh
+      - scripts/ci-gradle.sh verifyLocalAppPreflight
       - git diff --check

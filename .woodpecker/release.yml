@@ -9,215 +9,74 @@ when:
   - event: deployment
     evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
 
+variables:
+  - &alpine_image alpine:3.20
+  - &android_image ghcr.io/cirruslabs/android-sdk:tools
+  - &ruby_image ruby:3.3
+  - &android_environment
+    GRADLE_USER_HOME: /woodpecker/cache/gradle
+  - &android_volumes
+    - openvitals-gradle-cache:/woodpecker/cache/gradle
+    - openvitals-android-platforms:/opt/android-sdk-linux/platforms
+    - openvitals-android-build-tools:/opt/android-sdk-linux/build-tools
+  - &fastlane_environment
+    FASTLANE_DISABLE_COLORS: "1"
+    FASTLANE_OPT_OUT_USAGE: "1"
+    FASTLANE_SKIP_UPDATE_CHECK: "1"
+
 steps:
   - name: resolve-release-context
-    image: alpine:3.20
+    image: *alpine_image
     commands:
       - set -eu
       - apk add --no-cache curl git python3
-      - git fetch --tags --force origin
-      - mkdir -p .woodpecker/tmp
-      - apk_abi_filters="armeabi-v7a,arm64-v8a"
-      - |
-        release_tag="$${CI_COMMIT_TAG:-}"
-        if [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; then
-          release_tag="nightly"
-        elif [ -z "$${release_tag}" ]; then
-          case "$${CI_COMMIT_REF:-}" in
-            refs/tags/*) release_tag="$${CI_COMMIT_REF#refs/tags/}" ;;
-            *)
-              if [ "$${CI_PIPELINE_EVENT}" = "deployment" ]; then
-                release_tag="$$(git tag --points-at "$${CI_COMMIT_SHA}" | grep -E '^[vV][0-9]+\.[0-9]+\.[0-9]+$$' | tail -n 1 || true)"
-              fi
-              ;;
-          esac
-        fi
+      - chmod +x scripts/ci-release-context.sh scripts/version-code.sh
+      - scripts/ci-release-context.sh
 
-        gradle_task=":app:assembleRelease"
-        bundle_task=""
-        apk_variant_dir="release"
-        aab_variant_dir=""
-        aab_basename=""
-        build_aab="false"
-        build_debug_apk="false"
-        play_track=""
-        version_code=""
-        version_name_override=""
-        debug_apk_basename=""
-        configured_version_code="$$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
-        if [ -z "$${configured_version_code}" ]; then
-          echo "Could not read baseVersionCode from app/build.gradle.kts." >&2
-          exit 1
-        fi
-        version_name="$$(sed -n 's/.*baseVersionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
-        if ! printf '%s\n' "$${version_name}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-          echo "Release builds require a numeric baseVersionName, found $${version_name}." >&2
-          exit 1
-        fi
-
-        if [ "$${release_tag}" = "nightly" ]; then
-          release_channel="nightly"
-          gradle_task=":app:assembleNightly"
-          apk_variant_dir="nightly"
-          apk_basename="OpenVitals-nightly.apk"
-          bundle_task=":app:bundleNightly"
-          aab_variant_dir="nightly"
-          aab_basename="OpenVitals-nightly.aab"
-          release_title="OpenVitals Nightly"
-          prerelease="true"
-          build_aab="true"
-          build_debug_apk="true"
-          play_track="beta"
-          debug_apk_basename="OpenVitals-nightly-debug.apk"
-          pipeline_number="$${CI_PIPELINE_NUMBER:-1}"
-          if ! printf '%s\n' "$${pipeline_number}" | grep -Eq '^[0-9][0-9]*$$'; then
-            echo "CI_PIPELINE_NUMBER must be numeric for nightly versionName generation, found $${pipeline_number}." >&2
-            exit 1
-          fi
-          version_code="$$(sh scripts/version-code.sh next --floor "$${configured_version_code}")"
-          version_name_override="$${version_name}-nightly.$${pipeline_number}"
-        else
-          release_channel="release"
-          apk_basename="OpenVitals-$${release_tag}.apk"
-          release_title="OpenVitals $${release_tag}"
-          prerelease="true"
-
-          if [ -z "$${release_tag}" ]; then
-            echo "Release tag is required." >&2
-            exit 1
-          fi
-
-          if ! printf '%s\n' "$${release_tag}" | grep -Eq '^[vV][0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Release tags must use vX.Y.Z semantic version format, for example v1.8.0 or V1.8.0." >&2
-            exit 1
-          fi
-
-          if [ "$${version_name}" != "$${release_tag#[vV]}" ]; then
-            echo "Release tag $${release_tag} does not match app versionName $${version_name}." >&2
-            exit 1
-          fi
-
-          if [ "$${CI_PIPELINE_EVENT}" = "deployment" ]; then
-            prerelease="false"
-            bundle_task=":app:bundleRelease"
-            aab_variant_dir="release"
-            aab_basename="OpenVitals-$${release_tag}.aab"
-            build_aab="true"
-            play_track="production"
-            version_code="$$(sh scripts/version-code.sh for-tag "$${release_tag}" --floor "$${configured_version_code}")"
-          else
-            build_debug_apk="true"
-            debug_apk_basename="OpenVitals-$${release_tag}-debug.apk"
-            previous_configured_version_code="$$(($${configured_version_code} - 1))"
-            expected_version_code="$$(sh scripts/version-code.sh next --floor "$${previous_configured_version_code}")"
-            if [ "$${expected_version_code}" != "$${configured_version_code}" ]; then
-              echo "baseVersionCode $${configured_version_code} is stale; next expected versionCode is $${expected_version_code}." >&2
-              exit 1
-            fi
-            version_code="$${configured_version_code}"
-          fi
-        fi
-      - printf '%s\n' "$${release_title}" > .woodpecker/tmp/release-title.txt
-      - |
-        notes_file=".woodpecker/tmp/release-notes.md"
-        if [ "$${release_channel}" = "release" ]; then
-          : > "$${notes_file}"
-          if git rev-parse -q --verify "refs/tags/$${release_tag}" >/dev/null; then
-            tag_object_type="$$(git cat-file -t "$${release_tag}")"
-            if [ "$${tag_object_type}" = "tag" ]; then
-              git for-each-ref "refs/tags/$${release_tag}" --format='%(contents)' > "$${notes_file}"
-            fi
-          fi
-          if [ ! -s "$${notes_file}" ]; then
-            printf '%s\n' \
-              "$${release_title}" \
-              "" \
-              "Versioned prerelease build from commit $${CI_COMMIT_SHA}." \
-              "" \
-              "Assets:" \
-              "- Signed release APK ($${apk_abi_filters})" \
-              > "$${notes_file}"
-            if [ "$${build_debug_apk}" = "true" ]; then
-              printf '%s\n' "- Signed Debug APK ($${apk_abi_filters})" >> "$${notes_file}"
-              printf '%s\n' "- SHA-256 checksums" >> "$${notes_file}"
-            else
-              printf '%s\n' "- SHA-256 checksum" >> "$${notes_file}"
-            fi
-          fi
-        else
-          printf '%s\n' \
-            "$${release_title}" \
-            "" \
-            "Mutable $${release_channel} build from commit $${CI_COMMIT_SHA}." \
-            "" \
-            "This release keeps a stable download page. The APK and checksum assets are replaced by the next $${release_channel} build." \
-            "" \
-            "Assets:" \
-            "- Signed $${release_channel} APK ($${apk_abi_filters})" \
-            > "$${notes_file}"
-          if [ "$${build_debug_apk}" = "true" ]; then
-            printf '%s\n' "- Signed Debug APK ($${apk_abi_filters})" >> "$${notes_file}"
-            printf '%s\n' "- SHA-256 checksums" >> "$${notes_file}"
-          else
-            printf '%s\n' "- SHA-256 checksum" >> "$${notes_file}"
-          fi
-        fi
-        if [ -n "$${version_code}" ]; then
-          {
-            printf '\n'
-            sh scripts/version-code.sh marker "$${version_code}"
-          } >> "$${notes_file}"
-        fi
-      - |
-        {
-          printf 'OPENVITALS_RELEASE_CHANNEL=%s\n' "$${release_channel}"
-          printf 'OPENVITALS_RELEASE_TAG=%s\n' "$${release_tag}"
-          printf 'OPENVITALS_GRADLE_TASK=%s\n' "$${gradle_task}"
-          printf 'OPENVITALS_BUNDLE_TASK=%s\n' "$${bundle_task}"
-          printf 'OPENVITALS_APK_VARIANT_DIR=%s\n' "$${apk_variant_dir}"
-          printf 'OPENVITALS_APK_BASENAME=%s\n' "$${apk_basename}"
-          printf 'OPENVITALS_AAB_VARIANT_DIR=%s\n' "$${aab_variant_dir}"
-          printf 'OPENVITALS_AAB_BASENAME=%s\n' "$${aab_basename}"
-          printf 'OPENVITALS_APK_ABI_FILTERS=%s\n' "$${apk_abi_filters}"
-          printf 'OPENVITALS_RELEASE_PRERELEASE=%s\n' "$${prerelease}"
-          printf 'OPENVITALS_RELEASE_TARGET=%s\n' "$${CI_COMMIT_SHA}"
-          printf 'OPENVITALS_BUILD_AAB=%s\n' "$${build_aab}"
-          printf 'OPENVITALS_BUILD_DEBUG_APK=%s\n' "$${build_debug_apk}"
-          printf 'OPENVITALS_PLAY_TRACK=%s\n' "$${play_track}"
-          printf 'OPENVITALS_VERSION_CODE=%s\n' "$${version_code}"
-          printf 'OPENVITALS_VERSION_NAME=%s\n' "$${version_name_override}"
-          printf 'OPENVITALS_DEBUG_APK_BASENAME=%s\n' "$${debug_apk_basename}"
-        } > .woodpecker/tmp/release-context.env
-
-  - name: test
+  - name: unit-tests
     depends_on:
       - resolve-release-context
-    image: ghcr.io/cirruslabs/android-sdk:tools
+    image: *android_image
+    environment: *android_environment
+    volumes: *android_volumes
     commands:
       - set -eu
       - |
         if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
-          echo "Skipping prerelease test suite for production deployment."
+          echo "Skipping prerelease unit tests for production deployment."
+          exit 0
+        fi
+      - test -f gradle/wrapper/gradle-wrapper.jar
+      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
+      - scripts/ci-android-setup.sh
+      - scripts/ci-gradle.sh :app:testDebugUnitTest
+
+  - name: release-preflight
+    depends_on:
+      - unit-tests
+    image: *android_image
+    environment: *android_environment
+    volumes: *android_volumes
+    commands:
+      - set -eu
+      - |
+        if [ "$${CI_PIPELINE_EVENT}" = "deployment" ] && [ "$${CI_PIPELINE_DEPLOY_TARGET:-}" = "production" ]; then
+          echo "Skipping prerelease app preflight for production deployment."
           git diff --check
           exit 0
         fi
-      - sdk_root="$${ANDROID_HOME:-$${ANDROID_SDK_ROOT:-}}"
-      - test -n "$${sdk_root}"
-      - yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
-      - test -d "$${sdk_root}/platforms/android-37.0"
-      - test -d "$${sdk_root}/build-tools/37.0.0"
-      - printf 'sdk.dir=%s\n' "$${sdk_root}" > local.properties
-      - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh
-      - scripts/ci-gradle.sh verifyLocalReleaseChecks
+      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
+      - scripts/ci-android-setup.sh
+      - scripts/ci-gradle.sh verifyLocalReleasePreflight
       - git diff --check
 
   - name: build-apk
     depends_on:
-      - test
-    image: ghcr.io/cirruslabs/android-sdk:tools
+      - release-preflight
+    image: *android_image
     environment:
+      <<: *android_environment
       OPENVITALS_RELEASE_KEYSTORE_BASE64:
         from_secret: OPENVITALS_RELEASE_KEYSTORE_BASE64
       OPENVITALS_RELEASE_STORE_PASSWORD:
@@ -228,15 +87,13 @@ steps:
         from_secret: OPENVITALS_RELEASE_KEY_PASSWORD
       CODEBERG_RELEASE_API_KEY:
         from_secret: CODEBERG_RELEASE_API_KEY
+    volumes: *android_volumes
     commands:
       - set -eu
       - . .woodpecker/tmp/release-context.env
-      - sdk_root="$${ANDROID_HOME:-$${ANDROID_SDK_ROOT:-}}"
-      - test -n "$${sdk_root}"
-      - yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
-      - test -d "$${sdk_root}/platforms/android-37.0"
-      - test -d "$${sdk_root}/build-tools/37.0.0"
-      - printf 'sdk.dir=%s\n' "$${sdk_root}" > local.properties
+      - test -f gradle/wrapper/gradle-wrapper.jar
+      - chmod +x gradlew scripts/ci-gradle.sh scripts/ci-android-setup.sh
+      - scripts/ci-android-setup.sh
       - test -n "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}"
       - test -n "$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - test -n "$${OPENVITALS_RELEASE_KEY_ALIAS}"
@@ -245,14 +102,11 @@ steps:
       - export OPENVITALS_RELEASE_STORE_FILE="$${keystore_path}"
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
-      - export GRADLE_USER_HOME="$${CI_WORKSPACE}/.gradle-ci"
       - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
       - export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
       - if [ -n "$${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
       - if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
       - test -n "$${OPENVITALS_APK_ABI_FILTERS}"
-      - test -f gradle/wrapper/gradle-wrapper.jar
-      - chmod +x gradlew scripts/ci-gradle.sh
       - |
         set -- "$${OPENVITALS_GRADLE_TASK}"
         if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
@@ -283,69 +137,17 @@ steps:
       - |
         if { [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; } && [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
           test -n "$${CODEBERG_RELEASE_API_KEY}"
-          if ! command -v python3 >/dev/null 2>&1; then
-            if command -v apk >/dev/null 2>&1; then
-              apk add --no-cache python3
-            elif command -v apt-get >/dev/null 2>&1; then
-              apt-get update
-              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3
-            else
-              echo "Could not install python3 in this image." >&2
-              exit 1
-            fi
-          fi
           nightly_pipeline_number="$${CI_PIPELINE_NUMBER:-1}"
           api_base="$${CI_FORGE_URL%/}/api/v1/repos/$${CI_REPO}"
-          python3 - "$${api_base}" "$${CODEBERG_RELEASE_API_KEY}" nightly "$${CI_COMMIT_SHA}" "$${nightly_pipeline_number}" <<'PY'
-        import json
-        import sys
-        import urllib.error
-        import urllib.request
-
-        api_base, token, tag_name, target, pipeline_number = sys.argv[1:]
-
-        def request(method, path, payload=None, ok=(200,)):
-            data = None if payload is None else json.dumps(payload).encode("utf-8")
-            url = api_base + path
-            request = urllib.request.Request(url, data=data, method=method)
-            request.add_header("Authorization", "token " + token)
-            if data is not None:
-                request.add_header("Content-Type", "application/json")
-            try:
-                with urllib.request.urlopen(request, timeout=30) as response:
-                    body = response.read()
-                    if response.status not in ok:
-                        raise SystemExit(f"{method} {url} failed: HTTP {response.status}")
-                    return body
-            except urllib.error.HTTPError as error:
-                body = error.read().decode("utf-8", "replace")
-                if error.code in ok:
-                    return body
-                raise SystemExit(f"{method} {url} failed: HTTP {error.code}: {body}") from error
-
-        request("DELETE", f"/tags/{tag_name}", ok=(204, 404))
-        request(
-            "POST",
-            "/tags",
-            {
-                "tag_name": tag_name,
-                "target": target,
-                "message": f"OpenVitals nightly {pipeline_number}",
-            },
-            ok=(201,),
-        )
-        print(f"Updated {tag_name} tag to {target}")
-        PY
+          scripts/update-codeberg-tag.py "$${api_base}" "$${CODEBERG_RELEASE_API_KEY}" nightly "$${CI_COMMIT_SHA}" "OpenVitals nightly $${nightly_pipeline_number}"
         fi
 
   - name: publish-play-open-testing
     depends_on:
       - build-apk
-    image: ruby:3.3
+    image: *ruby_image
     environment:
-      FASTLANE_DISABLE_COLORS: "1"
-      FASTLANE_OPT_OUT_USAGE: "1"
-      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      <<: *fastlane_environment
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
         from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
     commands:
@@ -372,11 +174,9 @@ steps:
   - name: publish-play-production
     depends_on:
       - build-apk
-    image: ruby:3.3
+    image: *ruby_image
     environment:
-      FASTLANE_DISABLE_COLORS: "1"
-      FASTLANE_OPT_OUT_USAGE: "1"
-      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      <<: *fastlane_environment
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64:
         from_secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64
     commands:
@@ -402,7 +202,7 @@ steps:
   - name: publish-codeberg-release
     depends_on:
       - build-apk
-    image: alpine:3.20
+    image: *alpine_image
     environment:
       CODEBERG_RELEASE_API_KEY:
         from_secret: CODEBERG_RELEASE_API_KEY
@@ -446,7 +246,7 @@ steps:
   - name: prune-codeberg-releases
     depends_on:
       - publish-codeberg-release
-    image: alpine:3.20
+    image: *alpine_image
     environment:
       CODEBERG_RELEASE_API_KEY:
         from_secret: CODEBERG_RELEASE_API_KEY
@@ -464,7 +264,7 @@ steps:
   - name: publish-codeberg-stable
     depends_on:
       - publish-play-production
-    image: alpine:3.20
+    image: *alpine_image
     environment:
       CODEBERG_RELEASE_API_KEY:
         from_secret: CODEBERG_RELEASE_API_KEY

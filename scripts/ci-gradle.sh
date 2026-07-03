@@ -82,5 +82,18 @@ fi
 export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
 
+if [ -z "${GRADLE_USER_HOME:-}" ]; then
+    if [ -d /woodpecker/cache/gradle ]; then
+        GRADLE_USER_HOME=/woodpecker/cache/gradle
+    elif [ -n "${CI_WORKSPACE:-}" ]; then
+        GRADLE_USER_HOME="$CI_WORKSPACE/.gradle-ci"
+    fi
+fi
+
+if [ -n "${GRADLE_USER_HOME:-}" ]; then
+    export GRADLE_USER_HOME
+    mkdir -p "$GRADLE_USER_HOME"
+fi
+
 "$JAVA_HOME/bin/java" -version
 exec ./gradlew --no-daemon "$@"
