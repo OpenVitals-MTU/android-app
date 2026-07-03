@@ -1,5 +1,11 @@
 # Statistics
 
+> **Status:** Current implemented shared behavior across metric detail screens.
+> **Audience:** Users and contributors.
+> **Implementation:** `core/period`, feature ViewModels, feature presentation mappers.
+> **Navigation:** metric detail screens opened from dashboard widgets.
+> **Related:** [Feature map](feature-map.md), [Health Connect metrics dashboard](health-connect-metrics-dashboard.md), [Metric detail customization](metric-detail-customization.md).
+
 Statistics help turn raw records into context across time.
 
 ## Period Ranges

@@ -1,5 +1,11 @@
 # Cycle Tracking
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/cycle`, `data/repository/CycleRepository.kt`.
+> **Navigation:** `Screen.Metric`, widget `CYCLE`, settings section `CYCLE`.
+> **Related:** [Feature map](feature-map.md), [Onboarding and permissions](onboarding-and-permissions.md), [Privacy](../app/privacy.md).
+
 Cycle tracking reads supported Health Connect cycle records and presents them in dashboard and period detail views when permissions are granted.
 
 ## Supported Data

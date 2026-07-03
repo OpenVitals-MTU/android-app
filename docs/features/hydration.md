@@ -1,5 +1,11 @@
 # Hydration
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/hydration`, `features/hydration/reminders`, `features/manualentry/hydration`, `data/repository/HydrationRepository.kt`.
+> **Navigation:** `Screen.Metric`, hydration entry routes, widget `HYDRATION`, `ManualEntryWidgetId.HYDRATION`.
+> **Related:** [Feature map](feature-map.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md), [Reminders](reminders.md).
+
 The hydration feature owns the period-based hydration detail screen and hydration reminder controls.
 
 ## What It Shows
@@ -36,4 +42,3 @@ Hydration reminders are local notification reminders. The feature stores reminde
 
 - [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md): drink logging, hydration multipliers, caffeine, and nutrition defaults.
 - [`reminders.md`](reminders.md): shared reminder behavior for hydration and mindfulness.
-

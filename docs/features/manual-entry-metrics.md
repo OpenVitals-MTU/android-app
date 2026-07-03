@@ -1,5 +1,11 @@
 # Manual Entry Of Metrics
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/manualentry` and child packages for activity, hydration, nutrition, body, vitals, and mindfulness.
+> **Navigation:** `Screen.ManualEntry` and manual entry routes; widgets in `ManualEntryWidgetId`.
+> **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md).
+
 Manual entry flows let the user write explicit records to Health Connect. OpenVitals does not keep a separate health database for these records.
 
 ## Weight

@@ -1,5 +1,11 @@
 # Apple Health Import
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/imports/applehealth`.
+> **Navigation:** `Screen.SettingsDataImport`, settings section `DATA_IMPORT`.
+> **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Permissions](../app/permissions.md).
+
 OpenVitals can import supported records from Apple Health exports and write them into Health Connect.
 
 ## Input Files

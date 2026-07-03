@@ -55,7 +55,7 @@ OpenVitals stores app preferences locally on your device, such as display unit s
 
 If hydration reminders are enabled, Android may restore the local reminder schedule after a device restart. OpenVitals uses the notification permission only for reminders and active recording notifications.
 
-Health Connect remains the source of truth for health data. OpenVitals reads from Health Connect, displays the data in the app, and writes only entries you explicitly log. The current app does not request the Android `INTERNET` permission.
+Health Connect remains the source of truth for health data. OpenVitals reads from Health Connect, displays the data in the app, and writes only entries you explicitly log. The shipping app manifest removes inherited Android network permissions, including `INTERNET`.
 
 ## Data Retention And Deletion
 
@@ -83,4 +83,4 @@ This privacy policy may be updated when OpenVitals changes how it accesses, uses
 
 For privacy questions, contact:
 
-TODO: manuel@mmarca.tech
+manuel@mmarca.tech

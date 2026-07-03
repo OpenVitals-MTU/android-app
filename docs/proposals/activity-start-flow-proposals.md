@@ -1,6 +1,8 @@
 # Activity Start Flow Simplification Proposals
 
-Status: planning proposal, not the current implemented flow.
+> **Status:** Proposal, not the current implemented flow.
+> **Current behavior source:** [Recording of activity](../features/activity-recording.md) and [Activity and training plans](../features/activity-training-plans.md).
+> **Implementation map:** [Feature map](../features/feature-map.md).
 
 This document explains the proposed improvements for making activity recording, manual activity logging, and planned-workout starts faster and easier to understand.
 

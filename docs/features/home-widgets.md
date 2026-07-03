@@ -1,5 +1,11 @@
 # Home Screen Widgets
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/homewidgets`.
+> **Navigation:** Android launcher widget configuration activities; dashboard widgets in `DashboardWidgetId`.
+> **Related:** [Feature map](feature-map.md), [Health Connect metrics dashboard](health-connect-metrics-dashboard.md), [Daily readiness](daily-readiness.md).
+
 OpenVitals provides Android home screen widgets for quick health summaries and fast beverage logging.
 
 ## Widget Types

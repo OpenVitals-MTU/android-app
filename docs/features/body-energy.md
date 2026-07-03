@@ -1,5 +1,11 @@
 # Body Energy
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/bodyenergy`, `features/readiness`.
+> **Navigation:** `Screen.BodyEnergyDetails`, widget `BODY_ENERGY`, settings section `BODY_ENERGY`.
+> **Related:** [Feature map](feature-map.md), [Daily readiness](daily-readiness.md), [Home screen widgets](home-widgets.md).
+
 Body Energy is a local derived view that estimates available energy across the day from supported wellness signals. It is intentionally a selected-day experience rather than a canonical `Day / Week / Month / Year` metric-detail screen.
 
 ## What It Shows

@@ -1,5 +1,11 @@
 # Privacy, Support, And Diagnostics
 
+> **Status:** Current implemented behavior and support policy.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/settings`, diagnostics-gated settings, local support docs.
+> **Navigation:** `Screen.SettingsDebugDiagnostics` in diagnostics builds, Settings support links.
+> **Related:** [Feature map](feature-map.md), [Privacy](../app/privacy.md), [Support](../app/support.md).
+
 OpenVitals is designed as a local-first Health Connect app.
 
 For the standalone privacy reference, see [Privacy](../app/privacy.md). For support-oriented questions, see [FAQ](../app/faq.md).

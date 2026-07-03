@@ -1,5 +1,11 @@
 # Onboarding And Permissions
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/onboarding`, `healthconnect`, `features/settings`.
+> **Navigation:** `Screen.Onboarding`, `Screen.SettingsPermissions`, `Screen.SettingsHealthConnect`.
+> **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Health Connect](../app/health-connect.md).
+
 Onboarding prepares OpenVitals for local Health Connect use without requiring an account or cloud sync.
 
 For the exact permission reference, see [Permissions](../app/permissions.md). For platform behavior, see [Health Connect](../app/health-connect.md).

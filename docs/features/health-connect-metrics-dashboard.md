@@ -1,5 +1,11 @@
 # Health Connect Metrics Dashboard
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/dashboard`, `data/repository/HealthRepository.kt`.
+> **Navigation:** `Screen.Dashboard`, `Screen.Metric`, dashboard widgets in `DashboardWidgetId`.
+> **Related:** [Feature map](feature-map.md), [Metric detail customization](metric-detail-customization.md), [Permissions](../app/permissions.md).
+
 OpenVitals treats Health Connect as the source of truth. The dashboard reads granted Health Connect records, groups them into scan-friendly widgets, and links each widget to a focused detail screen.
 
 ## What It Shows

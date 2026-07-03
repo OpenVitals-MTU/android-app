@@ -1,3 +1,7 @@
+# Reference: Health Connect UX
+
+> **Status:** External Health Connect design reference. This is background material, not OpenVitals implementation policy.
+
 Your app's user interface (UI) should focus on articulating the benefits of
 using Health Connect, and explain key concepts in a way that enhances user
 knowledge of what an integration entails.

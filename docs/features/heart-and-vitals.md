@@ -1,5 +1,11 @@
 # Heart And Vitals
 
+> **Status:** Current implemented behavior with a transitional shared loader.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/heart`, `features/vitals`, `features/manualentry/vitals`, `data/repository/HeartRepository.kt`, `data/repository/VitalsRepository.kt`.
+> **Navigation:** `Screen.HeartVitals`, `Screen.Metric`, vitals entry routes; heart and vitals dashboard widgets.
+> **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
+
 Heart and vitals are related but distinct feature areas.
 
 - `features/heart` owns heart-rate-oriented state, presentation mapping, and route wrappers for average heart rate, resting heart rate, and HRV.
@@ -47,4 +53,3 @@ The vitals overview groups related metrics into heart, cardiovascular, and respi
 ## Data Boundaries
 
 Heart-rate and vitals records are read through feature-facing repository/use-case APIs rather than a global browser. Manual vitals entry lives under `features/manualentry/vitals`; dashboard cards route to focused heart or vitals detail destinations.
-

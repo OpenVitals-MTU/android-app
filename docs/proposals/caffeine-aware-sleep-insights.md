@@ -1,6 +1,8 @@
 # Caffeine Detail And Future Sleep Insights
 
-Status: standalone caffeine feature implemented; direct sleep-detail integration planned.
+> **Status:** Mixed current/proposed note. The standalone caffeine feature is implemented; direct sleep-detail integration is planned.
+> **Current behavior source:** [Beverage logging and caffeine](../features/beverage-logging-and-caffeine.md), [Sleep score and recovery](../features/sleep-score-and-recovery.md).
+> **Implementation map:** [Feature map](../features/feature-map.md).
 
 OpenVitals currently treats caffeine as its own detail experience fed by caffeine nutrition records from beverage logging and other Health Connect sources. The caffeine screen helps users understand timing, active caffeine, intake distribution, limits, sensitivity settings, and bedtime guidance.
 
@@ -41,7 +43,7 @@ Relevant implemented pieces include:
 
 - [`CaffeineViewModel.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/caffeine/CaffeineViewModel.kt): loads caffeine entries, preferences, active-caffeine estimates, and analytics ranges.
 - [`CaffeineScreen.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/caffeine/CaffeineScreen.kt): renders setup, overview, caffeine curve, sleep-impact guidance, daily impact, distribution, and recent entries.
-- [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md): describes the beverage logging flow that can write caffeine nutrition values.
+- [`beverage-logging-and-caffeine.md`](../features/beverage-logging-and-caffeine.md): describes the beverage logging flow that can write caffeine nutrition values.
 
 ## Planned Work
 

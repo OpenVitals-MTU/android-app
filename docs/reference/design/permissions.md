@@ -1,3 +1,7 @@
+# Reference: Health Connect Permissions
+
+> **Status:** External Health Connect design reference. This is background material, not OpenVitals implementation policy.
+
 Your app's Settings screen should provide users with options to manage their
 connection to Health Connect. This gives users control over data
 synchronization and access to their data.

@@ -1,3 +1,7 @@
+# Reference: Data Display
+
+> **Status:** External Health Connect design reference. This is background material, not OpenVitals implementation policy.
+
 To assure users that their data is being read correctly, clearly show how your
 app obtains data, which comes from the
 [`packageName` property of the `DataOrigin` class](https://developer.android.com/reference/kotlin/androidx/health/connect/client/records/metadata/DataOrigin#packageName()).

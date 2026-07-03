@@ -1,5 +1,11 @@
 # Preloaded Beverage Nutrition Reference
 
+> **Status:** Current implemented reference data.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/manualentry/hydration`, `features/nutrition`.
+> **Navigation:** beverage logging from hydration entry routes.
+> **Related:** [Feature map](feature-map.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md), [Nutrition](nutrition.md).
+
 Research date: 2026-07-02
 
 This note covers the beverage presets imported from `CaffeineHealthDrinkCatalog`

@@ -1,5 +1,11 @@
 # Sleep Tracking
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/sleep`, `data/repository/SleepRepository.kt`.
+> **Navigation:** `Screen.Sleep`, `Screen.SleepDetail`, widget `SLEEP`.
+> **Related:** [Feature map](feature-map.md), [Sleep score and recovery](sleep-score-and-recovery.md), [Statistics](statistics.md).
+
 The sleep feature owns the main period-based sleep detail screen and individual sleep-session detail route.
 
 ## What It Shows
@@ -30,5 +36,4 @@ The sleep session detail route is separate from the period overview and focuses 
 ## Related Features
 
 - [`sleep-score-and-recovery.md`](sleep-score-and-recovery.md): sleep score, sleep efficiency, recovery details, and confidence.
-- [`caffeine-aware-sleep-insights.md`](caffeine-aware-sleep-insights.md): current standalone caffeine feature and planned direct sleep integration.
-
+- [`caffeine-aware-sleep-insights.md`](../proposals/caffeine-aware-sleep-insights.md): current standalone caffeine feature and planned direct sleep integration.

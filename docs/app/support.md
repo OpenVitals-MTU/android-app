@@ -15,12 +15,12 @@ Support and contributions help with:
 
 User-facing support questions should usually point to:
 
-- [FAQ](app/faq.md)
-- [Getting started](app/getting-started.md)
-- [Permissions](app/permissions.md)
-- [Health Connect](app/health-connect.md)
+- [FAQ](faq.md)
+- [Getting started](getting-started.md)
+- [Permissions](permissions.md)
+- [Health Connect](health-connect.md)
 
-Developer setup and verification notes belong in [Development](development.md).
+Developer setup and verification notes belong in [Development](../engineering/development.md).
 
 ## Privacy Boundary
 

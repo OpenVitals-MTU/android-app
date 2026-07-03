@@ -24,7 +24,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 ## Why OpenVitals
 
 - No account, no ads, no analytics SDKs, no cloud health-data sync
-- No app-level `INTERNET` permission in the current manifest
+- No app-level `INTERNET` permission in the merged app manifest
 - Health Connect remains the source of truth
 - Manual entries are written only after an explicit save action
 - Sensitive cycle data is requested only as an explicit Health Connect permission category
@@ -122,7 +122,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Health Connect remains the source of truth; OpenVitals does not store health records locally
 - Imported Apple Health export records are written to Health Connect and are not uploaded to an OpenVitals service
 
-The current manifest does not request the `INTERNET` permission.
+The merged app manifest does not request the `INTERNET` permission.
 
 ## Platform requirements
 
@@ -176,7 +176,7 @@ Get-CimInstance Win32_Process |
 Remove-Item -LiteralPath app/build -Recurse -Force
 ```
 
-More local development notes are in [`docs/development.md`](docs/development.md).
+More local development notes are in [`docs/engineering/development.md`](docs/engineering/development.md).
 
 After launching the app:
 
@@ -200,7 +200,7 @@ OpenVitals is intentionally simple today:
 - local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, caffeine preferences, data import status, timer/background-sound settings, hydration container sizes, and reminders
 - shared presentation formatters for units and date/time labels
 
-The current architecture is documented in more detail in [`docs/architecture.md`](docs/architecture.md).
+The current architecture is documented in more detail in [`docs/engineering/architecture.md`](docs/engineering/architecture.md).
 
 ## Project layout
 
@@ -211,13 +211,16 @@ The current architecture is documented in more detail in [`docs/architecture.md`
 - [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components
-- [`docs/`](docs): current architecture, development, and feature guides
+- [`docs/`](docs): app guide, feature guide, engineering docs, how-to guides, proposals, reference material, and release notes
 
 ## Documentation
 
-- [`docs/development.md`](docs/development.md): local build, verification, CI, and Windows cleanup notes
-- [`docs/architecture.md`](docs/architecture.md): current architecture and target direction
-- [`docs/feature-playbook.md`](docs/feature-playbook.md): checklist for adding a new metric feature
+- [`docs/app/README.md`](docs/app/README.md): user guide, permissions, privacy, FAQ, screenshots, and support
+- [`docs/features/README.md`](docs/features/README.md): grouped feature guide
+- [`docs/features/feature-map.md`](docs/features/feature-map.md): map from features to routes, widgets, and packages
+- [`docs/engineering/development.md`](docs/engineering/development.md): local build, verification, CI, and Windows cleanup notes
+- [`docs/engineering/architecture.md`](docs/engineering/architecture.md): current architecture and target direction
+- [`docs/engineering/feature-playbook.md`](docs/engineering/feature-playbook.md): checklist for adding a new metric feature
 - [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
 
 

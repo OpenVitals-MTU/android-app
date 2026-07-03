@@ -1,5 +1,8 @@
 # Activity Start Flow Analysis
 
+> **Status:** Analysis and proposal context. Current implemented behavior remains documented in [Recording of activity](../features/activity-recording.md).
+> **Implementation map:** [Feature map](../features/feature-map.md).
+
 This document maps the current paths for starting or creating an activity, then proposes ways to reduce taps and make the intent clearer.
 
 For a clearer breakdown of each proposed improvement, see [Activity start flow simplification proposals](activity-start-flow-proposals.md).

@@ -1,5 +1,11 @@
 # Sleep Score And Recovery
 
+> **Status:** Current implemented behavior; caffeine sleep integration remains a proposal.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/recovery`, `features/sleep`, `domain/insights`.
+> **Navigation:** opened from the sleep detail experience; widget `SLEEP`.
+> **Related:** [Feature map](feature-map.md), [Sleep tracking](sleep-tracking.md), [Caffeine sleep proposal](../proposals/caffeine-aware-sleep-insights.md).
+
 Sleep score and recovery views explain sleep quality using local, non-diagnostic calculations.
 
 ## Sleep Score

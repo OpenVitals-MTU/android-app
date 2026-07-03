@@ -1,3 +1,7 @@
+# Reference: Promoting Health Connect
+
+> **Status:** External Health Connect design reference. This is background material, not OpenVitals implementation policy.
+
 Showcasing Health Connect in your app depends on the UX patterns and
 conventions established in your UI.
 

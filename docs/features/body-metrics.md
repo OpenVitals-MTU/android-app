@@ -1,5 +1,11 @@
 # Body Metrics
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/body`, `features/manualentry/body`, `data/repository/BodyRepository.kt`.
+> **Navigation:** `Screen.Body`, `Screen.Metric`, body entry routes; widgets `WEIGHT`, `HEIGHT`, `BMI`, `FFMI`, `BODY_FAT`, `LEAN_MASS`, `BMR`, `BONE_MASS`, `BODY_WATER_MASS`.
+> **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
+
 The body feature owns period-based detail screens for body measurement and composition metrics read from Health Connect.
 
 ## Implemented Metrics
@@ -33,4 +39,3 @@ Manual body entry lives under `features/manualentry/body` and writes explicit us
 ## Data Boundaries
 
 The body feature reads through `BodyRepository`. New body metric work should keep feature-specific formatting, cards, charts, and rows in `features/body`; shared components should only move out when another feature really reuses them.
-

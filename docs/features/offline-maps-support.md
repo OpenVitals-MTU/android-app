@@ -1,5 +1,11 @@
 # Offline Maps Support
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/activity/maps`, `features/manualentry/activity/recording`, `features/settings`.
+> **Navigation:** activity recording and route preview flows; settings import controls.
+> **Related:** [Feature map](feature-map.md), [Add offline maps](../how-to/offline-maps.md), [GPX/KML/KMZ/FIT import](route-file-import.md).
+
 Offline maps let activity routes render without app-level internet access.
 
 For detailed download, import, and troubleshooting steps, see [Add offline maps](../how-to/offline-maps.md).

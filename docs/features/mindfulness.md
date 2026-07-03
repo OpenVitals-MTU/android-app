@@ -1,5 +1,11 @@
 # Mindfulness
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/mindfulness`, `features/mindfulness/reminders`, `features/manualentry/mindfulness`, `data/repository/MindfulnessRepository.kt`.
+> **Navigation:** `Screen.Metric`, mindfulness entry routes, widget `MINDFULNESS`, `ManualEntryWidgetId.MINDFULNESS`.
+> **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Reminders](reminders.md).
+
 The mindfulness feature owns period-based meditation/mindfulness session details, goals, reminders, and links to manual session entry.
 
 ## What It Shows
@@ -35,4 +41,3 @@ Manual mindfulness entry lives under `features/manualentry/mindfulness` and can 
 
 - [`manual-entry-metrics.md`](manual-entry-metrics.md): explicit Health Connect write flows.
 - [`reminders.md`](reminders.md): shared reminder behavior.
-

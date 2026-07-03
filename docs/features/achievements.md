@@ -1,5 +1,11 @@
 # Achievements
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/achievements`.
+> **Navigation:** `Screen.Achievements`.
+> **Related:** [Feature map](feature-map.md), [Dashboard](health-connect-metrics-dashboard.md).
+
 Achievements turn long-term activity and wellness patterns into local badge progress.
 
 ## What Can Be Tracked

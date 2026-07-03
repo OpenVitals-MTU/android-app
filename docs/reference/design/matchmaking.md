@@ -1,3 +1,7 @@
+# Reference: Health Connect Matchmaking
+
+> **Status:** External Health Connect API reference. This is background material, not OpenVitals implementation policy.
+
 A guide to the Health Connect Matchmaking API.
 
 ## Overview

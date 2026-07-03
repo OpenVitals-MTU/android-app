@@ -1,3 +1,7 @@
+# Reference: Health Connect Onboarding
+
+> **Status:** External Health Connect design reference. This is background material, not OpenVitals implementation policy.
+
 Many apps have a custom onboarding flow for workflows such as educating the user
 about app features or asking for user consent. To create a seamless connection
 flow, your app can also use the [Matchmaking API](https://developer.android.com/health-and-fitness/health-connect/ui/matchmaking) to prompt users

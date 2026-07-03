@@ -2,6 +2,8 @@
 
 This document is a functional inventory of the OpenVitals Android app. It is organized by what the user can view, what the user can insert/update/delete, and which settings are available.
 
+For the route, widget, package, and documentation mapping, see [`docs/features/feature-map.md`](docs/features/feature-map.md).
+
 ## View Data
 
 ### Shared Metric Views
@@ -94,7 +96,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - View data confidence, sleep goal progress, total sleep, daily average, longest sleep, nights logged, previous-period comparison, and personal baseline.
 - View sleep target/context cards.
 - View cross-metric insight comparing sleep with HRV.
-- View caffeine timing insights when existing caffeine records are correlated with poorer sleep outcomes.
+- Review caffeine timing and bedtime guidance in the standalone caffeine detail experience. Direct caffeine insight cards inside sleep detail are planned separately.
 - View sleep session details including title, notes, source, recording method, device, IDs, start/end time, duration, and stage event list.
 
 ### Sleep Score And Recovery
@@ -103,7 +105,7 @@ This document is a functional inventory of the OpenVitals Android app. It is org
 - View confidence and non-diagnostic context.
 - View expandable formula/calculation details.
 - View component values such as duration, efficiency, continuity, regularity, and total sleep.
-- View caffeine-aware score context when caffeine data is available, without reducing the default numeric score for missing caffeine records.
+- Keep missing caffeine data neutral; direct caffeine-aware sleep-score context is planned separately.
 - View references used by the scoring/explanation screens.
 
 ### Daily Readiness

@@ -1,5 +1,11 @@
 # GPX/KML/KMZ/FIT Import
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/manualentry/activity/routeimport`, `features/activity`.
+> **Navigation:** `Screen.ActivityEntry`, `ManualEntryWidgetId.ACTIVITY`.
+> **Related:** [Feature map](feature-map.md), [FIT files import](fit-files-import.md), [Offline maps support](offline-maps-support.md).
+
 OpenVitals can import route and activity files, preview the result, and save supported activities to Health Connect.
 
 ## Supported Formats

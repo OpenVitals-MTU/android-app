@@ -1,5 +1,11 @@
 # Metric Detail Customization
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/dashboard`, `features/manualentry`, `core/period`, preference-backed widget ordering.
+> **Navigation:** Dashboard widget customization, manual entry widget customization, metric detail section editing.
+> **Related:** [Feature map](feature-map.md), [Health Connect metrics dashboard](health-connect-metrics-dashboard.md), [Settings and preferences](settings-and-preferences.md).
+
 OpenVitals lets users customize the order and visibility of dashboard widgets, manual entry widgets, and metric detail sections.
 
 ## Dashboard Widgets

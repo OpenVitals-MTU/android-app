@@ -1,5 +1,11 @@
 # Reminders
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/hydration/reminders`, `features/mindfulness/reminders`, `features/settings`.
+> **Navigation:** hydration detail, mindfulness detail, reminder-related settings.
+> **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Mindfulness](mindfulness.md).
+
 OpenVitals reminders are local device notifications for supported wellness workflows.
 
 ## Hydration Reminders

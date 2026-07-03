@@ -20,9 +20,9 @@ The goal is:
 Use these docs together:
 
 - [docs/README.md](docs/README.md): doc index
-- [docs/architecture.md](docs/architecture.md): target architecture
-- [docs/feature-playbook.md](docs/feature-playbook.md): step-by-step guide for adding a feature
-- [docs/analysis/README.md](docs/analysis/README.md): code analysis (MVVM, Clean Architecture, Compose performance, refactor backlog)
+- [docs/engineering/architecture.md](docs/engineering/architecture.md): target architecture
+- [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md): step-by-step guide for adding a feature
+- [docs/engineering/analysis/README.md](docs/engineering/analysis/README.md): code analysis (MVVM, Clean Architecture, Compose performance, refactor backlog)
 
 If code and docs disagree, prefer the docs for new work and refactor toward them incrementally.
 
@@ -159,7 +159,7 @@ Do not add per-screen `PermissionCallout`, inline `HealthConnectSyncStatusBanner
 
 ## Before Starting A New Feature
 
-Read [docs/feature-playbook.md](docs/feature-playbook.md) and follow the checklist there.
+Read [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md) and follow the checklist there.
 
 If the feature would require copying code from `ActivityScreen`, `SleepScreen`, or `HeartScreen`, stop and ask:
 

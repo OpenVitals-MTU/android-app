@@ -1,5 +1,11 @@
 # Activity Metrics
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/activity`, `data/repository/ActivityRepository.kt`.
+> **Navigation:** `Screen.Metric`; widgets `STEPS`, `DISTANCE`, `CALORIES_OUT`, `ACTIVE_CALORIES`, `FLOORS`, `ELEVATION`, `WHEELCHAIR_PUSHES`.
+> **Related:** [Feature map](feature-map.md), [Statistics](statistics.md), [Recording of activity](activity-recording.md).
+
 The activity feature owns period-based detail screens for movement metrics and workout sessions. It is separate from activity recording: recording and manual activity entry create records, while these screens read and explain existing Health Connect data.
 
 ## Implemented Metrics
@@ -38,4 +44,3 @@ The feature uses `ActivityRepository` through activity ViewModels. New activity 
 - [`route-file-import.md`](route-file-import.md): GPX/KML/KMZ/FIT import review.
 - [`offline-maps-support.md`](offline-maps-support.md): local map packs for route display.
 - [`non-health-connect-metrics-dashboard.md`](non-health-connect-metrics-dashboard.md): cardio load and other derived activity context.
-

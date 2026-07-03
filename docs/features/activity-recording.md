@@ -1,5 +1,11 @@
 # Recording Of Activity
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/manualentry/activity`, `features/manualentry/activity/recording`, `features/activity`.
+> **Navigation:** `Screen.ActivityEntry`, `Screen.ActivityEntryEdit`, `ManualEntryWidgetId.ACTIVITY`.
+> **Related:** [Feature map](feature-map.md), [Activity and training plans](activity-training-plans.md), [Bluetooth LE sensors](ble-sensors.md).
+
 OpenVitals can record activities locally, review the result, and then save the activity to Health Connect.
 
 ## GPS Activity

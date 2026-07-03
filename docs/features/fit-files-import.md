@@ -1,5 +1,11 @@
 # FIT Files Import
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/manualentry/activity/routeimport`.
+> **Navigation:** `Screen.ActivityEntry`, `ManualEntryWidgetId.ACTIVITY`.
+> **Related:** [Feature map](feature-map.md), [GPX/KML/KMZ/FIT import](route-file-import.md), [Recording of activity](activity-recording.md).
+
 FIT import lets users bring activity files into OpenVitals for review before saving to Health Connect.
 
 ## What FIT Import Is For

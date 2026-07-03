@@ -1,5 +1,11 @@
 # Settings And Preferences
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/settings`, `data/repository/PreferencesRepository.kt`.
+> **Navigation:** `Screen.Settings` and settings subsection routes; sections in `SettingsSection`.
+> **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Metric detail customization](metric-detail-customization.md).
+
 Settings centralize app preferences, Health Connect access, imports, sensors, goals, reminders, and diagnostics.
 
 ## Display

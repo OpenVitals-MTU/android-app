@@ -1,7 +1,6 @@
 # App Guide
 
-These pages document user-facing app behavior that cuts across several feature
-areas.
+These pages document user-facing behavior that cuts across several feature areas.
 
 - [Install](install.md): install channels, Android requirements, and Health Connect setup.
 - [Getting started](getting-started.md): first-run setup, common workflows, and what to check when data is missing.
@@ -11,3 +10,4 @@ areas.
 - [Local and connected editions](local-and-connected-editions.md): boundary between the local app and planned connected app work.
 - [FAQ](faq.md): common support answers about uploads, permissions, old data, editing, routes, sensors, and notifications.
 - [Screenshots](screenshots.md): image inventory for app-facing documentation.
+- [Support](support.md): support boundaries, useful user docs, and privacy expectations for diagnostics.

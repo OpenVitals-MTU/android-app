@@ -1,5 +1,11 @@
 # Nutrition
 
+> **Status:** Current implemented behavior.
+> **Audience:** Users and contributors.
+> **Implementation:** `features/nutrition`, `features/manualentry/nutrition`, `data/repository/NutritionRepository.kt`.
+> **Navigation:** `Screen.Nutrition`, `Screen.CarbsEntry`, `Screen.Metric`; widgets `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT`.
+> **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md).
+
 The nutrition feature owns period-based nutrition detail screens for intake metrics read from Health Connect.
 
 ## Implemented Metrics
@@ -11,7 +17,7 @@ Nutrition metric detail screens currently cover:
 - Carbohydrates.
 - Fat.
 
-Caffeine is intentionally separate. It is a caffeine-specific analytics and setup experience described in [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md) and [`caffeine-aware-sleep-insights.md`](caffeine-aware-sleep-insights.md).
+Caffeine is intentionally separate. It is a caffeine-specific analytics and setup experience described in [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md); planned direct sleep integration is tracked in [`caffeine-aware-sleep-insights.md`](../proposals/caffeine-aware-sleep-insights.md).
 
 ## Detail Pattern
 
@@ -32,4 +38,3 @@ Nutrition records remain in Health Connect. OpenVitals writes nutrition records 
 - [`manual-entry-metrics.md`](manual-entry-metrics.md): carbohydrate entry.
 - [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md): beverage nutrition defaults.
 - [`preloaded-beverage-nutrition.md`](preloaded-beverage-nutrition.md): preset beverage reference data.
-
