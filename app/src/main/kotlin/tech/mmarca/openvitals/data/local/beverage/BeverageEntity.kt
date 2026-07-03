@@ -68,12 +68,28 @@ data class BeverageEntity(
 
     companion object {
         fun preloadedDefaults(): List<BeverageEntity> =
-            CaffeineHealthDrinkCatalog.items
+            listOf(waterDefault()) + CaffeineHealthDrinkCatalog.items
                 .asSequence()
                 .filter { item -> item.defaultServingMilliliters != null }
                 .filterNot { item -> item.category == CaffeineSourceCategory.SUPPLEMENT }
-                .mapIndexed { index, item -> item.toPreloadedEntity(index) }
+                .mapIndexed { index, item -> item.toPreloadedEntity(index + 1) }
                 .toList()
+
+        private fun waterDefault(): BeverageEntity =
+            fromDomain(
+                drink = CustomHydrationDrink(
+                    id = "openvitals-water",
+                    name = "Water",
+                    volumeMilliliters = 100.0,
+                    hydrationMultiplier = 1.0,
+                    nutrientValues = emptyMap(),
+                    category = null,
+                    isPreloaded = true,
+                ),
+                sortOrder = 0,
+                isPreloaded = true,
+                category = null,
+            )
 
         fun fromDomain(
             drink: CustomHydrationDrink,

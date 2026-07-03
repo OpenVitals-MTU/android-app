@@ -61,6 +61,7 @@ data class CustomHydrationDrinkInput(
     val name: String,
     val volumeMilliliters: Double,
     val hydrationMultiplier: Double = 1.0,
+    val category: CaffeineSourceCategory? = null,
     val nutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
 )
 
@@ -289,7 +290,6 @@ class HydrationEntryViewModel @Inject constructor(
         val drink = input.toCustomHydrationDrink(
             id = existingDrinkId ?: UUID.randomUUID().toString(),
         )?.copy(
-            category = existingDrink?.category,
             isPreloaded = existingDrink?.isPreloaded ?: false,
         )
         if (drink == null) {
@@ -623,6 +623,7 @@ private fun CustomHydrationDrinkInput.toCustomHydrationDrink(
         name = normalizedName,
         volumeMilliliters = volumeMilliliters,
         hydrationMultiplier = hydrationMultiplier,
+        category = category,
         nutrientValues = normalizedNutrients,
     )
 }

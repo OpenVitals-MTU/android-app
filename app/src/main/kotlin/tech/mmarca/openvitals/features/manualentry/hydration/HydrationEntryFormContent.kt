@@ -164,6 +164,20 @@ private data class HydrationCatalogSectionSpec(
     @param:StringRes val titleRes: Int,
 )
 
+private data class HydrationDrinkCategoryOption(
+    val category: CaffeineSourceCategory?,
+    @param:StringRes val titleRes: Int,
+)
+
+private val HydrationDrinkCategoryOptions =
+    listOf(HydrationDrinkCategoryOption(null, R.string.hydration_custom_drink_no_category)) +
+        HydrationCatalogSections.map { section ->
+            HydrationDrinkCategoryOption(
+                category = section.category,
+                titleRes = section.titleRes,
+            )
+        }
+
 private data class HydrationCatalogRowItem(
     val rowKey: String,
     val drink: CustomHydrationDrink,
@@ -359,6 +373,7 @@ internal fun HydrationTrackerCard(
                     initialName = drink.name,
                     initialMilliliters = drink.volumeMilliliters,
                     initialHydrationMultiplier = drink.hydrationMultiplier,
+                    initialCategory = drink.category,
                     initialNutrientValues = drink.nutrientValues,
                     onDismiss = { editingSavedDrink = null },
                     onSave = { input ->
@@ -1355,6 +1370,7 @@ internal fun HydrationCustomDrinkDialog(
     initialName: String,
     initialMilliliters: Double?,
     initialHydrationMultiplier: Double = FullHydrationImpactMultiplier,
+    initialCategory: CaffeineSourceCategory? = null,
     initialNutrientValues: Map<NutritionNutrient, Double> = emptyMap(),
     onDismiss: () -> Unit,
     onSave: (CustomHydrationDrinkInput) -> Unit,
@@ -1369,6 +1385,7 @@ internal fun HydrationCustomDrinkDialog(
     var hydrationImpactPercentText by remember(initialHydrationMultiplier) {
         mutableStateOf(hydrationImpactPercentText(initialHydrationMultiplier))
     }
+    var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
     val resources = LocalContext.current.resources
     val nutrientComparator = Comparator<NutritionNutrient> { first, second ->
         resources.getString(first.titleRes()).compareTo(
@@ -1452,6 +1469,10 @@ internal fun HydrationCustomDrinkDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                HydrationDrinkCategorySelector(
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = { category -> selectedCategory = category },
+                )
                 HydrationImpactSelector(
                     selectedOption = hydrationImpactOption,
                     partialPercentText = hydrationImpactPercentText,
@@ -1509,6 +1530,7 @@ internal fun HydrationCustomDrinkDialog(
                                 name = nameText,
                                 volumeMilliliters = milliliters,
                                 hydrationMultiplier = impactMultiplier,
+                                category = selectedCategory,
                                 nutrientValues = nutrientValues,
                             )
                         )
@@ -1538,6 +1560,64 @@ internal fun HydrationCustomDrinkDialog(
                 nutrientChooserOpen = false
             },
         )
+    }
+}
+
+@Composable
+private fun HydrationDrinkCategorySelector(
+    selectedCategory: CaffeineSourceCategory?,
+    onCategorySelected: (CaffeineSourceCategory?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedOption = HydrationDrinkCategoryOptions
+        .firstOrNull { it.category == selectedCategory }
+        ?: HydrationDrinkCategoryOptions.first()
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.hydration_custom_drink_category),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OpenVitalsOutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(selectedOption.titleRes),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                HydrationDrinkCategoryOptions.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(option.titleRes)) },
+                        onClick = {
+                            onCategorySelected(option.category)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

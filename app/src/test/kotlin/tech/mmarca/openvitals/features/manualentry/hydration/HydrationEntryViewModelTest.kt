@@ -27,6 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
@@ -452,6 +453,7 @@ class HydrationEntryViewModelTest {
                 id = "coffee",
                 name = "Coffee",
                 volumeMilliliters = 150.0,
+                category = CaffeineSourceCategory.COFFEE,
                 nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 10.0),
             )
         )
@@ -468,6 +470,7 @@ class HydrationEntryViewModelTest {
             CustomHydrationDrinkInput(
                 name = "Latte",
                 volumeMilliliters = 200.0,
+                category = CaffeineSourceCategory.TEA,
                 nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 20.0),
             ),
             "coffee",
@@ -478,6 +481,7 @@ class HydrationEntryViewModelTest {
                 drink.id == "coffee" &&
                     drink.name == "Latte" &&
                     drink.volumeMilliliters == 200.0 &&
+                    drink.category == CaffeineSourceCategory.TEA &&
                     drink.nutrientValues[NutritionNutrient.CAFFEINE] == 20.0
             })
         }

@@ -831,6 +831,8 @@
     <string name="hydration_new_drink_title">New drink</string>
     <string name="hydration_edit_drink_title">Edit drink</string>
     <string name="hydration_custom_drink_name">Name</string>
+    <string name="hydration_custom_drink_category">Category</string>
+    <string name="hydration_custom_drink_no_category">No category</string>
     <string name="hydration_custom_drink_hydration_impact">Hydration impact</string>
     <string name="hydration_impact_counts_fully">Counts fully</string>
     <string name="hydration_impact_counts_partially">Counts partially</string>
