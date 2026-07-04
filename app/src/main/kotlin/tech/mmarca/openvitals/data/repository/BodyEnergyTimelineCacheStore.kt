@@ -8,8 +8,12 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import tech.mmarca.openvitals.domain.insights.BodyEnergyBucketState
+import tech.mmarca.openvitals.domain.insights.BodyEnergyCalibrationMode
 import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
+import tech.mmarca.openvitals.domain.insights.BodyEnergyInputSummary
+import tech.mmarca.openvitals.domain.insights.BodyEnergyPrimaryInfluence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
+import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineBucketMinutes
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 
 @Singleton
@@ -67,6 +71,20 @@ private fun BodyEnergyTimeline.toPreferenceString(): String {
         confidence.name,
         generatedAt.toEpochMilli(),
         confidenceReason.escapeCacheField(),
+        inputSummary.algorithmVersion,
+        inputSummary.bucketMinutes,
+        inputSummary.heartRateSampleCount,
+        inputSummary.hrvSampleCount,
+        inputSummary.sleepSessionCount,
+        inputSummary.workoutCount,
+        inputSummary.respiratorySampleCount,
+        inputSummary.hasRestingHeartRate,
+        inputSummary.hasBaselineRestingHeartRate,
+        inputSummary.hasObservedMaxHeartRate,
+        inputSummary.hasHrvBaseline,
+        inputSummary.hasRespiratoryBaseline,
+        inputSummary.previousEndScore.cacheValue(),
+        inputSummary.calibrationMode.name,
     ).joinToString("|")
     val pointsValue = points.joinToString(";") { point ->
         listOf(
@@ -75,6 +93,11 @@ private fun BodyEnergyTimeline.toPreferenceString(): String {
             "%.4f".format(java.util.Locale.US, point.delta),
             point.state.name,
             point.confidence.name,
+            "%.4f".format(java.util.Locale.US, point.charge),
+            "%.4f".format(java.util.Locale.US, point.intensityDrain),
+            "%.4f".format(java.util.Locale.US, point.stressDrain),
+            "%.4f".format(java.util.Locale.US, point.recoveryDebtDrain),
+            point.primaryInfluence.name,
         ).joinToString(",")
     }
     return "$header\n$pointsValue"
@@ -90,13 +113,22 @@ private fun String.toTimelineOrNull(signature: String): BodyEnergyTimeline? =
             .filter { it.isNotBlank() }
             .mapNotNull { encoded ->
                 val parts = encoded.split(",")
-                if (parts.size != 5) return@mapNotNull null
+                if (parts.size < 5) return@mapNotNull null
+                val state = BodyEnergyBucketState.valueOf(parts[3])
+                val delta = parts[2].toDouble()
                 BodyEnergyTimelinePoint(
                     time = Instant.ofEpochMilli(parts[0].toLong()),
                     score = parts[1].toInt(),
-                    delta = parts[2].toDouble(),
-                    state = BodyEnergyBucketState.valueOf(parts[3]),
+                    delta = delta,
+                    state = state,
                     confidence = BodyEnergyConfidence.valueOf(parts[4]),
+                    charge = parts.getOrNull(5)?.toDoubleOrNull() ?: delta.coerceAtLeast(0.0),
+                    intensityDrain = parts.getOrNull(6)?.toDoubleOrNull() ?: 0.0,
+                    stressDrain = parts.getOrNull(7)?.toDoubleOrNull() ?: 0.0,
+                    recoveryDebtDrain = parts.getOrNull(8)?.toDoubleOrNull() ?: 0.0,
+                    primaryInfluence = parts.getOrNull(9)
+                        ?.let { runCatching { BodyEnergyPrimaryInfluence.valueOf(it) }.getOrNull() }
+                        ?: state.legacyPrimaryInfluence(delta),
                 )
             }
         BodyEnergyTimeline(
@@ -108,10 +140,41 @@ private fun String.toTimelineOrNull(signature: String): BodyEnergyTimeline? =
             confidence = BodyEnergyConfidence.valueOf(header[5]),
             generatedAt = Instant.ofEpochMilli(header[6].toLong()),
             confidenceReason = header.getOrNull(7).orEmpty().unescapeCacheField(),
+            inputSummary = header.toInputSummary(),
             points = points,
             signature = signature,
         )
     }.getOrNull()
+
+private fun List<String>.toInputSummary(): BodyEnergyInputSummary =
+    BodyEnergyInputSummary(
+        algorithmVersion = getOrNull(8)?.toIntOrNull() ?: 1,
+        bucketMinutes = getOrNull(9)?.toLongOrNull() ?: BodyEnergyTimelineBucketMinutes,
+        heartRateSampleCount = getOrNull(10)?.toIntOrNull() ?: 0,
+        hrvSampleCount = getOrNull(11)?.toIntOrNull() ?: 0,
+        sleepSessionCount = getOrNull(12)?.toIntOrNull() ?: 0,
+        workoutCount = getOrNull(13)?.toIntOrNull() ?: 0,
+        respiratorySampleCount = getOrNull(14)?.toIntOrNull() ?: 0,
+        hasRestingHeartRate = getOrNull(15)?.toBoolean() ?: false,
+        hasBaselineRestingHeartRate = getOrNull(16)?.toBoolean() ?: false,
+        hasObservedMaxHeartRate = getOrNull(17)?.toBoolean() ?: false,
+        hasHrvBaseline = getOrNull(18)?.toBoolean() ?: false,
+        hasRespiratoryBaseline = getOrNull(19)?.toBoolean() ?: false,
+        previousEndScore = getOrNull(20).toIntOrNullCache(),
+        calibrationMode = getOrNull(21)
+            ?.let { runCatching { BodyEnergyCalibrationMode.valueOf(it) }.getOrNull() }
+            ?: BodyEnergyCalibrationMode.AUTOMATIC,
+    )
+
+private fun BodyEnergyBucketState.legacyPrimaryInfluence(delta: Double): BodyEnergyPrimaryInfluence =
+    when {
+        this == BodyEnergyBucketState.UNMEASURABLE -> BodyEnergyPrimaryInfluence.NO_DATA
+        delta > 0.0 && this == BodyEnergyBucketState.SLEEP -> BodyEnergyPrimaryInfluence.SLEEP_RECOVERY
+        delta > 0.0 -> BodyEnergyPrimaryInfluence.QUIET_REST
+        this == BodyEnergyBucketState.ACTIVITY -> BodyEnergyPrimaryInfluence.EXERTION
+        this == BodyEnergyBucketState.STRESS -> BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE
+        else -> BodyEnergyPrimaryInfluence.STEADY
+    }
 
 private fun BodyEnergyBaselineCacheEntry.toPreferenceString(): String =
     listOf(
@@ -136,6 +199,8 @@ private fun String.toBaselineOrNull(): BodyEnergyBaselineCacheEntry? =
 
 private fun Long?.cacheValue(): String = this?.toString().orEmpty()
 
+private fun Int?.cacheValue(): String = this?.toString().orEmpty()
+
 private fun Double?.cacheValue(): String = this?.toString().orEmpty()
 
 private fun String?.toLongOrNullCache(): Long? =
@@ -143,6 +208,9 @@ private fun String?.toLongOrNullCache(): Long? =
 
 private fun String?.toDoubleOrNullCache(): Double? =
     takeUnless { it.isNullOrBlank() }?.toDoubleOrNull()
+
+private fun String?.toIntOrNullCache(): Int? =
+    takeUnless { it.isNullOrBlank() }?.toIntOrNull()
 
 private fun String.escapeCacheField(): String =
     replace("\\", "\\\\")

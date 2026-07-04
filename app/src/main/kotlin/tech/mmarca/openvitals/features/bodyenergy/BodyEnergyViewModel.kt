@@ -29,6 +29,7 @@ data class BodyEnergyUiState(
     val selectedRange: TimeRange = TimeRange.DAY,
     val selectedDate: LocalDate = LocalDate.now(),
     val result: BodyEnergyTimelineResult? = null,
+    val display: BodyEnergyDisplayState = BodyEnergyDisplayState(),
     val error: ScreenError? = null,
 )
 
@@ -110,6 +111,7 @@ class BodyEnergyViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     result = result,
+                    display = result.toBodyEnergyDisplayState(),
                     error = null,
                 )
             }.onFailure { error ->

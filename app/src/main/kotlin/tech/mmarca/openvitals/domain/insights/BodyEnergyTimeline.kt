@@ -14,7 +14,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
 const val BodyEnergyTimelineBucketMinutes = 5L
-const val BodyEnergyTimelineAlgorithmVersion = 1
+const val BodyEnergyTimelineAlgorithmVersion = 2
 
 enum class BodyEnergyConfidence {
     HIGH,
@@ -31,12 +31,50 @@ enum class BodyEnergyBucketState {
     UNMEASURABLE,
 }
 
+enum class BodyEnergyPrimaryInfluence {
+    SLEEP_RECOVERY,
+    QUIET_REST,
+    EXERTION,
+    ELEVATED_HEART_RATE,
+    RECOVERY_DEBT,
+    NO_DATA,
+    STEADY,
+}
+
+enum class BodyEnergyCalibrationMode {
+    AUTOMATIC,
+    MANUAL_VALUES,
+    MANUAL_ZONES,
+}
+
 data class BodyEnergyTimelinePoint(
     val time: Instant,
     val score: Int,
     val delta: Double,
     val state: BodyEnergyBucketState,
     val confidence: BodyEnergyConfidence,
+    val charge: Double = delta.coerceAtLeast(0.0),
+    val intensityDrain: Double = 0.0,
+    val stressDrain: Double = 0.0,
+    val recoveryDebtDrain: Double = 0.0,
+    val primaryInfluence: BodyEnergyPrimaryInfluence = BodyEnergyPrimaryInfluence.STEADY,
+)
+
+data class BodyEnergyInputSummary(
+    val algorithmVersion: Int = BodyEnergyTimelineAlgorithmVersion,
+    val bucketMinutes: Long = BodyEnergyTimelineBucketMinutes,
+    val heartRateSampleCount: Int = 0,
+    val hrvSampleCount: Int = 0,
+    val sleepSessionCount: Int = 0,
+    val workoutCount: Int = 0,
+    val respiratorySampleCount: Int = 0,
+    val hasRestingHeartRate: Boolean = false,
+    val hasBaselineRestingHeartRate: Boolean = false,
+    val hasObservedMaxHeartRate: Boolean = false,
+    val hasHrvBaseline: Boolean = false,
+    val hasRespiratoryBaseline: Boolean = false,
+    val previousEndScore: Int? = null,
+    val calibrationMode: BodyEnergyCalibrationMode = BodyEnergyCalibrationMode.AUTOMATIC,
 )
 
 data class BodyEnergyTimeline(
@@ -48,11 +86,16 @@ data class BodyEnergyTimeline(
     val points: List<BodyEnergyTimelinePoint>,
     val confidence: BodyEnergyConfidence,
     val confidenceReason: String,
+    val inputSummary: BodyEnergyInputSummary = BodyEnergyInputSummary(),
     val generatedAt: Instant = Instant.now(),
     val signature: String = "",
 ) {
     companion object {
-        fun empty(date: LocalDate, reason: String): BodyEnergyTimeline =
+        fun empty(
+            date: LocalDate,
+            reason: String,
+            inputSummary: BodyEnergyInputSummary = BodyEnergyInputSummary(),
+        ): BodyEnergyTimeline =
             BodyEnergyTimeline(
                 date = date,
                 startScore = 50,
@@ -62,6 +105,7 @@ data class BodyEnergyTimeline(
                 points = emptyList(),
                 confidence = BodyEnergyConfidence.NO_DATA,
                 confidenceReason = reason,
+                inputSummary = inputSummary,
             )
     }
 }
@@ -88,11 +132,18 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
     val dayStart = inputs.date.atStartOfDay(inputs.zone).toInstant()
     val dayEnd = inputs.date.plusDays(1).atStartOfDay(inputs.zone).toInstant()
     val usableEnd = minOf(dayEnd, inputs.now.takeIf { inputs.date == LocalDate.now(inputs.zone) } ?: dayEnd)
+    val inputSummary = inputs.inputSummary(
+        heartRateSampleCount = inputs.heartRateSamples.count { it.time >= dayStart && it.time < dayEnd },
+    )
     val bucketCount = Duration.between(dayStart, usableEnd).toMinutes()
         .coerceAtLeast(0L)
         .let { ((it + BodyEnergyTimelineBucketMinutes - 1) / BodyEnergyTimelineBucketMinutes).toInt() }
     if (bucketCount <= 0) {
-        return BodyEnergyTimeline.empty(inputs.date, "No timeline window is available.")
+        return BodyEnergyTimeline.empty(
+            date = inputs.date,
+            reason = "No timeline window is available.",
+            inputSummary = inputSummary,
+        )
     }
 
     val sortedHeartRate = inputs.heartRateSamples
@@ -119,7 +170,11 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
     val intensityContext = resolveIntensityContext(inputs, sortedHeartRate)
     val hasSleep = inputs.sleepSessions.any { it.endTime > dayStart && it.startTime < dayEnd }
     if (sortedHeartRate.isEmpty() && !hasSleep) {
-        return BodyEnergyTimeline.empty(inputs.date, "Heart rate or sleep data is needed for Body Energy.")
+        return BodyEnergyTimeline.empty(
+            date = inputs.date,
+            reason = "Heart rate or sleep data is needed for Body Energy.",
+            inputSummary = inputSummary,
+        )
     }
 
     var score = (inputs.previousEndScore ?: 50).coerceIn(0, 100).toDouble()
@@ -165,7 +220,7 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                 else -> 1.0
             }
             val exerciseMultiplier = if (workoutMinutes > 0.0) 1.15 else 1.0
-            val stressDrain = avgHeartRate?.let { bpm ->
+            val rawStressDrain = avgHeartRate?.let { bpm ->
                 val resting = intensityContext.restingHeartRateBpm
                 when {
                     resting == null || workoutMinutes > 0.0 || sleepMinutes > 0.0 -> 0.0
@@ -174,16 +229,19 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                     else -> 0.0
                 }
             } ?: 0.0
-            val intensityDrain = if (avgHeartRate != null) {
+            val rawIntensityDrain = if (avgHeartRate != null) {
                 drainRateForZone(zone) * bucketMinutes * exerciseMultiplier * fatigueMultiplier
             } else if (workoutMinutes >= 2.0) {
                 0.05 * workoutMinutes
             } else {
                 0.0
             }
-            val recoveryDebtDrain = if (recoveryDebtBuckets > 0) 0.015 * bucketMinutes else 0.0
-            val drain = (intensityDrain + stressDrain + recoveryDebtDrain) *
-                maxOf(hrvFactor.drainMultiplier, respirationFactor.drainMultiplier)
+            val rawRecoveryDebtDrain = if (recoveryDebtBuckets > 0) 0.015 * bucketMinutes else 0.0
+            val drainMultiplier = maxOf(hrvFactor.drainMultiplier, respirationFactor.drainMultiplier)
+            val intensityDrain = rawIntensityDrain * drainMultiplier
+            val stressDrain = rawStressDrain * drainMultiplier
+            val recoveryDebtDrain = rawRecoveryDebtDrain * drainMultiplier
+            val drain = intensityDrain + stressDrain + recoveryDebtDrain
 
             if (zone >= 3 && workoutMinutes > 0.0) {
                 recoveryDebtBuckets = maxOf(recoveryDebtBuckets, (zone * 6).coerceAtMost(36))
@@ -213,6 +271,14 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                 avgHeartRate == null -> BodyEnergyBucketState.UNMEASURABLE
                 else -> BodyEnergyBucketState.REST
             }
+            val primaryInfluence = primaryInfluence(
+                charge = charge,
+                intensityDrain = intensityDrain,
+                stressDrain = stressDrain,
+                recoveryDebtDrain = recoveryDebtDrain,
+                sleepMinutes = sleepMinutes,
+                state = state,
+            )
             val confidence = when {
                 avgHeartRate == null && sleepMinutes <= 0.0 -> BodyEnergyConfidence.LOW
                 intensityContext.confidence == BodyEnergyConfidence.HIGH -> BodyEnergyConfidence.HIGH
@@ -232,6 +298,11 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                     delta = delta,
                     state = state,
                     confidence = confidence,
+                    charge = charge,
+                    intensityDrain = intensityDrain,
+                    stressDrain = stressDrain,
+                    recoveryDebtDrain = recoveryDebtDrain,
+                    primaryInfluence = primaryInfluence,
                 )
             )
         }
@@ -252,7 +323,60 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
         points = points,
         confidence = confidence,
         confidenceReason = confidenceReason(confidence, intensityContext),
+        inputSummary = inputSummary,
     )
+}
+
+private fun BodyEnergyTimelineInputs.inputSummary(heartRateSampleCount: Int): BodyEnergyInputSummary =
+    BodyEnergyInputSummary(
+        algorithmVersion = BodyEnergyTimelineAlgorithmVersion,
+        bucketMinutes = BodyEnergyTimelineBucketMinutes,
+        heartRateSampleCount = heartRateSampleCount,
+        hrvSampleCount = hrvSamples.size,
+        sleepSessionCount = sleepSessions.size,
+        workoutCount = workouts.size,
+        respiratorySampleCount = respiratoryRateSamples.size,
+        hasRestingHeartRate = restingHeartRateBpm != null,
+        hasBaselineRestingHeartRate = baselineRestingHeartRateBpm != null,
+        hasObservedMaxHeartRate = observedMaxHeartRateBpm != null,
+        hasHrvBaseline = hrvBaselineRmssdMs != null,
+        hasRespiratoryBaseline = respiratoryRateBaseline != null,
+        previousEndScore = previousEndScore,
+        calibrationMode = calibration.calibrationMode(date),
+    )
+
+private fun BodyEnergyCalibration.calibrationMode(date: LocalDate): BodyEnergyCalibrationMode {
+    val normalized = normalized(date)
+    return when {
+        normalized.useManualZones && normalized.manualZoneThresholdsBpm != null ->
+            BodyEnergyCalibrationMode.MANUAL_ZONES
+        normalized.manualMaxHeartRateBpm != null ||
+            normalized.manualRestingHeartRateBpm != null ||
+            normalized.birthYear != null ->
+            BodyEnergyCalibrationMode.MANUAL_VALUES
+        else -> BodyEnergyCalibrationMode.AUTOMATIC
+    }
+}
+
+private fun primaryInfluence(
+    charge: Double,
+    intensityDrain: Double,
+    stressDrain: Double,
+    recoveryDebtDrain: Double,
+    sleepMinutes: Double,
+    state: BodyEnergyBucketState,
+): BodyEnergyPrimaryInfluence {
+    if (state == BodyEnergyBucketState.UNMEASURABLE) return BodyEnergyPrimaryInfluence.NO_DATA
+    if (charge > 0.0 && sleepMinutes > 0.0) return BodyEnergyPrimaryInfluence.SLEEP_RECOVERY
+    if (charge > 0.0) return BodyEnergyPrimaryInfluence.QUIET_REST
+
+    val maxDrain = maxOf(intensityDrain, stressDrain, recoveryDebtDrain)
+    if (maxDrain <= 0.0) return BodyEnergyPrimaryInfluence.STEADY
+    return when (maxDrain) {
+        intensityDrain -> BodyEnergyPrimaryInfluence.EXERTION
+        stressDrain -> BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE
+        else -> BodyEnergyPrimaryInfluence.RECOVERY_DEBT
+    }
 }
 
 private data class IntensityContext(

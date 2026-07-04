@@ -1,14 +1,19 @@
 package tech.mmarca.openvitals.features.bodyenergy
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BatteryChargingFull
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,20 +27,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.time.Duration
 import java.time.LocalDate
-import java.time.ZoneId
-import kotlin.math.roundToInt
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.resolve
-import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
+import tech.mmarca.openvitals.domain.insights.BodyEnergyCalibrationMode
 import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
+import tech.mmarca.openvitals.domain.insights.BodyEnergyPrimaryInfluence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
-import tech.mmarca.openvitals.ui.components.MetricLinePlot
-import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 
@@ -80,28 +81,46 @@ fun BodyEnergyDetailsScreen(
             }
             if (result == null) return@MetricDetailScaffold
             bodyEnergyContent(
-                result = result,
+                display = state.display,
             )
         }
     }
 }
 
 private fun LazyListScope.bodyEnergyContent(
-    result: BodyEnergyTimelineResult,
+    display: BodyEnergyDisplayState,
 ) {
     item {
         BodyEnergySummaryCard(
-            result = result,
+            timeline = display.timeline,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
     }
     item {
         BodyEnergyDayTimelineCard(
-            timeline = result.latestDay,
+            display = display,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
     }
-    if (result.latestDay?.confidence == BodyEnergyConfidence.LOW) {
+    item {
+        BodyEnergyReasonsCard(
+            reasons = display.topReasons,
+            hasTimeline = !display.isEmpty,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+    item {
+        BodyEnergyInputsCard(
+            display = display,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+    item {
+        BodyEnergyCalculationCard(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+    if (display.timeline?.confidence == BodyEnergyConfidence.LOW) {
         item {
             OpenVitalsCard(
                 modifier = Modifier
@@ -121,10 +140,9 @@ private fun LazyListScope.bodyEnergyContent(
 
 @Composable
 private fun BodyEnergySummaryCard(
-    result: BodyEnergyTimelineResult,
+    timeline: BodyEnergyTimeline?,
     modifier: Modifier = Modifier,
 ) {
-    val latest = result.latestDay
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -134,7 +152,7 @@ private fun BodyEnergySummaryCard(
                 Icon(
                     imageVector = Icons.Outlined.BatteryChargingFull,
                     contentDescription = null,
-                    tint = bodyEnergyColor(latest?.currentScore),
+                    tint = bodyEnergyColor(timeline?.currentScore),
                 )
                 Column(
                     modifier = Modifier
@@ -153,10 +171,10 @@ private fun BodyEnergySummaryCard(
                     )
                 }
                 Text(
-                    text = latest?.currentScore?.toString() ?: "--",
+                    text = timeline?.currentScore?.toString() ?: "--",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = bodyEnergyColor(latest?.currentScore),
+                    color = bodyEnergyColor(timeline?.currentScore),
                 )
             }
             Row(
@@ -165,24 +183,24 @@ private fun BodyEnergySummaryCard(
             ) {
                 BodyEnergyStat(
                     label = stringResource(R.string.body_energy_timeline_start),
-                    value = latest?.startScore?.toString() ?: "--",
+                    value = timeline?.startScore?.toString() ?: "--",
                     modifier = Modifier.weight(1f),
                 )
                 BodyEnergyStat(
                     label = stringResource(R.string.body_energy_timeline_charged),
-                    value = "+${result.charged}",
+                    value = "+${timeline?.charged ?: 0}",
                     modifier = Modifier.weight(1f),
                 )
                 BodyEnergyStat(
                     label = stringResource(R.string.body_energy_timeline_drained),
-                    value = "-${result.drained}",
+                    value = "-${timeline?.drained ?: 0}",
                     modifier = Modifier.weight(1f),
                 )
             }
             BodyEnergyStat(
                 label = stringResource(R.string.body_energy_timeline_confidence),
-                value = confidenceText(latest?.confidence ?: BodyEnergyConfidence.NO_DATA),
-                body = latest?.confidenceReason.orEmpty(),
+                value = confidenceText(timeline?.confidence ?: BodyEnergyConfidence.NO_DATA),
+                body = timeline?.confidenceReason.orEmpty(),
             )
         }
     }
@@ -190,13 +208,12 @@ private fun BodyEnergySummaryCard(
 
 @Composable
 private fun BodyEnergyDayTimelineCard(
-    timeline: BodyEnergyTimeline?,
+    display: BodyEnergyDisplayState,
     modifier: Modifier = Modifier,
 ) {
     BodyEnergyChartCard(
         title = stringResource(R.string.body_energy_timeline_day_title),
-        points = timeline?.dayPlotPoints().orEmpty(),
-        empty = timeline == null || timeline.points.isEmpty(),
+        display = display,
         modifier = modifier,
     )
 }
@@ -204,8 +221,7 @@ private fun BodyEnergyDayTimelineCard(
 @Composable
 private fun BodyEnergyChartCard(
     title: String,
-    points: List<MetricLinePlotPoint>,
-    empty: Boolean,
+    display: BodyEnergyDisplayState,
     modifier: Modifier = Modifier,
 ) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
@@ -218,25 +234,219 @@ private fun BodyEnergyChartCard(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
-            if (empty) {
+            if (display.isEmpty) {
                 Text(
                     text = stringResource(R.string.body_energy_timeline_no_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                MetricLinePlot(
-                    points = points,
-                    minValue = 0.0,
-                    maxValue = 100.0,
-                    accentColor = MaterialTheme.colorScheme.primary,
-                    chartHeight = 180.dp,
-                    valueFormatter = { it.roundToInt().toString() },
-                    drawPoints = points.size <= 40,
+                BodyEnergyTimelineChart(
+                    points = display.chartPoints,
+                    influenceBars = display.influenceBars,
                     modifier = Modifier.fillMaxWidth(),
-                    canvasModifier = Modifier.height(180.dp),
+                )
+                BodyEnergyInfluenceLegend(
+                    influences = display.legendInfluences,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BodyEnergyInfluenceLegend(
+    influences: List<BodyEnergyPrimaryInfluence>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        influences.forEach { influence ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(bodyEnergyInfluenceColor(influence)),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = influenceLabel(influence),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BodyEnergyReasonsCard(
+    reasons: List<BodyEnergyReason>,
+    hasTimeline: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.body_energy_why_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (!hasTimeline || reasons.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.body_energy_why_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                reasons.forEach { reason ->
+                    BodyEnergyReasonRow(reason = reason)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BodyEnergyReasonRow(reason: BodyEnergyReason) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .size(10.dp)
+                .background(bodyEnergyInfluenceColor(reason.influence)),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = influenceLabel(reason.influence),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = reasonDetail(reason.influence),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = if (reason.direction == BodyEnergyReasonDirection.CHARGE) {
+                "+${reason.roundedAmount}"
+            } else {
+                "-${reason.roundedAmount}"
+            },
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = bodyEnergyInfluenceColor(reason.influence),
+        )
+    }
+}
+
+@Composable
+private fun BodyEnergyInputsCard(
+    display: BodyEnergyDisplayState,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.body_energy_inputs_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            display.inputSummary?.let { summary ->
+                Text(
+                    text = stringResource(
+                        R.string.body_energy_inputs_summary,
+                        summary.algorithmVersion,
+                        summary.bucketMinutes,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            display.inputRows.forEach { row ->
+                BodyEnergyInputRowContent(row = row)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BodyEnergyInputRowContent(row: BodyEnergyInputRow) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(9.dp)
+                .background(inputStatusColor(row.status)),
+        )
+        Text(
+            text = inputLabel(row.kind),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = inputStatusText(row),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun BodyEnergyCalculationCard(
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.body_energy_calculation_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.body_energy_calculation_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.body_energy_calculation_inputs_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.body_energy_calculation_limits_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -269,18 +479,6 @@ private fun BodyEnergyStat(
     }
 }
 
-private fun BodyEnergyTimeline.dayPlotPoints(): List<MetricLinePlotPoint> {
-    if (points.isEmpty()) return emptyList()
-    val start = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
-    val totalSeconds = Duration.ofDays(1).seconds.toFloat()
-    return points.map { point ->
-        MetricLinePlotPoint(
-            xFraction = (Duration.between(start, point.time).seconds / totalSeconds).coerceIn(0f, 1f),
-            value = point.score.toDouble(),
-        )
-    }
-}
-
 @Composable
 private fun bodyEnergyColor(score: Int?): Color =
     when {
@@ -290,6 +488,104 @@ private fun bodyEnergyColor(score: Int?): Color =
         score >= 40 -> MaterialTheme.colorScheme.secondary
         else -> MaterialTheme.colorScheme.error
     }
+
+@Composable
+private fun inputStatusColor(status: BodyEnergyInputStatus): Color =
+    when (status) {
+        BodyEnergyInputStatus.AVAILABLE -> MaterialTheme.colorScheme.primary
+        BodyEnergyInputStatus.MISSING -> MaterialTheme.colorScheme.error
+        BodyEnergyInputStatus.OPTIONAL -> MaterialTheme.colorScheme.outline
+    }
+
+@Composable
+private fun influenceLabel(influence: BodyEnergyPrimaryInfluence): String =
+    stringResource(
+        when (influence) {
+            BodyEnergyPrimaryInfluence.SLEEP_RECOVERY -> R.string.body_energy_influence_sleep_recovery
+            BodyEnergyPrimaryInfluence.QUIET_REST -> R.string.body_energy_influence_quiet_rest
+            BodyEnergyPrimaryInfluence.EXERTION -> R.string.body_energy_influence_exertion
+            BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE -> R.string.body_energy_influence_elevated_hr
+            BodyEnergyPrimaryInfluence.RECOVERY_DEBT -> R.string.body_energy_influence_recovery_debt
+            BodyEnergyPrimaryInfluence.NO_DATA -> R.string.body_energy_influence_no_data
+            BodyEnergyPrimaryInfluence.STEADY -> R.string.body_energy_influence_steady
+        }
+    )
+
+@Composable
+private fun reasonDetail(influence: BodyEnergyPrimaryInfluence): String =
+    stringResource(
+        when (influence) {
+            BodyEnergyPrimaryInfluence.SLEEP_RECOVERY -> R.string.body_energy_reason_sleep_recovery_detail
+            BodyEnergyPrimaryInfluence.QUIET_REST -> R.string.body_energy_reason_quiet_rest_detail
+            BodyEnergyPrimaryInfluence.EXERTION -> R.string.body_energy_reason_exertion_detail
+            BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE -> R.string.body_energy_reason_elevated_hr_detail
+            BodyEnergyPrimaryInfluence.RECOVERY_DEBT -> R.string.body_energy_reason_recovery_debt_detail
+            BodyEnergyPrimaryInfluence.NO_DATA -> R.string.body_energy_reason_no_data_detail
+            BodyEnergyPrimaryInfluence.STEADY -> R.string.body_energy_reason_steady_detail
+        }
+    )
+
+@Composable
+private fun inputLabel(kind: BodyEnergyInputKind): String =
+    stringResource(
+        when (kind) {
+            BodyEnergyInputKind.HEART_RATE -> R.string.body_energy_input_heart_rate
+            BodyEnergyInputKind.SLEEP -> R.string.body_energy_input_sleep
+            BodyEnergyInputKind.WORKOUTS -> R.string.body_energy_input_workouts
+            BodyEnergyInputKind.RESTING_HEART_RATE -> R.string.body_energy_input_resting_hr
+            BodyEnergyInputKind.HEART_RATE_BASELINE -> R.string.body_energy_input_hr_baseline
+            BodyEnergyInputKind.HRV -> R.string.body_energy_input_hrv
+            BodyEnergyInputKind.RESPIRATORY_RATE -> R.string.body_energy_input_respiratory
+            BodyEnergyInputKind.PREVIOUS_SCORE -> R.string.body_energy_input_previous_score
+            BodyEnergyInputKind.CALIBRATION -> R.string.body_energy_input_calibration
+        }
+    )
+
+@Composable
+private fun inputStatusText(row: BodyEnergyInputRow): String =
+    when (row.kind) {
+        BodyEnergyInputKind.HEART_RATE,
+        BodyEnergyInputKind.HRV,
+        BodyEnergyInputKind.RESPIRATORY_RATE ->
+            row.count?.let { stringResource(R.string.body_energy_input_records, it) }
+                ?: inputStatusText(row.status)
+        BodyEnergyInputKind.SLEEP ->
+            row.count?.let { stringResource(R.string.body_energy_input_sessions, it) }
+                ?: inputStatusText(row.status)
+        BodyEnergyInputKind.WORKOUTS ->
+            row.count?.let { stringResource(R.string.body_energy_input_workouts_value, it) }
+                ?: inputStatusText(row.status)
+        BodyEnergyInputKind.PREVIOUS_SCORE ->
+            row.value?.let { stringResource(R.string.body_energy_input_previous_score_value, it) }
+                ?: inputStatusText(row.status)
+        BodyEnergyInputKind.CALIBRATION -> calibrationModeLabel(row.value)
+        BodyEnergyInputKind.RESTING_HEART_RATE,
+        BodyEnergyInputKind.HEART_RATE_BASELINE -> inputStatusText(row.status)
+    }
+
+@Composable
+private fun inputStatusText(status: BodyEnergyInputStatus): String =
+    stringResource(
+        when (status) {
+            BodyEnergyInputStatus.AVAILABLE -> R.string.body_energy_input_available
+            BodyEnergyInputStatus.MISSING -> R.string.body_energy_input_missing
+            BodyEnergyInputStatus.OPTIONAL -> R.string.body_energy_input_optional
+        }
+    )
+
+@Composable
+private fun calibrationModeLabel(value: String?): String {
+    val mode = value
+        ?.let { runCatching { BodyEnergyCalibrationMode.valueOf(it) }.getOrNull() }
+        ?: BodyEnergyCalibrationMode.AUTOMATIC
+    return stringResource(
+        when (mode) {
+            BodyEnergyCalibrationMode.AUTOMATIC -> R.string.body_energy_calibration_mode_auto
+            BodyEnergyCalibrationMode.MANUAL_VALUES -> R.string.body_energy_calibration_mode_manual_values
+            BodyEnergyCalibrationMode.MANUAL_ZONES -> R.string.body_energy_calibration_mode_manual_zones
+        }
+    )
+}
 
 private fun confidenceText(confidence: BodyEnergyConfidence): String =
     when (confidence) {

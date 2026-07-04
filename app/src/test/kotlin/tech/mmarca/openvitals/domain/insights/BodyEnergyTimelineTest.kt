@@ -43,6 +43,8 @@ class BodyEnergyTimelineTest {
         assertTrue(timeline.currentScore < 65)
         assertTrue(timeline.drained >= 25)
         assertEquals(BodyEnergyConfidence.HIGH, timeline.confidence)
+        assertTrue(timeline.points.any { it.intensityDrain > 0.0 })
+        assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.EXERTION })
     }
 
     @Test
@@ -99,6 +101,8 @@ class BodyEnergyTimelineTest {
         assertEquals(40, timeline.startScore)
         assertTrue(timeline.currentScore > 70)
         assertTrue(timeline.charged > 30)
+        assertTrue(timeline.points.any { it.charge > 0.0 })
+        assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.SLEEP_RECOVERY })
     }
 
     @Test
@@ -121,6 +125,35 @@ class BodyEnergyTimelineTest {
         assertEquals(0, timeline.charged)
         assertTrue(timeline.drained > 0)
         assertTrue(timeline.currentScore < 70)
+        assertTrue(timeline.points.any { it.stressDrain > 0.0 })
+        assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE })
+    }
+
+    @Test
+    fun `recovery debt drain is reported after harder effort`() {
+        val start = dayStart
+        val workoutEnd = start.plus(Duration.ofMinutes(30))
+        val end = start.plus(Duration.ofMinutes(90))
+
+        val timeline = calculateBodyEnergyTimeline(
+            inputs(
+                now = end,
+                previousEndScore = 90,
+                heartRateSamples = heartRateSamples(start, workoutEnd, bpm = 165) +
+                    heartRateSamples(workoutEnd, end, bpm = 62),
+                workouts = listOf(workout(start, workoutEnd)),
+                calibration = BodyEnergyCalibration(
+                    manualRestingHeartRateBpm = 60,
+                    manualMaxHeartRateBpm = 190,
+                    manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
+                    useManualZones = true,
+                ),
+            )
+        )
+
+        assertTrue(timeline.drained > 0)
+        assertTrue(timeline.points.any { it.recoveryDebtDrain > 0.0 })
+        assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.RECOVERY_DEBT })
     }
 
     private fun inputs(
