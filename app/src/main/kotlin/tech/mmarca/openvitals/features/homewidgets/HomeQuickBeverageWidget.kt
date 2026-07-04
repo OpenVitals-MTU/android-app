@@ -98,8 +98,44 @@ class HomeQuickBeverageWidget : GlanceAppWidget() {
     }
 }
 
+class HomeQuickBeverageOneTapWidget : GlanceAppWidget() {
+    override val stateDefinition: GlanceStateDefinition<Preferences> = HomeQuickBeverageWidgetState.definition
+
+    override val sizeMode: SizeMode = SizeMode.Responsive(
+        setOf(DpSize(88.dp, 88.dp))
+    )
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        provideContent {
+            val preferences = currentState<Preferences>()
+            val snapshot = preferences.toQuickBeverageSnapshot(context)
+                ?: HomeQuickBeverageSnapshot(
+                    drinkId = "",
+                    title = context.getString(R.string.home_quick_beverage_widget_config_title),
+                    amount = "--",
+                    subtitle = context.getString(R.string.home_quick_beverage_widget_not_configured),
+                    route = Screen.HydrationEntry.route,
+                )
+            HomeQuickBeverageOneTapWidgetContent(snapshot = snapshot)
+        }
+    }
+
+    override suspend fun onDelete(context: Context, glanceId: GlanceId) {
+        homeQuickBeverageWidgetSelection(context).clearDrink(glanceId)
+        super.onDelete(context, glanceId)
+    }
+}
+
 class HomeQuickBeverageWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeQuickBeverageWidget()
+
+    override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
+        refreshHomeQuickBeverageWidget(context, appWidgetId)
+    }
+}
+
+class HomeQuickBeverageOneTapWidgetReceiver : UpdatingHomeWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = HomeQuickBeverageOneTapWidget()
 
     override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
         refreshHomeQuickBeverageWidget(context, appWidgetId)
@@ -290,13 +326,13 @@ suspend fun refreshHomeQuickBeverageWidget(
         ?: stateDrinkId
 
     if (resolvedDrinkId == null) {
-        HomeQuickBeverageWidget().update(context, glanceId)
+        quickBeverageWidgetForAppWidgetId(context, appWidgetId).update(context, glanceId)
         return
     }
 
     val snapshot = loadQuickBeverageSnapshot(context, resolvedDrinkId)
     writeQuickBeverageWidgetSnapshot(context, glanceId, snapshot)
-    HomeQuickBeverageWidget().update(context, glanceId)
+    quickBeverageWidgetForAppWidgetId(context, appWidgetId).update(context, glanceId)
 }
 
 internal suspend fun writeQuickBeverageWidgetSnapshot(
@@ -345,13 +381,7 @@ private fun HomeQuickBeverageWidgetContent(snapshot: HomeQuickBeverageSnapshot) 
     val actionWidth = if (isCompact) 52.dp else 64.dp
     val actionHeight = if (isCompact) 28.dp else 36.dp
     val actionGap = if (isCompact) 12.dp else 14.dp
-    val logAction = if (snapshot.drinkId.isBlank()) {
-        actionStartActivity(openMetricIntent(context, snapshot.route))
-    } else {
-        actionRunCallback<HomeQuickBeverageLogAction>(
-            actionParametersOf(QuickBeverageDrinkIdParameterKey to snapshot.drinkId)
-        )
-    }
+    val logAction = quickBeverageWidgetLogAction(context, snapshot)
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -396,6 +426,54 @@ private fun HomeQuickBeverageWidgetContent(snapshot: HomeQuickBeverageSnapshot) 
                 width = actionWidth,
                 height = actionHeight,
                 fontSize = actionFontSize,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickBeverageOneTapWidgetContent(snapshot: HomeQuickBeverageSnapshot) {
+    val context = LocalContext.current
+    val action = quickBeverageWidgetLogAction(context, snapshot)
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(ColorProvider(WidgetBackground))
+            .clickable(action)
+            .padding(horizontal = 6.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+    ) {
+        Text(
+            text = snapshot.title,
+            maxLines = 2,
+            style = TextStyle(
+                color = ColorProvider(WidgetPrimaryText),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(3.dp))
+        Text(
+            text = snapshot.amount,
+            maxLines = 1,
+            style = TextStyle(
+                color = ColorProvider(WidgetPrimaryText),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+        )
+        if (snapshot.subtitle.isNotBlank() &&
+            snapshot.subtitle != context.getString(R.string.home_quick_beverage_widget_tap_to_log)
+        ) {
+            Spacer(modifier = GlanceModifier.height(2.dp))
+            Text(
+                text = snapshot.subtitle,
+                maxLines = 1,
+                style = TextStyle(
+                    color = ColorProvider(WidgetPrimaryText),
+                    fontSize = 9.sp,
+                ),
             )
         }
     }
@@ -480,7 +558,13 @@ private suspend fun updateQuickBeverageWidgetStatus(
 ) {
     val snapshot = loadQuickBeverageSnapshot(context, drinkId, subtitle)
     writeQuickBeverageWidgetSnapshot(context, glanceId, snapshot)
-    HomeQuickBeverageWidget().update(context, glanceId)
+    val appWidgetId = glanceId.appWidgetIdOrNull()
+    val widget = if (appWidgetId == null) {
+        HomeQuickBeverageWidget()
+    } else {
+        quickBeverageWidgetForAppWidgetId(context, appWidgetId)
+    }
+    widget.update(context, glanceId)
 }
 
 private fun HydrationEntryError.quickBeverageWidgetMessage(context: Context): String =
@@ -496,6 +580,44 @@ private val QuickBeverageDrinkIdParameterKey =
     ActionParameters.Key<String>("quick_beverage_drink_id")
 
 private val WidgetActionBackground = Color(0xFF20313A)
+
+private fun quickBeverageWidgetLogAction(
+    context: Context,
+    snapshot: HomeQuickBeverageSnapshot,
+): Action =
+    if (snapshot.drinkId.isBlank()) {
+        actionStartActivity(openMetricIntent(context, snapshot.route))
+    } else {
+        actionRunCallback<HomeQuickBeverageLogAction>(
+            actionParametersOf(QuickBeverageDrinkIdParameterKey to snapshot.drinkId)
+        )
+    }
+
+internal fun quickBeverageWidgetReceiverClassForAppWidgetId(
+    context: Context,
+    appWidgetId: Int,
+): Class<*> =
+    if (isQuickBeverageOneTapWidget(context, appWidgetId)) {
+        HomeQuickBeverageOneTapWidgetReceiver::class.java
+    } else {
+        HomeQuickBeverageWidgetReceiver::class.java
+    }
+
+private fun quickBeverageWidgetForAppWidgetId(
+    context: Context,
+    appWidgetId: Int,
+): GlanceAppWidget =
+    if (isQuickBeverageOneTapWidget(context, appWidgetId)) {
+        HomeQuickBeverageOneTapWidget()
+    } else {
+        HomeQuickBeverageWidget()
+    }
+
+private fun isQuickBeverageOneTapWidget(context: Context, appWidgetId: Int): Boolean =
+    AppWidgetManager.getInstance(context.applicationContext)
+        .getAppWidgetInfo(appWidgetId)
+        ?.provider
+        ?.className == HomeQuickBeverageOneTapWidgetReceiver::class.java.name
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

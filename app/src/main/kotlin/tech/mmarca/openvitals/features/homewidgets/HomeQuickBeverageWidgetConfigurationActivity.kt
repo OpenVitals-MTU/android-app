@@ -14,13 +14,19 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.EntryPointAccessors
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
+import tech.mmarca.openvitals.features.manualentry.hydration.FrequentHydrationDrinkLookbackDays
+import tech.mmarca.openvitals.features.manualentry.hydration.frequentHydrationDrinkOptions
 import tech.mmarca.openvitals.features.manualentry.hydration.hydrationAmountLabel
 import tech.mmarca.openvitals.features.manualentry.hydration.isValidCustomHydrationDrink
 
@@ -45,12 +51,45 @@ class HomeQuickBeverageWidgetConfigurationActivity : AppCompatActivity() {
             applicationContext,
             HomeQuickBeverageWidgetEntryPoint::class.java,
         )
-        val drinks = entryPoint.hydrationRepository()
+        val unitFormatter = entryPoint.unitFormatter()
+        title = getString(R.string.home_quick_beverage_widget_config_title)
+
+        lifecycleScope.launch {
+            val drinks = loadBeverageOptions(entryPoint)
+            showBeverageOptions(drinks, unitFormatter)
+        }
+    }
+
+    private suspend fun loadBeverageOptions(
+        entryPoint: HomeQuickBeverageWidgetEntryPoint,
+    ): List<CustomHydrationDrink> = withContext(Dispatchers.IO) {
+        val hydrationRepository = entryPoint.hydrationRepository()
+        val nutritionRepository = entryPoint.nutritionRepository()
+        val drinks = hydrationRepository
             .customHydrationDrinks()
             .filter(CustomHydrationDrink::isValidCustomHydrationDrink)
-        val unitFormatter = entryPoint.unitFormatter()
+        if (drinks.isEmpty()) return@withContext emptyList()
 
-        title = getString(R.string.home_quick_beverage_widget_config_title)
+        val frequentDrinks = runCatching {
+            val endDate = LocalDate.now()
+            val startDate = endDate.minusDays(FrequentHydrationDrinkLookbackDays - 1)
+            frequentHydrationDrinkOptions(
+                drinks = drinks,
+                hydrationEntries = hydrationRepository.loadHydrationEntries(startDate, endDate),
+                nutritionEntries = nutritionRepository.loadNutritionEntries(startDate, endDate),
+            )
+        }.getOrDefault(emptyList())
+
+        quickBeverageWidgetDrinkOptions(
+            drinks = drinks,
+            frequentDrinks = frequentDrinks,
+        )
+    }
+
+    private fun showBeverageOptions(
+        drinks: List<CustomHydrationDrink>,
+        unitFormatter: UnitFormatter,
+    ) {
         val labels = drinks.map { drink ->
             "${drink.name} - ${hydrationAmountLabel(drink.volumeLiters, unitFormatter)}"
         }
@@ -122,7 +161,10 @@ class HomeQuickBeverageWidgetConfigurationActivity : AppCompatActivity() {
         val refresh = {
             appContext.sendBroadcast(
                 Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
-                    component = ComponentName(appContext, HomeQuickBeverageWidgetReceiver::class.java)
+                    component = ComponentName(
+                        appContext,
+                        quickBeverageWidgetReceiverClassForAppWidgetId(appContext, appWidgetId),
+                    )
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
                 }
             )

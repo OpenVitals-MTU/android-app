@@ -343,6 +343,17 @@
         </receiver>
 
         <receiver
+            android:name=".features.homewidgets.HomeQuickBeverageOneTapWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_quick_beverage_one_tap_widget_info" />
+        </receiver>
+
+        <receiver
             android:name=".features.homewidgets.HomeDailyReadinessWidgetReceiver"
             android:exported="true">
             <intent-filter>
