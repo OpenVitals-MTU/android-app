@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `features/bodyenergy`, `features/readiness`.
-> **Navigation:** `Screen.BodyEnergyDetails`, widget `BODY_ENERGY`, settings section `BODY_ENERGY`.
+> **Navigation:** `Screen.BodyEnergyDetails`, widget `BODY_ENERGY`, settings section `RECOVERY`.
 > **Related:** [Feature map](feature-map.md), [Daily readiness](daily-readiness.md), [Home screen widgets](home-widgets.md).
 
 Body Energy is a local derived view that estimates available energy across the day from supported wellness signals. It is intentionally a selected-day experience rather than a canonical `Day / Week / Month / Year` metric-detail screen.
@@ -21,7 +21,7 @@ The detail view can show a summary, timeline, confidence, and context for the se
 
 ## Calibration
 
-Body Energy supports calibration during onboarding and in settings. Calibration helps the local estimate better fit the user, and can be reset when needed.
+Body Energy supports calibration during onboarding and in Recovery settings. Calibration helps the local estimate better fit the user, and can be reset when needed.
 
 ## Signals
 

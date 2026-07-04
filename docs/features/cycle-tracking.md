@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `features/cycle`, `data/repository/CycleRepository.kt`.
-> **Navigation:** `Screen.Metric`, widget `CYCLE`, settings section `CYCLE`.
+> **Navigation:** `Screen.Metric`, widget `CYCLE`, Health Connect permission category.
 > **Related:** [Feature map](feature-map.md), [Onboarding and permissions](onboarding-and-permissions.md), [Privacy](../app/privacy.md).
 
 Cycle tracking reads supported Health Connect cycle records and presents them in dashboard and period detail views when permissions are granted.
@@ -30,7 +30,7 @@ Cycle data follows the same day, week, month, and year period model used by othe
 
 ## Permissions
 
-Cycle permissions are managed separately from broader activity, body, and vitals permissions. OpenVitals shows cycle access only when the relevant Health Connect permission categories are available.
+Cycle permissions are managed separately from broader activity, body, and vitals permissions inside Health Connect settings. OpenVitals shows cycle access only when the relevant Health Connect permission categories are available.
 
 ## Write Behavior
 

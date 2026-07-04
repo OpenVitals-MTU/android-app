@@ -135,7 +135,7 @@ private fun MapLibreRouteMap(
     val recenterDescription = stringResource(R.string.cd_recenter_map)
 
     val mapView = remember(context) {
-        MapLibre.getInstance(context.applicationContext)
+        initializeOfflineMapLibre(context.applicationContext)
         val options = MapLibreMapOptions.createFromAttributes(context)
             .textureMode(true)
         MapView(context, options).apply {
@@ -218,6 +218,13 @@ private fun MapLibreRouteMap(
             }
         }
     }
+}
+
+private fun initializeOfflineMapLibre(applicationContext: Context) {
+    MapLibre.getInstance(applicationContext)
+    // The app intentionally removes ACCESS_NETWORK_STATE. Pinning MapLibre to
+    // offline mode keeps its connectivity receiver from calling ConnectivityManager.
+    MapLibre.setConnected(false)
 }
 
 @SuppressLint("ClickableViewAccessibility")
