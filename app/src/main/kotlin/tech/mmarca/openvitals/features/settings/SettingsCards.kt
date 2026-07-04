@@ -26,11 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Bluetooth
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
@@ -43,6 +40,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -182,14 +180,10 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.DISPLAY -> Icons.Outlined.Settings
         SettingsSection.ACTIVITIES -> Icons.AutoMirrored.Outlined.DirectionsRun
         SettingsSection.SENSORS -> Icons.Outlined.Bluetooth
-        SettingsSection.CALORIES -> Icons.Outlined.LocalFireDepartment
-        SettingsSection.CAFFEINE -> Icons.Outlined.LocalDrink
-        SettingsSection.SLEEP -> Icons.Outlined.Bedtime
-        SettingsSection.BODY_ENERGY -> Icons.Outlined.BatteryChargingFull
-        SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
+        SettingsSection.NUTRITION -> Icons.Outlined.Restaurant
+        SettingsSection.RECOVERY -> Icons.Outlined.FavoriteBorder
         SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
         SettingsSection.HEALTH_CONNECT -> Icons.Outlined.HealthAndSafety
-        SettingsSection.PERMISSIONS -> Icons.Outlined.Lock
         SettingsSection.DEBUG_DIAGNOSTICS -> Icons.Outlined.BugReport
     }
 
@@ -1162,62 +1156,6 @@ internal fun UnitSystemCard(
                             )
                         },
                     )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun CyclePermissionsCard(
-    availability: HealthConnectAvailability,
-    cyclePermissions: Set<String>,
-    grantedPermissions: Set<String>,
-    onGrantPermissions: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val grantedCount = cyclePermissions.count { it in grantedPermissions }
-    val missingPermissions = cyclePermissions - grantedPermissions
-    val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
-    OpenVitalsCard(
-        modifier = modifier.fillMaxWidth(),
-
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CalendarMonth,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .weight(1f),
-            ) {
-                Text(text = stringResource(R.string.settings_cycle_permissions_title), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = stringResource(R.string.settings_cycle_permissions_granted, grantedCount, cyclePermissions.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            if (missingPermissions.isEmpty()) {
-                Icon(
-                    imageVector = Icons.Outlined.CheckCircle,
-                    contentDescription = stringResource(R.string.onboarding_status_granted),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            } else {
-                OpenVitalsTonalButton(
-                    onClick = onGrantPermissions,
-                    enabled = healthConnectAvailable,
-                ) {
-                    Text(stringResource(R.string.action_grant))
                 }
             }
         }

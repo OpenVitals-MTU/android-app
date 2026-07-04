@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.diagnostics.CrashReportEmailActivity
 import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
-import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 
@@ -89,12 +88,6 @@ fun SettingsScreen(
     }
 
     val requestAllPermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract()
-    ) { granted ->
-        viewModel.onPermissionsResult(granted)
-    }
-
-    val requestCyclePermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         viewModel.onPermissionsResult(granted)
@@ -181,11 +174,6 @@ fun SettingsScreen(
         },
         onOpenSupport = {
             openExternalUrl(supportUrl)
-        },
-        onGrantCyclePermissions = {
-            if (state.availability == HealthConnectAvailability.AVAILABLE) {
-                requestCyclePermissions.launch(state.cyclePermissions - state.grantedPermissions)
-            }
         },
         onGrantDataImportPermissions = {
             requestDataImportPermissions.launch(state.missingDataImportWritePermissions)

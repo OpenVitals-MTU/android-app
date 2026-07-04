@@ -8,7 +8,6 @@ internal data class SettingsScreenActions(
     val onOpenIssues: () -> Unit,
     val onOpenDiscussion: () -> Unit,
     val onOpenSupport: () -> Unit,
-    val onGrantCyclePermissions: () -> Unit,
     val onGrantDataImportPermissions: () -> Unit,
     val onImportAppleHealth: () -> Unit,
     val onImportOfflineMap: () -> Unit,

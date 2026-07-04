@@ -19,25 +19,13 @@ enum class SettingsSection(
         titleRes = R.string.settings_sensors_group_title,
         summaryRes = R.string.settings_sensors_group_body,
     ),
-    CALORIES(
-        titleRes = R.string.settings_calories_group_title,
-        summaryRes = R.string.settings_calories_group_body,
+    NUTRITION(
+        titleRes = R.string.settings_nutrition_group_title,
+        summaryRes = R.string.settings_nutrition_group_body,
     ),
-    CAFFEINE(
-        titleRes = R.string.settings_caffeine_group_title,
-        summaryRes = R.string.settings_caffeine_group_body,
-    ),
-    SLEEP(
-        titleRes = R.string.settings_sleep_group_title,
-        summaryRes = R.string.settings_sleep_group_body,
-    ),
-    BODY_ENERGY(
-        titleRes = R.string.settings_body_energy_group_title,
-        summaryRes = R.string.settings_body_energy_group_body,
-    ),
-    CYCLE(
-        titleRes = R.string.settings_cycle_group_title,
-        summaryRes = R.string.settings_cycle_group_body,
+    RECOVERY(
+        titleRes = R.string.settings_recovery_group_title,
+        summaryRes = R.string.settings_recovery_group_body,
     ),
     DATA_IMPORT(
         titleRes = R.string.settings_data_import_group_title,
@@ -46,10 +34,6 @@ enum class SettingsSection(
     HEALTH_CONNECT(
         titleRes = R.string.settings_health_connect_group_title,
         summaryRes = R.string.settings_health_connect_group_body,
-    ),
-    PERMISSIONS(
-        titleRes = R.string.settings_permissions_group_title,
-        summaryRes = R.string.settings_permissions_group_body,
     ),
     DEBUG_DIAGNOSTICS(
         titleRes = R.string.settings_debug_diagnostics_group_title,

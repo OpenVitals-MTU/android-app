@@ -263,16 +263,18 @@ class OpenVitalsConnectedFlowTest {
 
         composeRule.onNodeWithText("Display").performClick()
         composeRule.onNodeWithText("Activities").performClick()
+        composeRule.onNodeWithText("Nutrition").performClick()
+        composeRule.onNodeWithText("Recovery").performClick()
         composeRule.onNodeWithText("Health Connect").performClick()
-        composeRule.onNodeWithText("Permissions").performClick()
 
         composeRule.runOnIdle {
             assertEquals(
                 listOf(
                     SettingsSection.DISPLAY,
                     SettingsSection.ACTIVITIES,
+                    SettingsSection.NUTRITION,
+                    SettingsSection.RECOVERY,
                     SettingsSection.HEALTH_CONNECT,
-                    SettingsSection.PERMISSIONS,
                 ),
                 openedSections,
             )

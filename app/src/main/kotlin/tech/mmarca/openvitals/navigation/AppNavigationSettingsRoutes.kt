@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.navigation
 
+import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -25,67 +26,39 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
     }
 
     composable(Screen.SettingsDisplay.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.DISPLAY,
-        )
+        SettingsSectionScreen(SettingsSection.DISPLAY)
     }
 
     composable(Screen.SettingsActivities.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.ACTIVITIES,
-        )
+        SettingsSectionScreen(SettingsSection.ACTIVITIES)
     }
 
     composable(Screen.SettingsSensors.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.SENSORS,
-        )
+        SettingsSectionScreen(SettingsSection.SENSORS)
+    }
+
+    composable(Screen.SettingsNutrition.route) {
+        SettingsSectionScreen(SettingsSection.NUTRITION)
     }
 
     composable(Screen.SettingsCalories.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.CALORIES,
-        )
+        SettingsSectionScreen(SettingsSection.NUTRITION)
     }
 
     composable(Screen.SettingsCaffeine.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.CAFFEINE,
-        )
+        SettingsSectionScreen(SettingsSection.NUTRITION)
+    }
+
+    composable(Screen.SettingsRecovery.route) {
+        SettingsSectionScreen(SettingsSection.RECOVERY)
     }
 
     composable(Screen.SettingsSleep.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.SLEEP,
-        )
+        SettingsSectionScreen(SettingsSection.RECOVERY)
     }
 
     composable(Screen.SettingsBodyEnergy.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.BODY_ENERGY,
-        )
-    }
-
-    composable(Screen.SettingsCycle.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.CYCLE,
-        )
+        SettingsSectionScreen(SettingsSection.RECOVERY)
     }
 
     composable(Screen.SettingsDataImport.route) {
@@ -102,28 +75,16 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
     }
 
     composable(Screen.SettingsHealthConnect.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.HEALTH_CONNECT,
-        )
+        SettingsSectionScreen(SettingsSection.HEALTH_CONNECT)
     }
 
     composable(Screen.SettingsPermissions.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        SettingsScreen(
-            viewModel = settingsViewModel,
-            section = SettingsSection.PERMISSIONS,
-        )
+        SettingsSectionScreen(SettingsSection.HEALTH_CONNECT)
     }
 
     if (BuildConfig.OPENVITALS_DIAGNOSTICS) {
         composable(Screen.SettingsDebugDiagnostics.route) {
-            val settingsViewModel = hiltViewModel<SettingsViewModel>()
-            SettingsScreen(
-                viewModel = settingsViewModel,
-                section = SettingsSection.DEBUG_DIAGNOSTICS,
-            )
+            SettingsSectionScreen(SettingsSection.DEBUG_DIAGNOSTICS)
         }
     }
 }
@@ -133,13 +94,18 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.DISPLAY -> Screen.SettingsDisplay.route
         SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
         SettingsSection.SENSORS -> Screen.SettingsSensors.route
-        SettingsSection.CALORIES -> Screen.SettingsCalories.route
-        SettingsSection.CAFFEINE -> Screen.SettingsCaffeine.route
-        SettingsSection.SLEEP -> Screen.SettingsSleep.route
-        SettingsSection.BODY_ENERGY -> Screen.SettingsBodyEnergy.route
-        SettingsSection.CYCLE -> Screen.SettingsCycle.route
+        SettingsSection.NUTRITION -> Screen.SettingsNutrition.route
+        SettingsSection.RECOVERY -> Screen.SettingsRecovery.route
         SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
         SettingsSection.HEALTH_CONNECT -> Screen.SettingsHealthConnect.route
-        SettingsSection.PERMISSIONS -> Screen.SettingsPermissions.route
         SettingsSection.DEBUG_DIAGNOSTICS -> Screen.SettingsDebugDiagnostics.route
     }
+
+@Composable
+private fun SettingsSectionScreen(section: SettingsSection) {
+    val settingsViewModel = hiltViewModel<SettingsViewModel>()
+    SettingsScreen(
+        viewModel = settingsViewModel,
+        section = section,
+    )
+}

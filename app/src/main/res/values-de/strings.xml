@@ -1079,10 +1079,14 @@
     <string name="activity_recording_live_power">Leistung</string>
     <string name="activity_recording_live_speed">Geschwindigkeit</string>
     <string name="activity_recording_notification_heart_rate">HF %1$s</string>
+    <string name="settings_nutrition_group_title">Ernährung</string>
+    <string name="settings_nutrition_group_body">Kaloriendaten und Koffein-Personalisierung</string>
     <string name="settings_calories_group_title">Kalorien</string>
     <string name="settings_calories_group_body">Gesamtkaloriendaten</string>
     <string name="settings_caffeine_group_title">Koffein</string>
     <string name="settings_caffeine_group_body">Halbwertszeit, Schlafenszeit, Schlafschwelle und Personalisierung.</string>
+    <string name="settings_recovery_group_title">Erholung</string>
+    <string name="settings_recovery_group_body">Schlafzeitraum und Body-Energy-Kalibrierung</string>
     <string name="settings_sleep_group_title">Schlaf</string>
     <string name="settings_sleep_group_body">Schlafzeitraum</string>
     <string name="settings_cycle_group_title">Menstruationszyklus</string>
@@ -1092,7 +1096,7 @@
     <string name="settings_permissions_group_title">Berechtigungen</string>
     <string name="settings_permissions_group_body">Zugriff auf Gesundheitsdaten und manuelle Berechtigungsschritte</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
-    <string name="settings_health_connect_group_body">Synchronisation, Zugriff und Datenquellen</string>
+    <string name="settings_health_connect_group_body">Synchronisation, Berechtigungen, Zugriff und App-Sperre</string>
     <string name="settings_debug_diagnostics_group_title">Debug-Diagnose</string>
     <string name="settings_debug_diagnostics_group_body">Bereinigte Diagnoseprotokolle zur Fehlerbehebung speichern</string>
     <string name="settings_health_connect_sync_title">Mit Health Connect synchronisieren</string>

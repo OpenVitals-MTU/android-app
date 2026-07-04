@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.bodyenergy.BodyEnergyCalibrationCard
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -131,7 +130,7 @@ internal fun LazyListScope.settingsScreenContent(
                 BleDevicesSettingsSection()
             }
         }
-        SettingsSection.CALORIES -> {
+        SettingsSection.NUTRITION -> {
             item { SectionHeader(stringResource(section.titleRes)) }
             item {
                 CalorieDataSourceCard(
@@ -140,9 +139,7 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-        }
-        SettingsSection.CAFFEINE -> {
-            item { SectionHeader(stringResource(section.titleRes)) }
+            item { SettingsCardSpacer() }
             item {
                 CaffeinePreferencesCard(
                     preferences = state.caffeinePreferences,
@@ -152,7 +149,7 @@ internal fun LazyListScope.settingsScreenContent(
                 )
             }
         }
-        SettingsSection.SLEEP -> {
+        SettingsSection.RECOVERY -> {
             item { SectionHeader(stringResource(section.titleRes)) }
             item {
                 SleepRangeModeCard(
@@ -161,26 +158,12 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-        }
-        SettingsSection.BODY_ENERGY -> {
-            item { SectionHeader(stringResource(section.titleRes)) }
+            item { SettingsCardSpacer() }
             item {
                 BodyEnergyCalibrationCard(
                     calibration = state.bodyEnergyCalibration,
                     onSave = actions.onSaveBodyEnergyCalibration,
                     onUseAutomatic = actions.onResetBodyEnergyCalibration,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-        }
-        SettingsSection.CYCLE -> {
-            item { SectionHeader(stringResource(section.titleRes)) }
-            item {
-                CyclePermissionsCard(
-                    availability = state.availability,
-                    cyclePermissions = state.cyclePermissions,
-                    grantedPermissions = state.grantedPermissions,
-                    onGrantPermissions = actions.onGrantCyclePermissions,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
@@ -217,17 +200,6 @@ internal fun LazyListScope.settingsScreenContent(
                 )
             }
             item { SettingsCardSpacer() }
-            item {
-                AppLockCard(
-                    enabled = state.appLockEnabled,
-                    onEnabledChange = viewModel::setAppLockEnabled,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-            item { SettingsCardSpacer() }
-        }
-        SettingsSection.PERMISSIONS -> {
-            item { SectionHeader(stringResource(section.titleRes)) }
 
             state.permissionCategories.forEach { category ->
                 item {
@@ -275,6 +247,16 @@ internal fun LazyListScope.settingsScreenContent(
                     )
                 }
             }
+
+            item { SettingsCardSpacer() }
+            item {
+                AppLockCard(
+                    enabled = state.appLockEnabled,
+                    onEnabledChange = viewModel::setAppLockEnabled,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            item { SettingsCardSpacer() }
         }
         SettingsSection.DEBUG_DIAGNOSTICS -> {
             if (BuildConfig.OPENVITALS_DIAGNOSTICS) {
