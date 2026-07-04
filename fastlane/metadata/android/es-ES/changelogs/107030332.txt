@@ -1,0 +1,1 @@
+Añade un widget de bebida rápida con recipientes guardados para registrar hidratación, cafeína y nutrición más rápido. La importación de actividades maneja mejor FIT de actividades, recorridos y entrenamientos, calorías, duraciones, títulos, archivos sin ruta y errores claros. Corazón y Vitales se separan mejor, Ajustes es más simple y se actualizan docs y capturas de Play Store.

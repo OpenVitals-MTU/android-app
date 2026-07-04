@@ -1,0 +1,1 @@
+Fügt ein Schnellgetränk-Widget mit gespeicherten Behältern für schnelleres Flüssigkeits-, Koffein- und Nährwert-Logging hinzu. Aktivitätsimport verarbeitet FIT-Daten, Kalorien, Dauer, Titel, Dateien ohne Route und Fehler besser. Herz und Vitalwerte sind klarer getrennt, Einstellungen einfacher, Docs und Play-Store-Screenshots aktualisiert.

@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.7.6 - 2026-07-04
+
+### English
+
+- Add a configurable quick beverage home-screen widget so saved containers can log hydration, caffeine, and nutrition faster.
+- Improve beverage entry with tap-to-save containers, better daily-goal context, custom amount and category handling, and persisted nutrition defaults.
+- Upgrade activity import with richer FIT activity/course/workout parsing, route-less FIT support, imported calories, duration and title inference, and clearer import errors.
+- Split Heart and Vitals into clearer metric destinations, add a blood-pressure vitals view, and streamline Settings and navigation flows.
+- Refresh docs, README screenshots, and Play Store screenshots, including the reorganized app guide, feature guide, how-to pages, and offline maps notes.
+
+### Español
+
+- Añade un widget configurable de bebida rápida en la pantalla de inicio para registrar hidratación, cafeína y nutrición más rápido desde recipientes guardados.
+- Mejora la entrada de bebidas con recipientes de guardado rápido, más contexto del objetivo diario, manejo de cantidades y categorías personalizadas, y valores nutricionales persistentes.
+- Refuerza la importación de actividades con análisis FIT más completo para actividades, recorridos y entrenamientos, soporte para FIT sin ruta, calorías importadas, inferencia de duración y título, y errores más claros.
+- Separa Corazón y Vitales en destinos de métricas más claros, añade una vista de presión arterial y simplifica Ajustes y la navegación.
+- Actualiza la documentación, las capturas del README y las capturas de Play Store, incluida la guía de la app, la guía de funciones, los how-to y las notas de mapas sin conexión.
+
+### Deutsch
+
+- Fügt ein konfigurierbares Schnellgetränk-Widget für den Startbildschirm hinzu, damit gespeicherte Behälter Flüssigkeit, Koffein und Nährwerte schneller protokollieren.
+- Verbessert die Getränkeerfassung mit Tipp-zum-Speichern-Behältern, besserem Tagesziel-Kontext, eigener Mengen- und Kategorienverwaltung sowie gespeicherten Nährwertvorgaben.
+- Erweitert den Aktivitätsimport mit vollständigerem FIT-Parsing für Aktivitäten, Strecken und Trainings, FIT-Unterstützung ohne Route, importierten Kalorien, Dauer- und Titelableitung sowie klareren Importfehlern.
+- Trennt Herz und Vitalwerte in klarere Metrikziele, ergänzt eine Blutdruckansicht und vereinfacht Einstellungen und Navigation.
+- Aktualisiert Dokumentation, README-Screenshots und Play-Store-Screenshots, einschließlich neu geordneter App-Anleitung, Feature-Guide, How-to-Seiten und Offline-Kartenhinweise.
+
+### Italiano
+
+- Aggiunge un widget configurabile per bevande rapide nella schermata home, così i contenitori salvati possono registrare idratazione, caffeina e nutrienti più velocemente.
+- Migliora l'inserimento delle bevande con contenitori salva-subito, contesto dell'obiettivo giornaliero più chiaro, gestione di quantità e categorie personalizzate e valori nutrizionali persistenti.
+- Potenzia l'importazione attività con parsing FIT più completo per attività, percorsi e allenamenti, supporto ai FIT senza traccia, calorie importate, inferenza di durata e titolo ed errori più chiari.
+- Separa Cuore e Parametri vitali in destinazioni metriche più chiare, aggiunge una vista per la pressione arteriosa e semplifica Impostazioni e navigazione.
+- Aggiorna documentazione, screenshot del README e screenshot per Play Store, incluse guida app, guida funzioni, pagine how-to e note sulle mappe offline riorganizzate.
+
 ## 1.7.5 - 2026-07-03
 
 ### English

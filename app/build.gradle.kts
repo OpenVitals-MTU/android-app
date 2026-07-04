@@ -44,8 +44,8 @@ val nightlyVersionNameSuffix = versionNameOverride
     .map { "" }
     .orElse("-nightly")
 // versionCode is a monotonic release counter, independent of versionName.
-val baseVersionCode = 107030330
-val baseVersionName = "1.7.5"
+val baseVersionCode = 107030332
+val baseVersionName = "1.7.6"
 
 android {
     namespace = "tech.mmarca.openvitals"
