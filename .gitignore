@@ -46,6 +46,4 @@ out/
 # OS
 .DS_Store
 Thumbs.db
-OV_Formatos/
-z_proj/
-reviews/
+debug_files/

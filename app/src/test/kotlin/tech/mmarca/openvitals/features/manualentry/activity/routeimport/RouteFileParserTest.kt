@@ -118,6 +118,50 @@ class RouteFileParserTest {
         assertTrue(result.distanceMeters > 0.0)
     }
 
+    @Test fun `parseFile rejects FIT activity without GPS route with clear message`() {
+        val failure = runCatching {
+            RouteFileParser.parseFile(
+                fitActivityBytes(
+                    sport = 13,
+                    points = emptyList(),
+                    sessionTime = Instant.parse("2026-05-26T08:30:00Z"),
+                ),
+                fileName = "indoor-workout.fit",
+            )
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals(
+            "FIT file does not contain a GPS route. OpenVitals can import FIT route tracks only; indoor or non-GPS workouts can be entered manually.",
+            failure.exceptionOrNull()?.message,
+        )
+    }
+
+    @Test fun `parseFile rejects FIT route with fewer than two GPS points`() {
+        val failure = runCatching {
+            RouteFileParser.parseFile(
+                fitActivityBytes(
+                    sport = 2,
+                    points = listOf(
+                        FitTestPoint(
+                            time = Instant.parse("2026-05-26T08:30:00Z"),
+                            latitude = 59.0000,
+                            longitude = 24.0000,
+                            altitudeMeters = 10.0,
+                        ),
+                    ),
+                ),
+                fileName = "single-point.fit",
+            )
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals(
+            "FIT route must contain at least 2 timestamped GPS points.",
+            failure.exceptionOrNull()?.message,
+        )
+    }
+
     @Test fun `parseFile extracts untimestamped KML line string with synthetic timing`() {
         val result = RouteFileParser.parseFile(
             """
@@ -214,7 +258,11 @@ class RouteFileParserTest {
         return output.toByteArray()
     }
 
-    private fun fitActivityBytes(sport: Int, points: List<FitTestPoint>): ByteArray {
+    private fun fitActivityBytes(
+        sport: Int,
+        points: List<FitTestPoint>,
+        sessionTime: Instant = points.firstOrNull()?.time ?: Instant.parse("2026-05-26T08:30:00Z"),
+    ): ByteArray {
         val data = ByteArrayOutputStream()
         data.writeFitDefinition(
             localMessageType = 1,
@@ -225,7 +273,7 @@ class RouteFileParserTest {
             ),
         )
         data.write(1)
-        data.writeUInt32(points.first().time.fitTimestamp())
+        data.writeUInt32(sessionTime.fitTimestamp())
         data.write(sport)
 
         data.writeFitDefinition(

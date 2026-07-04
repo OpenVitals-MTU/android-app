@@ -17,8 +17,11 @@ import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 internal object FitRouteParser {
     fun parse(fitBytes: ByteArray, fileName: String? = null): RouteFileImport {
         val result = FitDecoder(fitBytes).decode()
+        require(result.points.isNotEmpty()) {
+            "FIT file does not contain a GPS route. OpenVitals can import FIT route tracks only; indoor or non-GPS workouts can be entered manually."
+        }
         require(result.points.size >= MinRoutePoints) {
-            "FIT activity must contain at least $MinRoutePoints timestamped GPS points."
+            "FIT route must contain at least $MinRoutePoints timestamped GPS points."
         }
         return buildRouteImport(
             fileName = fileName,

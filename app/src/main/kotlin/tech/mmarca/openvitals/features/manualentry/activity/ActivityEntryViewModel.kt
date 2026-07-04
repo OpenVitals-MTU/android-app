@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.onScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
@@ -426,11 +427,14 @@ class ActivityEntryViewModel(
                 .onSuccess { routeImport ->
                     applyRouteImport(routeImport, unitSystem)
                 }
-                .onFailure { error ->
+                .onScreenError(
+                    logTag = TAG,
+                    logMessage = "Route file import failed",
+                ) { screenError ->
                     _uiState.value = _uiState.value.copy(
                         isImportingRoute = false,
                         entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
-                        detailError = error.toScreenError(),
+                        detailError = screenError,
                         validationErrors = emptySet(),
                     )
                 }
@@ -1095,6 +1099,10 @@ class ActivityEntryViewModel(
             validationErrors = emptySet(),
         )
         refreshPermission()
+    }
+
+    private companion object {
+        private const val TAG = "ActivityEntryViewModel"
     }
 
     private fun updateState(
