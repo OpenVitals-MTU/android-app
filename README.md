@@ -40,7 +40,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Manual logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrate entries, body measurements, vitals, mindfulness, and activities
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
-- GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
+- GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
 - Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration
 - App language support for system default, English, Spanish, German, and Italian
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
@@ -88,11 +88,11 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
-- Data Import setting for supported Apple Health `export.xml` or `export.zip` records, with live progress while the import continues in the background
+- Data Importers setting for supported Apple Health `export.xml` or `export.zip` records and FIT activity/course/workout files
 - Cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views after Health Connect cycle permissions are granted
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Explicit manual entry logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrates, activities with optional GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge maps, GPS recording, high-contrast outdoor recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
+- Explicit manual entry logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrates, activities with optional GPX/KML/KMZ route import, FIT activity/course/workout review from Settings, offline PMTiles/Mapsforge maps, GPS recording, high-contrast outdoor recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
 
 ## Current coverage
 
@@ -102,7 +102,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Heart: heart rate samples and summaries, resting heart rate, HRV
 - Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
 - Body: weight, BMI, body fat, lean mass, Fat-Free Mass Index (FFMI), bone mass, body water mass, basal metabolic rate
-- Manual entry: beverage/hydration entries with drink presets, caffeine, nutrition defaults, and custom amounts; carbohydrate entries; activity sessions with optional GPX/KML/KMZ/FIT route import, offline PMTiles/Mapsforge maps, GPS recording, configurable recording dashboard, Focus mode, high-contrast outdoor mode, strength training heart-rate monitoring, or experimental Bluetooth LE sensors; mindfulness sessions; weight; height; body fat; blood pressure; SpO2; respiratory rate; and body temperature
+- Manual entry: beverage/hydration entries with drink presets, caffeine, nutrition defaults, and custom amounts; carbohydrate entries; activity sessions with optional GPX/KML/KMZ route import, FIT activity/course/workout review from Settings, offline PMTiles/Mapsforge maps, GPS recording, configurable recording dashboard, Focus mode, high-contrast outdoor mode, strength training heart-rate monitoring, or experimental Bluetooth LE sensors; mindfulness sessions; weight; height; body fat; blood pressure; SpO2; respiratory rate; and body temperature
 - Beverages and caffeine: daily and period hydration totals, active caffeine estimates, bedtime guidance, source and time-of-day insights, Health Connect-backed drink logging with preset or custom drinks, tap-to-save container presets, editable per-container serving sizes, and optional reminders
 - Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
 - Nutrition: calories in, meals, macros, caffeine, and selected nutrient totals from Health Connect nutrition records

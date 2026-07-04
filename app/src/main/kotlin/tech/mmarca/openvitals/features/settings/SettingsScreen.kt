@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.settings
 
 import android.content.ClipData
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.diagnostics.CrashReportEmailActivity
 import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitImportMimeTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 
@@ -38,6 +40,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     section: SettingsSection? = null,
     onOpenSection: (SettingsSection) -> Unit = {},
+    onImportFitFileSelected: (Uri) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -104,6 +107,14 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.importAppleHealthExport(uri)
+        }
+    }
+
+    val fitFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            onImportFitFileSelected(uri)
         }
     }
 
@@ -180,6 +191,9 @@ fun SettingsScreen(
         },
         onImportAppleHealth = {
             appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
+        },
+        onImportFitFile = {
+            fitFilePicker.launch(FitImportMimeTypes)
         },
         onImportOfflineMap = {
             offlineMapPicker.launch(OfflineMapMimeTypes)

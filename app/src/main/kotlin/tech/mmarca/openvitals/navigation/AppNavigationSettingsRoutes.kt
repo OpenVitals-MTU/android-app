@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
@@ -9,14 +10,16 @@ import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
-import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
-import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 
-internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
+internal fun NavGraphBuilder.settingsRoutes(
+    navController: NavHostController,
+    onImportFitFile: (Uri) -> Unit = {},
+) {
     composable(Screen.Settings.route) {
         val settingsViewModel = hiltViewModel<SettingsViewModel>()
         SettingsScreen(
             viewModel = settingsViewModel,
+            onImportFitFileSelected = onImportFitFile,
             onOpenSection = { section ->
                 navController.navigate(settingsSectionRoute(section)) {
                     launchSingleTop = true
@@ -26,65 +29,56 @@ internal fun NavGraphBuilder.settingsRoutes(navController: NavHostController) {
     }
 
     composable(Screen.SettingsDisplay.route) {
-        SettingsSectionScreen(SettingsSection.DISPLAY)
+        SettingsSectionScreen(SettingsSection.DISPLAY, onImportFitFile)
     }
 
     composable(Screen.SettingsActivities.route) {
-        SettingsSectionScreen(SettingsSection.ACTIVITIES)
+        SettingsSectionScreen(SettingsSection.ACTIVITIES, onImportFitFile)
     }
 
     composable(Screen.SettingsSensors.route) {
-        SettingsSectionScreen(SettingsSection.SENSORS)
+        SettingsSectionScreen(SettingsSection.SENSORS, onImportFitFile)
     }
 
     composable(Screen.SettingsNutrition.route) {
-        SettingsSectionScreen(SettingsSection.NUTRITION)
+        SettingsSectionScreen(SettingsSection.NUTRITION, onImportFitFile)
     }
 
     composable(Screen.SettingsCalories.route) {
-        SettingsSectionScreen(SettingsSection.NUTRITION)
+        SettingsSectionScreen(SettingsSection.NUTRITION, onImportFitFile)
     }
 
     composable(Screen.SettingsCaffeine.route) {
-        SettingsSectionScreen(SettingsSection.NUTRITION)
+        SettingsSectionScreen(SettingsSection.NUTRITION, onImportFitFile)
     }
 
     composable(Screen.SettingsRecovery.route) {
-        SettingsSectionScreen(SettingsSection.RECOVERY)
+        SettingsSectionScreen(SettingsSection.RECOVERY, onImportFitFile)
     }
 
     composable(Screen.SettingsSleep.route) {
-        SettingsSectionScreen(SettingsSection.RECOVERY)
+        SettingsSectionScreen(SettingsSection.RECOVERY, onImportFitFile)
     }
 
     composable(Screen.SettingsBodyEnergy.route) {
-        SettingsSectionScreen(SettingsSection.RECOVERY)
+        SettingsSectionScreen(SettingsSection.RECOVERY, onImportFitFile)
     }
 
     composable(Screen.SettingsDataImport.route) {
-        val settingsViewModel = hiltViewModel<SettingsViewModel>()
-        WithHealthConnectFeatureScreen(
-            feature = HealthConnectFeature.DATA_IMPORT,
-            showInlineSyncBanner = false,
-        ) { _ ->
-            SettingsScreen(
-                viewModel = settingsViewModel,
-                section = SettingsSection.DATA_IMPORT,
-            )
-        }
+        SettingsSectionScreen(SettingsSection.DATA_IMPORT, onImportFitFile)
     }
 
     composable(Screen.SettingsHealthConnect.route) {
-        SettingsSectionScreen(SettingsSection.HEALTH_CONNECT)
+        SettingsSectionScreen(SettingsSection.HEALTH_CONNECT, onImportFitFile)
     }
 
     composable(Screen.SettingsPermissions.route) {
-        SettingsSectionScreen(SettingsSection.HEALTH_CONNECT)
+        SettingsSectionScreen(SettingsSection.HEALTH_CONNECT, onImportFitFile)
     }
 
     if (BuildConfig.OPENVITALS_DIAGNOSTICS) {
         composable(Screen.SettingsDebugDiagnostics.route) {
-            SettingsSectionScreen(SettingsSection.DEBUG_DIAGNOSTICS)
+            SettingsSectionScreen(SettingsSection.DEBUG_DIAGNOSTICS, onImportFitFile)
         }
     }
 }
@@ -102,10 +96,14 @@ private fun settingsSectionRoute(section: SettingsSection): String =
     }
 
 @Composable
-private fun SettingsSectionScreen(section: SettingsSection) {
+private fun SettingsSectionScreen(
+    section: SettingsSection,
+    onImportFitFile: (Uri) -> Unit,
+) {
     val settingsViewModel = hiltViewModel<SettingsViewModel>()
     SettingsScreen(
         viewModel = settingsViewModel,
         section = section,
+        onImportFitFileSelected = onImportFitFile,
     )
 }

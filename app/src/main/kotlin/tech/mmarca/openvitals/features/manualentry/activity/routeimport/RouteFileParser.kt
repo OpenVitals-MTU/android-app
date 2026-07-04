@@ -1,16 +1,5 @@
 package tech.mmarca.openvitals.features.manualentry.activity.routeimport
 
-import tech.mmarca.openvitals.features.manualentry.*
-import tech.mmarca.openvitals.features.manualentry.activity.*
-import tech.mmarca.openvitals.features.manualentry.activity.recording.*
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
-import tech.mmarca.openvitals.features.manualentry.body.*
-import tech.mmarca.openvitals.features.manualentry.hydration.*
-import tech.mmarca.openvitals.features.manualentry.mindfulness.*
-import tech.mmarca.openvitals.features.manualentry.vitals.*
-
-
-
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -27,8 +16,11 @@ data class RouteFileImport(
     val points: List<ExerciseRoutePoint>,
     val distanceMeters: Double,
     val elevationGainedMeters: Double,
+    val activeCaloriesKcal: Double? = null,
+    val totalCaloriesKcal: Double? = null,
     val startTime: Instant,
     val endTime: Instant,
+    val durationSeconds: Long? = null,
     val name: String? = null,
     val description: String? = null,
     val type: String? = null,
@@ -44,8 +36,8 @@ class RouteFileImporter @Inject constructor(
     suspend fun import(uri: Uri): RouteFileImport = withContext(Dispatchers.IO) {
         val fileName = uri.displayName(context)
         val routeBytes = context.contentResolver.openInputStream(uri)
-            ?.use { it.readBytesBounded(MaxRouteFileBytes, "Route file is too large.") }
-            ?: throw IllegalArgumentException("Unable to read route file.")
+            ?.use { it.readBytesBounded(MaxRouteFileBytes, "Activity file is too large.") }
+            ?: throw IllegalArgumentException("Unable to read activity file.")
 
         RouteFileParser.parseFile(routeBytes, fileName = fileName)
     }
@@ -54,7 +46,7 @@ class RouteFileImporter @Inject constructor(
 internal object RouteFileParser {
     fun parseFile(fileBytes: ByteArray, fileName: String? = null): RouteFileImport {
         require(fileBytes.size <= MaxRouteFileBytes) {
-            "Route file is too large."
+            "Activity file is too large."
         }
         try {
             if (fileBytes.isFitFile() || fileName.hasExtension("fit")) {
@@ -74,7 +66,7 @@ internal object RouteFileParser {
         } catch (error: IllegalArgumentException) {
             throw error
         } catch (error: Throwable) {
-            throw IllegalArgumentException("Route file is not a valid GPX, KML, KMZ, or FIT file.", error)
+            throw IllegalArgumentException("Activity file is not a valid GPX, KML, KMZ, or FIT file.", error)
         }
     }
 

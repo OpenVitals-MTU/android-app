@@ -127,6 +127,9 @@ fun AppNavigation(
     var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
     var dashboardDeviceActionVisible by remember { mutableStateOf(false) }
+    var settingsRouteImportRequest by remember { mutableStateOf<ExternalRouteImportRequest?>(null) }
+    var nextSettingsRouteImportRequestId by remember { mutableStateOf(0L) }
+    val activeRouteImportRequest = settingsRouteImportRequest ?: routeImportRequest
 
     fun markDashboardDirty() {
         dashboardRefreshRequest += 1
@@ -247,9 +250,9 @@ fun AppNavigation(
         }
     }
 
-    LaunchedEffect(routeImportRequest?.id, currentRoute) {
+    LaunchedEffect(activeRouteImportRequest, currentRoute) {
         if (
-            routeImportRequest != null &&
+            activeRouteImportRequest != null &&
             currentRoute != null &&
             currentRoute != Screen.Onboarding.route
         ) {
@@ -633,8 +636,14 @@ fun AppNavigation(
                 navController = navController,
                 unitFormatter = unitFormatter,
                 appThemeMode = appThemeMode,
-                routeImportRequest = routeImportRequest,
-                onRouteImportRequestHandled = onRouteImportRequestHandled,
+                routeImportRequest = activeRouteImportRequest,
+                onRouteImportRequestHandled = { requestId ->
+                    if (settingsRouteImportRequest?.id == requestId) {
+                        settingsRouteImportRequest = null
+                    } else {
+                        onRouteImportRequestHandled(requestId)
+                    }
+                },
                 onManualEntryEditStateChanged = { isEditing, onToggleEdit ->
                     manualEntryTopBarState = TopBarEditState(isEditing, onToggleEdit)
                 },
@@ -882,7 +891,15 @@ fun AppNavigation(
                 )
             }
 
-            settingsRoutes(navController)
+            settingsRoutes(
+                navController = navController,
+                onImportFitFile = { uri ->
+                    settingsRouteImportRequest = ExternalRouteImportRequest(
+                        id = --nextSettingsRouteImportRequestId,
+                        uri = uri,
+                    )
+                },
+            )
         }
     }
     HealthConnectNewPermissionsPrompt()

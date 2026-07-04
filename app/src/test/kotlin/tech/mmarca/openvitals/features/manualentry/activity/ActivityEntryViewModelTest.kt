@@ -1124,6 +1124,76 @@ class ActivityEntryViewModelTest {
         assertEquals("126", vm.uiState.value.totalCaloriesText)
     }
 
+    @Test fun `FIT import without route fills manual activity fields`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val importer = mockk<RouteFileImporter>()
+        val uri = mockk<Uri>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val end = Instant.parse("2026-05-26T09:15:00Z")
+        coEvery { importer.import(uri) } returns RouteFileImport(
+            fileName = "Functional Strength Training.fit",
+            points = emptyList(),
+            distanceMeters = 0.0,
+            elevationGainedMeters = 0.0,
+            activeCaloriesKcal = 220.0,
+            startTime = start,
+            endTime = end,
+            type = "training",
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            routeFileImporter = importer,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.importRouteFile(uri, UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.ROUTE_IMPORT, vm.uiState.value.mode)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, vm.uiState.value.selectedActivityType.exerciseType)
+        assertFalse(vm.uiState.value.selectedActivityType.supportsGpsRoute)
+        assertTrue(vm.uiState.value.importedRoute?.points.orEmpty().isEmpty())
+        assertEquals("Functional Strength Training", vm.uiState.value.titleText)
+        assertEquals("45", vm.uiState.value.durationMinutesText)
+        assertEquals("220", vm.uiState.value.activeCaloriesText)
+    }
+
+    @Test fun `FIT workout import uses workout duration without changing selected time`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val importer = mockk<RouteFileImporter>()
+        val uri = mockk<Uri>()
+        val now = Instant.parse("2026-05-26T08:30:00Z")
+        coEvery { importer.import(uri) } returns RouteFileImport(
+            fileName = "Tempo Run.fit",
+            points = emptyList(),
+            distanceMeters = 0.0,
+            elevationGainedMeters = 0.0,
+            startTime = Instant.EPOCH,
+            endTime = Instant.EPOCH.plusSeconds(15 * 60L),
+            durationSeconds = 15 * 60L,
+            name = "Tempo Run",
+            type = "running",
+            hasRecordedTimestamps = false,
+            hasImportedTimeRange = false,
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            routeFileImporter = importer,
+            clock = Clock.fixed(now, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.importRouteFile(uri, UnitSystem.METRIC)
+        advanceUntilIdle()
+
+        assertEquals("Tempo Run", vm.uiState.value.titleText)
+        assertEquals("2026-05-26", vm.uiState.value.startDateText)
+        assertEquals("8:30", vm.uiState.value.startTimeText)
+        assertEquals("15", vm.uiState.value.durationMinutesText)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, vm.uiState.value.selectedActivityType.exerciseType)
+    }
+
     private fun activityRepo(
         canWrite: Boolean,
         plannedWorkouts: List<PlannedExerciseData> = emptyList(),

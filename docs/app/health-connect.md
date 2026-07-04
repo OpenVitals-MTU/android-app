@@ -42,7 +42,7 @@ OpenVitals can request Health history and background-read access where Android a
 
 Workout routes are sensitive Health Connect data. Route previews may require manual approval from Health Connect settings.
 
-OpenVitals can import route files into activity entries, import PMTiles or Mapsforge map packs for offline route previews, record GPS routes, open saved routes in map apps, and export routes as GPX or KMZ when required data is available.
+OpenVitals can import GPX/KML/KMZ route files from activity entries, import FIT activity, course, or workout files from Settings Data Importers into activity review, import PMTiles or Mapsforge map packs for offline route previews, record GPS routes, open saved routes in map apps, and export routes as GPX or KMZ when route data is available.
 
 ## Platform Notes
 

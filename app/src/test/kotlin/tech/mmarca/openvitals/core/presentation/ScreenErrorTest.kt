@@ -32,14 +32,14 @@ class ScreenErrorTest {
         try {
             throwable.toScreenError(
                 logTag = "ActivityEntryViewModel",
-                logMessage = "Route file import failed",
+                logMessage = "Activity file import failed",
             )
         } finally {
             ScreenErrorHandler.sink = previousSink
         }
 
         assertEquals("ActivityEntryViewModel", loggedTag)
-        assertEquals("Route file import failed", loggedMessage)
+        assertEquals("Activity file import failed", loggedMessage)
         assertEquals(throwable, loggedThrowable)
     }
 

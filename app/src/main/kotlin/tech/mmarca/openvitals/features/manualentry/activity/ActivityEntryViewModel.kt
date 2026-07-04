@@ -164,7 +164,9 @@ class ActivityEntryViewModel(
 
     fun selectActivityType(type: ActivityEntryType) {
         val currentState = _uiState.value
-        val retainedRoute = currentState.importedRoute?.takeIf { type.supportsGpsRoute }
+        val retainedRoute = currentState.importedRoute?.takeIf { import ->
+            import.points.isEmpty() || type.supportsGpsRoute
+        }
         _uiState.value = currentState.copy(
             selectedActivityType = type,
             plannedWorkouts = emptyList(),
@@ -400,20 +402,11 @@ class ActivityEntryViewModel(
         if (importer == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
-                detailError = ScreenError.Message("Route file import is not available."),
+                detailError = ScreenError.Message("Activity file import is not available."),
                 validationErrors = emptySet(),
             )
             return
         }
-        if (!_uiState.value.selectedActivityType.supportsGpsRoute) {
-            _uiState.value = _uiState.value.copy(
-                entryError = ActivityEntryError.INVALID_VALUE,
-                detailError = ScreenError.Message("Selected activity type does not support GPS routes."),
-                validationErrors = setOf(ActivityEntryValidationError.ACTIVITY_TYPE_DOES_NOT_SUPPORT_ROUTE),
-            )
-            return
-        }
-
         recordingDraftStore?.clear()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -429,7 +422,7 @@ class ActivityEntryViewModel(
                 }
                 .onScreenError(
                     logTag = TAG,
-                    logMessage = "Route file import failed",
+                    logMessage = "Activity file import failed",
                 ) { screenError ->
                     _uiState.value = _uiState.value.copy(
                         isImportingRoute = false,
@@ -977,7 +970,17 @@ class ActivityEntryViewModel(
         val selectedActivityType = inferActivityType(routeImport, currentState.selectedActivityType)
         val routeDurationMinutes = if (routeImport.hasImportedTimeRange) {
             val routeDurationSeconds = Duration.between(routeImport.startTime, routeImport.endTime).seconds.coerceAtLeast(1)
-            ceil((routeDurationSeconds + 1).toDouble() / 60.0)
+            val durationSecondsForDisplay = if (routeImport.points.isNotEmpty() && routeImport.hasRecordedTimestamps) {
+                routeDurationSeconds + 1
+            } else {
+                routeDurationSeconds
+            }
+            ceil(durationSecondsForDisplay.toDouble() / 60.0)
+                .toLong()
+                .coerceIn(1, MaxActivityDurationMinutes)
+                .toString()
+        } else if (routeImport.durationSeconds != null) {
+            ceil(routeImport.durationSeconds.coerceAtLeast(1).toDouble() / 60.0)
                 .toLong()
                 .coerceIn(1, MaxActivityDurationMinutes)
                 .toString()
@@ -991,15 +994,29 @@ class ActivityEntryViewModel(
         ).takeIf {
             currentState.activeCaloriesText.isBlank() && currentState.totalCaloriesText.isBlank()
         }
+        val importedActiveCaloriesText = routeImport.activeCaloriesKcal
+            ?.takeIf { it > 0.0 }
+            ?.toInputText(maxFractionDigits = 1)
+        val importedTotalCaloriesText = routeImport.totalCaloriesKcal
+            ?.takeIf { it > 0.0 }
+            ?.toInputText(maxFractionDigits = 1)
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.ROUTE_IMPORT,
             selectedActivityType = selectedActivityType,
-            titleText = currentState.titleText.ifBlank { routeImport.name.orEmpty() },
+            titleText = currentState.titleText.ifBlank {
+                routeImport.name
+                    ?: routeImport.fileName?.substringBeforeLast('.', missingDelimiterValue = routeImport.fileName)
+                    ?: ""
+            },
             notesText = currentState.notesText.ifBlank { routeImport.description.orEmpty() },
             distanceText = currentState.distanceText.ifBlank { routeDistanceInputText(routeImport, unitSystem) },
             elevationText = currentState.elevationText.ifBlank { routeElevationInputText(routeImport, unitSystem) },
-            activeCaloriesText = calorieEstimate?.activeCaloriesText ?: currentState.activeCaloriesText,
-            totalCaloriesText = calorieEstimate?.totalCaloriesText ?: currentState.totalCaloriesText,
+            activeCaloriesText = currentState.activeCaloriesText.ifBlank {
+                importedActiveCaloriesText ?: calorieEstimate?.activeCaloriesText.orEmpty()
+            },
+            totalCaloriesText = currentState.totalCaloriesText.ifBlank {
+                importedTotalCaloriesText ?: calorieEstimate?.totalCaloriesText.orEmpty()
+            },
             importedRoute = routeImport,
             recordedPauseIntervals = emptyList(),
             recordedLaps = emptyList(),

@@ -10,6 +10,7 @@ internal data class SettingsScreenActions(
     val onOpenSupport: () -> Unit,
     val onGrantDataImportPermissions: () -> Unit,
     val onImportAppleHealth: () -> Unit,
+    val onImportFitFile: () -> Unit,
     val onImportOfflineMap: () -> Unit,
     val onCopyAppleHealthReport: (String) -> Unit,
     val onCopyAppleHealthError: (String) -> Unit,

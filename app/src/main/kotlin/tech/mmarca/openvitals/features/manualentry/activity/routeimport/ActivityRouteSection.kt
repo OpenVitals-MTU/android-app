@@ -43,6 +43,7 @@ internal fun ImportedActivityRouteSection(
     onClearRoute: () -> Unit,
 ) {
     val route = state.importedRoute ?: return
+    if (route.points.isEmpty()) return
     val averageMetrics = routeAverageMetrics(
         route = route,
         pauseIntervals = state.recordedPauseIntervals,

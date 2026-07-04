@@ -12,16 +12,23 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 internal val RouteImportMimeTypes = arrayOf(
+    "application/gpx",
     "application/gpx+xml",
     "application/vnd.google-earth.kml+xml",
     "application/vnd.google-earth.kmz",
-    "application/vnd.ant.fit",
-    "application/vnd.garmin.fit",
-    "application/fit",
-    "application/x-fit",
+    "application/vnd.google-earth.kmz+xml",
     "application/xml",
     "text/xml",
     "application/zip",
     "application/x-zip-compressed",
     "application/octet-stream",
+)
+
+internal val FitImportMimeTypes = arrayOf(
+    "application/vnd.ant.fit",
+    "application/vnd.garmin.fit",
+    "application/fit",
+    "application/x-fit",
+    "application/octet-stream",
+    "*/*",
 )

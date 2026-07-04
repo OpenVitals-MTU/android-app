@@ -147,7 +147,7 @@
     <string name="mindfulness_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen von Achtsamkeitseinträgen benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Sitzungen nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="activity_entry_subtitle">Erstelle eine Aktivitätssitzung in Health Connect. Routendateien werden nur geschrieben, wenn du eine importierst.</string>
     <string name="activity_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Um Aktivitäten ohne spätere Unterbrechungen hinzuzufügen, benötigen wir Health-Connect-Schreibberechtigungen für Sitzungen, Routen, Distanz, Höhenmeter, aktive Kalorien und Gesamtkalorien. OpenVitals speichert diese Einträge nicht; sie werden in Health Connect gespeichert.</string>
-    <string name="activity_entry_source_body">Erstelle eine leere Aktivität, zeichne eine GPS-Route auf oder importiere zuerst GPX/KML/KMZ/FIT und prüfe die erkannte Route, Zeit, den Titel, die Notizen und den Typ vor dem Speichern.</string>
+    <string name="activity_entry_source_body">Erstelle eine leere Aktivität, zeichne eine GPS-Route auf oder importiere zuerst eine GPX/KML/KMZ-Route und prüfe die erkannte Route, Zeit, den Titel, die Notizen und den Typ vor dem Speichern.</string>
     <string name="activity_entry_create_manual">Manuell erstellen</string>
     <string name="activity_entry_create_from_existing_plan">Aus vorhandenem Plan erstellen</string>
     <string name="activity_entry_record_gps">Aktivität aufzeichnen</string>
@@ -194,7 +194,7 @@
     <string name="activity_entry_feeling_good">Gut</string>
     <string name="activity_entry_feeling_hard">Anstrengend</string>
     <string name="activity_entry_feeling_rough">Sehr hart</string>
-    <string name="activity_entry_import_route_file">GPX/KML/KMZ/FIT importieren</string>
+    <string name="activity_entry_import_route_file">GPX/KML/KMZ importieren</string>
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
     <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und öffne den Aktivitätsbildschirm, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
@@ -1091,8 +1091,8 @@
     <string name="settings_sleep_group_body">Schlafzeitraum</string>
     <string name="settings_cycle_group_title">Menstruationszyklus</string>
     <string name="settings_cycle_group_body">Zyklusdaten und Health-Connect-Berechtigungen</string>
-    <string name="settings_data_import_group_title">Datenimport</string>
-    <string name="settings_data_import_group_body">Unterstützte Apple-Health-Exportdaten importieren</string>
+    <string name="settings_data_import_group_title">Datenimporteure</string>
+    <string name="settings_data_import_group_body">Apple-Health-Exporte und FIT-Dateien importieren</string>
     <string name="settings_permissions_group_title">Berechtigungen</string>
     <string name="settings_permissions_group_body">Zugriff auf Gesundheitsdaten und manuelle Berechtigungsschritte</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
@@ -1217,7 +1217,7 @@
     <string name="settings_sleep_range_evening">18:00</string>
     <string name="settings_cycle_permissions_title">Zyklusberechtigungen</string>
     <string name="settings_cycle_permissions_granted">%1$d/%2$d Zyklusberechtigungen erteilt.</string>
-    <string name="settings_apple_health_import_title">Apple-Health-Export</string>
+    <string name="settings_apple_health_import_title">Apple-Health-Importer</string>
     <string name="settings_apple_health_import_body">Importiere unterstützte Datensätze aus Apple Health export.xml oder export.zip in Health Connect.</string>
     <string name="settings_apple_health_import_permissions">%1$d/%2$d Importberechtigungen erteilt.</string>
     <string name="settings_apple_health_import_grant">Importberechtigungen erteilen</string>
@@ -1242,6 +1242,9 @@
     <string name="settings_apple_health_import_error_copied">Importfehler kopiert.</string>
     <string name="settings_apple_health_import_report_saved">Importbericht gespeichert.</string>
     <string name="settings_apple_health_import_report_save_failed">Importbericht konnte nicht gespeichert werden.</string>
+    <string name="settings_fit_import_title">FIT-Importer</string>
+    <string name="settings_fit_import_body">Importiere FIT-Dateien für Aktivitäten, Kurse oder Workouts, prüfe die erkannten Details und wähle, ob sie in Health Connect gespeichert werden.</string>
+    <string name="settings_fit_import_action">FIT-Datei importieren</string>
     <string name="settings_offline_maps_title">Offline-Karten</string>
     <string name="settings_offline_maps_body">Importiere PMTiles- oder Mapsforge-.map/.maps-Pakete für vollständig offline nutzbare Aktivitätskarten. Protomaps-kompatible PMTiles-Basiskarten und Mapsforge-Karten werden unterstützt.</string>
     <string name="settings_offline_maps_empty">Noch keine Offline-Karten importiert.</string>
@@ -1551,7 +1554,7 @@
     <string name="data_confidence_warning_no_sources">Dieses Aggregat stellt keine Details nach Quelle bereit.</string>
 
     <string name="privacy_policy_title">Datenschutzerklärung</string>
-    <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KML/KMZ/FIT-Aktivitätsrouten, werden in Health Connect geschrieben.</string>
+    <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KML/KMZ-Routen und importierter FIT-Dateien, werden in Health Connect geschrieben.</string>
     <string name="privacy_policy_body_2">Diese App lädt deine Gesundheitsdaten nicht in einen Cloud-Dienst hoch, enthält keine Werbung und teilt keine Daten mit Dritten.</string>
     <string name="privacy_policy_body_3">OpenVitals ist kein Medizinprodukt und diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Es ersetzt keine medizinische Beratung, Diagnose oder Behandlung durch qualifiziertes medizinisches Fachpersonal.</string>
 

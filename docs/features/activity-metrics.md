@@ -41,6 +41,7 @@ The feature uses `ActivityRepository` through activity ViewModels. New activity 
 
 - [`activity-recording.md`](activity-recording.md): GPS/repetition recording before saving to Health Connect.
 - [`activity-training-plans.md`](activity-training-plans.md): planned workouts and activity setup defaults.
-- [`route-file-import.md`](route-file-import.md): GPX/KML/KMZ/FIT import review.
+- [`route-file-import.md`](route-file-import.md): GPX/KML/KMZ route import review.
+- [`fit-files-import.md`](fit-files-import.md): FIT activity, course, and workout import from Settings Data Importers.
 - [`offline-maps-support.md`](offline-maps-support.md): local map packs for route display.
 - [`non-health-connect-metrics-dashboard.md`](non-health-connect-metrics-dashboard.md): cardio load and other derived activity context.

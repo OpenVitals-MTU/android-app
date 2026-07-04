@@ -37,8 +37,8 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Recording of activity](activity-recording.md): GPS and repetition-oriented activity recording before saving to Health Connect.
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.
-- [GPX/KML/KMZ/FIT import](route-file-import.md): route and activity file import for review before saving.
-- [FIT files import](fit-files-import.md): FIT activity import support and detected details.
+- [GPX/KML/KMZ route import](route-file-import.md): route file import for review before saving.
+- [FIT files import](fit-files-import.md): Settings Data Importers support for FIT activity, course, and workout files.
 - [Offline maps support](offline-maps-support.md): PMTiles or Mapsforge packs for local activity maps.
 - [Apple Health import](apple-health-import.md): supported Apple Health export records written into Health Connect.
 - [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md): imported caffeine beverage presets, nutrition families, common serving values, and source links.

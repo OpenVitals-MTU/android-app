@@ -100,10 +100,10 @@ internal fun ActivityEntryCard(
             }
 
             ActivityTypeSelector(
-                types = if (state.importedRoute == null) {
-                    state.activityTypes
-                } else {
+                types = if (state.importedRoute?.points?.isNotEmpty() == true) {
                     state.activityTypes.filter { it.supportsGpsRoute }
+                } else {
+                    state.activityTypes
                 },
                 selectedType = state.selectedActivityType,
                 onSelectActivityType = onSelectActivityType,

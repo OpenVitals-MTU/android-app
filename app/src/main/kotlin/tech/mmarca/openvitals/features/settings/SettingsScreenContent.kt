@@ -187,6 +187,13 @@ internal fun LazyListScope.settingsScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+            item { SettingsCardSpacer() }
+            item {
+                FitImportCard(
+                    onImport = actions.onImportFitFile,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
         SettingsSection.HEALTH_CONNECT -> {
             item { SectionHeader(stringResource(section.titleRes)) }

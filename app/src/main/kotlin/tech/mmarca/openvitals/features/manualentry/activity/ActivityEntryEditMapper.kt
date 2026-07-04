@@ -183,6 +183,10 @@ internal fun inferActivityType(
         .joinToString(separator = " ")
         .lowercase()
     val exerciseType = when {
+        sourceText.containsAny("treadmill") -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL
+        sourceText.containsAny("strength", "weight lifting", "weightlifting") -> {
+            ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING
+        }
         sourceText.containsAny("snowboard") -> ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING
         sourceText.containsAny("snowshoe") -> ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING
         sourceText.containsAny("ski") -> ExerciseSessionRecord.EXERCISE_TYPE_SKIING
@@ -200,12 +204,14 @@ internal fun inferActivityType(
         sourceText.containsAny("surf", "surfing") -> ExerciseSessionRecord.EXERCISE_TYPE_SURFING
         sourceText.containsAny("swim", "swimming") -> ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER
         sourceText.containsAny("golf") -> ExerciseSessionRecord.EXERCISE_TYPE_GOLF
+        sourceText.containsAny("training", "workout", "fitness") -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT
         else -> null
     }
+    val requiresGpsRoute = routeImport.points.isNotEmpty()
     return DefaultActivityEntryTypes
-        .firstOrNull { it.exerciseType == exerciseType && it.supportsGpsRoute }
-        ?: currentType.takeIf { it.supportsGpsRoute }
-        ?: DefaultActivityEntryTypes.first()
+        .firstOrNull { it.exerciseType == exerciseType && (!requiresGpsRoute || it.supportsGpsRoute) }
+        ?: currentType.takeIf { !requiresGpsRoute || it.supportsGpsRoute }
+        ?: DefaultActivityEntryTypes.first { !requiresGpsRoute || it.supportsGpsRoute }
 }
 
 internal fun String.containsAny(vararg values: String): Boolean =
