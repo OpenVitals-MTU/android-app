@@ -7,20 +7,35 @@ This page tracks screenshot assets that live in this repository.
 | Image | Purpose |
 | --- | --- |
 | `docs/images/readme-dashboard.png` | Dashboard and summary-first navigation. |
-| `docs/images/readme-steps-week.png` | Steps weekly detail view. |
-| `docs/images/readme-steps-statistics.png` | Steps statistics and period context. |
-| `docs/images/readme-sleep.png` | Sleep detail view. |
+| `docs/images/onboarding.png` | Health Connect onboarding and permission setup. |
+| `docs/images/settings.png` | Settings and app configuration. |
+| `docs/images/dailyReadiness.png` | Daily Readiness detail view. |
+| `docs/images/bodyEnergy.png` | Body Energy detail view. |
+| `docs/images/activityDetail.png` | Activity detail view. |
+| `docs/images/activityRecording.png` | Activity recording controls. |
+| `docs/images/beverageEntry.png` | Beverage and caffeine entry. |
+| `docs/images/readme-steps-week.png` | Legacy steps weekly detail screenshot. |
+| `docs/images/readme-steps-statistics.png` | Legacy steps statistics screenshot. |
+| `docs/images/readme-sleep.png` | Legacy sleep detail screenshot. |
 | `docs/images/readme-logo.png` | OpenVitals logo. |
 
 ## Preview
 
 ![OpenVitals dashboard](../images/readme-dashboard.png)
 
-![Steps weekly view](../images/readme-steps-week.png)
+![OpenVitals onboarding](../images/onboarding.png)
 
-![Steps statistics](../images/readme-steps-statistics.png)
+![OpenVitals settings](../images/settings.png)
 
-![Sleep view](../images/readme-sleep.png)
+![Daily Readiness detail](../images/dailyReadiness.png)
+
+![Body Energy detail](../images/bodyEnergy.png)
+
+![Activity detail](../images/activityDetail.png)
+
+![Activity recording](../images/activityRecording.png)
+
+![Beverage entry](../images/beverageEntry.png)
 
 ## Maintenance Notes
 

@@ -66,9 +66,13 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 <div>
     <img width="23%" alt="OpenVitals dashboard" src="docs/images/readme-dashboard.png">
-    <img width="23%" alt="Steps weekly chart" src="docs/images/readme-steps-week.png">
-    <img width="23%" alt="Steps statistics" src="docs/images/readme-steps-statistics.png">
-    <img width="23%" alt="Sleep detail" src="docs/images/readme-sleep.png">
+    <img width="23%" alt="OpenVitals onboarding" src="docs/images/onboarding.png">
+    <img width="23%" alt="OpenVitals settings" src="docs/images/settings.png">
+    <img width="23%" alt="Daily Readiness detail" src="docs/images/dailyReadiness.png">
+    <img width="23%" alt="Body Energy detail" src="docs/images/bodyEnergy.png">
+    <img width="23%" alt="Activity detail" src="docs/images/activityDetail.png">
+    <img width="23%" alt="Activity recording" src="docs/images/activityRecording.png">
+    <img width="23%" alt="Beverage entry" src="docs/images/beverageEntry.png">
 </div>
 
 ## Features
