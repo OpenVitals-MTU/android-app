@@ -85,6 +85,7 @@
     <string name="home_metric_widget_open_for_details">Abrir detalles</string>
     <string name="home_metric_widget_not_configured">Selecciona una métrica</string>
     <string name="home_quick_beverage_widget_description">Bebida rápida</string>
+    <string name="home_quick_beverage_one_tap_widget_description">Bebida rápida 1x1</string>
     <string name="home_quick_beverage_widget_config_title">Elegir bebida</string>
     <string name="home_quick_beverage_widget_config_prompt">Elige la bebida para el widget:</string>
     <string name="home_quick_beverage_widget_no_drinks">No hay bebidas disponibles.</string>
