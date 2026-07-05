@@ -15,13 +15,9 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.time.Instant
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
 import org.w3c.dom.Document
 import org.w3c.dom.Element
+import tech.mmarca.openvitals.core.geo.haversineMeters
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 internal data class RouteFileMetadata(
@@ -194,25 +190,10 @@ private fun simplifyRoutePoints(points: List<ExerciseRoutePoint>): List<Exercise
     }.distinctBy { it.time }
 }
 
-private fun haversineMeters(
-    startLatitude: Double,
-    startLongitude: Double,
-    endLatitude: Double,
-    endLongitude: Double,
-): Double {
-    val dLat = Math.toRadians(endLatitude - startLatitude)
-    val dLon = Math.toRadians(endLongitude - startLongitude)
-    val lat1 = Math.toRadians(startLatitude)
-    val lat2 = Math.toRadians(endLatitude)
-    val a = sin(dLat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dLon / 2).pow(2)
-    return 2 * EarthRadiusMeters * asin(sqrt(a))
-}
-
 internal const val MinRoutePoints = 2
 private const val MaxImportedRoutePoints = 2_000
 internal const val MaxRouteFileBytes = 15 * 1024 * 1024
 internal const val MaxKmzRouteEntryBytes = 15 * 1024 * 1024
-private const val EarthRadiusMeters = 6_371_000.0
 internal const val MinLatitude = -90.0
 internal const val MaxLatitude = 90.0
 internal const val MinLongitude = -180.0

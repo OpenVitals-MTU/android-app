@@ -19,7 +19,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import java.time.Instant
@@ -108,8 +107,9 @@ class AppleHealthImportWorker(
             log("Stage started: Building downloadable report")
             log("Stage finished: Building downloadable report")
             log("Stage started: Writing downloadable report file")
-            val initialReportText = result.shareableReportText.withWorkerLogs(workerLogs)
-            val reportPath = AppleHealthImportReportStore.write(appContext, initialReportText)
+            // The store path is deterministic, so the completion log can be added to the worker
+            // logs before the (potentially multi-MB) report is rendered and written exactly once.
+            val reportPath = AppleHealthImportReportStore.reportPath(appContext)
             log("Stage finished: Writing downloadable report file path=$reportPath")
             val finalReportText = result.shareableReportText.withWorkerLogs(workerLogs)
             AppleHealthImportReportStore.write(appContext, finalReportText)
@@ -284,11 +284,6 @@ class AppleHealthImportWorker(
         fun errorReportPathFromData(data: Data): String? =
             data.getString(KeyErrorReportPath)
 
-        fun errorData(message: String): Data =
-            Data.Builder()
-                .putString(KeyError, message)
-                .build()
-
         fun errorData(context: Context, error: Throwable, workerLogs: List<String> = emptyList()): Data {
             val details = AppleHealthImportErrorFormatter.details(error)
             val fullReport = buildFailureReportText(error, workerLogs)
@@ -404,10 +399,7 @@ private fun String.withWorkerLogs(workerLogs: List<String>): String =
 
 private fun buildFailureReportText(error: Throwable, workerLogs: List<String>): String =
     buildString {
-        appendLine("OpenVitals Apple Health Import Report")
-        appendLine("Generated: ${Instant.now()}")
-        appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-        appendLine("Health Connect client: androidx.health.connect:connect-client (runtime version unavailable)")
+        appendAppleHealthReportHeader()
         appendLine()
         appendLine("Summary")
         appendLine("Status: failed")

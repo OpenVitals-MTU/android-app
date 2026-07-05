@@ -1,9 +1,7 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
 import java.io.BufferedInputStream
-import java.io.ByteArrayInputStream
 import java.io.File
-import java.io.FilterInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.time.LocalDateTime
@@ -13,7 +11,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.zip.ZipInputStream
-import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.DefaultHandler
 
@@ -23,40 +20,11 @@ internal data class AppleHealthParseOptions(
 )
 
 internal object AppleHealthImportParser {
-    fun parse(input: BufferedInputStream): AppleParsedExport =
-        parseInternal(input, consumer = null, routeFiles = emptyMap(), options = AppleHealthParseOptions())
-
     fun parse(
         input: BufferedInputStream,
-        routeFiles: Map<String, AppleWorkoutRouteFile>,
-    ): AppleParsedExport =
-        parseInternal(input, consumer = null, routeFiles = routeFiles, options = AppleHealthParseOptions())
-
-    fun parse(
-        input: BufferedInputStream,
-        consumer: AppleHealthXmlEventConsumer,
-    ): AppleParsedExport =
-        parseInternal(input, consumer = consumer, routeFiles = emptyMap(), options = AppleHealthParseOptions())
-
-    fun parse(
-        input: BufferedInputStream,
-        consumer: AppleHealthXmlEventConsumer,
-        options: AppleHealthParseOptions,
-    ): AppleParsedExport =
-        parseInternal(input, consumer = consumer, routeFiles = emptyMap(), options = options)
-
-    fun parse(
-        input: BufferedInputStream,
-        consumer: AppleHealthXmlEventConsumer,
-        routeFiles: Map<String, AppleWorkoutRouteFile>,
-    ): AppleParsedExport =
-        parseInternal(input, consumer = consumer, routeFiles = routeFiles, options = AppleHealthParseOptions())
-
-    private fun parseInternal(
-        input: BufferedInputStream,
-        consumer: AppleHealthXmlEventConsumer?,
-        routeFiles: Map<String, AppleWorkoutRouteFile>,
-        options: AppleHealthParseOptions,
+        consumer: AppleHealthXmlEventConsumer? = null,
+        options: AppleHealthParseOptions = AppleHealthParseOptions(),
+        routeFiles: Map<String, AppleWorkoutRouteFile> = emptyMap(),
     ): AppleParsedExport =
         if (input.hasZipHeader()) {
             parseZipExport(input, consumer, routeFiles, options)
@@ -118,8 +86,9 @@ internal object AppleHealthImportParser {
                                 foundExportXml = true
                             }
                             entry.name.isAppleWorkoutRouteFile() -> {
-                                val routeBytes = zipInput.readBytes()
-                                AppleHealthImportRouteParser.parse(entry.name, ByteArrayInputStream(routeBytes))?.let { routeFile ->
+                                // Stream the GPX entry directly; buffering it as a byte array costs
+                                // megabytes per routed workout during the zip sweep.
+                                AppleHealthImportRouteParser.parse(entry.name, NonClosingInputStream(zipInput))?.let { routeFile ->
                                     resolvedRouteFiles[routeFile.path] = routeFile
                                 }
                             }
@@ -143,19 +112,10 @@ internal object AppleHealthImportParser {
         input: InputStream,
         consumer: AppleHealthXmlEventConsumer?,
         routeFiles: Map<String, AppleWorkoutRouteFile>,
-        parseRecordDetails: Boolean = true,
+        parseRecordDetails: Boolean,
     ): AppleParsedExport {
         val handler = AppleHealthXmlHandler(consumer, routeFiles, parseRecordDetails)
-        val factory =
-            SAXParserFactory.newInstance().apply {
-                isNamespaceAware = false
-                setFeatureIfSupported("http://xml.org/sax/features/external-general-entities", false)
-                setFeatureIfSupported("http://xml.org/sax/features/external-parameter-entities", false)
-                setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-                setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false)
-            }
-
-        factory.newSAXParser().parse(input, handler)
+        secureSaxParserFactory().newSAXParser().parse(input, handler)
         return handler.result()
     }
 }
@@ -168,15 +128,10 @@ internal interface AppleHealthXmlEventConsumer {
     fun onActivitySummary()
 }
 
-/** Prevents the SAX parser from closing the underlying ZipInputStream when streaming an entry. */
-private class NonClosingInputStream(delegate: InputStream) : FilterInputStream(delegate) {
-    override fun close() = Unit
-}
-
 private class AppleHealthXmlHandler(
     private val consumer: AppleHealthXmlEventConsumer?,
     private val routeFiles: Map<String, AppleWorkoutRouteFile>,
-    private val parseRecordDetails: Boolean = true,
+    private val parseRecordDetails: Boolean,
 ) : DefaultHandler() {
     private val stack = ArrayDeque<MutableAppleElement>()
     private val records = mutableListOf<AppleRecord>()
@@ -228,7 +183,7 @@ private class AppleHealthXmlHandler(
                 val workout = stack.lastOrNull() as? MutableAppleWorkout ?: return
                 workout.events += AppleWorkoutEvent(
                     type = attributes.value("type"),
-                    date = if (parseRecordDetails) attributes.value("date")?.toAppleDateTime() else null,
+                    date = attributes.appleDate("date", parseRecordDetails),
                     duration = attributes.value("duration")?.toDoubleOrNull(),
                     durationUnit = attributes.value("durationUnit"),
                 )
@@ -332,7 +287,7 @@ private class MutableAppleWorkoutRoute : MutableAppleElement {
 private class MutableAppleRecord(
     attributes: Attributes,
     private val parentCorrelation: MutableAppleCorrelation?,
-    private val parseDetails: Boolean = true,
+    private val parseDetails: Boolean,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     private val type = attributes.value("type") ?: "Record"
@@ -340,9 +295,9 @@ private class MutableAppleRecord(
     private val sourceVersion = attributes.value("sourceVersion")
     private val device = attributes.value("device")
     private val unit = attributes.value("unit")
-    private val creationDate = if (parseDetails) attributes.value("creationDate")?.toAppleDateTime() else null
-    private val startDate = if (parseDetails) attributes.value("startDate")?.toAppleDateTime() else null
-    private val endDate = if (parseDetails) attributes.value("endDate")?.toAppleDateTime() else null
+    private val creationDate = attributes.appleDate("creationDate", parseDetails)
+    private val startDate = attributes.appleDate("startDate", parseDetails)
+    private val endDate = attributes.appleDate("endDate", parseDetails)
     private val rawValue = attributes.value("value")
 
     fun toRecord(): AppleRecord {
@@ -365,7 +320,7 @@ private class MutableAppleRecord(
 
 private class MutableAppleWorkout(
     attributes: Attributes,
-    parseDetails: Boolean = true,
+    parseDetails: Boolean,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val events = mutableListOf<AppleWorkoutEvent>()
@@ -375,9 +330,9 @@ private class MutableAppleWorkout(
     private val sourceName = attributes.value("sourceName")
     private val sourceVersion = attributes.value("sourceVersion")
     private val device = attributes.value("device")
-    private val creationDate = if (parseDetails) attributes.value("creationDate")?.toAppleDateTime() else null
-    private val startDate = if (parseDetails) attributes.value("startDate")?.toAppleDateTime() else null
-    private val endDate = if (parseDetails) attributes.value("endDate")?.toAppleDateTime() else null
+    private val creationDate = attributes.appleDate("creationDate", parseDetails)
+    private val startDate = attributes.appleDate("startDate", parseDetails)
+    private val endDate = attributes.appleDate("endDate", parseDetails)
     private val duration = attributes.value("duration")?.toDoubleOrNull()
     private val durationUnit = attributes.value("durationUnit")
     private var totalDistance = attributes.value("totalDistance")?.toDoubleOrNull()
@@ -446,7 +401,7 @@ private fun Double?.addCompatible(value: Double, currentUnit: String?, valueUnit
 
 private class MutableAppleCorrelation(
     attributes: Attributes,
-    parseDetails: Boolean = true,
+    parseDetails: Boolean,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val records = mutableListOf<AppleRecord>()
@@ -454,9 +409,9 @@ private class MutableAppleCorrelation(
     private val sourceName = attributes.value("sourceName")
     private val sourceVersion = attributes.value("sourceVersion")
     private val device = attributes.value("device")
-    private val creationDate = if (parseDetails) attributes.value("creationDate")?.toAppleDateTime() else null
-    private val startDate = if (parseDetails) attributes.value("startDate")?.toAppleDateTime() else null
-    private val endDate = if (parseDetails) attributes.value("endDate")?.toAppleDateTime() else null
+    private val creationDate = attributes.appleDate("creationDate", parseDetails)
+    private val startDate = attributes.appleDate("startDate", parseDetails)
+    private val endDate = attributes.appleDate("endDate", parseDetails)
 
     fun toCorrelation(): AppleCorrelation =
         AppleCorrelation(
@@ -493,7 +448,8 @@ internal fun String.toAppleDateTime(): AppleDateTime? {
     }.getOrNull()
 }
 
-private fun Attributes.value(name: String): String? = getValue(name)?.takeIf { it.isNotBlank() }
+private fun Attributes.appleDate(name: String, parseDetails: Boolean): AppleDateTime? =
+    if (parseDetails) value(name)?.toAppleDateTime() else null
 
 private fun String.isAppleHealthExportXml(): Boolean {
     val normalized = replace('\\', '/').substringAfterLast('/').lowercase(Locale.US)
@@ -511,10 +467,6 @@ private fun BufferedInputStream.hasZipHeader(): Boolean {
     val second = read()
     reset()
     return first == 0x50 && second == 0x4B
-}
-
-private fun SAXParserFactory.setFeatureIfSupported(feature: String, enabled: Boolean) {
-    runCatching { setFeature(feature, enabled) }
 }
 
 private val AppleOffsetDateFormats =

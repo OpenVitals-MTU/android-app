@@ -2,12 +2,8 @@ package tech.mmarca.openvitals.features.manualentry.activity.recording
 
 import java.time.Duration
 import java.time.Instant
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.floor
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
+import tech.mmarca.openvitals.core.geo.haversineMeters
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -368,17 +364,8 @@ private fun ExerciseRoutePoint.climbMetersTo(other: ExerciseRoutePoint): Double 
     return if (delta >= MinSplitClimbMeters) delta else 0.0
 }
 
-private fun ExerciseRoutePoint.distanceMetersTo(other: ExerciseRoutePoint): Double {
-    val lat1 = Math.toRadians(latitude)
-    val lat2 = Math.toRadians(other.latitude)
-    val deltaLat = Math.toRadians(other.latitude - latitude)
-    val deltaLon = Math.toRadians(other.longitude - longitude)
-    val a = sin(deltaLat / 2.0).pow(2.0) +
-        cos(lat1) * cos(lat2) * sin(deltaLon / 2.0).pow(2.0)
-    val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
-    return EarthRadiusMeters * c
-}
+private fun ExerciseRoutePoint.distanceMetersTo(other: ExerciseRoutePoint): Double =
+    haversineMeters(latitude, longitude, other.latitude, other.longitude)
 
-private const val EarthRadiusMeters = 6_371_000.0
 private const val MinSplitClimbMeters = 1.0
 private const val SplitEpsilon = 0.000001

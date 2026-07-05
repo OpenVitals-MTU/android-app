@@ -29,7 +29,7 @@ class AppleHealthImportSmokeTest {
 
         val consumer = StreamingAppleHealthSmokeConsumer()
         val parsed = openExportXml(exportPath) { input, routeFiles ->
-            AppleHealthImportParser.parse(BufferedInputStream(input, SmokeTestInputBufferSize), consumer, routeFiles)
+            AppleHealthImportParser.parse(BufferedInputStream(input, SmokeTestInputBufferSize), consumer, routeFiles = routeFiles)
         }
         val conversion = consumer.finishConversion()
 

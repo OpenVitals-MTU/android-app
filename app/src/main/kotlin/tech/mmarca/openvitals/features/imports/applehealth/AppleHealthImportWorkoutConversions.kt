@@ -7,11 +7,8 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.units.kilocalories
 import androidx.health.connect.client.units.meters
 import java.time.Duration
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.roundToLong
-import kotlin.math.sin
-import kotlin.math.sqrt
+import tech.mmarca.openvitals.core.geo.haversineMeters
 
 internal fun AppleHealthImportConverter.convertWorkouts(
     workouts: List<AppleWorkout>,
@@ -117,8 +114,8 @@ internal fun AppleHealthImportConverter.convertWorkouts(
     }
 
 private fun AppleWorkout.toSynthesizedExerciseRoute(interval: AppleInterval): ExerciseRoute? {
+    // routes are already deduplicated by path at parse time (AppleHealthImportParser.toWorkout).
     val points = routes
-        .distinctBy { it.path }
         .flatMap { it.points }
         .filter { it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0 }
     if (points.size < MinWorkoutRoutePoints) return null
@@ -169,16 +166,7 @@ private fun List<AppleWorkoutRoutePoint>.runningRouteDistances(): List<Double> {
     }
 }
 
-private fun AppleWorkoutRoutePoint.distanceMetersTo(other: AppleWorkoutRoutePoint): Double {
-    val lat1 = Math.toRadians(latitude)
-    val lat2 = Math.toRadians(other.latitude)
-    val deltaLat = Math.toRadians(other.latitude - latitude)
-    val deltaLon = Math.toRadians(other.longitude - longitude)
-    val a = sin(deltaLat / 2.0) * sin(deltaLat / 2.0) +
-        cos(lat1) * cos(lat2) * sin(deltaLon / 2.0) * sin(deltaLon / 2.0)
-    val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
-    return EarthRadiusMeters * c
-}
+private fun AppleWorkoutRoutePoint.distanceMetersTo(other: AppleWorkoutRoutePoint): Double =
+    haversineMeters(latitude, longitude, other.latitude, other.longitude)
 
 private const val MinWorkoutRoutePoints = 2
-private const val EarthRadiusMeters = 6_371_000.0

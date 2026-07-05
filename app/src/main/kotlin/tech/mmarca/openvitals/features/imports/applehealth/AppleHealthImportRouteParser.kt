@@ -2,7 +2,6 @@ package tech.mmarca.openvitals.features.imports.applehealth
 
 import java.io.InputStream
 import java.util.Locale
-import javax.xml.parsers.SAXParserFactory
 import kotlin.math.abs
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.DefaultHandler
@@ -10,14 +9,7 @@ import org.xml.sax.helpers.DefaultHandler
 internal object AppleHealthImportRouteParser {
     fun parse(path: String, input: InputStream): AppleWorkoutRouteFile? {
         val handler = AppleWorkoutRouteGpxHandler(path.normalizedAppleWorkoutRoutePath())
-        val factory = SAXParserFactory.newInstance().apply {
-            isNamespaceAware = false
-            setFeatureIfSupported("http://xml.org/sax/features/external-general-entities", false)
-            setFeatureIfSupported("http://xml.org/sax/features/external-parameter-entities", false)
-            setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false)
-        }
-        factory.newSAXParser().parse(input, handler)
+        secureSaxParserFactory().newSAXParser().parse(input, handler)
         return handler.routeFile()
     }
 }
@@ -112,12 +104,6 @@ private data class MutableAppleWorkoutRoutePoint(
 
 private fun elementName(localName: String?, qName: String?): String =
     localName?.takeIf { it.isNotBlank() } ?: qName.orEmpty()
-
-private fun Attributes.value(name: String): String? = getValue(name)?.takeIf { it.isNotBlank() }
-
-private fun SAXParserFactory.setFeatureIfSupported(feature: String, enabled: Boolean) {
-    runCatching { setFeature(feature, enabled) }
-}
 
 private const val AppleWorkoutRoutesDirectory = "workout-routes/"
 private const val MinAppleWorkoutRoutePoints = 2

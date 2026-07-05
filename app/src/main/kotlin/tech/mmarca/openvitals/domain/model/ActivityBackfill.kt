@@ -1,11 +1,7 @@
 package tech.mmarca.openvitals.domain.model
 
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.pow
 import kotlin.math.roundToLong
-import kotlin.math.sin
-import kotlin.math.sqrt
+import tech.mmarca.openvitals.core.geo.haversineMeters
 
 internal fun ExerciseData.withRouteBackfilledMetrics(): ExerciseData {
     val metrics = route.takeIf { it.status == ExerciseRouteStatus.DATA }
@@ -90,14 +86,8 @@ private fun List<ExerciseRoutePoint>.routeBackfillMetrics(): RouteBackfillMetric
     )
 }
 
-private fun ExerciseRoutePoint.distanceMetersTo(other: ExerciseRoutePoint): Double {
-    val deltaLat = Math.toRadians(other.latitude - latitude)
-    val deltaLon = Math.toRadians(other.longitude - longitude)
-    val lat1 = Math.toRadians(latitude)
-    val lat2 = Math.toRadians(other.latitude)
-    val a = sin(deltaLat / 2.0).pow(2.0) + cos(lat1) * cos(lat2) * sin(deltaLon / 2.0).pow(2.0)
-    return 2.0 * EarthRadiusMeters * asin(sqrt(a))
-}
+private fun ExerciseRoutePoint.distanceMetersTo(other: ExerciseRoutePoint): Double =
+    haversineMeters(latitude, longitude, other.latitude, other.longitude)
 
 private fun Double?.backfilledBy(value: Double?): Double? =
     if (isMissingMetric() && value != null && value > 0.0 && value.isFinite()) value else this
@@ -114,7 +104,6 @@ private fun List<Long>.averageLongOrNull(): Double? =
 private fun List<Double>.averageDoubleOrNull(): Double? =
     takeIf { it.isNotEmpty() }?.average()
 
-private const val EarthRadiusMeters = 6_371_000.0
 private const val MinBackfillDistanceMeters = 1.0
 private const val MinBackfillElevationMeters = 1.0
 private const val MinBackfillElevationDeltaMeters = 1.0

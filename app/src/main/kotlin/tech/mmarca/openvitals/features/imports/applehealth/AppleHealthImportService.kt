@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -23,7 +24,6 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 
 @Singleton
@@ -59,18 +59,19 @@ class AppleHealthImportService
                 progress(analysisState.progressSnapshot(AppleHealthImportPhase.CONVERTING))
                 log("Stage started: Summarizing compatible categories")
                 val summaries = analysisState.typeSummaries()
+                val totals = summaries.totals()
                 val diagnostics = analysisState.diagnostics()
                 val diagnosticSummaries = analysisState.diagnosticSummaries()
                 val categorySummaries = analysisState.categorySummaries()
                 log(
-                    "Stage finished: Summarizing compatible categories compatible=${summaries.sumOf { it.converted }} " +
-                        "categories=${categorySummaries.size} unsupported=${summaries.sumOf { it.unsupported }} " +
-                        "skipped=${summaries.sumOf { it.skipped }} failed=${summaries.sumOf { it.failed }}",
+                    "Stage finished: Summarizing compatible categories compatible=${totals.converted} " +
+                        "categories=${categorySummaries.size} unsupported=${totals.unsupported} " +
+                        "skipped=${totals.skipped} failed=${totals.failed}",
                 )
                 log(
-                    "Analysis completed converted=${summaries.sumOf { it.converted }} " +
-                        "categories=${categorySummaries.size} unsupported=${summaries.sumOf { it.unsupported }} " +
-                        "skipped=${summaries.sumOf { it.skipped }} failed=${summaries.sumOf { it.failed }} " +
+                    "Analysis completed converted=${totals.converted} " +
+                        "categories=${categorySummaries.size} unsupported=${totals.unsupported} " +
+                        "skipped=${totals.skipped} failed=${totals.failed} " +
                         "diagnostics=${diagnostics.size}",
                 )
                 progress(analysisState.progressSnapshot(AppleHealthImportPhase.BUILDING_REPORT))
@@ -94,10 +95,10 @@ class AppleHealthImportService
                     parsedWorkouts = parsed.parsedWorkouts,
                     parsedCorrelations = parsed.parsedCorrelations,
                     parsedActivitySummaries = parsed.parsedActivitySummaries,
-                    convertedRecords = summaries.sumOf { it.converted },
-                    unsupportedElements = summaries.sumOf { it.unsupported },
-                    skippedRecords = summaries.sumOf { it.skipped },
-                    failedRecords = summaries.sumOf { it.failed },
+                    convertedRecords = totals.converted,
+                    unsupportedElements = totals.unsupported,
+                    skippedRecords = totals.skipped,
+                    failedRecords = totals.failed,
                     categorySummaries = categorySummaries,
                     typeSummaries = summaries,
                     diagnostics = diagnostics,
@@ -133,9 +134,9 @@ class AppleHealthImportService
                     progressMutex = progressMutex,
                     selectedCategories = selectedCategories,
                     writer = writer,
-                    // The SAX parse thread cannot suspend; blocking here applies backpressure when
-                    // the writer falls behind (same runBlocking pattern as progress publishing).
-                    sendBatch = { batch -> runBlocking { batchChannel.send(batch) } },
+                    // The SAX parse thread cannot suspend; trySendBlocking completes lock-free when
+                    // the channel has capacity and only blocks under real writer backpressure.
+                    sendBatch = { batch -> batchChannel.trySendBlocking(batch).getOrThrow() },
                 )
                 writer.publishProgress = { phase ->
                     progressMutex.withLock { progress(importState.progressSnapshot(phase)) }
@@ -158,11 +159,11 @@ class AppleHealthImportService
                         progressMutex.withLock { progress(importState.progressSnapshot(AppleHealthImportPhase.CONVERTING)) }
                         log("Stage started: Converting records")
                         importState.finishBufferedGroups()
-                        val conversionSummaries = converter.typeStats.toTypeSummaries()
+                        val conversionTotals = converter.typeStats.toTypeSummaries().totals()
                         log(
-                            "Stage finished: Converting records converted=${conversionSummaries.sumOf { it.converted }} " +
-                                "notSelected=${conversionSummaries.sumOf { it.notSelected }} unsupported=${conversionSummaries.sumOf { it.unsupported }} " +
-                                "skipped=${conversionSummaries.sumOf { it.skipped }} failed=${conversionSummaries.sumOf { it.failed }}",
+                            "Stage finished: Converting records converted=${conversionTotals.converted} " +
+                                "notSelected=${conversionTotals.notSelected} unsupported=${conversionTotals.unsupported} " +
+                                "skipped=${conversionTotals.skipped} failed=${conversionTotals.failed}",
                         )
                         log("Stage started: Flushing final converted records")
                         importState.finishConverted()
@@ -175,18 +176,19 @@ class AppleHealthImportService
                 // accounting into the converter's stats and assemble the final results.
                 writer.mergeInto(converter.typeStats)
                 val summaries = converter.typeStats.toTypeSummaries()
+                val totals = summaries.totals()
                 val diagnostics = converter.diagnosticsSnapshot() + writer.diagnostics()
                 val diagnosticSummaries =
                     (converter.diagnosticSummariesSnapshot() + writer.diagnosticSummaries()).mergeDiagnosticSummaries()
                 val categorySummaries = importState.categorySummaries()
                 log(
                     "Stage finished: Flushing final converted records imported=${importState.importedRecords} " +
-                        "duplicates=${summaries.sumOf { it.duplicateSkipped }} failed=${summaries.sumOf { it.failed }}",
+                        "duplicates=${totals.duplicateSkipped} failed=${totals.failed}",
                 )
                 log(
-                    "Import completed converted=${summaries.sumOf { it.converted }} imported=${importState.importedRecords} " +
-                        "duplicates=${summaries.sumOf { it.duplicateSkipped }} unsupported=${summaries.sumOf { it.unsupported }} " +
-                        "notSelected=${summaries.sumOf { it.notSelected }} skipped=${summaries.sumOf { it.skipped }} failed=${summaries.sumOf { it.failed }} " +
+                    "Import completed converted=${totals.converted} imported=${importState.importedRecords} " +
+                        "duplicates=${totals.duplicateSkipped} unsupported=${totals.unsupported} " +
+                        "notSelected=${totals.notSelected} skipped=${totals.skipped} failed=${totals.failed} " +
                         "diagnostics=${diagnostics.size}",
                 )
                 progress(importState.progressSnapshot(AppleHealthImportPhase.BUILDING_REPORT))
@@ -210,13 +212,13 @@ class AppleHealthImportService
                     parsedWorkouts = parsed.parsedWorkouts,
                     parsedCorrelations = parsed.parsedCorrelations,
                     parsedActivitySummaries = parsed.parsedActivitySummaries,
-                    convertedRecords = summaries.sumOf { it.converted },
+                    convertedRecords = totals.converted,
                     importedRecords = importState.importedRecords,
-                    duplicateSkippedRecords = summaries.sumOf { it.duplicateSkipped },
-                    notSelectedRecords = summaries.sumOf { it.notSelected },
-                    unsupportedElements = summaries.sumOf { it.unsupported },
-                    skippedRecords = summaries.sumOf { it.skipped },
-                    failedRecords = summaries.sumOf { it.failed },
+                    duplicateSkippedRecords = totals.duplicateSkipped,
+                    notSelectedRecords = totals.notSelected,
+                    unsupportedElements = totals.unsupported,
+                    skippedRecords = totals.skipped,
+                    failedRecords = totals.failed,
                     typeSummaries = summaries,
                     diagnostics = diagnostics,
                     shareableReportText = reportText,
@@ -274,6 +276,10 @@ class AppleHealthImportService
             private var parsedActivitySummaries = 0
             private var lastProgressParsedElements = 0
 
+            // Running totals mirroring typeStats sums, so per-progress reporting does not rescan the map.
+            private var compatibleCount = 0
+            private var unsupportedCount = 0
+
             override fun onParsedType(type: String) {
                 typeStats.getOrPut(type) { MutableAppleImportTypeStats() }.parsed += 1
             }
@@ -283,6 +289,7 @@ class AppleHealthImportService
                 val category = record.analysisCategory(mindfulnessAvailable)
                 if (category != null) {
                     typeStats.getOrPut(record.type) { MutableAppleImportTypeStats() }.converted += 1
+                    compatibleCount += 1
                     categoryStats.add(category = category, convertedRecords = 1)
                 } else {
                     markUnsupported(record.type, "No direct Health Connect mapping is implemented for this Apple record type.")
@@ -293,6 +300,7 @@ class AppleHealthImportService
             override fun onWorkout(workout: AppleWorkout) {
                 parsedWorkouts += 1
                 typeStats.getOrPut(workout.workoutActivityType) { MutableAppleImportTypeStats() }.converted += 1
+                compatibleCount += 1
                 categoryStats.add(
                     category = AppleHealthImportCategory.WORKOUTS,
                     convertedRecords = 1,
@@ -305,6 +313,7 @@ class AppleHealthImportService
                 parsedCorrelations += 1
                 if (correlation.type == AppleBloodPressureCorrelation) {
                     typeStats.getOrPut(correlation.type) { MutableAppleImportTypeStats() }.converted += 1
+                    compatibleCount += 1
                     categoryStats.add(category = AppleHealthImportCategory.VITALS, convertedRecords = 1)
                 } else {
                     markUnsupported(correlation.type, "Correlation type has no direct Health Connect import mapping.")
@@ -328,11 +337,11 @@ class AppleHealthImportService
                     parsedWorkouts = parsedWorkouts,
                     parsedCorrelations = parsedCorrelations,
                     parsedActivitySummaries = parsedActivitySummaries,
-                    convertedRecords = typeStats.values.sumOf { it.converted },
+                    convertedRecords = compatibleCount,
                     importedRecords = 0,
                     duplicateSkippedRecords = 0,
                     notSelectedRecords = 0,
-                    unsupportedElements = typeStats.values.sumOf { it.unsupported },
+                    unsupportedElements = unsupportedCount,
                     skippedRecords = 0,
                     failedRecords = 0,
                 )
@@ -351,6 +360,7 @@ class AppleHealthImportService
 
             private fun markUnsupported(appleType: String, detail: String) {
                 typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.unsupported += 1
+                unsupportedCount += 1
                 val diagnostic = AppleHealthImportDiagnostic(
                     appleType = appleType,
                     targetType = null,
@@ -372,22 +382,27 @@ class AppleHealthImportService
                     lastProgressParsedElements = parsedElements
                     runBlocking { onProgress(progressSnapshot(AppleHealthImportPhase.PARSING)) }
                     importLogs.addImportInfo(
-                        "Analysis scan progress parsedElements=$parsedElements compatible=${typeStats.values.sumOf { it.converted }} " +
-                            "unsupported=${typeStats.values.sumOf { it.unsupported }}",
+                        "Analysis scan progress parsedElements=$parsedElements compatible=$compatibleCount " +
+                            "unsupported=$unsupportedCount",
                     )
                 }
             }
         }
 
-        private abstract inner class StreamingAppleHealthConversionState(
+        private inner class StreamingAppleHealthWritingState(
             private val converter: AppleHealthImportConverter,
-            protected val onProgress: suspend (AppleHealthImportProgress) -> Unit,
-            protected val importLogs: MutableList<String>,
+            private val onProgress: suspend (AppleHealthImportProgress) -> Unit,
+            private val importLogs: MutableList<String>,
             private val progressMutex: Mutex,
+            private val selectedCategories: Set<AppleHealthImportCategory>,
+            private val writer: ConvertedBatchWriter,
+            private val sendBatch: (List<ConvertedAppleRecord>) -> Unit,
         ) : StreamingAppleHealthProgressState {
             private val bufferedRecords = mutableListOf<AppleRecord>()
             private val overlapDedupRecords = mutableListOf<AppleRecord>()
             private val bufferedWorkouts = mutableListOf<AppleWorkout>()
+            private val convertedBatch = mutableListOf<ConvertedAppleRecord>()
+            private val categoryStats = linkedMapOf<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>()
 
             // Parse-side counters are volatile so the concurrent batch writer coroutine can read
             // consistent progress totals without touching converter.typeStats (which the parse
@@ -408,13 +423,12 @@ class AppleHealthImportService
             private var convertedRecords = 0
 
             @Volatile
-            protected var notSelectedCount = 0
+            private var notSelectedCount = 0
 
             private var lastProgressParsedElements = 0
 
-            open val importedRecords: Int get() = 0
-            protected open val duplicateSkippedCount: Int get() = 0
-            protected open val writerFailedCount: Int get() = 0
+            val importedRecords: Int
+                get() = writer.importedCount.get()
 
             private fun log(message: String) {
                 importLogs.addImportInfo(message)
@@ -497,7 +511,12 @@ class AppleHealthImportService
                 )
             }
 
-            open fun finishConverted() = Unit
+            fun finishConverted() {
+                sendConvertedBatch()
+            }
+
+            fun categorySummaries(): List<AppleHealthImportCategorySummary> =
+                categoryStats.toCategorySummaries()
 
             override fun progressSnapshot(phase: AppleHealthImportPhase): AppleHealthImportProgress =
                 AppleHealthImportProgress(
@@ -508,23 +527,14 @@ class AppleHealthImportService
                     parsedActivitySummaries = parsedActivitySummaries,
                     convertedRecords = convertedRecords,
                     importedRecords = importedRecords,
-                    duplicateSkippedRecords = duplicateSkippedCount,
+                    duplicateSkippedRecords = writer.duplicateCount.get(),
                     notSelectedRecords = notSelectedCount,
                     unsupportedElements = converter.unsupportedCount,
                     skippedRecords = converter.skippedCount,
-                    failedRecords = converter.invalidCount + writerFailedCount,
+                    failedRecords = converter.invalidCount + writer.failedCount.get(),
                 )
 
-            protected abstract fun onConverted(converted: ConvertedAppleRecord)
-
-            protected fun mutableTypeStats(): MutableMap<String, MutableAppleImportTypeStats> =
-                converter.typeStats
-
-            protected fun logFromState(message: String) {
-                log(message)
-            }
-
-            protected fun publishProgress(phase: AppleHealthImportPhase) {
+            private fun publishProgress(phase: AppleHealthImportPhase) {
                 runBlocking { progressMutex.withLock { onProgress(progressSnapshot(phase)) } }
             }
 
@@ -550,43 +560,15 @@ class AppleHealthImportService
 
             private fun acceptConverted(converted: ConvertedAppleRecord) {
                 convertedRecords += 1
-                onConverted(converted)
-            }
-
-            private fun maybeReportProgress() {
-                val parsedElements = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
-                if (parsedElements - lastProgressParsedElements >= ProgressReportElementInterval) {
-                    lastProgressParsedElements = parsedElements
-                    publishProgress(AppleHealthImportPhase.PARSING)
-                }
-            }
-        }
-
-        private inner class StreamingAppleHealthWritingState(
-            converter: AppleHealthImportConverter,
-            onProgress: suspend (AppleHealthImportProgress) -> Unit,
-            importLogs: MutableList<String>,
-            progressMutex: Mutex,
-            private val selectedCategories: Set<AppleHealthImportCategory>,
-            private val writer: ConvertedBatchWriter,
-            private val sendBatch: (List<ConvertedAppleRecord>) -> Unit,
-        ) : StreamingAppleHealthConversionState(converter, onProgress, importLogs, progressMutex) {
-            private val convertedBatch = mutableListOf<ConvertedAppleRecord>()
-            private val categoryStats = linkedMapOf<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>()
-
-            override val importedRecords: Int
-                get() = writer.importedCount.get()
-
-            override val duplicateSkippedCount: Int
-                get() = writer.duplicateCount.get()
-
-            override val writerFailedCount: Int
-                get() = writer.failedCount.get()
-
-            override fun onConverted(converted: ConvertedAppleRecord) {
-                categoryStats.add(converted)
-                if (converted.importCategory() !in selectedCategories) {
-                    mutableTypeStats().getOrPut(converted.appleType) { MutableAppleImportTypeStats() }.notSelected += 1
+                // Per-record hot path: classify once and reuse for stats + selection.
+                val category = converted.importCategory()
+                categoryStats.add(
+                    category = category,
+                    convertedRecords = 1,
+                    routeSessions = if (converted.hasExerciseRoute()) 1 else 0,
+                )
+                if (category !in selectedCategories) {
+                    converter.typeStats.getOrPut(converted.appleType) { MutableAppleImportTypeStats() }.notSelected += 1
                     notSelectedCount += 1
                     return
                 }
@@ -596,17 +578,18 @@ class AppleHealthImportService
                 }
             }
 
-            override fun finishConverted() {
-                sendConvertedBatch()
-            }
-
-            fun categorySummaries(): List<AppleHealthImportCategorySummary> =
-                categoryStats.toCategorySummaries()
-
             private fun sendConvertedBatch() {
                 if (convertedBatch.isEmpty()) return
                 sendBatch(convertedBatch.toList())
                 convertedBatch.clear()
+            }
+
+            private fun maybeReportProgress() {
+                val parsedElements = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
+                if (parsedElements - lastProgressParsedElements >= ProgressReportElementInterval) {
+                    lastProgressParsedElements = parsedElements
+                    publishProgress(AppleHealthImportPhase.PARSING)
+                }
             }
         }
 
@@ -637,11 +620,9 @@ class AppleHealthImportService
                 val batchCount = batch.size
                 publishProgress(AppleHealthImportPhase.CHECKING_DUPLICATES)
                 log("Stage started: Checking duplicates batchRecords=$batchCount")
-                val duplicateDiagnostics = mutableListOf<AppleHealthImportDiagnostic>()
-                val duplicateSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
                 val deduplicated = batch.deduplicateWithinImport(
-                    diagnostics = duplicateDiagnostics,
-                    diagnosticSummaries = duplicateSummaries,
+                    diagnostics = serviceDiagnostics,
+                    diagnosticSummaries = serviceDiagnosticSummaries,
                     typeStats = writerTypeStats,
                 )
                 val inFileDuplicates = batch.size - deduplicated.size
@@ -649,7 +630,6 @@ class AppleHealthImportService
                     duplicateCount.addAndGet(inFileDuplicates)
                     log("Skipped duplicate records inside export count=$inFileDuplicates")
                 }
-                duplicateDiagnostics.forEach(::addDiagnostic)
                 val existingClientRecordIds = findExistingClientRecordIds(deduplicated, importLogs)
                 val toInsert = deduplicated.filterNot { converted ->
                     val clientRecordId = converted.clientRecordId
@@ -741,9 +721,11 @@ class AppleHealthImportService
                                     wantedIds = wantedIds,
                                 )
                             }.getOrElse { error ->
-                                importLogs += "${Instant.now()} [ERROR] Existing clientRecordId lookup failed " +
-                                    "recordType=${recordType.qualifiedName} wanted=${wantedIds.size} range=$start..$end\n" +
-                                    AppleHealthImportErrorFormatter.details(error)
+                                importLogs.addImportError(
+                                    "Existing clientRecordId lookup failed " +
+                                        "recordType=${recordType.qualifiedName} wanted=${wantedIds.size} range=$start..$end",
+                                    error,
+                                )
                                 emptySet()
                             }
                         }
@@ -769,8 +751,7 @@ class AppleHealthImportService
                 return AppleHealthInsertionResult(imported = records.size)
             }
             batchResult.exceptionOrNull()?.let { error ->
-                importLogs += "${Instant.now()} [ERROR] Batch insert failed count=${records.size}; retrying individually\n" +
-                    AppleHealthImportErrorFormatter.details(error)
+                importLogs.addImportError("Batch insert failed count=${records.size}; retrying individually", error)
             }
 
             return records.fold(AppleHealthInsertionResult()) { result, converted ->
@@ -794,10 +775,11 @@ class AppleHealthImportService
                                 result.copy(duplicates = result.duplicates + 1)
                             } else {
                                 stats.failed += 1
-                                importLogs += "${Instant.now()} [ERROR] Record insert failed " +
-                                    "appleType=${converted.appleType} target=${converted.targetType} " +
-                                    "timeRange=${converted.sourceTimeRange}\n" +
-                                    AppleHealthImportErrorFormatter.details(error)
+                                importLogs.addImportError(
+                                    "Record insert failed appleType=${converted.appleType} " +
+                                        "target=${converted.targetType} timeRange=${converted.sourceTimeRange}",
+                                    error,
+                                )
                                 addDiagnostic(
                                     converted.diagnostic(
                                         reasonCode = "insert_failed",
@@ -832,17 +814,6 @@ private data class MutableAppleHealthImportCategorySummary(
 }
 
 private fun MutableMap<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>.add(
-    converted: ConvertedAppleRecord,
-) {
-    val category = converted.importCategory()
-    add(
-        category = category,
-        convertedRecords = 1,
-        routeSessions = if (converted.hasExerciseRoute()) 1 else 0,
-    )
-}
-
-private fun MutableMap<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>.add(
     category: AppleHealthImportCategory,
     convertedRecords: Int,
     routeSessions: Int = 0,
@@ -852,56 +823,46 @@ private fun MutableMap<AppleHealthImportCategory, MutableAppleHealthImportCatego
     summary.routeSessions += routeSessions
 }
 
-private fun AppleRecord.analysisCategory(mindfulnessAvailable: Boolean): AppleHealthImportCategory? =
-    when (type) {
-        AppleStepCount,
-        AppleDistanceWalkingRunning,
-        AppleDistanceCycling,
-        AppleDistanceSwimming,
-        AppleDistanceWheelchair,
-        AppleActiveEnergyBurned,
-        AppleBasalEnergyBurned,
-        AppleFlightsClimbed,
-        AppleElevationAscended,
-        ApplePushCount,
-        AppleWalkingSpeed,
-        -> AppleHealthImportCategory.ACTIVITY
-        AppleHeartRate,
-        AppleRestingHeartRate,
-        -> AppleHealthImportCategory.HEART
-        AppleSleepAnalysis -> AppleHealthImportCategory.SLEEP
-        AppleBodyMass,
-        AppleHeight,
-        AppleBodyFatPercentage,
-        AppleLeanBodyMass,
-        AppleBoneMass,
-        AppleBodyWaterMass,
-        -> AppleHealthImportCategory.BODY
-        AppleBloodPressureSystolic,
-        AppleBloodPressureDiastolic,
-        AppleOxygenSaturation,
-        AppleRespiratoryRate,
-        AppleBodyTemperature,
-        AppleBloodGlucose,
-        AppleVo2Max,
-        -> AppleHealthImportCategory.VITALS
-        AppleBasalBodyTemperature -> AppleHealthImportCategory.CYCLE
-        AppleDietaryWater -> AppleHealthImportCategory.HYDRATION
-        in AppleNutritionTypes -> AppleHealthImportCategory.NUTRITION
-        AppleMindfulSession -> AppleHealthImportCategory.MINDFULNESS.takeIf { mindfulnessAvailable }
-        in AppleCycleCategoryTypes -> AppleHealthImportCategory.CYCLE
-        else -> null
-    }
-
 private fun Map<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>.toCategorySummaries():
     List<AppleHealthImportCategorySummary> =
     AppleHealthImportCategory.entries
         .mapNotNull { category -> this[category]?.toSummary() }
         .filter { it.convertedRecords > 0 }
 
+private data class AppleTypeSummaryTotals(
+    val converted: Int = 0,
+    val duplicateSkipped: Int = 0,
+    val notSelected: Int = 0,
+    val unsupported: Int = 0,
+    val skipped: Int = 0,
+    val failed: Int = 0,
+)
+
+private fun List<AppleHealthImportTypeSummary>.totals(): AppleTypeSummaryTotals {
+    var converted = 0
+    var duplicateSkipped = 0
+    var notSelected = 0
+    var unsupported = 0
+    var skipped = 0
+    var failed = 0
+    forEach { summary ->
+        converted += summary.converted
+        duplicateSkipped += summary.duplicateSkipped
+        notSelected += summary.notSelected
+        unsupported += summary.unsupported
+        skipped += summary.skipped
+        failed += summary.failed
+    }
+    return AppleTypeSummaryTotals(converted, duplicateSkipped, notSelected, unsupported, skipped, failed)
+}
+
 private fun MutableList<String>.addImportInfo(message: String) {
     add("${Instant.now()} [INFO] $message")
     debugImportLog(message)
+}
+
+private fun MutableList<String>.addImportError(message: String, error: Throwable) {
+    add("${Instant.now()} [ERROR] $message\n" + AppleHealthImportErrorFormatter.details(error))
 }
 
 private fun debugImportLog(message: String) {
@@ -1027,23 +988,21 @@ private fun buildReportText(
     diagnosticSummaries: List<AppleHealthImportDiagnosticSummary>,
     importLogs: List<String>,
 ): String = buildString {
-    appendLine("OpenVitals Apple Health Import Report")
-    appendLine("Generated: ${Instant.now()}")
-    appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-    appendLine("Health Connect client: androidx.health.connect:connect-client (runtime version unavailable)")
+    appendAppleHealthReportHeader()
     appendLine()
     appendLine("Summary")
     appendLine("Parsed records: ${parsed.parsedRecords}")
     appendLine("Parsed workouts: ${parsed.parsedWorkouts}")
     appendLine("Parsed correlations: ${parsed.parsedCorrelations}")
     appendLine("Parsed activity summaries: ${parsed.parsedActivitySummaries}")
-    appendLine("Converted Health Connect records: ${summaries.sumOf { it.converted }}")
+    val totals = summaries.totals()
+    appendLine("Converted Health Connect records: ${totals.converted}")
     appendLine("Imported Health Connect records: $imported")
-    appendLine("Duplicate skipped: ${summaries.sumOf { it.duplicateSkipped }}")
-    appendLine("Not selected: ${summaries.sumOf { it.notSelected }}")
-    appendLine("Unsupported: ${summaries.sumOf { it.unsupported }}")
-    appendLine("Skipped: ${summaries.sumOf { it.skipped }}")
-    appendLine("Failed: ${summaries.sumOf { it.failed }}")
+    appendLine("Duplicate skipped: ${totals.duplicateSkipped}")
+    appendLine("Not selected: ${totals.notSelected}")
+    appendLine("Unsupported: ${totals.unsupported}")
+    appendLine("Skipped: ${totals.skipped}")
+    appendLine("Failed: ${totals.failed}")
     if (selectedCategories != null) {
         appendLine("Selected categories: ${selectedCategories.joinToString { it.reportName }}")
     }

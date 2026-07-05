@@ -2,8 +2,20 @@ package tech.mmarca.openvitals.features.imports.applehealth
 
 import android.content.Context
 import java.io.File
+import java.time.Instant
+import tech.mmarca.openvitals.BuildConfig
+
+internal fun StringBuilder.appendAppleHealthReportHeader() {
+    appendLine("OpenVitals Apple Health Import Report")
+    appendLine("Generated: ${Instant.now()}")
+    appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+    appendLine("Health Connect client: androidx.health.connect:connect-client (runtime version unavailable)")
+}
 
 internal object AppleHealthImportReportStore {
+    fun reportPath(context: Context): String =
+        File(File(context.filesDir, ReportDirectory), ReportFileName).absolutePath
+
     fun write(context: Context, reportText: String): String {
         return writeFile(context, ReportFileName, reportText)
     }

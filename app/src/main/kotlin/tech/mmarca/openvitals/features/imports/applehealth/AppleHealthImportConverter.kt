@@ -172,25 +172,28 @@ internal class AppleHealthImportConverter(
         emit: (ConvertedAppleRecord) -> Unit,
     ) {
         val additiveRecords = records.filter { it.type in AppleAdditiveOverlapSensitiveTypes }
-        val candidates = additiveRecords
-            .mapNotNull { it.toAdditiveOverlapCandidate() }
-            .sortedWith(
-                compareBy<AppleAdditiveOverlapCandidate> { it.record.type }
-                    .thenBy { it.sourcePriority }
-                    .thenBy { it.start }
-                    .thenBy { it.end },
-            )
         if (additiveRecords.isEmpty()) return
 
-        val candidateFingerprints = candidates.mapTo(mutableSetOf()) { it.record.sourceFingerprint }
-        val accepted = AppleAdditiveOverlapIndex()
+        // Single pass: records without a usable start date cannot participate in overlap dedup
+        // (and can never share a fingerprint with a candidate, since startDate is part of the
+        // fingerprint), so they convert directly; the rest are deduplicated in deterministic order.
+        val candidates = ArrayList<AppleAdditiveOverlapCandidate>(additiveRecords.size)
         additiveRecords.forEach { record ->
-            // Compute the fingerprint once per record; stableParts() is allocation-heavy.
-            val fingerprint = record.sourceFingerprint
-            if (fingerprint in candidateFingerprints) return@forEach
-            consumedRecordFingerprints += fingerprint
-            convertSingleRecord(record)?.let(emit)
+            val candidate = record.toAdditiveOverlapCandidate()
+            if (candidate == null) {
+                consumedRecordFingerprints += record.sourceFingerprint
+                convertSingleRecord(record)?.let(emit)
+            } else {
+                candidates += candidate
+            }
         }
+        candidates.sortWith(
+            compareBy<AppleAdditiveOverlapCandidate> { it.record.type }
+                .thenBy { it.sourcePriority }
+                .thenBy { it.start }
+                .thenBy { it.end },
+        )
+        val accepted = AppleAdditiveOverlapIndex()
         candidates.forEach { candidate ->
             consumedRecordFingerprints += candidate.record.sourceFingerprint
             if (accepted.isMostlyCovered(candidate)) {
