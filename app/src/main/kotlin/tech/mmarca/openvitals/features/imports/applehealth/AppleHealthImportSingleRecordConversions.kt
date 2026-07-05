@@ -8,10 +8,12 @@ import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Power
+import androidx.health.connect.client.units.Velocity
 import androidx.health.connect.client.units.kilocalories
 import androidx.health.connect.client.units.meters
 import java.time.Duration
@@ -92,6 +94,29 @@ internal fun AppleHealthImportConverter.convertSingleRecord(record: AppleRecord)
                     endZoneOffset = interval.end.offset,
                     energy = kilocalories.kilocalories,
                     metadata = metadata("ActiveCaloriesBurnedRecord"),
+                ),
+            )
+        }
+
+        AppleWalkingSpeed -> {
+            val metersPerSecond = value?.toMetersPerSecond(record.unit)?.takeIf { it >= 0.0 }
+                ?: return invalid(record, "Walking speed is missing, unsupported unit, or negative.")
+            val fingerprint = record.stableClientRecordId("walking_speed")
+            converted(
+                "SpeedRecord",
+                fingerprint,
+                SpeedRecord(
+                    startTime = interval.start.instant,
+                    startZoneOffset = interval.start.offset,
+                    endTime = interval.end.instant,
+                    endZoneOffset = interval.end.offset,
+                    samples = listOf(
+                        SpeedRecord.Sample(
+                            time = interval.start.instant,
+                            speed = Velocity.metersPerSecond(metersPerSecond),
+                        ),
+                    ),
+                    metadata = metadata("SpeedRecord"),
                 ),
             )
         }

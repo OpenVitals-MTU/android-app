@@ -40,6 +40,10 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkControl
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategorySummary
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -272,18 +276,28 @@ class SettingsViewModelTest {
         val currentWorkId = UUID.randomUUID()
         val currentFailure = workInfo(id = currentWorkId, state = WorkInfo.State.FAILED)
         val importController = importController(workInfos = workInfos)
+        val importService = importService()
         val uri = mockk<Uri>()
-        every { importController.enqueue(uri) } returns currentWorkId
+        every {
+            importController.enqueue(
+                uri = uri,
+                selectedCategories = setOf(AppleHealthImportCategory.ACTIVITY),
+                expectedSelectedRecords = 1,
+            )
+        } returns currentWorkId
         every { importController.errorFor(currentFailure) } returns "current failure"
 
         val vm = viewModel(
             repository = repo(),
             preferencesRepository = prefs(),
+            appleHealthImportService = importService,
             appleHealthImportWorkController = importController,
             permissionUxState = permissionUxState(),
         )
 
-        vm.importAppleHealthExport(uri)
+        vm.analyzeAppleHealthExport(uri)
+        advanceUntilIdle()
+        vm.importSelectedAppleHealthExport()
         advanceUntilIdle()
         workInfos.value = listOf(staleFailure, currentFailure)
         advanceUntilIdle()
@@ -301,6 +315,7 @@ class SettingsViewModelTest {
     private fun viewModel(
         repository: HealthRepository = repo(),
         preferencesRepository: PreferencesRepository = prefs(),
+        appleHealthImportService: AppleHealthImportService = importService(),
         appleHealthImportWorkController: AppleHealthImportWorkController = importController(),
         offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
         offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
@@ -309,6 +324,7 @@ class SettingsViewModelTest {
         SettingsViewModel(
             repository = repository,
             preferencesRepository = preferencesRepository,
+            appleHealthImportService = appleHealthImportService,
             appleHealthImportWorkController = appleHealthImportWorkController,
             offlineMapRepository = offlineMapRepository,
             offlineMapImportWorkController = offlineMapImportWorkController,
@@ -378,7 +394,34 @@ class SettingsViewModelTest {
         mockk<AppleHealthImportWorkController>(relaxed = true).also { controller ->
             every { controller.workInfos } returns (workInfos ?: emptyFlow())
             every { controller.enqueue(any()) } returns UUID.randomUUID()
+            every { controller.enqueue(any(), any(), any()) } returns UUID.randomUUID()
         }
+
+    private fun importService(): AppleHealthImportService =
+        mockk<AppleHealthImportService>().also { service ->
+            coEvery { service.analyzeAppleHealthExport(any(), any()) } returns appleHealthAnalysis()
+        }
+
+    private fun appleHealthAnalysis(): AppleHealthImportAnalysisResult =
+        AppleHealthImportAnalysisResult(
+            parsedRecords = 1,
+            parsedWorkouts = 0,
+            parsedCorrelations = 0,
+            parsedActivitySummaries = 0,
+            convertedRecords = 1,
+            unsupportedElements = 0,
+            skippedRecords = 0,
+            failedRecords = 0,
+            categorySummaries = listOf(
+                AppleHealthImportCategorySummary(
+                    category = AppleHealthImportCategory.ACTIVITY,
+                    convertedRecords = 1,
+                ),
+            ),
+            typeSummaries = emptyList(),
+            diagnostics = emptyList(),
+            shareableReportText = "analysis",
+        )
 
     private fun offlineMapRepository(): OfflineMapRepository =
         mockk<OfflineMapRepository>(relaxed = true).also { repository ->

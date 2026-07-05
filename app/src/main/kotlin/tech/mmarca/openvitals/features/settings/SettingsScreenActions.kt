@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.settings
 
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
 
 internal data class SettingsScreenActions(
     val onOpenSection: (SettingsSection) -> Unit,
@@ -10,6 +11,8 @@ internal data class SettingsScreenActions(
     val onOpenSupport: () -> Unit,
     val onGrantDataImportPermissions: () -> Unit,
     val onImportAppleHealth: () -> Unit,
+    val onToggleAppleHealthImportCategory: (AppleHealthImportCategory, Boolean) -> Unit,
+    val onImportSelectedAppleHealth: () -> Unit,
     val onImportFitFile: () -> Unit,
     val onImportOfflineMap: () -> Unit,
     val onCopyAppleHealthReport: (String) -> Unit,

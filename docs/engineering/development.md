@@ -17,6 +17,17 @@ Run the main checks before pushing architecture or feature changes:
 git diff --check
 ```
 
+For Apple Health importer work, there is also a desktop JVM smoke test that can exercise the Kotlin importer against a real local export without building or installing the app:
+
+```bash
+./gradlew app:testCiUnitTest \
+  --tests tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportSmokeTest \
+  -PappleHealthExport=/path/to/export.zip \
+  --console=plain
+```
+
+`-PappleHealthExport` can point to an Apple Health `export.zip`, `export.xml`, or an unzipped export directory. The test parses XML, parses GPX route files when present, runs supported Health Connect conversion logic, and prints import-shape counts. It is skipped automatically when no export path is provided.
+
 On Windows, use `gradlew.bat`:
 
 ```powershell

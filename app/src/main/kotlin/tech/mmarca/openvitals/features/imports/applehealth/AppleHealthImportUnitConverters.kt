@@ -17,6 +17,15 @@ internal fun Double.toMeters(unit: String?): Double? =
         else -> null
     }
 
+internal fun Double.toMetersPerSecond(unit: String?): Double? =
+    when (unit?.lowercase(Locale.US)) {
+        "m/s", "m/sec", "meter/second", "meters/second", "meters/sec" -> this
+        "km/hr", "km/h", "kph", "kilometer/hour", "kilometers/hour" -> this / 3.6
+        "mi/hr", "mi/h", "mph", "mile/hour", "miles/hour" -> this * 0.44704
+        "ft/s", "ft/sec", "foot/second", "feet/second", "feet/sec" -> this * 0.3048
+        else -> null
+    }
+
 internal fun Double.toKilograms(unit: String?): Double? =
     when (unit?.lowercase(Locale.US)) {
         "kg", "kilogram", "kilograms" -> this

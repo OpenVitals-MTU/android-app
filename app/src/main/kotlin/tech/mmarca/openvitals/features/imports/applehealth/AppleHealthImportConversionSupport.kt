@@ -37,6 +37,14 @@ internal data class AppleWorkoutOverlapCandidate(
     val endDate: AppleDateTime?,
 )
 
+internal data class AppleAdditiveOverlapCandidate(
+    val record: AppleRecord,
+    val start: Instant,
+    val end: Instant,
+    val sourceName: String?,
+    val sourcePriority: Int,
+)
+
 internal data class BoundedWorkoutOverlapCandidates(
     val candidates: List<AppleWorkoutOverlapCandidate>,
     val limitReached: Boolean,
@@ -67,12 +75,21 @@ internal fun appleMetadata(targetType: String, fingerprint: String): Metadata =
     )
 
 internal fun buildStableClientRecordId(prefix: String, parts: Any): String {
-    val digest = MessageDigest.getInstance("SHA-256")
+    val bytes = MessageDigest.getInstance("SHA-256")
         .digest(parts.toString().toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it) }
-        .take(32)
+    // 16 bytes → 32 hex chars; manual hex encoding avoids a Formatter allocation per byte on
+    // this hot path (multiple digests per imported record).
+    val digest = buildString(32) {
+        for (index in 0 until 16) {
+            val byte = bytes[index].toInt() and 0xFF
+            append(HexDigits[byte ushr 4])
+            append(HexDigits[byte and 0x0F])
+        }
+    }
     return "apple_health_${prefix.toStableIdSegment()}_$digest"
 }
+
+private const val HexDigits = "0123456789abcdef"
 
 internal fun AppleRecord.stableClientRecordId(prefix: String, extra: Any = stableParts()): String =
     buildStableClientRecordId(prefix, extra)
@@ -149,6 +166,20 @@ internal fun AppleRecord.toWorkoutOverlapCandidate(): AppleWorkoutOverlapCandida
         null
     }
 
+internal fun AppleRecord.toAdditiveOverlapCandidate(): AppleAdditiveOverlapCandidate? {
+    if (type !in AppleAdditiveOverlapSensitiveTypes) return null
+    val start = startDate?.instant ?: return null
+    val rawEnd = endDate?.instant ?: start
+    val end = if (rawEnd.isAfter(start)) rawEnd else start.plusSeconds(1)
+    return AppleAdditiveOverlapCandidate(
+        record = this,
+        start = start,
+        end = end,
+        sourceName = sourceName,
+        sourcePriority = additiveSourcePriority(),
+    )
+}
+
 internal fun List<AppleRecord>.toBoundedWorkoutOverlapCandidates(): BoundedWorkoutOverlapCandidates {
     val candidates = ArrayList<AppleWorkoutOverlapCandidate>(minOf(size, MaxWorkoutOverlapCandidates))
     var limitReached = false
@@ -164,12 +195,135 @@ internal fun List<AppleRecord>.toBoundedWorkoutOverlapCandidates(): BoundedWorko
     return BoundedWorkoutOverlapCandidates(candidates, limitReached)
 }
 
+internal class AppleAdditiveOverlapIndex {
+    private val rangesByTypeAndSource = linkedMapOf<String, MutableMap<String, MutableList<AppleInstantRange>>>()
+
+    fun isMostlyCovered(candidate: AppleAdditiveOverlapCandidate): Boolean {
+        val source = candidate.sourceName.orEmpty()
+        val sourceRanges = rangesByTypeAndSource[candidate.record.type] ?: return false
+        val overlaps = mutableListOf<AppleInstantRange>()
+        sourceRanges.forEach { (acceptedSource, ranges) ->
+            if (acceptedSource != source) {
+                ranges.collectOverlaps(candidate.start, candidate.end, overlaps)
+            }
+        }
+        if (overlaps.isEmpty()) return false
+
+        overlaps.sortBy { it.start }
+        var coveredSeconds = 0L
+        var currentStart = overlaps.first().start
+        var currentEnd = overlaps.first().end
+        for (index in 1 until overlaps.size) {
+            val range = overlaps[index]
+            if (range.start <= currentEnd) {
+                currentEnd = maxOf(currentEnd, range.end)
+            } else {
+                coveredSeconds += Duration.between(currentStart, currentEnd).seconds
+                currentStart = range.start
+                currentEnd = range.end
+            }
+        }
+        coveredSeconds += Duration.between(currentStart, currentEnd).seconds
+
+        val durationSeconds = Duration.between(candidate.start, candidate.end).seconds.coerceAtLeast(1)
+        return coveredSeconds.toDouble() / durationSeconds >= AdditiveOverlapCoverageThreshold
+    }
+
+    fun add(candidate: AppleAdditiveOverlapCandidate) {
+        val ranges = rangesByTypeAndSource
+            .getOrPut(candidate.record.type) { linkedMapOf() }
+            .getOrPut(candidate.sourceName.orEmpty()) { mutableListOf() }
+        ranges.addMerged(candidate.start, candidate.end)
+    }
+}
+
+private data class AppleInstantRange(
+    val start: Instant,
+    var end: Instant,
+)
+
+private fun MutableList<AppleInstantRange>.collectOverlaps(
+    start: Instant,
+    end: Instant,
+    destination: MutableList<AppleInstantRange>,
+) {
+    var index = indexOfFirstEndingAfter(start)
+    while (index < size) {
+        val range = this[index]
+        if (range.start >= end) break
+        val overlapStart = maxOf(range.start, start)
+        val overlapEnd = minOf(range.end, end)
+        if (overlapEnd.isAfter(overlapStart)) {
+            destination += AppleInstantRange(overlapStart, overlapEnd)
+        }
+        index += 1
+    }
+}
+
+private fun MutableList<AppleInstantRange>.indexOfFirstEndingAfter(start: Instant): Int {
+    var low = 0
+    var high = size
+    while (low < high) {
+        val mid = (low + high) ushr 1
+        if (this[mid].end <= start) {
+            low = mid + 1
+        } else {
+            high = mid
+        }
+    }
+    return low
+}
+
+private fun MutableList<AppleInstantRange>.addMerged(start: Instant, end: Instant) {
+    if (isEmpty()) {
+        add(AppleInstantRange(start, end))
+        return
+    }
+
+    val last = last()
+    if (start >= last.start) {
+        if (start <= last.end) {
+            last.end = maxOf(last.end, end)
+        } else {
+            add(AppleInstantRange(start, end))
+        }
+        return
+    }
+
+    add(AppleInstantRange(start, end))
+    sortBy { it.start }
+    var writeIndex = 0
+    for (readIndex in 1 until size) {
+        val current = this[readIndex]
+        val merged = this[writeIndex]
+        if (current.start <= merged.end) {
+            merged.end = maxOf(merged.end, current.end)
+        } else {
+            writeIndex += 1
+            this[writeIndex] = current
+        }
+    }
+    subList(writeIndex + 1, size).clear()
+}
+
+private fun AppleRecord.additiveSourcePriority(): Int {
+    val source = sourceName?.lowercase(Locale.US).orEmpty()
+    return when {
+        "watch" in source -> 0
+        source.containsAny(WorkoutAppSourceHints) -> 1
+        "iphone" in source || "ipad" in source -> 2
+        "apple" in source -> 3
+        else -> 4
+    }
+}
+
+private fun String.containsAny(values: Set<String>): Boolean = values.any { it in this }
+
 internal fun List<AppleWorkoutOverlapCandidate>.hasOverlapping(workout: AppleWorkout, types: Set<String>): Boolean {
     val workoutStart = workout.startDate?.instant ?: return false
     val workoutEnd = workout.endDate?.instant ?: return false
     return any { record ->
         record.type in types &&
-            (record.sourceName == null || workout.sourceName == null || record.sourceName == workout.sourceName) &&
             record.startDate?.instant?.isBefore(workoutEnd) == true &&
             (record.endDate?.instant ?: record.startDate.instant).isAfter(workoutStart)
     }
@@ -177,8 +331,22 @@ internal fun List<AppleWorkoutOverlapCandidate>.hasOverlapping(workout: AppleWor
 
 internal fun String.toStableIdSegment(): String =
     lowercase(Locale.US)
-        .replace(Regex("[^a-z0-9]+"), "_")
+        .replace(StableIdSegmentRegex, "_")
         .trim('_')
         .ifBlank { "record" }
 
+private val StableIdSegmentRegex = Regex("[^a-z0-9]+")
+
 private val SleepSessionGap: Duration = Duration.ofHours(2)
+private const val AdditiveOverlapCoverageThreshold = 0.8
+private val WorkoutAppSourceHints = setOf(
+    "strava",
+    "garmin",
+    "polar",
+    "fitbit",
+    "wahoo",
+    "zwift",
+    "runkeeper",
+    "komoot",
+    "trainingpeaks",
+)

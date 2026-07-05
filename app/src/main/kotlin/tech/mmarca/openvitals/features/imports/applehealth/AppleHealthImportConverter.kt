@@ -11,6 +11,7 @@ internal data class MutableAppleImportTypeStats(
     var converted: Int = 0,
     var imported: Int = 0,
     var duplicateSkipped: Int = 0,
+    var notSelected: Int = 0,
     var unsupported: Int = 0,
     var skipped: Int = 0,
     var failed: Int = 0,
@@ -18,11 +19,26 @@ internal data class MutableAppleImportTypeStats(
 
 internal class AppleHealthImportConverter(
     internal val mindfulnessAvailable: Boolean,
-    private val diagnosticLimit: Int = 200,
+    private val diagnosticLimit: Int = Int.MAX_VALUE,
 ) {
     private val diagnostics = mutableListOf<AppleHealthImportDiagnostic>()
     private val diagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
     internal val typeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
+
+    // Aggregate counters mirroring typeStats sums. All mutation happens on the parse thread; these
+    // volatiles let a concurrent writer coroutine read progress totals without iterating typeStats
+    // (which the parse thread mutates via getOrPut).
+    @Volatile
+    internal var unsupportedCount: Int = 0
+        private set
+
+    @Volatile
+    internal var skippedCount: Int = 0
+        private set
+
+    @Volatile
+    internal var invalidCount: Int = 0
+        private set
     internal val consumedRecordFingerprints = mutableSetOf<String>()
     private val workoutOverlapCandidates = mutableListOf<AppleWorkoutOverlapCandidate>()
     private var workoutOverlapCandidatesLimitReached = false
@@ -43,6 +59,7 @@ internal class AppleHealthImportConverter(
             addAll(convertSleep(export.records))
             addAll(convertNutrition(export.records))
             addAll(convertWorkouts(export.workouts, workoutOverlaps.candidates, workoutOverlapCandidatesLimitReached))
+            convertAdditiveOverlapSensitiveRecords(export.records, ::add)
             export.records.forEach { record ->
                 if (record.sourceFingerprint in consumedRecordFingerprints) return@forEach
                 convertSingleRecord(record)?.let(::add)
@@ -87,6 +104,9 @@ internal class AppleHealthImportConverter(
             record.type == AppleSleepAnalysis ||
             (record.type in AppleNutritionTypes && record.type != AppleDietaryWater)
 
+    fun shouldBufferForOverlapDedup(record: AppleRecord): Boolean =
+        record.type in AppleAdditiveOverlapSensitiveTypes
+
     fun noteWorkoutOverlap(record: AppleRecord) {
         record.toWorkoutOverlapCandidate()?.let { candidate ->
             if (workoutOverlapCandidates.size < MaxWorkoutOverlapCandidates) {
@@ -107,28 +127,84 @@ internal class AppleHealthImportConverter(
         parsedActivitySummaries: Int,
     ): List<ConvertedAppleRecord> =
         buildList {
-            addAll(convertBloodPressureCorrelations(correlations))
-            addAll(convertStandaloneBloodPressure(records))
-            addAll(convertSleep(records, trackConsumedRecords = false))
-            addAll(convertNutrition(records, trackConsumedRecords = false))
-            addAll(convertWorkouts(workouts, workoutOverlapCandidates, workoutOverlapCandidatesLimitReached))
-            correlations
-                .filterNot { it.type == AppleBloodPressureCorrelation }
-                .forEach { correlation ->
-                    unsupported(
-                        appleType = correlation.type,
-                        detail = "Correlation type has no direct Health Connect import mapping.",
-                        timeRange = correlation.timeRangeOrNull()?.toString(),
-                    )
-                }
-            if (parsedActivitySummaries > 0) {
+            convertBufferedGroups(records, workouts, correlations, parsedActivitySummaries, ::add)
+        }
+
+    /**
+     * Emit-based variant: converted records are handed to [emit] as they are produced instead of
+     * being materialized in one list. For step/energy-heavy exports the additive group can span
+     * hundreds of thousands of records, so streaming keeps memory bounded and lets the import
+     * pipeline start writing while conversion is still running.
+     */
+    fun convertBufferedGroups(
+        records: List<AppleRecord>,
+        workouts: List<AppleWorkout>,
+        correlations: List<AppleCorrelation>,
+        parsedActivitySummaries: Int,
+        emit: (ConvertedAppleRecord) -> Unit,
+    ) {
+        convertBloodPressureCorrelations(correlations).forEach(emit)
+        convertStandaloneBloodPressure(records).forEach(emit)
+        convertSleep(records, trackConsumedRecords = false).forEach(emit)
+        convertNutrition(records, trackConsumedRecords = false).forEach(emit)
+        convertWorkouts(workouts, workoutOverlapCandidates, workoutOverlapCandidatesLimitReached).forEach(emit)
+        convertAdditiveOverlapSensitiveRecords(records, emit)
+        correlations
+            .filterNot { it.type == AppleBloodPressureCorrelation }
+            .forEach { correlation ->
                 unsupported(
-                    appleType = "ActivitySummary",
-                    detail = "Apple activity rings and stand hours have no direct writable Health Connect record.",
-                    timeRange = null,
+                    appleType = correlation.type,
+                    detail = "Correlation type has no direct Health Connect import mapping.",
+                    timeRange = correlation.timeRangeOrNull()?.toString(),
                 )
             }
+        if (parsedActivitySummaries > 0) {
+            unsupported(
+                appleType = "ActivitySummary",
+                detail = "Apple activity rings and stand hours have no direct writable Health Connect record.",
+                timeRange = null,
+            )
         }
+    }
+
+    private fun convertAdditiveOverlapSensitiveRecords(
+        records: List<AppleRecord>,
+        emit: (ConvertedAppleRecord) -> Unit,
+    ) {
+        val additiveRecords = records.filter { it.type in AppleAdditiveOverlapSensitiveTypes }
+        val candidates = additiveRecords
+            .mapNotNull { it.toAdditiveOverlapCandidate() }
+            .sortedWith(
+                compareBy<AppleAdditiveOverlapCandidate> { it.record.type }
+                    .thenBy { it.sourcePriority }
+                    .thenBy { it.start }
+                    .thenBy { it.end },
+            )
+        if (additiveRecords.isEmpty()) return
+
+        val candidateFingerprints = candidates.mapTo(mutableSetOf()) { it.record.sourceFingerprint }
+        val accepted = AppleAdditiveOverlapIndex()
+        additiveRecords.forEach { record ->
+            // Compute the fingerprint once per record; stableParts() is allocation-heavy.
+            val fingerprint = record.sourceFingerprint
+            if (fingerprint in candidateFingerprints) return@forEach
+            consumedRecordFingerprints += fingerprint
+            convertSingleRecord(record)?.let(emit)
+        }
+        candidates.forEach { candidate ->
+            consumedRecordFingerprints += candidate.record.sourceFingerprint
+            if (accepted.isMostlyCovered(candidate)) {
+                skippedNull(
+                    candidate.record,
+                    reasonCode = "overlap_cross_source",
+                    detail = "Skipped because another source already contributed an overlapping additive sample.",
+                )
+                return@forEach
+            }
+            accepted.add(candidate)
+            convertSingleRecord(candidate.record)?.let(emit)
+        }
+    }
 
     internal fun invalid(record: AppleRecord, detail: String): Nothing? =
         invalid(record.type, detail, record.timeRangeOrNull()?.toString(), record.unit, record.valueForReport)
@@ -142,6 +218,7 @@ internal class AppleHealthImportConverter(
     ): Nothing? {
         addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "invalid", timeRange, unit, value, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.failed += 1
+        invalidCount += 1
         return null
     }
 
@@ -157,23 +234,33 @@ internal class AppleHealthImportConverter(
     ): Nothing? {
         addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "unsupported", timeRange, unit, value, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.unsupported += 1
+        unsupportedCount += 1
         return null
     }
 
     internal fun skippedNull(record: AppleRecord, reasonCode: String, detail: String): Nothing? {
-        addDiagnostic(
-            AppleHealthImportDiagnostic(
-                record.type,
-                null,
-                reasonCode,
-                record.timeRangeOrNull()?.toString(),
-                record.unit,
-                record.valueForReport,
-                detail,
-            ),
+        skipped(
+            appleType = record.type,
+            reasonCode = reasonCode,
+            detail = detail,
+            timeRange = record.timeRangeOrNull()?.toString(),
+            unit = record.unit,
+            value = record.valueForReport,
         )
-        typeStats.getOrPut(record.type) { MutableAppleImportTypeStats() }.skipped += 1
         return null
+    }
+
+    internal fun skipped(
+        appleType: String,
+        reasonCode: String,
+        detail: String,
+        timeRange: String?,
+        unit: String? = null,
+        value: String? = null,
+    ) {
+        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, reasonCode, timeRange, unit, value, detail))
+        typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.skipped += 1
+        skippedCount += 1
     }
 
     internal fun markConverted(appleType: String) {

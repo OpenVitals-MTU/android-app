@@ -43,6 +43,9 @@ val versionNameOverride = providers.environmentVariable("OPENVITALS_VERSION_NAME
 val nightlyVersionNameSuffix = versionNameOverride
     .map { "" }
     .orElse("-nightly")
+val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
+    .orElse(providers.systemProperty("appleHealthExport"))
+    .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
 // versionCode is a monotonic release counter, independent of versionName.
 val baseVersionCode = 107030332
 val baseVersionName = "1.7.6"
@@ -219,4 +222,7 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     jvmArgs("-XX:+EnableDynamicAgentLoading")
+    localAppleHealthExportPath.orNull?.let { path ->
+        systemProperty("appleHealthExport", path)
+    }
 }

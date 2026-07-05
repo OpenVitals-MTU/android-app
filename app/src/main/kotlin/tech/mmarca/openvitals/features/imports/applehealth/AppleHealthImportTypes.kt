@@ -5,6 +5,7 @@ internal const val AppleDistanceWalkingRunning = "HKQuantityTypeIdentifierDistan
 internal const val AppleDistanceCycling = "HKQuantityTypeIdentifierDistanceCycling"
 internal const val AppleDistanceSwimming = "HKQuantityTypeIdentifierDistanceSwimming"
 internal const val AppleDistanceWheelchair = "HKQuantityTypeIdentifierDistanceWheelchair"
+internal const val AppleWalkingSpeed = "HKQuantityTypeIdentifierWalkingSpeed"
 internal const val AppleActiveEnergyBurned = "HKQuantityTypeIdentifierActiveEnergyBurned"
 internal const val AppleBasalEnergyBurned = "HKQuantityTypeIdentifierBasalEnergyBurned"
 internal const val AppleFlightsClimbed = "HKQuantityTypeIdentifierFlightsClimbed"
@@ -90,6 +91,12 @@ internal val AppleDistanceTypes =
         AppleDistanceCycling,
         AppleDistanceSwimming,
         AppleDistanceWheelchair,
+    )
+
+internal val AppleAdditiveOverlapSensitiveTypes =
+    AppleDistanceTypes + setOf(
+        AppleStepCount,
+        AppleActiveEnergyBurned,
     )
 
 internal val AppleNutritionTypes =

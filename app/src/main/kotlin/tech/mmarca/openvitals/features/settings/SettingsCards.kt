@@ -46,7 +46,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -92,6 +94,8 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
 import tech.mmarca.openvitals.features.activity.maps.labelRes
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.labelRes
@@ -1165,23 +1169,36 @@ internal fun UnitSystemCard(
 @Composable
 internal fun AppleHealthImportCard(
     availability: HealthConnectAvailability,
-    importPermissions: Set<String>,
-    grantedPermissions: Set<String>,
-    isImporting: Boolean,
-    progress: AppleHealthImportProgress?,
-    result: AppleHealthImportResult?,
-    error: String?,
-    onGrantPermissions: () -> Unit,
-    onImport: () -> Unit,
-    onCopyReport: (String) -> Unit,
-    onCopyError: (String) -> Unit,
-    onSaveReport: () -> Unit,
+	importPermissions: Set<String>,
+	grantedPermissions: Set<String>,
+	isAnalyzing: Boolean,
+	isImporting: Boolean,
+	analysisProgress: AppleHealthImportProgress?,
+	analysis: AppleHealthImportAnalysisResult?,
+	selectedCategories: Set<AppleHealthImportCategory>,
+	progress: AppleHealthImportProgress?,
+	result: AppleHealthImportResult?,
+	error: String?,
+	onGrantPermissions: () -> Unit,
+	onImport: () -> Unit,
+	onToggleCategory: (AppleHealthImportCategory, Boolean) -> Unit,
+	onImportSelected: () -> Unit,
+	onCopyReport: (String) -> Unit,
+	onCopyError: (String) -> Unit,
+	onSaveReport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val grantedCount = importPermissions.count { it in grantedPermissions }
     val missingPermissions = importPermissions - grantedPermissions
     val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
-    val canImport = healthConnectAvailable && missingPermissions.isEmpty() && !isImporting
+    val isBusy = isAnalyzing || isImporting
+    val canAnalyze = healthConnectAvailable && !isBusy
+    val canImportSelected =
+        healthConnectAvailable &&
+            missingPermissions.isEmpty() &&
+            !isBusy &&
+            analysis != null &&
+            selectedCategories.isNotEmpty()
 
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
@@ -1232,6 +1249,7 @@ internal fun AppleHealthImportCard(
                         R.string.settings_apple_health_import_result,
                         importResult.importedRecords,
                         importResult.duplicateSkippedRecords,
+                        importResult.notSelectedRecords,
                         importResult.unsupportedElements,
                         importResult.skippedRecords,
                         importResult.failedRecords,
@@ -1275,6 +1293,79 @@ internal fun AppleHealthImportCard(
                 }
             }
 
+            analysis?.let { importAnalysis ->
+                Text(
+                    text = stringResource(
+                        R.string.settings_apple_health_import_analysis_result,
+                        importAnalysis.parsedElements,
+                        importAnalysis.convertedRecords,
+                        importAnalysis.unsupportedElements,
+                        importAnalysis.failedRecords,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                Text(
+                    text = stringResource(R.string.settings_apple_health_import_choose_categories),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    importAnalysis.categorySummaries.forEach { summary ->
+                        val checked = summary.category in selectedCategories
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Checkbox(
+                                checked = checked,
+                                onCheckedChange = { selected ->
+                                    onToggleCategory(summary.category, selected)
+                                },
+                                enabled = !isBusy,
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(top = 10.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(summary.category.titleRes),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    text = stringResource(summary.category.descriptionRes),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = if (summary.routeSessions > 0) {
+                                        stringResource(
+                                            R.string.settings_apple_health_import_category_count_routes,
+                                            summary.convertedRecords,
+                                            summary.routeSessions,
+                                        )
+                                    } else {
+                                        stringResource(
+                                            R.string.settings_apple_health_import_category_count,
+                                            summary.convertedRecords,
+                                        )
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!error.isNullOrBlank()) {
                 val errorText = stringResource(R.string.settings_apple_health_import_error, error)
                 Column(modifier = Modifier.padding(top = 8.dp)) {
@@ -1290,6 +1381,20 @@ internal fun AppleHealthImportCard(
                         Spacer(Modifier.widthIn(min = 6.dp))
                         Text(stringResource(R.string.settings_apple_health_import_copy_error))
                     }
+                    OpenVitalsOutlinedButton(
+                        onClick = onSaveReport,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.widthIn(min = 6.dp))
+                        Text(stringResource(R.string.settings_apple_health_import_save_report))
+                    }
                     SelectionContainer {
                         Text(
                             text = errorText,
@@ -1301,15 +1406,29 @@ internal fun AppleHealthImportCard(
                 }
             }
 
-            if (isImporting) {
+            if (isBusy) {
+                val importProgress = if (isAnalyzing) {
+                    analysisProgress ?: AppleHealthImportProgress()
+                } else {
+                    progress ?: AppleHealthImportProgress()
+                }
                 AppleHealthImportProgressBar(
+                    progressPercent = importProgress.percent,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp),
                 )
-                val importProgress = progress ?: AppleHealthImportProgress()
                 Text(
-                    text = stringResource(
+                    text = importProgress.percent?.let { percent ->
+                        stringResource(
+                            R.string.settings_apple_health_import_progress_with_percent,
+                            percent,
+                            stringResource(importProgress.phase.labelRes),
+                            importProgress.selectedPreparedRecords,
+                            importProgress.expectedSelectedRecords,
+                            importProgress.importedRecords,
+                        )
+                    } ?: stringResource(
                         R.string.settings_apple_health_import_progress,
                         stringResource(importProgress.phase.labelRes),
                         importProgress.parsedElements,
@@ -1319,41 +1438,67 @@ internal fun AppleHealthImportCard(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 8.dp),
                 )
-                Text(
-                    text = stringResource(R.string.settings_apple_health_import_background),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+                if (isImporting) {
+                    Text(
+                        text = stringResource(R.string.settings_apple_health_import_background),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
 
             if (missingPermissions.isNotEmpty()) {
                 OpenVitalsTonalButton(
-                    onClick = onGrantPermissions,
-                    enabled = healthConnectAvailable && !isImporting,
-                    modifier = Modifier
+	                    onClick = onGrantPermissions,
+	                    enabled = healthConnectAvailable && !isBusy,
+	                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp),
                 ) {
                     Text(stringResource(R.string.settings_apple_health_import_grant))
                 }
-            }
+	            }
 
-            OpenVitalsOutlinedButton(
-                onClick = onImport,
-                enabled = canImport,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            ) {
-                Text(
-                    if (isImporting) {
-                        stringResource(R.string.settings_apple_health_importing)
-                    } else {
-                        stringResource(R.string.settings_apple_health_import_action)
-                    }
-                )
-            }
+	            if (analysis != null) {
+	                OpenVitalsTonalButton(
+	                    onClick = onImportSelected,
+	                    enabled = canImportSelected,
+	                    modifier = Modifier
+	                        .fillMaxWidth()
+	                        .padding(top = 8.dp),
+	                ) {
+	                    Text(
+	                        if (isImporting) {
+	                            stringResource(R.string.settings_apple_health_importing)
+	                        } else {
+	                            stringResource(R.string.settings_apple_health_import_selected_action)
+	                        }
+	                    )
+	                }
+	            }
+
+	            OpenVitalsOutlinedButton(
+	                onClick = onImport,
+	                enabled = canAnalyze,
+	                modifier = Modifier
+	                    .fillMaxWidth()
+	                    .padding(top = 8.dp),
+	            ) {
+	                Text(
+	                    if (isAnalyzing) {
+	                        stringResource(R.string.settings_apple_health_import_analyzing)
+	                    } else {
+	                        stringResource(
+	                            if (analysis == null) {
+	                                R.string.settings_apple_health_import_analyze_action
+	                            } else {
+	                                R.string.settings_apple_health_import_choose_another_action
+	                            }
+	                        )
+	                    }
+	                )
+	            }
         }
     }
 }
@@ -1414,7 +1559,19 @@ internal fun FitImportCard(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun AppleHealthImportProgressBar(modifier: Modifier = Modifier) {
+private fun AppleHealthImportProgressBar(
+    modifier: Modifier = Modifier,
+    progressPercent: Int? = null,
+) {
+    if (progressPercent != null) {
+        LinearProgressIndicator(
+            progress = { progressPercent.coerceIn(0, 100) / 100f },
+            modifier = modifier.height(8.dp),
+            color = HydrationColor.copy(alpha = 0.86f),
+            trackColor = MaterialTheme.colorScheme.outlineVariant,
+        )
+        return
+    }
     val strokeWidth = with(LocalDensity.current) { 5.dp.toPx() }
     val progressStroke = remember(strokeWidth) {
         Stroke(width = strokeWidth, cap = StrokeCap.Round)

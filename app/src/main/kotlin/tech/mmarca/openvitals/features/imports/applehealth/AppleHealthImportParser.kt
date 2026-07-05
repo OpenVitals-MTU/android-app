@@ -1,6 +1,9 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
 import java.io.BufferedInputStream
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FilterInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.time.LocalDateTime
@@ -14,46 +17,142 @@ import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.DefaultHandler
 
+internal data class AppleHealthParseOptions(
+    val parseRouteFiles: Boolean = true,
+    val parseRecordDetails: Boolean = true,
+)
+
 internal object AppleHealthImportParser {
     fun parse(input: BufferedInputStream): AppleParsedExport =
-        parseInternal(input, consumer = null)
+        parseInternal(input, consumer = null, routeFiles = emptyMap(), options = AppleHealthParseOptions())
+
+    fun parse(
+        input: BufferedInputStream,
+        routeFiles: Map<String, AppleWorkoutRouteFile>,
+    ): AppleParsedExport =
+        parseInternal(input, consumer = null, routeFiles = routeFiles, options = AppleHealthParseOptions())
 
     fun parse(
         input: BufferedInputStream,
         consumer: AppleHealthXmlEventConsumer,
     ): AppleParsedExport =
-        parseInternal(input, consumer = consumer)
+        parseInternal(input, consumer = consumer, routeFiles = emptyMap(), options = AppleHealthParseOptions())
+
+    fun parse(
+        input: BufferedInputStream,
+        consumer: AppleHealthXmlEventConsumer,
+        options: AppleHealthParseOptions,
+    ): AppleParsedExport =
+        parseInternal(input, consumer = consumer, routeFiles = emptyMap(), options = options)
+
+    fun parse(
+        input: BufferedInputStream,
+        consumer: AppleHealthXmlEventConsumer,
+        routeFiles: Map<String, AppleWorkoutRouteFile>,
+    ): AppleParsedExport =
+        parseInternal(input, consumer = consumer, routeFiles = routeFiles, options = AppleHealthParseOptions())
 
     private fun parseInternal(
         input: BufferedInputStream,
         consumer: AppleHealthXmlEventConsumer?,
+        routeFiles: Map<String, AppleWorkoutRouteFile>,
+        options: AppleHealthParseOptions,
     ): AppleParsedExport =
         if (input.hasZipHeader()) {
-            parseZipExport(input, consumer)
+            parseZipExport(input, consumer, routeFiles, options)
         } else {
-            parseXmlExport(input, consumer)
+            parseXmlExport(input, consumer, routeFiles, options.parseRecordDetails)
         }
 
-    private fun parseZipExport(input: InputStream, consumer: AppleHealthXmlEventConsumer?): AppleParsedExport {
+    private fun parseZipExport(
+        input: InputStream,
+        consumer: AppleHealthXmlEventConsumer?,
+        routeFiles: Map<String, AppleWorkoutRouteFile>,
+        options: AppleHealthParseOptions,
+    ): AppleParsedExport =
+        if (options.parseRouteFiles) {
+            parseZipExportWithRouteFiles(input, consumer, routeFiles, options.parseRecordDetails)
+        } else {
+            parseZipExportStreaming(input, consumer, options.parseRecordDetails)
+        }
+
+    /**
+     * Parses export.xml directly off the ZIP stream without extracting it to a temp file.
+     * Only valid when workout route files are not needed, since those may appear after
+     * export.xml in the archive.
+     */
+    private fun parseZipExportStreaming(
+        input: InputStream,
+        consumer: AppleHealthXmlEventConsumer?,
+        parseRecordDetails: Boolean,
+    ): AppleParsedExport {
         ZipInputStream(input).use { zipInput ->
             while (true) {
                 val entry = zipInput.nextEntry ?: break
                 if (!entry.isDirectory && entry.name.isAppleHealthExportXml()) {
-                    return parseXmlExport(zipInput, consumer)
+                    return parseXmlExport(NonClosingInputStream(zipInput), consumer, emptyMap(), parseRecordDetails)
                 }
+                zipInput.closeEntry()
             }
         }
         throw IllegalArgumentException("Apple Health export.zip must contain export.xml.")
     }
 
-    private fun parseXmlExport(input: InputStream, consumer: AppleHealthXmlEventConsumer?): AppleParsedExport {
-        val handler = AppleHealthXmlHandler(consumer)
+    private fun parseZipExportWithRouteFiles(
+        input: InputStream,
+        consumer: AppleHealthXmlEventConsumer?,
+        routeFiles: Map<String, AppleWorkoutRouteFile>,
+        parseRecordDetails: Boolean,
+    ): AppleParsedExport {
+        val exportXml = File.createTempFile("openvitals_apple_health_export", ".xml")
+        val resolvedRouteFiles = routeFiles.toMutableMap()
+        var foundExportXml = false
+        try {
+            ZipInputStream(input).use { zipInput ->
+                while (true) {
+                    val entry = zipInput.nextEntry ?: break
+                    if (!entry.isDirectory) {
+                        when {
+                            entry.name.isAppleHealthExportXml() -> {
+                                exportXml.outputStream().use { output -> zipInput.copyTo(output) }
+                                foundExportXml = true
+                            }
+                            entry.name.isAppleWorkoutRouteFile() -> {
+                                val routeBytes = zipInput.readBytes()
+                                AppleHealthImportRouteParser.parse(entry.name, ByteArrayInputStream(routeBytes))?.let { routeFile ->
+                                    resolvedRouteFiles[routeFile.path] = routeFile
+                                }
+                            }
+                        }
+                    }
+                    zipInput.closeEntry()
+                }
+            }
+            if (!foundExportXml) {
+                throw IllegalArgumentException("Apple Health export.zip must contain export.xml.")
+            }
+            return exportXml.inputStream().use { xmlInput ->
+                parseXmlExport(xmlInput, consumer, resolvedRouteFiles, parseRecordDetails)
+            }
+        } finally {
+            exportXml.delete()
+        }
+    }
+
+    private fun parseXmlExport(
+        input: InputStream,
+        consumer: AppleHealthXmlEventConsumer?,
+        routeFiles: Map<String, AppleWorkoutRouteFile>,
+        parseRecordDetails: Boolean = true,
+    ): AppleParsedExport {
+        val handler = AppleHealthXmlHandler(consumer, routeFiles, parseRecordDetails)
         val factory =
             SAXParserFactory.newInstance().apply {
                 isNamespaceAware = false
                 setFeatureIfSupported("http://xml.org/sax/features/external-general-entities", false)
                 setFeatureIfSupported("http://xml.org/sax/features/external-parameter-entities", false)
                 setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+                setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false)
             }
 
         factory.newSAXParser().parse(input, handler)
@@ -69,8 +168,15 @@ internal interface AppleHealthXmlEventConsumer {
     fun onActivitySummary()
 }
 
+/** Prevents the SAX parser from closing the underlying ZipInputStream when streaming an entry. */
+private class NonClosingInputStream(delegate: InputStream) : FilterInputStream(delegate) {
+    override fun close() = Unit
+}
+
 private class AppleHealthXmlHandler(
     private val consumer: AppleHealthXmlEventConsumer?,
+    private val routeFiles: Map<String, AppleWorkoutRouteFile>,
+    private val parseRecordDetails: Boolean = true,
 ) : DefaultHandler() {
     private val stack = ArrayDeque<MutableAppleElement>()
     private val records = mutableListOf<AppleRecord>()
@@ -94,23 +200,24 @@ private class AppleHealthXmlHandler(
                 val type = attributes.value("type") ?: "Record"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleRecord(attributes, stack.lastOrNull() as? MutableAppleCorrelation))
+                stack.addLast(MutableAppleRecord(attributes, stack.lastOrNull() as? MutableAppleCorrelation, parseRecordDetails))
             }
             "Workout" -> {
                 parsedWorkouts += 1
                 val type = attributes.value("workoutActivityType") ?: "Workout"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleWorkout(attributes))
+                stack.addLast(MutableAppleWorkout(attributes, parseRecordDetails))
             }
             "Correlation" -> {
                 parsedCorrelations += 1
                 val type = attributes.value("type") ?: "Correlation"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleCorrelation(attributes))
+                stack.addLast(MutableAppleCorrelation(attributes, parseRecordDetails))
             }
             "MetadataEntry" -> {
+                if (!parseRecordDetails) return
                 val key = attributes.value("key")
                 val value = attributes.value("value")
                 if (key != null && value != null) {
@@ -121,10 +228,23 @@ private class AppleHealthXmlHandler(
                 val workout = stack.lastOrNull() as? MutableAppleWorkout ?: return
                 workout.events += AppleWorkoutEvent(
                     type = attributes.value("type"),
-                    date = attributes.value("date")?.toAppleDateTime(),
+                    date = if (parseRecordDetails) attributes.value("date")?.toAppleDateTime() else null,
                     duration = attributes.value("duration")?.toDoubleOrNull(),
                     durationUnit = attributes.value("durationUnit"),
                 )
+            }
+            "WorkoutStatistics" -> {
+                val workout = stack.lastOrNull() as? MutableAppleWorkout ?: return
+                workout.addStatistic(attributes)
+            }
+            "WorkoutRoute" -> {
+                if (stack.lastOrNull() is MutableAppleWorkout) {
+                    stack.addLast(MutableAppleWorkoutRoute())
+                }
+            }
+            "FileReference" -> {
+                val route = stack.lastOrNull() as? MutableAppleWorkoutRoute ?: return
+                attributes.value("path")?.let { route.paths += it }
             }
             "ActivitySummary" -> {
                 parsedActivitySummaries += 1
@@ -169,6 +289,17 @@ private class AppleHealthXmlHandler(
                     correlations += correlation
                 }
             }
+            "WorkoutRoute" -> {
+                val route = stack.removeLastOrNull() as? MutableAppleWorkoutRoute ?: return
+                val workout = stack.lastOrNull() as? MutableAppleWorkout ?: return
+                val referencedPaths = route.paths
+                    .map { it.normalizedAppleWorkoutRoutePath() }
+                    .distinct()
+                workout.addRouteReferences(referencedPaths.size)
+                referencedPaths
+                    .mapNotNull(routeFiles::get)
+                    .forEach(workout::addRoute)
+            }
         }
     }
 
@@ -193,9 +324,15 @@ private sealed interface MutableAppleElement {
     val metadata: MutableMap<String, String>
 }
 
+private class MutableAppleWorkoutRoute : MutableAppleElement {
+    override val metadata: MutableMap<String, String> = linkedMapOf()
+    val paths = mutableListOf<String>()
+}
+
 private class MutableAppleRecord(
     attributes: Attributes,
     private val parentCorrelation: MutableAppleCorrelation?,
+    private val parseDetails: Boolean = true,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     private val type = attributes.value("type") ?: "Record"
@@ -203,9 +340,9 @@ private class MutableAppleRecord(
     private val sourceVersion = attributes.value("sourceVersion")
     private val device = attributes.value("device")
     private val unit = attributes.value("unit")
-    private val creationDate = attributes.value("creationDate")?.toAppleDateTime()
-    private val startDate = attributes.value("startDate")?.toAppleDateTime()
-    private val endDate = attributes.value("endDate")?.toAppleDateTime()
+    private val creationDate = if (parseDetails) attributes.value("creationDate")?.toAppleDateTime() else null
+    private val startDate = if (parseDetails) attributes.value("startDate")?.toAppleDateTime() else null
+    private val endDate = if (parseDetails) attributes.value("endDate")?.toAppleDateTime() else null
     private val rawValue = attributes.value("value")
 
     fun toRecord(): AppleRecord {
@@ -219,7 +356,7 @@ private class MutableAppleRecord(
             startDate = startDate,
             endDate = endDate,
             rawValue = rawValue,
-            numericValue = rawValue?.toDoubleOrNull(),
+            numericValue = if (parseDetails) rawValue?.toDoubleOrNull() else null,
             metadata = metadata.toMap(),
             correlationType = parentCorrelation?.type,
         )
@@ -228,22 +365,55 @@ private class MutableAppleRecord(
 
 private class MutableAppleWorkout(
     attributes: Attributes,
+    parseDetails: Boolean = true,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val events = mutableListOf<AppleWorkoutEvent>()
+    private val routes = mutableListOf<AppleWorkoutRouteFile>()
+    private var routeReferences = 0
     private val workoutActivityType = attributes.value("workoutActivityType") ?: "Workout"
     private val sourceName = attributes.value("sourceName")
     private val sourceVersion = attributes.value("sourceVersion")
     private val device = attributes.value("device")
-    private val creationDate = attributes.value("creationDate")?.toAppleDateTime()
-    private val startDate = attributes.value("startDate")?.toAppleDateTime()
-    private val endDate = attributes.value("endDate")?.toAppleDateTime()
+    private val creationDate = if (parseDetails) attributes.value("creationDate")?.toAppleDateTime() else null
+    private val startDate = if (parseDetails) attributes.value("startDate")?.toAppleDateTime() else null
+    private val endDate = if (parseDetails) attributes.value("endDate")?.toAppleDateTime() else null
     private val duration = attributes.value("duration")?.toDoubleOrNull()
     private val durationUnit = attributes.value("durationUnit")
-    private val totalDistance = attributes.value("totalDistance")?.toDoubleOrNull()
-    private val totalDistanceUnit = attributes.value("totalDistanceUnit")
-    private val totalEnergyBurned = attributes.value("totalEnergyBurned")?.toDoubleOrNull()
-    private val totalEnergyBurnedUnit = attributes.value("totalEnergyBurnedUnit")
+    private var totalDistance = attributes.value("totalDistance")?.toDoubleOrNull()
+    private var totalDistanceUnit = attributes.value("totalDistanceUnit")
+    private var totalEnergyBurned = attributes.value("totalEnergyBurned")?.toDoubleOrNull()
+    private var totalEnergyBurnedUnit = attributes.value("totalEnergyBurnedUnit")
+    private val hasTotalDistanceAttribute = totalDistance != null
+    private val hasTotalEnergyBurnedAttribute = totalEnergyBurned != null
+
+    fun addStatistic(attributes: Attributes) {
+        val type = attributes.value("type") ?: return
+        val sum = attributes.value("sum")?.toDoubleOrNull() ?: return
+        val unit = attributes.value("unit")
+        when (type) {
+            in AppleDistanceTypes -> {
+                if (!hasTotalDistanceAttribute) {
+                    totalDistance = totalDistance.addCompatible(sum, totalDistanceUnit, unit)
+                }
+                totalDistanceUnit = totalDistanceUnit ?: unit
+            }
+            AppleActiveEnergyBurned -> {
+                if (!hasTotalEnergyBurnedAttribute) {
+                    totalEnergyBurned = totalEnergyBurned.addCompatible(sum, totalEnergyBurnedUnit, unit)
+                }
+                totalEnergyBurnedUnit = totalEnergyBurnedUnit ?: unit
+            }
+        }
+    }
+
+    fun addRoute(route: AppleWorkoutRouteFile) {
+        routes += route
+    }
+
+    fun addRouteReferences(count: Int) {
+        routeReferences += count
+    }
 
     fun toWorkout(): AppleWorkout =
         AppleWorkout(
@@ -262,11 +432,21 @@ private class MutableAppleWorkout(
             totalEnergyBurnedUnit = totalEnergyBurnedUnit,
             metadata = metadata.toMap(),
             events = events.toList(),
+            routes = routes.distinctBy { it.path },
+            routeReferences = routeReferences,
         )
 }
 
+private fun Double?.addCompatible(value: Double, currentUnit: String?, valueUnit: String?): Double =
+    if (this == null || currentUnit == null || currentUnit == valueUnit) {
+        (this ?: 0.0) + value
+    } else {
+        this
+    }
+
 private class MutableAppleCorrelation(
     attributes: Attributes,
+    parseDetails: Boolean = true,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val records = mutableListOf<AppleRecord>()
@@ -274,9 +454,9 @@ private class MutableAppleCorrelation(
     private val sourceName = attributes.value("sourceName")
     private val sourceVersion = attributes.value("sourceVersion")
     private val device = attributes.value("device")
-    private val creationDate = attributes.value("creationDate")?.toAppleDateTime()
-    private val startDate = attributes.value("startDate")?.toAppleDateTime()
-    private val endDate = attributes.value("endDate")?.toAppleDateTime()
+    private val creationDate = if (parseDetails) attributes.value("creationDate")?.toAppleDateTime() else null
+    private val startDate = if (parseDetails) attributes.value("startDate")?.toAppleDateTime() else null
+    private val endDate = if (parseDetails) attributes.value("endDate")?.toAppleDateTime() else null
 
     fun toCorrelation(): AppleCorrelation =
         AppleCorrelation(
@@ -319,6 +499,11 @@ private fun String.isAppleHealthExportXml(): Boolean {
     val normalized = replace('\\', '/').substringAfterLast('/').lowercase(Locale.US)
     return normalized == "export.xml"
 }
+
+private fun String.isAppleWorkoutRouteFile(): Boolean =
+    normalizedAppleWorkoutRoutePath().let { path ->
+        path.startsWith("workout-routes/") && path.endsWith(".gpx")
+    }
 
 private fun BufferedInputStream.hasZipHeader(): Boolean {
     mark(4)

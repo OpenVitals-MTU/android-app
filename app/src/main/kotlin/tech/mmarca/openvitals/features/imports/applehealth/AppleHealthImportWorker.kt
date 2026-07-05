@@ -19,8 +19,10 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
+import java.time.Instant
 
 class AppleHealthImportWorker(
     appContext: Context,
@@ -28,15 +30,32 @@ class AppleHealthImportWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun getForegroundInfo(): ForegroundInfo =
-        foregroundInfo(AppleHealthImportProgress())
+        foregroundInfo(
+            AppleHealthImportProgress(
+                expectedSelectedRecords = expectedSelectedRecordsFromData(inputData),
+            ),
+        )
 
     override suspend fun doWork(): Result {
+        val workerLogs = mutableListOf<String>()
+        fun log(message: String) {
+            workerLogs += "${Instant.now()} [WORKER] $message"
+        }
+        fun logError(message: String, error: Throwable) {
+            workerLogs += "${Instant.now()} [WORKER][ERROR] $message\n${AppleHealthImportErrorFormatter.details(error)}"
+        }
+
         val uri = inputData.getString(KeyInputUri)?.let(Uri::parse)
         if (uri == null) {
             Log.w(LogTag, "Missing Apple Health export URI.")
-            return Result.failure(errorData("Missing Apple Health export URI."))
+            val error = IllegalArgumentException("Missing Apple Health export URI.")
+            logError("Missing Apple Health export URI.", error)
+            return Result.failure(errorData(applicationContext, error, workerLogs))
         }
-        setForeground(foregroundInfo(AppleHealthImportProgress()))
+        val expectedSelectedRecords = expectedSelectedRecordsFromData(inputData)
+        log("Worker started uri=$uri expectedSelectedRecords=$expectedSelectedRecords")
+        setForeground(foregroundInfo(AppleHealthImportProgress(expectedSelectedRecords = expectedSelectedRecords)))
+        log("Foreground notification initialized")
 
         return runCatching {
             val appContext = applicationContext
@@ -45,34 +64,63 @@ class AppleHealthImportWorker(
                 AppleHealthImportWorkerEntryPoint::class.java,
             )
             val service = entryPoint.appleHealthImportService()
+            log("AppleHealthImportService resolved")
             var lastProgressUpdateMillis = 0L
             var lastProgressPhase: AppleHealthImportPhase? = null
+            var lastLoggedProgressPhase: AppleHealthImportPhase? = null
             var lastNotificationUpdateMillis = 0L
             var lastNotificationPhase: AppleHealthImportPhase? = null
-            val result = service.importAppleHealthExport(uri) { progress ->
+            val selectedCategories = selectedCategoriesFromData(inputData)
+            log("Selected categories=${selectedCategories.joinToString { it.name }}")
+            val result = service.importAppleHealthExport(uri, selectedCategories) { progress ->
+                val importProgress = progress.copy(expectedSelectedRecords = expectedSelectedRecords)
                 val now = System.currentTimeMillis()
                 if (now - lastProgressUpdateMillis >= WorkManagerProgressUpdateMillis ||
-                    progress.phase != lastProgressPhase
+                    importProgress.phase != lastProgressPhase
                 ) {
-                    setProgress(progress.toData())
+                    setProgress(importProgress.toData())
                     lastProgressUpdateMillis = now
-                    lastProgressPhase = progress.phase
+                    lastProgressPhase = importProgress.phase
+                }
+                if (importProgress.phase != lastLoggedProgressPhase) {
+                    log(
+                        "Progress phase changed phase=${importProgress.phase.name} percent=${importProgress.percent ?: -1} " +
+                            "selectedPrepared=${importProgress.selectedPreparedRecords}/$expectedSelectedRecords " +
+                            "scanned=${importProgress.parsedElements} converted=${importProgress.convertedRecords} " +
+                            "imported=${importProgress.importedRecords} duplicates=${importProgress.duplicateSkippedRecords} " +
+                            "notSelected=${importProgress.notSelectedRecords} unsupported=${importProgress.unsupportedElements} " +
+                            "skipped=${importProgress.skippedRecords} failed=${importProgress.failedRecords}",
+                    )
+                    lastLoggedProgressPhase = importProgress.phase
                 }
                 if (now - lastNotificationUpdateMillis >= ForegroundNotificationUpdateMillis ||
-                    progress.phase != lastNotificationPhase
+                    importProgress.phase != lastNotificationPhase
                 ) {
-                    setForeground(foregroundInfo(progress))
+                    setForeground(foregroundInfo(importProgress))
                     lastNotificationUpdateMillis = now
-                    lastNotificationPhase = progress.phase
+                    lastNotificationPhase = importProgress.phase
                 }
             }
-            val reportPath = AppleHealthImportReportStore.write(appContext, result.shareableReportText)
-            val completeProgress = result.toProgress(AppleHealthImportPhase.COMPLETE)
+            log("Import service completed imported=${result.importedRecords} failed=${result.failedRecords}")
+            val buildingReportProgress = result.toProgress(AppleHealthImportPhase.BUILDING_REPORT, expectedSelectedRecords)
+            setProgress(buildingReportProgress.toData())
+            setForeground(foregroundInfo(buildingReportProgress))
+            log("Stage started: Building downloadable report")
+            log("Stage finished: Building downloadable report")
+            log("Stage started: Writing downloadable report file")
+            val initialReportText = result.shareableReportText.withWorkerLogs(workerLogs)
+            val reportPath = AppleHealthImportReportStore.write(appContext, initialReportText)
+            log("Stage finished: Writing downloadable report file path=$reportPath")
+            val finalReportText = result.shareableReportText.withWorkerLogs(workerLogs)
+            AppleHealthImportReportStore.write(appContext, finalReportText)
+            val finalResult = result.copy(shareableReportText = finalReportText)
+            val completeProgress = finalResult.toProgress(AppleHealthImportPhase.COMPLETE, expectedSelectedRecords)
             setProgress(completeProgress.toData())
-            Result.success(result.toOutputData(reportPath))
+            Result.success(finalResult.toOutputData(reportPath, expectedSelectedRecords))
         }.getOrElse { error ->
             Log.e(LogTag, "Apple Health import failed", error)
-            Result.failure(errorData(applicationContext, error))
+            logError("Apple Health import failed.", error)
+            Result.failure(errorData(applicationContext, error, workerLogs))
         }
     }
 
@@ -99,9 +147,19 @@ class AppleHealthImportWorker(
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val contentText = applicationContext.getString(
+        val phaseText = applicationContext.getString(progress.phase.labelRes)
+        val contentText = progress.percent?.let { percent ->
+            applicationContext.getString(
+                R.string.settings_apple_health_import_notification_text_with_percent,
+                percent,
+                phaseText,
+                progress.selectedPreparedRecords,
+                progress.expectedSelectedRecords,
+                progress.importedRecords,
+            )
+        } ?: applicationContext.getString(
             R.string.settings_apple_health_import_notification_text,
-            applicationContext.getString(progress.phase.labelRes),
+            phaseText,
             progress.parsedElements,
             progress.importedRecords,
         )
@@ -117,7 +175,14 @@ class AppleHealthImportWorker(
             .setOngoing(progress.phase != AppleHealthImportPhase.COMPLETE)
             .setAutoCancel(progress.phase == AppleHealthImportPhase.COMPLETE)
             .setSilent(true)
-            .setProgress(0, 0, progress.phase != AppleHealthImportPhase.COMPLETE)
+            .apply {
+                val percent = progress.percent
+                if (percent != null) {
+                    setProgress(100, percent, false)
+                } else {
+                    setProgress(0, 0, progress.phase != AppleHealthImportPhase.COMPLETE)
+                }
+            }
             .build()
     }
 
@@ -146,9 +211,12 @@ class AppleHealthImportWorker(
         private const val KeyConvertedRecords = "converted_records"
         private const val KeyImportedRecords = "imported_records"
         private const val KeyDuplicateSkippedRecords = "duplicate_skipped_records"
+        private const val KeyNotSelectedRecords = "not_selected_records"
         private const val KeyUnsupportedElements = "unsupported_elements"
         private const val KeySkippedRecords = "skipped_records"
         private const val KeyFailedRecords = "failed_records"
+        private const val KeySelectedCategories = "selected_categories"
+        private const val KeyExpectedSelectedRecords = "expected_selected_records"
 
         private const val ChannelId = "apple_health_imports"
         private const val NotificationId = 4071
@@ -158,9 +226,15 @@ class AppleHealthImportWorker(
         private const val MaxInlineErrorCharacters = 2_000
         private const val MaxSummaryErrorCharacters = 1_000
 
-        fun inputData(uri: Uri): Data =
+        fun inputData(
+            uri: Uri,
+            selectedCategories: Set<AppleHealthImportCategory> = AllAppleHealthImportCategories,
+            expectedSelectedRecords: Int = 0,
+        ): Data =
             Data.Builder()
                 .putString(KeyInputUri, uri.toString())
+                .putStringArray(KeySelectedCategories, selectedCategories.map { it.name }.toTypedArray())
+                .putInt(KeyExpectedSelectedRecords, expectedSelectedRecords.coerceAtLeast(0))
                 .build()
 
         fun progressFromData(data: Data): AppleHealthImportProgress? {
@@ -176,9 +250,11 @@ class AppleHealthImportWorker(
                 convertedRecords = data.getInt(KeyConvertedRecords, 0),
                 importedRecords = data.getInt(KeyImportedRecords, 0),
                 duplicateSkippedRecords = data.getInt(KeyDuplicateSkippedRecords, 0),
+                notSelectedRecords = data.getInt(KeyNotSelectedRecords, 0),
                 unsupportedElements = data.getInt(KeyUnsupportedElements, 0),
                 skippedRecords = data.getInt(KeySkippedRecords, 0),
                 failedRecords = data.getInt(KeyFailedRecords, 0),
+                expectedSelectedRecords = expectedSelectedRecordsFromData(data),
             )
         }
 
@@ -192,6 +268,7 @@ class AppleHealthImportWorker(
                 convertedRecords = progress.convertedRecords,
                 importedRecords = progress.importedRecords,
                 duplicateSkippedRecords = progress.duplicateSkippedRecords,
+                notSelectedRecords = progress.notSelectedRecords,
                 unsupportedElements = progress.unsupportedElements,
                 skippedRecords = progress.skippedRecords,
                 failedRecords = progress.failedRecords,
@@ -212,10 +289,11 @@ class AppleHealthImportWorker(
                 .putString(KeyError, message)
                 .build()
 
-        fun errorData(context: Context, error: Throwable): Data {
+        fun errorData(context: Context, error: Throwable, workerLogs: List<String> = emptyList()): Data {
             val details = AppleHealthImportErrorFormatter.details(error)
+            val fullReport = buildFailureReportText(error, workerLogs)
             val reportPath = runCatching {
-                AppleHealthImportReportStore.writeFailure(context, details)
+                AppleHealthImportReportStore.writeFailure(context, fullReport)
             }.getOrNull()
             return Data.Builder()
                 .putString(
@@ -260,19 +338,30 @@ class AppleHealthImportWorker(
                 .putInt(KeyConvertedRecords, convertedRecords)
                 .putInt(KeyImportedRecords, importedRecords)
                 .putInt(KeyDuplicateSkippedRecords, duplicateSkippedRecords)
+                .putInt(KeyNotSelectedRecords, notSelectedRecords)
                 .putInt(KeyUnsupportedElements, unsupportedElements)
                 .putInt(KeySkippedRecords, skippedRecords)
                 .putInt(KeyFailedRecords, failedRecords)
+                .putInt(KeyExpectedSelectedRecords, expectedSelectedRecords)
             if (reportPath != null) {
                 builder.putString(KeyReportPath, reportPath)
             }
             return builder.build()
         }
 
-        private fun AppleHealthImportResult.toOutputData(reportPath: String): Data =
-            toProgress(AppleHealthImportPhase.COMPLETE).toData(reportPath)
+        private fun AppleHealthImportResult.toOutputData(
+            reportPath: String,
+            expectedSelectedRecords: Int,
+        ): Data =
+            toProgress(
+                phase = AppleHealthImportPhase.COMPLETE,
+                expectedSelectedRecords = expectedSelectedRecords,
+            ).toData(reportPath)
 
-        private fun AppleHealthImportResult.toProgress(phase: AppleHealthImportPhase): AppleHealthImportProgress =
+        private fun AppleHealthImportResult.toProgress(
+            phase: AppleHealthImportPhase,
+            expectedSelectedRecords: Int,
+        ): AppleHealthImportProgress =
             AppleHealthImportProgress(
                 phase = phase,
                 parsedRecords = parsedRecords,
@@ -282,13 +371,58 @@ class AppleHealthImportWorker(
                 convertedRecords = convertedRecords,
                 importedRecords = importedRecords,
                 duplicateSkippedRecords = duplicateSkippedRecords,
+                notSelectedRecords = notSelectedRecords,
                 unsupportedElements = unsupportedElements,
                 skippedRecords = skippedRecords,
                 failedRecords = failedRecords,
+                expectedSelectedRecords = expectedSelectedRecords,
             )
+
+        private fun selectedCategoriesFromData(data: Data): Set<AppleHealthImportCategory> =
+            data.getStringArray(KeySelectedCategories)
+                ?.mapNotNull { name -> runCatching { AppleHealthImportCategory.valueOf(name) }.getOrNull() }
+                ?.toSet()
+                ?: AllAppleHealthImportCategories
+
+        private fun expectedSelectedRecordsFromData(data: Data): Int =
+            data.getInt(KeyExpectedSelectedRecords, 0).coerceAtLeast(0)
 
     }
 }
+
+private fun String.withWorkerLogs(workerLogs: List<String>): String =
+    buildString {
+        appendLine(this@withWorkerLogs.trimEnd())
+        appendLine()
+        appendLine("Worker Logs")
+        if (workerLogs.isEmpty()) {
+            appendLine("No worker log entries were recorded.")
+        } else {
+            workerLogs.forEach { entry -> appendLine(entry) }
+        }
+    }
+
+private fun buildFailureReportText(error: Throwable, workerLogs: List<String>): String =
+    buildString {
+        appendLine("OpenVitals Apple Health Import Report")
+        appendLine("Generated: ${Instant.now()}")
+        appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        appendLine("Health Connect client: androidx.health.connect:connect-client (runtime version unavailable)")
+        appendLine()
+        appendLine("Summary")
+        appendLine("Status: failed")
+        appendLine("Error: ${AppleHealthImportErrorFormatter.summary(error)}")
+        appendLine()
+        appendLine("Logs")
+        if (workerLogs.isEmpty()) {
+            appendLine("No worker log entries were recorded before failure.")
+        } else {
+            workerLogs.forEach { entry -> appendLine(entry) }
+        }
+        appendLine()
+        appendLine("Exception")
+        appendLine(AppleHealthImportErrorFormatter.details(error))
+    }
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

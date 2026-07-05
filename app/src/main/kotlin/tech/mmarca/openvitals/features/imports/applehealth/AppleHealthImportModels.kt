@@ -4,6 +4,7 @@ import androidx.health.connect.client.records.Record
 import androidx.annotation.StringRes
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlin.math.roundToInt
 import kotlin.reflect.KClass
 import tech.mmarca.openvitals.R
 
@@ -15,6 +16,7 @@ data class AppleHealthImportResult(
     val convertedRecords: Int,
     val importedRecords: Int,
     val duplicateSkippedRecords: Int,
+    val notSelectedRecords: Int,
     val unsupportedElements: Int,
     val skippedRecords: Int,
     val failedRecords: Int,
@@ -34,19 +36,49 @@ data class AppleHealthImportProgress(
     val convertedRecords: Int = 0,
     val importedRecords: Int = 0,
     val duplicateSkippedRecords: Int = 0,
+    val notSelectedRecords: Int = 0,
     val unsupportedElements: Int = 0,
     val skippedRecords: Int = 0,
     val failedRecords: Int = 0,
+    val expectedSelectedRecords: Int = 0,
 ) {
     val parsedElements: Int
         get() = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
+
+    val selectedPreparedRecords: Int
+        get() = (convertedRecords - notSelectedRecords).coerceAtLeast(0)
+
+    val percent: Int?
+        get() {
+            val total = expectedSelectedRecords.takeIf { it > 0 } ?: return null
+            if (phase == AppleHealthImportPhase.COMPLETE) return 100
+            val selectedProgress = selectedPreparedRecords.coerceAtMost(total)
+            val selectedPercent = (selectedProgress.toDouble() / total * SelectedRecordsPercentCeiling).roundToInt()
+            val phaseFloor = when (phase) {
+                AppleHealthImportPhase.QUEUED,
+                AppleHealthImportPhase.PARSING,
+                AppleHealthImportPhase.CONVERTING,
+                -> 0
+                AppleHealthImportPhase.CHECKING_DUPLICATES -> if (selectedProgress >= total) 88 else 0
+                AppleHealthImportPhase.WRITING -> if (selectedProgress >= total) 92 else 0
+                AppleHealthImportPhase.FINISHING -> 95
+                AppleHealthImportPhase.BUILDING_REPORT -> 98
+                AppleHealthImportPhase.COMPLETE -> 100
+            }
+            return maxOf(selectedPercent, phaseFloor).coerceIn(0, 99)
+        }
 }
+
+private const val SelectedRecordsPercentCeiling = 88
 
 enum class AppleHealthImportPhase {
     QUEUED,
     PARSING,
+    CONVERTING,
+    CHECKING_DUPLICATES,
     WRITING,
     FINISHING,
+    BUILDING_REPORT,
     COMPLETE,
 }
 
@@ -55,8 +87,11 @@ val AppleHealthImportPhase.labelRes: Int
     get() = when (this) {
         AppleHealthImportPhase.QUEUED -> R.string.settings_apple_health_import_progress_queued
         AppleHealthImportPhase.PARSING -> R.string.settings_apple_health_import_progress_parsing
+        AppleHealthImportPhase.CONVERTING -> R.string.settings_apple_health_import_progress_converting
+        AppleHealthImportPhase.CHECKING_DUPLICATES -> R.string.settings_apple_health_import_progress_checking_duplicates
         AppleHealthImportPhase.WRITING -> R.string.settings_apple_health_import_progress_writing
         AppleHealthImportPhase.FINISHING -> R.string.settings_apple_health_import_progress_finishing
+        AppleHealthImportPhase.BUILDING_REPORT -> R.string.settings_apple_health_import_progress_building_report
         AppleHealthImportPhase.COMPLETE -> R.string.settings_apple_health_import_progress_complete
     }
 
@@ -66,10 +101,81 @@ data class AppleHealthImportTypeSummary(
     val converted: Int,
     val imported: Int,
     val duplicateSkipped: Int,
+    val notSelected: Int,
     val unsupported: Int,
     val skipped: Int,
     val failed: Int,
 )
+
+data class AppleHealthImportAnalysisResult(
+    val parsedRecords: Int,
+    val parsedWorkouts: Int,
+    val parsedCorrelations: Int,
+    val parsedActivitySummaries: Int,
+    val convertedRecords: Int,
+    val unsupportedElements: Int,
+    val skippedRecords: Int,
+    val failedRecords: Int,
+    val categorySummaries: List<AppleHealthImportCategorySummary>,
+    val typeSummaries: List<AppleHealthImportTypeSummary>,
+    val diagnostics: List<AppleHealthImportDiagnostic>,
+    val shareableReportText: String,
+) {
+    val parsedElements: Int
+        get() = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
+}
+
+data class AppleHealthImportCategorySummary(
+    val category: AppleHealthImportCategory,
+    val convertedRecords: Int,
+    val routeSessions: Int = 0,
+)
+
+enum class AppleHealthImportCategory(
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val descriptionRes: Int,
+) {
+    WORKOUTS(
+        R.string.settings_apple_health_import_category_workouts,
+        R.string.settings_apple_health_import_category_workouts_desc,
+    ),
+    ACTIVITY(
+        R.string.settings_apple_health_import_category_activity,
+        R.string.settings_apple_health_import_category_activity_desc,
+    ),
+    HEART(
+        R.string.settings_apple_health_import_category_heart,
+        R.string.settings_apple_health_import_category_heart_desc,
+    ),
+    SLEEP(
+        R.string.settings_apple_health_import_category_sleep,
+        R.string.settings_apple_health_import_category_sleep_desc,
+    ),
+    BODY(
+        R.string.settings_apple_health_import_category_body,
+        R.string.settings_apple_health_import_category_body_desc,
+    ),
+    VITALS(
+        R.string.settings_apple_health_import_category_vitals,
+        R.string.settings_apple_health_import_category_vitals_desc,
+    ),
+    NUTRITION(
+        R.string.settings_apple_health_import_category_nutrition,
+        R.string.settings_apple_health_import_category_nutrition_desc,
+    ),
+    HYDRATION(
+        R.string.settings_apple_health_import_category_hydration,
+        R.string.settings_apple_health_import_category_hydration_desc,
+    ),
+    MINDFULNESS(
+        R.string.settings_apple_health_import_category_mindfulness,
+        R.string.settings_apple_health_import_category_mindfulness_desc,
+    ),
+    CYCLE(
+        R.string.settings_apple_health_import_category_cycle,
+        R.string.settings_apple_health_import_category_cycle_desc,
+    ),
+}
 
 data class AppleHealthImportDiagnostic(
     val appleType: String,
@@ -193,6 +299,21 @@ internal data class AppleWorkout(
     val totalEnergyBurnedUnit: String?,
     val metadata: Map<String, String>,
     val events: List<AppleWorkoutEvent>,
+    val routes: List<AppleWorkoutRouteFile> = emptyList(),
+    val routeReferences: Int = 0,
+)
+
+internal data class AppleWorkoutRouteFile(
+    val path: String,
+    val points: List<AppleWorkoutRoutePoint>,
+)
+
+internal data class AppleWorkoutRoutePoint(
+    val latitude: Double,
+    val longitude: Double,
+    val altitudeMeters: Double?,
+    val horizontalAccuracyMeters: Double?,
+    val verticalAccuracyMeters: Double?,
 )
 
 internal data class AppleWorkoutEvent(

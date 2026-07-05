@@ -26,9 +26,12 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportErrorFormatter
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
@@ -50,7 +53,11 @@ data class SettingsUiState(
     val allPermissions: Set<String> = emptySet(),
     val dataImportWritePermissions: Set<String> = emptySet(),
     val manualOnlyPermissions: Set<String> = emptySet(),
+    val isAnalyzingAppleHealth: Boolean = false,
     val isImportingAppleHealth: Boolean = false,
+    val appleHealthAnalysisProgress: AppleHealthImportProgress? = null,
+    val appleHealthImportAnalysis: AppleHealthImportAnalysisResult? = null,
+    val selectedAppleHealthImportCategories: Set<AppleHealthImportCategory> = emptySet(),
     val appleHealthImportProgress: AppleHealthImportProgress? = null,
     val appleHealthImportResult: AppleHealthImportResult? = null,
     val appleHealthImportError: String? = null,
@@ -100,6 +107,7 @@ data class SettingsPermissionCategory(
 class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val appleHealthImportService: AppleHealthImportService,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
     private val offlineMapRepository: OfflineMapRepository,
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
@@ -112,6 +120,7 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     private var currentAppleHealthImportWorkId: UUID? = null
+    private var pendingAppleHealthImportUri: Uri? = null
 
     init {
         refresh()
@@ -152,18 +161,95 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun importAppleHealthExport(uri: Uri) {
-        if (_uiState.value.isImportingAppleHealth) return
+    fun analyzeAppleHealthExport(uri: Uri) {
+        val state = _uiState.value
+        if (state.isAnalyzingAppleHealth || state.isImportingAppleHealth) return
 
         viewModelScope.launch {
+            pendingAppleHealthImportUri = uri
             _uiState.value = _uiState.value.copy(
-                isImportingAppleHealth = true,
-                appleHealthImportProgress = AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
+                isAnalyzingAppleHealth = true,
+                appleHealthAnalysisProgress = AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
+                appleHealthImportAnalysis = null,
+                selectedAppleHealthImportCategories = emptySet(),
+                appleHealthImportProgress = null,
                 appleHealthImportResult = null,
                 appleHealthImportError = null,
             )
 
-            runCatching { appleHealthImportWorkController.enqueue(uri) }
+            runCatching {
+                appleHealthImportWorkController.persistReadPermission(uri)
+                appleHealthImportService.analyzeAppleHealthExport(uri) { progress ->
+                    _uiState.value = _uiState.value.copy(
+                        appleHealthAnalysisProgress = progress,
+                    )
+                }
+            }.onSuccess { analysis ->
+                val detectedCategories = analysis.categorySummaries
+                    .mapTo(mutableSetOf()) { it.category }
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzingAppleHealth = false,
+                    appleHealthAnalysisProgress = null,
+                    appleHealthImportAnalysis = analysis,
+                    selectedAppleHealthImportCategories = detectedCategories,
+                    appleHealthImportError = null,
+                )
+            }.onFailure { error ->
+                Log.e(AppleHealthImportWorker.LogTag, "Apple Health analysis failed", error)
+                pendingAppleHealthImportUri = null
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzingAppleHealth = false,
+                    appleHealthAnalysisProgress = null,
+                    appleHealthImportAnalysis = null,
+                    selectedAppleHealthImportCategories = emptySet(),
+                    appleHealthImportResult = null,
+                    appleHealthImportError = AppleHealthImportErrorFormatter.details(error),
+                )
+            }
+        }
+    }
+
+    fun setAppleHealthImportCategorySelected(category: AppleHealthImportCategory, selected: Boolean) {
+        val current = _uiState.value.selectedAppleHealthImportCategories
+        _uiState.value = _uiState.value.copy(
+            selectedAppleHealthImportCategories = if (selected) {
+                current + category
+            } else {
+                current - category
+            },
+        )
+    }
+
+    fun importSelectedAppleHealthExport() {
+        val state = _uiState.value
+        if (state.isAnalyzingAppleHealth || state.isImportingAppleHealth) return
+        val uri = pendingAppleHealthImportUri ?: return
+        val selectedCategories = state.selectedAppleHealthImportCategories
+        if (selectedCategories.isEmpty()) return
+        val expectedSelectedRecords = state.appleHealthImportAnalysis
+            ?.categorySummaries
+            ?.filter { it.category in selectedCategories }
+            ?.sumOf { it.convertedRecords }
+            ?: 0
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isImportingAppleHealth = true,
+                appleHealthImportProgress = AppleHealthImportProgress(
+                    phase = AppleHealthImportPhase.QUEUED,
+                    expectedSelectedRecords = expectedSelectedRecords,
+                ),
+                appleHealthImportResult = null,
+                appleHealthImportError = null,
+            )
+
+            runCatching {
+                appleHealthImportWorkController.enqueue(
+                    uri = uri,
+                    selectedCategories = selectedCategories,
+                    expectedSelectedRecords = expectedSelectedRecords,
+                )
+            }
                 .onSuccess { workId ->
                     currentAppleHealthImportWorkId = workId
                 }
@@ -228,11 +314,12 @@ class SettingsViewModel @Inject constructor(
                     WorkInfo.State.BLOCKED,
                     WorkInfo.State.RUNNING,
                     -> {
-                        _uiState.value = _uiState.value.copy(
-                            isImportingAppleHealth = true,
-                            appleHealthImportProgress = appleHealthImportWorkController.progressFor(workInfo)
-                                ?: AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
-                            appleHealthImportResult = null,
+	                        _uiState.value = _uiState.value.copy(
+	                            isImportingAppleHealth = true,
+	                            isAnalyzingAppleHealth = false,
+	                            appleHealthImportProgress = appleHealthImportWorkController.progressFor(workInfo)
+	                                ?: AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
+	                            appleHealthImportResult = null,
                             appleHealthImportError = null,
                         )
                     }
@@ -243,12 +330,15 @@ class SettingsViewModel @Inject constructor(
                             "Apple Health import completed imported=${result?.importedRecords ?: 0} " +
                                 "failed=${result?.failedRecords ?: 0}",
                         )
-                        _uiState.value = _uiState.value.copy(
-                            isImportingAppleHealth = false,
-                            appleHealthImportProgress = null,
-                            appleHealthImportResult = result,
-                            appleHealthImportError = null,
-                        )
+	                        _uiState.value = _uiState.value.copy(
+	                            isImportingAppleHealth = false,
+	                            isAnalyzingAppleHealth = false,
+	                            appleHealthImportProgress = null,
+	                            appleHealthImportAnalysis = null,
+	                            selectedAppleHealthImportCategories = emptySet(),
+	                            appleHealthImportResult = result,
+	                            appleHealthImportError = null,
+	                        )
                     }
                     WorkInfo.State.FAILED -> {
                         val error = appleHealthImportWorkController.errorFor(workInfo)
@@ -257,11 +347,12 @@ class SettingsViewModel @Inject constructor(
                             AppleHealthImportWorker.LogTag,
                             "Apple Health import failed workId=${workInfo.id}\n$error",
                         )
-                        _uiState.value = _uiState.value.copy(
-                            isImportingAppleHealth = false,
-                            appleHealthImportProgress = null,
-                            appleHealthImportResult = null,
-                            appleHealthImportError = error,
+	                        _uiState.value = _uiState.value.copy(
+	                            isImportingAppleHealth = false,
+	                            isAnalyzingAppleHealth = false,
+	                            appleHealthImportProgress = null,
+	                            appleHealthImportResult = null,
+	                            appleHealthImportError = error,
                         )
                     }
                     WorkInfo.State.CANCELLED -> {

@@ -106,7 +106,7 @@ fun SettingsScreen(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            viewModel.importAppleHealthExport(uri)
+            viewModel.analyzeAppleHealthExport(uri)
         }
     }
 
@@ -131,7 +131,8 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             runCatching {
-                val reportText = state.appleHealthImportResult?.shareableReportText.orEmpty()
+                val reportText = state.appleHealthImportResult?.shareableReportText
+                    ?: state.appleHealthImportError.orEmpty()
                 context.contentResolver.openOutputStream(uri)?.use { output ->
                     output.write(reportText.toByteArray())
                 } ?: error("Unable to open destination.")
@@ -192,6 +193,8 @@ fun SettingsScreen(
         onImportAppleHealth = {
             appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
         },
+        onToggleAppleHealthImportCategory = viewModel::setAppleHealthImportCategorySelected,
+        onImportSelectedAppleHealth = viewModel::importSelectedAppleHealthExport,
         onImportFitFile = {
             fitFilePicker.launch(FitImportMimeTypes)
         },

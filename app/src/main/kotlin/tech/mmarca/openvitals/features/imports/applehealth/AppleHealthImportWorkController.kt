@@ -22,10 +22,14 @@ class AppleHealthImportWorkController @Inject constructor(
     val workInfos: Flow<List<WorkInfo>> =
         workManager.getWorkInfosForUniqueWorkFlow(AppleHealthImportWorker.UniqueWorkName)
 
-    fun enqueue(uri: Uri): UUID {
+    fun enqueue(
+        uri: Uri,
+        selectedCategories: Set<AppleHealthImportCategory> = AllAppleHealthImportCategories,
+        expectedSelectedRecords: Int = 0,
+    ): UUID {
         persistReadPermission(uri)
         val request = OneTimeWorkRequestBuilder<AppleHealthImportWorker>()
-            .setInputData(AppleHealthImportWorker.inputData(uri))
+            .setInputData(AppleHealthImportWorker.inputData(uri, selectedCategories, expectedSelectedRecords))
             .build()
         workManager.enqueueUniqueWork(
             AppleHealthImportWorker.UniqueWorkName,
@@ -56,7 +60,7 @@ class AppleHealthImportWorkController @Inject constructor(
         }
     }
 
-    private fun persistReadPermission(uri: Uri) {
+    fun persistReadPermission(uri: Uri) {
         runCatching {
             context.contentResolver.takePersistableUriPermission(
                 uri,
