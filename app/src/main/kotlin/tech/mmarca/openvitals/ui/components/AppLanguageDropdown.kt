@@ -62,4 +62,5 @@ private fun AppLanguage.label(): String =
         AppLanguage.SPANISH -> stringResource(R.string.settings_language_spanish)
         AppLanguage.GERMAN -> stringResource(R.string.settings_language_german)
         AppLanguage.ITALIAN -> stringResource(R.string.settings_language_italian)
+        AppLanguage.ESTONIAN -> stringResource(R.string.settings_language_estonian)
     }

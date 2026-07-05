@@ -1169,6 +1169,7 @@
     <string name="settings_language_spanish">Hispaania</string>
     <string name="settings_language_german">Saksa</string>
     <string name="settings_language_italian">Itaalia</string>
+    <string name="settings_language_estonian">Eesti</string>
     <string name="settings_units_title">Ühikud</string>
     <string name="settings_units_body">Vali, kuidas vahemaid, kaalu, vedelikutarbimist ja temperatuuri kuvatakse.</string>
     <string name="settings_unit_metric">Meetriline</string>

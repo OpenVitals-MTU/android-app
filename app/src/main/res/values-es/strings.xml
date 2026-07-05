@@ -1162,6 +1162,7 @@
     <string name="settings_language_spanish">Español</string>
     <string name="settings_language_german">Alemán</string>
     <string name="settings_language_italian">Italiano</string>
+    <string name="settings_language_estonian">Estonio</string>
     <string name="settings_units_title">Unidades</string>
     <string name="settings_units_body">Elige cómo se muestran distancias, pesos, hidratación y temperatura.</string>
     <string name="settings_unit_metric">Métrico</string>
