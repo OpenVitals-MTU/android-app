@@ -1,0 +1,1 @@
+Fügt Body-Energy-Erklärungen hinzu, die zeigen, was deinen täglichen Wert im Zeitverlauf beeinflusst. Der Apple-Health-Import ist sauberer und robuster, mit besserem Parsing von Aktivitäten, Routen und Trainingseinheiten. Verbesserungen am Schnellgetränk-Widget und aktualisierte Dokumentation runden dieses Release ab.

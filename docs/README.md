@@ -6,7 +6,7 @@ Start here when you need to understand the app, a feature, or the implementation
 
 - [App guide](app/README.md): install, getting started, Health Connect, permissions, privacy, FAQ, editions, screenshots, and support.
 - [How-to guides](how-to/README.md): concrete workflows that need step-by-step instructions.
-- [Release notes](releases/1.7.6.md): latest user-facing release summary.
+- [Release notes](releases/1.7.7.md): latest user-facing release summary.
 
 ## Browse Features
 

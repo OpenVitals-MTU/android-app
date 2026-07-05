@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.7.7 - 2026-07-05
+
+### English
+
+- Add Body Energy explainability, breaking down which factors drive your daily score over time with a dedicated timeline chart.
+- Clean up and harden the Apple Health importer with clearer category handling, geo-distance helpers, and more consistent activity/route/workout conversions.
+- Improve the quick-beverage home-screen widget with better drink ordering and configuration handling.
+- Refresh docs for the Apple Health import and privacy/support/diagnostics pages.
+
+### Español
+
+- Añade explicabilidad de Energía corporal, desglosando qué factores determinan tu puntuación diaria con un gráfico de línea temporal dedicado.
+- Limpia y refuerza el importador de Apple Health con un manejo de categorías más claro, ayudantes de distancia geográfica y conversiones de actividad/ruta/entrenamiento más consistentes.
+- Mejora el widget de bebida rápida en la pantalla de inicio con mejor ordenación y configuración de bebidas.
+- Actualiza la documentación de importación de Apple Health y de privacidad/soporte/diagnóstico.
+
+### Deutsch
+
+- Fügt Body-Energy-Erklärungen hinzu, die mit einem eigenen Zeitachsendiagramm aufschlüsseln, welche Faktoren deinen täglichen Wert über die Zeit beeinflussen.
+- Bereinigt und härtet den Apple-Health-Importer mit klarerer Kategorienverarbeitung, Geo-Distanz-Hilfsfunktionen und konsistenteren Aktivitäts-/Routen-/Trainingskonvertierungen.
+- Verbessert das Schnellgetränk-Widget auf dem Startbildschirm mit besserer Getränkereihenfolge und Konfigurationsverarbeitung.
+- Aktualisiert die Dokumentation zum Apple-Health-Import und zu Datenschutz/Support/Diagnose.
+
+### Italiano
+
+- Aggiunge la spiegabilità di Energia corporea, che scompone quali fattori determinano il punteggio giornaliero nel tempo con un grafico temporale dedicato.
+- Ripulisce e rafforza l'importer di Apple Health con gestione delle categorie più chiara, funzioni di distanza geografica e conversioni di attività/percorsi/allenamenti più coerenti.
+- Migliora il widget bevanda rapida nella schermata home con un ordinamento e una configurazione delle bevande migliori.
+- Aggiorna la documentazione per l'importazione Apple Health e per privacy/supporto/diagnostica.
+
 ## 1.7.6 - 2026-07-04
 
 ### English

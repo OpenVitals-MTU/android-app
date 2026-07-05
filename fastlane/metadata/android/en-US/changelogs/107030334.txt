@@ -1,0 +1,1 @@
+Adds Body Energy explainability, breaking down what drives your daily score over time. Apple Health import is cleaner and more robust, with better activity, route, and workout parsing. Quick-beverage widget improvements and docs updates round out this release.

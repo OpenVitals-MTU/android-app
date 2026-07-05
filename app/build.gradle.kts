@@ -47,8 +47,8 @@ val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.systemProperty("appleHealthExport"))
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
 // versionCode is a monotonic release counter, independent of versionName.
-val baseVersionCode = 107030332
-val baseVersionName = "1.7.6"
+val baseVersionCode = 107030334
+val baseVersionName = "1.7.7"
 
 android {
     namespace = "tech.mmarca.openvitals"

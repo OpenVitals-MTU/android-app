@@ -1,0 +1,1 @@
+Aggiunge la spiegabilità di Energia corporea, mostrando cosa determina il punteggio giornaliero nel tempo. L'import di Apple Health è più pulito e robusto, con un parsing migliore di attività, percorsi e allenamenti. Miglioramenti al widget bevanda rapida e aggiornamenti alla documentazione completano questa versione.
