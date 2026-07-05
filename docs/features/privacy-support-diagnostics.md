@@ -29,7 +29,7 @@ The app does not need app-level internet access for normal health features. Offl
 
 Diagnostics surfaces help users and maintainers understand local issues without sending health data automatically. They can include app version information, debug build separation, import reports, logs, and crash-report email drafts.
 
-Apple Health import reports are explicit user downloads and intentionally include the full importer summary, logs, grouped diagnostics, raw diagnostics, worker logs, and full exception stacks on failure. They are not the same as sanitized debug diagnostics logs and should be shared only when the user is comfortable sharing the included export-derived details.
+Apple Health import reports are explicit user downloads and intentionally include the full importer summary, logs, grouped diagnostics, worker logs, and full exception stacks on failure; the raw per-record diagnostic log is capped per source (see [Apple Health import](apple-health-import.md#reports-and-diagnostics)) so a large repeated import cannot make the report unbounded, but grouped diagnostic counts stay complete. They are not the same as sanitized debug diagnostics logs and should be shared only when the user is comfortable sharing the included export-derived details.
 
 ## Support Links
 
