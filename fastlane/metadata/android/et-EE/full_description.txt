@@ -1,0 +1,41 @@
+OpenVitals on privaatne Androidi töölaud Health Connecti jaoks. See aitab sul ühes kohalikus rakenduses jälgida aktiivsust, und, südant, keha, vedelikke, toitumist, teadvelolekut, elutähtsaid näitajaid ja valikulisi tsükliandmeid.
+
+Sinu terviseandmed jäävad sinu seadmesse. OpenVitalsil pole kontot, pilvesünkroonimist, reklaame, analüütika SDK-sid ega rakendustaset internetiluba. Töölaud loeb Health Connectist andmeid alles pärast lubade andmist. Käsitsi sisestatud kirjed kirjutatakse Health Connecti tagasi ainult siis, kui sa need selgesõnaliselt salvestad.
+
+Mida saad teha
+
+* Vaadata igapäevast Health Connecti töölauda rühmitatud tervise- ja treeningkaartidega
+* Uurida perioodipõhiseid detailvaateid päeva, nädala, kuu ja aasta lõikes
+* Vaadata igapäevast valmisolekut (Daily Readiness) koos kehaenergia, treeningvalmiduse, HRV oleku, intensiivsete minutite, füsioloogilise stressi, kohanduvate eesmärkide ja kohalike selgitustega
+* Vaadata samme, distantsi, kaloreid, korruseid, kõrguse muutust ja treeningseansse
+* Vaadata unesessioone, kestust ja unefaase
+* Vaadata südame löögisagedust, puhkeoleku pulssi, HRV-d, vererõhku, SpO2-te, hingamissagedust, kehatemperatuuri, VO2 maxi, kehamõõtmeid, jooke, vedelikutasakaalu, kofeiini, toitumist ja teadveloleku andmeid, kui need on saadaval
+* Vaadata rasvavaba massi indeksit (FFMI), kui kaalu, pikkuse ja kehararsva andmed on saadaval
+* Lisada ja muuta OpenVitalsis loodud joogi-, kehamõõtmete, elutähtsate näitajate, teadveloleku ja treeningkirjeid otse Health Connectis
+* Logida jooke eelseadistustest või oma jookidest koos vedelikutasakaalu, kofeiini ja valitud toitumisvaikeväärtustega
+* Jälgida saavutusmärke aktiivsuse, distantsi, korruste, treeningute, vedelikutasakaalu, une ja teadveloleku verstapostide eest
+* Importida GPX-, KML-, KMZ- ja FIT-treeningmarsruute, eelvaadata neid ning salvestada marsruudipõhiseid treeninguid
+* Importida toetatud Apple Healthi ekspordikirjeid Health Connecti
+* Salvestada GPS-treeninguid koos pausi, jätkamise, lõpetamise, tühistamise, marsruudi eelvaate, distantsi, kõrguse muutuse, liikumisaja, seadistatava salvestustöölaua, fookusrežiimi, ekraani püsivalt sees hoidmise ja püsiva salvestusteatega
+* Ühendada treeningu salvestamise ajal katselisi Bluetooth LE südamelöögi-, sammulugemis-, võimsus- ja jalaanduri sensoreid, sealhulgas südame löögisageduse jälgimine toetatud jõu- ja kordustreeningute jaoks
+* Hinnata imporditud ja salvestatud treeningute aktiivseid ja kogukaloreid enne salvestamist
+* Lubada valikulised vedelikutasakaalu meeldetuletused koos aktiivsete tundide ja päevaeesmärgi täitumisel peatumise loogikaga
+* Valida fikseeritud E-P treeningnädal või libisev viimane 7 päeva
+* Valida meetermõõdustik või inglise mõõtühikud
+* Anda tundlikud tsükliload ainult siis, kui soovid neid andmeid näha
+
+Miks valida OpenVitals
+
+* Privaatne algusest peale: pole kontot, pilvesünkroonimist, reklaame ega analüütikat
+* Töölauale keskendunud: avakuva on kirjutuskaitstud, kuni valid ise kirje lisamise
+* Health Connect kui ainuõige andmeallikas: OpenVitals ei pea eraldi terviseandmete andmebaasi
+* Lubade teadlik: kasuta ühe puudutusega seadistust või anna selged andmekategooriad ükshaaval, muuda lube hiljem
+* Avatud lähtekood: kood, väljalaskemärkmed ja build'id on ülevaatamiseks saadaval
+
+Nõuded
+
+OpenVitals vajab Health Connectit. Android 14 ja uuemas on Health Connect osa Androidist. Android 13 ja vanemas paigalda Health Connecti rakendus eraldi.
+
+Terviseteatis
+
+OpenVitals on mõeldud ainult üldiseks heaoluks ja informatiivseks kasutuseks. See ei ole meditsiiniseade ega anna meditsiinilisi nõuandeid. See ei diagnoosi, ravi ega ennetata ühtegi haigust ega terviseseisundit. Meditsiinilise nõu, diagnoosi või ravi saamiseks pöördu alati kvalifitseeritud tervishoiutöötaja poole.
