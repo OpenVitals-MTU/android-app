@@ -198,7 +198,7 @@
     <string name="activity_entry_import_route_file">GPX/KML/KMZ importieren</string>
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
-    <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und öffne den Aktivitätsbildschirm, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
+    <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und starte, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
     <string name="activity_entry_recording_go_to_activity_screen">Zum Aktivitätsbildschirm</string>
     <string name="activity_entry_recording_focus">Fokus</string>
     <string name="activity_entry_recording_dashboard_layout">Dashboard-Layout</string>
@@ -890,6 +890,7 @@
     <string name="dashboard_add_widgets">Widgets hinzufügen</string>
     <string name="dashboard_all_widgets_added">Alle Widgets sind bereits in der Übersicht.</string>
     <string name="dashboard_action_log">Eintragen</string>
+    <string name="dashboard_action_start_workout">Training starten</string>
     <string name="dashboard_activities_today">Aktivitäten</string>
     <string name="dashboard_sensor_status_title">Sensorakku</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% niedrigster Stand</string>
@@ -1087,7 +1088,7 @@
     <string name="settings_caffeine_group_title">Koffein</string>
     <string name="settings_caffeine_group_body">Halbwertszeit, Schlafenszeit, Schlafschwelle und Personalisierung.</string>
     <string name="settings_recovery_group_title">Erholung</string>
-    <string name="settings_recovery_group_body">Schlafzeitraum und Body-Energy-Kalibrierung</string>
+    <string name="settings_recovery_group_body">Schlafzeitraum und Körperenergie-Kalibrierung</string>
     <string name="settings_sleep_group_title">Schlaf</string>
     <string name="settings_sleep_group_body">Schlafzeitraum</string>
     <string name="settings_cycle_group_title">Menstruationszyklus</string>
@@ -1215,7 +1216,7 @@
     <string name="settings_caffeine_title">Koffeinmodell</string>
     <string name="settings_caffeine_body">Diese Werte personalisieren Koffeinspiegel, Schlafenszeitprognose und sichere Schlafhinweise. Einträge bleiben in Health Connect.</string>
     <string name="settings_body_profile_title">Körperprofil</string>
-    <string name="settings_body_profile_body">Alter, Gewicht und Herzfrequenz personalisieren die Schätzungen für Body-Energy und Koffein. Alle Felder sind optional.</string>
+    <string name="settings_body_profile_body">Alter, Gewicht und Herzfrequenz personalisieren die Schätzungen für Körperenergie und Koffein. Alle Felder sind optional.</string>
     <string name="settings_body_profile_weight">Gewicht</string>
     <string name="settings_sleep_range_title">Schlafzeitraum</string>
     <string name="settings_sleep_range_body">Wähle, welchem Tag Schlafsitzungen zugeordnet werden.</string>
@@ -1601,9 +1602,9 @@
     <string name="privacy_policy_body_3">OpenVitals ist kein Medizinprodukt und diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Es ersetzt keine medizinische Beratung, Diagnose oder Behandlung durch qualifiziertes medizinisches Fachpersonal.</string>
 
     <string name="action_continue">Weiter</string>
-    <string name="settings_body_energy_group_title">Body Energy</string>
+    <string name="settings_body_energy_group_title">Körperenergie</string>
     <string name="settings_body_energy_group_body">Kalibrierung für geschätzte Energie im Tagesverlauf und Belastungszonen.</string>
-    <string name="body_energy_calibration_title">Body-Energy-Schätzungen verbessern</string>
+    <string name="body_energy_calibration_title">Körperenergie-Schätzungen verbessern</string>
     <string name="body_energy_calibration_body">OpenVitals schätzt den Verbrauch anhand der Herzfrequenzintensität über die Zeit. Alter, maximale Herzfrequenz, Ruhepuls und Zonen helfen, Belastung genauer einzuordnen.</string>
     <string name="body_energy_calibration_optional_body">Dies ist optional. Wenn du es überspringst, verwendet OpenVitals automatische Schätzungen aus Health-Connect-Daten und zeigt geringeres Vertrauen, wenn die Kalibrierung unsicher ist. Diese Werte bleiben in den OpenVitals-Einstellungen.</string>
     <string name="body_energy_calibration_birth_year">Geburtsjahr</string>
@@ -1618,8 +1619,8 @@
     <string name="body_energy_calibration_zone_5">Untere bpm-Grenze für Zone 5</string>
     <string name="body_energy_calibration_use_auto">Automatische Schätzungen verwenden</string>
     <string name="body_energy_calibration_skip">Vorerst überspringen</string>
-    <string name="body_energy_calibration_saved">Body-Energy-Kalibrierung gespeichert</string>
-    <string name="body_energy_calibration_reset">Body-Energy-Kalibrierung auf automatisch zurückgesetzt</string>
+    <string name="body_energy_calibration_saved">Körperenergie-Kalibrierung gespeichert</string>
+    <string name="body_energy_calibration_reset">Körperenergie-Kalibrierung auf automatisch zurückgesetzt</string>
     <string name="body_energy_not_set_up">Nicht eingerichtet</string>
     <string name="body_energy_timeline_estimated">Von OpenVitals geschätzt</string>
     <string name="body_energy_timeline_current">Aktuell</string>
@@ -1627,7 +1628,7 @@
     <string name="body_energy_timeline_charged">Aufgeladen</string>
     <string name="body_energy_timeline_drained">Verbraucht</string>
     <string name="body_energy_timeline_confidence">Vertrauen</string>
-    <string name="body_energy_timeline_no_data">Keine verwendbare Body-Energy-Zeitleiste für diesen Zeitraum.</string>
+    <string name="body_energy_timeline_no_data">Keine verwendbare Körperenergie-Zeitleiste für diesen Zeitraum.</string>
     <string name="body_energy_timeline_day_title">Tagesverlauf</string>
     <string name="body_energy_timeline_low_confidence">Einige Abschnitte sind geschätzt, weil Kalibrierung oder Health-Connect-Daten unvollständig sind.</string>
     <string name="body_energy_why_title">Was es bewegt hat</string>
@@ -1667,9 +1668,9 @@
     <string name="body_energy_calibration_mode_auto">Automatische Schätzungen</string>
     <string name="body_energy_calibration_mode_manual_values">Manuelle Werte</string>
     <string name="body_energy_calibration_mode_manual_zones">Manuelle Zonen</string>
-    <string name="body_energy_calculation_title">Wie Body Energy geschätzt wird</string>
+    <string name="body_energy_calculation_title">Wie Körperenergie geschätzt wird</string>
     <string name="body_energy_calculation_body">OpenVitals teilt den ausgewählten Tag in kurze Abschnitte, startet wenn möglich mit dem vorherigen Wert, addiert Aufladung durch Schlaf oder ruhige Erholung und zieht Verbrauch durch Belastung, erhöhte wache Herzfrequenz und Erholungsschuld nach stärkerer Belastung ab.</string>
     <string name="body_energy_calculation_inputs_body">Herzfrequenz, Ruheherzfrequenz, persönliche Zonen, Schlaf, Trainings, HRV und Atemfrequenz können die Schätzung verbessern. Fehlende Eingaben machen die Schätzung konservativer und senken das Vertrauen.</string>
     <string name="body_energy_calculation_limits_body">Dies ist eine Wellness-Schätzung auf dem Gerät, keine direkte Messung und kein medizinischer Rat. Die angezeigten Eingaben und Gründe werden offengelegt, damit die Methode geprüft und verbessert werden kann.</string>
-    <string name="metric_body_energy">Body Energy</string>
+    <string name="metric_body_energy">Körperenergie</string>
 </resources>

@@ -198,7 +198,7 @@
     <string name="activity_entry_import_route_file">Importar GPX/KML/KMZ</string>
     <string name="activity_entry_imported_route">Ruta importada</string>
     <string name="activity_entry_recording_title">Grabando actividad</string>
-    <string name="activity_entry_recording_ready_body">Elige el tipo de actividad y abre la pantalla de actividad cuando estés listo. Al terminar, podrás revisar y añadir detalles antes de guardar.</string>
+    <string name="activity_entry_recording_ready_body">Elige el tipo de actividad y empieza cuando estés listo. Al terminar, podrás revisar y añadir detalles antes de guardar.</string>
     <string name="activity_entry_recording_go_to_activity_screen">Ir a la pantalla de actividad</string>
     <string name="activity_entry_recording_focus">Enfoque</string>
     <string name="activity_entry_recording_dashboard_layout">Diseño del panel</string>
@@ -890,6 +890,7 @@
     <string name="dashboard_add_widgets">Añadir widgets</string>
     <string name="dashboard_all_widgets_added">Todos los widgets ya están en el resumen.</string>
     <string name="dashboard_action_log">Registrar</string>
+    <string name="dashboard_action_start_workout">Iniciar actividad</string>
     <string name="dashboard_activities_today">Actividades</string>
     <string name="dashboard_sensor_status_title">Batería de sensores</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% mínimo</string>

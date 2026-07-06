@@ -200,7 +200,7 @@
     <string name="activity_entry_import_route_file">Impordi GPX/KML/KMZ</string>
     <string name="activity_entry_imported_route">Imporditud marsruut</string>
     <string name="activity_entry_recording_title">Treeningu salvestamine</string>
-    <string name="activity_entry_recording_ready_body">Vali treeningu liik ja ava seejärel treeningu ekraan, kui oled valmis. Pärast lõpetamist saad üksikasjad üle vaadata ja lisada enne salvestamist.</string>
+    <string name="activity_entry_recording_ready_body">Vali treeningu liik ja alusta, kui oled valmis. Pärast lõpetamist saad üksikasjad üle vaadata ja lisada enne salvestamist.</string>
     <string name="activity_entry_recording_go_to_activity_screen">Ava treeningu ekraan</string>
     <string name="activity_entry_recording_active">Salvestamine</string>
     <string name="activity_entry_recording_paused">Peatatud</string>
@@ -892,6 +892,7 @@
     <string name="dashboard_add_widgets">Lisa vidinaid</string>
     <string name="dashboard_all_widgets_added">Kõik vidinad on juba kokkuvõttes.</string>
     <string name="dashboard_action_log">Logi</string>
+    <string name="dashboard_action_start_workout">Alusta treeningut</string>
     <string name="dashboard_activities_today">Treeningud</string>
     <string name="dashboard_sensor_status_title">Anduri aku</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% madalaim</string>
