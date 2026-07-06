@@ -23,6 +23,10 @@ internal object AppleHealthImportErrorFormatter {
         return stackTrace.ifBlank { summary(error) }
     }
 
+    fun isPermissionDenied(error: Throwable): Boolean =
+        generateSequence(error) { it.cause.takeIf { cause -> cause !== it } }
+            .any { it is SecurityException }
+
     private fun Throwable.stackTraceText(): String {
         val writer = StringWriter()
         PrintWriter(writer).use { printWriter ->

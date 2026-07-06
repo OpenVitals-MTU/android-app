@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeineAlcoholUse
 import tech.mmarca.openvitals.domain.preferences.CaffeineGenotype
 import tech.mmarca.openvitals.domain.preferences.CaffeineHabituation
@@ -36,6 +37,7 @@ import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
 import javax.inject.Inject
@@ -60,6 +62,7 @@ class PreferencesRepository @Inject constructor(
     private val _healthConnectSyncEnabled = MutableStateFlow(readHealthConnectSyncEnabled())
     private val _bodyEnergyCalibration = MutableStateFlow(readBodyEnergyCalibration())
     private val _caffeinePreferences = MutableStateFlow(readCaffeinePreferences())
+    private val _bodyProfile = MutableStateFlow(readBodyProfile())
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
@@ -70,6 +73,7 @@ class PreferencesRepository @Inject constructor(
     val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
     val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
     val caffeinePreferencesFlow: StateFlow<CaffeinePreferences> = _caffeinePreferences.asStateFlow()
+    val bodyProfileFlow: StateFlow<BodyProfile> = _bodyProfile.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -231,17 +235,29 @@ class PreferencesRepository @Inject constructor(
         val normalized = calibration.normalized()
         prefs.edit {
             putBoolean(KEY_BODY_ENERGY_USE_MANUAL_ZONES, normalized.useManualZones)
-            normalized.birthYear?.let { putInt(KEY_BODY_ENERGY_BIRTH_YEAR, it) }
-                ?: remove(KEY_BODY_ENERGY_BIRTH_YEAR)
-            normalized.manualMaxHeartRateBpm?.let { putInt(KEY_BODY_ENERGY_MAX_HR_BPM, it) }
-                ?: remove(KEY_BODY_ENERGY_MAX_HR_BPM)
-            normalized.manualRestingHeartRateBpm?.let { putInt(KEY_BODY_ENERGY_RESTING_HR_BPM, it) }
-                ?: remove(KEY_BODY_ENERGY_RESTING_HR_BPM)
+            putBoolean(KEY_BODY_ENERGY_SETUP_COMPLETED, normalized.setupCompleted)
             normalized.manualZoneThresholdsBpm?.let {
                 putString(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM, it.toPreferenceString())
             } ?: remove(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM)
         }
         _bodyEnergyCalibration.value = normalized
+    }
+
+    fun bodyProfile(): BodyProfile = _bodyProfile.value
+
+    fun setBodyProfile(profile: BodyProfile) {
+        val normalized = profile.normalized()
+        prefs.edit {
+            normalized.birthYear?.let { putInt(KEY_BODY_PROFILE_BIRTH_YEAR, it) }
+                ?: remove(KEY_BODY_PROFILE_BIRTH_YEAR)
+            normalized.weightKg?.let { putFloat(KEY_BODY_PROFILE_WEIGHT_KG, it.toFloat()) }
+                ?: remove(KEY_BODY_PROFILE_WEIGHT_KG)
+            normalized.restingHeartRateBpm?.let { putInt(KEY_BODY_PROFILE_RESTING_HR_BPM, it) }
+                ?: remove(KEY_BODY_PROFILE_RESTING_HR_BPM)
+            normalized.maxHeartRateBpm?.let { putInt(KEY_BODY_PROFILE_MAX_HR_BPM, it) }
+                ?: remove(KEY_BODY_PROFILE_MAX_HR_BPM)
+        }
+        _bodyProfile.value = normalized
     }
 
     fun caffeinePreferences(): CaffeinePreferences = _caffeinePreferences.value
@@ -254,10 +270,6 @@ class PreferencesRepository @Inject constructor(
             putInt(KEY_CAFFEINE_ABSORPTION_MINUTES, normalized.absorptionMinutes)
             putInt(KEY_CAFFEINE_SLEEP_THRESHOLD_MG, normalized.sleepThresholdMg)
             putString(KEY_CAFFEINE_BEDTIME, normalized.bedtime.toString())
-            normalized.ageYears?.let { putInt(KEY_CAFFEINE_AGE_YEARS, it) }
-                ?: remove(KEY_CAFFEINE_AGE_YEARS)
-            normalized.weightKg?.let { putFloat(KEY_CAFFEINE_WEIGHT_KG, it.toFloat()) }
-                ?: remove(KEY_CAFFEINE_WEIGHT_KG)
             putString(KEY_CAFFEINE_SLEEP_SENSITIVITY, normalized.sleepSensitivity.name)
             putBoolean(KEY_CAFFEINE_SMOKER, normalized.smoker)
             putString(KEY_CAFFEINE_ALCOHOL_USE, normalized.alcoholUse.name)
@@ -679,17 +691,56 @@ class PreferencesRepository @Inject constructor(
 
     private fun readBodyEnergyCalibration(): BodyEnergyCalibration =
         BodyEnergyCalibration(
-            birthYear = prefs.getInt(KEY_BODY_ENERGY_BIRTH_YEAR, MISSING_BODY_ENERGY_INT)
-                .takeIf { it != MISSING_BODY_ENERGY_INT },
-            manualMaxHeartRateBpm = prefs.getInt(KEY_BODY_ENERGY_MAX_HR_BPM, MISSING_BODY_ENERGY_INT)
-                .takeIf { it != MISSING_BODY_ENERGY_INT },
-            manualRestingHeartRateBpm = prefs.getInt(KEY_BODY_ENERGY_RESTING_HR_BPM, MISSING_BODY_ENERGY_INT)
-                .takeIf { it != MISSING_BODY_ENERGY_INT },
             manualZoneThresholdsBpm = HeartZoneThresholds.fromPreferenceString(
                 prefs.getString(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM, null),
             ),
             useManualZones = prefs.getBoolean(KEY_BODY_ENERGY_USE_MANUAL_ZONES, false),
+            setupCompleted = prefs.getBoolean(KEY_BODY_ENERGY_SETUP_COMPLETED, false),
         ).normalized()
+
+    private fun readBodyProfile(): BodyProfile {
+        val hasNewProfileData = prefs.contains(KEY_BODY_PROFILE_BIRTH_YEAR) ||
+            prefs.contains(KEY_BODY_PROFILE_WEIGHT_KG) ||
+            prefs.contains(KEY_BODY_PROFILE_RESTING_HR_BPM) ||
+            prefs.contains(KEY_BODY_PROFILE_MAX_HR_BPM)
+        if (!hasNewProfileData) {
+            migrateLegacyBodyProfileValues()
+        }
+        return BodyProfile(
+            birthYear = prefs.getInt(KEY_BODY_PROFILE_BIRTH_YEAR, MISSING_BODY_PROFILE_INT)
+                .takeIf { it != MISSING_BODY_PROFILE_INT },
+            weightKg = prefs.getFloat(KEY_BODY_PROFILE_WEIGHT_KG, MISSING_BODY_PROFILE_FLOAT)
+                .takeIf { it != MISSING_BODY_PROFILE_FLOAT }
+                ?.toDouble(),
+            restingHeartRateBpm = prefs.getInt(KEY_BODY_PROFILE_RESTING_HR_BPM, MISSING_BODY_PROFILE_INT)
+                .takeIf { it != MISSING_BODY_PROFILE_INT },
+            maxHeartRateBpm = prefs.getInt(KEY_BODY_PROFILE_MAX_HR_BPM, MISSING_BODY_PROFILE_INT)
+                .takeIf { it != MISSING_BODY_PROFILE_INT },
+        ).normalized()
+    }
+
+    private fun migrateLegacyBodyProfileValues() {
+        val legacyBirthYear = prefs.getInt(KEY_BODY_ENERGY_BIRTH_YEAR, MISSING_BODY_ENERGY_INT)
+            .takeIf { it != MISSING_BODY_ENERGY_INT }
+        val legacyAgeYears = prefs.getInt(KEY_CAFFEINE_AGE_YEARS, MISSING_CAFFEINE_INT)
+            .takeIf { it != MISSING_CAFFEINE_INT }
+        val legacyWeightKg = prefs.getFloat(KEY_CAFFEINE_WEIGHT_KG, MISSING_CAFFEINE_FLOAT)
+            .takeIf { it != MISSING_CAFFEINE_FLOAT }
+        val legacyRestingHr = prefs.getInt(KEY_BODY_ENERGY_RESTING_HR_BPM, MISSING_BODY_ENERGY_INT)
+            .takeIf { it != MISSING_BODY_ENERGY_INT }
+        val legacyMaxHr = prefs.getInt(KEY_BODY_ENERGY_MAX_HR_BPM, MISSING_BODY_ENERGY_INT)
+            .takeIf { it != MISSING_BODY_ENERGY_INT }
+        val migratedBirthYear = legacyBirthYear ?: legacyAgeYears?.let { LocalDate.now().year - it }
+        if (migratedBirthYear == null && legacyWeightKg == null && legacyRestingHr == null && legacyMaxHr == null) {
+            return
+        }
+        prefs.edit {
+            migratedBirthYear?.let { putInt(KEY_BODY_PROFILE_BIRTH_YEAR, it) }
+            legacyWeightKg?.let { putFloat(KEY_BODY_PROFILE_WEIGHT_KG, it) }
+            legacyRestingHr?.let { putInt(KEY_BODY_PROFILE_RESTING_HR_BPM, it) }
+            legacyMaxHr?.let { putInt(KEY_BODY_PROFILE_MAX_HR_BPM, it) }
+        }
+    }
 
     private fun readCaffeinePreferences(): CaffeinePreferences =
         CaffeinePreferences(
@@ -708,11 +759,6 @@ class PreferencesRepository @Inject constructor(
             ),
             bedtime = prefs.getString(KEY_CAFFEINE_BEDTIME, null)
                 .toReminderTimeOrDefault(CaffeinePreferences.DefaultBedtime),
-            ageYears = prefs.getInt(KEY_CAFFEINE_AGE_YEARS, MISSING_CAFFEINE_INT)
-                .takeIf { it != MISSING_CAFFEINE_INT },
-            weightKg = prefs.getFloat(KEY_CAFFEINE_WEIGHT_KG, MISSING_CAFFEINE_FLOAT)
-                .takeIf { it != MISSING_CAFFEINE_FLOAT }
-                ?.toDouble(),
             sleepSensitivity = prefs.getString(KEY_CAFFEINE_SLEEP_SENSITIVITY, null)
                 .toEnumOrDefault(CaffeineSleepSensitivity.NORMAL),
             smoker = prefs.getBoolean(KEY_CAFFEINE_SMOKER, false),
@@ -935,6 +981,11 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_BODY_ENERGY_RESTING_HR_BPM = "body_energy_resting_hr_bpm"
         private const val KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM = "body_energy_zone_thresholds_bpm"
         private const val KEY_BODY_ENERGY_USE_MANUAL_ZONES = "body_energy_use_manual_zones"
+        private const val KEY_BODY_ENERGY_SETUP_COMPLETED = "body_energy_setup_completed"
+        private const val KEY_BODY_PROFILE_BIRTH_YEAR = "body_profile_birth_year"
+        private const val KEY_BODY_PROFILE_WEIGHT_KG = "body_profile_weight_kg"
+        private const val KEY_BODY_PROFILE_RESTING_HR_BPM = "body_profile_resting_hr_bpm"
+        private const val KEY_BODY_PROFILE_MAX_HR_BPM = "body_profile_max_hr_bpm"
         private const val KEY_CAFFEINE_PROFILE_COMPLETED = "caffeine_profile_completed"
         private const val KEY_CAFFEINE_HALF_LIFE_MINUTES = "caffeine_half_life_minutes"
         private const val KEY_CAFFEINE_ABSORPTION_MINUTES = "caffeine_absorption_minutes"
@@ -978,6 +1029,8 @@ class PreferencesRepository @Inject constructor(
         private const val MISSING_BODY_ENERGY_INT = Int.MIN_VALUE
         private const val MISSING_CAFFEINE_INT = Int.MIN_VALUE
         private const val MISSING_CAFFEINE_FLOAT = -1.0f
+        private const val MISSING_BODY_PROFILE_INT = Int.MIN_VALUE
+        private const val MISSING_BODY_PROFILE_FLOAT = -1.0f
         private const val MAX_CUSTOM_HYDRATION_DRINKS = 25
         private const val ROUTE_GAP_OFF = 0
         private const val RECORDING_INTERVAL_OFF = 0

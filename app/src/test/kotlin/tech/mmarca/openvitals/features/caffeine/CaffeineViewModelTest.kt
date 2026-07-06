@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -162,6 +163,7 @@ class CaffeineViewModelTest {
             every { prefs.setCaffeinePreferences(any()) } answers {
                 flow.value = firstArg<CaffeinePreferences>()
             }
+            every { prefs.bodyProfile() } returns BodyProfile()
         }
         return PreferencesFixture(repository = repository, flow = flow)
     }

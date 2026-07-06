@@ -581,6 +581,7 @@ class DashboardViewModel @Inject constructor(
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             loadingWidgets = loadingWidgets,
+            bodyEnergySetupCompleted = prefs.bodyEnergyCalibration().setupCompleted,
         )
     }
 }

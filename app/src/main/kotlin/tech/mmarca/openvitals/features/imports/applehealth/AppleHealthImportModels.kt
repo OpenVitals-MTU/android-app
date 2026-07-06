@@ -131,6 +131,13 @@ data class AppleHealthImportCategorySummary(
     val routeSessions: Int = 0,
 )
 
+data class AppleHealthExportFingerprint(
+    val displayName: String?,
+    val size: Long?,
+) {
+    fun isIdentifiable(): Boolean = displayName != null || size != null
+}
+
 enum class AppleHealthImportCategory(
     @param:StringRes val titleRes: Int,
     @param:StringRes val descriptionRes: Int,

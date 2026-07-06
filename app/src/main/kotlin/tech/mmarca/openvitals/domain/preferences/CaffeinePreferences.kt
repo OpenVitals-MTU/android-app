@@ -9,8 +9,6 @@ data class CaffeinePreferences(
     val absorptionMinutes: Int = DefaultAbsorptionMinutes,
     val sleepThresholdMg: Int = DefaultSleepThresholdMg,
     val bedtime: LocalTime = DefaultBedtime,
-    val ageYears: Int? = null,
-    val weightKg: Double? = null,
     val sleepSensitivity: CaffeineSleepSensitivity = CaffeineSleepSensitivity.NORMAL,
     val smoker: Boolean = false,
     val alcoholUse: CaffeineAlcoholUse = CaffeineAlcoholUse.NONE,
@@ -26,35 +24,30 @@ data class CaffeinePreferences(
             halfLifeMinutes = halfLifeMinutes.coerceIn(MinHalfLifeMinutes, MaxHalfLifeMinutes),
             absorptionMinutes = absorptionMinutes.coerceIn(MinAbsorptionMinutes, MaxAbsorptionMinutes),
             sleepThresholdMg = sleepThresholdMg.coerceIn(MinSleepThresholdMg, MaxSleepThresholdMg),
-            ageYears = ageYears?.coerceIn(MinAgeYears, MaxAgeYears),
-            weightKg = weightKg
-                ?.takeIf { it.isFinite() }
-                ?.coerceIn(MinWeightKg, MaxWeightKg),
         )
 
-    val effectiveHalfLifeMinutes: Int
-        get() {
-            val base = halfLifeMinutes.toDouble()
-            val multiplier = listOf(
-                sleepSensitivity.halfLifeMultiplier,
-                alcoholUse.halfLifeMultiplier,
-                caffeineHabituation.halfLifeMultiplier,
-                cyp1a2Genotype.halfLifeMultiplier,
-                ahrGenotype.halfLifeMultiplier,
-                hormonalStatus.halfLifeMultiplier,
-                if (smoker) 0.7 else 1.0,
-                if (liverImpairment) 1.8 else 1.0,
-                if (medicationInteraction) 1.4 else 1.0,
-                ageMultiplier,
-                weightMultiplier,
-            ).fold(1.0) { product, factor -> product * factor }
-            return (base * multiplier)
-                .roundToInt()
-                .coerceIn(MinHalfLifeMinutes, MaxEffectiveHalfLifeMinutes)
-        }
+    fun effectiveHalfLifeMinutes(bodyProfile: BodyProfile): Int {
+        val base = halfLifeMinutes.toDouble()
+        val multiplier = listOf(
+            sleepSensitivity.halfLifeMultiplier,
+            alcoholUse.halfLifeMultiplier,
+            caffeineHabituation.halfLifeMultiplier,
+            cyp1a2Genotype.halfLifeMultiplier,
+            ahrGenotype.halfLifeMultiplier,
+            hormonalStatus.halfLifeMultiplier,
+            if (smoker) 0.7 else 1.0,
+            if (liverImpairment) 1.8 else 1.0,
+            if (medicationInteraction) 1.4 else 1.0,
+            ageMultiplier(bodyProfile),
+            weightMultiplier(bodyProfile),
+        ).fold(1.0) { product, factor -> product * factor }
+        return (base * multiplier)
+            .roundToInt()
+            .coerceIn(MinHalfLifeMinutes, MaxEffectiveHalfLifeMinutes)
+    }
 
-    private val ageMultiplier: Double
-        get() = when (ageYears) {
+    private fun ageMultiplier(bodyProfile: BodyProfile): Double =
+        when (bodyProfile.ageYears()) {
             null -> 1.0
             in 0..17 -> 1.1
             in 18..44 -> 1.0
@@ -62,11 +55,11 @@ data class CaffeinePreferences(
             else -> 1.2
         }
 
-    private val weightMultiplier: Double
-        get() = when {
-            weightKg == null -> 1.0
-            weightKg < 55.0 -> 1.1
-            weightKg > 95.0 -> 0.92
+    private fun weightMultiplier(bodyProfile: BodyProfile): Double =
+        when {
+            bodyProfile.weightKg == null -> 1.0
+            bodyProfile.weightKg < 55.0 -> 1.1
+            bodyProfile.weightKg > 95.0 -> 0.92
             else -> 1.0
         }
 
@@ -83,10 +76,6 @@ data class CaffeinePreferences(
         const val MaxAbsorptionMinutes = 180
         const val MinSleepThresholdMg = 5
         const val MaxSleepThresholdMg = 300
-        const val MinAgeYears = 10
-        const val MaxAgeYears = 110
-        const val MinWeightKg = 30.0
-        const val MaxWeightKg = 250.0
     }
 }
 

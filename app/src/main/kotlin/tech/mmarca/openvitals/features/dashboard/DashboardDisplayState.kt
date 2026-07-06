@@ -26,6 +26,7 @@ data class DashboardWidgetDisplayModel(
     val measurementSubtitle: String? = null,
     val showTitle: Boolean = true,
     val requiresNoDataMessage: Boolean = false,
+    val isNotSetUp: Boolean = false,
 )
 
 @Immutable

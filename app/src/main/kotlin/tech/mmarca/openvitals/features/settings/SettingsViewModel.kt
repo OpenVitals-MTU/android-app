@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -26,6 +27,7 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthExportFingerprint
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportErrorFormatter
@@ -61,6 +63,7 @@ data class SettingsUiState(
     val appleHealthImportProgress: AppleHealthImportProgress? = null,
     val appleHealthImportResult: AppleHealthImportResult? = null,
     val appleHealthImportError: String? = null,
+    val appleHealthImportPermissionDenied: Boolean = false,
     val offlineMapPacks: List<OfflineMapPack> = emptyList(),
     val activeOfflineMapFormat: OfflineMapPackFormat? = null,
     val isImportingOfflineMap: Boolean = false,
@@ -79,6 +82,7 @@ data class SettingsUiState(
     val appLockEnabled: Boolean = false,
     val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
     val caffeinePreferences: CaffeinePreferences = CaffeinePreferences(),
+    val bodyProfile: BodyProfile = BodyProfile(),
 ) {
     val visiblePermissions: Set<String>
         get() = permissionCategories.flatMap { it.permissions }.toSet()
@@ -121,6 +125,7 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     private var currentAppleHealthImportWorkId: UUID? = null
     private var pendingAppleHealthImportUri: Uri? = null
+    private var lastAnalyzedAppleHealthExportFingerprint: AppleHealthExportFingerprint? = null
 
     init {
         refresh()
@@ -157,6 +162,7 @@ class SettingsViewModel @Inject constructor(
                 appLockEnabled = preferencesRepository.appLockEnabled,
                 bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
                 caffeinePreferences = preferencesRepository.caffeinePreferences(),
+                bodyProfile = preferencesRepository.bodyProfile(),
             )
         }
     }
@@ -165,47 +171,94 @@ class SettingsViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isAnalyzingAppleHealth || state.isImportingAppleHealth) return
 
-        viewModelScope.launch {
-            pendingAppleHealthImportUri = uri
-            _uiState.value = _uiState.value.copy(
-                isAnalyzingAppleHealth = true,
-                appleHealthAnalysisProgress = AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
-                appleHealthImportAnalysis = null,
-                selectedAppleHealthImportCategories = emptySet(),
-                appleHealthImportProgress = null,
-                appleHealthImportResult = null,
-                appleHealthImportError = null,
-            )
+        val previousAnalysis = state.appleHealthImportAnalysis
+        val previousCategories = state.selectedAppleHealthImportCategories
+        val previousFingerprint = lastAnalyzedAppleHealthExportFingerprint
 
-            runCatching {
-                appleHealthImportWorkController.persistReadPermission(uri)
-                appleHealthImportService.analyzeAppleHealthExport(uri) { progress ->
-                    _uiState.value = _uiState.value.copy(
-                        appleHealthAnalysisProgress = progress,
-                    )
-                }
-            }.onSuccess { analysis ->
-                val detectedCategories = analysis.categorySummaries
-                    .mapTo(mutableSetOf()) { it.category }
+        viewModelScope.launch {
+            val fingerprint = appleHealthImportService.fingerprintOf(uri)
+            val canReuseAnalysis = previousAnalysis != null &&
+                previousFingerprint != null &&
+                fingerprint.isIdentifiable() &&
+                fingerprint == previousFingerprint
+
+            if (canReuseAnalysis) {
+                reuseAppleHealthAnalysis(uri, previousAnalysis, previousCategories)
+            } else {
+                runFullAppleHealthAnalysis(uri, fingerprint)
+            }
+        }
+    }
+
+    private suspend fun reuseAppleHealthAnalysis(
+        uri: Uri,
+        analysis: AppleHealthImportAnalysisResult,
+        categories: Set<AppleHealthImportCategory>,
+    ) {
+        pendingAppleHealthImportUri = uri
+        _uiState.value = _uiState.value.copy(
+            appleHealthImportAnalysis = analysis,
+            selectedAppleHealthImportCategories = categories,
+            appleHealthImportError = null,
+            appleHealthImportPermissionDenied = false,
+        )
+        runCatching {
+            appleHealthImportWorkController.persistReadPermission(uri)
+        }.onFailure { error ->
+            Log.e(AppleHealthImportWorker.LogTag, "Apple Health re-selection failed", error)
+            pendingAppleHealthImportUri = null
+            _uiState.value = _uiState.value.copy(
+                appleHealthImportError = AppleHealthImportErrorFormatter.details(error),
+                appleHealthImportPermissionDenied = AppleHealthImportErrorFormatter.isPermissionDenied(error),
+            )
+        }
+    }
+
+    private suspend fun runFullAppleHealthAnalysis(uri: Uri, fingerprint: AppleHealthExportFingerprint) {
+        pendingAppleHealthImportUri = uri
+        lastAnalyzedAppleHealthExportFingerprint = null
+        _uiState.value = _uiState.value.copy(
+            isAnalyzingAppleHealth = true,
+            appleHealthAnalysisProgress = AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
+            appleHealthImportAnalysis = null,
+            selectedAppleHealthImportCategories = emptySet(),
+            appleHealthImportProgress = null,
+            appleHealthImportResult = null,
+            appleHealthImportError = null,
+            appleHealthImportPermissionDenied = false,
+        )
+
+        runCatching {
+            appleHealthImportWorkController.persistReadPermission(uri)
+            appleHealthImportService.analyzeAppleHealthExport(uri) { progress ->
                 _uiState.value = _uiState.value.copy(
-                    isAnalyzingAppleHealth = false,
-                    appleHealthAnalysisProgress = null,
-                    appleHealthImportAnalysis = analysis,
-                    selectedAppleHealthImportCategories = detectedCategories,
-                    appleHealthImportError = null,
-                )
-            }.onFailure { error ->
-                Log.e(AppleHealthImportWorker.LogTag, "Apple Health analysis failed", error)
-                pendingAppleHealthImportUri = null
-                _uiState.value = _uiState.value.copy(
-                    isAnalyzingAppleHealth = false,
-                    appleHealthAnalysisProgress = null,
-                    appleHealthImportAnalysis = null,
-                    selectedAppleHealthImportCategories = emptySet(),
-                    appleHealthImportResult = null,
-                    appleHealthImportError = AppleHealthImportErrorFormatter.details(error),
+                    appleHealthAnalysisProgress = progress,
                 )
             }
+        }.onSuccess { analysis ->
+            val detectedCategories = analysis.categorySummaries
+                .mapTo(mutableSetOf()) { it.category }
+            lastAnalyzedAppleHealthExportFingerprint = fingerprint.takeIf { it.isIdentifiable() }
+            _uiState.value = _uiState.value.copy(
+                isAnalyzingAppleHealth = false,
+                appleHealthAnalysisProgress = null,
+                appleHealthImportAnalysis = analysis,
+                selectedAppleHealthImportCategories = detectedCategories,
+                appleHealthImportError = null,
+                appleHealthImportPermissionDenied = false,
+            )
+        }.onFailure { error ->
+            Log.e(AppleHealthImportWorker.LogTag, "Apple Health analysis failed", error)
+            pendingAppleHealthImportUri = null
+            _uiState.value = _uiState.value.copy(
+                isAnalyzingAppleHealth = false,
+                appleHealthAnalysisProgress = null,
+                appleHealthImportAnalysis = null,
+                selectedAppleHealthImportCategories = emptySet(),
+                appleHealthImportResult = null,
+                appleHealthImportError = AppleHealthImportErrorFormatter.details(error),
+                appleHealthImportPermissionDenied = AppleHealthImportErrorFormatter.isPermissionDenied(error),
+            )
         }
     }
 
@@ -241,6 +294,7 @@ class SettingsViewModel @Inject constructor(
                 ),
                 appleHealthImportResult = null,
                 appleHealthImportError = null,
+                appleHealthImportPermissionDenied = false,
             )
 
             runCatching {
@@ -260,6 +314,7 @@ class SettingsViewModel @Inject constructor(
                         appleHealthImportProgress = null,
                         appleHealthImportResult = null,
                         appleHealthImportError = AppleHealthImportErrorFormatter.details(error),
+                        appleHealthImportPermissionDenied = AppleHealthImportErrorFormatter.isPermissionDenied(error),
                     )
                 }
         }
@@ -321,6 +376,7 @@ class SettingsViewModel @Inject constructor(
 	                                ?: AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED),
 	                            appleHealthImportResult = null,
                             appleHealthImportError = null,
+                            appleHealthImportPermissionDenied = false,
                         )
                     }
                     WorkInfo.State.SUCCEEDED -> {
@@ -338,6 +394,7 @@ class SettingsViewModel @Inject constructor(
 	                            selectedAppleHealthImportCategories = emptySet(),
 	                            appleHealthImportResult = result,
 	                            appleHealthImportError = null,
+	                            appleHealthImportPermissionDenied = false,
 	                        )
                     }
                     WorkInfo.State.FAILED -> {
@@ -353,6 +410,7 @@ class SettingsViewModel @Inject constructor(
 	                            appleHealthImportProgress = null,
 	                            appleHealthImportResult = null,
 	                            appleHealthImportError = error,
+	                            appleHealthImportPermissionDenied = appleHealthImportWorkController.permissionDeniedFor(workInfo),
                         )
                     }
                     WorkInfo.State.CANCELLED -> {
@@ -504,13 +562,18 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
-        preferencesRepository.setBodyEnergyCalibration(calibration)
+        preferencesRepository.setBodyEnergyCalibration(calibration.copy(setupCompleted = true))
         _uiState.value = _uiState.value.copy(bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration())
     }
 
     fun updateCaffeinePreferences(preferences: CaffeinePreferences) {
         preferencesRepository.setCaffeinePreferences(preferences)
         _uiState.value = _uiState.value.copy(caffeinePreferences = preferencesRepository.caffeinePreferences())
+    }
+
+    fun updateBodyProfile(profile: BodyProfile) {
+        preferencesRepository.setBodyProfile(profile)
+        _uiState.value = _uiState.value.copy(bodyProfile = preferencesRepository.bodyProfile())
     }
 
     fun resetBodyEnergyCalibration() {

@@ -143,7 +143,7 @@ internal fun LazyListScope.settingsScreenContent(
             item {
                 CaffeinePreferencesCard(
                     preferences = state.caffeinePreferences,
-                    unitSystem = state.unitSystem,
+                    bodyProfile = state.bodyProfile,
                     onSave = viewModel::updateCaffeinePreferences,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
@@ -155,6 +155,15 @@ internal fun LazyListScope.settingsScreenContent(
                 SleepRangeModeCard(
                     selected = state.sleepRangeMode,
                     onSelect = viewModel::selectSleepRangeMode,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            item { SettingsCardSpacer() }
+            item {
+                BodyProfileCard(
+                    profile = state.bodyProfile,
+                    unitSystem = state.unitSystem,
+                    onSave = viewModel::updateBodyProfile,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
@@ -183,6 +192,7 @@ internal fun LazyListScope.settingsScreenContent(
 	                    progress = state.appleHealthImportProgress,
 	                    result = state.appleHealthImportResult,
 	                    error = state.appleHealthImportError,
+	                    permissionDenied = state.appleHealthImportPermissionDenied,
 	                    onGrantPermissions = actions.onGrantDataImportPermissions,
 	                    onImport = actions.onImportAppleHealth,
 	                    onToggleCategory = actions.onToggleAppleHealthImportCategory,

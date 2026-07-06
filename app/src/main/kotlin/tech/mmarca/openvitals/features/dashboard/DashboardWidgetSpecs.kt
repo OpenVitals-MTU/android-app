@@ -268,14 +268,16 @@ private fun sleepScoreRatingLabel(rating: SleepScoreRating): String =
 
 @Composable
 private fun noDataMessageFor(model: DashboardWidgetDisplayModel): String? =
-    when (model.id) {
-        DashboardWidgetId.SLEEP -> stringResource(R.string.message_no_sleep_day)
-        DashboardWidgetId.BLOOD_PRESSURE -> stringResource(R.string.message_no_blood_pressure)
-        DashboardWidgetId.SPO2 -> stringResource(R.string.message_no_oxygen)
-        DashboardWidgetId.VO2_MAX -> stringResource(R.string.message_no_vo2_max)
-        DashboardWidgetId.BLOOD_GLUCOSE -> stringResource(R.string.message_no_blood_glucose)
-        DashboardWidgetId.SKIN_TEMPERATURE -> stringResource(R.string.message_no_skin_temperature)
-        else -> if (model.requiresNoDataMessage) stringResource(R.string.no_data) else null
+    when {
+        model.isNotSetUp -> stringResource(R.string.body_energy_not_set_up)
+        model.id == DashboardWidgetId.SLEEP -> stringResource(R.string.message_no_sleep_day)
+        model.id == DashboardWidgetId.BLOOD_PRESSURE -> stringResource(R.string.message_no_blood_pressure)
+        model.id == DashboardWidgetId.SPO2 -> stringResource(R.string.message_no_oxygen)
+        model.id == DashboardWidgetId.VO2_MAX -> stringResource(R.string.message_no_vo2_max)
+        model.id == DashboardWidgetId.BLOOD_GLUCOSE -> stringResource(R.string.message_no_blood_glucose)
+        model.id == DashboardWidgetId.SKIN_TEMPERATURE -> stringResource(R.string.message_no_skin_temperature)
+        model.requiresNoDataMessage -> stringResource(R.string.no_data)
+        else -> null
     }
 
 @Composable

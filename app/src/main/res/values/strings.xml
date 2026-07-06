@@ -1219,6 +1219,9 @@
     <string name="settings_calorie_data_body">Show plain Health Connect total calories by default. Turn on OpenVitals calculations to fill missing totals from active calories and BMR.</string>
     <string name="settings_caffeine_title">Caffeine model</string>
     <string name="settings_caffeine_body">These values personalize caffeine level, bedtime forecast, and safe-sleep insights. Entries remain in Health Connect.</string>
+    <string name="settings_body_profile_title">Body profile</string>
+    <string name="settings_body_profile_body">Age, weight, and heart rate personalize Body Energy and Caffeine estimates. All fields are optional.</string>
+    <string name="settings_body_profile_weight">Weight</string>
     <string name="settings_sleep_range_title">Sleep range</string>
     <string name="settings_sleep_range_body">Choose which day sleep sessions are assigned to.</string>
     <string name="settings_sleep_range_rolling_24h">Rolling 24h</string>
@@ -1284,6 +1287,7 @@
     <string name="settings_apple_health_import_report_saved">Import report saved.</string>
     <string name="settings_apple_health_import_report_save_failed">Unable to save import report.</string>
     <string name="settings_apple_health_import_error">Import failed: %1$s</string>
+    <string name="settings_apple_health_import_permission_denied">Access to the selected file was lost, so the import couldn\'t continue. Select the same Apple Health export again to pick up right where it left off.</string>
     <string name="settings_fit_import_title">FIT Importer</string>
     <string name="settings_fit_import_body">Import FIT activity, course, or workout files, review detected details, and choose whether to save them to Health Connect.</string>
     <string name="settings_fit_import_action">Import FIT file</string>
@@ -1596,9 +1600,9 @@
 
     <string name="settings_body_energy_group_title">Body Energy</string>
     <string name="settings_body_energy_group_body">Calibration for estimated intraday energy and effort zones.</string>
-    <string name="body_energy_calibration_title">Improve Body Energy estimates</string>
-    <string name="body_energy_calibration_body">OpenVitals estimates drain from heart-rate intensity over time. Age, max heart rate, resting heart rate, and zones help classify effort more accurately.</string>
-    <string name="body_energy_calibration_optional_body">This is optional. If you skip it, OpenVitals uses automatic estimates from Health Connect data and shows lower confidence when calibration is uncertain. These values stay in OpenVitals settings.</string>
+    <string name="body_energy_calibration_title">Turn on Body Energy</string>
+    <string name="body_energy_calibration_body">OpenVitals estimates drain from heart-rate intensity over time, using your age, weight, and heart rate from the Body profile in Settings.</string>
+    <string name="body_energy_calibration_optional_body">Manual heart-rate zones below are optional. If you skip them, OpenVitals uses automatic estimates from Health Connect data and shows lower confidence when calibration is uncertain.</string>
     <string name="body_energy_calibration_birth_year">Birth year</string>
     <string name="body_energy_calibration_max_hr">Max heart rate</string>
     <string name="body_energy_calibration_resting_hr">Resting heart rate</string>
@@ -1613,6 +1617,7 @@
     <string name="body_energy_calibration_skip">Skip for now</string>
     <string name="body_energy_calibration_saved">Body Energy calibration saved</string>
     <string name="body_energy_calibration_reset">Body Energy calibration reset to automatic</string>
+    <string name="body_energy_not_set_up">Not set up</string>
     <string name="body_energy_timeline_estimated">Estimated by OpenVitals</string>
     <string name="body_energy_timeline_current">Current</string>
     <string name="body_energy_timeline_start">Start</string>

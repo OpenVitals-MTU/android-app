@@ -60,12 +60,13 @@ class AppleHealthImportWorkController @Inject constructor(
         }
     }
 
+    fun permissionDeniedFor(workInfo: WorkInfo): Boolean =
+        workInfo.outputData.getBoolean(AppleHealthImportWorker.KeyPermissionDenied, false)
+
     fun persistReadPermission(uri: Uri) {
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
-        }
+        context.contentResolver.takePersistableUriPermission(
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
     }
 }

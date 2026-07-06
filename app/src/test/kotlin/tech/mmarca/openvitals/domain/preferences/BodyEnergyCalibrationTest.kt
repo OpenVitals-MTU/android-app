@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.domain.preferences
 
-import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -33,31 +32,29 @@ class BodyEnergyCalibrationTest {
                 zone5LowerBpm = 180,
             ),
             useManualZones = true,
-        ).normalized(LocalDate.of(2026, 6, 30))
+        ).normalized()
 
         assertNull(normalized.manualZoneThresholdsBpm)
         assertFalse(normalized.useManualZones)
     }
 
     @Test
-    fun `normalization keeps optional values in safe ranges`() {
-        val normalized = BodyEnergyCalibration(
-            birthYear = 2030,
-            manualMaxHeartRateBpm = 260,
-            manualRestingHeartRateBpm = 20,
-        ).normalized(LocalDate.of(2026, 6, 30))
+    fun `automatic calibration has no manual zones`() {
+        val automatic = BodyEnergyCalibration.Automatic
 
-        assertNull(normalized.birthYear)
-        assertEquals(BodyEnergyCalibration.MaxMaxHeartRateBpm, normalized.manualMaxHeartRateBpm)
-        assertEquals(BodyEnergyCalibration.MinRestingHeartRateBpm, normalized.manualRestingHeartRateBpm)
+        assertFalse(automatic.useManualZones)
+        assertTrue(automatic.signature().contains("auto"))
     }
 
     @Test
-    fun `automatic calibration has no age and no manual zones`() {
-        val automatic = BodyEnergyCalibration.Automatic
+    fun `automatic calibration defaults to setup not completed`() {
+        assertFalse(BodyEnergyCalibration.Automatic.setupCompleted)
+    }
 
-        assertNull(automatic.ageYears(LocalDate.of(2026, 6, 30)))
-        assertFalse(automatic.useManualZones)
-        assertTrue(automatic.signature(LocalDate.of(2026, 6, 30)).contains("auto"))
+    @Test
+    fun `normalization preserves setupCompleted flag`() {
+        val normalized = BodyEnergyCalibration(setupCompleted = true).normalized()
+
+        assertTrue(normalized.setupCompleted)
     }
 }

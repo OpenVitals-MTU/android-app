@@ -42,13 +42,6 @@ fun BodyEnergyCalibrationCard(
     onSkip: () -> Unit = {},
 ) {
     val signature = calibration.signature()
-    var birthYear by rememberSaveable(signature) { mutableStateOf(calibration.birthYear?.toString().orEmpty()) }
-    var maxHeartRate by rememberSaveable(signature) {
-        mutableStateOf(calibration.manualMaxHeartRateBpm?.toString().orEmpty())
-    }
-    var restingHeartRate by rememberSaveable(signature) {
-        mutableStateOf(calibration.manualRestingHeartRateBpm?.toString().orEmpty())
-    }
     var useManualZones by rememberSaveable(signature) { mutableStateOf(calibration.useManualZones) }
     var zone1 by rememberSaveable(signature) {
         mutableStateOf(calibration.manualZoneThresholdsBpm?.zone1LowerBpm?.toString().orEmpty())
@@ -100,22 +93,6 @@ fun BodyEnergyCalibrationCard(
                     )
                 }
             }
-
-            CalibrationNumberField(
-                value = birthYear,
-                onValueChange = { birthYear = it },
-                label = stringResource(R.string.body_energy_calibration_birth_year),
-            )
-            CalibrationNumberField(
-                value = maxHeartRate,
-                onValueChange = { maxHeartRate = it },
-                label = stringResource(R.string.body_energy_calibration_max_hr),
-            )
-            CalibrationNumberField(
-                value = restingHeartRate,
-                onValueChange = { restingHeartRate = it },
-                label = stringResource(R.string.body_energy_calibration_resting_hr),
-            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -170,9 +147,6 @@ fun BodyEnergyCalibrationCard(
                 onClick = {
                     onSave(
                         BodyEnergyCalibration(
-                            birthYear = birthYear.toOptionalInt(),
-                            manualMaxHeartRateBpm = maxHeartRate.toOptionalInt(),
-                            manualRestingHeartRateBpm = restingHeartRate.toOptionalInt(),
                             manualZoneThresholdsBpm = HeartZoneThresholds(
                                 zone1LowerBpm = zone1.toOptionalInt() ?: 0,
                                 zone2LowerBpm = zone2.toOptionalInt() ?: 0,

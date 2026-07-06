@@ -4,6 +4,7 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.model.BleConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
@@ -70,6 +71,7 @@ class DashboardViewModelTest {
         every { it.dashboardWidgetOrder() } returns null
         every { it.setDashboardWidgetOrder(any()) } returns Unit
         every { it.healthConnectSyncEnabled } returns true
+        every { it.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
     }
 
     // ─── Initial load ─────────────────────────────────────────────────────────

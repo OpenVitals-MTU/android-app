@@ -1,11 +1,11 @@
-package tech.mmarca.openvitals.features.caffeine
+package tech.mmarca.openvitals.features.settings
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
-class CaffeinePreferencesEditorTest {
+class BodyProfileCardTest {
 
     @Test
     fun `metric weight displays and stores kilograms`() {

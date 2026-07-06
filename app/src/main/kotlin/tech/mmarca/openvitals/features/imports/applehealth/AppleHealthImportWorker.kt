@@ -200,6 +200,7 @@ class AppleHealthImportWorker(
         const val UniqueWorkName = "apple_health_import"
         const val KeyInputUri = "input_uri"
         const val KeyError = "error"
+        const val KeyPermissionDenied = "permission_denied"
 
         private const val KeyReportPath = "report_path"
         private const val KeyErrorReportPath = "error_report_path"
@@ -299,6 +300,7 @@ class AppleHealthImportWorker(
                         details.inlineForWorkData()
                     }
                 )
+                .putBoolean(KeyPermissionDenied, AppleHealthImportErrorFormatter.isPermissionDenied(error))
                 .apply {
                     if (reportPath != null) {
                         putString(KeyErrorReportPath, reportPath)

@@ -28,18 +28,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalTime
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeineAlcoholUse
 import tech.mmarca.openvitals.domain.preferences.CaffeineGenotype
 import tech.mmarca.openvitals.domain.preferences.CaffeineHabituation
 import tech.mmarca.openvitals.domain.preferences.CaffeineHormonalStatus
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 @Composable
 internal fun CaffeinePreferencesEditor(
     preferences: CaffeinePreferences,
-    unitSystem: UnitSystem,
+    bodyProfile: BodyProfile,
     onChange: (CaffeinePreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -66,20 +66,6 @@ internal fun CaffeinePreferencesEditor(
             label = "Bedtime",
             value = preferences.bedtime,
             onValue = { onChange(preferences.copy(bedtime = it)) },
-        )
-        PreferenceOptionalNumberField(
-            label = "Age",
-            value = preferences.ageYears,
-            suffix = "years",
-            onValue = { onChange(preferences.copy(ageYears = it)) },
-        )
-        PreferenceOptionalDecimalField(
-            label = "Weight",
-            value = displayWeightForUnitSystem(preferences.weightKg, unitSystem),
-            suffix = weightSuffix(unitSystem),
-            onValue = {
-                onChange(preferences.copy(weightKg = storedWeightKgForUnitSystem(it, unitSystem)))
-            },
         )
         PreferenceEnumDropdown(
             label = "Sleep sensitivity",
@@ -139,37 +125,13 @@ internal fun CaffeinePreferencesEditor(
             onCheckedChange = { onChange(preferences.copy(medicationInteraction = it)) },
         )
         Text(
-            text = "Effective half-life ${preferences.effectiveHalfLifeMinutes} min",
+            text = "Effective half-life ${preferences.effectiveHalfLifeMinutes(bodyProfile)} min",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
         )
     }
 }
-
-internal fun displayWeightForUnitSystem(weightKg: Double?, unitSystem: UnitSystem): Double? =
-    weightKg?.let { kg ->
-        when (unitSystem) {
-            UnitSystem.METRIC -> kg
-            UnitSystem.IMPERIAL -> kg * PoundsPerKilogram
-        }
-    }
-
-internal fun storedWeightKgForUnitSystem(weight: Double?, unitSystem: UnitSystem): Double? =
-    weight?.let { value ->
-        when (unitSystem) {
-            UnitSystem.METRIC -> value
-            UnitSystem.IMPERIAL -> value / PoundsPerKilogram
-        }
-    }
-
-private fun weightSuffix(unitSystem: UnitSystem): String =
-    when (unitSystem) {
-        UnitSystem.METRIC -> "kg"
-        UnitSystem.IMPERIAL -> "lb"
-    }
-
-private const val PoundsPerKilogram = 2.2046226218
 
 @Composable
 private fun PreferenceNumberField(
@@ -204,30 +166,6 @@ private fun PreferenceOptionalNumberField(
         suffix = { Text(suffix) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-    )
-}
-
-@Composable
-private fun PreferenceOptionalDecimalField(
-    label: String,
-    value: Double?,
-    suffix: String,
-    onValue: (Double?) -> Unit,
-) {
-    var text by remember(value) { mutableStateOf(value?.let { "%.1f".format(it) }.orEmpty()) }
-    OutlinedTextField(
-        value = text,
-        onValueChange = { next ->
-            text = next.filter { it.isDigit() || it == '.' }.take(5)
-            onValue(text.toDoubleOrNull())
-        },
-        label = { Text(label) },
-        suffix = { Text(suffix) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),

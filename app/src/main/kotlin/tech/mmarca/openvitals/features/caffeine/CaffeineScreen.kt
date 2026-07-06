@@ -77,8 +77,8 @@ import tech.mmarca.openvitals.domain.model.CaffeinePoint
 import tech.mmarca.openvitals.domain.model.CaffeineTimeBucket
 import tech.mmarca.openvitals.domain.model.CaffeineTimeOfDayBucket
 import tech.mmarca.openvitals.domain.model.displayLabel
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -168,7 +168,7 @@ private fun LazyListScope.caffeineHomeAndAnalyticsContent(
         item {
             CaffeineSetupCard(
                 preferences = state.preferences,
-                unitSystem = unitFormatter.unitSystem(),
+                bodyProfile = state.bodyProfile,
                 onSave = onCompleteSetup,
                 onSkip = onSkipSetup,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -296,7 +296,7 @@ private fun LazyListScope.caffeineHomeAndAnalyticsContent(
 @Composable
 private fun CaffeineSetupCard(
     preferences: CaffeinePreferences,
-    unitSystem: UnitSystem,
+    bodyProfile: BodyProfile,
     onSave: (CaffeinePreferences) -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
@@ -325,7 +325,7 @@ private fun CaffeineSetupCard(
             )
             CaffeinePreferencesEditor(
                 preferences = draft,
-                unitSystem = unitSystem,
+                bodyProfile = bodyProfile,
                 onChange = { draft = it },
                 modifier = Modifier.padding(top = 8.dp),
             )

@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
 import android.content.Context
+import android.database.Cursor
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -104,6 +106,29 @@ class AppleHealthImportService
                     diagnostics = diagnostics,
                     shareableReportText = reportText,
                 )
+            }
+
+        suspend fun fingerprintOf(uri: Uri): AppleHealthExportFingerprint =
+            withContext(Dispatchers.IO) {
+                AppleHealthExportFingerprint(
+                    displayName = queryOpenableColumn(uri, OpenableColumns.DISPLAY_NAME) { cursor, index ->
+                        cursor.getString(index)
+                    },
+                    size = queryOpenableColumn(uri, OpenableColumns.SIZE) { cursor, index ->
+                        cursor.getLong(index)
+                    },
+                )
+            }
+
+        private fun <T> queryOpenableColumn(
+            uri: Uri,
+            column: String,
+            read: (Cursor, Int) -> T,
+        ): T? =
+            context.contentResolver.query(uri, arrayOf(column), null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val index = cursor.getColumnIndex(column).takeIf { it >= 0 } ?: return@use null
+                read(cursor, index)
             }
 
         suspend fun importAppleHealthExport(

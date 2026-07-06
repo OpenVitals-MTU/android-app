@@ -85,6 +85,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -216,7 +217,7 @@ private val OfflineMapPackFormat.settingsLabelRes: Int
 @Composable
 internal fun CaffeinePreferencesCard(
     preferences: CaffeinePreferences,
-    unitSystem: UnitSystem,
+    bodyProfile: BodyProfile,
     onSave: (CaffeinePreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -247,7 +248,7 @@ internal fun CaffeinePreferencesCard(
             )
             CaffeinePreferencesEditor(
                 preferences = draft,
-                unitSystem = unitSystem,
+                bodyProfile = bodyProfile,
                 onChange = { draft = it },
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -1179,6 +1180,7 @@ internal fun AppleHealthImportCard(
 	progress: AppleHealthImportProgress?,
 	result: AppleHealthImportResult?,
 	error: String?,
+	permissionDenied: Boolean,
 	onGrantPermissions: () -> Unit,
 	onImport: () -> Unit,
 	onToggleCategory: (AppleHealthImportCategory, Boolean) -> Unit,
@@ -1368,6 +1370,11 @@ internal fun AppleHealthImportCard(
 
             if (!error.isNullOrBlank()) {
                 val errorText = stringResource(R.string.settings_apple_health_import_error, error)
+                val displayText = if (permissionDenied) {
+                    stringResource(R.string.settings_apple_health_import_permission_denied)
+                } else {
+                    errorText
+                }
                 Column(modifier = Modifier.padding(top = 8.dp)) {
                     OpenVitalsOutlinedButton(
                         onClick = { onCopyError(errorText) },
@@ -1397,7 +1404,7 @@ internal fun AppleHealthImportCard(
                     }
                     SelectionContainer {
                         Text(
-                            text = errorText,
+                            text = displayText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(top = 8.dp),

@@ -1,7 +1,5 @@
 package tech.mmarca.openvitals.domain.preferences
 
-import java.time.LocalDate
-
 data class HeartZoneThresholds(
     val zone1LowerBpm: Int,
     val zone2LowerBpm: Int,
@@ -43,41 +41,22 @@ data class HeartZoneThresholds(
 }
 
 data class BodyEnergyCalibration(
-    val birthYear: Int? = null,
-    val manualMaxHeartRateBpm: Int? = null,
-    val manualRestingHeartRateBpm: Int? = null,
     val manualZoneThresholdsBpm: HeartZoneThresholds? = null,
     val useManualZones: Boolean = false,
+    val setupCompleted: Boolean = false,
 ) {
-    fun normalized(today: LocalDate = LocalDate.now()): BodyEnergyCalibration {
-        val currentYear = today.year
-        val normalizedBirthYear = birthYear
-            ?.takeIf { it in MinBirthYear..currentYear }
-        val normalizedMaxHr = manualMaxHeartRateBpm
-            ?.coerceIn(MinMaxHeartRateBpm, MaxMaxHeartRateBpm)
-        val normalizedRestingHr = manualRestingHeartRateBpm
-            ?.coerceIn(MinRestingHeartRateBpm, MaxRestingHeartRateBpm)
+    fun normalized(): BodyEnergyCalibration {
         val normalizedZones = manualZoneThresholdsBpm?.normalized()
         return BodyEnergyCalibration(
-            birthYear = normalizedBirthYear,
-            manualMaxHeartRateBpm = normalizedMaxHr,
-            manualRestingHeartRateBpm = normalizedRestingHr,
             manualZoneThresholdsBpm = normalizedZones,
             useManualZones = useManualZones && normalizedZones != null,
+            setupCompleted = setupCompleted,
         )
     }
 
-    fun ageYears(today: LocalDate = LocalDate.now()): Int? =
-        birthYear
-            ?.let { today.year - it }
-            ?.takeIf { it in MinAgeYears..MaxAgeYears }
-
-    fun signature(today: LocalDate = LocalDate.now()): String {
-        val normalized = normalized(today)
+    fun signature(): String {
+        val normalized = normalized()
         return listOf(
-            normalized.birthYear ?: "auto",
-            normalized.manualMaxHeartRateBpm ?: "auto",
-            normalized.manualRestingHeartRateBpm ?: "auto",
             normalized.useManualZones,
             normalized.manualZoneThresholdsBpm?.toPreferenceString() ?: "auto",
         ).joinToString("|")
@@ -85,12 +64,5 @@ data class BodyEnergyCalibration(
 
     companion object {
         val Automatic = BodyEnergyCalibration()
-        const val MinBirthYear = 1900
-        const val MinAgeYears = 10
-        const val MaxAgeYears = 110
-        const val MinMaxHeartRateBpm = 80
-        const val MaxMaxHeartRateBpm = 240
-        const val MinRestingHeartRateBpm = 30
-        const val MaxRestingHeartRateBpm = 120
     }
 }

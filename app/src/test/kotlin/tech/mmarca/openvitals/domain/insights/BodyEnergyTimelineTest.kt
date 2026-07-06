@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
 class BodyEnergyTimelineTest {
@@ -30,9 +31,11 @@ class BodyEnergyTimelineTest {
                 previousEndScore = 90,
                 heartRateSamples = heartRateSamples(start, end, bpm = 165),
                 workouts = listOf(workout(start, end)),
+                bodyProfile = BodyProfile(
+                    restingHeartRateBpm = 60,
+                    maxHeartRateBpm = 190,
+                ),
                 calibration = BodyEnergyCalibration(
-                    manualRestingHeartRateBpm = 60,
-                    manualMaxHeartRateBpm = 190,
                     manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
                     useManualZones = true,
                 ),
@@ -52,9 +55,9 @@ class BodyEnergyTimelineTest {
         val start = dayStart
         val shortEnd = start.plus(Duration.ofMinutes(40))
         val longEnd = start.plus(Duration.ofMinutes(100))
-        val calibration = BodyEnergyCalibration(
-            manualRestingHeartRateBpm = 60,
-            manualMaxHeartRateBpm = 190,
+        val bodyProfile = BodyProfile(
+            restingHeartRateBpm = 60,
+            maxHeartRateBpm = 190,
         )
 
         val shortTimeline = calculateBodyEnergyTimeline(
@@ -63,7 +66,7 @@ class BodyEnergyTimelineTest {
                 previousEndScore = 90,
                 heartRateSamples = heartRateSamples(start, shortEnd, bpm = 130),
                 workouts = listOf(workout(start, shortEnd)),
-                calibration = calibration,
+                bodyProfile = bodyProfile,
             )
         )
         val longTimeline = calculateBodyEnergyTimeline(
@@ -72,7 +75,7 @@ class BodyEnergyTimelineTest {
                 previousEndScore = 90,
                 heartRateSamples = heartRateSamples(start, longEnd, bpm = 130),
                 workouts = listOf(workout(start, longEnd)),
-                calibration = calibration,
+                bodyProfile = bodyProfile,
             )
         )
 
@@ -91,9 +94,9 @@ class BodyEnergyTimelineTest {
                 previousEndScore = 40,
                 heartRateSamples = heartRateSamples(start, end, bpm = 55),
                 sleepSessions = listOf(sleep(start, end)),
-                calibration = BodyEnergyCalibration(
-                    manualRestingHeartRateBpm = 58,
-                    manualMaxHeartRateBpm = 188,
+                bodyProfile = BodyProfile(
+                    restingHeartRateBpm = 58,
+                    maxHeartRateBpm = 188,
                 ),
             )
         )
@@ -115,9 +118,9 @@ class BodyEnergyTimelineTest {
                 now = end,
                 previousEndScore = 70,
                 heartRateSamples = heartRateSamples(start, end, bpm = 88),
-                calibration = BodyEnergyCalibration(
-                    manualRestingHeartRateBpm = 60,
-                    manualMaxHeartRateBpm = 190,
+                bodyProfile = BodyProfile(
+                    restingHeartRateBpm = 60,
+                    maxHeartRateBpm = 190,
                 ),
             )
         )
@@ -142,9 +145,11 @@ class BodyEnergyTimelineTest {
                 heartRateSamples = heartRateSamples(start, workoutEnd, bpm = 165) +
                     heartRateSamples(workoutEnd, end, bpm = 62),
                 workouts = listOf(workout(start, workoutEnd)),
+                bodyProfile = BodyProfile(
+                    restingHeartRateBpm = 60,
+                    maxHeartRateBpm = 190,
+                ),
                 calibration = BodyEnergyCalibration(
-                    manualRestingHeartRateBpm = 60,
-                    manualMaxHeartRateBpm = 190,
                     manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
                     useManualZones = true,
                 ),
@@ -160,7 +165,8 @@ class BodyEnergyTimelineTest {
         now: Instant,
         previousEndScore: Int,
         heartRateSamples: List<HeartRateSample>,
-        calibration: BodyEnergyCalibration,
+        bodyProfile: BodyProfile,
+        calibration: BodyEnergyCalibration = BodyEnergyCalibration(),
         workouts: List<ExerciseData> = emptyList(),
         sleepSessions: List<SleepData> = emptyList(),
     ): BodyEnergyTimelineInputs =
@@ -169,10 +175,11 @@ class BodyEnergyTimelineTest {
             heartRateSamples = heartRateSamples,
             sleepSessions = sleepSessions,
             workouts = workouts,
-            restingHeartRateBpm = calibration.manualRestingHeartRateBpm?.toLong(),
-            observedMaxHeartRateBpm = calibration.manualMaxHeartRateBpm?.toLong(),
+            restingHeartRateBpm = bodyProfile.restingHeartRateBpm?.toLong(),
+            observedMaxHeartRateBpm = bodyProfile.maxHeartRateBpm?.toLong(),
             previousEndScore = previousEndScore,
             calibration = calibration,
+            bodyProfile = bodyProfile,
             now = now,
             zone = zone,
         )

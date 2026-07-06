@@ -6,9 +6,13 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.PeriodSelection
@@ -22,6 +26,8 @@ import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 
 @Immutable
 data class BodyEnergyUiState(
@@ -30,13 +36,29 @@ data class BodyEnergyUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val result: BodyEnergyTimelineResult? = null,
     val display: BodyEnergyDisplayState = BodyEnergyDisplayState(),
+    val calibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
     val error: ScreenError? = null,
 )
 
 @HiltViewModel
-class BodyEnergyViewModel @Inject constructor(
+class BodyEnergyViewModel(
     private val repository: BodyEnergyRepository,
+    private val preferencesRepository: PreferencesRepository,
+    private val calibrationChanges: Flow<BodyEnergyCalibration> = emptyFlow(),
+    private val bodyProfileChanges: Flow<BodyProfile> = emptyFlow(),
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        repository: BodyEnergyRepository,
+        preferencesRepository: PreferencesRepository,
+    ) : this(
+        repository = repository,
+        preferencesRepository = preferencesRepository,
+        calibrationChanges = preferencesRepository.bodyEnergyCalibrationFlow,
+        bodyProfileChanges = preferencesRepository.bodyProfileFlow,
+    )
+
     private val periodDriver = PeriodSelectionDriver(
         initialRange = TimeRange.DAY,
         initialWeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
@@ -47,12 +69,43 @@ class BodyEnergyViewModel @Inject constructor(
         BodyEnergyUiState(
             selectedRange = TimeRange.DAY,
             selectedDate = periodDriver.selection.selectedDate,
+            calibration = preferencesRepository.bodyEnergyCalibration(),
         )
     )
     val uiState: StateFlow<BodyEnergyUiState> = _uiState.asStateFlow()
 
     init {
+        observeCalibration()
+        observeBodyProfile()
         load()
+    }
+
+    private fun observeCalibration() {
+        viewModelScope.launch {
+            calibrationChanges.drop(1).collect { calibration ->
+                _uiState.value = _uiState.value.copy(calibration = calibration)
+            }
+        }
+    }
+
+    private fun observeBodyProfile() {
+        viewModelScope.launch {
+            bodyProfileChanges.drop(1).collect {
+                load(RefreshMode.FORCE)
+            }
+        }
+    }
+
+    fun completeSetup(calibration: BodyEnergyCalibration) {
+        preferencesRepository.setBodyEnergyCalibration(calibration.copy(setupCompleted = true))
+        load(RefreshMode.FORCE)
+    }
+
+    fun useAutomatic() {
+        preferencesRepository.setBodyEnergyCalibration(
+            BodyEnergyCalibration.Automatic.copy(setupCompleted = true)
+        )
+        load(RefreshMode.FORCE)
     }
 
     fun selectRange(range: TimeRange) {

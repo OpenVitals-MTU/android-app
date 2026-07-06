@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
 const val BodyEnergyTimelineBucketMinutes = 5L
@@ -124,6 +125,7 @@ data class BodyEnergyTimelineInputs(
     val respiratoryRateBaseline: Double? = null,
     val previousEndScore: Int? = null,
     val calibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
+    val bodyProfile: BodyProfile = BodyProfile(),
     val now: Instant = Instant.now(),
     val zone: ZoneId = ZoneId.systemDefault(),
 )
@@ -342,17 +344,22 @@ private fun BodyEnergyTimelineInputs.inputSummary(heartRateSampleCount: Int): Bo
         hasHrvBaseline = hrvBaselineRmssdMs != null,
         hasRespiratoryBaseline = respiratoryRateBaseline != null,
         previousEndScore = previousEndScore,
-        calibrationMode = calibration.calibrationMode(date),
+        calibrationMode = calibrationMode(calibration, bodyProfile, date),
     )
 
-private fun BodyEnergyCalibration.calibrationMode(date: LocalDate): BodyEnergyCalibrationMode {
-    val normalized = normalized(date)
+private fun calibrationMode(
+    calibration: BodyEnergyCalibration,
+    bodyProfile: BodyProfile,
+    date: LocalDate,
+): BodyEnergyCalibrationMode {
+    val normalizedCalibration = calibration.normalized()
+    val normalizedProfile = bodyProfile.normalized(date)
     return when {
-        normalized.useManualZones && normalized.manualZoneThresholdsBpm != null ->
+        normalizedCalibration.useManualZones && normalizedCalibration.manualZoneThresholdsBpm != null ->
             BodyEnergyCalibrationMode.MANUAL_ZONES
-        normalized.manualMaxHeartRateBpm != null ||
-            normalized.manualRestingHeartRateBpm != null ||
-            normalized.birthYear != null ->
+        normalizedProfile.maxHeartRateBpm != null ||
+            normalizedProfile.restingHeartRateBpm != null ||
+            normalizedProfile.birthYear != null ->
             BodyEnergyCalibrationMode.MANUAL_VALUES
         else -> BodyEnergyCalibrationMode.AUTOMATIC
     }
@@ -415,31 +422,32 @@ private fun resolveIntensityContext(
     inputs: BodyEnergyTimelineInputs,
     heartRateSamples: List<HeartRateSample>,
 ): IntensityContext {
-    val calibration = inputs.calibration.normalized(inputs.date)
+    val calibration = inputs.calibration.normalized()
+    val profile = inputs.bodyProfile.normalized(inputs.date)
     if (calibration.useManualZones && calibration.manualZoneThresholdsBpm != null) {
         return IntensityContext(
-            restingHeartRateBpm = calibration.manualRestingHeartRateBpm?.toLong()
+            restingHeartRateBpm = profile.restingHeartRateBpm?.toLong()
                 ?: inputs.restingHeartRateBpm
                 ?: inputs.baselineRestingHeartRateBpm
                 ?: heartRateSamples.estimatedRestingHeartRate(),
-            maxHeartRateBpm = calibration.manualMaxHeartRateBpm?.toLong(),
+            maxHeartRateBpm = profile.maxHeartRateBpm?.toLong(),
             manualZones = calibration.manualZoneThresholdsBpm,
             confidence = BodyEnergyConfidence.HIGH,
         )
     }
 
-    val resting = calibration.manualRestingHeartRateBpm?.toLong()
+    val resting = profile.restingHeartRateBpm?.toLong()
         ?: inputs.restingHeartRateBpm
         ?: inputs.baselineRestingHeartRateBpm
         ?: heartRateSamples.estimatedRestingHeartRate()
     val observedMax = listOfNotNull(
-        calibration.manualMaxHeartRateBpm?.toLong(),
+        profile.maxHeartRateBpm?.toLong(),
         inputs.observedMaxHeartRateBpm,
         heartRateSamples.maxOfOrNull { it.beatsPerMinute },
     ).maxOrNull()
-    val ageMax = calibration.ageYears(inputs.date)?.let { 220L - it }
+    val ageMax = profile.ageYears(inputs.date)?.let { 220L - it }
     val maxHeartRate = when {
-        calibration.manualMaxHeartRateBpm != null -> calibration.manualMaxHeartRateBpm.toLong()
+        profile.maxHeartRateBpm != null -> profile.maxHeartRateBpm.toLong()
         resting != null && observedMax != null && observedMax >= maxOf(150L, resting + 60L) -> observedMax
         ageMax != null -> ageMax
         resting != null && observedMax != null -> maxOf(observedMax + 10L, resting + 70L)
@@ -447,7 +455,7 @@ private fun resolveIntensityContext(
         else -> null
     }
     val confidence = when {
-        calibration.manualMaxHeartRateBpm != null && resting != null -> BodyEnergyConfidence.HIGH
+        profile.maxHeartRateBpm != null && resting != null -> BodyEnergyConfidence.HIGH
         resting != null && observedMax != null && maxHeartRate == observedMax -> BodyEnergyConfidence.MEDIUM
         resting != null && ageMax != null -> BodyEnergyConfidence.MEDIUM
         resting != null && maxHeartRate != null -> BodyEnergyConfidence.LOW

@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -40,6 +41,7 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkControl
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthExportFingerprint
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategorySummary
@@ -312,6 +314,64 @@ class SettingsViewModelTest {
         }
     }
 
+    @Test fun `re-selecting the same file reuses the previous analysis`() = runTest {
+        val importService = importService()
+        val importController = importController()
+        val firstUri = mockk<Uri>()
+        val secondUri = mockk<Uri>()
+
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs(),
+            appleHealthImportService = importService,
+            appleHealthImportWorkController = importController,
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.analyzeAppleHealthExport(firstUri)
+        advanceUntilIdle()
+        val firstAnalysis = vm.uiState.value.appleHealthImportAnalysis
+        assertEquals(setOf(AppleHealthImportCategory.ACTIVITY), vm.uiState.value.selectedAppleHealthImportCategories)
+
+        vm.analyzeAppleHealthExport(secondUri)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { importService.analyzeAppleHealthExport(any(), any()) }
+        assertEquals(firstAnalysis, vm.uiState.value.appleHealthImportAnalysis)
+        assertEquals(setOf(AppleHealthImportCategory.ACTIVITY), vm.uiState.value.selectedAppleHealthImportCategories)
+        verify { importController.persistReadPermission(firstUri) }
+        verify { importController.persistReadPermission(secondUri) }
+    }
+
+    @Test fun `re-selecting a different file re-analyzes it`() = runTest {
+        val importService = importService()
+        val firstUri = mockk<Uri>()
+        val secondUri = mockk<Uri>()
+        coEvery { importService.fingerprintOf(firstUri) } returns AppleHealthExportFingerprint(
+            displayName = "export-1.zip",
+            size = 1L,
+        )
+        coEvery { importService.fingerprintOf(secondUri) } returns AppleHealthExportFingerprint(
+            displayName = "export-2.zip",
+            size = 2L,
+        )
+
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs(),
+            appleHealthImportService = importService,
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.analyzeAppleHealthExport(firstUri)
+        advanceUntilIdle()
+        vm.analyzeAppleHealthExport(secondUri)
+        advanceUntilIdle()
+
+        coVerify(exactly = 2) { importService.analyzeAppleHealthExport(any(), any()) }
+    }
+
     private fun viewModel(
         repository: HealthRepository = repo(),
         preferencesRepository: PreferencesRepository = prefs(),
@@ -372,6 +432,7 @@ class SettingsViewModelTest {
             every { prefs.favoriteActivityExerciseType } returns null
             every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
             every { prefs.caffeinePreferences() } answers { caffeinePreferences }
+            every { prefs.bodyProfile() } returns BodyProfile()
             every { prefs.healthConnectSyncEnabled } returns true
             every { prefs.appLockEnabled } returns false
             every { prefs.appLanguage = any() } just runs
@@ -400,6 +461,10 @@ class SettingsViewModelTest {
     private fun importService(): AppleHealthImportService =
         mockk<AppleHealthImportService>().also { service ->
             coEvery { service.analyzeAppleHealthExport(any(), any()) } returns appleHealthAnalysis()
+            coEvery { service.fingerprintOf(any()) } returns AppleHealthExportFingerprint(
+                displayName = "export.zip",
+                size = 1L,
+            )
         }
 
     private fun appleHealthAnalysis(): AppleHealthImportAnalysisResult =

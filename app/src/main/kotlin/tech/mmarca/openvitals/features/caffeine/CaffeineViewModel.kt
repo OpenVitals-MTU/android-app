@@ -27,6 +27,7 @@ import tech.mmarca.openvitals.domain.insights.CaffeineInsightCalculator
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeineInsights
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 
 @Immutable
@@ -37,6 +38,7 @@ data class CaffeineUiState(
     val homeDisplay: CaffeineInsights = CaffeineInsights(),
     val analyticsDisplay: CaffeineInsights = CaffeineInsights(),
     val preferences: CaffeinePreferences = CaffeinePreferences(),
+    val bodyProfile: BodyProfile = BodyProfile(),
     val showSetup: Boolean = false,
     val selectedEntryId: String? = null,
     val error: ScreenError? = null,
@@ -58,6 +60,7 @@ class CaffeineViewModel(
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     initialAnalyticsRange: CaffeineAnalyticsRange = CaffeineAnalyticsRange.LAST_30_DAYS,
     private val preferenceChanges: Flow<CaffeinePreferences> = emptyFlow(),
+    private val bodyProfileChanges: Flow<BodyProfile> = emptyFlow(),
 ) : ViewModel() {
 
     @Inject
@@ -70,12 +73,14 @@ class CaffeineViewModel(
         preferencesRepository = preferencesRepository,
         dispatchers = dispatchers,
         preferenceChanges = preferencesRepository.caffeinePreferencesFlow,
+        bodyProfileChanges = preferencesRepository.bodyProfileFlow,
     )
 
     private val _uiState = MutableStateFlow(
         CaffeineUiState(
             analyticsRange = initialAnalyticsRange,
             preferences = preferencesRepository.caffeinePreferences(),
+            bodyProfile = preferencesRepository.bodyProfile(),
         )
     )
     val uiState: StateFlow<CaffeineUiState> = _uiState.asStateFlow()
@@ -83,6 +88,7 @@ class CaffeineViewModel(
 
     init {
         observePreferences()
+        observeBodyProfile()
         load()
     }
 
@@ -109,16 +115,19 @@ class CaffeineViewModel(
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val preferences = _uiState.value.preferences
+                val bodyProfile = _uiState.value.bodyProfile
                 val displays = withContext(dispatchers.default) {
                     val home = CaffeineInsightCalculator.build(
                         entries = result.entries,
                         period = homePeriod,
                         preferences = preferences,
+                        bodyProfile = bodyProfile,
                     )
                     val analytics = CaffeineInsightCalculator.build(
                         entries = result.entries,
                         period = analyticsPeriod,
                         preferences = preferences,
+                        bodyProfile = bodyProfile,
                     )
                     home to analytics
                 }
@@ -163,6 +172,15 @@ class CaffeineViewModel(
         }
     }
 
+    private fun observeBodyProfile() {
+        viewModelScope.launch {
+            bodyProfileChanges.drop(1).collect { bodyProfile ->
+                _uiState.value = _uiState.value.copy(bodyProfile = bodyProfile)
+                rebuildDisplay()
+            }
+        }
+    }
+
     private suspend fun rebuildDisplay() {
         val state = _uiState.value
         val today = LocalDate.now()
@@ -174,12 +192,14 @@ class CaffeineViewModel(
                 period = homePeriod,
                 preferences = state.preferences,
                 now = Instant.now(),
+                bodyProfile = state.bodyProfile,
             )
             val analytics = CaffeineInsightCalculator.build(
                 entries = state.entries,
                 period = analyticsPeriod,
                 preferences = state.preferences,
                 now = Instant.now(),
+                bodyProfile = state.bodyProfile,
             )
             home to analytics
         }

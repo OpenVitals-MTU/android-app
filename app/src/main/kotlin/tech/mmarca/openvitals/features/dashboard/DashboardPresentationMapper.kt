@@ -19,6 +19,7 @@ object DashboardPresentationMapper {
         unitFormatter: UnitFormatter,
         dateTimeFormatterProvider: DateTimeFormatterProvider,
         loadingWidgets: Set<DashboardWidgetId> = emptySet(),
+        bodyEnergySetupCompleted: Boolean = false,
     ): DashboardDisplayState {
         val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
         val widgets = DashboardWidgetId.entries.associateWith { widgetId ->
@@ -30,6 +31,7 @@ object DashboardPresentationMapper {
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 sleepGoalMs = sleepGoalMs,
                 isLoading = widgetId in loadingWidgets,
+                bodyEnergySetupCompleted = bodyEnergySetupCompleted,
             )
         }.filterValues { it != null }.mapValues { (_, value) -> value!! }
 
@@ -44,6 +46,7 @@ object DashboardPresentationMapper {
         dateTimeFormatterProvider: DateTimeFormatterProvider,
         sleepGoalMs: Long,
         isLoading: Boolean,
+        bodyEnergySetupCompleted: Boolean,
     ): DashboardWidgetDisplayModel? = when (widgetId) {
         DashboardWidgetId.STEPS -> metricWidget(
             id = widgetId,
@@ -172,11 +175,14 @@ object DashboardPresentationMapper {
         )
         DashboardWidgetId.BODY_ENERGY -> optionalMetricWidget(
             id = widgetId,
-            value = data.bodyEnergyTimeline?.let { DisplayValue(unitFormatter.count(it.currentScore), "") },
-            measurementSubtitle = data.bodyEnergyTimeline?.let { timeline ->
-                "Start ${timeline.startScore}  +${timeline.charged} / -${timeline.drained}"
-            },
+            value = data.bodyEnergyTimeline
+                ?.takeIf { bodyEnergySetupCompleted }
+                ?.let { DisplayValue(unitFormatter.count(it.currentScore), "") },
+            measurementSubtitle = data.bodyEnergyTimeline
+                ?.takeIf { bodyEnergySetupCompleted }
+                ?.let { timeline -> "Start ${timeline.startScore}  +${timeline.charged} / -${timeline.drained}" },
             requiresNoDataMessage = true,
+            isNotSetUp = !bodyEnergySetupCompleted,
             isLoading = isLoading,
         )
         DashboardWidgetId.HYDRATION -> metricWidget(
@@ -397,6 +403,7 @@ object DashboardPresentationMapper {
         measurementSubtitle: String? = null,
         showTitle: Boolean = true,
         requiresNoDataMessage: Boolean = false,
+        isNotSetUp: Boolean = false,
         isLoading: Boolean,
     ): DashboardWidgetDisplayModel =
         DashboardWidgetDisplayModel(
@@ -411,6 +418,7 @@ object DashboardPresentationMapper {
             measurementSubtitle = measurementSubtitle,
             showTitle = showTitle,
             requiresNoDataMessage = requiresNoDataMessage,
+            isNotSetUp = isNotSetUp,
         )
 
     private fun weeklyCardioLoadWidget(

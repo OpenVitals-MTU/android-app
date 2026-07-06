@@ -70,6 +70,18 @@ fun BodyEnergyDetailsScreen(
             showTimeRangeSelector = false,
             syncPaused = uxState.syncPaused,
         ) {
+            if (!state.calibration.setupCompleted) {
+                item {
+                    BodyEnergyCalibrationCard(
+                        calibration = state.calibration,
+                        onSave = viewModel::completeSetup,
+                        onUseAutomatic = viewModel::useAutomatic,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+                return@MetricDetailScaffold
+            }
+
             val result = state.result
             if (result == null && state.error != null) {
                 item {

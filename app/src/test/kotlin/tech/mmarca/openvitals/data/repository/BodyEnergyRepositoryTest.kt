@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 
 class BodyEnergyRepositoryTest {
 
@@ -56,6 +57,7 @@ class BodyEnergyRepositoryTest {
 
         val preferencesRepository = mockk<PreferencesRepository>()
         every { preferencesRepository.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
+        every { preferencesRepository.bodyProfile() } returns BodyProfile()
 
         val cacheStore = mockk<BodyEnergyTimelineCacheStore>()
         every { cacheStore.load(any(), any()) } returns null

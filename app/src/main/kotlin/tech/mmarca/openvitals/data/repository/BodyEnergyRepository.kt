@@ -52,8 +52,10 @@ class BodyEnergyRepositoryImpl @Inject constructor(
         refreshMode: RefreshMode,
     ): BodyEnergyTimeline = coroutineScope {
         val calibration = preferencesRepository.bodyEnergyCalibration()
+        val bodyProfile = preferencesRepository.bodyProfile()
         val permissionSignature = permissionSignature()
-        val signature = timelineSignature(calibration.signature(date), permissionSignature)
+        val combinedSignature = "${calibration.signature()}|${bodyProfile.signature(date)}"
+        val signature = timelineSignature(combinedSignature, permissionSignature)
         val cached = cacheStore.load(date, signature)
         if (cached != null && refreshMode == RefreshMode.NORMAL && !cached.isStale(date)) {
             return@coroutineScope cached
@@ -101,6 +103,7 @@ class BodyEnergyRepositoryImpl @Inject constructor(
                     respiratoryRateBaseline = baselineValues.respiratoryRateBaseline,
                     previousEndScore = previousEnd,
                     calibration = calibration,
+                    bodyProfile = bodyProfile,
                     now = Instant.now(),
                     zone = zone,
                 )
