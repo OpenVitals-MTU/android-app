@@ -1387,6 +1387,7 @@
     <string name="sleep_stage_rem">REM</string>
     <string name="sleep_stage_awake_in_bed">Sveglio a letto</string>
     <string name="sleep_stage_unknown">Sconosciuto</string>
+    <string name="sleep_stages_share_title">Percentuale del tempo a letto</string>
     <string name="cycle_permissions_missing_title">Autorizzazioni ciclo mancanti</string>
     <string name="cycle_permissions_missing_body">Concedi le autorizzazioni di tracciamento ciclo per visualizzare i giorni mestruali, i test di ovulazione, il muco cervicale e la temperatura basale.</string>
     <string name="cycle_observation_menstruation_period">Periodo mestruale</string>

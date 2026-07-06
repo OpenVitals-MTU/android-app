@@ -148,6 +148,7 @@ private fun SleepSessionTimelineCardContent(
                     .padding(top = 4.dp),
                 timelineStart = session.startTime,
                 timelineEnd = session.endTime,
+                showInlineLabels = false,
             )
         }
 

@@ -1,15 +1,20 @@
 package tech.mmarca.openvitals.features.sleep
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,11 +35,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.domain.model.SleepStage
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 @Composable
 internal fun SleepStagesBar(
@@ -95,6 +102,7 @@ internal fun SleepStagesLaneChart(
     modifier: Modifier = Modifier,
     timelineStart: Instant? = null,
     timelineEnd: Instant? = null,
+    showInlineLabels: Boolean = true,
 ) {
     val orderedStages = stages
         .filter { it.durationMs > 0L }
@@ -223,9 +231,13 @@ internal fun SleepStagesLaneChart(
             Column(modifier = Modifier.fillMaxSize()) {
                 lanes.forEach { lane ->
                     val label = sleepStageLabel(lane.labelStageType)
-                    val duration = unitFormatter.duration(laneDurationMs(orderedStages, lane))
+                    val text = if (showInlineLabels) {
+                        "$label - ${unitFormatter.duration(laneDurationMs(orderedStages, lane))}"
+                    } else {
+                        label
+                    }
                     Text(
-                        text = "$label - $duration",
+                        text = text,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
@@ -260,6 +272,97 @@ internal fun SleepStagesLaneChart(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Grouped per-stage durations (Awake / REM / Light / Deep) for the stage breakdown. */
+internal data class SleepStageDurations(
+    val awakeMs: Long,
+    val remMs: Long,
+    val lightMs: Long,
+    val deepMs: Long,
+) {
+    val totalMs: Long get() = awakeMs + remMs + lightMs + deepMs
+}
+
+/**
+ * "Share of time in bed" card wrapping the [SleepStageBreakdown]. Self-hides when there is no stage
+ * data. Used across the day / week / month sleep views for a consistent breakdown card.
+ */
+@Composable
+internal fun SleepStageShareCard(
+    durations: SleepStageDurations,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    if (durations.totalMs <= 0L) return
+    DetailSectionCard(title = stringResource(R.string.sleep_stages_share_title), modifier = modifier) {
+        SleepStageBreakdown(durations = durations, unitFormatter = unitFormatter)
+    }
+}
+
+/**
+ * Vertical per-stage list (Awake / REM / Light / Deep). Each row shows the stage name, a
+ * stage-colored bar that fills to the stage's share of the total, and the duration with that share
+ * in parentheses.
+ */
+@Composable
+internal fun SleepStageBreakdown(
+    durations: SleepStageDurations,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    val rows = listOf(
+        SleepStage.STAGE_AWAKE to durations.awakeMs,
+        SleepStage.STAGE_REM to durations.remMs,
+        SleepStage.STAGE_LIGHT to durations.lightMs,
+        SleepStage.STAGE_DEEP to durations.deepMs,
+    ).filter { it.second > 0L }
+    val totalMs = durations.totalMs.takeIf { it > 0L } ?: return
+    if (rows.isEmpty()) return
+
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        rows.forEach { (stageType, durationMs) ->
+            val fraction = (durationMs.toFloat() / totalMs).coerceIn(0f, 1f)
+            val percent = (fraction * 100f).roundToInt()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = sleepStageLabel(stageType),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.width(64.dp),
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(trackColor),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(stageColor(stageType)),
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = "${unitFormatter.duration(durationMs)} (${percent}%)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

@@ -1402,6 +1402,7 @@
     <string name="sleep_stage_rem">REM</string>
     <string name="sleep_stage_awake_in_bed">Despierto en cama</string>
     <string name="sleep_stage_unknown">Desconocido</string>
+    <string name="sleep_stages_share_title">Porcentaje del tiempo en cama</string>
 
     <string name="cycle_permissions_missing_title">Faltan permisos del ciclo</string>
     <string name="cycle_permissions_missing_body">Concede permisos de seguimiento del ciclo para mostrar días de periodo, pruebas de ovulación, moco cervical y temperatura basal.</string>

@@ -42,6 +42,7 @@ import tech.mmarca.openvitals.ui.components.DailyGoalStatistics
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricBarChart
+import tech.mmarca.openvitals.ui.components.localizedPeriodTitle
 import tech.mmarca.openvitals.ui.components.MetricInterpretationCard
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.PeriodBarAggregation
@@ -73,23 +74,30 @@ internal fun LazyListScope.renderSleepDayOrderedContent(
 
     renderOrderedMetricDetailSections(sectionContext) {
         section(MetricDetailSectionId.INTRADAY_CHART) {
-            SleepSessionTimelineCard(
-                session = summary,
-                selectedDate = state.selectedDate,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                timeRangeText = dailySleepTimeRangeText(
-                    sessions = display.dailySessions,
+            Column {
+                SleepSessionTimelineCard(
+                    session = summary,
                     selectedDate = state.selectedDate,
+                    unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                ),
-                onClick = display.dailySessions.singleOrNull()?.let { session ->
-                    { onOpenSleepSession(session.id) }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+                    timeRangeText = dailySleepTimeRangeText(
+                        sessions = display.dailySessions,
+                        selectedDate = state.selectedDate,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    ),
+                    onClick = display.dailySessions.singleOrNull()?.let { session ->
+                        { onOpenSleepSession(session.id) }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                SleepStageShareCard(
+                    durations = sleepStageDurationsOf(display.overviewSummary),
+                    unitFormatter = unitFormatter,
+                    modifier = metricModifier(),
+                )
+            }
         }
         section(
             MetricDetailSectionId.ACTIVITY_SUMMARY,
@@ -167,6 +175,9 @@ internal fun LazyListScope.renderSleepPeriodOrderedContent(
     val goalProgress = sleepGoalProgress(state, period, display.durationPoints)
     val nightsWithSleep = display.durationPoints.filter { it.hours > 0.0 }
     val averageHours = nightsWithSleep.map { it.hours }.average().takeIf { !it.isNaN() } ?: 0.0
+    val scheduleDays = display.overviewDays.toSleepScheduleDays()
+    val useScheduleChart = state.selectedRange in setOf(TimeRange.WEEK, TimeRange.MONTH) &&
+        scheduleDays.any { it.inBedStart != null }
 
     renderOrderedMetricDetailSections(sectionContext) {
         section(MetricDetailSectionId.ACTIVITY_SUMMARY) {
@@ -181,26 +192,50 @@ internal fun LazyListScope.renderSleepPeriodOrderedContent(
             )
         }
         section(MetricDetailSectionId.PERIOD_CHART) {
-            MetricBarChart(
-                title = stringResource(R.string.metric_sleep),
-                values = display.durationPoints.map { PeriodChartValue(date = it.date, value = it.hours) },
-                selectedRange = state.selectedRange,
-                period = period,
-                accentColor = SleepColor,
-                accentAlpha = 0.75f,
-                summaryValue = "${
-                    stringResource(R.string.summary_avg_value, "${unitFormatter.decimal(averageHours, 1)}h")
-                } · ${stringResource(R.string.summary_nights, unitFormatter.count(nightsWithSleep.size))}",
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("sleep_week_period_content")
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
-                selectedDate = chartDaySelection.selectedDate,
-                onDateSelected = chartDaySelection.onDateSelected,
-                valueFormatter = { "${unitFormatter.decimal(it, 1)}h" },
-            )
+            val summaryValue = "${
+                stringResource(R.string.summary_avg_value, "${unitFormatter.decimal(averageHours, 1)}h")
+            } · ${stringResource(R.string.summary_nights, unitFormatter.count(nightsWithSleep.size))}"
+            val chartModifier = Modifier
+                .fillMaxWidth()
+                .testTag("sleep_week_period_content")
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+            Column {
+                if (useScheduleChart) {
+                    SleepScheduleStageChart(
+                        title = stringResource(R.string.metric_sleep),
+                        summaryText = "${localizedPeriodTitle(state.selectedRange, period)} · $summaryValue",
+                        days = scheduleDays,
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        averageSchedule = display.overviewSummary.schedule,
+                        selectedDate = chartDaySelection.selectedDate,
+                        onDateSelected = chartDaySelection.onDateSelected,
+                        modifier = chartModifier,
+                    )
+                } else {
+                    MetricBarChart(
+                        title = stringResource(R.string.metric_sleep),
+                        values = display.durationPoints.map { PeriodChartValue(date = it.date, value = it.hours) },
+                        selectedRange = state.selectedRange,
+                        period = period,
+                        accentColor = SleepColor,
+                        accentAlpha = 0.75f,
+                        summaryValue = summaryValue,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = chartModifier,
+                        yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
+                        selectedDate = chartDaySelection.selectedDate,
+                        onDateSelected = chartDaySelection.onDateSelected,
+                        valueFormatter = { "${unitFormatter.decimal(it, 1)}h" },
+                    )
+                }
+                SleepStageShareCard(
+                    durations = sleepStageDurationsOf(display.overviewSummary),
+                    unitFormatter = unitFormatter,
+                    modifier = metricModifier(),
+                )
+            }
         }
         section(MetricDetailSectionId.SELECTED_DAY_ENTRIES, selectedDate != null) {
             selectedDate?.let { date ->
@@ -265,6 +300,13 @@ internal fun LazyListScope.renderSleepPeriodOrderedContent(
         }
     }
 }
+
+private fun sleepStageDurationsOf(summary: SleepOverviewSummary) = SleepStageDurations(
+    awakeMs = summary.awakeDurationMs,
+    remMs = summary.remDurationMs,
+    lightMs = summary.coreDurationMs,
+    deepMs = summary.deepDurationMs,
+)
 
 private fun sleepGoalProgress(
     state: SleepUiState,

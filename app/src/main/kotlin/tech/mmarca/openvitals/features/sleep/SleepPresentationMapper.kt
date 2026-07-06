@@ -10,8 +10,11 @@ import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailySleepDuration
+import tech.mmarca.openvitals.domain.model.AwakeStageTypes
+import tech.mmarca.openvitals.domain.model.CoreStageTypes
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
+import tech.mmarca.openvitals.domain.model.durationMsForTypes
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 import tech.mmarca.openvitals.domain.model.sleepSessionsForRange
@@ -179,6 +182,21 @@ private fun SleepData?.withDurationOverride(
     return this?.copy(durationMs = durationMs)
 }
 
+/**
+ * One [SleepScheduleDay] per overview day for the time-aligned schedule chart: the night's
+ * in-bed window (earliest start → latest end across that day's sessions) plus the union of all
+ * stages. Nights with no sessions produce null start/end and empty stages.
+ */
+fun List<SleepOverviewDay>.toSleepScheduleDays(): List<SleepScheduleDay> = map { day ->
+    val sessions = day.sessions
+    SleepScheduleDay(
+        date = day.date,
+        inBedStart = sessions.minOfOrNull { it.startTime },
+        inBedEnd = sessions.maxOfOrNull { it.endTime },
+        stages = sessions.flatMap { it.stages }.sortedBy { it.startTime },
+    )
+}
+
 fun List<SleepOverviewDay>.toSleepOverviewSummary(): SleepOverviewSummary {
     val nights = filter { it.sleepDurationMs > 0L }
     val scoredDays = filter { it.sleepScore.confidence != SleepScoreConfidence.NO_DATA }
@@ -195,8 +213,11 @@ fun List<SleepOverviewDay>.toSleepOverviewSummary(): SleepOverviewSummary {
             ?.roundToInt(),
         sleepScoreConfidence = scoredDays.sleepScoreConfidence(),
         sleepDurationMs = durationSource.averageDurationMs { it.sleepDurationMs },
+        timeInBedMs = durationSource.averageDurationMs { it.timeInBedMs },
         schedule = mainSessions.averageSchedule(),
+        awakeDurationMs = durationSource.averageDurationMs { it.awakeDurationMs },
         remDurationMs = durationSource.averageDurationMs { it.remDurationMs },
+        coreDurationMs = durationSource.averageDurationMs { it.coreDurationMs },
         deepDurationMs = durationSource.averageDurationMs { it.deepDurationMs },
         sleepEfficiencyPercent = scoredDays
             .takeIf { it.isNotEmpty() }
@@ -219,11 +240,20 @@ private val SleepOverviewDay.sleepDurationMs: Long
         ?.takeIf { it > 0L }
         ?: sessions.sumOf { sleepDurationMsFromStages(it.stages, it.durationMs) }
 
+private val SleepOverviewDay.timeInBedMs: Long
+    get() = sessions.sumOf { (it.endTime.toEpochMilli() - it.startTime.toEpochMilli()).coerceAtLeast(0L) }
+
+private val SleepOverviewDay.awakeDurationMs: Long
+    get() = sessions.stageDurationMs(AwakeStageTypes)
+
 private val SleepOverviewDay.remDurationMs: Long
-    get() = sessions.stageDurationMs(SleepStage.STAGE_REM)
+    get() = sessions.stageDurationMs(setOf(SleepStage.STAGE_REM))
+
+private val SleepOverviewDay.coreDurationMs: Long
+    get() = sessions.stageDurationMs(CoreStageTypes)
 
 private val SleepOverviewDay.deepDurationMs: Long
-    get() = sessions.stageDurationMs(SleepStage.STAGE_DEEP)
+    get() = sessions.stageDurationMs(setOf(SleepStage.STAGE_DEEP))
 
 private val SleepOverviewDay.mainSleepSession: SleepData?
     get() = sessions.mainSleepSession()
@@ -261,12 +291,8 @@ private fun List<SleepData>.averageSchedule(): SleepOverviewSchedule? {
 private fun List<SleepData>.mainSleepSession(): SleepData? =
     maxByOrNull { sleepDurationMsFromStages(it.stages, it.durationMs) }
 
-private fun List<SleepData>.stageDurationMs(stageType: Int): Long =
-    sumOf { session ->
-        session.stages
-            .filter { it.stageType == stageType }
-            .sumOf { it.durationMs.coerceAtLeast(0L) }
-    }
+private fun List<SleepData>.stageDurationMs(stageTypes: Set<Int>): Long =
+    sumOf { session -> session.stages.durationMsForTypes(stageTypes) }
 
 private fun circularMeanMinutes(values: List<Int>): Int {
     if (values.isEmpty()) return 0

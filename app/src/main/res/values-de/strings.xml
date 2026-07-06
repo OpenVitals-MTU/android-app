@@ -1402,6 +1402,7 @@
     <string name="sleep_stage_rem">REM</string>
     <string name="sleep_stage_awake_in_bed">Wach im Bett</string>
     <string name="sleep_stage_unknown">Unbekannt</string>
+    <string name="sleep_stages_share_title">Anteil der Zeit im Bett</string>
 
     <string name="cycle_permissions_missing_title">Zyklusberechtigungen fehlen</string>
     <string name="cycle_permissions_missing_body">Erteile Berechtigungen zur Zyklusverfolgung, um Menstruationstage, Ovulationstests, Zervixschleim und Basaltemperatur anzuzeigen.</string>

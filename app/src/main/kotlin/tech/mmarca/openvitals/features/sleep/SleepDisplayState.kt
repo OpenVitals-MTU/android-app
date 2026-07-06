@@ -6,6 +6,8 @@ import tech.mmarca.openvitals.domain.insights.CrossMetricValue
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.insights.SleepScoreEstimate
 import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepStage
+import java.time.Instant
 import java.time.LocalDate
 
 @Immutable
@@ -43,8 +45,11 @@ data class SleepOverviewSummary(
     val sleepScore: Int? = null,
     val sleepScoreConfidence: SleepScoreConfidence = SleepScoreConfidence.NO_DATA,
     val sleepDurationMs: Long = 0L,
+    val timeInBedMs: Long = 0L,
     val schedule: SleepOverviewSchedule? = null,
+    val awakeDurationMs: Long = 0L,
     val remDurationMs: Long = 0L,
+    val coreDurationMs: Long = 0L,
     val deepDurationMs: Long = 0L,
     val sleepEfficiencyPercent: Double? = null,
     val remValues: List<Double> = emptyList(),
@@ -56,4 +61,16 @@ data class SleepOverviewSummary(
 data class SleepOverviewSchedule(
     val startMinute: Int,
     val endMinute: Int,
+)
+
+/**
+ * One night's sleep window and stages, used by the time-aligned week/month schedule chart.
+ * [inBedStart]/[inBedEnd] are null for nights with no recorded sleep.
+ */
+@Immutable
+data class SleepScheduleDay(
+    val date: LocalDate,
+    val inBedStart: Instant?,
+    val inBedEnd: Instant?,
+    val stages: List<SleepStage> = emptyList(),
 )

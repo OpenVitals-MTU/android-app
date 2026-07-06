@@ -60,6 +60,16 @@ data class SleepReadData(
     val dailyAggregateDurations: List<DailySleepDuration> = emptyList(),
 )
 
+/** Stage types shown as "Awake" in grouped breakdowns (in-bed awake, excluding out-of-bed). */
+val AwakeStageTypes: Set<Int> = setOf(SleepStage.STAGE_AWAKE, SleepStage.STAGE_AWAKE_IN_BED)
+
+/** Stage types shown as "Core" (Apple naming) — light plus generic sleeping. */
+val CoreStageTypes: Set<Int> = setOf(SleepStage.STAGE_LIGHT, SleepStage.STAGE_SLEEPING)
+
+/** Total duration of the stages whose [SleepStage.stageType] is in [types]. */
+fun List<SleepStage>.durationMsForTypes(types: Set<Int>): Long =
+    filter { it.stageType in types }.sumOf { it.durationMs.coerceAtLeast(0L) }
+
 internal fun sleepDurationMsFromStages(
     stages: List<SleepStage>,
     fallbackDurationMs: Long,

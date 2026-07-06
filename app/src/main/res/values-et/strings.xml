@@ -1408,6 +1408,7 @@
     <string name="sleep_stage_rem">REM</string>
     <string name="sleep_stage_awake_in_bed">Ärkvel voodis</string>
     <string name="sleep_stage_unknown">Tundmatu</string>
+    <string name="sleep_stages_share_title">Osakaal voodis veedetud ajast</string>
 
     <string name="cycle_permissions_missing_title">Tsükli load puuduvad</string>
     <string name="cycle_permissions_missing_body">Anna tsükli jälgimise load, et näidata menstruatsioonipäevi, ovulatsioonitesti, emakakaelalima ja basaaltemperatuuri.</string>
