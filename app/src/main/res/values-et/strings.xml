@@ -1219,6 +1219,9 @@
     <string name="settings_calorie_data_body">Näita vaikimisi Health Connecti tavalisi kogukaloreid. Lülita sisse OpenVitalsi arvutused, et täita puuduvad kogusummad aktiivsete kalorite ja BMR-i põhjal.</string>
     <string name="settings_caffeine_title">Kofeiinimudel</string>
     <string name="settings_caffeine_body">Need väärtused isikupärastavad kofeiinitaset, magamaminekuprognoosi ja ohutu une ülevaateid. Kirjed jäävad Health Connectisse.</string>
+    <string name="settings_body_profile_title">Kehaprofiil</string>
+    <string name="settings_body_profile_body">Vanus, kaal ja pulss isikupärastavad kehaenergia ja kofeiini hinnanguid. Kõik väljad on valikulised.</string>
+    <string name="settings_body_profile_weight">Kaal</string>
     <string name="settings_sleep_range_title">Unevahemik</string>
     <string name="settings_sleep_range_body">Vali, millisele päevale unesessioonid määratakse.</string>
     <string name="settings_sleep_range_rolling_24h">Libisev 24h</string>
@@ -1284,6 +1287,7 @@
     <string name="settings_apple_health_import_report_saved">Impordiraport salvestatud.</string>
     <string name="settings_apple_health_import_report_save_failed">Impordiraportit ei õnnestunud salvestada.</string>
     <string name="settings_apple_health_import_error">Import ebaõnnestus: %1$s</string>
+    <string name="settings_apple_health_import_permission_denied">Ligipääs valitud failile kadus, mistõttu importimist ei saanud jätkata. Vali sama Apple Health\'i eksport uuesti, et jätkata täpselt sealt, kus pooleli jäi.</string>
     <string name="settings_fit_import_title">FIT-importija</string>
     <string name="settings_fit_import_body">Impordi FIT treeningu-, marsruudi- või harjutusfaile, vaata tuvastatud üksikasjad üle ja vali, kas salvestada need Health Connectisse.</string>
     <string name="settings_fit_import_action">Impordi FIT-fail</string>
@@ -1613,6 +1617,7 @@
     <string name="body_energy_calibration_skip">Jäta praegu vahele</string>
     <string name="body_energy_calibration_saved">Kehaenergia kalibreerimine salvestatud</string>
     <string name="body_energy_calibration_reset">Kehaenergia kalibreerimine lähtestatud automaatseks</string>
+    <string name="body_energy_not_set_up">Pole seadistatud</string>
     <string name="body_energy_timeline_estimated">OpenVitalsi hinnang</string>
     <string name="body_energy_timeline_current">Praegune</string>
     <string name="body_energy_timeline_start">Algus</string>

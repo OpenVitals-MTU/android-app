@@ -1212,6 +1212,9 @@
     <string name="settings_calorie_data_body">Standardmäßig werden nur Health-Connect-Gesamtkalorien angezeigt. Aktiviere OpenVitals-Berechnungen, um fehlende Gesamtwerte aus aktiven Kalorien und BMR zu ergänzen.</string>
     <string name="settings_caffeine_title">Koffeinmodell</string>
     <string name="settings_caffeine_body">Diese Werte personalisieren Koffeinspiegel, Schlafenszeitprognose und sichere Schlafhinweise. Einträge bleiben in Health Connect.</string>
+    <string name="settings_body_profile_title">Körperprofil</string>
+    <string name="settings_body_profile_body">Alter, Gewicht und Herzfrequenz personalisieren die Schätzungen für Body-Energy und Koffein. Alle Felder sind optional.</string>
+    <string name="settings_body_profile_weight">Gewicht</string>
     <string name="settings_sleep_range_title">Schlafzeitraum</string>
     <string name="settings_sleep_range_body">Wähle, welchem Tag Schlafsitzungen zugeordnet werden.</string>
     <string name="settings_sleep_range_rolling_24h">Gleitende 24 h</string>
@@ -1270,6 +1273,7 @@
     <string name="settings_apple_health_import_category_cycle">Zyklus</string>
     <string name="settings_apple_health_import_category_cycle_desc">Menstruation, Ovulation, Zervixschleim, Blutungen, Basaltemperatur und sexuelle Aktivität.</string>
     <string name="settings_apple_health_import_error">Import fehlgeschlagen: %1$s</string>
+    <string name="settings_apple_health_import_permission_denied">Der Zugriff auf die ausgewählte Datei ist verloren gegangen, sodass der Import nicht fortgesetzt werden konnte. Wähle den gleichen Apple-Health-Export erneut aus, um genau dort weiterzumachen, wo du aufgehört hast.</string>
     <string name="settings_apple_health_import_copy_report">Bericht kopieren</string>
     <string name="settings_apple_health_import_copy_error">Fehler kopieren</string>
     <string name="settings_apple_health_import_save_report">Bericht speichern</string>
@@ -1613,6 +1617,7 @@
     <string name="body_energy_calibration_skip">Vorerst überspringen</string>
     <string name="body_energy_calibration_saved">Body-Energy-Kalibrierung gespeichert</string>
     <string name="body_energy_calibration_reset">Body-Energy-Kalibrierung auf automatisch zurückgesetzt</string>
+    <string name="body_energy_not_set_up">Nicht eingerichtet</string>
     <string name="body_energy_timeline_estimated">Von OpenVitals geschätzt</string>
     <string name="body_energy_timeline_current">Aktuell</string>
     <string name="body_energy_timeline_start">Start</string>

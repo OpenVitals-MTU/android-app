@@ -1212,6 +1212,9 @@
     <string name="settings_calorie_data_body">Muestra por defecto solo las calorías totales de Health Connect. Activa los cálculos de OpenVitals para completar totales faltantes con calorías activas y BMR.</string>
     <string name="settings_caffeine_title">Modelo de cafeína</string>
     <string name="settings_caffeine_body">Estos valores personalizan el nivel de cafeína, la previsión de hora de dormir y los avisos de sueño seguro. Las entradas permanecen en Health Connect.</string>
+    <string name="settings_body_profile_title">Perfil corporal</string>
+    <string name="settings_body_profile_body">La edad, el peso y la frecuencia cardíaca personalizan las estimaciones de energía corporal y cafeína. Todos los campos son opcionales.</string>
+    <string name="settings_body_profile_weight">Peso</string>
     <string name="settings_sleep_range_title">Rango de sueño</string>
     <string name="settings_sleep_range_body">Elige a qué día se asignan las sesiones de sueño.</string>
     <string name="settings_sleep_range_rolling_24h">24 h móviles</string>
@@ -1270,6 +1273,7 @@
     <string name="settings_apple_health_import_category_cycle">Seguimiento del ciclo</string>
     <string name="settings_apple_health_import_category_cycle_desc">Menstruación, ovulación, moco cervical, sangrado, temperatura basal y actividad sexual.</string>
     <string name="settings_apple_health_import_error">Error de importación: %1$s</string>
+    <string name="settings_apple_health_import_permission_denied">Se perdió el acceso al archivo seleccionado, por lo que la importación no pudo continuar. Selecciona de nuevo la misma exportación de Apple Health para continuar justo donde lo dejaste.</string>
     <string name="settings_apple_health_import_copy_report">Copiar informe</string>
     <string name="settings_apple_health_import_copy_error">Copiar error</string>
     <string name="settings_apple_health_import_save_report">Guardar informe</string>
@@ -1613,6 +1617,7 @@
     <string name="body_energy_calibration_skip">Omitir por ahora</string>
     <string name="body_energy_calibration_saved">Calibración de energía corporal guardada</string>
     <string name="body_energy_calibration_reset">Calibración de energía corporal restablecida a automático</string>
+    <string name="body_energy_not_set_up">No configurado</string>
     <string name="body_energy_timeline_estimated">Estimado por OpenVitals</string>
     <string name="body_energy_timeline_current">Actual</string>
     <string name="body_energy_timeline_start">Inicio</string>

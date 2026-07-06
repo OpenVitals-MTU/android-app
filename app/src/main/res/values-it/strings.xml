@@ -1205,6 +1205,9 @@
     <string name="settings_calorie_data_body">Mostra le calorie totali semplici di Health Connect. Attiva i calcoli di OpenVitals per completare i totali mancanti con calorie attive e MBR.</string>
     <string name="settings_caffeine_title">Modello caffeina</string>
     <string name="settings_caffeine_body">Questi valori personalizzano il livello di caffeina, la previsione dell\'ora di andare a letto e gli insight per un sonno sicuro. Le voci restano in Health Connect.</string>
+    <string name="settings_body_profile_title">Profilo corporeo</string>
+    <string name="settings_body_profile_body">Età, peso e frequenza cardiaca personalizzano le stime di energia corporea e caffeina. Tutti i campi sono facoltativi.</string>
+    <string name="settings_body_profile_weight">Peso</string>
     <string name="settings_sleep_range_title">Intervallo sonno</string>
     <string name="settings_sleep_range_body">Scegli a quale giorno vengono assegnate le sessioni di sonno.</string>
     <string name="settings_sleep_range_rolling_24h">24 ore mobili</string>
@@ -1270,6 +1273,7 @@
     <string name="settings_apple_health_import_report_saved">Report di importazione salvato.</string>
     <string name="settings_apple_health_import_report_save_failed">Impossibile salvare il report di importazione.</string>
     <string name="settings_apple_health_import_error">Importazione fallita: %1$s</string>
+    <string name="settings_apple_health_import_permission_denied">L\'accesso al file selezionato è andato perso, quindi l\'importazione non ha potuto continuare. Seleziona di nuovo la stessa esportazione di Apple Health per riprendere esattamente da dove eri rimasto.</string>
     <string name="settings_fit_import_title">Importatore FIT</string>
     <string name="settings_fit_import_body">Importa file FIT di attività, percorso o allenamento, rivedi i dettagli rilevati e scegli se salvarli in Health Connect.</string>
     <string name="settings_fit_import_action">Importa file FIT</string>
@@ -1593,6 +1597,7 @@
     <string name="body_energy_calibration_skip">Salta per ora</string>
     <string name="body_energy_calibration_saved">Calibrazione energia corporea salvata</string>
     <string name="body_energy_calibration_reset">Calibrazione energia corporea ripristinata su automatico</string>
+    <string name="body_energy_not_set_up">Non configurato</string>
     <string name="body_energy_timeline_estimated">Stimato da OpenVitals</string>
     <string name="body_energy_timeline_current">Attuale</string>
     <string name="body_energy_timeline_start">Inizio</string>
