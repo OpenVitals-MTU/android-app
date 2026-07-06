@@ -263,6 +263,10 @@ internal data class AppleParsedExport(
     val parsedCorrelations: Int,
     val parsedActivitySummaries: Int,
     val parsedTypeCounts: Map<String, Int>,
+    /** Raw control characters removed from export.xml because XML 1.0 forbids them as literal text. */
+    val sanitizedControlChars: Int = 0,
+    /** Bare `&` characters in export.xml that were auto-escaped to `&amp;` because they weren't part of an entity reference. */
+    val sanitizedAmpersands: Int = 0,
 )
 
 internal data class AppleRecord(

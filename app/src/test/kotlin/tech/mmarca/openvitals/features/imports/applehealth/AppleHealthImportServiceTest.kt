@@ -29,6 +29,7 @@ import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
@@ -75,6 +76,35 @@ class AppleHealthImportServiceTest {
         )
 
         assertEquals(1, parsed.parsedRecords)
+    }
+
+    @Test
+    fun `parser repairs raw control characters and unescaped ampersands in attribute values`() {
+        val xml = "<HealthData><Record type=\"HKQuantityTypeIdentifierStepCount\" " +
+            "sourceName=\"NotesApp\" device=\"AT&T Watch\" " +
+            "startDate=\"2026-01-01 00:00:00 +0000\" endDate=\"2026-01-01 00:01:00 +0000\" " +
+            "unit=\"count\" value=\"10\" /></HealthData>"
+
+        val parsed = parseXml(xml)
+
+        assertEquals(1, parsed.parsedRecords)
+        assertEquals(1, parsed.sanitizedControlChars)
+        assertEquals(1, parsed.sanitizedAmpersands)
+        val record = parsed.records.single()
+        assertEquals("NotesApp", record.sourceName)
+        assertEquals("AT&T Watch", record.device)
+    }
+
+    @Test
+    fun `parser wraps a genuine well-formedness failure with the surrounding text`() {
+        val xml = "<HealthData><Record type=\"HKQuantityTypeIdentifierStepCount\" " +
+            "startDate=\"2026-01-01 00:00:00 +0000\" endDate=\"2026-01-01 00:01:00 +0000\">" +
+            "</MismatchedClosingTag></HealthData>"
+
+        val error = assertThrows(AppleHealthXmlParseException::class.java) { parseXml(xml) }
+
+        assertTrue(error.message.orEmpty().contains("not well-formed") || error.cause is org.xml.sax.SAXParseException)
+        assertTrue(error.message.orEmpty().contains("Text leading up to the error"))
     }
 
     @Test

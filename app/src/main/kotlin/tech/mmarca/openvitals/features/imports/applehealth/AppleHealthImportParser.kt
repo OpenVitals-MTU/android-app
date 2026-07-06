@@ -3,6 +3,8 @@ package tech.mmarca.openvitals.features.imports.applehealth
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.InputStream
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -12,6 +14,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.zip.ZipInputStream
 import org.xml.sax.Attributes
+import org.xml.sax.InputSource
+import org.xml.sax.SAXParseException
 import org.xml.sax.helpers.DefaultHandler
 
 internal data class AppleHealthParseOptions(
@@ -115,8 +119,18 @@ internal object AppleHealthImportParser {
         parseRecordDetails: Boolean,
     ): AppleParsedExport {
         val handler = AppleHealthXmlHandler(consumer, routeFiles, parseRecordDetails)
-        secureSaxParserFactory().newSAXParser().parse(input, handler)
-        return handler.result()
+        // Apple's exporter always writes UTF-8 (declared in the XML prolog); decoding explicitly
+        // lets the sanitizer inspect and repair characters before Expat ever sees them.
+        val sanitizer = XmlCharacterSanitizingReader(InputStreamReader(input, StandardCharsets.UTF_8))
+        try {
+            secureSaxParserFactory().newSAXParser().parse(InputSource(sanitizer), handler)
+        } catch (parseException: SAXParseException) {
+            throw AppleHealthXmlParseException(parseException, sanitizer)
+        }
+        return handler.result().copy(
+            sanitizedControlChars = sanitizer.strippedControlChars,
+            sanitizedAmpersands = sanitizer.escapedAmpersands,
+        )
     }
 }
 

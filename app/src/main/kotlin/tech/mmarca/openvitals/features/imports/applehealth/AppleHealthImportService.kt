@@ -253,6 +253,12 @@ class AppleHealthImportService
                     "records=${parsed.parsedRecords} workouts=${parsed.parsedWorkouts} " +
                     "correlations=${parsed.parsedCorrelations} activitySummaries=${parsed.parsedActivitySummaries}",
             )
+            if (parsed.sanitizedControlChars > 0 || parsed.sanitizedAmpersands > 0) {
+                importLogs.addImportInfo(
+                    "export.xml contained invalid XML that was auto-repaired: " +
+                        "controlCharsRemoved=${parsed.sanitizedControlChars} ampersandsEscaped=${parsed.sanitizedAmpersands}",
+                )
+            }
             return parsed
         }
 
