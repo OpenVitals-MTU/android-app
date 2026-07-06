@@ -89,9 +89,11 @@ class DailyReadinessViewModel @Inject constructor(
 
     fun resumeCurrentDay() {
         refreshPreferences()
-        val today = LocalDate.now()
-        if (!userPinnedPastDay && _uiState.value.selectedDate.isBefore(today)) {
-            load(today)
+        // Reload whenever the user returns to "today" (e.g. from a detail screen), not only
+        // on a day rollover: this ViewModel outlives detail screens on the back stack, so
+        // ON_RESUME is the only signal that Health Connect data may have changed.
+        if (!userPinnedPastDay) {
+            load(LocalDate.now())
         }
     }
 

@@ -53,6 +53,7 @@ data class DashboardUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val data: DashboardData? = null,
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: ScreenError? = null,
     val unacknowledgedWidgetPermissions: Set<String> = emptySet(),
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
@@ -155,6 +156,10 @@ class DashboardViewModel @Inject constructor(
         load(_uiState.value.selectedDate, RefreshMode.FORCE)
     }
 
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+
     private fun observeSensorStatus() {
         val deviceRepository = bleDeviceRepository ?: return
         val metricsFlow = bleSensorCoordinator?.metrics ?: flowOf(BleRecordingMetrics())
@@ -227,9 +232,11 @@ class DashboardViewModel @Inject constructor(
 
     fun resumeCurrentDay() {
         refreshPreferences()
-        val today = LocalDate.now()
-        if (!userPinnedPastDay && _uiState.value.selectedDate.isBefore(today)) {
-            load(today)
+        // Reload whenever the user returns to "today" (e.g. from a metric detail screen),
+        // not only on a day rollover: this ViewModel outlives detail screens on the back
+        // stack, so ON_RESUME is the only signal that Health Connect data may have changed.
+        if (!userPinnedPastDay) {
+            load(LocalDate.now())
         }
     }
 
@@ -263,6 +270,7 @@ class DashboardViewModel @Inject constructor(
             _uiState.value = current.copy(
                 selectedDate = clampedDate,
                 isLoading = !keepCurrentDataVisible,
+                isRefreshing = true,
                 error = null,
                 sleepRangeMode = sleepRangeMode,
                 activityWeekMode = activityWeekMode,
@@ -297,6 +305,7 @@ class DashboardViewModel @Inject constructor(
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         error = null,
                     )
                 }
@@ -305,6 +314,7 @@ class DashboardViewModel @Inject constructor(
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     error = error.toScreenError("Unknown error"),
                 )
                 return@load
@@ -435,6 +445,7 @@ class DashboardViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             data = data,
             isLoading = false,
+            isRefreshing = false,
             unacknowledgedWidgetPermissions = unacknowledgedWidgetPermissions(data.missingPermissions),
             sleepRangeMode = sleepRangeMode,
             activityWeekMode = activityWeekMode,

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.dashboard
 
+import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -10,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -80,6 +82,17 @@ fun DashboardScreen(
             viewModel.refresh()
         }
     }
+    val context = LocalContext.current
+    val errorMessage = error?.resolve()
+    androidx.compose.runtime.LaunchedEffect(errorMessage) {
+        // Refresh failures (e.g. Health Connect rate limiting) are shown as a transient
+        // toast rather than the full-screen ErrorMessage, since the dashboard already
+        // has data to display and shouldn't be replaced by an error state.
+        if (errorMessage != null && loadedData != null) {
+            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+        }
+    }
     androidx.compose.runtime.LaunchedEffect(state.sensorStatus.hasDevices) {
         onSensorStatusVisibilityChanged(state.sensorStatus.hasDevices)
     }
@@ -93,7 +106,7 @@ fun DashboardScreen(
         refreshKey = refreshRequest to permissionReloadKey,
     ) {
         PullToRefreshBox(
-            isRefreshing = isLoading && loadedData != null,
+            isRefreshing = state.isRefreshing && loadedData != null,
             onRefresh = viewModel::refresh,
             modifier = Modifier.fillMaxSize(),
         ) {
