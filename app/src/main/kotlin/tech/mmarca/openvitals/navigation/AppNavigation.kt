@@ -256,7 +256,7 @@ fun AppNavigation(
             currentRoute != null &&
             currentRoute != Screen.Onboarding.route
         ) {
-            navController.navigate(Screen.ActivityEntry.route) {
+            navController.navigate(Screen.ActivityEntry.createRoute()) {
                 launchSingleTop = true
             }
         }
@@ -533,7 +533,9 @@ fun AppNavigation(
                     },
                     onOpenLog = { navController.navigate(Screen.ManualEntry.route) },
                     onStartActivity = {
-                        navController.navigate(Screen.ActivityEntry.route)
+                        navController.navigate(
+                            Screen.ActivityEntry.createRoute(mode = Screen.ActivityEntryMode.RECORD),
+                        )
                     },
                     onOpenDeviceStatus = {
                         navController.navigate(Screen.SettingsSensors.route) {
@@ -732,6 +734,9 @@ fun AppNavigation(
                     onEditActivity = { activityId ->
                         navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
                     },
+                    onStartPlannedWorkout = { planId ->
+                        navController.navigate(Screen.ActivityEntry.createRoute(planId = planId))
+                    },
                     onOpenSleepSession = { sleepId ->
                         navController.navigate(Screen.SleepDetail.createRoute(sleepId))
                     },
@@ -809,6 +814,9 @@ fun AppNavigation(
                     },
                     onEditActivity = { activityId ->
                         navController.navigate(Screen.ActivityEntryEdit.createRoute(activityId))
+                    },
+                    onStartPlannedWorkout = { planId ->
+                        navController.navigate(Screen.ActivityEntry.createRoute(planId = planId))
                     },
                     onOpenCardioLoad = {
                         navController.navigate(CardioLoadDetailRoute)
@@ -913,7 +921,7 @@ private fun addEntryActionForCurrentRoute(
     onNavigate: (String) -> Unit,
 ): MetricAction? {
     val destinationRoute = when {
-        currentRoute == Screen.Activity.route -> Screen.ActivityEntry.route
+        currentRoute == Screen.Activity.route -> Screen.ActivityEntry.createRoute()
         currentRoute == Screen.Metric.route -> currentMetricId?.entryRoute()
         else -> null
     } ?: return null
@@ -933,7 +941,7 @@ private fun DashboardWidgetId.entryRoute(): String? =
         DashboardWidgetId.WEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.WEIGHT.name)
         DashboardWidgetId.HEIGHT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.HEIGHT.name)
         DashboardWidgetId.BODY_FAT -> Screen.BodyMeasurementEntry.createRoute(BodyMeasurementType.BODY_FAT.name)
-        DashboardWidgetId.WORKOUT -> Screen.ActivityEntry.route
+        DashboardWidgetId.WORKOUT -> Screen.ActivityEntry.createRoute()
         DashboardWidgetId.BLOOD_PRESSURE ->
             Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.BLOOD_PRESSURE.name)
         DashboardWidgetId.SPO2 -> Screen.VitalsMeasurementEntry.createRoute(VitalsMeasurementType.SPO2.name)

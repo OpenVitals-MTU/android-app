@@ -32,8 +32,8 @@ internal fun ActivityEntryFormContent(
                         recordingState = recordingState,
                         unitFormatter = unitFormatter,
                         onSelectActivityType = viewModel::selectActivityType,
-                        onStartRecording = { _, restSeconds ->
-                            viewModel.openRecordingDashboard(restSeconds)
+                        onStartRecording = { initialFix, restSeconds ->
+                            viewModel.startGpsRecording(initialFix, restSeconds)
                         },
                         onRequestLocationPermission = onRequestGpsLocationPermissions,
                         onRequestActivityRecognitionPermission = onRequestActivityRecognitionPermission,

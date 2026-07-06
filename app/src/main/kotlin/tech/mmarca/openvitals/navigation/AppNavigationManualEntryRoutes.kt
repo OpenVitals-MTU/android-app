@@ -57,7 +57,7 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                     navController.navigate(Screen.CarbsEntry.route)
                 },
                 onOpenActivityEntry = {
-                    navController.navigate(Screen.ActivityEntry.route)
+                    navController.navigate(Screen.ActivityEntry.createRoute())
                 },
                 onOpenMindfulnessEntry = {
                     navController.navigate(Screen.MindfulnessEntry.route)
@@ -116,7 +116,26 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         )
     }
 
-    composable(Screen.ActivityEntry.route) {
+    composable(
+        route = Screen.ActivityEntry.route,
+        arguments = listOf(
+            navArgument(ACTIVITY_ENTRY_MODE_ARG) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+            navArgument(ACTIVITY_ENTRY_PLAN_ID_ARG) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+            navArgument(ACTIVITY_ENTRY_TYPE_ARG) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+        ),
+    ) {
         val activityEntryViewModel = hiltViewModel<ActivityEntryViewModel>()
         ActivityEntryScreen(
             viewModel = activityEntryViewModel,

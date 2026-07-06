@@ -51,6 +51,10 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
+import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_MODE_ARG
+import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_PLAN_ID_ARG
+import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_TYPE_ARG
+import tech.mmarca.openvitals.navigation.Screen
 
 @HiltViewModel
 class ActivityEntryViewModel(
@@ -63,6 +67,9 @@ class ActivityEntryViewModel(
     private val markerRepository: ActivityMarkerRepository? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val editActivityId: String? = null,
+    private val launchMode: String? = null,
+    private val launchPlanId: String? = null,
+    private val launchActivityTypeId: String? = null,
 ) : ViewModel() {
 
     @Inject
@@ -85,6 +92,9 @@ class ActivityEntryViewModel(
         markerRepository = markerRepository,
         clock = Clock.systemDefaultZone(),
         editActivityId = savedStateHandle[ACTIVITY_ENTRY_ID_ARG],
+        launchMode = savedStateHandle[ACTIVITY_ENTRY_MODE_ARG],
+        launchPlanId = savedStateHandle[ACTIVITY_ENTRY_PLAN_ID_ARG],
+        launchActivityTypeId = savedStateHandle[ACTIVITY_ENTRY_TYPE_ARG],
     )
 
     private var editEntryLoaded = false
@@ -106,6 +116,94 @@ class ActivityEntryViewModel(
                 }
             }
             ?.launchIn(viewModelScope)
+        applyLaunchIntent()
+    }
+
+    /**
+     * Applies the caller's intent (carried as navigation arguments) so the screen opens directly
+     * in the requested state instead of the generic source chooser. Only runs for a fresh entry:
+     * an edit target or a restored in-progress recording draft always takes precedence.
+     */
+    private fun applyLaunchIntent() {
+        if (editActivityId != null) return
+        if (_uiState.value.isRecordingDraft) return
+
+        launchActivityTypeId
+            ?.let { typeId -> DefaultActivityEntryTypes.firstOrNull { it.id == typeId } }
+            ?.let { type -> _uiState.value = _uiState.value.copy(selectedActivityType = type) }
+
+        when {
+            launchPlanId != null -> startWithPlan(launchPlanId)
+            launchMode == Screen.ActivityEntryMode.RECORD -> prepareGpsRecording()
+            launchMode == Screen.ActivityEntryMode.MANUAL -> startManualEntry()
+            launchMode == Screen.ActivityEntryMode.PLAN -> startFromExistingPlan()
+        }
+    }
+
+    /**
+     * Loads the existing planned workouts and, if the requested plan is present, applies it
+     * immediately so the user lands on the prefilled entry form. Falls back to the activity
+     * picker when the plan can no longer be found.
+     */
+    fun startWithPlan(planId: String) {
+        recordingDraftStore?.clear()
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                mode = ActivityEntryMode.PLAN_ACTIVITY_PICKER,
+                plannedWorkouts = emptyList(),
+                selectedPlannedWorkoutId = null,
+                selectedPlannedWorkoutActivityTypeId = null,
+                isLoadingPlannedWorkouts = true,
+                isRecordingDraft = false,
+                entryError = null,
+                detailError = null,
+                validationErrors = emptySet(),
+            )
+            runCatching {
+                repository.loadExistingPlannedWorkouts(LocalDate.now(clock))
+            }.onSuccess { plans ->
+                _uiState.value = _uiState.value.copy(
+                    plannedWorkouts = plans,
+                    isLoadingPlannedWorkouts = false,
+                )
+                if (plans.any { it.id == planId }) {
+                    applyPlannedWorkout(planId)
+                } else {
+                    autoAdvancePlanSelection(plans)
+                }
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    plannedWorkouts = emptyList(),
+                    isLoadingPlannedWorkouts = false,
+                    writePermissions = repository.plannedWorkoutWritePermissions(),
+                    canWrite = false,
+                    entryError = if (error is SecurityException) {
+                        ActivityEntryError.MISSING_WRITE_PERMISSION
+                    } else {
+                        ActivityEntryError.WRITE_FAILED
+                    },
+                    detailError = error.toScreenError(),
+                )
+            }
+        }
+    }
+
+    /**
+     * Skips picker steps that offer no real choice: a single plan is applied outright, and a
+     * single activity type advances straight to its plan list. Multiple genuine choices keep the
+     * picker visible.
+     */
+    private fun autoAdvancePlanSelection(plans: List<PlannedExerciseData>) {
+        val selectable = plans.filter { it.completedExerciseSessionId == null }
+        if (selectable.isEmpty()) return
+        if (selectable.size == 1) {
+            applyPlannedWorkout(selectable.first().id)
+            return
+        }
+        val typeIds = selectable.mapNotNull { it.toActivityEntryType()?.id }.distinct()
+        if (typeIds.size == 1) {
+            selectPlannedWorkoutActivity(typeIds.first())
+        }
     }
 
     private fun initialState(recordingDraft: ActivityEntryUiState?): ActivityEntryUiState {
@@ -231,6 +329,7 @@ class ActivityEntryViewModel(
                     plannedWorkouts = plans,
                     isLoadingPlannedWorkouts = false,
                 )
+                autoAdvancePlanSelection(plans)
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     plannedWorkouts = emptyList(),

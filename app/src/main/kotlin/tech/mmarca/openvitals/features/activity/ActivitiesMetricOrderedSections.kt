@@ -79,6 +79,7 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
     onOpenActivity: (String) -> Unit,
     onEditActivity: (String) -> Unit,
     onDeleteActivity: (String) -> Unit,
+    onStartPlannedWorkout: (String) -> Unit,
     onOpenCardioLoad: (() -> Unit)?,
     onOpenSteps: (() -> Unit)?,
     onOpenDistance: (() -> Unit)?,
@@ -141,6 +142,7 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                         plannedWorkouts = state.plannedWorkouts,
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        onStartPlannedWorkout = onStartPlannedWorkout,
                     )
                 }
             }

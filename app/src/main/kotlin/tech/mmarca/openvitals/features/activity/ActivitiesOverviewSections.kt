@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Edit
@@ -231,6 +232,7 @@ internal fun LazyListScope.plannedWorkoutListSection(
     plannedWorkouts: List<PlannedExerciseData>,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onStartPlannedWorkout: (String) -> Unit = {},
 ) {
     if (plannedWorkouts.isEmpty()) return
 
@@ -239,6 +241,7 @@ internal fun LazyListScope.plannedWorkoutListSection(
             plannedWorkouts = plannedWorkouts,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            onStartPlannedWorkout = onStartPlannedWorkout,
         )
     }
 }
@@ -248,6 +251,7 @@ internal fun PlannedWorkoutListCard(
     plannedWorkouts: List<PlannedExerciseData>,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onStartPlannedWorkout: (String) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeader(text = stringResource(R.string.section_planned_workouts))
@@ -259,6 +263,7 @@ internal fun PlannedWorkoutListCard(
                     plannedWorkout = plannedWorkout,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onStartPlannedWorkout = onStartPlannedWorkout,
                 )
                 if (index < plannedWorkouts.lastIndex) {
                     HorizontalDivider(
@@ -276,13 +281,22 @@ internal fun PlannedWorkoutRow(
     plannedWorkout: PlannedExerciseData,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onStartPlannedWorkout: (String) -> Unit = {},
 ) {
     val zone = ZoneId.systemDefault()
     val start = plannedWorkout.startTime.atZone(zone)
     val end = plannedWorkout.endTime.atZone(zone)
+    val isActionable = plannedWorkout.completedExerciseSessionId == null
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (isActionable) {
+                    Modifier.clickable { onStartPlannedWorkout(plannedWorkout.id) }
+                } else {
+                    Modifier
+                },
+            )
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -343,6 +357,15 @@ internal fun PlannedWorkoutRow(
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (isActionable) {
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = stringResource(R.string.action_start),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
             )
         }
     }

@@ -590,7 +590,7 @@ class ActivityEntryViewModelTest {
         assertTrue(vm.uiState.value.hasSelectedPlannedWorkoutChanges)
     }
 
-    @Test fun `start from existing plan loads Health Connect plans`() = runTest {
+    @Test fun `start from existing plan auto-applies the only available plan`() = runTest {
         val plan = plannedPullUpPlan()
         val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plan))
         val vm = ActivityEntryViewModel(
@@ -602,9 +602,48 @@ class ActivityEntryViewModelTest {
         vm.startFromExistingPlan()
         advanceUntilIdle()
 
-        assertEquals(ActivityEntryMode.PLAN_ACTIVITY_PICKER, vm.uiState.value.mode)
+        // With a single planned workout there is no meaningful choice, so the picker steps are
+        // skipped and the plan opens directly in the editable manual entry form.
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
         assertEquals(listOf(plan), vm.uiState.value.plannedWorkouts)
+        assertEquals("planned-id", vm.uiState.value.selectedPlannedWorkoutId)
         assertFalse(vm.uiState.value.isLoadingPlannedWorkouts)
+    }
+
+    @Test fun `start from existing plan keeps picker when multiple activity types exist`() = runTest {
+        val pullUps = plannedPullUpPlan()
+        val pushUps = plannedPushUpPlan()
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(pullUps, pushUps))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startFromExistingPlan()
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.PLAN_ACTIVITY_PICKER, vm.uiState.value.mode)
+        assertEquals(listOf(pullUps, pushUps), vm.uiState.value.plannedWorkouts)
+        assertFalse(vm.uiState.value.isLoadingPlannedWorkouts)
+    }
+
+    @Test fun `startWithPlan opens the requested plan directly in manual entry`() = runTest {
+        val pullUps = plannedPullUpPlan()
+        val pushUps = plannedPushUpPlan()
+        val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(pullUps, pushUps))
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.startWithPlan("planned-push-id")
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
+        assertEquals("planned-push-id", vm.uiState.value.selectedPlannedWorkoutId)
+        assertEquals("push_ups", vm.uiState.value.selectedActivityType.id)
     }
 
     @Test fun `selecting activity then plan opens editable manual entry`() = runTest {
@@ -1259,6 +1298,34 @@ class ActivityEntryViewModelTest {
         )
     }
 }
+
+private fun plannedPushUpPlan(): PlannedExerciseData =
+    PlannedExerciseData(
+        id = "planned-push-id",
+        title = "Push-up pyramid",
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        startTime = Instant.parse("2026-05-26T09:30:00Z"),
+        endTime = Instant.parse("2026-05-26T09:35:00Z"),
+        hasExplicitTime = true,
+        completedExerciseSessionId = null,
+        notes = "Slow tempo",
+        blockCount = 1,
+        source = "tech.mmarca.openvitals",
+        blocks = listOf(
+            PlannedExerciseBlockData(
+                repetitions = 1,
+                description = "Main set",
+                steps = listOf(
+                    PlannedExerciseStepData(
+                        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+                        exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+                        description = "Set 1",
+                        completion = PlannedExerciseCompletion.Repetitions(12),
+                    ),
+                ),
+            )
+        ),
+    )
 
 private fun plannedPullUpPlan(): PlannedExerciseData =
     PlannedExerciseData(

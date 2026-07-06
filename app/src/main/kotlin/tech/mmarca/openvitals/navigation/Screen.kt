@@ -4,6 +4,9 @@ import android.net.Uri
 
 const val ACTIVITY_DETAIL_ID_ARG = "activityId"
 const val ACTIVITY_ENTRY_ID_ARG = "activityEntryId"
+const val ACTIVITY_ENTRY_MODE_ARG = "mode"
+const val ACTIVITY_ENTRY_PLAN_ID_ARG = "planId"
+const val ACTIVITY_ENTRY_TYPE_ARG = "activityTypeId"
 const val SLEEP_DETAIL_ID_ARG = "sleepId"
 const val METRIC_ID_ARG = "metricId"
 const val BODY_MEASUREMENT_TYPE_ARG = "bodyMeasurementType"
@@ -40,7 +43,41 @@ sealed class Screen(val route: String) {
         fun createRoute(drinkId: String): String = "manual_entry/hydration/log/${Uri.encode(drinkId)}"
     }
     data object CarbsEntry : Screen("manual_entry/carbs")
-    data object ActivityEntry : Screen("manual_entry/activity")
+    data object ActivityEntry : Screen(
+        "manual_entry/activity" +
+            "?$ACTIVITY_ENTRY_MODE_ARG={$ACTIVITY_ENTRY_MODE_ARG}" +
+            "&$ACTIVITY_ENTRY_PLAN_ID_ARG={$ACTIVITY_ENTRY_PLAN_ID_ARG}" +
+            "&$ACTIVITY_ENTRY_TYPE_ARG={$ACTIVITY_ENTRY_TYPE_ARG}",
+    ) {
+        /**
+         * Builds a concrete navigation target for the activity entry screen, carrying the
+         * caller's intent as optional query arguments. With no arguments this resolves to the
+         * bare `manual_entry/activity` path, which still matches the route pattern above.
+         */
+        fun createRoute(
+            mode: String? = null,
+            planId: String? = null,
+            activityTypeId: String? = null,
+        ): String {
+            val params = buildList {
+                mode?.let { add("$ACTIVITY_ENTRY_MODE_ARG=${Uri.encode(it)}") }
+                planId?.let { add("$ACTIVITY_ENTRY_PLAN_ID_ARG=${Uri.encode(it)}") }
+                activityTypeId?.let { add("$ACTIVITY_ENTRY_TYPE_ARG=${Uri.encode(it)}") }
+            }
+            return if (params.isEmpty()) {
+                "manual_entry/activity"
+            } else {
+                "manual_entry/activity?" + params.joinToString("&")
+            }
+        }
+    }
+
+    /** Intent values understood by [ActivityEntry]'s `mode` argument. */
+    object ActivityEntryMode {
+        const val RECORD = "record"
+        const val MANUAL = "manual"
+        const val PLAN = "plan"
+    }
     data object ActivityEntryEdit : Screen("manual_entry/activity/edit/{$ACTIVITY_ENTRY_ID_ARG}") {
         fun createRoute(entryId: String): String = "manual_entry/activity/edit/${Uri.encode(entryId)}"
     }

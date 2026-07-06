@@ -176,7 +176,7 @@ private fun Intent.openVitalsRoute(): String? =
 private fun isSupportedOpenVitalsRoute(route: String): Boolean {
     if (route == Screen.Dashboard.route) return true
     if (route == Screen.DailyReadiness.route) return true
-    if (route == Screen.ActivityEntry.route) return true
+    if (route == Screen.ActivityEntry.createRoute()) return true
     if (route == Screen.HydrationEntry.route) return true
     val hydrationDrinkLogPrefix = "manual_entry/hydration/log/"
     if (route.startsWith(hydrationDrinkLogPrefix)) {

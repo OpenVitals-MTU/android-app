@@ -114,7 +114,7 @@ class OpenVitalsConnectedFlowTest {
         }
 
         composeRule.onNodeWithText("Log").performClick()
-        composeRule.onNodeWithText("Start").performClick()
+        composeRule.onNodeWithText("Start workout").performClick()
         composeRule.onNodeWithContentDescription("Edit summary").performClick()
         composeRule.onAllNodesWithText("Steps").onFirst().performClick()
 

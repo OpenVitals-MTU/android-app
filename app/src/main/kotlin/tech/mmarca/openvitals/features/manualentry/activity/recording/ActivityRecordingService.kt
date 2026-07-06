@@ -381,7 +381,7 @@ class ActivityRecordingService : Service() {
             RequestOpenApp,
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(EXTRA_OPENVITALS_ROUTE, Screen.ActivityEntry.route)
+                putExtra(EXTRA_OPENVITALS_ROUTE, Screen.ActivityEntry.createRoute())
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
