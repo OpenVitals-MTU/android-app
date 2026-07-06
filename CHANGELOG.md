@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.8.0 - 2026-07-06
+
+### English
+
+- Add Estonian and an in-app language picker so the interface can be switched independently of the system language.
+- Refine starting activities and the sleep graph in the weekly and monthly views.
+- Improve Body Energy and fix a file permission issue affecting imports.
+- Fix the quick-beverage home-screen widget and dashboard refreshing, and harden the XML importer against malformed data.
+- Polish the design system across the app.
+
+### Español
+
+- Añade el estonio y un selector de idioma dentro de la app para cambiar la interfaz independientemente del idioma del sistema.
+- Refina el inicio de actividades y el gráfico de sueño en las vistas semanal y mensual.
+- Mejora Energía corporal y corrige un problema de permisos de archivos que afectaba a las importaciones.
+- Corrige el widget de bebida rápida en la pantalla de inicio y la actualización del panel, y refuerza el importador XML frente a datos mal formados.
+- Pule el sistema de diseño en toda la app.
+
+### Deutsch
+
+- Fügt Estnisch und einen In-App-Sprachwähler hinzu, sodass die Oberfläche unabhängig von der Systemsprache umgestellt werden kann.
+- Verfeinert das Starten von Aktivitäten und das Schlafdiagramm in der Wochen- und Monatsansicht.
+- Verbessert Body Energy und behebt ein Dateiberechtigungsproblem, das Importe betraf.
+- Behebt das Schnellgetränk-Widget auf dem Startbildschirm und die Dashboard-Aktualisierung und härtet den XML-Import gegen fehlerhafte Daten.
+- Poliert das Designsystem in der gesamten App.
+
+### Italiano
+
+- Aggiunge l'estone e un selettore della lingua nell'app, così l'interfaccia può essere cambiata indipendentemente dalla lingua di sistema.
+- Rifinisce l'avvio delle attività e il grafico del sonno nelle viste settimanale e mensile.
+- Migliora Energia corporea e corregge un problema di permessi sui file che riguardava le importazioni.
+- Corregge il widget bevanda rapida nella schermata home e l'aggiornamento della dashboard, e rafforza l'importer XML contro dati non validi.
+- Rifinisce il sistema di design in tutta l'app.
+
 ## 1.7.7 - 2026-07-05
 
 ### English

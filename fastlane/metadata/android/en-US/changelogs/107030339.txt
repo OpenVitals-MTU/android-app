@@ -1,0 +1,1 @@
+Adds Estonian and an in-app language picker. Starting activities, the week and month sleep graph, and Body Energy all get refinements. Fixes the quick-beverage widget and dashboard refreshing, and hardens the XML importer against malformed data. Rounded out with design system polish.

@@ -1,0 +1,1 @@
+Añade el estonio y un selector de idioma dentro de la app. Mejoras al iniciar actividades, en el gráfico de sueño de la vista semanal y mensual, y en Energía corporal. Corrige el widget de bebida rápida y la actualización del panel, y refuerza el importador XML frente a datos mal formados. Con retoques al sistema de diseño.

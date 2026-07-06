@@ -1,0 +1,1 @@
+Fügt Estnisch und einen In-App-Sprachwähler hinzu. Verfeinerungen beim Starten von Aktivitäten, beim Schlafdiagramm in der Wochen- und Monatsansicht und bei Body Energy. Behebt das Schnellgetränk-Widget und die Dashboard-Aktualisierung und härtet den XML-Import gegen fehlerhafte Daten. Abgerundet durch Feinschliff am Designsystem.

@@ -1,0 +1,1 @@
+Aggiunge l'estone e un selettore della lingua nell'app. Rifiniture all'avvio delle attività, al grafico del sonno nella vista settimanale e mensile e a Energia corporea. Corregge il widget bevanda rapida e l'aggiornamento della dashboard e rafforza l'importer XML contro dati non validi. Completato da rifiniture al sistema di design.
