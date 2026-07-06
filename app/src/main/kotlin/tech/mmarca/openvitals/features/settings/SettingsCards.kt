@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
@@ -152,23 +153,24 @@ internal fun SettingsCategoryCard(
             Icon(
                 imageVector = section.icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(24.dp),
             )
             Column(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = 16.dp)
                     .weight(1f),
             ) {
                 Text(
                     text = stringResource(section.titleRes),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(section.summaryRes),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
             Icon(
@@ -338,6 +340,8 @@ internal fun LanguageCard(
 internal fun ThemeModeCard(
     selected: AppThemeMode,
     onSelect: (AppThemeMode) -> Unit,
+    dynamicColor: Boolean,
+    onDynamicColorChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OpenVitalsCard(
@@ -378,6 +382,13 @@ internal fun ThemeModeCard(
                     )
                 }
             }
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_dynamic_color_title),
+                body = stringResource(R.string.settings_dynamic_color_body),
+                checked = dynamicColor,
+                onCheckedChange = onDynamicColorChange,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
     }
 }

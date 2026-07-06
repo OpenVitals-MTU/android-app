@@ -1173,6 +1173,8 @@
     <string name="settings_theme_light">Claro</string>
     <string name="settings_theme_dark">Oscuro</string>
     <string name="settings_theme_amoled">AMOLED</string>
+    <string name="settings_dynamic_color_title">Color dinámico (Material You)</string>
+    <string name="settings_dynamic_color_body">Tiñe OpenVitals con tu fondo de pantalla de Android. Desactivado usa la paleta de marca azul y verde azulado de OpenVitals.</string>
     <string name="settings_activity_week_title">Semana de actividad</string>
     <string name="settings_activity_week_body">Elige si Actividades usa una semana fija lun-dom o los últimos 7 días móviles.</string>
     <string name="settings_activity_week_monday_to_sunday">Lun-dom</string>

@@ -92,7 +92,7 @@ private val AppShapes = Shapes(
 @Composable
 fun OpenVitalsTheme(
     themeMode: AppThemeMode = AppThemeMode.SYSTEM,
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val systemInDarkTheme = isSystemInDarkTheme()

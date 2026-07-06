@@ -100,6 +100,7 @@ import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.ManualEntryTimestampFields
 import tech.mmarca.openvitals.features.nutrition.titleRes
+import tech.mmarca.openvitals.ui.components.AccentIconChip
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
@@ -261,11 +262,11 @@ internal fun HydrationTrackerCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.LocalDrink,
-                    contentDescription = null,
-                    tint = HydrationColor,
-                    modifier = Modifier.size(22.dp),
+                AccentIconChip(
+                    icon = Icons.Outlined.LocalDrink,
+                    color = HydrationColor,
+                    size = 40.dp,
+                    iconSize = 20.dp,
                 )
                 Column(
                     modifier = Modifier
@@ -274,7 +275,7 @@ internal fun HydrationTrackerCard(
                 ) {
                     Text(
                         text = stringResource(R.string.hydration_tracker_title),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
                         text = stringResource(

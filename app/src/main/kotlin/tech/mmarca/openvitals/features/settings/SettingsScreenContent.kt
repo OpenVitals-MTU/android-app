@@ -80,6 +80,8 @@ internal fun LazyListScope.settingsScreenContent(
                 ThemeModeCard(
                     selected = state.appThemeMode,
                     onSelect = viewModel::selectAppThemeMode,
+                    dynamicColor = state.dynamicColor,
+                    onDynamicColorChange = viewModel::setDynamicColor,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }

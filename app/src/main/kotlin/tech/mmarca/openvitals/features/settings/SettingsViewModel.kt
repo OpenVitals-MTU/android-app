@@ -73,6 +73,7 @@ data class SettingsUiState(
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    val dynamicColor: Boolean = false,
     val sleepRangeMode: SleepRangeMode = SleepRangeMode.EVENING_18H,
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val activityRecordingPreferences: ActivityRecordingPreferences = ActivityRecordingPreferences(),
@@ -153,6 +154,7 @@ class SettingsViewModel @Inject constructor(
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
                 appThemeMode = preferencesRepository.appThemeMode,
+                dynamicColor = preferencesRepository.dynamicColor,
                 sleepRangeMode = preferencesRepository.sleepRangeMode,
                 activityWeekMode = preferencesRepository.activityWeekMode,
                 activityRecordingPreferences = preferencesRepository.activityRecordingPreferences(),
@@ -492,6 +494,11 @@ class SettingsViewModel @Inject constructor(
     fun selectAppThemeMode(appThemeMode: AppThemeMode) {
         preferencesRepository.appThemeMode = appThemeMode
         _uiState.value = _uiState.value.copy(appThemeMode = appThemeMode)
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        preferencesRepository.dynamicColor = enabled
+        _uiState.value = _uiState.value.copy(dynamicColor = enabled)
     }
 
     fun selectSleepRangeMode(sleepRangeMode: SleepRangeMode) {

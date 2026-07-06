@@ -1173,6 +1173,8 @@
     <string name="settings_theme_light">Hell</string>
     <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_theme_amoled">AMOLED</string>
+    <string name="settings_dynamic_color_title">Dynamische Farben (Material You)</string>
+    <string name="settings_dynamic_color_body">Färbe OpenVitals anhand deines Android-Hintergrundbilds ein. Deaktiviert verwendet die OpenVitals-Markenpalette in Blau und Türkis.</string>
     <string name="settings_activity_week_title">Aktivitätswoche</string>
     <string name="settings_activity_week_body">Wähle, ob Aktivitäten eine feste Mo-So-Woche oder die letzten gleitenden 7 Tage verwendet.</string>
     <string name="settings_activity_week_monday_to_sunday">Mo-So</string>

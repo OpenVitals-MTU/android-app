@@ -267,8 +267,8 @@ internal fun DashboardWidgetCarousel(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(
-                                top = 6.dp,
-                                bottom = 6.dp,
+                                top = 10.dp,
+                                bottom = 4.dp,
                             ),
                         horizontalArrangement = Arrangement.Center,
                     ) {
@@ -280,8 +280,8 @@ internal fun DashboardWidgetCarousel(
                             }
                             Box(
                                 modifier = Modifier
-                                    .padding(horizontal = 3.dp)
-                                    .size(6.dp)
+                                    .padding(horizontal = 4.dp)
+                                    .size(8.dp)
                                     .background(color, CircleShape)
                             )
                         }

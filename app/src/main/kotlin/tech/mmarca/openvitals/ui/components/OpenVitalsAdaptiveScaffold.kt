@@ -12,13 +12,19 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 
 data class OpenVitalsNavigationDestination(
     val route: String,
@@ -56,6 +62,7 @@ fun OpenVitalsAdaptiveScaffold(
     navigationContentDescription: String,
     action: MetricAction?,
     modifier: Modifier = Modifier,
+    largeTopBar: Boolean = false,
     topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -66,7 +73,18 @@ fun OpenVitalsAdaptiveScaffold(
             topBar = {
                 if (showTopBar) {
                     TopAppBar(
-                        title = { Text(title) },
+                        title = {
+                            Text(
+                                text = title,
+                                style = if (largeTopBar) {
+                                    MaterialTheme.typography.headlineLarge
+                                } else {
+                                    MaterialTheme.typography.titleLarge
+                                },
+                                fontWeight = if (largeTopBar) FontWeight.Bold else FontWeight.SemiBold,
+                                maxLines = 1,
+                            )
+                        },
                         navigationIcon = {
                             if (canNavigateBack) {
                                 OpenVitalsIconButton(onClick = onNavigateBack) {
@@ -78,12 +96,23 @@ fun OpenVitalsAdaptiveScaffold(
                             }
                         },
                         actions = topBarActions,
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = Color.Transparent,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                     )
                 }
             },
             bottomBar = {
                 if (showNavigation) {
-                    NavigationBar {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tonalElevation = 0.dp,
+                    ) {
                         navigationDestinations.forEach { destination ->
                             NavigationBarItem(
                                 icon = {
@@ -94,6 +123,13 @@ fun OpenVitalsAdaptiveScaffold(
                                 },
                                 label = { Text(stringResource(destination.labelRes)) },
                                 selected = currentRoute == destination.route,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
                                 onClick = {
                                     if (currentRoute != destination.route) {
                                         onNavigate(destination.route)

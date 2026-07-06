@@ -110,7 +110,7 @@ fun OnboardingScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(32.dp))
@@ -300,9 +300,9 @@ private fun FeatureCard(
     body: String,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
-                OpenVitalsCard(
+    OpenVitalsCard(
         modifier = Modifier.fillMaxWidth(),
-
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

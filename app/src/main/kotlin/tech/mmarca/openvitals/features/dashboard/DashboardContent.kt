@@ -112,19 +112,6 @@ internal fun DashboardContent(
                 )
             }
 
-            if (sensorStatus.hasDevices) {
-                item {
-                    DashboardSensorStatusCard(
-                        status = sensorStatus,
-                        onOpenDeviceStatus = onOpenDeviceStatus,
-                        modifier = Modifier.padding(
-                            horizontal = DashboardScreenPadding,
-                            vertical = 4.dp,
-                        ),
-                    )
-                }
-            }
-
             if (showHealthConnectPromo) {
                 item {
                     DashboardHealthConnectPromoCard(
@@ -181,6 +168,19 @@ internal fun DashboardContent(
                         }
                     },
                 )
+            }
+
+            if (sensorStatus.hasDevices) {
+                item {
+                    DashboardSensorStatusCard(
+                        status = sensorStatus,
+                        onOpenDeviceStatus = onOpenDeviceStatus,
+                        modifier = Modifier.padding(
+                            horizontal = DashboardScreenPadding,
+                            vertical = 4.dp,
+                        ),
+                    )
+                }
             }
 
             dashboardActivitiesToday(

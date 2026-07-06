@@ -1180,6 +1180,8 @@
     <string name="settings_theme_light">Hele</string>
     <string name="settings_theme_dark">Tume</string>
     <string name="settings_theme_amoled">AMOLED</string>
+    <string name="settings_dynamic_color_title">Dünaamilised värvid (Material You)</string>
+    <string name="settings_dynamic_color_body">Tooni OpenVitals Androidi taustapildi järgi. Väljas kasutatakse OpenVitalsi sinist ja türkiissinist brändipaletti.</string>
     <string name="settings_activity_week_title">Treeningnädal</string>
     <string name="settings_activity_week_body">Vali, kas Treeningud kasutab fikseeritud E-P nädalat või viimast 7 päeva.</string>
     <string name="settings_activity_week_monday_to_sunday">E-P</string>

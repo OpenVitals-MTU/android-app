@@ -1180,6 +1180,8 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_amoled">AMOLED</string>
+    <string name="settings_dynamic_color_title">Dynamic color (Material You)</string>
+    <string name="settings_dynamic_color_body">Tint OpenVitals from your Android wallpaper. Off uses the OpenVitals blue and teal brand palette.</string>
     <string name="settings_activity_week_title">Activity week</string>
     <string name="settings_activity_week_body">Choose whether Activities uses a fixed Mon-Sun week or the latest rolling 7 days.</string>
     <string name="settings_activity_week_monday_to_sunday">Mon-Sun</string>

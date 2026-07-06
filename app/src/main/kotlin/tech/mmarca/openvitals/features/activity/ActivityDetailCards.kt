@@ -31,6 +31,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
 import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
+import tech.mmarca.openvitals.ui.components.AccentIconChip
 import tech.mmarca.openvitals.ui.components.DetailRow
 import tech.mmarca.openvitals.ui.components.DetailSectionCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -64,25 +65,28 @@ internal fun WorkoutSummaryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = exerciseTypeIcon(workout.exerciseType),
-                            contentDescription = null,
-                            tint = WorkoutColor,
-                        )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AccentIconChip(
+                        icon = exerciseTypeIcon(workout.exerciseType),
+                        color = WorkoutColor,
+                        size = 40.dp,
+                        iconSize = 20.dp,
+                    )
+                    Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(
                             text = workout.title ?: exerciseTypeLabel(workout.exerciseType),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                        Text(
+                            text = exerciseTypeLabel(workout.exerciseType),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
-                        text = exerciseTypeLabel(workout.exerciseType),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 SourceChip(source = workout.source)
             }
@@ -90,7 +94,8 @@ internal fun WorkoutSummaryCard(
             Spacer(Modifier.height(16.dp))
             Text(
                 text = unitFormatter.duration(workout.durationMs),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
                 color = WorkoutColor,
             )
             Text(

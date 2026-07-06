@@ -31,6 +31,7 @@ class HealthConnectOnboardingActivity : AppCompatActivity() {
 
         setContent {
             val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
+            val dynamicColor by preferencesRepository.dynamicColorFlow.collectAsStateWithLifecycle()
             val appDarkTheme = appThemeMode.isDarkTheme(isSystemInDarkTheme())
 
             LaunchedEffect(appDarkTheme) {
@@ -48,7 +49,10 @@ class HealthConnectOnboardingActivity : AppCompatActivity() {
                 )
             }
 
-            OpenVitalsTheme(themeMode = appThemeMode) {
+            OpenVitalsTheme(
+                themeMode = appThemeMode,
+                dynamicColor = dynamicColor,
+            ) {
                 val viewModel = hiltViewModel<OnboardingViewModel>()
                 OnboardingScreen(
                     viewModel = viewModel,

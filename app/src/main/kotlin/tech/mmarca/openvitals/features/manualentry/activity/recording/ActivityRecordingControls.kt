@@ -147,7 +147,7 @@ internal fun TimedRecordingControls(
     onEnterFocusMode: () -> Unit,
     onFinishRecording: () -> Unit,
 ) {
-    val buttonModifier = Modifier.height(44.dp)
+    val buttonModifier = Modifier.height(48.dp)
     val buttonContentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
 
     OpenVitalsSurface(
@@ -158,7 +158,7 @@ internal fun TimedRecordingControls(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (state.status == ActivityRecordingStatus.PAUSED) {
                 OpenVitalsOutlinedButton(
@@ -245,7 +245,7 @@ internal fun GpsRecordingControls(
     onAddMarker: () -> Unit,
     onChooseSource: () -> Unit,
 ) {
-    val buttonModifier = Modifier.height(44.dp)
+    val buttonModifier = Modifier.height(48.dp)
     val buttonContentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
 
     OpenVitalsSurface(
@@ -254,11 +254,11 @@ internal fun GpsRecordingControls(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(8.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (state.status == ActivityRecordingStatus.IDLE) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OpenVitalsButton(
                         onClick = onStartRecording,
@@ -289,7 +289,7 @@ internal fun GpsRecordingControls(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (state.status == ActivityRecordingStatus.PAUSED) {
                     OpenVitalsOutlinedButton(
@@ -360,7 +360,7 @@ internal fun GpsRecordingControls(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OpenVitalsOutlinedButton(
                     onClick = onAddLap,

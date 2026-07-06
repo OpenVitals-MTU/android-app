@@ -38,6 +38,7 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 
 @Composable
@@ -155,16 +156,22 @@ private fun BodyEnergySummaryCard(
     timeline: BodyEnergyTimeline?,
     modifier: Modifier = Modifier,
 ) {
-    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+    val accentColor = bodyEnergyColor(timeline?.currentScore)
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+        style = OpenVitalsCardStyle.Accent,
+        accentColor = accentColor,
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Outlined.BatteryChargingFull,
                     contentDescription = null,
-                    tint = bodyEnergyColor(timeline?.currentScore),
+                    tint = accentColor,
+                    modifier = Modifier.size(28.dp),
                 )
                 Column(
                     modifier = Modifier
@@ -184,9 +191,9 @@ private fun BodyEnergySummaryCard(
                 }
                 Text(
                     text = timeline?.currentScore?.toString() ?: "--",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = bodyEnergyColor(timeline?.currentScore),
+                    color = accentColor,
                 )
             }
             Row(

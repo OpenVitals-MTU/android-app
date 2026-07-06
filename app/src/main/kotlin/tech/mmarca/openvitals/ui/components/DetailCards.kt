@@ -52,7 +52,7 @@ val OpenVitalsCardHorizontalPadding: Dp = 16.dp
 val OpenVitalsSectionSpacing: Dp = 8.dp
 val OpenVitalsMetricTilePadding: Dp = 12.dp
 val OpenVitalsMetricTileSpacing: Dp = 8.dp
-val OpenVitalsActionRowHeight: Dp = 40.dp
+val OpenVitalsActionRowHeight: Dp = 48.dp
 val OpenVitalsSurfacePadding: PaddingValues = PaddingValues(12.dp)
 val OpenVitalsStandardRowSpacing: Dp = 8.dp
 
@@ -206,6 +206,7 @@ fun OpenVitalsButton(
     colors: ButtonColors? = null,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     border: BorderStroke? = null,
+    shape: Shape = CircleShape,
     style: OpenVitalsButtonStyle = OpenVitalsButtonStyle.Filled,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -217,6 +218,7 @@ fun OpenVitalsButton(
             enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.buttonColors(),
             contentPadding = contentPadding,
+            shape = shape,
         ) {
             content()
         }
@@ -226,6 +228,7 @@ fun OpenVitalsButton(
             enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.filledTonalButtonColors(),
             contentPadding = contentPadding,
+            shape = shape,
         ) {
             content()
         }
@@ -236,6 +239,7 @@ fun OpenVitalsButton(
             colors = colors ?: ButtonDefaults.outlinedButtonColors(),
             border = border,
             contentPadding = contentPadding,
+            shape = shape,
         ) {
             content()
         }
@@ -245,6 +249,7 @@ fun OpenVitalsButton(
             enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.textButtonColors(),
             contentPadding = contentPadding,
+            shape = shape,
         ) {
             content()
         }
@@ -347,7 +352,11 @@ fun OpenVitalsIconButton(
     content: @Composable () -> Unit,
 ) {
     val interactionEnabled = enabled && !metricSectionEditModeActive()
-    IconButton(onClick = onClick, modifier = modifier, enabled = interactionEnabled) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(44.dp),
+        enabled = interactionEnabled,
+    ) {
         content()
     }
 }
@@ -482,11 +491,12 @@ fun AccentIconChip(
     icon: ImageVector,
     color: Color,
     modifier: Modifier = Modifier,
+    size: Dp = 24.dp,
     iconSize: Dp = 16.dp,
 ) {
     Box(
         modifier = modifier
-            .size(24.dp)
+            .size(size)
             .clip(CircleShape)
             .background(color.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center,

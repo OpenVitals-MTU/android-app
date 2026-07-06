@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -135,6 +136,7 @@ internal fun DailyReadinessPanel(
                     icon = Icons.Outlined.FitnessCenter,
                     color = WorkoutColor,
                     onClick = onOpenTrainingReadinessDetails,
+                    muted = true,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -229,23 +231,29 @@ private fun DailyReadinessMetric(
     icon: ImageVector,
     color: Color,
     onClick: (() -> Unit)? = null,
+    muted: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val background = if (muted) {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    } else {
+        color.copy(alpha = 0.16f).compositeOver(MaterialTheme.colorScheme.surfaceContainer)
+    }
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha = 0.10f))
+            .clip(RoundedCornerShape(12.dp))
+            .background(background)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 9.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = color,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,

@@ -358,6 +358,7 @@ fun AppNavigation(
         navigationIcon = Icons.AutoMirrored.Outlined.ArrowBack,
         navigationContentDescription = stringResource(R.string.cd_back),
         action = addEntryAction,
+        largeTopBar = currentRoute == Screen.Dashboard.route,
         topBarActions = {
             val topBarEditState = when (currentRoute) {
                 Screen.ManualEntry.route -> manualEntryTopBarState

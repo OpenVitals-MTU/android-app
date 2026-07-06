@@ -56,6 +56,7 @@ class PreferencesRepository @Inject constructor(
     private val _unitSystem = MutableStateFlow(readUnitSystem())
     private val _appLanguage = MutableStateFlow(readAppLanguage())
     private val _appThemeMode = MutableStateFlow(readAppThemeMode())
+    private val _dynamicColor = MutableStateFlow(readDynamicColor())
     private val _sleepRangeMode = MutableStateFlow(readSleepRangeMode())
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     private val _showOpenVitalsCalculatedCalories = MutableStateFlow(readShowOpenVitalsCalculatedCalories())
@@ -66,6 +67,7 @@ class PreferencesRepository @Inject constructor(
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
+    val dynamicColorFlow: StateFlow<Boolean> = _dynamicColor.asStateFlow()
     val sleepRangeModeFlow: StateFlow<SleepRangeMode> = _sleepRangeMode.asStateFlow()
     val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
     val weekPeriodModeFlow = activityWeekModeFlow.map { it.toWeekPeriodMode() }
@@ -98,6 +100,13 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit { putString(KEY_APP_THEME_MODE, value.name) }
             _appThemeMode.value = value
+        }
+
+    var dynamicColor: Boolean
+        get() = _dynamicColor.value
+        set(value) {
+            prefs.edit { putBoolean(KEY_DYNAMIC_COLOR, value) }
+            _dynamicColor.value = value
         }
 
     var sleepRangeMode: SleepRangeMode
@@ -673,6 +682,9 @@ class PreferencesRepository @Inject constructor(
             ?.let { value -> runCatching { AppThemeMode.valueOf(value) }.getOrNull() }
             ?: AppThemeMode.SYSTEM
 
+    private fun readDynamicColor(): Boolean =
+        prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
+
     private fun readSleepRangeMode(): SleepRangeMode =
         prefs.getString(KEY_SLEEP_RANGE_MODE, null)
             ?.let { value -> runCatching { SleepRangeMode.valueOf(value) }.getOrNull() }
@@ -934,6 +946,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_UNIT_SYSTEM = "unit_system"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_SLEEP_RANGE_MODE = "sleep_range_mode"
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"
         private const val KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED = "activity_recording_auto_idle_enabled"

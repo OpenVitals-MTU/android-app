@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
+            val dynamicColor by preferencesRepository.dynamicColorFlow.collectAsStateWithLifecycle()
             val appDarkTheme = appThemeMode.isDarkTheme(isSystemInDarkTheme())
 
             LaunchedEffect(appDarkTheme) {
@@ -76,7 +77,10 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            OpenVitalsTheme(themeMode = appThemeMode) {
+            OpenVitalsTheme(
+                themeMode = appThemeMode,
+                dynamicColor = dynamicColor,
+            ) {
                 val resolvedStartDestination = startDestination ?: run {
                     if (
                         preferencesRepository.onboardingDone &&

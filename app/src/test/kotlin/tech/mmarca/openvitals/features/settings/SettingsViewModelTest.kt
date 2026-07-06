@@ -136,6 +136,21 @@ class SettingsViewModelTest {
         assertEquals(AppThemeMode.AMOLED, vm.uiState.value.appThemeMode)
     }
 
+    @Test fun `setDynamicColor persists preference and updates ui state`() = runTest {
+        val prefs = prefs()
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.setDynamicColor(true)
+
+        verify { prefs.dynamicColor = true }
+        assertTrue(vm.uiState.value.dynamicColor)
+    }
+
     @Test fun `selectSleepRangeMode persists preference and updates ui state`() = runTest {
         val prefs = prefs()
         val vm = viewModel(
@@ -425,6 +440,7 @@ class SettingsViewModelTest {
             every { prefs.unitSystem } returns UnitSystem.METRIC
             every { prefs.appLanguage } returns AppLanguage.SYSTEM
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
+            every { prefs.dynamicColor } returns false
             every { prefs.sleepRangeMode } returns SleepRangeMode.EVENING_18H
             every { prefs.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
             every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
@@ -437,6 +453,7 @@ class SettingsViewModelTest {
             every { prefs.appLockEnabled } returns false
             every { prefs.appLanguage = any() } just runs
             every { prefs.appThemeMode = any() } just runs
+            every { prefs.dynamicColor = any() } just runs
             every { prefs.sleepRangeMode = any() } just runs
             every { prefs.activityWeekMode = any() } just runs
             every { prefs.setActivityRecordingPreferences(any()) } just runs
