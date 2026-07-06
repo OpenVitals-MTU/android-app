@@ -53,6 +53,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
@@ -203,6 +204,14 @@ class HomeQuickBeverageLogAction : ActionCallback {
                                 R.string.home_quick_beverage_widget_saved_nutrition
                             }
                         ),
+                    )
+                    // Briefly confirm the tap, then revert to the normal widget text.
+                    delay(SavedConfirmationDurationMillis)
+                    updateQuickBeverageWidgetStatus(
+                        context = context,
+                        glanceId = glanceId,
+                        drinkId = drinkId,
+                        subtitle = context.getString(R.string.home_quick_beverage_widget_tap_to_log),
                     )
                 }
             }
@@ -575,6 +584,8 @@ private fun HydrationEntryError.quickBeverageWidgetMessage(context: Context): St
         HydrationEntryError.INVALID_CUSTOM_DRINK,
         HydrationEntryError.WRITE_FAILED -> context.getString(R.string.home_metric_widget_update_failed)
     }
+
+private const val SavedConfirmationDurationMillis = 1_200L
 
 private val QuickBeverageDrinkIdParameterKey =
     ActionParameters.Key<String>("quick_beverage_drink_id")
