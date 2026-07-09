@@ -417,6 +417,9 @@
     <string name="period_week_of">Woche vom %1$s</string>
     <string name="period_this_month">Dieser Monat</string>
     <string name="period_this_year">Dieses Jahr</string>
+    <string name="period_last_7_days">Letzte 7 Tage</string>
+    <string name="period_last_30_days">Letzte 30 Tage</string>
+    <string name="period_last_365_days">Letzte 365 Tage</string>
     <string name="period_selected">Ausgewählter Zeitraum</string>
 
     <string name="metric_steps">Schritte</string>
@@ -1037,7 +1040,7 @@
     <string name="settings_display_group_title">Anzeige</string>
     <string name="settings_display_group_body">Sprache, Einheiten und Erscheinungsbild</string>
     <string name="settings_activities_group_title">Aktivitäten</string>
-    <string name="settings_activities_group_body">Aktivitätswoche, Lieblingsaktivität, Aufzeichnung und Offline-Karten</string>
+    <string name="settings_activities_group_body">Gleitende Daten, Lieblingsaktivität, Aufzeichnung und Offline-Karten</string>
     <string name="settings_sensors_group_title">Sensoren &amp; Geräte</string>
     <string name="settings_sensors_group_body">Herzfrequenz-, Trittfrequenz- und Leistungssensoren</string>
     <string name="settings_sensors_empty_title">Noch keine Sensoren</string>
@@ -1175,10 +1178,10 @@
     <string name="settings_theme_amoled">AMOLED</string>
     <string name="settings_dynamic_color_title">Dynamische Farben (Material You)</string>
     <string name="settings_dynamic_color_body">Färbe OpenVitals anhand deines Android-Hintergrundbilds ein. Deaktiviert verwendet die OpenVitals-Markenpalette in Blau und Türkis.</string>
-    <string name="settings_activity_week_title">Aktivitätswoche</string>
-    <string name="settings_activity_week_body">Wähle, ob Aktivitäten eine feste Mo-So-Woche oder die letzten gleitenden 7 Tage verwendet.</string>
-    <string name="settings_activity_week_monday_to_sunday">Mo-So</string>
-    <string name="settings_activity_week_last_7_days">Letzte 7 Tage</string>
+    <string name="settings_activity_week_title">Gleitende Daten</string>
+    <string name="settings_activity_week_body">Verwende gleitende Fenster über 7, 30 und 365 Tage statt Kalenderwoche, Kalendermonat und Kalenderjahr.</string>
+    <string name="settings_activity_week_monday_to_sunday">Kalender</string>
+    <string name="settings_activity_week_last_7_days">Gleitend</string>
     <string name="settings_favorite_activity_title">Lieblingsaktivität</string>
     <string name="settings_favorite_activity_body">Verwende standardmäßig die zuletzt aufgezeichnete Aktivität oder wähle einen Aktivitätstyp, der immer vorausgewählt wird.</string>
     <string name="settings_favorite_activity_latest">Letzte verwenden</string>

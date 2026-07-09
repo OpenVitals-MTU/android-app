@@ -419,6 +419,9 @@
     <string name="period_week_of">Week of %1$s</string>
     <string name="period_this_month">This month</string>
     <string name="period_this_year">This year</string>
+    <string name="period_last_7_days">Last 7 days</string>
+    <string name="period_last_30_days">Last 30 days</string>
+    <string name="period_last_365_days">Last 365 days</string>
     <string name="period_selected">Selected period</string>
 
     <string name="metric_steps">Steps</string>
@@ -1049,7 +1052,7 @@
     <string name="settings_display_group_title">Display</string>
     <string name="settings_display_group_body">Language, units, and theme</string>
     <string name="settings_activities_group_title">Activities</string>
-    <string name="settings_activities_group_body">Activity week, favorite activity, recording, and offline maps</string>
+    <string name="settings_activities_group_body">Rolling dates, favorite activity, recording, and offline maps</string>
     <string name="settings_sensors_group_title">Sensors &amp; devices</string>
     <string name="settings_sensors_group_body">Heart rate, cadence, and power sensors</string>
     <string name="settings_sensors_empty_title">No sensors yet</string>
@@ -1193,10 +1196,10 @@
     <string name="settings_theme_amoled">AMOLED</string>
     <string name="settings_dynamic_color_title">Dynamic color (Material You)</string>
     <string name="settings_dynamic_color_body">Tint OpenVitals from your Android wallpaper. Off uses the OpenVitals blue and teal brand palette.</string>
-    <string name="settings_activity_week_title">Activity week</string>
-    <string name="settings_activity_week_body">Choose whether Activities uses a fixed Mon-Sun week or the latest rolling 7 days.</string>
-    <string name="settings_activity_week_monday_to_sunday">Mon-Sun</string>
-    <string name="settings_activity_week_last_7_days">Last 7 days</string>
+    <string name="settings_activity_week_title">Rolling dates</string>
+    <string name="settings_activity_week_body">Use rolling 7, 30, and 365-day windows instead of calendar week, month, and year.</string>
+    <string name="settings_activity_week_monday_to_sunday">Calendar</string>
+    <string name="settings_activity_week_last_7_days">Rolling</string>
     <string name="settings_favorite_activity_title">Favorite activity</string>
     <string name="settings_favorite_activity_body">Use the latest recorded activity by default, or choose one activity type to always preselect.</string>
     <string name="settings_favorite_activity_latest">Use latest</string>

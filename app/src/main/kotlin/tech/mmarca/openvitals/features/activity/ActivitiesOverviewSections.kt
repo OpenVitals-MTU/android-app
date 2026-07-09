@@ -124,11 +124,11 @@ internal fun activityPeriodTitle(
     activityWeekMode: ActivityWeekMode,
     period: DatePeriod,
 ): String =
-    if (selectedRange == TimeRange.WEEK && activityWeekMode == ActivityWeekMode.LAST_7_DAYS) {
-        stringResource(R.string.settings_activity_week_last_7_days)
-    } else {
-        localizedPeriodTitle(selectedRange, period)
-    }
+    localizedPeriodTitle(
+        range = selectedRange,
+        period = period,
+        weekPeriodMode = activityWeekMode.toWeekPeriodMode(),
+    )
 
 @Composable
 internal fun ActivityPeriodSummaryCard(

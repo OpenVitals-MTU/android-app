@@ -47,6 +47,34 @@ class PeriodLoadQueryTest {
         assertEquals(DatePeriod(today.minusDays(36), today.minusDays(7)), query.windows.baseline)
     }
 
+    @Test fun `query uses rolling last thirty days for month when rolling dates are selected`() {
+        val query = PeriodLoadQuery(
+            range = TimeRange.MONTH,
+            anchorDate = today,
+            today = today,
+            baselineDays = 30,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(DatePeriod(today.minusDays(29), today), query.windows.current)
+        assertEquals(DatePeriod(today.minusDays(59), today.minusDays(30)), query.windows.previous)
+        assertEquals(DatePeriod(today.minusDays(59), today.minusDays(30)), query.windows.baseline)
+    }
+
+    @Test fun `query uses rolling last three hundred sixty five days for year when rolling dates are selected`() {
+        val query = PeriodLoadQuery(
+            range = TimeRange.YEAR,
+            anchorDate = today,
+            today = today,
+            baselineDays = 30,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(DatePeriod(today.minusDays(364), today), query.windows.current)
+        assertEquals(DatePeriod(today.minusDays(729), today.minusDays(365)), query.windows.previous)
+        assertEquals(DatePeriod(today.minusDays(394), today.minusDays(365)), query.windows.baseline)
+    }
+
     @Test fun `query clips current Monday to Sunday load window to today`() {
         val wednesday = LocalDate.of(2026, 5, 27)
         val query = PeriodLoadQuery(

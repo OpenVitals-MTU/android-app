@@ -9,14 +9,16 @@ data class PeriodSelection(
     fun selectRange(range: TimeRange, today: LocalDate = LocalDate.now()): PeriodSelection =
         copy(selectedRange = range, selectedDate = selectedDate.coerceAtMost(today))
 
-    fun previousPeriod(): PeriodSelection =
-        copy(selectedDate = selectedRange.shift(selectedDate, steps = -1))
+    fun previousPeriod(
+        weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+    ): PeriodSelection =
+        copy(selectedDate = selectedRange.shift(selectedDate, steps = -1, weekPeriodMode = weekPeriodMode))
 
     fun nextPeriod(
         today: LocalDate = LocalDate.now(),
         weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     ): PeriodSelection {
-        val nextDate = selectedRange.shift(selectedDate, steps = 1)
+        val nextDate = selectedRange.shift(selectedDate, steps = 1, weekPeriodMode = weekPeriodMode)
         val nextPeriod = periodFor(selectedRange, nextDate, today, weekPeriodMode)
         return if (nextPeriod.start.isAfter(today) || nextPeriod.end.isAfter(today)) {
             this

@@ -419,6 +419,9 @@
     <string name="period_week_of">Nädal %1$s</string>
     <string name="period_this_month">Sel kuul</string>
     <string name="period_this_year">Sel aastal</string>
+    <string name="period_last_7_days">Viimased 7 päeva</string>
+    <string name="period_last_30_days">Viimased 30 päeva</string>
+    <string name="period_last_365_days">Viimased 365 päeva</string>
     <string name="period_selected">Valitud periood</string>
 
     <string name="metric_steps">Sammud</string>
@@ -1038,7 +1041,7 @@
     <string name="settings_display_group_title">Kuva</string>
     <string name="settings_display_group_body">Keel, ühikud ja teema</string>
     <string name="settings_activities_group_title">Treeningud</string>
-    <string name="settings_activities_group_body">Treeningnädal, lemmiktreening, salvestamine ja võrguühenduseta kaardid</string>
+    <string name="settings_activities_group_body">Veerevad kuupäevad, lemmiktreening, salvestamine ja võrguühenduseta kaardid</string>
     <string name="settings_sensors_group_title">Andurid ja seadmed</string>
     <string name="settings_sensors_group_body">Pulsi-, sagedus- ja võimsusandurid</string>
     <string name="settings_sensors_empty_title">Andureid veel pole</string>
@@ -1182,10 +1185,10 @@
     <string name="settings_theme_amoled">AMOLED</string>
     <string name="settings_dynamic_color_title">Dünaamilised värvid (Material You)</string>
     <string name="settings_dynamic_color_body">Tooni OpenVitals Androidi taustapildi järgi. Väljas kasutatakse OpenVitalsi sinist ja türkiissinist brändipaletti.</string>
-    <string name="settings_activity_week_title">Treeningnädal</string>
-    <string name="settings_activity_week_body">Vali, kas Treeningud kasutab fikseeritud E-P nädalat või viimast 7 päeva.</string>
-    <string name="settings_activity_week_monday_to_sunday">E-P</string>
-    <string name="settings_activity_week_last_7_days">Viimased 7 päeva</string>
+    <string name="settings_activity_week_title">Veerevad kuupäevad</string>
+    <string name="settings_activity_week_body">Kasuta kalendrinädala, -kuu ja -aasta asemel veerevaid 7, 30 ja 365 päeva aknaid.</string>
+    <string name="settings_activity_week_monday_to_sunday">Kalender</string>
+    <string name="settings_activity_week_last_7_days">Veerev</string>
     <string name="settings_favorite_activity_title">Lemmiktreening</string>
     <string name="settings_favorite_activity_body">Kasuta vaikimisi viimati salvestatud treeningut või vali üks treeningu liik, mis alati eelnevalt valitakse.</string>
     <string name="settings_favorite_activity_latest">Kasuta viimast</string>

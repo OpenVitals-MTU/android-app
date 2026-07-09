@@ -14,6 +14,8 @@ enum class WeekPeriodMode {
     LAST_7_DAYS,
 }
 
+fun WeekPeriodMode.usesRollingDates(): Boolean = this == WeekPeriodMode.LAST_7_DAYS
+
 data class DatePeriod(
     val start: LocalDate,
     val end: LocalDate,

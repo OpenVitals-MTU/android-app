@@ -417,6 +417,9 @@
     <string name="period_week_of">Semana del %1$s</string>
     <string name="period_this_month">Este mes</string>
     <string name="period_this_year">Este año</string>
+    <string name="period_last_7_days">Últimos 7 días</string>
+    <string name="period_last_30_days">Últimos 30 días</string>
+    <string name="period_last_365_days">Últimos 365 días</string>
     <string name="period_selected">Periodo seleccionado</string>
 
     <string name="metric_steps">Pasos</string>
@@ -1037,7 +1040,7 @@
     <string name="settings_display_group_title">Visualización</string>
     <string name="settings_display_group_body">Idioma, unidades y tema</string>
     <string name="settings_activities_group_title">Actividades</string>
-    <string name="settings_activities_group_body">Semana de actividad, actividad favorita, grabación y mapas sin conexión</string>
+    <string name="settings_activities_group_body">Fechas móviles, actividad favorita, grabación y mapas sin conexión</string>
     <string name="settings_sensors_group_title">Sensores y dispositivos</string>
     <string name="settings_sensors_group_body">Sensores de frecuencia cardiaca, cadencia y potencia</string>
     <string name="settings_sensors_empty_title">Sin sensores todavía</string>
@@ -1175,10 +1178,10 @@
     <string name="settings_theme_amoled">AMOLED</string>
     <string name="settings_dynamic_color_title">Color dinámico (Material You)</string>
     <string name="settings_dynamic_color_body">Tiñe OpenVitals con tu fondo de pantalla de Android. Desactivado usa la paleta de marca azul y verde azulado de OpenVitals.</string>
-    <string name="settings_activity_week_title">Semana de actividad</string>
-    <string name="settings_activity_week_body">Elige si Actividades usa una semana fija lun-dom o los últimos 7 días móviles.</string>
-    <string name="settings_activity_week_monday_to_sunday">Lun-dom</string>
-    <string name="settings_activity_week_last_7_days">Últimos 7 días</string>
+    <string name="settings_activity_week_title">Fechas móviles</string>
+    <string name="settings_activity_week_body">Usa ventanas móviles de 7, 30 y 365 días en lugar de semana, mes y año de calendario.</string>
+    <string name="settings_activity_week_monday_to_sunday">Calendario</string>
+    <string name="settings_activity_week_last_7_days">Móviles</string>
     <string name="settings_favorite_activity_title">Actividad favorita</string>
     <string name="settings_favorite_activity_body">Usa por defecto la última actividad grabada o elige un tipo de actividad para preseleccionarlo siempre.</string>
     <string name="settings_favorite_activity_latest">Usar última</string>

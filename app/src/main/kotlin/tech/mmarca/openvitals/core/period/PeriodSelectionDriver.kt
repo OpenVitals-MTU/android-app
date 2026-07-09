@@ -22,7 +22,7 @@ class PeriodSelectionDriver(
     }
 
     fun previousPeriod(): PeriodSelection =
-        updateUserSelection(selection.previousPeriod())
+        updateUserSelection(selection.previousPeriod(weekPeriodMode))
 
     fun nextPeriod(): PeriodSelection? {
         val next = selection.nextPeriod(weekPeriodMode = weekPeriodMode)

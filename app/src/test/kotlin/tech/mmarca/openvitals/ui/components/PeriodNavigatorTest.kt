@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.ui.components
 
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.period.periodFor
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -74,6 +75,17 @@ class PeriodNavigatorTest {
         assertEquals(LocalDate.of(2024, 2, 29), period.end)
     }
 
+    @Test fun `periodFor MONTH supports rolling last thirty days`() {
+        val period = periodFor(
+            range = TimeRange.MONTH,
+            anchorDate = wednesday,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(wednesday.minusDays(29), period.start)
+        assertEquals(wednesday, period.end)
+    }
+
     // ─── YEAR ─────────────────────────────────────────────────────────────────
 
     @Test fun `periodFor YEAR start is January 1`() {
@@ -84,6 +96,17 @@ class PeriodNavigatorTest {
     @Test fun `periodFor YEAR end is December 31`() {
         val period = periodFor(TimeRange.YEAR, midYear)
         assertEquals(LocalDate.of(2023, 12, 31), period.end)
+    }
+
+    @Test fun `periodFor YEAR supports rolling last three hundred sixty five days`() {
+        val period = periodFor(
+            range = TimeRange.YEAR,
+            anchorDate = midYear,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(midYear.minusDays(364), period.start)
+        assertEquals(midYear, period.end)
     }
 
     // ─── coerceAtMost(today) guard ────────────────────────────────────────────

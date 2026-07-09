@@ -24,14 +24,30 @@ fun periodFor(
     )
 
     TimeRange.MONTH -> {
-        val start = anchorDate.withDayOfMonth(1)
-        val end = anchorDate.withDayOfMonth(anchorDate.lengthOfMonth()).coerceAtMost(today)
+        val start = if (weekPeriodMode.usesRollingDates()) {
+            anchorDate.minusDays(TimeRange.MONTH.days.toLong() - 1)
+        } else {
+            anchorDate.withDayOfMonth(1)
+        }
+        val end = if (weekPeriodMode.usesRollingDates()) {
+            anchorDate
+        } else {
+            anchorDate.withDayOfMonth(anchorDate.lengthOfMonth()).coerceAtMost(today)
+        }
         DatePeriod(start = start, end = end)
     }
 
     TimeRange.YEAR -> {
-        val start = anchorDate.withDayOfYear(1)
-        val end = anchorDate.withDayOfYear(anchorDate.lengthOfYear()).coerceAtMost(today)
+        val start = if (weekPeriodMode.usesRollingDates()) {
+            anchorDate.minusDays(TimeRange.YEAR.days.toLong() - 1)
+        } else {
+            anchorDate.withDayOfYear(1)
+        }
+        val end = if (weekPeriodMode.usesRollingDates()) {
+            anchorDate
+        } else {
+            anchorDate.withDayOfYear(anchorDate.lengthOfYear()).coerceAtMost(today)
+        }
         DatePeriod(start = start, end = end)
     }
 }
@@ -59,7 +75,7 @@ fun previousPeriodFor(
     PeriodSelection(
         selectedRange = range,
         selectedDate = anchorDate.coerceAtMost(today),
-    ).previousPeriod().period(today, weekPeriodMode)
+    ).previousPeriod(weekPeriodMode).period(today, weekPeriodMode)
 
 fun baselinePeriodBefore(
     period: DatePeriod,
@@ -87,11 +103,23 @@ fun periodWindowsFor(
     )
 }
 
-internal fun TimeRange.shift(anchorDate: LocalDate, steps: Long): LocalDate = when (this) {
+internal fun TimeRange.shift(
+    anchorDate: LocalDate,
+    steps: Long,
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+): LocalDate = when (this) {
     TimeRange.DAY -> anchorDate.plusDays(steps)
     TimeRange.WEEK -> anchorDate.plusWeeks(steps)
-    TimeRange.MONTH -> anchorDate.plusMonths(steps)
-    TimeRange.YEAR -> anchorDate.plusYears(steps)
+    TimeRange.MONTH -> if (weekPeriodMode.usesRollingDates()) {
+        anchorDate.plusDays(TimeRange.MONTH.days.toLong() * steps)
+    } else {
+        anchorDate.plusMonths(steps)
+    }
+    TimeRange.YEAR -> if (weekPeriodMode.usesRollingDates()) {
+        anchorDate.plusDays(TimeRange.YEAR.days.toLong() * steps)
+    } else {
+        anchorDate.plusYears(steps)
+    }
 }
 
 private fun weekPeriodFor(

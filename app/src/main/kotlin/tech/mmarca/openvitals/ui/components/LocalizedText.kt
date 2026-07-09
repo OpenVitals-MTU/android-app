@@ -6,6 +6,8 @@ import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.core.period.usesRollingDates
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -35,6 +37,7 @@ fun localizedPeriodTitle(
     range: TimeRange,
     period: DatePeriod,
     today: LocalDate = LocalDate.now(),
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
 ): String {
     val locale = LocalLocale.current.platformLocale
     val dateFormatter = DateTimeFormatter.ofPattern("EEE d MMM", locale)
@@ -48,19 +51,25 @@ fun localizedPeriodTitle(
             else -> dateFormatter.format(period.start)
         }
 
-        TimeRange.WEEK -> if (today in period.start..period.end) {
+        TimeRange.WEEK -> if (weekPeriodMode.usesRollingDates() && period.end == today) {
+            stringResource(R.string.period_last_7_days)
+        } else if (today in period.start..period.end) {
             stringResource(R.string.period_this_week)
         } else {
             stringResource(R.string.period_week_of, dateFormatter.format(period.start))
         }
 
-        TimeRange.MONTH -> if (period.end == today) {
+        TimeRange.MONTH -> if (weekPeriodMode.usesRollingDates() && period.end == today) {
+            stringResource(R.string.period_last_30_days)
+        } else if (period.end == today) {
             stringResource(R.string.period_this_month)
         } else {
             monthFormatter.format(period.start)
         }
 
-        TimeRange.YEAR -> if (period.end == today) {
+        TimeRange.YEAR -> if (weekPeriodMode.usesRollingDates() && period.end == today) {
+            stringResource(R.string.period_last_365_days)
+        } else if (period.end == today) {
             stringResource(R.string.period_this_year)
         } else {
             yearFormatter.format(period.start)

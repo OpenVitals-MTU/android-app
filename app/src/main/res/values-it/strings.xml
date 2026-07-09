@@ -413,6 +413,9 @@
     <string name="period_week_of">Settimana del %1$s</string>
     <string name="period_this_month">Questo mese</string>
     <string name="period_this_year">Quest\'anno</string>
+    <string name="period_last_7_days">Ultimi 7 giorni</string>
+    <string name="period_last_30_days">Ultimi 30 giorni</string>
+    <string name="period_last_365_days">Ultimi 365 giorni</string>
     <string name="period_selected">Periodo selezionato</string>
     <string name="metric_steps">Passi</string>
     <string name="metric_distance">Distanza</string>
@@ -1025,7 +1028,7 @@
     <string name="settings_display_group_title">Visualizzazione</string>
     <string name="settings_display_group_body">Lingua, unità di misura e tema</string>
     <string name="settings_activities_group_title">Attività</string>
-    <string name="settings_activities_group_body">Settimana attività, attività preferita, registrazione e mappe offline</string>
+    <string name="settings_activities_group_body">Date mobili, attività preferita, registrazione e mappe offline</string>
     <string name="settings_sensors_group_title">Sensori &amp; dispositivi</string>
     <string name="settings_sensors_group_body">Frequenza cardiaca, cadenza e sensori di potenza</string>
     <string name="settings_sensors_empty_title">Ancora nessun sensore</string>
@@ -1168,10 +1171,10 @@
     <string name="settings_theme_amoled">AMOLED</string>
     <string name="settings_dynamic_color_title">Colore dinamico (Material You)</string>
     <string name="settings_dynamic_color_body">Tinge OpenVitals in base allo sfondo Android. Se disattivato, usa la palette del brand OpenVitals in blu e verde acqua.</string>
-    <string name="settings_activity_week_title">Settimana attività</string>
-    <string name="settings_activity_week_body">Scegli se Attività usa una settimana fissa Lun-Dom o gli ultimi 7 giorni mobili.</string>
-    <string name="settings_activity_week_monday_to_sunday">Lun-Dom</string>
-    <string name="settings_activity_week_last_7_days">Ultimi 7 giorni</string>
+    <string name="settings_activity_week_title">Date mobili</string>
+    <string name="settings_activity_week_body">Usa finestre mobili di 7, 30 e 365 giorni invece di settimana, mese e anno di calendario.</string>
+    <string name="settings_activity_week_monday_to_sunday">Calendario</string>
+    <string name="settings_activity_week_last_7_days">Mobile</string>
     <string name="settings_favorite_activity_title">Attività preferita</string>
     <string name="settings_favorite_activity_body">Usa l\'ultima attività registrata come predefinita, oppure scegli un tipo di attività da preselezionare sempre.</string>
     <string name="settings_favorite_activity_latest">Usa l\'ultima</string>

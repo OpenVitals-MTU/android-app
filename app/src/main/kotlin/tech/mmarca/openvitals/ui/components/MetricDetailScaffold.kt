@@ -122,6 +122,7 @@ fun MetricDetailScaffold(
                         onNextPeriod = onNextPeriod,
                         onOpenCalendar = { showDatePicker = true },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        weekPeriodMode = weekPeriodMode,
                     )
                 }
                 primaryAction?.let { action ->

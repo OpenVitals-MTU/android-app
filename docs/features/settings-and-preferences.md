@@ -22,7 +22,7 @@ Display preferences affect app presentation only. They do not rewrite Health Con
 
 Metric-specific settings include:
 
-- Activity week mode, such as Monday-to-Sunday or rolling last 7 days.
+- Rolling dates mode, such as calendar week/month/year or rolling 7/30/365-day windows.
 - Favorite or latest activity defaults used by activity entry and recording setup.
 - Calorie data mode, including optional OpenVitals total-calorie calculation when Health Connect totals are missing.
 - Sleep range mode, including rolling 24 hours, noon boundary, and evening boundary.

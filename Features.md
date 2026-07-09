@@ -342,7 +342,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Activity Settings
 
-- Change activity week mode: Monday-to-Sunday or last 7 days.
+- Change rolling dates mode: calendar week/month/year or rolling 7/30/365-day windows.
 - Choose the favorite/default activity behavior used by activity entry.
 - Use the latest activity or a route-capable default activity type as the favorite activity source.
 

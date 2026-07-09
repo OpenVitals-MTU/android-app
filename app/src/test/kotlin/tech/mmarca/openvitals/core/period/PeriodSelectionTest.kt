@@ -30,6 +30,18 @@ class PeriodSelectionTest {
         assertEquals(LocalDate.of(2026, 3, 15), selection.previousPeriod().selectedDate)
     }
 
+    @Test fun `previousPeriod moves month by thirty days for rolling dates`() {
+        val selection = PeriodSelection(
+            selectedRange = TimeRange.MONTH,
+            selectedDate = LocalDate.of(2026, 4, 15),
+        )
+
+        assertEquals(
+            LocalDate.of(2026, 3, 16),
+            selection.previousPeriod(WeekPeriodMode.LAST_7_DAYS).selectedDate,
+        )
+    }
+
     @Test fun `nextPeriod does not move beyond current period`() {
         val selection = PeriodSelection(
             selectedRange = TimeRange.WEEK,
@@ -84,6 +96,18 @@ class PeriodSelectionTest {
         )
 
         assertEquals(today.minusDays(6), period.start)
+        assertEquals(today, period.end)
+    }
+
+    @Test fun `displayPeriodFor supports rolling last thirty days`() {
+        val period = displayPeriodFor(
+            range = TimeRange.MONTH,
+            anchorDate = today,
+            today = today,
+            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+        )
+
+        assertEquals(today.minusDays(29), period.start)
         assertEquals(today, period.end)
     }
 }

@@ -20,7 +20,7 @@ What you can do
 * Connect experimental Bluetooth LE heart-rate, cadence, power, and footpod sensors during activity recording, including heart-rate monitoring for supported strength and repetition training
 * Estimate active and total calories for imported and recorded activities before saving
 * Enable opt-in hydration reminders with active hours and daily-goal pause logic
-* Choose a fixed Mon-Sun activity week or a rolling last 7 days
+* Choose calendar periods or rolling 7, 30, and 365-day date windows
 * Choose metric or imperial units
 * Grant sensitive cycle permissions only when you want that data shown
 

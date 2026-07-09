@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.period.WeekPeriodMode
 
 @Composable
 fun PeriodNavigator(
@@ -33,6 +34,7 @@ fun PeriodNavigator(
     onNextPeriod: () -> Unit,
     onOpenCalendar: () -> Unit,
     modifier: Modifier = Modifier,
+    weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -50,7 +52,7 @@ fun PeriodNavigator(
                 .clickable(onClick = onOpenCalendar),
         ) {
             Text(
-                text = title ?: localizedPeriodTitle(selectedRange, period),
+                text = title ?: localizedPeriodTitle(selectedRange, period, weekPeriodMode = weekPeriodMode),
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Start,
             )

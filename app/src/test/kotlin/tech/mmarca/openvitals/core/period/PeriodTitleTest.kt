@@ -46,4 +46,35 @@ class PeriodTitleTest {
             ),
         )
     }
+
+    @Test
+    fun rollingPeriodTitlesUseFixedDayWindowLabels() {
+        assertEquals(
+            "Last 7 days",
+            periodTitle(
+                TimeRange.WEEK,
+                DatePeriod(today.minusDays(6), today),
+                today,
+                weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+            ),
+        )
+        assertEquals(
+            "Last 30 days",
+            periodTitle(
+                TimeRange.MONTH,
+                DatePeriod(today.minusDays(29), today),
+                today,
+                weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+            ),
+        )
+        assertEquals(
+            "Last 365 days",
+            periodTitle(
+                TimeRange.YEAR,
+                DatePeriod(today.minusDays(364), today),
+                today,
+                weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+            ),
+        )
+    }
 }
