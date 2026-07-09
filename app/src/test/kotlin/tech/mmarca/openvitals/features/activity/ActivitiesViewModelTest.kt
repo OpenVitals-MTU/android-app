@@ -4,6 +4,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.query.ActivitiesPeriodData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -122,22 +123,109 @@ class ActivitiesViewModelTest {
         coVerify { repo.loadDailyNutrition(weekStart, weekEnd.coerceAtMost(today)) }
     }
 
+    @Test fun `selectActivityType filters loaded activities without changing selected period`() = runTest {
+        val walk = workout(
+            id = "walk",
+            source = "com.example",
+            isOpenVitalsEntry = false,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+        )
+        val bike = workout(
+            id = "bike",
+            source = "com.example",
+            isOpenVitalsEntry = false,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+        )
+        val bikePlan = plannedWorkout(
+            id = "bike-plan",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadWorkouts(any(), any()) } returns listOf(walk, bike)
+        coEvery { repo.loadPlannedWorkouts(any(), any()) } returns listOf(bikePlan)
+        val vm = ActivitiesViewModel(repo)
+        val initialRange = vm.uiState.value.selectedRange
+        val initialDate = vm.uiState.value.selectedDate
+
+        vm.selectActivityType(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(initialRange, state.selectedRange)
+        assertEquals(initialDate, state.selectedDate)
+        assertEquals(listOf("bike"), state.workouts.map { it.id })
+        assertEquals(listOf("bike-plan"), state.plannedWorkouts.map { it.id })
+        assertEquals(listOf("bike"), state.previousWorkouts.map { it.id })
+        assertEquals(listOf("bike"), state.baselineWorkouts.map { it.id })
+        assertTrue(state.overviewDays.flatMap { it.workouts }.all { it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_BIKING })
+        assertEquals(
+            listOf(
+                ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+                ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+            ),
+            state.availableActivityTypes,
+        )
+    }
+
+    @Test fun `selectActivityType all restores loaded activities`() = runTest {
+        val walk = workout(
+            id = "walk",
+            source = "com.example",
+            isOpenVitalsEntry = false,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+        )
+        val bike = workout(
+            id = "bike",
+            source = "com.example",
+            isOpenVitalsEntry = false,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadWorkouts(any(), any()) } returns listOf(walk, bike)
+        val vm = ActivitiesViewModel(repo)
+
+        vm.selectActivityType(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
+        vm.selectActivityType(null)
+        advanceUntilIdle()
+
+        assertEquals(listOf("walk", "bike"), vm.uiState.value.workouts.map { it.id })
+        assertEquals(null, vm.uiState.value.selectedActivityType)
+    }
+
     private fun workout(
         id: String,
         source: String,
         isOpenVitalsEntry: Boolean,
+        exerciseType: Int = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
     ): ExerciseData {
-        val start = Instant.parse("2026-05-26T08:00:00Z")
+        val start = Instant.parse("${LocalDate.now()}T08:00:00Z")
         val end = start.plusSeconds(1_800)
         return ExerciseData(
             id = id,
             title = "Walk",
-            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+            exerciseType = exerciseType,
             startTime = start,
             endTime = end,
             durationMs = 1_800_000,
             source = source,
             isOpenVitalsEntry = isOpenVitalsEntry,
+        )
+    }
+
+    private fun plannedWorkout(id: String, exerciseType: Int): PlannedExerciseData {
+        val start = Instant.parse("${LocalDate.now()}T08:00:00Z")
+        val end = start.plusSeconds(1_800)
+        return PlannedExerciseData(
+            id = id,
+            title = null,
+            exerciseType = exerciseType,
+            startTime = start,
+            endTime = end,
+            hasExplicitTime = true,
+            completedExerciseSessionId = null,
+            notes = null,
+            blockCount = 0,
+            source = "com.example",
         )
     }
 }

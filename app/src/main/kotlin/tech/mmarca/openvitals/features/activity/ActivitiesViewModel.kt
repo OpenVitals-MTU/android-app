@@ -50,6 +50,8 @@ data class ActivitiesUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
     val dailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
+    val selectedActivityType: Int? = null,
+    val availableActivityTypes: List<Int> = emptyList(),
     val workouts: List<ExerciseData> = emptyList(),
     val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
     val previousWorkouts: List<ExerciseData> = emptyList(),
@@ -106,6 +108,7 @@ class ActivitiesViewModel(
     )
     val uiState: StateFlow<ActivitiesUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
+    private var latestResult: ActivitiesLoadResult? = null
 
     init {
         observeActivityWeekMode()
@@ -170,14 +173,26 @@ class ActivitiesViewModel(
         _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
     }
 
+    fun selectActivityType(type: Int?) {
+        val result = latestResult
+        if (result == null) {
+            _uiState.value = _uiState.value.copy(selectedActivityType = type)
+            return
+        }
+        _uiState.value = _uiState.value.withLoadedResult(result, type)
+    }
+
     fun deleteActivityEntry(entryId: String) {
         if (entryId.isBlank()) return
         val entry = _uiState.value.workouts.firstOrNull { it.id == entryId } ?: return
         if (!entry.isOpenVitalsEntry) return
         viewModelScope.launch {
             val previous = _uiState.value
+            val previousResult = latestResult
+            latestResult = latestResult?.withoutActivityEntry(entryId)
             _uiState.value = previous.copy(
                 workouts = previous.workouts.filterNot { it.id == entryId },
+                overviewDays = previous.overviewDays.withoutActivityEntry(entryId),
                 error = null,
             )
             runCatching {
@@ -185,6 +200,7 @@ class ActivitiesViewModel(
             }.onSuccess {
                 load()
             }.onFailure { error ->
+                latestResult = previousResult
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
@@ -248,16 +264,10 @@ class ActivitiesViewModel(
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        selectedDate = date,
-                        workouts = result.workouts,
-                        plannedWorkouts = result.plannedWorkouts,
-                        previousWorkouts = result.previousWorkouts,
-                        baselineWorkouts = result.baselineWorkouts,
-                        overviewDays = result.overviewDays,
-                        crossDailyRestingHR = result.crossDailyRestingHR,
-                    )
+                    latestResult = result
+                    _uiState.value = _uiState.value
+                        .copy(isLoading = false, selectedDate = date)
+                        .withLoadedResult(result, _uiState.value.selectedActivityType)
                 }
                 .onFailure {
                     if (!isCurrent) return@load
@@ -270,14 +280,22 @@ class ActivitiesViewModel(
         }
     }
 
-    private data class ActivitiesLoadResult(
-        val workouts: List<ExerciseData>,
-        val plannedWorkouts: List<PlannedExerciseData>,
-        val previousWorkouts: List<ExerciseData>,
-        val baselineWorkouts: List<ExerciseData>,
-        val overviewDays: List<ActivityOverviewDay>,
-        val crossDailyRestingHR: List<DailyRestingHR>,
-    )
+    private fun ActivitiesUiState.withLoadedResult(
+        result: ActivitiesLoadResult,
+        selectedActivityType: Int?,
+    ): ActivitiesUiState {
+        val filtered = result.filteredBy(selectedActivityType)
+        return copy(
+            selectedActivityType = selectedActivityType,
+            availableActivityTypes = result.availableActivityTypes(),
+            workouts = filtered.workouts,
+            plannedWorkouts = filtered.plannedWorkouts,
+            previousWorkouts = filtered.previousWorkouts,
+            baselineWorkouts = filtered.baselineWorkouts,
+            overviewDays = filtered.overviewDays,
+            crossDailyRestingHR = filtered.crossDailyRestingHR,
+        )
+    }
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(
@@ -286,6 +304,52 @@ class ActivitiesViewModel(
         )
     }
 }
+
+private data class ActivitiesLoadResult(
+    val workouts: List<ExerciseData>,
+    val plannedWorkouts: List<PlannedExerciseData>,
+    val previousWorkouts: List<ExerciseData>,
+    val baselineWorkouts: List<ExerciseData>,
+    val overviewDays: List<ActivityOverviewDay>,
+    val crossDailyRestingHR: List<DailyRestingHR>,
+)
+
+private fun ActivitiesLoadResult.filteredBy(type: Int?): ActivitiesLoadResult {
+    if (type == null) return this
+    return copy(
+        workouts = workouts.filterWorkoutsByActivityType(type),
+        plannedWorkouts = plannedWorkouts.filterPlansByActivityType(type),
+        previousWorkouts = previousWorkouts.filterWorkoutsByActivityType(type),
+        baselineWorkouts = baselineWorkouts.filterWorkoutsByActivityType(type),
+        overviewDays = overviewDays.map { day ->
+            day.copy(workouts = day.workouts.filterWorkoutsByActivityType(type))
+        },
+    )
+}
+
+private fun ActivitiesLoadResult.availableActivityTypes(): List<Int> =
+    (workouts.map { it.exerciseType } + plannedWorkouts.map { it.exerciseType })
+        .distinct()
+        .sortedBy(::exerciseTypeLabel)
+
+private fun ActivitiesLoadResult.withoutActivityEntry(
+    entryId: String,
+): ActivitiesLoadResult =
+    copy(
+        workouts = workouts.filterNot { it.id == entryId },
+        overviewDays = overviewDays.withoutActivityEntry(entryId),
+    )
+
+private fun List<ActivityOverviewDay>.withoutActivityEntry(entryId: String): List<ActivityOverviewDay> =
+    map { day ->
+        day.copy(workouts = day.workouts.filterNot { it.id == entryId })
+    }
+
+private fun List<ExerciseData>.filterWorkoutsByActivityType(type: Int): List<ExerciseData> =
+    filter { it.exerciseType == type }
+
+private fun List<PlannedExerciseData>.filterPlansByActivityType(type: Int): List<PlannedExerciseData> =
+    filter { it.exerciseType == type }
 
 private fun activityOverviewDays(
     start: LocalDate,

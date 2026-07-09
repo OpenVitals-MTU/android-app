@@ -74,6 +74,9 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
     state: ActivitiesUiState,
     period: DatePeriod,
     chartDaySelection: ChartDaySelection,
+    selectedActivityType: Int?,
+    availableActivityTypes: List<Int>,
+    onSelectActivityType: (Int?) -> Unit,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenActivity: (String) -> Unit,
@@ -122,6 +125,16 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                 !state.isLoading,
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
+                if (availableActivityTypes.isNotEmpty() || selectedActivityType != null) {
+                    ActivityTypeFilterSelector(
+                        selectedActivityType = selectedActivityType,
+                        availableActivityTypes = availableActivityTypes,
+                        onSelectActivityType = onSelectActivityType,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 if (state.workouts.isNotEmpty() || sortedOverviewDays.isNotEmpty() || !state.isLoading) {
                     ActivityPeriodSummaryCard(
                         workouts = state.workouts,

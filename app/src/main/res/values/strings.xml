@@ -533,6 +533,8 @@
 
     <string name="section_activities">Activities</string>
     <string name="section_planned_workouts">Planned workouts</string>
+    <string name="activities_filter_activity_type_label">Activity type</string>
+    <string name="activities_filter_all">All activities</string>
     <string name="activities_key_metrics">Key metrics</string>
     <string name="recovery_sleep_score">Sleep score</string>
     <string name="recovery_sleep_duration">Sleep duration</string>
@@ -1291,8 +1293,15 @@
     <string name="settings_apple_health_import_error">Import failed: %1$s</string>
     <string name="settings_apple_health_import_permission_denied">Access to the selected file was lost, so the import couldn\'t continue. Select the same Apple Health export again to pick up right where it left off.</string>
     <string name="settings_route_import_title">GPX/KML/KMZ Importer</string>
-    <string name="settings_route_import_body">Import GPX, KML, or KMZ route files, review detected details, and choose whether to save them to Health Connect.</string>
+    <string name="settings_route_import_body">Import GPX, KML, or KMZ route files. Review one file before saving, or bulk import multiple files directly into Health Connect.</string>
+    <string name="settings_route_import_permissions">%1$d/%2$d route import permissions granted.</string>
+    <string name="settings_route_import_grant">Grant route import permissions</string>
     <string name="settings_route_import_action">Import GPX/KML/KMZ file</string>
+    <string name="settings_route_import_bulk_action">Bulk import GPX/KML/KMZ files</string>
+    <string name="settings_route_importing">Importing routes...</string>
+    <string name="settings_route_import_progress">File %1$d/%2$d. Imported %3$d, failed %4$d.</string>
+    <string name="settings_route_import_result">Imported %1$d. Failed %2$d. Selected %3$d.</string>
+    <string name="settings_route_import_error">Route import warning: %1$s</string>
     <string name="settings_fit_import_title">FIT Importer</string>
     <string name="settings_fit_import_body">Import FIT activity, course, or workout files, review detected details, and choose whether to save them to Health Connect.</string>
     <string name="settings_fit_import_action">Import FIT file</string>
