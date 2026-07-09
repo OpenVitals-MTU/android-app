@@ -36,7 +36,6 @@ import tech.mmarca.openvitals.R
 internal enum class ActivityEntrySourceAction {
     MANUAL,
     EXISTING_PLAN,
-    IMPORT_ROUTE_FILE,
     RECORD_GPS,
 }
 
@@ -45,7 +44,6 @@ internal fun ActivityEntrySourceCard(
     state: ActivityEntryUiState,
     onStartManualEntry: () -> Unit,
     onCreateFromExistingPlan: () -> Unit,
-    onImportRouteFile: () -> Unit,
     onRecordGpsActivity: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
@@ -113,22 +111,6 @@ internal fun ActivityEntrySourceCard(
                 )
                 Text(
                     text = stringResource(R.string.activity_entry_record_gps),
-                    modifier = Modifier.padding(start = 6.dp),
-                )
-            }
-
-            OpenVitalsOutlinedButton(
-                onClick = onImportRouteFile,
-                enabled = !state.isCheckingPermission && !state.isImportingRoute && !state.isSavingEntry,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FolderOpen,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = stringResource(R.string.activity_entry_import_route_file),
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

@@ -13,6 +13,7 @@ internal data class SettingsScreenActions(
     val onImportAppleHealth: () -> Unit,
     val onToggleAppleHealthImportCategory: (AppleHealthImportCategory, Boolean) -> Unit,
     val onImportSelectedAppleHealth: () -> Unit,
+    val onImportRouteFile: () -> Unit,
     val onImportFitFile: () -> Unit,
     val onImportOfflineMap: () -> Unit,
     val onCopyAppleHealthReport: (String) -> Unit,

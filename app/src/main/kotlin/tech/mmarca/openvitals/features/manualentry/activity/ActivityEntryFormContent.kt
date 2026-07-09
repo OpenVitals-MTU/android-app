@@ -51,9 +51,6 @@ internal fun ActivityEntryFormContent(
                         onCreateFromExistingPlan = {
                             onPerformSourceActionAfterPermission(ActivityEntrySourceAction.EXISTING_PLAN)
                         },
-                        onImportRouteFile = {
-                            onPerformSourceActionAfterPermission(ActivityEntrySourceAction.IMPORT_ROUTE_FILE)
-                        },
                         onRecordGpsActivity = {
                             onPerformSourceActionAfterPermission(ActivityEntrySourceAction.RECORD_GPS)
                         },

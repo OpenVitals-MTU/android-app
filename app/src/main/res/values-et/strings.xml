@@ -150,7 +150,7 @@
     <string name="mindfulness_entry_permission_needed">Kokkuvõtte jaoks küsib OpenVitals ainult vaatamisõigust. Teadveloleku kirjete lisamiseks vajame kirjutamisluba. OpenVitals ei salvesta neid seansse ise; kirjed salvestatakse Health Connectisse.</string>
     <string name="activity_entry_subtitle">Loo Health Connecti treeningsessioon. Imporditud marsruut või treeningu üksikasjad kirjutatakse alles salvestamisel.</string>
     <string name="activity_entry_permission_needed">Kokkuvõtte jaoks küsib OpenVitals ainult vaatamisõigust. Treeningute lisamiseks vajame Health Connecti kirjutamisõigust sessioonidele, marsruutidele, vahemaale, kõrgusele, kaloritele ja salvestatud anduri näitajatele, näiteks pulsile; jooksulindi kirjed küsivad vajadusel samme. OpenVitals ei salvesta neid kirjeid ise; need salvestatakse Health Connectisse.</string>
-    <string name="activity_entry_source_body">Loo tühi treening, salvesta GPS-marsruut või impordi enne GPX/KML/KMZ marsruudid ja vaata tuvastatud andmed üle enne salvestamist.</string>
+    <string name="activity_entry_source_body">Loo treening käsitsi, kasuta olemasolevat plaani või salvesta GPS-marsruut.</string>
     <string name="activity_entry_create_manual">Loo käsitsi</string>
     <string name="activity_entry_create_from_existing_plan">Loo olemasolevast plaanist</string>
     <string name="activity_entry_record_gps">Salvesta treening</string>
@@ -197,7 +197,6 @@
     <string name="activity_entry_feeling_good">Hea</string>
     <string name="activity_entry_feeling_hard">Raske</string>
     <string name="activity_entry_feeling_rough">Kohutav</string>
-    <string name="activity_entry_import_route_file">Impordi GPX/KML/KMZ</string>
     <string name="activity_entry_imported_route">Imporditud marsruut</string>
     <string name="activity_entry_recording_title">Treeningu salvestamine</string>
     <string name="activity_entry_recording_ready_body">Vali treeningu liik ja alusta, kui oled valmis. Pärast lõpetamist saad üksikasjad üle vaadata ja lisada enne salvestamist.</string>
@@ -1095,7 +1094,7 @@
     <string name="settings_cycle_group_title">Menstruaaltsükkel</string>
     <string name="settings_cycle_group_body">Tsükliandmed ja Health Connecti load</string>
     <string name="settings_data_import_group_title">Andmete importijad</string>
-    <string name="settings_data_import_group_body">Impordi Apple Healthi eksporte ja FIT-faile</string>
+    <string name="settings_data_import_group_body">Impordi Apple Healthi eksporte, marsruudifaile ja FIT-faile</string>
     <string name="settings_permissions_group_title">Load</string>
     <string name="settings_permissions_group_body">Terviseandmete juurdepääs ja käsitsi lubade sammud</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
@@ -1291,6 +1290,9 @@
     <string name="settings_apple_health_import_report_save_failed">Impordiraportit ei õnnestunud salvestada.</string>
     <string name="settings_apple_health_import_error">Import ebaõnnestus: %1$s</string>
     <string name="settings_apple_health_import_permission_denied">Ligipääs valitud failile kadus, mistõttu importimist ei saanud jätkata. Vali sama Apple Health\'i eksport uuesti, et jätkata täpselt sealt, kus pooleli jäi.</string>
+    <string name="settings_route_import_title">GPX/KML/KMZ-importija</string>
+    <string name="settings_route_import_body">Impordi GPX-, KML- või KMZ-marsruudifaile, vaata tuvastatud üksikasjad üle ja vali, kas salvestada need Health Connectisse.</string>
+    <string name="settings_route_import_action">Impordi GPX/KML/KMZ-fail</string>
     <string name="settings_fit_import_title">FIT-importija</string>
     <string name="settings_fit_import_body">Impordi FIT treeningu-, marsruudi- või harjutusfaile, vaata tuvastatud üksikasjad üle ja vali, kas salvestada need Health Connectisse.</string>
     <string name="settings_fit_import_action">Impordi FIT-fail</string>

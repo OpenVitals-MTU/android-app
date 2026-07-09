@@ -902,6 +902,12 @@ fun AppNavigation(
 
             settingsRoutes(
                 navController = navController,
+                onImportRouteFile = { uri ->
+                    settingsRouteImportRequest = ExternalRouteImportRequest(
+                        id = --nextSettingsRouteImportRequestId,
+                        uri = uri,
+                    )
+                },
                 onImportFitFile = { uri ->
                     settingsRouteImportRequest = ExternalRouteImportRequest(
                         id = --nextSettingsRouteImportRequestId,

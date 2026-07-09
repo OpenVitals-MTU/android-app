@@ -366,6 +366,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Open Apple Health import.
 - Grant import permissions.
 - Select Apple Health export files.
+- Import GPX, KML, KMZ, and FIT activity files for review before saving.
 - Monitor import progress and read import reports.
 
 ### Permission Settings

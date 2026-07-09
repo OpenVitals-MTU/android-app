@@ -150,7 +150,7 @@
     <string name="mindfulness_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.</string>
     <string name="activity_entry_subtitle">Create a Health Connect activity session. Imported route or activity details are written only when you save.</string>
     <string name="activity_entry_permission_needed">For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.</string>
-    <string name="activity_entry_source_body">Create an empty activity, record a GPS route, or import GPX/KML/KMZ routes first and review the detected data before saving.</string>
+    <string name="activity_entry_source_body">Create an activity manually, use an existing plan, or record a GPS route.</string>
     <string name="activity_entry_create_manual">Create manually</string>
     <string name="activity_entry_create_from_existing_plan">Create from existing plan</string>
     <string name="activity_entry_record_gps">Record activity</string>
@@ -197,7 +197,6 @@
     <string name="activity_entry_feeling_good">Good</string>
     <string name="activity_entry_feeling_hard">Hard</string>
     <string name="activity_entry_feeling_rough">Rough</string>
-    <string name="activity_entry_import_route_file">Import GPX/KML/KMZ</string>
     <string name="activity_entry_imported_route">Imported route</string>
     <string name="activity_entry_recording_title">Recording activity</string>
     <string name="activity_entry_recording_ready_body">Choose the activity type, then start when you are ready. After finishing, you can review and add details before saving.</string>
@@ -1095,7 +1094,7 @@
     <string name="settings_cycle_group_title">Menstrual cycle</string>
     <string name="settings_cycle_group_body">Cycle data and Health Connect permissions</string>
     <string name="settings_data_import_group_title">Data Importers</string>
-    <string name="settings_data_import_group_body">Import Apple Health exports and FIT files</string>
+    <string name="settings_data_import_group_body">Import Apple Health exports, route files, and FIT files</string>
     <string name="settings_permissions_group_title">Permissions</string>
     <string name="settings_permissions_group_body">Health data access and manual permission steps</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
@@ -1291,6 +1290,9 @@
     <string name="settings_apple_health_import_report_save_failed">Unable to save import report.</string>
     <string name="settings_apple_health_import_error">Import failed: %1$s</string>
     <string name="settings_apple_health_import_permission_denied">Access to the selected file was lost, so the import couldn\'t continue. Select the same Apple Health export again to pick up right where it left off.</string>
+    <string name="settings_route_import_title">GPX/KML/KMZ Importer</string>
+    <string name="settings_route_import_body">Import GPX, KML, or KMZ route files, review detected details, and choose whether to save them to Health Connect.</string>
+    <string name="settings_route_import_action">Import GPX/KML/KMZ file</string>
     <string name="settings_fit_import_title">FIT Importer</string>
     <string name="settings_fit_import_body">Import FIT activity, course, or workout files, review detected details, and choose whether to save them to Health Connect.</string>
     <string name="settings_fit_import_action">Import FIT file</string>

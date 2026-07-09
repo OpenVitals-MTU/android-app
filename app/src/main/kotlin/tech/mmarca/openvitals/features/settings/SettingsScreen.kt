@@ -31,6 +31,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.diagnostics.CrashReportEmailActivity
 import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitImportMimeTypes
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteImportMimeTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 
@@ -40,6 +41,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     section: SettingsSection? = null,
     onOpenSection: (SettingsSection) -> Unit = {},
+    onImportRouteFileSelected: (Uri) -> Unit = {},
     onImportFitFileSelected: (Uri) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -115,6 +117,14 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             onImportFitFileSelected(uri)
+        }
+    }
+
+    val routeFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            onImportRouteFileSelected(uri)
         }
     }
 
@@ -195,6 +205,9 @@ fun SettingsScreen(
         },
         onToggleAppleHealthImportCategory = viewModel::setAppleHealthImportCategorySelected,
         onImportSelectedAppleHealth = viewModel::importSelectedAppleHealthExport,
+        onImportRouteFile = {
+            routeFilePicker.launch(RouteImportMimeTypes)
+        },
         onImportFitFile = {
             fitFilePicker.launch(FitImportMimeTypes)
         },

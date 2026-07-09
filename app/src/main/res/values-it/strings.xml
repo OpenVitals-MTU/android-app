@@ -145,7 +145,7 @@
     <string name="mindfulness_entry_permission_needed">Per il riepilogo, OpenVitals chiede solo i permessi di visualizzazione. Per aggiungere voci di Consapevolezza, abbiamo bisogno del permesso di scrittura. OpenVitals non memorizzerà queste sessioni; le voci vengono salvate in Health Connect.</string>
     <string name="activity_entry_subtitle">Crea una sessione di attività Health Connect. I file di percorso sono scritti solo quando ne importi uno.</string>
     <string name="activity_entry_permission_needed">Per il riepilogo, OpenVitals richiede solo i permessi di visualizzazione. Per aggiungere attività, abbiamo bisogno di permessi di scrittura Health Connect per sessioni, percorsi, distanza, elevazione, calorie attive e calorie totali; le voci del tapis roulant chiedono i passaggi quando necessario. OpenVitals non memorizzerà queste voci; sono salvate in Health Connect.</string>
-    <string name="activity_entry_source_body">Crea un\'attività vuota, registra un percorso GPS o importa prima un percorso GPX/KML/KMZ e rivedi percorso, ora, titolo, note e tipo rilevati prima di salvare.</string>
+    <string name="activity_entry_source_body">Crea un\'attività manualmente, usa un piano esistente o registra un percorso GPS.</string>
     <string name="activity_entry_create_manual">Crea manualmente</string>
     <string name="activity_entry_create_from_existing_plan">Crea da programma esistente</string>
     <string name="activity_entry_record_gps">Registra attività</string>
@@ -192,7 +192,6 @@
     <string name="activity_entry_feeling_good">Buono</string>
     <string name="activity_entry_feeling_hard">Difficile</string>
     <string name="activity_entry_feeling_rough">Tosto</string>
-    <string name="activity_entry_import_route_file">Importa GPX/KML/KMZ</string>
     <string name="activity_entry_imported_route">Percorso importato</string>
     <string name="activity_entry_recording_title">Registrazione attività</string>
     <string name="activity_entry_recording_ready_body">Scegli il tipo di attività, quindi inizia quando sei pronto. Dopo aver terminato, puoi rivedere e aggiungere dettagli prima di salvare.</string>
@@ -1082,7 +1081,7 @@
     <string name="settings_cycle_group_title">Ciclo mestruale</string>
     <string name="settings_cycle_group_body">Dati del ciclo e autorizzazioni Health Connect</string>
     <string name="settings_data_import_group_title">Importatori dati</string>
-    <string name="settings_data_import_group_body">Importa esportazioni Apple Health e file FIT</string>
+    <string name="settings_data_import_group_body">Importa esportazioni Apple Health, file di percorso e file FIT</string>
     <string name="settings_permissions_group_title">Autorizzazioni</string>
     <string name="settings_permissions_group_body">Accesso ai dati sanitari e procedure per autorizzazioni manuali</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
@@ -1277,6 +1276,9 @@
     <string name="settings_apple_health_import_report_save_failed">Impossibile salvare il report di importazione.</string>
     <string name="settings_apple_health_import_error">Importazione fallita: %1$s</string>
     <string name="settings_apple_health_import_permission_denied">L\'accesso al file selezionato è andato perso, quindi l\'importazione non ha potuto continuare. Seleziona di nuovo la stessa esportazione di Apple Health per riprendere esattamente da dove eri rimasto.</string>
+    <string name="settings_route_import_title">Importatore GPX/KML/KMZ</string>
+    <string name="settings_route_import_body">Importa file di percorso GPX, KML o KMZ, rivedi i dettagli rilevati e scegli se salvarli in Health Connect.</string>
+    <string name="settings_route_import_action">Importa file GPX/KML/KMZ</string>
     <string name="settings_fit_import_title">Importatore FIT</string>
     <string name="settings_fit_import_body">Importa file FIT di attività, percorso o allenamento, rivedi i dettagli rilevati e scegli se salvarli in Health Connect.</string>
     <string name="settings_fit_import_action">Importa file FIT</string>

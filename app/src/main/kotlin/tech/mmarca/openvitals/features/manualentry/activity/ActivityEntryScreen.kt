@@ -1,8 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteImportMimeTypes
-
 import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -50,18 +48,10 @@ fun ActivityEntryScreen(
     LaunchedEffect(isRecordingFocusMode) {
         onActivityRecordingFocusModeChanged(isRecordingFocusMode)
     }
-    val importRouteFile = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importRouteFile(uri, unitFormatter.unitSystem())
-        }
-    }
     fun performSourceAction(action: ActivityEntrySourceAction) {
         when (action) {
             ActivityEntrySourceAction.MANUAL -> viewModel.startManualEntry()
             ActivityEntrySourceAction.EXISTING_PLAN -> viewModel.startFromExistingPlan()
-            ActivityEntrySourceAction.IMPORT_ROUTE_FILE -> importRouteFile.launch(RouteImportMimeTypes)
             ActivityEntrySourceAction.RECORD_GPS -> viewModel.prepareGpsRecording()
         }
     }

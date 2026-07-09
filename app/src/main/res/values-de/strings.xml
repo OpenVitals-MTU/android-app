@@ -148,7 +148,7 @@
     <string name="mindfulness_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Zum Hinzufügen von Achtsamkeitseinträgen benötigen wir eine Schreibberechtigung. OpenVitals speichert diese Sitzungen nicht; Einträge werden in Health Connect gespeichert.</string>
     <string name="activity_entry_subtitle">Erstelle eine Aktivitätssitzung in Health Connect. Routendateien werden nur geschrieben, wenn du eine importierst.</string>
     <string name="activity_entry_permission_needed">Für die Übersicht fragt OpenVitals nur Leseberechtigungen an. Um Aktivitäten ohne spätere Unterbrechungen hinzuzufügen, benötigen wir Health-Connect-Schreibberechtigungen für Sitzungen, Routen, Distanz, Höhenmeter, aktive Kalorien und Gesamtkalorien. OpenVitals speichert diese Einträge nicht; sie werden in Health Connect gespeichert.</string>
-    <string name="activity_entry_source_body">Erstelle eine leere Aktivität, zeichne eine GPS-Route auf oder importiere zuerst eine GPX/KML/KMZ-Route und prüfe die erkannte Route, Zeit, den Titel, die Notizen und den Typ vor dem Speichern.</string>
+    <string name="activity_entry_source_body">Erstelle eine Aktivität manuell, nutze einen vorhandenen Plan oder zeichne eine GPS-Route auf.</string>
     <string name="activity_entry_create_manual">Manuell erstellen</string>
     <string name="activity_entry_create_from_existing_plan">Aus vorhandenem Plan erstellen</string>
     <string name="activity_entry_record_gps">Aktivität aufzeichnen</string>
@@ -195,7 +195,6 @@
     <string name="activity_entry_feeling_good">Gut</string>
     <string name="activity_entry_feeling_hard">Anstrengend</string>
     <string name="activity_entry_feeling_rough">Sehr hart</string>
-    <string name="activity_entry_import_route_file">GPX/KML/KMZ importieren</string>
     <string name="activity_entry_imported_route">Importierte Route</string>
     <string name="activity_entry_recording_title">Aktivität wird aufgezeichnet</string>
     <string name="activity_entry_recording_ready_body">Wähle den Aktivitätstyp und starte, wenn du bereit bist. Nach dem Beenden kannst du Details prüfen und ergänzen, bevor du speicherst.</string>
@@ -1094,7 +1093,7 @@
     <string name="settings_cycle_group_title">Menstruationszyklus</string>
     <string name="settings_cycle_group_body">Zyklusdaten und Health-Connect-Berechtigungen</string>
     <string name="settings_data_import_group_title">Datenimporteure</string>
-    <string name="settings_data_import_group_body">Apple-Health-Exporte und FIT-Dateien importieren</string>
+    <string name="settings_data_import_group_body">Apple-Health-Exporte, Routendateien und FIT-Dateien importieren</string>
     <string name="settings_permissions_group_title">Berechtigungen</string>
     <string name="settings_permissions_group_body">Zugriff auf Gesundheitsdaten und manuelle Berechtigungsschritte</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
@@ -1284,6 +1283,9 @@
     <string name="settings_apple_health_import_error_copied">Importfehler kopiert.</string>
     <string name="settings_apple_health_import_report_saved">Importbericht gespeichert.</string>
     <string name="settings_apple_health_import_report_save_failed">Importbericht konnte nicht gespeichert werden.</string>
+    <string name="settings_route_import_title">GPX/KML/KMZ-Importer</string>
+    <string name="settings_route_import_body">Importiere GPX-, KML- oder KMZ-Routendateien, prüfe die erkannten Details und wähle, ob sie in Health Connect gespeichert werden.</string>
+    <string name="settings_route_import_action">GPX/KML/KMZ-Datei importieren</string>
     <string name="settings_fit_import_title">FIT-Importer</string>
     <string name="settings_fit_import_body">Importiere FIT-Dateien für Aktivitäten, Kurse oder Workouts, prüfe die erkannten Details und wähle, ob sie in Health Connect gespeichert werden.</string>
     <string name="settings_fit_import_action">FIT-Datei importieren</string>
