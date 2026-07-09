@@ -11,10 +11,12 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.time.Instant
 import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,6 +27,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.navigation.BODY_ENTRY_ID_ARG
+import tech.mmarca.openvitals.domain.model.BodyMeasurementEntry
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
@@ -71,6 +75,71 @@ class BodyMeasurementEntryViewModelTest {
         assertFalse(vm.uiState.value.saveCompleted)
     }
 
+    @Test fun `weight entry writes selected timestamp`() = runTest {
+        val repo = bodyRepo()
+        val vm = BodyMeasurementEntryViewModel(repo)
+        val selectedTime = Instant.parse("2026-05-20T07:30:00Z")
+        vm.setType(BodyMeasurementType.WEIGHT)
+        advanceUntilIdle()
+
+        vm.updateEntryTime(selectedTime)
+        vm.updateInput("82.4")
+        vm.addEntry(82.4)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeBodyMeasurementEntry(match<BodyMeasurementWriteRequest> { request ->
+                request.type == BodyMeasurementType.WEIGHT &&
+                    request.time == selectedTime &&
+                    abs(request.value - 82.4) < 0.001
+            })
+        }
+    }
+
+    @Test fun `edit weight entry loads existing value and updates record`() = runTest {
+        val repo = bodyRepo(
+            editEntry = BodyMeasurementEntry(
+                id = "weight-id",
+                type = BodyMeasurementType.WEIGHT,
+                time = Instant.parse("2026-05-19T07:30:00Z"),
+                value = 81.0,
+                source = "OpenVitals",
+                isOpenVitalsEntry = true,
+            ),
+        )
+        val vm = BodyMeasurementEntryViewModel(
+            repository = repo,
+            savedStateHandle = SavedStateHandle(mapOf(BODY_ENTRY_ID_ARG to "weight-id")),
+        )
+        val selectedTime = Instant.parse("2026-05-20T07:30:00Z")
+
+        vm.setType(BodyMeasurementType.WEIGHT)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isEditMode)
+        assertEquals("81", vm.uiState.value.inputText)
+        assertEquals(Instant.parse("2026-05-19T07:30:00Z"), vm.uiState.value.editTime)
+
+        vm.updateEntryTime(selectedTime)
+        vm.updateInput("82.4")
+        vm.addEntry(82.4)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.updateBodyMeasurementEntry(
+                "weight-id",
+                match<BodyMeasurementWriteRequest> { request ->
+                    request.type == BodyMeasurementType.WEIGHT &&
+                        request.time == selectedTime &&
+                        abs(request.value - 82.4) < 0.001
+                },
+            )
+        }
+        coVerify(exactly = 0) { repo.writeBodyMeasurementEntry(any()) }
+        assertTrue(vm.uiState.value.saveCompleted)
+        assertEquals("82.4", vm.uiState.value.inputText)
+    }
+
     @Test fun `body fat entry writes percent value`() = runTest {
         val repo = bodyRepo()
         val vm = BodyMeasurementEntryViewModel(repo)
@@ -113,10 +182,13 @@ class BodyMeasurementEntryViewModelTest {
 
     private fun bodyRepo(
         canWrite: Boolean = true,
+        editEntry: BodyMeasurementEntry? = null,
     ): BodyRepository =
         mockk<BodyRepository>().also { repo ->
             every { repo.bodyWritePermissions(any()) } returns setOf("write_body")
             coEvery { repo.hasBodyWritePermission(any()) } returns canWrite
             coEvery { repo.writeBodyMeasurementEntry(any()) } returns "record-id"
+            coEvery { repo.loadBodyMeasurementEntry(any(), any()) } returns editEntry
+            coEvery { repo.updateBodyMeasurementEntry(any(), any()) } returns Unit
         }
 }

@@ -191,14 +191,12 @@ private fun BodyMeasurementEntryCard(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            if (state.isEditMode) {
-                ManualEntryTimestampFields(
-                    timestamp = state.editTime,
-                    enabled = !state.isSavingEntry,
-                    onTimestampChanged = onEntryTimeChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            ManualEntryTimestampFields(
+                timestamp = state.editTime,
+                enabled = !state.isSavingEntry,
+                onTimestampChanged = onEntryTimeChanged,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             OpenVitalsButton(
                 onClick = onAddEntry,
