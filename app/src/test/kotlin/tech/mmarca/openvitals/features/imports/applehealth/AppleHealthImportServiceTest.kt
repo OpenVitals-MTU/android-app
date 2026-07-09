@@ -18,9 +18,11 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.just
 import io.mockk.runs
+import io.mockk.verify
 import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.EOFException
 import java.nio.file.Files
 import java.time.Instant
 import java.time.ZoneOffset
@@ -334,6 +336,36 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
+    fun `parser reports truncated zip exports with actionable apple health context`() {
+        val xml = buildString {
+            appendLine("<HealthData>")
+            repeat(5_000) { index ->
+                val minute = (index % 60).toString().padStart(2, '0')
+                val second = (index % 60).toString().padStart(2, '0')
+                appendLine(
+                    """<Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone $index" """ +
+                        """startDate="2026-01-01 08:$minute:$second +0000" """ +
+                        """endDate="2026-01-01 08:$minute:$second +0000" unit="count" value="$index" />""",
+                )
+            }
+            appendLine("</HealthData>")
+        }
+        val zip = zipExport(xml)
+        val failingZipStream = FailingAfterBytesInputStream(zip, maxBytesBeforeFailure = zip.size / 2)
+
+        val error = assertThrows(AppleHealthZipReadException::class.java) {
+            AppleHealthImportParser.parse(
+                BufferedInputStream(failingZipStream),
+                options = AppleHealthParseOptions(parseRouteFiles = false),
+            )
+        }
+
+        assertTrue(error.message.orEmpty().contains("apple_health_export/export.xml"))
+        assertTrue(error.message.orEmpty().contains("incomplete, corrupt, not fully downloaded"))
+        assertTrue(error.message.orEmpty().contains("extract export.xml and import that file directly"))
+    }
+
+    @Test
     fun `parser and converter import apple workout route with synthesized times`() {
         val xml =
             """
@@ -474,9 +506,10 @@ class AppleHealthImportServiceTest {
         coEvery { repository.insertImportedRecords(capture(insertedRecords)) } just runs
 
         val phases = mutableListOf<AppleHealthImportPhase>()
-        val result = AppleHealthImportService(context, repository).importAppleHealthExport(uri) { progress ->
-            phases += progress.phase
-        }
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(
+            uri,
+            progress = { progress -> phases += progress.phase },
+        )
 
         assertEquals(2, result.parsedRecords)
         assertEquals(1, result.importedRecords)
@@ -679,6 +712,38 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
+    fun `staging store reuses matching local export copy`() {
+        val xml =
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
+                    unit="count" value="100" />
+            </HealthData>
+            """.trimIndent()
+        val zip = zipExport(xml)
+        val uri = mockk<Uri>()
+        val context = mockk<Context>()
+        val resolver = mockk<ContentResolver>()
+        val filesDir = Files.createTempDirectory("apple-health-stage").toFile()
+        val fingerprint = AppleHealthExportFingerprint(displayName = "export.zip", size = zip.size.toLong())
+
+        every { uri.toString() } returns "content://example/apple-health-export.zip"
+        every { context.filesDir } returns filesDir
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(zip)
+
+        val first = AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+        val second = AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+
+        assertFalse(first.reused)
+        assertTrue(second.reused)
+        assertEquals(zip.size.toLong(), second.bytes)
+        assertEquals(first.file, second.file)
+        verify(exactly = 1) { resolver.openInputStream(uri) }
+    }
+
+    @Test
     fun `service pipelines multiple batches in order and imports all records`() = runTest {
         val xml = heartRateExport(count = 700)
         val uri = mockk<Uri>()
@@ -696,9 +761,10 @@ class AppleHealthImportServiceTest {
         }
 
         val progressSnapshots = mutableListOf<AppleHealthImportProgress>()
-        val result = AppleHealthImportService(context, repository).importAppleHealthExport(uri) { progress ->
-            progressSnapshots += progress
-        }
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(
+            uri,
+            progress = { progress -> progressSnapshots += progress },
+        )
 
         assertEquals(700, result.parsedRecords)
         assertEquals(700, result.importedRecords)
@@ -720,6 +786,56 @@ class AppleHealthImportServiceTest {
         val importedCounts = progressSnapshots.map { it.importedRecords }
         assertEquals(importedCounts, importedCounts.sorted())
         assertEquals(700, importedCounts.last())
+    }
+
+    @Test
+    fun `service resumes from selected record checkpoint and writes remaining batches`() = runTest {
+        val xml = heartRateExport(count = 700)
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<AppleHealthImportRepository>()
+        val insertedBatches = mutableListOf<List<androidx.health.connect.client.records.Record>>()
+        val checkpoints = mutableListOf<AppleHealthImportCheckpoint>()
+        val selectedCategories = setOf(AppleHealthImportCategory.HEART)
+        val checkpoint = AppleHealthImportCheckpoint(
+            sourceKey = "same-export",
+            selectedCategories = selectedCategories,
+            committedSelectedRecords = 300,
+            importedRecords = 300,
+            duplicateSkippedRecords = 0,
+            failedRecords = 0,
+            typeStats = mapOf(
+                "HKQuantityTypeIdentifierHeartRate" to AppleHealthImportCheckpointTypeStats(
+                    imported = 300,
+                    duplicateSkipped = 0,
+                    failed = 0,
+                ),
+            ),
+        )
+
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
+        every { repository.isMindfulnessAvailable() } returns true
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        coEvery { repository.insertImportedRecords(any()) } coAnswers {
+            insertedBatches += firstArg<List<androidx.health.connect.client.records.Record>>()
+        }
+
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(
+            uri = uri,
+            selectedCategories = selectedCategories,
+            resumeCheckpoint = checkpoint,
+            onCheckpoint = { checkpoints += it },
+        )
+
+        assertEquals(700, result.parsedRecords)
+        assertEquals(700, result.importedRecords)
+        assertEquals(listOf(300, 100), insertedBatches.map { it.size })
+        assertEquals(listOf(600, 700), checkpoints.map { it.committedSelectedRecords })
+        assertEquals(700, checkpoints.last().importedRecords)
+        assertEquals(700, result.typeSummaries.single { it.appleType == "HKQuantityTypeIdentifierHeartRate" }.imported)
+        assertTrue(result.shareableReportText.contains("Resuming Apple Health import checkpoint"))
     }
 
     @Test
@@ -956,5 +1072,37 @@ class AppleHealthImportServiceTest {
             if (!extraFilesBeforeXml) writeExtras()
         }
         return output.toByteArray()
+    }
+
+    private class FailingAfterBytesInputStream(
+        data: ByteArray,
+        private val maxBytesBeforeFailure: Int,
+    ) : ByteArrayInputStream(data) {
+        private var bytesRead = 0
+
+        override fun read(): Int {
+            throwIfPastLimit()
+            val value = super.read()
+            if (value != -1) bytesRead++
+            return value
+        }
+
+        override fun read(
+            b: ByteArray,
+            off: Int,
+            len: Int,
+        ): Int {
+            throwIfPastLimit()
+            val allowed = minOf(len, maxBytesBeforeFailure - bytesRead)
+            val count = super.read(b, off, allowed)
+            if (count > 0) bytesRead += count
+            return count
+        }
+
+        private fun throwIfPastLimit() {
+            if (bytesRead >= maxBytesBeforeFailure) {
+                throw EOFException("Simulated document provider EOF")
+            }
+        }
     }
 }

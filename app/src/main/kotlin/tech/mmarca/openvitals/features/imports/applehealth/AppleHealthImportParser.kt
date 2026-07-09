@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
 import java.io.BufferedInputStream
+import java.io.EOFException
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -12,6 +13,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.zip.ZipException
 import java.util.zip.ZipInputStream
 import org.xml.sax.Attributes
 import org.xml.sax.InputSource
@@ -60,11 +62,16 @@ internal object AppleHealthImportParser {
     ): AppleParsedExport {
         ZipInputStream(input).use { zipInput ->
             while (true) {
-                val entry = zipInput.nextEntry ?: break
+                val entry = zipInput.nextEntryOrThrow(entryName = null) ?: break
                 if (!entry.isDirectory && entry.name.isAppleHealthExportXml()) {
-                    return parseXmlExport(NonClosingInputStream(zipInput), consumer, emptyMap(), parseRecordDetails)
+                    val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
+                    return try {
+                        parseXmlExport(entryInput, consumer, emptyMap(), parseRecordDetails)
+                    } catch (error: Exception) {
+                        throw error.asZipReadException(entry.name, entryInput.bytesRead)
+                    }
                 }
-                zipInput.closeEntry()
+                zipInput.closeEntryOrThrow(entry.name)
             }
         }
         throw IllegalArgumentException("Apple Health export.zip must contain export.xml.")
@@ -79,33 +86,49 @@ internal object AppleHealthImportParser {
         val exportXml = File.createTempFile("openvitals_apple_health_export", ".xml")
         val resolvedRouteFiles = routeFiles.toMutableMap()
         var foundExportXml = false
+        var exportXmlEntryName = "export.xml"
         try {
             ZipInputStream(input).use { zipInput ->
                 while (true) {
-                    val entry = zipInput.nextEntry ?: break
+                    val entry = zipInput.nextEntryOrThrow(entryName = null) ?: break
                     if (!entry.isDirectory) {
                         when {
                             entry.name.isAppleHealthExportXml() -> {
-                                exportXml.outputStream().use { output -> zipInput.copyTo(output) }
+                                exportXmlEntryName = entry.name
+                                val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
+                                try {
+                                    exportXml.outputStream().use { output -> entryInput.copyTo(output) }
+                                } catch (error: Exception) {
+                                    throw error.asZipReadException(entry.name, entryInput.bytesRead)
+                                }
                                 foundExportXml = true
                             }
                             entry.name.isAppleWorkoutRouteFile() -> {
                                 // Stream the GPX entry directly; buffering it as a byte array costs
                                 // megabytes per routed workout during the zip sweep.
-                                AppleHealthImportRouteParser.parse(entry.name, NonClosingInputStream(zipInput))?.let { routeFile ->
-                                    resolvedRouteFiles[routeFile.path] = routeFile
+                                val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
+                                try {
+                                    AppleHealthImportRouteParser.parse(entry.name, entryInput)?.let { routeFile ->
+                                        resolvedRouteFiles[routeFile.path] = routeFile
+                                    }
+                                } catch (error: Exception) {
+                                    throw error.asZipReadException(entry.name, entryInput.bytesRead)
                                 }
                             }
                         }
                     }
-                    zipInput.closeEntry()
+                    zipInput.closeEntryOrThrow(entry.name)
                 }
             }
             if (!foundExportXml) {
                 throw IllegalArgumentException("Apple Health export.zip must contain export.xml.")
             }
             return exportXml.inputStream().use { xmlInput ->
-                parseXmlExport(xmlInput, consumer, resolvedRouteFiles, parseRecordDetails)
+                try {
+                    parseXmlExport(xmlInput, consumer, resolvedRouteFiles, parseRecordDetails)
+                } catch (error: Exception) {
+                    throw error.asZipReadException(exportXmlEntryName, exportXml.length())
+                }
             }
         } finally {
             exportXml.delete()
@@ -133,6 +156,47 @@ internal object AppleHealthImportParser {
         )
     }
 }
+
+private fun ZipInputStream.nextEntryOrThrow(entryName: String?): java.util.zip.ZipEntry? =
+    try {
+        nextEntry
+    } catch (error: Exception) {
+        throw error.asZipReadException(entryName, bytesRead = null)
+    }
+
+private fun ZipInputStream.closeEntryOrThrow(entryName: String) {
+    try {
+        closeEntry()
+    } catch (error: Exception) {
+        throw error.asZipReadException(entryName, bytesRead = null)
+    }
+}
+
+private fun Throwable.asZipReadException(
+    entryName: String?,
+    bytesRead: Long?,
+): Throwable =
+    if (isZipReadFailure() || isUnexpectedZipXmlEnd(entryName)) {
+        AppleHealthZipReadException(entryName, bytesRead, this)
+    } else {
+        this
+    }
+
+private fun Throwable.isZipReadFailure(): Boolean =
+    this is EOFException || this is ZipException
+
+private fun Throwable.isUnexpectedZipXmlEnd(entryName: String?): Boolean {
+    if (entryName?.isAppleHealthExportXml() != true || this !is AppleHealthXmlParseException) return false
+    val normalizedMessage = message.orEmpty().lowercase(Locale.US)
+    return UnexpectedXmlEndMessages.any(normalizedMessage::contains)
+}
+
+private val UnexpectedXmlEndMessages = listOf(
+    "unexpected end",
+    "premature end",
+    "must start and end within the same entity",
+    "no element found",
+)
 
 internal interface AppleHealthXmlEventConsumer {
     fun onParsedType(type: String)

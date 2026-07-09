@@ -8,6 +8,8 @@ import android.util.Log
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.BufferedInputStream
+import java.io.File
+import java.io.InputStream
 import java.time.Instant
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
@@ -51,7 +53,8 @@ class AppleHealthImportService
                     importLogs = importLogs,
                 )
                 val parsed = parseExport(
-                    uri,
+                    exportLabel = uri.toString(),
+                    openInput = { context.contentResolver.openInputStream(uri) },
                     analysisState,
                     importLogs,
                     progress,
@@ -135,6 +138,9 @@ class AppleHealthImportService
             uri: Uri,
             selectedCategories: Set<AppleHealthImportCategory> = AllAppleHealthImportCategories,
             progress: suspend (AppleHealthImportProgress) -> Unit = {},
+            resumeCheckpoint: AppleHealthImportCheckpoint? = null,
+            onCheckpoint: ((AppleHealthImportCheckpoint) -> Unit)? = null,
+            stagedFile: File? = null,
         ): AppleHealthImportResult =
             withContext(Dispatchers.IO) {
                 // Appended from both the parse thread and the batch-writer coroutine.
@@ -142,7 +148,18 @@ class AppleHealthImportService
                 fun log(message: String) {
                     importLogs.addImportInfo(message)
                 }
-                log("Apple Health import requested uri=$uri selectedCategories=${selectedCategories.joinToString { it.name }}")
+                log(
+                    "Apple Health import requested uri=$uri " +
+                        "stagedFile=${stagedFile?.absolutePath.orEmpty()} " +
+                        "selectedCategories=${selectedCategories.joinToString { it.name }}",
+                )
+                if (resumeCheckpoint != null && resumeCheckpoint.committedSelectedRecords > 0) {
+                    log(
+                        "Resuming Apple Health import checkpoint committedSelectedRecords=" +
+                            "${resumeCheckpoint.committedSelectedRecords} imported=${resumeCheckpoint.importedRecords} " +
+                            "duplicates=${resumeCheckpoint.duplicateSkippedRecords} failed=${resumeCheckpoint.failedRecords}",
+                    )
+                }
                 val converter = AppleHealthImportConverter(
                     mindfulnessAvailable = importRepository.isMindfulnessAvailable(),
                     diagnosticLimit = MaxRawDiagnostics,
@@ -151,7 +168,11 @@ class AppleHealthImportService
                 // shared state and must never run concurrently from parse thread + writer.
                 val progressMutex = Mutex()
                 val batchChannel = Channel<List<ConvertedAppleRecord>>(capacity = BatchChannelCapacity)
-                val writer = ConvertedBatchWriter(importLogs)
+                val writer = ConvertedBatchWriter(
+                    importLogs = importLogs,
+                    resumeCheckpoint = resumeCheckpoint,
+                    onCheckpoint = onCheckpoint,
+                )
                 val importState = StreamingAppleHealthWritingState(
                     converter = converter,
                     onProgress = progress,
@@ -179,7 +200,13 @@ class AppleHealthImportService
                         if (cause != null) batchChannel.cancel()
                     }
                     try {
-                        val parsedExport = parseExport(uri, importState, importLogs, progress)
+                        val parsedExport = parseExport(
+                            exportLabel = stagedFile?.absolutePath ?: uri.toString(),
+                            openInput = { stagedFile?.inputStream() ?: context.contentResolver.openInputStream(uri) },
+                            state = importState,
+                            importLogs = importLogs,
+                            progress = progress,
+                        )
 
                         progressMutex.withLock { progress(importState.progressSnapshot(AppleHealthImportPhase.CONVERTING)) }
                         log("Stage started: Converting records")
@@ -251,19 +278,20 @@ class AppleHealthImportService
             }
 
         private suspend fun parseExport(
-            uri: Uri,
+            exportLabel: String,
+            openInput: () -> InputStream?,
             state: StreamingAppleHealthProgressState,
             importLogs: MutableList<String>,
             progress: suspend (AppleHealthImportProgress) -> Unit,
             options: AppleHealthParseOptions = AppleHealthParseOptions(),
         ): AppleParsedExport {
             val input =
-                context.contentResolver.openInputStream(uri)
+                openInput()
                     ?: throw IllegalArgumentException("Unable to open Apple Health export.")
 
             val startedAtMillis = System.currentTimeMillis()
             importLogs.addImportInfo(
-                "Stage started: Scanning export uri=$uri bufferSize=$ImportInputBufferSize " +
+                "Stage started: Scanning export source=$exportLabel bufferSize=$ImportInputBufferSize " +
                     "parseRouteFiles=${options.parseRouteFiles} parseRecordDetails=${options.parseRecordDetails}",
             )
             val parsed =
@@ -636,27 +664,45 @@ class AppleHealthImportService
          */
         private inner class ConvertedBatchWriter(
             private val importLogs: MutableList<String>,
+            resumeCheckpoint: AppleHealthImportCheckpoint?,
+            private val onCheckpoint: ((AppleHealthImportCheckpoint) -> Unit)?,
         ) {
             lateinit var publishProgress: suspend (AppleHealthImportPhase) -> Unit
             private val writerTypeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
             private val serviceDiagnostics = mutableListOf<AppleHealthImportDiagnostic>()
             private val serviceDiagnosticSummaries =
                 linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
-            val importedCount = AtomicInteger(0)
-            val duplicateCount = AtomicInteger(0)
-            val failedCount = AtomicInteger(0)
+            private val checkpointSourceKey = resumeCheckpoint?.sourceKey
+            private val checkpointSelectedCategories = resumeCheckpoint?.selectedCategories
+            private val checkpointSelectedRecordsToSkip = resumeCheckpoint?.committedSelectedRecords?.coerceAtLeast(0) ?: 0
+            private var skippedSelectedRecordsRemaining = resumeCheckpoint?.committedSelectedRecords?.coerceAtLeast(0) ?: 0
+            private var committedSelectedRecords = resumeCheckpoint?.committedSelectedRecords?.coerceAtLeast(0) ?: 0
+            val importedCount = AtomicInteger(resumeCheckpoint?.importedRecords?.coerceAtLeast(0) ?: 0)
+            val duplicateCount = AtomicInteger(resumeCheckpoint?.duplicateSkippedRecords?.coerceAtLeast(0) ?: 0)
+            val failedCount = AtomicInteger(resumeCheckpoint?.failedRecords?.coerceAtLeast(0) ?: 0)
+
+            init {
+                resumeCheckpoint?.typeStats?.forEach { (appleType, stats) ->
+                    writerTypeStats[appleType] = MutableAppleImportTypeStats().apply {
+                        imported = stats.imported
+                        duplicateSkipped = stats.duplicateSkipped
+                        failed = stats.failed
+                    }
+                }
+            }
 
             suspend fun process(batch: List<ConvertedAppleRecord>) {
                 if (batch.isEmpty()) return
-                val batchCount = batch.size
+                val resumedBatch = batch.withResumeSkip()
+                if (resumedBatch.isEmpty()) return
                 publishProgress(AppleHealthImportPhase.CHECKING_DUPLICATES)
-                log("Stage started: Checking duplicates batchRecords=$batchCount")
-                val deduplicated = batch.deduplicateWithinImport(
+                log("Stage started: Checking duplicates batchRecords=${resumedBatch.size}")
+                val deduplicated = resumedBatch.deduplicateWithinImport(
                     diagnostics = serviceDiagnostics,
                     diagnosticSummaries = serviceDiagnosticSummaries,
                     typeStats = writerTypeStats,
                 )
-                val inFileDuplicates = batch.size - deduplicated.size
+                val inFileDuplicates = resumedBatch.size - deduplicated.size
                 if (inFileDuplicates > 0) {
                     duplicateCount.addAndGet(inFileDuplicates)
                     log("Skipped duplicate records inside export count=$inFileDuplicates")
@@ -682,7 +728,7 @@ class AppleHealthImportService
                     log("Skipped records already present in Health Connect count=$existingDuplicates")
                 }
                 log(
-                    "Stage finished: Checking duplicates batchRecords=$batchCount unique=${deduplicated.size} " +
+                    "Stage finished: Checking duplicates batchRecords=${resumedBatch.size} unique=${deduplicated.size} " +
                         "toInsert=${toInsert.size} inFileDuplicates=$inFileDuplicates existingDuplicates=$existingDuplicates",
                 )
 
@@ -696,6 +742,8 @@ class AppleHealthImportService
                     "Stage finished: Writing records attempted=${toInsert.size} imported=${insertionResult.imported} " +
                         "duplicates=${insertionResult.duplicates} failed=${insertionResult.failed}",
                 )
+                committedSelectedRecords += resumedBatch.size
+                saveCheckpoint()
                 publishProgress(AppleHealthImportPhase.WRITING)
             }
 
@@ -719,6 +767,53 @@ class AppleHealthImportService
 
             private fun log(message: String) {
                 importLogs.addImportInfo(message)
+            }
+
+            private fun List<ConvertedAppleRecord>.withResumeSkip(): List<ConvertedAppleRecord> {
+                if (skippedSelectedRecordsRemaining <= 0) return this
+                return when {
+                    skippedSelectedRecordsRemaining >= size -> {
+                        skippedSelectedRecordsRemaining -= size
+                        if (skippedSelectedRecordsRemaining == 0) {
+                            log(
+                                "Finished skipping previously committed selected records from checkpoint " +
+                                    "count=$checkpointSelectedRecordsToSkip",
+                            )
+                        }
+                        emptyList()
+                    }
+                    else -> {
+                        val skipped = skippedSelectedRecordsRemaining
+                        skippedSelectedRecordsRemaining = 0
+                        log(
+                            "Finished skipping previously committed selected records from checkpoint " +
+                                "count=$checkpointSelectedRecordsToSkip partialBatchSkip=$skipped",
+                        )
+                        drop(skipped)
+                    }
+                }
+            }
+
+            private fun saveCheckpoint() {
+                val sourceKey = checkpointSourceKey ?: return
+                val selectedCategories = checkpointSelectedCategories ?: return
+                onCheckpoint?.invoke(
+                    AppleHealthImportCheckpoint(
+                        sourceKey = sourceKey,
+                        selectedCategories = selectedCategories,
+                        committedSelectedRecords = committedSelectedRecords,
+                        importedRecords = importedCount.get(),
+                        duplicateSkippedRecords = duplicateCount.get(),
+                        failedRecords = failedCount.get(),
+                        typeStats = writerTypeStats.mapValues { (_, stats) ->
+                            AppleHealthImportCheckpointTypeStats(
+                                imported = stats.imported,
+                                duplicateSkipped = stats.duplicateSkipped,
+                                failed = stats.failed,
+                            )
+                        },
+                    ),
+                )
             }
         }
 

@@ -71,35 +71,75 @@ class AppleHealthImportWorker(
             var lastNotificationPhase: AppleHealthImportPhase? = null
             val selectedCategories = selectedCategoriesFromData(inputData)
             log("Selected categories=${selectedCategories.joinToString { it.name }}")
-            val result = service.importAppleHealthExport(uri, selectedCategories) { progress ->
-                val importProgress = progress.copy(expectedSelectedRecords = expectedSelectedRecords)
-                val now = System.currentTimeMillis()
-                if (now - lastProgressUpdateMillis >= WorkManagerProgressUpdateMillis ||
-                    importProgress.phase != lastProgressPhase
-                ) {
-                    setProgress(importProgress.toData())
-                    lastProgressUpdateMillis = now
-                    lastProgressPhase = importProgress.phase
-                }
-                if (importProgress.phase != lastLoggedProgressPhase) {
-                    log(
-                        "Progress phase changed phase=${importProgress.phase.name} percent=${importProgress.percent ?: -1} " +
-                            "selectedPrepared=${importProgress.selectedPreparedRecords}/$expectedSelectedRecords " +
-                            "scanned=${importProgress.parsedElements} converted=${importProgress.convertedRecords} " +
-                            "imported=${importProgress.importedRecords} duplicates=${importProgress.duplicateSkippedRecords} " +
-                            "notSelected=${importProgress.notSelectedRecords} unsupported=${importProgress.unsupportedElements} " +
-                            "skipped=${importProgress.skippedRecords} failed=${importProgress.failedRecords}",
-                    )
-                    lastLoggedProgressPhase = importProgress.phase
-                }
-                if (now - lastNotificationUpdateMillis >= ForegroundNotificationUpdateMillis ||
-                    importProgress.phase != lastNotificationPhase
-                ) {
-                    setForeground(foregroundInfo(importProgress))
-                    lastNotificationUpdateMillis = now
-                    lastNotificationPhase = importProgress.phase
-                }
+            val fingerprint = service.fingerprintOf(uri)
+            val sourceKey = AppleHealthImportCheckpointStore.sourceKey(uri, fingerprint)
+            val storedCheckpoint = AppleHealthImportCheckpointStore.load(
+                appContext,
+                sourceKey,
+                selectedCategories,
+            )
+            val resumeCheckpoint = storedCheckpoint ?: AppleHealthImportCheckpoint(
+                sourceKey = sourceKey,
+                selectedCategories = selectedCategories,
+                committedSelectedRecords = 0,
+                importedRecords = 0,
+                duplicateSkippedRecords = 0,
+                failedRecords = 0,
+                typeStats = emptyMap(),
+            )
+            if (storedCheckpoint != null) {
+                log(
+                    "Resume checkpoint loaded committedSelectedRecords=${storedCheckpoint.committedSelectedRecords} " +
+                        "imported=${storedCheckpoint.importedRecords} duplicates=${storedCheckpoint.duplicateSkippedRecords} " +
+                        "failed=${storedCheckpoint.failedRecords}",
+                )
+            } else {
+                log("No matching resume checkpoint found")
             }
+            log("Stage started: Copying Apple Health export into app storage")
+            val stagedExport = AppleHealthImportStagingStore.stage(appContext, uri, fingerprint)
+            log(
+                "Stage finished: Copying Apple Health export into app storage " +
+                    "bytes=${stagedExport.bytes} reused=${stagedExport.reused}",
+            )
+            val result = service.importAppleHealthExport(
+                uri,
+                selectedCategories,
+                progress = { progress ->
+                    val importProgress = progress.copy(expectedSelectedRecords = expectedSelectedRecords)
+                    val now = System.currentTimeMillis()
+                    if (now - lastProgressUpdateMillis >= WorkManagerProgressUpdateMillis ||
+                        importProgress.phase != lastProgressPhase
+                    ) {
+                        setProgress(importProgress.toData())
+                        lastProgressUpdateMillis = now
+                        lastProgressPhase = importProgress.phase
+                    }
+                    if (importProgress.phase != lastLoggedProgressPhase) {
+                        log(
+                            "Progress phase changed phase=${importProgress.phase.name} percent=${importProgress.percent ?: -1} " +
+                                "selectedPrepared=${importProgress.selectedPreparedRecords}/$expectedSelectedRecords " +
+                                "scanned=${importProgress.parsedElements} converted=${importProgress.convertedRecords} " +
+                                "imported=${importProgress.importedRecords} duplicates=${importProgress.duplicateSkippedRecords} " +
+                                "notSelected=${importProgress.notSelectedRecords} unsupported=${importProgress.unsupportedElements} " +
+                                "skipped=${importProgress.skippedRecords} failed=${importProgress.failedRecords}",
+                        )
+                        lastLoggedProgressPhase = importProgress.phase
+                    }
+                    if (now - lastNotificationUpdateMillis >= ForegroundNotificationUpdateMillis ||
+                        importProgress.phase != lastNotificationPhase
+                    ) {
+                        setForeground(foregroundInfo(importProgress))
+                        lastNotificationUpdateMillis = now
+                        lastNotificationPhase = importProgress.phase
+                    }
+                },
+                resumeCheckpoint = resumeCheckpoint,
+                onCheckpoint = { checkpoint ->
+                    AppleHealthImportCheckpointStore.save(appContext, checkpoint)
+                },
+                stagedFile = stagedExport.file,
+            )
             log("Import service completed imported=${result.importedRecords} failed=${result.failedRecords}")
             val buildingReportProgress = result.toProgress(AppleHealthImportPhase.BUILDING_REPORT, expectedSelectedRecords)
             setProgress(buildingReportProgress.toData())
@@ -116,6 +156,9 @@ class AppleHealthImportWorker(
             val finalResult = result.copy(shareableReportText = finalReportText)
             val completeProgress = finalResult.toProgress(AppleHealthImportPhase.COMPLETE, expectedSelectedRecords)
             setProgress(completeProgress.toData())
+            AppleHealthImportCheckpointStore.clear(appContext)
+            AppleHealthImportStagingStore.clear(appContext)
+            log("Cleared staged Apple Health import state")
             Result.success(finalResult.toOutputData(reportPath, expectedSelectedRecords))
         }.getOrElse { error ->
             Log.e(LogTag, "Apple Health import failed", error)

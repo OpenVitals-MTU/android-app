@@ -29,6 +29,49 @@ internal class NonClosingInputStream(delegate: InputStream) : FilterInputStream(
     override fun close() = Unit
 }
 
+internal class CountingInputStream(delegate: InputStream) : FilterInputStream(delegate) {
+    var bytesRead: Long = 0
+        private set
+
+    override fun read(): Int {
+        val value = super.read()
+        if (value != -1) bytesRead++
+        return value
+    }
+
+    override fun read(
+        b: ByteArray,
+        off: Int,
+        len: Int,
+    ): Int {
+        val count = super.read(b, off, len)
+        if (count > 0) bytesRead += count
+        return count
+    }
+}
+
+internal class AppleHealthZipReadException(
+    entryName: String?,
+    bytesRead: Long?,
+    cause: Throwable,
+) : Exception(
+    buildString {
+        append("Apple Health export.zip ended unexpectedly")
+        if (!entryName.isNullOrBlank()) {
+            append(" while reading ")
+            append(entryName)
+        }
+        if (bytesRead != null) {
+            append(" after ")
+            append(bytesRead)
+            append(" decompressed byte(s)")
+        }
+        append(". The selected ZIP is likely incomplete, corrupt, not fully downloaded, or Android stopped providing the document stream. ")
+        append("Re-copy or re-export the Apple Health ZIP, make sure it is stored locally on the phone, or extract export.xml and import that file directly.")
+    },
+    cause,
+)
+
 /**
  * Repairs the two ways free-text fields (workout notes, device names, clinical titles/descriptions)
  * most often break XML well-formedness in the wild: raw control characters that XML 1.0 forbids as
