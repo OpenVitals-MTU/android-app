@@ -49,6 +49,22 @@ val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
 // versionCode is a monotonic release counter, independent of versionName.
 val baseVersionCode = 107030340
 val baseVersionName = "1.8.0"
+val translationCoverageResDir = layout.buildDirectory.dir("generated/res/translationCoverage").get().asFile
+val generateTranslationCoverage by tasks.registering(Exec::class) {
+    inputs.files(
+        fileTree(rootProject.file("app/src/main/res")) {
+            include("values*/strings.xml")
+        },
+    )
+    inputs.file(rootProject.file("scripts/generate-translation-coverage.py"))
+    outputs.dir(translationCoverageResDir)
+    workingDir(rootProject.projectDir)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/generate-translation-coverage.py"),
+        translationCoverageResDir,
+    )
+}
 
 android {
     namespace = "tech.mmarca.openvitals"
@@ -145,8 +161,32 @@ android {
         }
     }
 
+    sourceSets {
+        getByName("main") {
+            res.srcDir(translationCoverageResDir)
+        }
+    }
+
     lint {
-        disable += "LogNotTimber"
+        disable += setOf(
+            "LogNotTimber",
+            // Partial Weblate languages are allowed once scripts/verify-translations.py
+            // confirms at least 70% coverage and placeholder safety.
+            "MissingTranslation",
+        )
+    }
+}
+
+tasks.configureEach {
+    if (
+        name != "generateTranslationCoverage" &&
+        (
+            name.contains("Resources") ||
+                name.contains("SourceSetPaths") ||
+                name.startsWith("extractDeepLinks")
+        )
+    ) {
+        dependsOn(generateTranslationCoverage)
     }
 }
 

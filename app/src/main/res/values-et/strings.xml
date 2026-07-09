@@ -535,7 +535,14 @@
     <string name="unit_grams">g</string>
 
     <string name="section_activities">Treeningud</string>
+    <string name="section_activity_type_stats">Treeningu tüübi järgi</string>
+    <plurals name="activity_type_stats_activity_count">
+        <item quantity="one">%d treening</item>
+        <item quantity="other">%d treeningut</item>
+    </plurals>
     <string name="section_planned_workouts">Planeeritud treeningud</string>
+    <string name="activities_filter_activity_type_label">Treeningu tüüp</string>
+    <string name="activities_filter_all">Kõik treeningud</string>
     <string name="activities_key_metrics">Põhinäitajad</string>
     <string name="recovery_sleep_score">Unehinne</string>
     <string name="recovery_sleep_duration">Une kestus</string>
@@ -681,6 +688,7 @@
     <string name="summary_sleep_ending_today">Uni lõpeb täna</string>
     <string name="summary_sleep_ending_on">Uni lõpeb kuupäeval %1$s</string>
     <string name="stat_total">Kokku</string>
+    <string name="stat_time">Aeg</string>
     <string name="stat_active_days">Aktiivseid päevi</string>
     <string name="stat_average">Keskmine</string>
     <string name="stat_lowest">Madalaim</string>
@@ -695,6 +703,9 @@
     <string name="stat_nights_logged">Logitud öid</string>
     <string name="stat_longest_sleep">Pikim uni</string>
     <string name="stat_longest_workout">Pikim treening</string>
+    <string name="stat_average_moving_pace">Keskm liikumistempo</string>
+    <string name="stat_fastest_pace">Kiireim tempo</string>
+    <string name="stat_best_speed">Parim kiirus</string>
     <string name="stat_longest_session">Pikim sessioon</string>
     <string name="stat_bbt_readings">BBT-näidud</string>
     <string name="stat_goal_streak">Eesmärgi seeria</string>
@@ -1161,7 +1172,6 @@
     <string name="settings_debug_logs_saved">Silumislogid salvestatud</string>
     <string name="settings_debug_logs_save_failed">Diagnostikalogide salvestamine ebaõnnestus</string>
     <string name="settings_privacy_policy_link">Vaata privaatsuspoliitikat</string>
-    <string name="settings_privacy_policy_url" translatable="false">https://codeberg.org/OpenVitals/android-app/src/branch/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">Rakenduse lukk</string>
     <string name="settings_app_lock_body">Nõua OpenVitalsi avamiseks seadme lukust vabastamist.</string>
     <string name="onboarding_core_required">Alustamiseks on vaja treeningu, une ja pulsi juurdepääsu. Rohkem andmetüüpe saad hiljem lisada seadetest.</string>
@@ -1331,16 +1341,12 @@
     <string name="settings_offline_maps_import_notification_text_with_percent">%1$s • %2$d%%.</string>
     <string name="settings_offline_maps_help_prompt">Kas soovid teada, kuidas võrguühenduseta kaarte lisada? Mine:</string>
     <string name="settings_offline_maps_help_link">Ava võrguühenduseta kaartide juhend</string>
-    <string name="settings_offline_maps_help_url" translatable="false">https://openvitals.codeberg.page/website/how-to/offline-maps/</string>
     <string name="section_support">Tugi</string>
     <string name="settings_support_title">Toeta OpenVitalsi</string>
     <string name="settings_support_body">Teata vigadest, liitu kogukonna tugiaruteludega või aita rahastada arendustööd.</string>
     <string name="settings_support_issues_action">Teata probleemist</string>
     <string name="settings_support_discussion_action">Liitu Zulipi aruteludega</string>
     <string name="settings_support_action">Ava Liberapay</string>
-    <string name="settings_support_issues_url" translatable="false">https://codeberg.org/mmarca-tech/OpenVitals/issues</string>
-    <string name="settings_support_discussion_url" translatable="false">http://openvitals.zulipchat.com/</string>
-    <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
     <string name="crash_report_email_chooser_title">Saada OpenVitalsi raport e-kirjaga</string>
     <string name="crash_report_fallback_title">E-posti rakendust ei leitud</string>
     <string name="crash_report_fallback_body">Kopeeri raport või salvesta see tekstifailina ning saada see hiljem aadressile %1$s.</string>

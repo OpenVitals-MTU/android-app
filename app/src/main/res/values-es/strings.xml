@@ -533,7 +533,14 @@
     <string name="unit_grams">g</string>
 
     <string name="section_activities">Actividades</string>
+    <string name="section_activity_type_stats">Por tipo de actividad</string>
+    <plurals name="activity_type_stats_activity_count">
+        <item quantity="one">%d actividad</item>
+        <item quantity="other">%d actividades</item>
+    </plurals>
     <string name="section_planned_workouts">Entrenamientos planificados</string>
+    <string name="activities_filter_activity_type_label">Tipo de actividad</string>
+    <string name="activities_filter_all">Todas las actividades</string>
     <string name="activities_key_metrics">Métricas clave</string>
     <string name="recovery_sleep_score">Puntuación de sueño</string>
     <string name="recovery_sleep_duration">Duración del sueño</string>
@@ -679,6 +686,7 @@
     <string name="summary_sleep_ending_today">Sueño que termina hoy</string>
     <string name="summary_sleep_ending_on">Sueño que termina el %1$s</string>
     <string name="stat_total">Total</string>
+    <string name="stat_time">Tiempo</string>
     <string name="stat_active_days">Días activos</string>
     <string name="stat_average">Media</string>
     <string name="stat_lowest">Mínimo</string>
@@ -693,6 +701,9 @@
     <string name="stat_nights_logged">Noches registradas</string>
     <string name="stat_longest_sleep">Sueño más largo</string>
     <string name="stat_longest_workout">Entreno más largo</string>
+    <string name="stat_average_moving_pace">Ritmo medio en movimiento</string>
+    <string name="stat_fastest_pace">Ritmo más rápido</string>
+    <string name="stat_best_speed">Mejor velocidad</string>
     <string name="stat_longest_session">Sesión más larga</string>
     <string name="stat_bbt_readings">Lecturas BBT</string>
     <string name="stat_goal_streak">Racha de objetivo</string>

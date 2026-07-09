@@ -91,7 +91,7 @@ class PreferencesRepository @Inject constructor(
     var appLanguage: AppLanguage
         get() = _appLanguage.value
         set(value) {
-            prefs.edit { putString(KEY_APP_LANGUAGE, value.name) }
+            prefs.edit { putString(KEY_APP_LANGUAGE, value.storageValue) }
             _appLanguage.value = value
         }
 
@@ -673,9 +673,7 @@ class PreferencesRepository @Inject constructor(
             ?: defaultUnitSystem()
 
     private fun readAppLanguage(): AppLanguage =
-        prefs.getString(KEY_APP_LANGUAGE, null)
-            ?.let { value -> runCatching { AppLanguage.valueOf(value) }.getOrNull() }
-            ?: AppLanguage.SYSTEM
+        AppLanguage.fromStorageValue(prefs.getString(KEY_APP_LANGUAGE, null))
 
     private fun readAppThemeMode(): AppThemeMode =
         prefs.getString(KEY_APP_THEME_MODE, null)

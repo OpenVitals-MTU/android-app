@@ -526,7 +526,14 @@
     <string name="unit_total">totale</string>
     <string name="unit_grams">g</string>
     <string name="section_activities">Attività</string>
+    <string name="section_activity_type_stats">Per tipo di attività</string>
+    <plurals name="activity_type_stats_activity_count">
+        <item quantity="one">%d attività</item>
+        <item quantity="other">%d attività</item>
+    </plurals>
     <string name="section_planned_workouts">Allenamenti pianificati</string>
+    <string name="activities_filter_activity_type_label">Tipo di attività</string>
+    <string name="activities_filter_all">Tutte le attività</string>
     <string name="activities_key_metrics">Metriche chiave</string>
     <string name="recovery_sleep_score">Punteggio sonno</string>
     <string name="recovery_sleep_duration">Durata sonno</string>
@@ -671,6 +678,7 @@
     <string name="summary_sleep_ending_today">Sonno terminato oggi</string>
     <string name="summary_sleep_ending_on">Sonno terminato il %1$s</string>
     <string name="stat_total">Totale</string>
+    <string name="stat_time">Tempo</string>
     <string name="stat_active_days">Giorni attivi</string>
     <string name="stat_average">Media</string>
     <string name="stat_lowest">Minimo</string>
@@ -685,6 +693,9 @@
     <string name="stat_nights_logged">Notti registrate</string>
     <string name="stat_longest_sleep">Sonno più lungo</string>
     <string name="stat_longest_workout">Allenamento più lungo</string>
+    <string name="stat_average_moving_pace">Passo medio in movimento</string>
+    <string name="stat_fastest_pace">Passo più veloce</string>
+    <string name="stat_best_speed">Velocità migliore</string>
     <string name="stat_longest_session">Sessione più lunga</string>
     <string name="stat_bbt_readings">Rilevazioni TBC</string>
     <string name="stat_goal_streak">Serie obiettivo</string>

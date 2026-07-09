@@ -15,10 +15,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
+import java.util.Locale
 
 @Composable
 fun AppLanguageDropdown(
@@ -27,6 +30,8 @@ fun AppLanguageDropdown(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val pickerLanguageTags = stringArrayResource(R.array.translation_picker_language_tags)
+    val pickerOptions = AppLanguage.pickerOptions(pickerLanguageTags.asIterable())
 
     Box(modifier = modifier) {
         OpenVitalsOutlinedButton(onClick = { expanded = true }) {
@@ -41,7 +46,7 @@ fun AppLanguageDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            AppLanguage.entries.forEach { appLanguage ->
+            pickerOptions.forEach { appLanguage ->
                 DropdownMenuItem(
                     text = { Text(appLanguage.label()) },
                     onClick = {
@@ -56,11 +61,23 @@ fun AppLanguageDropdown(
 
 @Composable
 private fun AppLanguage.label(): String =
-    when (this) {
-        AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
-        AppLanguage.ENGLISH -> stringResource(R.string.settings_language_english)
-        AppLanguage.SPANISH -> stringResource(R.string.settings_language_spanish)
-        AppLanguage.GERMAN -> stringResource(R.string.settings_language_german)
-        AppLanguage.ITALIAN -> stringResource(R.string.settings_language_italian)
-        AppLanguage.ESTONIAN -> stringResource(R.string.settings_language_estonian)
+    when (languageTag) {
+        null -> stringResource(R.string.settings_language_system)
+        "en" -> stringResource(R.string.settings_language_english)
+        "es" -> stringResource(R.string.settings_language_spanish)
+        "de" -> stringResource(R.string.settings_language_german)
+        "it" -> stringResource(R.string.settings_language_italian)
+        "et" -> stringResource(R.string.settings_language_estonian)
+        else -> localizedDisplayName(languageTag)
     }
+
+@Composable
+private fun localizedDisplayName(languageTag: String): String {
+    val displayLocale = LocalLocale.current.platformLocale
+    val locale = Locale.forLanguageTag(languageTag)
+    return locale
+        .getDisplayName(displayLocale)
+        .replaceFirstChar { char ->
+            if (char.isLowerCase()) char.titlecase(displayLocale) else char.toString()
+        }
+}

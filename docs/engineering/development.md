@@ -17,6 +17,15 @@ Run the main checks before pushing architecture or feature changes:
 git diff --check
 ```
 
+For translation-only changes, the fast local check is:
+
+```bash
+./gradlew verifyTranslations
+```
+
+`verifyCi` also runs the translation validator, so Weblate pull requests must
+keep locale files more than 70% translated and placeholders intact.
+
 For Apple Health importer work, there is also a desktop JVM smoke test that can exercise the Kotlin importer against a real local export without building or installing the app:
 
 ```bash

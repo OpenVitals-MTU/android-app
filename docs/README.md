@@ -19,6 +19,7 @@ Start here when you need to understand the app, a feature, or the implementation
 - [Engineering guide](engineering/README.md): architecture, development setup, feature playbook, code analysis, and review archive.
 - [Architecture](engineering/architecture.md): current single-module architecture, feature boundaries, period detail pattern, and data-access rules.
 - [Feature playbook](engineering/feature-playbook.md): checklist for adding or extending a metric feature.
+- [Translations](engineering/translations.md): Codeberg Translate setup, shipping policy, and validation checks.
 
 ## Reference And Archive
 

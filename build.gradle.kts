@@ -49,10 +49,17 @@ tasks.register("verifyCiUnitTest") {
     dependsOn(":app:testCiUnitTest")
 }
 
+tasks.register<Exec>("verifyTranslations") {
+    group = "verification"
+    description = "Validates Android translation resources for completeness and placeholder safety."
+    commandLine("python3", "scripts/verify-translations.py")
+}
+
 tasks.register("verifyCiPreflight") {
     group = "verification"
     description = "Runs Android app build, lint, and android-test compile checks for CI."
     dependsOn(
+        "verifyTranslations",
         ":app:lintCi",
         ":app:assembleCi",
         ":app:compileCiAndroidTestKotlin",
