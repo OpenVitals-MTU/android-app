@@ -2,8 +2,6 @@ package tech.mmarca.openvitals.data.repository
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
 
 import android.util.Log
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.MindfulnessSessionRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
@@ -27,9 +25,7 @@ class MindfulnessRepositoryImpl @Inject constructor(
         private const val TAG = "MindfulnessRepository"
     }
 
-    private val readMindfulnessPermission = HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
-    private val writeMindfulnessPermission = HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
-    override val mindfulnessWritePermissions: Set<String> get() = setOf(writeMindfulnessPermission)
+    override val mindfulnessWritePermissions: Set<String> get() = hc.mindfulnessWritePermissions
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -67,8 +63,14 @@ class MindfulnessRepositoryImpl @Inject constructor(
         end: LocalDate,
         granted: Set<String>,
     ): List<MindfulnessSession> {
-        if (readMindfulnessPermission !in granted) {
-            Log.w(TAG, "Skipping loadMindfulnessSessions missingCount=1")
+        val readPermissions = hc.mindfulnessPermissions
+        if (readPermissions.isEmpty()) {
+            Log.w(TAG, "Skipping loadMindfulnessSessions because mindfulness sessions are unavailable")
+            return emptyList()
+        }
+        val missingPermissions = readPermissions - granted
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping loadMindfulnessSessions missingCount=${missingPermissions.size}")
             return emptyList()
         }
         val zone = ZoneId.systemDefault()
@@ -98,8 +100,14 @@ class MindfulnessRepositoryImpl @Inject constructor(
 
     override suspend fun loadMindfulnessSession(id: String): MindfulnessSession? {
         val granted = grantedPermissionsIfAvailable()
-        if (readMindfulnessPermission !in granted) {
-            Log.w(TAG, "Skipping loadMindfulnessSession missingCount=1")
+        val readPermissions = hc.mindfulnessPermissions
+        if (readPermissions.isEmpty()) {
+            Log.w(TAG, "Skipping loadMindfulnessSession because mindfulness sessions are unavailable")
+            return null
+        }
+        val missingPermissions = readPermissions - granted
+        if (missingPermissions.isNotEmpty()) {
+            Log.w(TAG, "Skipping loadMindfulnessSession missingCount=${missingPermissions.size}")
             return null
         }
         return hc.readMindfulnessSession(id)

@@ -154,13 +154,19 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(BodyFatRecord::class),
     )
 
-    val mindfulnessPermissions: Set<String> = setOf(
+    private val rawMindfulnessPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     )
 
-    val mindfulnessWritePermissions: Set<String> = setOf(
+    val mindfulnessPermissions: Set<String>
+        get() = if (isMindfulnessSessionAvailable()) rawMindfulnessPermissions else emptySet()
+
+    private val rawMindfulnessWritePermissions: Set<String> = setOf(
         HealthPermission.getWritePermission(MindfulnessSessionRecord::class),
     )
+
+    val mindfulnessWritePermissions: Set<String>
+        get() = if (isMindfulnessSessionAvailable()) rawMindfulnessWritePermissions else emptySet()
 
     val additionalDataAccessPermissions: Set<String>
         get() = buildSet {
@@ -222,9 +228,7 @@ internal class HealthConnectPermissionService(
         add(HealthPermission.getWritePermission(BodyTemperatureRecord::class))
         add(HealthPermission.getWritePermission(BloodGlucoseRecord::class))
         add(HealthPermission.getWritePermission(Vo2MaxRecord::class))
-        if (isMindfulnessSessionAvailable()) {
-            add(HealthPermission.getWritePermission(MindfulnessSessionRecord::class))
-        }
+        addAll(mindfulnessWritePermissions)
         add(HealthPermission.getWritePermission(MenstruationFlowRecord::class))
         add(HealthPermission.getWritePermission(OvulationTestRecord::class))
         add(HealthPermission.getWritePermission(CervicalMucusRecord::class))
@@ -255,7 +259,7 @@ internal class HealthConnectPermissionService(
             bodyPermissions +
             activityExtrasPermissions +
             nutritionHydrationPermissions +
-            (if (isMindfulnessSessionAvailable()) mindfulnessPermissions else emptySet())
+            mindfulnessPermissions
 
     /** Phase 3 - vitals, requested by category during onboarding or when opening Heart & Vitals */
     val phase3Permissions: Set<String> get() = vitalsPermissions
@@ -275,7 +279,7 @@ internal class HealthConnectPermissionService(
             nutritionWritePermissions +
             bodyWritePermissions +
             vitalsWritePermissions +
-            (if (isMindfulnessSessionAvailable()) mindfulnessWritePermissions else emptySet())
+            mindfulnessWritePermissions
 
     val onboardingRequestablePermissions: Set<String>
         get() = requestableAllPermissions +

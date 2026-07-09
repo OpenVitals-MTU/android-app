@@ -441,6 +441,27 @@ class ManualEntryViewModelTest {
         assertTrue(vm.uiState.value.pendingMindfulnessEntryNavigation)
     }
 
+    @Test fun `mindfulness tap skips permission prompt when provider exposes no write permission`() = runTest {
+        val vm = ManualEntryViewModel(
+            hydrationRepository = hydrationRepo(),
+            nutritionRepository = nutritionRepo(),
+            activityRepository = activityRepo(),
+            bodyRepository = bodyRepo(),
+            vitalsRepository = vitalsRepo(),
+            mindfulnessRepository = mindfulnessRepo(
+                canWrite = false,
+                writePermissions = emptySet(),
+            ),
+            preferencesRepository = prefs(acknowledgedPermissions = emptySet()),
+        )
+
+        vm.onMindfulnessWidgetTapped()
+
+        assertFalse(vm.uiState.value.showMindfulnessWritePermissionPrompt)
+        assertEquals(emptySet<String>(), vm.uiState.value.mindfulnessWritePermissions)
+        assertTrue(vm.uiState.value.pendingMindfulnessEntryNavigation)
+    }
+
     @Test fun `opening mindfulness entry from prompt acknowledges write permission`() = runTest {
         val preferencesRepository = prefs()
         val vm = ManualEntryViewModel(
@@ -514,9 +535,10 @@ class ManualEntryViewModelTest {
 
     private fun mindfulnessRepo(
         canWrite: Boolean = false,
+        writePermissions: Set<String> = setOf(WriteMindfulnessPermission),
     ): MindfulnessRepository =
         mockk<MindfulnessRepository>().also { repo ->
-            every { repo.mindfulnessWritePermissions } returns setOf(WriteMindfulnessPermission)
+            every { repo.mindfulnessWritePermissions } returns writePermissions
             coEvery { repo.hasMindfulnessWritePermission() } returns canWrite
         }
 

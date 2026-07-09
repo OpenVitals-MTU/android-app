@@ -54,6 +54,24 @@ class MindfulnessEntryViewModelTest {
         assertEquals(setOf(WriteMindfulnessPermission), vm.uiState.value.writePermissions)
     }
 
+    @Test fun `initial load marks mindfulness unavailable without write permissions`() = runTest {
+        val vm = MindfulnessEntryViewModel(
+            repository = repo(
+                canWrite = false,
+                available = false,
+                writePermissions = emptySet(),
+            ),
+            preferencesRepository = prefs(),
+        )
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isCheckingPermission)
+        assertFalse(vm.uiState.value.mindfulnessAvailable)
+        assertFalse(vm.uiState.value.canWrite)
+        assertEquals(emptySet<String>(), vm.uiState.value.writePermissions)
+        assertEquals(MindfulnessEntryError.UNAVAILABLE, vm.uiState.value.entryError)
+    }
+
     @Test fun `starting timer persists timer config`() = runTest {
         val preferencesRepository = prefs()
         val vm = MindfulnessEntryViewModel(
@@ -279,9 +297,10 @@ class MindfulnessEntryViewModelTest {
     private fun repo(
         canWrite: Boolean = true,
         available: Boolean = true,
+        writePermissions: Set<String> = setOf(WriteMindfulnessPermission),
     ): MindfulnessRepository =
         mockk<MindfulnessRepository>().also { repo ->
-            every { repo.mindfulnessWritePermissions } returns setOf(WriteMindfulnessPermission)
+            every { repo.mindfulnessWritePermissions } returns writePermissions
             every { repo.isMindfulnessAvailable() } returns available
             coEvery { repo.hasMindfulnessWritePermission() } returns canWrite
             coEvery { repo.writeMindfulnessSessionEntry(any()) } returns "record-id"
