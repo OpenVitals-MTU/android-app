@@ -1,0 +1,1 @@
+Hace que las importaciones de Apple Health se puedan reanudar con puntos de control y recuperacion. La importacion de rutas pasa a Ajustes > Importadores de datos con importacion masiva GPX/KML/KMZ, y Actividades gana filtros por tipo y estadisticas agregadas. Navegacion por periodos mas clara, mejoras en mindfulness y peso, y validacion Weblate para traducciones.

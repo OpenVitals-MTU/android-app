@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.9.0 - 2026-07-09
+
+### English
+
+- Make Apple Health imports resumable with checkpointed parsing, staged write batches, and better recovery after interruptions.
+- Move GPX, KML, KMZ, and FIT imports into Settings, Data Importers, and add bulk GPX/KML/KMZ import for saving multiple route files directly.
+- Add Activities filtering by activity type and aggregate activity-type statistics for distance, duration, calories, heart rate, pace, and sessions.
+- Improve period navigation with rolling day, week, month, and year ranges and clearer localized titles.
+- Fix mindfulness availability handling, polish weight entry behavior, and add Weblate translation validation plus stronger language-picker coverage.
+
+### Español
+
+- Hace que las importaciones de Apple Health se puedan reanudar con analisis por puntos de control, lotes de escritura preparados y mejor recuperacion tras interrupciones.
+- Mueve las importaciones GPX, KML, KMZ y FIT a Ajustes, Importadores de datos, y anade importacion masiva de GPX/KML/KMZ para guardar varios archivos de ruta directamente.
+- Anade filtrado de Actividades por tipo de actividad y estadisticas agregadas por tipo para distancia, duracion, calorias, frecuencia cardiaca, ritmo y sesiones.
+- Mejora la navegacion por periodos con rangos moviles de dia, semana, mes y ano y titulos localizados mas claros.
+- Corrige la disponibilidad de mindfulness, pule el registro de peso y anade validacion de traducciones de Weblate con mas cobertura para el selector de idioma.
+
+### Deutsch
+
+- Macht Apple-Health-Importe mit Parsing-Checkpoints, zwischengespeicherten Schreibbatches und besserer Wiederaufnahme nach Unterbrechungen fortsetzbar.
+- Verschiebt GPX-, KML-, KMZ- und FIT-Importe nach Einstellungen, Datenimporte, und ergänzt Massenimport für GPX/KML/KMZ zum direkten Speichern mehrerer Routendateien.
+- Ergänzt Aktivitäten-Filter nach Aktivitätstyp und aggregierte Statistiken je Typ für Distanz, Dauer, Kalorien, Herzfrequenz, Tempo und Sitzungen.
+- Verbessert die Zeitraum-Navigation mit rollenden Tages-, Wochen-, Monats- und Jahresbereichen sowie klareren lokalisierten Titeln.
+- Korrigiert die Mindfulness-Verfügbarkeit, verfeinert die Gewichtseingabe und ergänzt Weblate-Übersetzungsvalidierung mit stärkerer Abdeckung des Sprachwählers.
+
+### Italiano
+
+- Rende riprendibili le importazioni Apple Health con parsing a checkpoint, batch di scrittura preparati e recupero migliore dopo le interruzioni.
+- Sposta le importazioni GPX, KML, KMZ e FIT in Impostazioni, Importatori dati, e aggiunge l'importazione massiva GPX/KML/KMZ per salvare direttamente piu file di percorso.
+- Aggiunge il filtro Attivita per tipo e statistiche aggregate per tipo su distanza, durata, calorie, frequenza cardiaca, passo e sessioni.
+- Migliora la navigazione per periodi con intervalli mobili giorno, settimana, mese e anno e titoli localizzati piu chiari.
+- Corregge la disponibilita della mindfulness, rifinisce l'inserimento del peso e aggiunge validazione Weblate con copertura piu solida del selettore lingua.
+
 ## 1.8.0 - 2026-07-06
 
 ### English

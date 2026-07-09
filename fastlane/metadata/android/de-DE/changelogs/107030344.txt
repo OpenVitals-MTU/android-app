@@ -1,0 +1,1 @@
+Macht Apple-Health-Importe mit Checkpoints und Wiederaufnahme fortsetzbar. Routenimporte wandern nach Einstellungen > Datenimporte mit GPX/KML/KMZ-Massenimport, und Aktivitäten erhalten Typfilter plus aggregierte Statistiken. Zeitraum-Navigation wird klarer, Mindfulness-Verfügbarkeit und Gewichtseingabe werden robuster, und Weblate validiert Übersetzungen.

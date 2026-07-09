@@ -1,0 +1,1 @@
+Apple Healthi importi saab nüüd jätkata kontrollpunktide ja taastamise abil. Marsruudi import kolib asukohta Seaded > Andmeimportijad koos GPX/KML/KMZ hulgiimpordiga ning tegevused saavad tüübifiltrid ja koondstatistika. Perioodide navigeerimine on selgem, mindfulnessi saadavus ja kaalu sisestus on töökindlamad ning Weblate valideerib tõlkeid.

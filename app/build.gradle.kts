@@ -47,8 +47,8 @@ val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.systemProperty("appleHealthExport"))
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
 // versionCode is a monotonic release counter, independent of versionName.
-val baseVersionCode = 107030340
-val baseVersionName = "1.8.0"
+val baseVersionCode = 107030344
+val baseVersionName = "1.9.0"
 val translationCoverageResDir = layout.buildDirectory.dir("generated/res/translationCoverage").get().asFile
 val generateTranslationCoverage by tasks.registering(Exec::class) {
     inputs.files(

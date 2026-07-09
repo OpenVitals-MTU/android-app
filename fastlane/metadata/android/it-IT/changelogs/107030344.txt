@@ -1,0 +1,1 @@
+Rende riprendibili le importazioni Apple Health con checkpoint e recupero. L'importazione percorsi passa a Impostazioni > Importatori dati con importazione massiva GPX/KML/KMZ, e Attivita ottiene filtri per tipo e statistiche aggregate. Navigazione periodi piu chiara, miglioramenti a mindfulness e peso, e validazione Weblate per le traduzioni.
