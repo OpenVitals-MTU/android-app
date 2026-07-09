@@ -914,6 +914,7 @@ fun AppNavigation(
                         uri = uri,
                     )
                 },
+                onRouteFilesImported = ::markDashboardDirty,
             )
         }
     }

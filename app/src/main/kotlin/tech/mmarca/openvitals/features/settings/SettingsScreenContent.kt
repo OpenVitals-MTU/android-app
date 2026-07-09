@@ -208,7 +208,16 @@ internal fun LazyListScope.settingsScreenContent(
             item { SettingsCardSpacer() }
             item {
                 RouteImportCard(
-                    onImport = actions.onImportRouteFile,
+                    availability = state.availability,
+                    importPermissions = state.routeImportWritePermissions,
+                    grantedPermissions = state.grantedPermissions,
+                    isImporting = state.isImportingRouteFiles,
+                    progress = state.routeImportProgress,
+                    result = state.routeImportResult,
+                    error = state.routeImportError,
+                    onGrantPermissions = actions.onGrantRouteImportPermissions,
+                    onImportSingle = actions.onImportRouteFile,
+                    onImportBulk = actions.onImportRouteFiles,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }

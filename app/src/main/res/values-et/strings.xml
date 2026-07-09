@@ -1291,8 +1291,15 @@
     <string name="settings_apple_health_import_error">Import ebaõnnestus: %1$s</string>
     <string name="settings_apple_health_import_permission_denied">Ligipääs valitud failile kadus, mistõttu importimist ei saanud jätkata. Vali sama Apple Health\'i eksport uuesti, et jätkata täpselt sealt, kus pooleli jäi.</string>
     <string name="settings_route_import_title">GPX/KML/KMZ-importija</string>
-    <string name="settings_route_import_body">Impordi GPX-, KML- või KMZ-marsruudifaile, vaata tuvastatud üksikasjad üle ja vali, kas salvestada need Health Connectisse.</string>
+    <string name="settings_route_import_body">Impordi GPX-, KML- või KMZ-marsruudifaile. Vaata üks fail enne salvestamist üle või impordi mitu faili otse Health Connectisse.</string>
+    <string name="settings_route_import_permissions">%1$d/%2$d marsruudiimpordi õigust antud.</string>
+    <string name="settings_route_import_grant">Anna marsruudiimpordi õigused</string>
     <string name="settings_route_import_action">Impordi GPX/KML/KMZ-fail</string>
+    <string name="settings_route_import_bulk_action">Impordi GPX/KML/KMZ-failid hulgana</string>
+    <string name="settings_route_importing">Marsruute imporditakse...</string>
+    <string name="settings_route_import_progress">Fail %1$d/%2$d. Imporditud %3$d, ebaõnnestunud %4$d.</string>
+    <string name="settings_route_import_result">Imporditud %1$d. Ebaõnnestunud %2$d. Valitud %3$d.</string>
+    <string name="settings_route_import_error">Marsruudiimpordi hoiatus: %1$s</string>
     <string name="settings_fit_import_title">FIT-importija</string>
     <string name="settings_fit_import_body">Impordi FIT treeningu-, marsruudi- või harjutusfaile, vaata tuvastatud üksikasjad üle ja vali, kas salvestada need Health Connectisse.</string>
     <string name="settings_fit_import_action">Impordi FIT-fail</string>

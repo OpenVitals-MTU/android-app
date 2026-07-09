@@ -1284,8 +1284,15 @@
     <string name="settings_apple_health_import_report_saved">Informe de importación guardado.</string>
     <string name="settings_apple_health_import_report_save_failed">No se pudo guardar el informe de importación.</string>
     <string name="settings_route_import_title">Importador GPX/KML/KMZ</string>
-    <string name="settings_route_import_body">Importa archivos de ruta GPX, KML o KMZ, revisa los detalles detectados y elige si guardarlos en Health Connect.</string>
+    <string name="settings_route_import_body">Importa archivos de ruta GPX, KML o KMZ. Revisa un archivo antes de guardarlo o importa varios archivos directamente en Health Connect.</string>
+    <string name="settings_route_import_permissions">%1$d/%2$d permisos de importación de rutas concedidos.</string>
+    <string name="settings_route_import_grant">Conceder permisos de importación de rutas</string>
     <string name="settings_route_import_action">Importar archivo GPX/KML/KMZ</string>
+    <string name="settings_route_import_bulk_action">Importar archivos GPX/KML/KMZ en lote</string>
+    <string name="settings_route_importing">Importando rutas...</string>
+    <string name="settings_route_import_progress">Archivo %1$d/%2$d. Importados %3$d, fallidos %4$d.</string>
+    <string name="settings_route_import_result">Importados %1$d. Fallidos %2$d. Seleccionados %3$d.</string>
+    <string name="settings_route_import_error">Aviso de importación de rutas: %1$s</string>
     <string name="settings_fit_import_title">Importador FIT</string>
     <string name="settings_fit_import_body">Importa archivos FIT de actividad, curso o entrenamiento, revisa los detalles detectados y elige si guardarlos en Health Connect.</string>
     <string name="settings_fit_import_action">Importar archivo FIT</string>

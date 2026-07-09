@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ fun SettingsScreen(
     onOpenSection: (SettingsSection) -> Unit = {},
     onImportRouteFileSelected: (Uri) -> Unit = {},
     onImportFitFileSelected: (Uri) -> Unit = {},
+    onRouteFilesImported: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -91,6 +93,11 @@ fun SettingsScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
     }
+    LaunchedEffect(state.routeImportResult) {
+        if ((state.routeImportResult?.importedFiles ?: 0) > 0) {
+            onRouteFilesImported()
+        }
+    }
 
     val requestAllPermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
@@ -99,6 +106,12 @@ fun SettingsScreen(
     }
 
     val requestDataImportPermissions = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        viewModel.onPermissionsResult(granted)
+    }
+
+    val requestRouteImportPermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         viewModel.onPermissionsResult(granted)
@@ -125,6 +138,14 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             onImportRouteFileSelected(uri)
+        }
+    }
+
+    val routeFilesPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            viewModel.importRouteFiles(uris)
         }
     }
 
@@ -200,6 +221,9 @@ fun SettingsScreen(
         onGrantDataImportPermissions = {
             requestDataImportPermissions.launch(state.missingDataImportWritePermissions)
         },
+        onGrantRouteImportPermissions = {
+            requestRouteImportPermissions.launch(state.missingRouteImportWritePermissions)
+        },
         onImportAppleHealth = {
             appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
         },
@@ -207,6 +231,9 @@ fun SettingsScreen(
         onImportSelectedAppleHealth = viewModel::importSelectedAppleHealthExport,
         onImportRouteFile = {
             routeFilePicker.launch(RouteImportMimeTypes)
+        },
+        onImportRouteFiles = {
+            routeFilesPicker.launch(RouteImportMimeTypes)
         },
         onImportFitFile = {
             fitFilePicker.launch(FitImportMimeTypes)

@@ -1523,9 +1523,21 @@ internal fun AppleHealthImportCard(
 
 @Composable
 internal fun RouteImportCard(
-    onImport: () -> Unit,
+    availability: HealthConnectAvailability,
+    importPermissions: Set<String>,
+    grantedPermissions: Set<String>,
+    isImporting: Boolean,
+    progress: RouteBulkImportProgress?,
+    result: RouteBulkImportResult?,
+    error: String?,
+    onGrantPermissions: () -> Unit,
+    onImportSingle: () -> Unit,
+    onImportBulk: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val grantedCount = importPermissions.count { it in grantedPermissions }
+    val missingPermissions = importPermissions - grantedPermissions
+    val healthConnectAvailable = availability == HealthConnectAvailability.AVAILABLE
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -1557,8 +1569,72 @@ internal fun RouteImportCard(
                 }
             }
 
+            Text(
+                text = stringResource(
+                    R.string.settings_route_import_permissions,
+                    grantedCount,
+                    importPermissions.size,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+
+            result?.let { importResult ->
+                Text(
+                    text = stringResource(
+                        R.string.settings_route_import_result,
+                        importResult.importedFiles,
+                        importResult.failedFiles,
+                        importResult.totalFiles,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (!error.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.settings_route_import_error, error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (isImporting) {
+                AppleHealthImportProgressBar(modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+                val routeProgress = progress ?: RouteBulkImportProgress(totalFiles = 0)
+                Text(
+                    text = stringResource(
+                        R.string.settings_route_import_progress,
+                        routeProgress.currentFileIndex,
+                        routeProgress.totalFiles,
+                        routeProgress.importedFiles,
+                        routeProgress.failedFiles,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (missingPermissions.isNotEmpty()) {
+                OpenVitalsTonalButton(
+                    onClick = onGrantPermissions,
+                    enabled = healthConnectAvailable && !isImporting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                ) {
+                    Text(stringResource(R.string.settings_route_import_grant))
+                }
+            }
+
             OpenVitalsOutlinedButton(
-                onClick = onImport,
+                onClick = onImportSingle,
+                enabled = !isImporting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
@@ -1570,6 +1646,28 @@ internal fun RouteImportCard(
                 )
                 Spacer(Modifier.widthIn(min = 6.dp))
                 Text(stringResource(R.string.settings_route_import_action))
+            }
+
+            OpenVitalsOutlinedButton(
+                onClick = onImportBulk,
+                enabled = healthConnectAvailable && missingPermissions.isEmpty() && !isImporting,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FolderOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.widthIn(min = 6.dp))
+                Text(
+                    if (isImporting) {
+                        stringResource(R.string.settings_route_importing)
+                    } else {
+                        stringResource(R.string.settings_route_import_bulk_action)
+                    }
+                )
             }
         }
     }

@@ -35,6 +35,9 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
@@ -48,8 +51,11 @@ import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCate
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImport
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
+import java.time.Instant
 import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -387,20 +393,51 @@ class SettingsViewModelTest {
         coVerify(exactly = 2) { importService.analyzeAppleHealthExport(any(), any()) }
     }
 
+    @Test fun `bulk route import writes each selected file`() = runTest {
+        val activityRepository = activityRepo()
+        val routeFileImporter = routeFileImporter()
+        val firstUri = mockk<Uri>()
+        val secondUri = mockk<Uri>()
+        val start = Instant.parse("2024-01-01T10:00:00Z")
+        coEvery { routeFileImporter.import(firstUri) } returns routeImport("morning-run.gpx", start)
+        coEvery { routeFileImporter.import(secondUri) } returns routeImport("evening-walk.kml", start.plusSeconds(3600))
+        coEvery { activityRepository.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns true
+        coEvery { activityRepository.writeActivityEntry(any()) } returnsMany listOf("first", "second")
+
+        val vm = viewModel(
+            repository = repo(grantedPermissions = setOf("write", "route")),
+            activityRepository = activityRepository,
+            preferencesRepository = prefs(),
+            routeFileImporter = routeFileImporter,
+        )
+
+        vm.importRouteFiles(listOf(firstUri, secondUri))
+        advanceUntilIdle()
+
+        assertEquals(2, vm.uiState.value.routeImportResult?.importedFiles)
+        assertEquals(0, vm.uiState.value.routeImportResult?.failedFiles)
+        assertNull(vm.uiState.value.routeImportError)
+        coVerify(exactly = 2) { activityRepository.writeActivityEntry(any()) }
+    }
+
     private fun viewModel(
         repository: HealthRepository = repo(),
+        activityRepository: ActivityRepository = activityRepo(),
         preferencesRepository: PreferencesRepository = prefs(),
         appleHealthImportService: AppleHealthImportService = importService(),
         appleHealthImportWorkController: AppleHealthImportWorkController = importController(),
+        routeFileImporter: RouteFileImporter = routeFileImporter(),
         offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
         offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
         permissionUxState: HealthConnectPermissionUxState = permissionUxState(),
     ): SettingsViewModel =
         SettingsViewModel(
             repository = repository,
+            activityRepository = activityRepository,
             preferencesRepository = preferencesRepository,
             appleHealthImportService = appleHealthImportService,
             appleHealthImportWorkController = appleHealthImportWorkController,
+            routeFileImporter = routeFileImporter,
             offlineMapRepository = offlineMapRepository,
             offlineMapImportWorkController = offlineMapImportWorkController,
             permissionUxState = permissionUxState,
@@ -431,6 +468,11 @@ class SettingsViewModelTest {
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 
+    private fun activityRepo(): ActivityRepository =
+        mockk<ActivityRepository>().also { repo ->
+            every { repo.activityWritePermissions() } returns setOf("write", "route")
+        }
+
     private fun permissionUxState(): HealthConnectPermissionUxState =
         mockk<HealthConnectPermissionUxState>(relaxed = true)
 
@@ -446,6 +488,7 @@ class SettingsViewModelTest {
             every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
             every { prefs.showOpenVitalsCalculatedCalories } returns false
             every { prefs.favoriteActivityExerciseType } returns null
+            every { prefs.lastActivityExerciseType } returns null
             every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
             every { prefs.caffeinePreferences() } answers { caffeinePreferences }
             every { prefs.bodyProfile() } returns BodyProfile()
@@ -459,12 +502,44 @@ class SettingsViewModelTest {
             every { prefs.setActivityRecordingPreferences(any()) } just runs
             every { prefs.showOpenVitalsCalculatedCalories = any() } just runs
             every { prefs.favoriteActivityExerciseType = any() } just runs
+            every { prefs.lastActivityExerciseType = any() } just runs
             every { prefs.setBodyEnergyCalibration(any()) } just runs
             every { prefs.setCaffeinePreferences(any()) } answers {
                 caffeinePreferences = firstArg<CaffeinePreferences>()
             }
         }
     }
+
+    private fun routeFileImporter(): RouteFileImporter =
+        mockk<RouteFileImporter>(relaxed = true)
+
+    private fun routeImport(fileName: String, start: Instant): RouteFileImport =
+        RouteFileImport(
+            fileName = fileName,
+            points = listOf(
+                routePoint(start),
+                routePoint(start.plusSeconds(30), latitude = 59.001, longitude = 24.001),
+            ),
+            distanceMeters = 120.0,
+            elevationGainedMeters = 3.0,
+            startTime = start,
+            endTime = start.plusSeconds(60),
+            name = fileName.substringBeforeLast('.'),
+        )
+
+    private fun routePoint(
+        time: Instant,
+        latitude: Double = 59.0,
+        longitude: Double = 24.0,
+    ): ExerciseRoutePoint =
+        ExerciseRoutePoint(
+            time = time,
+            latitude = latitude,
+            longitude = longitude,
+            altitudeMeters = 10.0,
+            horizontalAccuracyMeters = null,
+            verticalAccuracyMeters = null,
+        )
 
     private fun importController(
         workInfos: MutableStateFlow<List<WorkInfo>>? = null,

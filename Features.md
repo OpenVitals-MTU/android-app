@@ -257,6 +257,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Choose activity type, start date, start time, duration, distance, elevation, active calories, total calories, repetitions, title, and notes.
 - Enter repetition-based workouts using total repetitions or sets with repetitions and rest minutes.
 - Import route/activity files in GPX, KML, KMZ, or FIT formats.
+- Bulk import multiple GPX, KML, or KMZ route files from Settings.
 - Preview imported routes and inferred activity details before saving.
 - Save imported route data with inferred type, title, notes, distance, elevation, time range, and calorie estimates where available.
 - Import PMTiles or Mapsforge map packs from Settings for offline activity maps.
@@ -366,7 +367,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Open Apple Health import.
 - Grant import permissions.
 - Select Apple Health export files.
-- Import GPX, KML, KMZ, and FIT activity files for review before saving.
+- Import one GPX, KML, KMZ, or FIT activity file for review before saving.
+- Bulk import multiple GPX, KML, or KMZ route files directly into Health Connect.
 - Monitor import progress and read import reports.
 
 ### Permission Settings

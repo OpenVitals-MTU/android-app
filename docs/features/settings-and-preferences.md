@@ -43,7 +43,7 @@ OpenVitals asks for read permissions for dashboard and detail views. Write permi
 
 ## Data Importers And Sensors
 
-Settings provide Data Importers for Apple Health export import, GPX/KML/KMZ route import, and FIT activity/course/workout import, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Import results can be copied or downloaded as a full text report with summary, selected categories, logs, diagnostics, and failure details.
+Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ route import, and FIT activity/course/workout import, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. GPX/KML/KMZ bulk import writes selected route files directly after route import permissions are granted. Import results can be copied or downloaded as a full text report with summary, selected categories, logs, diagnostics, and failure details.
 
 ## Diagnostics And App Information
 

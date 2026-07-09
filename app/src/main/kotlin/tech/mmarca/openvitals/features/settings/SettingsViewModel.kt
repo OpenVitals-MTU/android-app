@@ -17,8 +17,14 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepRangeMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
+import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
+import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
+import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportPhase
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
@@ -45,6 +51,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.work.WorkInfo
 import androidx.compose.runtime.Immutable
+import java.time.Clock
 
 @Immutable
 data class SettingsUiState(
@@ -54,6 +61,7 @@ data class SettingsUiState(
     val permissionCategories: List<SettingsPermissionCategory> = emptyList(),
     val allPermissions: Set<String> = emptySet(),
     val dataImportWritePermissions: Set<String> = emptySet(),
+    val routeImportWritePermissions: Set<String> = emptySet(),
     val manualOnlyPermissions: Set<String> = emptySet(),
     val isAnalyzingAppleHealth: Boolean = false,
     val isImportingAppleHealth: Boolean = false,
@@ -64,6 +72,10 @@ data class SettingsUiState(
     val appleHealthImportResult: AppleHealthImportResult? = null,
     val appleHealthImportError: String? = null,
     val appleHealthImportPermissionDenied: Boolean = false,
+    val isImportingRouteFiles: Boolean = false,
+    val routeImportProgress: RouteBulkImportProgress? = null,
+    val routeImportResult: RouteBulkImportResult? = null,
+    val routeImportError: String? = null,
     val offlineMapPacks: List<OfflineMapPack> = emptyList(),
     val activeOfflineMapFormat: OfflineMapPackFormat? = null,
     val isImportingOfflineMap: Boolean = false,
@@ -96,7 +108,25 @@ data class SettingsUiState(
 
     val missingDataImportWritePermissions: Set<String>
         get() = dataImportWritePermissions - grantedPermissions
+
+    val missingRouteImportWritePermissions: Set<String>
+        get() = routeImportWritePermissions - grantedPermissions
 }
+
+@Immutable
+data class RouteBulkImportProgress(
+    val totalFiles: Int,
+    val importedFiles: Int = 0,
+    val failedFiles: Int = 0,
+    val currentFileIndex: Int = 0,
+)
+
+@Immutable
+data class RouteBulkImportResult(
+    val totalFiles: Int,
+    val importedFiles: Int,
+    val failedFiles: Int,
+)
 
 data class SettingsPermissionCategory(
     val id: String,
@@ -111,9 +141,11 @@ data class SettingsPermissionCategory(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
+    private val activityRepository: ActivityRepository,
     private val preferencesRepository: PreferencesRepository,
     private val appleHealthImportService: AppleHealthImportService,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
+    private val routeFileImporter: RouteFileImporter,
     private val offlineMapRepository: OfflineMapRepository,
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val permissionUxState: HealthConnectPermissionUxState,
@@ -127,6 +159,7 @@ class SettingsViewModel @Inject constructor(
     private var currentAppleHealthImportWorkId: UUID? = null
     private var pendingAppleHealthImportUri: Uri? = null
     private var lastAnalyzedAppleHealthExportFingerprint: AppleHealthExportFingerprint? = null
+    private val clock: Clock = Clock.systemDefaultZone()
 
     init {
         refresh()
@@ -150,6 +183,7 @@ class SettingsViewModel @Inject constructor(
                 permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 dataImportWritePermissions = repository.dataImportWritePermissions,
+                routeImportWritePermissions = activityRepository.activityWritePermissions(),
                 manualOnlyPermissions = repository.manualOnlyPermissions,
                 unitSystem = preferencesRepository.unitSystem,
                 appLanguage = preferencesRepository.appLanguage,
@@ -319,6 +353,73 @@ class SettingsViewModel @Inject constructor(
                         appleHealthImportPermissionDenied = AppleHealthImportErrorFormatter.isPermissionDenied(error),
                     )
                 }
+        }
+    }
+
+    fun importRouteFiles(uris: List<Uri>) {
+        if (uris.isEmpty() || _uiState.value.isImportingRouteFiles) return
+
+        viewModelScope.launch {
+            val totalFiles = uris.size
+            var importedFiles = 0
+            var failedFiles = 0
+            var lastError: String? = null
+
+            _uiState.value = _uiState.value.copy(
+                isImportingRouteFiles = true,
+                routeImportProgress = RouteBulkImportProgress(totalFiles = totalFiles),
+                routeImportResult = null,
+                routeImportError = null,
+            )
+
+            uris.forEachIndexed { index, uri ->
+                _uiState.value = _uiState.value.copy(
+                    routeImportProgress = RouteBulkImportProgress(
+                        totalFiles = totalFiles,
+                        importedFiles = importedFiles,
+                        failedFiles = failedFiles,
+                        currentFileIndex = index + 1,
+                    ),
+                )
+
+                runCatching {
+                    val routeImport = routeFileImporter.import(uri)
+                    val routeState = initialActivityEntryState(
+                        clock = clock,
+                        repository = activityRepository,
+                        selectedActivityType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty()),
+                    ).withRouteImport(
+                        routeImport = routeImport,
+                        unitSystem = _uiState.value.unitSystem,
+                        clock = clock,
+                    )
+                    val request = buildWriteRequest(routeState, _uiState.value.unitSystem)
+                        ?: throw IllegalArgumentException("Imported route could not be converted into an activity.")
+                    val hasPermission = activityRepository.hasActivityWritePermission(request)
+                    if (!hasPermission) {
+                        throw SecurityException("Activity import write permissions are missing.")
+                    }
+                    activityRepository.writeActivityEntry(request)
+                    preferencesRepository.lastActivityExerciseType = request.exerciseType
+                }.onSuccess {
+                    importedFiles += 1
+                }.onFailure { error ->
+                    failedFiles += 1
+                    lastError = error.localizedMessage ?: error.message ?: "Route import failed."
+                    Log.e(TAG, "Route bulk import failed index=${index + 1}", error)
+                }
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isImportingRouteFiles = false,
+                routeImportProgress = null,
+                routeImportResult = RouteBulkImportResult(
+                    totalFiles = totalFiles,
+                    importedFiles = importedFiles,
+                    failedFiles = failedFiles,
+                ),
+                routeImportError = lastError.takeIf { failedFiles > 0 },
+            )
         }
     }
 
@@ -526,6 +627,19 @@ class SettingsViewModel @Inject constructor(
         preferencesRepository.favoriteActivityExerciseType = exerciseType
         _uiState.value = _uiState.value.copy(favoriteActivityExerciseType = exerciseType)
     }
+
+    private fun preferredActivityType(requireGpsRoute: Boolean = false) =
+        DefaultActivityEntryTypes
+            .filter { !requireGpsRoute || it.supportsGpsRoute }
+            .ifEmpty { DefaultActivityEntryTypes }
+            .let { activityTypes ->
+                val preferredExerciseType = preferencesRepository.favoriteActivityExerciseType
+                    ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
+                    ?: preferencesRepository.lastActivityExerciseType
+                        ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
+                activityTypes.firstOrNull { it.exerciseType == preferredExerciseType }
+                    ?: activityTypes.first()
+            }
 
     fun selectOfflineMapFormat(format: OfflineMapPackFormat?) {
         offlineMapRepository.setActiveFormat(format)
