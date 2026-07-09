@@ -287,6 +287,11 @@ class ActivityRepositoryImpl @Inject constructor(
         return loadWorkouts(start, end, granted)
     }
 
+    override suspend fun loadWorkoutsWithMetrics(start: LocalDate, end: LocalDate): List<ExerciseData> {
+        val granted = grantedPermissionsIfAvailable()
+        return loadWorkoutsWithMetrics(start, end, granted)
+    }
+
     private suspend fun loadWorkouts(
         start: LocalDate,
         end: LocalDate,
@@ -300,6 +305,26 @@ class ActivityRepositoryImpl @Inject constructor(
         val startInstant = start.atStartOfDay(zone).toInstant()
         val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
         return hc.readExerciseSessions(startInstant, endInstant)
+    }
+
+    private suspend fun loadWorkoutsWithMetrics(
+        start: LocalDate,
+        end: LocalDate,
+        granted: Set<String>,
+    ): List<ExerciseData> {
+        if (readExercisePermission !in granted) {
+            Log.w(TAG, "Skipping loadWorkoutsWithMetrics missingCount=1")
+            return emptyList()
+        }
+        val zone = ZoneId.systemDefault()
+        val startInstant = start.atStartOfDay(zone).toInstant()
+        val endInstant = end.plusDays(1).atStartOfDay(zone).toInstant()
+        return hc.readExerciseSessionsWithMetrics(
+            start = startInstant,
+            end = endInstant,
+            includeDistance = readDistancePermission in granted,
+            includeSpeed = readSpeedPermission in granted,
+        )
     }
 
     override suspend fun loadWorkout(id: String): ExerciseData? {

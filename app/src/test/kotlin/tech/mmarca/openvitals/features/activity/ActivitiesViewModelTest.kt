@@ -31,6 +31,9 @@ class ActivitiesViewModelTest {
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
         coEvery { repo.loadWorkouts(any(), any()) } returns emptyList()
+        coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } coAnswers {
+            repo.loadWorkouts(firstArg(), secondArg())
+        }
         coEvery { repo.loadPlannedWorkouts(any(), any()) } returns emptyList()
         coEvery { repo.loadDailySteps(any(), any()) } returns emptyList()
         coEvery { repo.loadDailyNutrition(any(), any()) } returns emptyList()
@@ -99,7 +102,7 @@ class ActivitiesViewModelTest {
 
         val expectedDates = (0..6).map { today.minusDays(6).plusDays(it.toLong()) }
         assertEquals(expectedDates, vm.uiState.value.overviewDays.map { it.date })
-        coVerify { repo.loadWorkouts(today.minusDays(6), today) }
+        coVerify { repo.loadWorkoutsWithMetrics(today.minusDays(6), today) }
         coVerify { repo.loadDailySteps(today.minusDays(6), today) }
         coVerify { repo.loadDailyNutrition(today.minusDays(6), today) }
     }
@@ -118,7 +121,7 @@ class ActivitiesViewModelTest {
 
         val expectedDates = (0..6).map { weekStart.plusDays(it.toLong()) }
         assertEquals(expectedDates, vm.uiState.value.overviewDays.map { it.date })
-        coVerify { repo.loadWorkouts(weekStart, weekEnd.coerceAtMost(today)) }
+        coVerify { repo.loadWorkoutsWithMetrics(weekStart, weekEnd.coerceAtMost(today)) }
         coVerify { repo.loadDailySteps(weekStart, weekEnd.coerceAtMost(today)) }
         coVerify { repo.loadDailyNutrition(weekStart, weekEnd.coerceAtMost(today)) }
     }
@@ -192,22 +195,60 @@ class ActivitiesViewModelTest {
         assertEquals(null, vm.uiState.value.selectedActivityType)
     }
 
+    @Test fun `loaded activities expose aggregate stats by activity type`() = runTest {
+        val walk = workout(
+            id = "walk",
+            source = "com.example",
+            isOpenVitalsEntry = false,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+            totalDistanceMeters = 1_000.0,
+            durationMs = 600_000,
+        )
+        val bike = workout(
+            id = "bike",
+            source = "com.example",
+            isOpenVitalsEntry = false,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            totalDistanceMeters = 2_000.0,
+            durationMs = 300_000,
+            averageSpeedMetersPerSecond = 8.0,
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadWorkouts(any(), any()) } returns listOf(walk, bike)
+        val vm = ActivitiesViewModel(repo)
+
+        advanceUntilIdle()
+
+        val aggregates = vm.uiState.value.activityTypeAggregates.associateBy { it.exerciseType }
+        assertEquals(2, aggregates.size)
+        assertEquals(1, aggregates.getValue(ExerciseSessionRecord.EXERCISE_TYPE_WALKING).count)
+        assertEquals(1_000.0, aggregates.getValue(ExerciseSessionRecord.EXERCISE_TYPE_WALKING).totalDistanceMeters, 0.01)
+        assertEquals(600_000, aggregates.getValue(ExerciseSessionRecord.EXERCISE_TYPE_WALKING).totalMovingDurationMs)
+        assertEquals(1, aggregates.getValue(ExerciseSessionRecord.EXERCISE_TYPE_BIKING).count)
+        assertEquals(8.0, aggregates.getValue(ExerciseSessionRecord.EXERCISE_TYPE_BIKING).bestSpeedMetersPerSecond ?: 0.0, 0.01)
+    }
+
     private fun workout(
         id: String,
         source: String,
         isOpenVitalsEntry: Boolean,
         exerciseType: Int = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+        totalDistanceMeters: Double? = null,
+        durationMs: Long = 1_800_000,
+        averageSpeedMetersPerSecond: Double? = null,
     ): ExerciseData {
         val start = Instant.parse("${LocalDate.now()}T08:00:00Z")
-        val end = start.plusSeconds(1_800)
+        val end = start.plusMillis(durationMs)
         return ExerciseData(
             id = id,
             title = "Walk",
             exerciseType = exerciseType,
             startTime = start,
             endTime = end,
-            durationMs = 1_800_000,
+            durationMs = durationMs,
             source = source,
+            totalDistanceMeters = totalDistanceMeters,
+            averageSpeedMetersPerSecond = averageSpeedMetersPerSecond,
             isOpenVitalsEntry = isOpenVitalsEntry,
         )
     }

@@ -150,6 +150,12 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                         showEmptyState = !state.isLoading,
                     )
                 }
+                if (state.activityTypeAggregates.isNotEmpty()) {
+                    ActivityTypeAggregateStatsCard(
+                        aggregates = state.activityTypeAggregates,
+                        unitFormatter = unitFormatter,
+                    )
+                }
                 if (state.plannedWorkouts.isNotEmpty()) {
                     PlannedWorkoutListCard(
                         plannedWorkouts = state.plannedWorkouts,

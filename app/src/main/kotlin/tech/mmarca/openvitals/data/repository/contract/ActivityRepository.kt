@@ -36,6 +36,8 @@ interface ActivityRepository {
 
     suspend fun loadWorkouts(start: LocalDate, end: LocalDate): List<ExerciseData>
 
+    suspend fun loadWorkoutsWithMetrics(start: LocalDate, end: LocalDate): List<ExerciseData>
+
     suspend fun loadWorkout(id: String): ExerciseData?
 
     suspend fun loadSpeedSamples(start: Instant, end: Instant): List<SpeedSample>

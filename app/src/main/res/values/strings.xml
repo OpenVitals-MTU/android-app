@@ -532,6 +532,11 @@
     <string name="unit_grams">g</string>
 
     <string name="section_activities">Activities</string>
+    <string name="section_activity_type_stats">By activity type</string>
+    <plurals name="activity_type_stats_activity_count">
+        <item quantity="one">%d activity</item>
+        <item quantity="other">%d activities</item>
+    </plurals>
     <string name="section_planned_workouts">Planned workouts</string>
     <string name="activities_filter_activity_type_label">Activity type</string>
     <string name="activities_filter_all">All activities</string>
@@ -680,6 +685,7 @@
     <string name="summary_sleep_ending_today">Sleep ending today</string>
     <string name="summary_sleep_ending_on">Sleep ending on %1$s</string>
     <string name="stat_total">Total</string>
+    <string name="stat_time">Time</string>
     <string name="stat_active_days">Active days</string>
     <string name="stat_average">Average</string>
     <string name="stat_lowest">Lowest</string>
@@ -694,6 +700,9 @@
     <string name="stat_nights_logged">Nights logged</string>
     <string name="stat_longest_sleep">Longest sleep</string>
     <string name="stat_longest_workout">Longest workout</string>
+    <string name="stat_average_moving_pace">Avg moving pace</string>
+    <string name="stat_fastest_pace">Fastest pace</string>
+    <string name="stat_best_speed">Best speed</string>
     <string name="stat_longest_session">Longest session</string>
     <string name="stat_bbt_readings">BBT readings</string>
     <string name="stat_goal_streak">Goal streak</string>

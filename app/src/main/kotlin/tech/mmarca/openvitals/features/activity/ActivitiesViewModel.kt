@@ -56,6 +56,7 @@ data class ActivitiesUiState(
     val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
     val previousWorkouts: List<ExerciseData> = emptyList(),
     val baselineWorkouts: List<ExerciseData> = emptyList(),
+    val activityTypeAggregates: List<ActivityTypeAggregate> = emptyList(),
     val overviewDays: List<ActivityOverviewDay> = emptyList(),
     val crossDailyRestingHR: List<DailyRestingHR> = emptyList(),
     val error: ScreenError? = null,
@@ -192,6 +193,9 @@ class ActivitiesViewModel(
             latestResult = latestResult?.withoutActivityEntry(entryId)
             _uiState.value = previous.copy(
                 workouts = previous.workouts.filterNot { it.id == entryId },
+                activityTypeAggregates = previous.workouts
+                    .filterNot { it.id == entryId }
+                    .activityTypeAggregates(),
                 overviewDays = previous.overviewDays.withoutActivityEntry(entryId),
                 error = null,
             )
@@ -222,7 +226,7 @@ class ActivitiesViewModel(
             runCatching {
                 coroutineScope {
                     val currentDataEnd = windows.currentDataEnd
-                    val workouts = async { repository.loadWorkouts(windows.current.start, currentDataEnd) }
+                    val workouts = async { repository.loadWorkoutsWithMetrics(windows.current.start, currentDataEnd) }
                     val plannedWorkouts = async { repository.loadPlannedWorkouts(windows.current.start, windows.current.end) }
                     val previousWorkouts = async { repository.loadWorkouts(windows.previous.start, windows.previous.end) }
                     val baselineWorkouts = async { repository.loadWorkouts(windows.baseline.start, windows.baseline.end) }
@@ -292,6 +296,7 @@ class ActivitiesViewModel(
             plannedWorkouts = filtered.plannedWorkouts,
             previousWorkouts = filtered.previousWorkouts,
             baselineWorkouts = filtered.baselineWorkouts,
+            activityTypeAggregates = filtered.workouts.activityTypeAggregates(),
             overviewDays = filtered.overviewDays,
             crossDailyRestingHR = filtered.crossDailyRestingHR,
         )

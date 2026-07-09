@@ -622,6 +622,30 @@ internal class ActivityHealthReader(
             deduplicateExerciseSessions(sessions)
         }
 
+    suspend fun readExerciseSessionsWithMetrics(
+        start: Instant,
+        end: Instant,
+        includeDistance: Boolean,
+        includeSpeed: Boolean,
+    ): List<ExerciseData> =
+        support.withLogging("readExerciseSessionsWithMetrics[$start..$end]", emptyList()) {
+            val records = support.client().readRecordsPaged(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 50,
+            )
+            val sessions = records.map { record ->
+                readExerciseSessionMetrics(
+                    record = record,
+                    includeDistance = includeDistance,
+                    includeSpeed = includeSpeed,
+                )
+            }
+
+            deduplicateExerciseSessions(sessions)
+        }
+
     suspend fun readExerciseSession(
         id: String,
         includeSteps: Boolean,
@@ -758,6 +782,48 @@ internal class ActivityHealthReader(
                 backfillRouteMetrics = true,
             )
         }
+
+    private suspend fun readExerciseSessionMetrics(
+        record: ExerciseSessionRecord,
+        includeDistance: Boolean,
+        includeSpeed: Boolean,
+    ): ExerciseData {
+        val metrics = buildSet {
+            if (includeDistance) add(DistanceRecord.DISTANCE_TOTAL)
+            if (includeSpeed) add(SpeedRecord.SPEED_AVG)
+        }
+        val aggregate = if (metrics.isEmpty()) {
+            null
+        } else {
+            runCatching {
+                support.client().aggregate(
+                    AggregateRequest(
+                        metrics = metrics,
+                        timeRangeFilter = TimeRangeFilter.between(record.startTime, record.endTime),
+                    )
+                )
+            }.onFailure {
+                if (HealthConnectRateLimitBackoff.isRateLimitFailure(it)) {
+                    throw it
+                }
+                Log.e(TAG, "Failed readExerciseSessionMetrics aggregate ${support.diagnosticsSummary()}", it)
+            }.getOrNull()
+        }
+        return record.toExerciseData(
+            totalDistanceMeters = if (includeDistance && aggregate != null) {
+                aggregate[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+            } else {
+                null
+            },
+            averageSpeedMetersPerSecond = if (includeSpeed && aggregate != null) {
+                aggregate[SpeedRecord.SPEED_AVG]?.inMetersPerSecond
+            } else {
+                null
+            },
+            appPackageName = appPackageName,
+            backfillRouteMetrics = true,
+        )
+    }
 
     suspend fun readSpeedSamples(start: Instant, end: Instant): List<SpeedSample> =
         support.withLogging("readSpeedSamples[$start..$end]", emptyList()) {
