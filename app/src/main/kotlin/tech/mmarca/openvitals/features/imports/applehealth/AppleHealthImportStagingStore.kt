@@ -29,7 +29,7 @@ internal object AppleHealthImportStagingStore {
         }
 
         file.parentFile?.mkdirs()
-        val tempFile = File(file.parentFile, "${file.name}.tmp")
+        val tempFile = stagedExportTempFile(context)
         tempFile.delete()
         val bytesCopied = try {
             context.contentResolver.openInputStream(sourceUri)
@@ -68,9 +68,17 @@ internal object AppleHealthImportStagingStore {
         )
     }
 
-    fun clear(context: Context) {
-        stagedExportFile(context).delete()
-        metadataFile(context).delete()
+    fun clear(context: Context): Boolean {
+        val files = listOf(
+            stagedExportFile(context),
+            stagedExportTempFile(context),
+            metadataFile(context),
+        )
+        files.forEach { file ->
+            if (file.exists()) file.delete()
+        }
+        importDirectory(context).delete()
+        return files.none(File::exists)
     }
 
     private fun File.matches(
@@ -109,6 +117,9 @@ internal object AppleHealthImportStagingStore {
 
     private fun stagedExportFile(context: Context): File =
         File(importDirectory(context), StagedExportFileName)
+
+    private fun stagedExportTempFile(context: Context): File =
+        File(importDirectory(context), "$StagedExportFileName.tmp")
 
     private fun metadataFile(context: Context): File =
         File(importDirectory(context), MetadataFileName)

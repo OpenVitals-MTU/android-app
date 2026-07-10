@@ -143,7 +143,7 @@ internal object AppleHealthImportParser {
                 }
             }
         } finally {
-            exportXml.delete()
+            if (!exportXml.delete()) exportXml.deleteOnExit()
         }
     }
 

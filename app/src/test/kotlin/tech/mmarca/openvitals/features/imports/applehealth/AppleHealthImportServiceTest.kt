@@ -892,6 +892,35 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
+    fun `staging cleanup deletes private export files but preserves selected source`() {
+        val xml = "<HealthData />"
+        val zip = zipExport(xml)
+        val sourceFile = File.createTempFile("apple-health-source", ".zip").apply { writeBytes(zip) }
+        val uri = mockk<Uri>()
+        val context = mockk<Context>()
+        val resolver = mockk<ContentResolver>()
+        val filesDir = Files.createTempDirectory("apple-health-cleanup").toFile()
+        val fingerprint = AppleHealthExportFingerprint(displayName = "export.zip", size = zip.size.toLong())
+
+        every { uri.toString() } returns "content://example/source-export.zip"
+        every { context.filesDir } returns filesDir
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } answers { sourceFile.inputStream() }
+
+        val staged = AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+        val stagingDirectory = requireNotNull(staged.file.parentFile)
+        val leftoverTemp = File(stagingDirectory, "${staged.file.name}.tmp").apply { writeText("leftover") }
+        val cleared = AppleHealthImportStagingStore.clear(context)
+
+        assertTrue(cleared)
+        assertFalse(staged.file.exists())
+        assertFalse(leftoverTemp.exists())
+        assertFalse(stagingDirectory.exists())
+        assertTrue(sourceFile.exists())
+        sourceFile.delete()
+    }
+
+    @Test
     fun `staging store rejects a short provider copy`() {
         val bytes = "partial export".toByteArray()
         val uri = mockk<Uri>()

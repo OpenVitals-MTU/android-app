@@ -157,8 +157,11 @@ class AppleHealthImportWorker(
             val completeProgress = finalResult.toProgress(AppleHealthImportPhase.COMPLETE, expectedSelectedRecords)
             setProgress(completeProgress.toData())
             AppleHealthImportCheckpointStore.clear(appContext)
-            AppleHealthImportStagingStore.clear(appContext)
-            log("Cleared staged Apple Health import state")
+            val stagedExportDeleted = AppleHealthImportStagingStore.clear(appContext)
+            log("Cleared staged Apple Health import state stagedExportDeleted=$stagedExportDeleted")
+            if (!stagedExportDeleted) {
+                Log.w(LogTag, "Unable to delete every staged Apple Health export file after successful import")
+            }
             Result.success(finalResult.toOutputData(reportPath, expectedSelectedRecords))
         }.getOrElse { error ->
             Log.e(LogTag, "Apple Health import failed", error)
