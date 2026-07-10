@@ -3,6 +3,10 @@
 OpenVitals uses Android XML resources for app UI translations. Codeberg Translate
 is the preferred place for community translation work.
 
+Translate the Android app here:
+
+[translate.codeberg.org/projects/openvitals/android-app](https://translate.codeberg.org/projects/openvitals/android-app/)
+
 ## Codeberg Translate Setup
 
 Create one Weblate component for the Android app UI:
