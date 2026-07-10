@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenVitals</string>
-
     <string name="cd_back">Zurück</string>
     <string name="cd_settings">Einstellungen</string>
     <string name="cd_achievements">Auszeichnungen</string>
@@ -75,7 +74,6 @@
     <string name="not_recorded">Nicht aufgezeichnet</string>
     <string name="no_data">Keine Daten</string>
     <string name="loading">Wird geladen...</string>
-
     <string name="home_metric_widget_description">OpenVitals-Metrik</string>
     <string name="home_metric_widget_config_title">Metrik auswählen</string>
     <string name="home_metric_widget_config_prompt">Wähle die Metrik für das Widget:</string>
@@ -103,7 +101,6 @@
     <string name="home_widget_body_energy_steady">Stabil</string>
     <string name="home_widget_body_energy_limited">Begrenzt</string>
     <string name="home_widget_body_energy_low">Niedrig</string>
-
     <string name="screen_steps">Schritte</string>
     <string name="screen_activities">Aktivitäten</string>
     <string name="screen_calories">Kalorien</string>
@@ -129,7 +126,6 @@
     <string name="screen_carbs_entry">Kohlenhydrateintrag</string>
     <string name="screen_body_measurement_entry">Körpermessungseintrag</string>
     <string name="screen_vitals_measurement_entry">Vitalwerteeintrag</string>
-
     <string name="bottom_nav_dashboard">Übersicht</string>
     <string name="manual_entry_hydration_title">Hydrierung</string>
     <string name="manual_entry_activity_title">Aktivität</string>
@@ -406,7 +402,6 @@
     <string name="vitals_entry_add_selected">%1$s hinzufügen</string>
     <string name="vitals_entry_invalid_value">Gib einen gültigen Wert für diesen Vitalwert ein.</string>
     <string name="vitals_entry_write_failed">Vitalwert konnte nicht gespeichert werden: %1$s</string>
-
     <string name="range_day">Tag</string>
     <string name="range_week">Woche</string>
     <string name="range_month">Monat</string>
@@ -421,7 +416,6 @@
     <string name="period_last_30_days">Letzte 30 Tage</string>
     <string name="period_last_365_days">Letzte 365 Tage</string>
     <string name="period_selected">Ausgewählter Zeitraum</string>
-
     <string name="metric_steps">Schritte</string>
     <string name="metric_distance">Distanz</string>
     <string name="metric_average_pace">Durchschnittliches Tempo</string>
@@ -521,7 +515,6 @@
     <string name="metric_average_power">Durchschnittsleistung</string>
     <string name="metric_steps_cadence">Schrittfrequenz</string>
     <string name="metric_cycling_cadence">Trittfrequenz</string>
-
     <string name="unit_steps">Schritte</string>
     <string name="unit_pushes">Schübe</string>
     <string name="unit_reps">Wdh.</string>
@@ -531,7 +524,6 @@
     <string name="unit_tests">Tests</string>
     <string name="unit_total">gesamt</string>
     <string name="unit_grams">g</string>
-
     <string name="section_activities">Aktivitäten</string>
     <string name="section_activity_type_stats">Nach Aktivitätstyp</string>
     <plurals name="activity_type_stats_activity_count">
@@ -556,7 +548,7 @@
     <string name="sleep_score_rating_good">Gut</string>
     <string name="sleep_score_rating_fair">Okay</string>
     <string name="sleep_score_rating_poor">Schwach</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">So wird es berechnet</string>
     <string name="sleep_score_day_numbers_title">Heutige Werte</string>
     <string name="sleep_score_references_title">Belegte Links</string>
@@ -658,7 +650,6 @@
     <string name="section_vitamins">Vitamine</string>
     <string name="section_minerals">Mineralstoffe</string>
     <string name="section_other_nutrients">Weitere Nährstoffe</string>
-
     <string name="summary_daily_average">%1$s Tagesdurchschnitt</string>
     <string name="summary_days_in_range">%1$s Tage im Zeitraum</string>
     <string name="summary_entries">%1$s Einträge</string>
@@ -887,7 +878,6 @@
     <string name="cd_decrease_hydration_reminder_interval">Hydrierungserinnerungsintervall verringern</string>
     <string name="cd_increase_hydration_reminder_interval">Hydrierungserinnerungsintervall erhöhen</string>
     <string name="unit_percent_symbol">%</string>
-
     <string name="message_no_dashboard_data">Keine Übersichtsdaten verfügbar.</string>
     <string name="message_missing_permissions_title">Einige Berechtigungen fehlen</string>
     <string name="message_missing_permissions_body">Erteile die fehlenden Berechtigungen, um eine vollständige Übersicht zu sehen.</string>
@@ -908,7 +898,7 @@
     <string name="dashboard_sensor_status_title">Sensorakku</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% niedrigster Stand</string>
     <string name="dashboard_sensor_battery_unknown">Akkustand wird ermittelt</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d aktiv &#8226; %2$d verbunden</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d aktiv • %2$d verbunden</string>
     <string name="dashboard_sensor_status_all_disabled">Alle Sensoren deaktiviert</string>
     <string name="dashboard_delete_activity_title">Aktivität löschen?</string>
     <string name="dashboard_delete_activity_message">Diese %1$s-Aktivität aus OpenVitals löschen?</string>
@@ -994,7 +984,6 @@
     <string name="message_no_route_data">Keine Routendaten aufgezeichnet.</string>
     <string name="message_no_stages">Keine Phasen aufgezeichnet.</string>
     <string name="message_no_kcal">Keine kcal</string>
-
     <string name="onboarding_tagline">Deine Gesundheitsdaten auf deinem Gerät</string>
     <string name="onboarding_privacy_title">Datenschutz zuerst</string>
     <string name="onboarding_privacy_body">Kein Konto erforderlich. Daten bleiben auf deinem Gerät. Kein Cloud-Upload, keine Analysen, keine Werbung.</string>
@@ -1043,7 +1032,6 @@
     <string name="onboarding_category_vitals_desc">Health Connect fragt nach:\n* Blutdruck\n* Sauerstoffsättigung\n* Atemfrequenz\n* Körpertemperatur\n* VO2 max.\n* Blutzucker\n* Hauttemperatur, falls unterstützt</string>
     <string name="onboarding_category_cycle_tracking">Zyklusverfolgung</string>
     <string name="onboarding_category_cycle_tracking_desc">Health Connect fragt nach sensiblen Zyklusdaten:\n* Menstruationsfluss\n* Menstruationsperioden\n* Ovulationstests\n* Zervixschleim\n* Basaltemperatur\n* Zwischenblutung\n* Sexuelle Aktivität</string>
-
     <string name="settings_all_requestable_granted">Alle anforderbaren Berechtigungen erteilt</string>
     <string name="settings_manual_permissions_title">Manuelle Berechtigungen erforderlich</string>
     <string name="settings_manual_permissions_body">Einige Health-Connect-Berechtigungen können nicht über den normalen Anfragedialog erteilt werden. Öffne Health Connect und aktiviere sie für OpenVitals.</string>
@@ -1366,7 +1354,6 @@
     <string name="settings_debug_logs_saved">Debug-Protokolle gespeichert</string>
     <string name="settings_debug_logs_save_failed">Diagnoseprotokolle konnten nicht gespeichert werden</string>
     <string name="settings_app_version">Version %1$s (%2$d)</string>
-
     <string name="detail_metrics">Metriken</string>
     <string name="detail_session_details">Sitzungsdetails</string>
     <string name="detail_duration">Dauer</string>
@@ -1407,7 +1394,6 @@
     <string name="detail_stage_events">Phasenereignisse</string>
     <string name="detail_stages">Phasen</string>
     <string name="detail_sleep_session">Schlafsitzung</string>
-
     <string name="recording_actively_recorded">Aktiv aufgezeichnet</string>
     <string name="recording_automatically_recorded">Automatisch aufgezeichnet</string>
     <string name="recording_manual_entry">Manueller Eintrag</string>
@@ -1420,7 +1406,6 @@
     <string name="device_fitness_band">Fitnessarmband</string>
     <string name="device_chest_strap">Brustgurt</string>
     <string name="device_smart_display">Smart Display</string>
-
     <string name="sleep_stage_awake">Wach</string>
     <string name="sleep_stage_sleeping">Schlafend</string>
     <string name="sleep_stage_out_of_bed">Außerhalb des Betts</string>
@@ -1430,7 +1415,6 @@
     <string name="sleep_stage_awake_in_bed">Wach im Bett</string>
     <string name="sleep_stage_unknown">Unbekannt</string>
     <string name="sleep_stages_share_title">Anteil der Zeit im Bett</string>
-
     <string name="cycle_permissions_missing_title">Zyklusberechtigungen fehlen</string>
     <string name="cycle_permissions_missing_body">Erteile Berechtigungen zur Zyklusverfolgung, um Menstruationstage, Ovulationstests, Zervixschleim und Basaltemperatur anzuzeigen.</string>
     <string name="cycle_observation_menstruation_period">Menstruationsperiode</string>
@@ -1482,7 +1466,6 @@
     <string name="weekday_friday_short">F</string>
     <string name="weekday_saturday_short">S</string>
     <string name="weekday_sunday_short">S</string>
-
     <string name="vitals_permissions_needed_title">Vitalwertberechtigungen erforderlich</string>
     <string name="vitals_permissions_needed_body">Erteile Berechtigungen für Blutdruck, Sauerstoffsättigung, Atemfrequenz, Temperatur, VO2 max und Blutzucker, um diese Ansicht zu füllen.</string>
     <string name="vitals_respiratory_rate_readings">Atemfrequenz-Messwerte</string>
@@ -1496,7 +1479,6 @@
     <string name="heart_rate_days_at_or_below">Tage bei/unter %1$d bpm</string>
     <string name="cd_decrease_hr_threshold">Herzfrequenzschwelle senken</string>
     <string name="cd_increase_hr_threshold">Herzfrequenzschwelle erhöhen</string>
-
     <string name="meal_breakfast">Frühstück</string>
     <string name="meal_lunch">Mittagessen</string>
     <string name="meal_dinner">Abendessen</string>
@@ -1507,7 +1489,6 @@
     <string name="macro_fat_short">F %1$sg</string>
     <string name="macro_fiber">Ballaststoffe %1$sg</string>
     <string name="macro_sugar">Zucker %1$sg</string>
-
     <string name="caffeine_section_overview">Überblick</string>
     <string name="caffeine_section_dashboard">Dashboard</string>
     <string name="caffeine_section_analytics">Analysen</string>
@@ -1572,7 +1553,6 @@
     <string name="caffeine_reference_efsa">EFSA-Hinweise zu Koffeinsicherheit und Schlaf</string>
     <string name="caffeine_reference_health_connect">Felder des Health-Connect-Ernährungsdatensatzes</string>
     <string name="unknown_source">Unbekannte Quelle</string>
-
     <string name="achievements_legacy_title">Legacy-Aktivitätsabzeichen</string>
     <string name="achievements_progress_summary">%1$d von %2$d freigeschaltet</string>
     <string name="achievements_data_window">%1$s bis %2$s · %3$s verfolgte Tage</string>
@@ -1600,7 +1580,6 @@
     <string name="achievements_no_floor_data_title">Keine Etagen-Daten</string>
     <string name="achievements_no_floor_data_body">Etagenabzeichen werden freigeschaltet, wenn Health Connect Daten zu gestiegenen Etagen hat.</string>
     <string name="achievements_error_title">Auszeichnungen nicht verfügbar</string>
-
     <string name="data_confidence_title">Datenvertrauen</string>
     <string name="data_confidence_high">Hohes Vertrauen</string>
     <string name="data_confidence_medium">Mittleres Vertrauen</string>
@@ -1621,12 +1600,10 @@
     <string name="data_confidence_warning_manual">In diesem Zeitraum sind manuelle Einträge enthalten.</string>
     <string name="data_confidence_warning_calculated">Dieser Wert ist abgeleitet, nicht direkt gemessen.</string>
     <string name="data_confidence_warning_no_sources">Dieses Aggregat stellt keine Details nach Quelle bereit.</string>
-
     <string name="privacy_policy_title">Datenschutzerklärung</string>
     <string name="privacy_policy_body_1">OpenVitals liest Daten aus Health Connect, um Schritte, Trainings, Schlaf, Herzfrequenz, Gewicht, Kalorien, Hydrierung, Ernährung, Achtsamkeit und Vitalwerte auf deinem Gerät anzuzeigen. Einträge, die du ausdrücklich protokollierst, einschließlich importierter GPX/KML/KMZ-Routen und importierter FIT-Dateien, werden in Health Connect geschrieben.</string>
     <string name="privacy_policy_body_2">Diese App lädt deine Gesundheitsdaten nicht in einen Cloud-Dienst hoch, enthält keine Werbung und teilt keine Daten mit Dritten.</string>
     <string name="privacy_policy_body_3">OpenVitals ist kein Medizinprodukt und diagnostiziert, behandelt, heilt oder verhindert keine Krankheit oder medizinische Erkrankung. Es ersetzt keine medizinische Beratung, Diagnose oder Behandlung durch qualifiziertes medizinisches Fachpersonal.</string>
-
     <string name="action_continue">Weiter</string>
     <string name="settings_body_energy_group_title">Körperenergie</string>
     <string name="settings_body_energy_group_body">Kalibrierung für geschätzte Energie im Tagesverlauf und Belastungszonen.</string>
@@ -1699,4 +1676,5 @@
     <string name="body_energy_calculation_inputs_body">Herzfrequenz, Ruheherzfrequenz, persönliche Zonen, Schlaf, Trainings, HRV und Atemfrequenz können die Schätzung verbessern. Fehlende Eingaben machen die Schätzung konservativer und senken das Vertrauen.</string>
     <string name="body_energy_calculation_limits_body">Dies ist eine Wellness-Schätzung auf dem Gerät, keine direkte Messung und kein medizinischer Rat. Die angezeigten Eingaben und Gründe werden offengelegt, damit die Methode geprüft und verbessert werden kann.</string>
     <string name="metric_body_energy">Körperenergie</string>
+    <string name="settings_apple_health_import_routes_incomplete">Die Gesundheitsdaten wurden importiert, jedoch waren einige Trainingsrouten nicht verfügbar, da die Postleitzahl unerwartet endete. Im Importbericht sind die betroffenen Aktivitäten zur manuellen Wiederherstellung aufgeführt.</string>
 </resources>
