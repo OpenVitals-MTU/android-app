@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenVitals</string>
-
     <string name="cd_back">Tagasi</string>
     <string name="cd_settings">Seaded</string>
     <string name="cd_achievements">Saavutused</string>
@@ -77,7 +76,6 @@
     <string name="not_recorded">Salvestamata</string>
     <string name="no_data">Andmed puuduvad</string>
     <string name="loading">Laadimine...</string>
-
     <string name="home_metric_widget_description">OpenVitalsi näitaja</string>
     <string name="home_metric_widget_config_title">Vali näitaja</string>
     <string name="home_metric_widget_config_prompt">Vali vidina jaoks näitaja:</string>
@@ -105,7 +103,6 @@
     <string name="home_widget_body_energy_steady">Stabiilne</string>
     <string name="home_widget_body_energy_limited">Piiratud</string>
     <string name="home_widget_body_energy_low">Madal</string>
-
     <string name="screen_steps">Sammud</string>
     <string name="screen_activities">Treeningud</string>
     <string name="screen_calories">Kalorid</string>
@@ -131,7 +128,6 @@
     <string name="screen_carbs_entry">Süsivesikute kirje</string>
     <string name="screen_body_measurement_entry">Kehamõõtmise kirje</string>
     <string name="screen_vitals_measurement_entry">Elunäitajate kirje</string>
-
     <string name="bottom_nav_dashboard">Kokkuvõte</string>
     <string name="manual_entry_hydration_title">Joogid</string>
     <string name="manual_entry_activity_title">Treening</string>
@@ -408,7 +404,6 @@
     <string name="vitals_entry_add_selected">Lisa %1$s</string>
     <string name="vitals_entry_invalid_value">Sisesta selle näitaja jaoks kehtiv väärtus.</string>
     <string name="vitals_entry_write_failed">Näitajat ei õnnestunud salvestada: %1$s</string>
-
     <string name="range_day">Päev</string>
     <string name="range_week">Nädal</string>
     <string name="range_month">Kuu</string>
@@ -423,7 +418,6 @@
     <string name="period_last_30_days">Viimased 30 päeva</string>
     <string name="period_last_365_days">Viimased 365 päeva</string>
     <string name="period_selected">Valitud periood</string>
-
     <string name="metric_steps">Sammud</string>
     <string name="metric_distance">Vahemaa</string>
     <string name="metric_average_pace">Keskmine tempo</string>
@@ -523,7 +517,6 @@
     <string name="metric_average_power">Keskmine võimsus</string>
     <string name="metric_steps_cadence">Sammusagedus</string>
     <string name="metric_cycling_cadence">Rattasõidu sagedus</string>
-
     <string name="unit_steps">sammu</string>
     <string name="unit_reps">kordust</string>
     <string name="unit_pushes">lükkeid</string>
@@ -533,7 +526,6 @@
     <string name="unit_tests">testi</string>
     <string name="unit_total">kokku</string>
     <string name="unit_grams">g</string>
-
     <string name="section_activities">Treeningud</string>
     <string name="section_activity_type_stats">Treeningu tüübi järgi</string>
     <plurals name="activity_type_stats_activity_count">
@@ -558,7 +550,7 @@
     <string name="sleep_score_rating_good">Hea</string>
     <string name="sleep_score_rating_fair">Rahuldav</string>
     <string name="sleep_score_rating_poor">Halb</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">Kuidas seda arvutatakse</string>
     <string name="sleep_score_day_numbers_title">Tänased väärtused</string>
     <string name="sleep_score_references_title">Kasutatud allikad</string>
@@ -660,7 +652,6 @@
     <string name="section_vitamins">Vitamiinid</string>
     <string name="section_minerals">Mineraalid</string>
     <string name="section_other_nutrients">Muud toitained</string>
-
     <string name="summary_daily_average">%1$s keskmine päevas</string>
     <string name="summary_days_in_range">%1$s päeva vahemikus</string>
     <string name="summary_entries">%1$s kirjet</string>
@@ -889,7 +880,6 @@
     <string name="cd_decrease_hydration_reminder_interval">Vähenda joogimeeldetuletuse intervalli</string>
     <string name="cd_increase_hydration_reminder_interval">Suurenda joogimeeldetuletuse intervalli</string>
     <string name="unit_percent_symbol">%</string>
-
     <string name="message_no_dashboard_data">Kokkuvõtte andmed puuduvad.</string>
     <string name="message_missing_permissions_title">Mõned load puuduvad</string>
     <string name="message_missing_permissions_body">Anna puuduvad load, et näha täielikku kokkuvõtet.</string>
@@ -910,7 +900,7 @@
     <string name="dashboard_sensor_status_title">Anduri aku</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% madalaim</string>
     <string name="dashboard_sensor_battery_unknown">Aku ootel</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d aktiivne &#8226; %2$d ühendatud</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d aktiivne • %2$d ühendatud</string>
     <string name="dashboard_sensor_status_all_disabled">Kõik andurid keelatud</string>
     <string name="dashboard_delete_activity_title">Kustuta treening?</string>
     <string name="dashboard_delete_activity_message">Kustutada see %1$s treening OpenVitalsist?</string>
@@ -996,7 +986,6 @@
     <string name="message_no_route_data">Marsruudi andmeid ei salvestatud.</string>
     <string name="message_no_stages">Faase ei salvestatud.</string>
     <string name="message_no_kcal">Kcal puudub</string>
-
     <string name="onboarding_tagline">Sinu terviseandmed sinu seadmes</string>
     <string name="onboarding_privacy_title">Privaatsus esikohal</string>
     <string name="onboarding_privacy_body">Kontot ei ole vaja. Andmed jäävad sinu seadmesse. Pilve üleslaadimist, analüütikat ega reklaame ei ole.</string>
@@ -1044,7 +1033,6 @@
     <string name="onboarding_category_vitals_desc">Health Connect küsib:\n* Vererõhk\n* Hapnikusaturatsioon\n* Hingamissagedus\n* Kehatemperatuur\n* VO2 max\n* Veresuhkur\n* Nahatemperatuur, kui toetatud</string>
     <string name="onboarding_category_cycle_tracking">Tsükli jälgimine</string>
     <string name="onboarding_category_cycle_tracking_desc">Health Connect küsib tundlikke tsükliandmeid:\n* Menstruatsiooni voolus\n* Menstruatsiooniperioodid\n* Ovulatsioonitestid\n* Emakakaelalima\n* Basaaltemperatuur\n* Menstruatsioonidevaheline veritsus\n* Seksuaalne aktiivsus</string>
-
     <string name="settings_all_requestable_granted">Kõik taotletavad load on antud</string>
     <string name="settings_manual_permissions_title">Vajalikud käsitsi load</string>
     <string name="settings_manual_permissions_body">Mõnda Health Connecti luba ei saa anda tavalisest päringudialoogist. Ava Health Connect ja luba need OpenVitalsi jaoks.</string>
@@ -1367,7 +1355,6 @@
     <string name="settings_privacy_on_device">Andmed jäävad sinu seadmesse</string>
     <string name="settings_privacy_read_only">Ainult loetav, välja arvatud kirjed, mida sa ise logid</string>
     <string name="settings_app_version">Versioon %1$s (%2$d)</string>
-
     <string name="detail_metrics">Näitajad</string>
     <string name="detail_session_details">Sessiooni üksikasjad</string>
     <string name="detail_duration">Kestus</string>
@@ -1408,7 +1395,6 @@
     <string name="detail_stage_events">Faasi sündmused</string>
     <string name="detail_stages">Faasid</string>
     <string name="detail_sleep_session">Unesessioon</string>
-
     <string name="recording_actively_recorded">Aktiivselt salvestatud</string>
     <string name="recording_automatically_recorded">Automaatselt salvestatud</string>
     <string name="recording_manual_entry">Käsitsi kirje</string>
@@ -1421,7 +1407,6 @@
     <string name="device_fitness_band">Fitnessikäevõru</string>
     <string name="device_chest_strap">Rinnavöö</string>
     <string name="device_smart_display">Nutikuvar</string>
-
     <string name="sleep_stage_awake">Ärkvel</string>
     <string name="sleep_stage_sleeping">Magab</string>
     <string name="sleep_stage_out_of_bed">Väljas voodist</string>
@@ -1431,7 +1416,6 @@
     <string name="sleep_stage_awake_in_bed">Ärkvel voodis</string>
     <string name="sleep_stage_unknown">Tundmatu</string>
     <string name="sleep_stages_share_title">Osakaal voodis veedetud ajast</string>
-
     <string name="cycle_permissions_missing_title">Tsükli load puuduvad</string>
     <string name="cycle_permissions_missing_body">Anna tsükli jälgimise load, et näidata menstruatsioonipäevi, ovulatsioonitesti, emakakaelalima ja basaaltemperatuuri.</string>
     <string name="cycle_observation_menstruation_period">Menstruatsiooniperiood</string>
@@ -1483,7 +1467,6 @@
     <string name="weekday_friday_short">R</string>
     <string name="weekday_saturday_short">L</string>
     <string name="weekday_sunday_short">P</string>
-
     <string name="vitals_permissions_needed_title">Elunäitajate load vajalikud</string>
     <string name="vitals_permissions_needed_body">Anna vererõhu, hapnikusaturatsiooni, hingamissageduse, temperatuuri, VO2 max ja veresuhkru load, et täita see ekraan.</string>
     <string name="vitals_respiratory_rate_readings">Hingamissageduse näidud</string>
@@ -1497,7 +1480,6 @@
     <string name="heart_rate_days_at_or_below">Päevad tasemel %1$d bpm või alla selle</string>
     <string name="cd_decrease_hr_threshold">Vähenda pulsiläve</string>
     <string name="cd_increase_hr_threshold">Suurenda pulsiläve</string>
-
     <string name="meal_breakfast">Hommikusöök</string>
     <string name="meal_lunch">Lõunasöök</string>
     <string name="meal_dinner">Õhtusöök</string>
@@ -1508,7 +1490,6 @@
     <string name="macro_fat_short">R %1$sg</string>
     <string name="macro_fiber">kiudaineid %1$sg</string>
     <string name="macro_sugar">suhkrut %1$sg</string>
-
     <string name="caffeine_section_overview">Ülevaade</string>
     <string name="caffeine_section_dashboard">Kokkuvõte</string>
     <string name="caffeine_section_analytics">Analüütika</string>
@@ -1573,7 +1554,6 @@
     <string name="caffeine_reference_efsa">EFSA kofeiini ohutuse ja une märkused</string>
     <string name="caffeine_reference_health_connect">Health Connecti toitumiskirje väljad</string>
     <string name="unknown_source">Tundmatu allikas</string>
-
     <string name="achievements_legacy_title">Vanad treeningumärgid</string>
     <string name="achievements_progress_summary">%1$d %2$d-st avatud</string>
     <string name="achievements_data_window">%1$s kuni %2$s · %3$s jälgitud päeva</string>
@@ -1601,7 +1581,6 @@
     <string name="achievements_no_floor_data_title">Korruste andmed puuduvad</string>
     <string name="achievements_no_floor_data_body">Korruste märgid avanevad, kui Health Connectis on läbitud korruste andmed.</string>
     <string name="achievements_error_title">Saavutused ei ole saadaval</string>
-
     <string name="data_confidence_title">Andmete usaldusväärsus</string>
     <string name="data_confidence_high">Kõrge usaldusväärsus</string>
     <string name="data_confidence_medium">Keskmine usaldusväärsus</string>
@@ -1622,7 +1601,6 @@
     <string name="data_confidence_warning_manual">Sel perioodil sisalduvad käsitsi kirjed.</string>
     <string name="data_confidence_warning_calculated">See väärtus on tuletatud, mitte otseselt mõõdetud.</string>
     <string name="data_confidence_warning_no_sources">See koondandmestik ei näita allikapõhiseid üksikasju.</string>
-
     <string name="settings_body_energy_group_title">Kehaenergia</string>
     <string name="settings_body_energy_group_body">Kalibreerimine hinnangulise päevasisese energia ja pingutustsoonide jaoks.</string>
     <string name="body_energy_calibration_title">Paranda kehaenergia hinnanguid</string>
@@ -1694,9 +1672,9 @@
     <string name="body_energy_calculation_inputs_body">Pulss, puhkeoleku pulss, isiklikud tsoonid, uni, treeningud, HRV ja hingamissagedus võivad kõik hinnangut parandada. Puuduvad sisendid muudavad hinnangu ettevaatlikumaks ja vähendavad usaldusväärsust.</string>
     <string name="body_energy_calculation_limits_body">See on seadmesisene heaoluhinnang, mitte otsene mõõtmine ega meditsiiniline nõuanne. Kuvatud sisendid ja põhjused on nähtavad, et meetodit saaks üle vaadata ja parandada.</string>
     <string name="metric_body_energy">Kehaenergia</string>
-
     <string name="privacy_policy_title">Privaatsuspoliitika</string>
     <string name="privacy_policy_body_1">OpenVitals loeb andmeid Health Connectist, et näidata sinu seadmes samme, treeninguid, und, pulssi, kaalu, kaloreid, vedelikutarbimist, toitumist, teadvelolekut ja elunäitajaid. Kirjed, mida sa ise logid, sealhulgas imporditud GPX/KML/KMZ marsruudid ja imporditud FIT-failid, kirjutatakse Health Connectisse.</string>
     <string name="privacy_policy_body_2">See rakendus ei laadi sinu terviseandmeid pilveteenusesse, ei sisalda reklaame ega jaga andmeid kolmandate osapooltega.</string>
     <string name="privacy_policy_body_3">OpenVitals ei ole meditsiiniseade ega diagnoosi, ravi ega ennetab ühtegi haigust ega terviseseisundit. See ei asenda kvalifitseeritud tervishoiutöötaja meditsiinilist nõuannet, diagnoosi ega ravi.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Tervisandmed imporditi, kuid mõned treeningmarsruudid jäid kättesaamatuks, kuna ZIP-fail lõppes ootamatult. Impordiaruandes on loetletud asjaomased tegevused, mida saab käsitsi taastada.</string>
 </resources>
