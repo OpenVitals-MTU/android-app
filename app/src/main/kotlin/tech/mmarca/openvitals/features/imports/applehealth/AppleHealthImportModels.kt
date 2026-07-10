@@ -20,6 +20,7 @@ data class AppleHealthImportResult(
     val unsupportedElements: Int,
     val skippedRecords: Int,
     val failedRecords: Int,
+    val workoutRoutesIncomplete: Boolean = false,
     val typeSummaries: List<AppleHealthImportTypeSummary>,
     val diagnostics: List<AppleHealthImportDiagnostic>,
     val shareableReportText: String,
@@ -274,7 +275,26 @@ internal data class AppleParsedExport(
     val sanitizedControlChars: Int = 0,
     /** Bare `&` characters in export.xml that were auto-escaped to `&amp;` because they weren't part of an entity reference. */
     val sanitizedAmpersands: Int = 0,
+    /** A truncated workout-route entry was ignored after export.xml had already been read intact. */
+    val workoutRouteArchiveFailure: AppleWorkoutRouteArchiveFailure? = null,
 )
+
+internal data class AppleWorkoutRouteArchiveFailure(
+    val entryName: String,
+    val decompressedBytesRead: Long?,
+) {
+    val detail: String
+        get() = buildString {
+            append("The ZIP ended unexpectedly while reading ")
+            append(entryName)
+            if (decompressedBytesRead != null) {
+                append(" after ")
+                append(decompressedBytesRead)
+                append(" decompressed byte(s)")
+            }
+            append(". Health records were imported from the intact export.xml, but this route and any remaining ZIP entries were unavailable.")
+        }
+}
 
 internal data class AppleRecord(
     val type: String,
@@ -312,7 +332,14 @@ internal data class AppleWorkout(
     val events: List<AppleWorkoutEvent>,
     val routes: List<AppleWorkoutRouteFile> = emptyList(),
     val routeReferences: Int = 0,
-)
+    val routeReferencePaths: List<String> = emptyList(),
+) {
+    val unavailableRoutePaths: List<String>
+        get() {
+            val availablePaths = routes.mapTo(hashSetOf()) { it.path }
+            return routeReferencePaths.filterNot(availablePaths::contains)
+        }
+}
 
 internal data class AppleWorkoutRouteFile(
     val path: String,

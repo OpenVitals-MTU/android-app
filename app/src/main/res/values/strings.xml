@@ -1271,6 +1271,7 @@
     <string name="settings_apple_health_import_notification_text">%1$s. Scanned %2$d, imported %3$d.</string>
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Selected %3$d/%4$d, imported %5$d.</string>
     <string name="settings_apple_health_import_result">Imported %1$d. Duplicates %2$d. Not selected %3$d. Unsupported %4$d. Skipped %5$d. Failed %6$d.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Health records were imported, but some workout routes were unavailable because the ZIP ended unexpectedly. The import report lists affected activities for manual recovery.</string>
     <string name="settings_apple_health_import_analysis_result">Scanned %1$d items. Found %2$d compatible records. Unsupported %3$d. Failed %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Choose what to write to Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d records</string>

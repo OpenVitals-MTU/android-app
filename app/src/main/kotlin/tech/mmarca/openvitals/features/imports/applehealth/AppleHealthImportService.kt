@@ -229,9 +229,14 @@ class AppleHealthImportService
                 writer.mergeInto(converter.typeStats)
                 val summaries = converter.typeStats.toTypeSummaries()
                 val totals = summaries.totals()
-                val diagnostics = converter.diagnosticsSnapshot() + writer.diagnostics()
+                val routeArchiveDiagnostics = listOfNotNull(parsed.workoutRouteArchiveFailure?.toDiagnostic())
+                val diagnostics = routeArchiveDiagnostics + converter.diagnosticsSnapshot() + writer.diagnostics()
                 val diagnosticSummaries =
-                    (converter.diagnosticSummariesSnapshot() + writer.diagnosticSummaries()).mergeDiagnosticSummaries()
+                    (
+                        routeArchiveDiagnostics.map(AppleHealthImportDiagnostic::toSingleSummary) +
+                            converter.diagnosticSummariesSnapshot() +
+                            writer.diagnosticSummaries()
+                    ).mergeDiagnosticSummaries()
                 val categorySummaries = importState.categorySummaries()
                 log(
                     "Stage finished: Flushing final converted records imported=${importState.importedRecords} " +
@@ -271,6 +276,7 @@ class AppleHealthImportService
                     unsupportedElements = totals.unsupported,
                     skippedRecords = totals.skipped,
                     failedRecords = totals.failed,
+                    workoutRoutesIncomplete = parsed.workoutRouteArchiveFailure != null,
                     typeSummaries = summaries,
                     diagnostics = diagnostics,
                     shareableReportText = reportText,
@@ -311,6 +317,9 @@ class AppleHealthImportService
                     "export.xml contained invalid XML that was auto-repaired: " +
                         "controlCharsRemoved=${parsed.sanitizedControlChars} ampersandsEscaped=${parsed.sanitizedAmpersands}",
                 )
+            }
+            parsed.workoutRouteArchiveFailure?.let { failure ->
+                importLogs.addImportWarning("Workout route archive recovery: ${failure.detail}")
             }
             return parsed
         }
@@ -987,6 +996,11 @@ private fun MutableList<String>.addImportInfo(message: String) {
     debugImportLog(message)
 }
 
+private fun MutableList<String>.addImportWarning(message: String) {
+    add("${Instant.now()} [WARN] $message")
+    debugImportLog(message)
+}
+
 private fun MutableList<String>.addImportError(message: String, error: Throwable) {
     add("${Instant.now()} [ERROR] $message\n" + AppleHealthImportErrorFormatter.details(error))
 }
@@ -1064,6 +1078,29 @@ private fun List<AppleHealthImportDiagnosticSummary>.mergeDiagnosticSummaries():
     return merged.values.map { it.toSummary() }
 }
 
+private fun AppleHealthImportDiagnostic.toSingleSummary(): AppleHealthImportDiagnosticSummary =
+    AppleHealthImportDiagnosticSummary(
+        appleType = appleType,
+        targetType = targetType,
+        reasonCode = reasonCode,
+        detail = detail,
+        count = 1,
+        exampleTimeRange = timeRange,
+        exampleUnit = unit,
+        exampleValue = value,
+    )
+
+private fun AppleWorkoutRouteArchiveFailure.toDiagnostic(): AppleHealthImportDiagnostic =
+    AppleHealthImportDiagnostic(
+        appleType = "WorkoutRoute",
+        targetType = "ExerciseRoute",
+        reasonCode = "route_archive_truncated",
+        timeRange = null,
+        unit = null,
+        value = null,
+        detail = detail,
+    )
+
 private fun ConvertedAppleRecord.diagnostic(reasonCode: String, detail: String): AppleHealthImportDiagnostic =
     AppleHealthImportDiagnostic(
         appleType = appleType,
@@ -1129,8 +1166,26 @@ private fun buildReportText(
     appendLine("Unsupported: ${totals.unsupported}")
     appendLine("Skipped: ${totals.skipped}")
     appendLine("Failed: ${totals.failed}")
+    appendLine("Workout routes incomplete: ${parsed.workoutRouteArchiveFailure != null}")
     if (selectedCategories != null) {
         appendLine("Selected categories: ${selectedCategories.joinToString { it.reportName }}")
+    }
+    val workoutsMissingRoutes = diagnosticSummaries
+        .filter { it.reasonCode == "workout_route_unavailable" }
+        .sortedWith(compareBy({ it.exampleTimeRange.orEmpty() }, { it.appleType }))
+    if (workoutsMissingRoutes.isNotEmpty()) {
+        appendLine()
+        appendLine("Activities Requiring Manual Route Import")
+        appendLine(
+            "These activities referenced unavailable route geometry. Depending on the selected categories, " +
+                "their workout sessions may have imported without routes:",
+        )
+        workoutsMissingRoutes.forEach { diagnostic ->
+            appendLine(
+                "- activity=${diagnostic.appleType}; timeRange=${diagnostic.exampleTimeRange ?: "unknown"}; " +
+                    "occurrences=${diagnostic.count}; ${diagnostic.detail}",
+            )
+        }
     }
     appendLine()
     appendLine("Logs")

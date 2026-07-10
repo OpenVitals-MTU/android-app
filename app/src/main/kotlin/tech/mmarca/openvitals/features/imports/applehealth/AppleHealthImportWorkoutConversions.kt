@@ -23,6 +23,18 @@ internal fun AppleHealthImportConverter.convertWorkouts(
             invalid(workout.workoutActivityType, "Workout is missing endDate.", start.instant.toString())
         }
         val interval = interval(start, end)
+        if (workout.unavailableRoutePaths.isNotEmpty()) {
+            skipped(
+                appleType = workout.workoutActivityType,
+                reasonCode = "workout_route_unavailable",
+                detail =
+                    "Workout route file(s) unavailable: " +
+                        workout.unavailableRoutePaths.joinToString() +
+                        ". Source: ${workout.sourceName ?: "unknown"}. " +
+                        "Import or recreate this activity manually if route geometry is needed.",
+                timeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant).toString(),
+            )
+        }
         val fingerprint = buildStableClientRecordId("workout", workout.stableParts())
         val exerciseRoute = workout.toSynthesizedExerciseRoute(interval)
         if (workout.routes.isNotEmpty() && exerciseRoute == null) {

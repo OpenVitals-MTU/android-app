@@ -259,6 +259,7 @@ class AppleHealthImportWorker(
         private const val KeyUnsupportedElements = "unsupported_elements"
         private const val KeySkippedRecords = "skipped_records"
         private const val KeyFailedRecords = "failed_records"
+        private const val KeyWorkoutRoutesIncomplete = "workout_routes_incomplete"
         private const val KeySelectedCategories = "selected_categories"
         private const val KeyExpectedSelectedRecords = "expected_selected_records"
 
@@ -316,6 +317,7 @@ class AppleHealthImportWorker(
                 unsupportedElements = progress.unsupportedElements,
                 skippedRecords = progress.skippedRecords,
                 failedRecords = progress.failedRecords,
+                workoutRoutesIncomplete = data.getBoolean(KeyWorkoutRoutesIncomplete, false),
                 typeSummaries = emptyList(),
                 diagnostics = emptyList(),
                 shareableReportText = reportText,
@@ -368,7 +370,10 @@ class AppleHealthImportWorker(
                     "\n\n... full error stored in import error report."
             }
 
-        private fun AppleHealthImportProgress.toData(reportPath: String? = null): Data {
+        private fun AppleHealthImportProgress.toData(
+            reportPath: String? = null,
+            workoutRoutesIncomplete: Boolean = false,
+        ): Data {
             val builder = Data.Builder()
                 .putString(KeyPhase, phase.name)
                 .putInt(KeyParsedRecords, parsedRecords)
@@ -382,6 +387,7 @@ class AppleHealthImportWorker(
                 .putInt(KeyUnsupportedElements, unsupportedElements)
                 .putInt(KeySkippedRecords, skippedRecords)
                 .putInt(KeyFailedRecords, failedRecords)
+                .putBoolean(KeyWorkoutRoutesIncomplete, workoutRoutesIncomplete)
                 .putInt(KeyExpectedSelectedRecords, expectedSelectedRecords)
             if (reportPath != null) {
                 builder.putString(KeyReportPath, reportPath)
@@ -396,7 +402,7 @@ class AppleHealthImportWorker(
             toProgress(
                 phase = AppleHealthImportPhase.COMPLETE,
                 expectedSelectedRecords = expectedSelectedRecords,
-            ).toData(reportPath)
+            ).toData(reportPath, workoutRoutesIncomplete)
 
         private fun AppleHealthImportResult.toProgress(
             phase: AppleHealthImportPhase,

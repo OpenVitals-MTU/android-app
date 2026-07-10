@@ -87,45 +87,57 @@ internal object AppleHealthImportParser {
         val resolvedRouteFiles = routeFiles.toMutableMap()
         var foundExportXml = false
         var exportXmlEntryName = "export.xml"
+        var workoutRouteArchiveFailure: AppleWorkoutRouteArchiveFailure? = null
         try {
-            ZipInputStream(input).use { zipInput ->
-                while (true) {
-                    val entry = zipInput.nextEntryOrThrow(entryName = null) ?: break
-                    if (!entry.isDirectory) {
-                        when {
-                            entry.name.isAppleHealthExportXml() -> {
-                                exportXmlEntryName = entry.name
-                                val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
-                                try {
-                                    exportXml.outputStream().use { output -> entryInput.copyTo(output) }
-                                } catch (error: Exception) {
-                                    throw error.asZipReadException(entry.name, entryInput.bytesRead)
-                                }
-                                foundExportXml = true
-                            }
-                            entry.name.isAppleWorkoutRouteFile() -> {
-                                // Stream the GPX entry directly; buffering it as a byte array costs
-                                // megabytes per routed workout during the zip sweep.
-                                val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
-                                try {
-                                    AppleHealthImportRouteParser.parse(entry.name, entryInput)?.let { routeFile ->
-                                        resolvedRouteFiles[routeFile.path] = routeFile
+            try {
+                ZipInputStream(input).use { zipInput ->
+                    while (true) {
+                        val entry = zipInput.nextEntryOrThrow(entryName = null) ?: break
+                        if (!entry.isDirectory) {
+                            when {
+                                entry.name.isAppleHealthExportXml() -> {
+                                    exportXmlEntryName = entry.name
+                                    val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
+                                    try {
+                                        exportXml.outputStream().use { output -> entryInput.copyTo(output) }
+                                    } catch (error: Exception) {
+                                        throw error.asZipReadException(entry.name, entryInput.bytesRead)
                                     }
-                                } catch (error: Exception) {
-                                    throw error.asZipReadException(entry.name, entryInput.bytesRead)
+                                    foundExportXml = true
+                                }
+                                entry.name.isAppleWorkoutRouteFile() -> {
+                                    // Stream the GPX entry directly; buffering it as a byte array costs
+                                    // megabytes per routed workout during the zip sweep.
+                                    val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
+                                    try {
+                                        AppleHealthImportRouteParser.parse(entry.name, entryInput)?.let { routeFile ->
+                                            resolvedRouteFiles[routeFile.path] = routeFile
+                                        }
+                                    } catch (error: Exception) {
+                                        throw error.asZipReadException(entry.name, entryInput.bytesRead)
+                                    }
                                 }
                             }
                         }
+                        zipInput.closeEntryOrThrow(entry.name)
                     }
-                    zipInput.closeEntryOrThrow(entry.name)
                 }
+            } catch (error: AppleHealthZipReadException) {
+                val failedRoute = error.entryName?.takeIf(String::isAppleWorkoutRouteFile)
+                if (!foundExportXml || failedRoute == null) throw error
+                workoutRouteArchiveFailure = AppleWorkoutRouteArchiveFailure(
+                    entryName = failedRoute,
+                    decompressedBytesRead = error.decompressedBytesRead,
+                )
             }
             if (!foundExportXml) {
                 throw IllegalArgumentException("Apple Health export.zip must contain export.xml.")
             }
             return exportXml.inputStream().use { xmlInput ->
                 try {
-                    parseXmlExport(xmlInput, consumer, resolvedRouteFiles, parseRecordDetails)
+                    parseXmlExport(xmlInput, consumer, resolvedRouteFiles, parseRecordDetails).copy(
+                        workoutRouteArchiveFailure = workoutRouteArchiveFailure,
+                    )
                 } catch (error: Exception) {
                     throw error.asZipReadException(exportXmlEntryName, exportXml.length())
                 }
@@ -186,7 +198,11 @@ private fun Throwable.isZipReadFailure(): Boolean =
     this is EOFException || this is ZipException
 
 private fun Throwable.isUnexpectedZipXmlEnd(entryName: String?): Boolean {
-    if (entryName?.isAppleHealthExportXml() != true || this !is AppleHealthXmlParseException) return false
+    val isArchivedXmlEntry = entryName?.let { name ->
+        name.isAppleHealthExportXml() || name.isAppleWorkoutRouteFile()
+    } == true
+    val isXmlParseFailure = this is AppleHealthXmlParseException || this is SAXParseException
+    if (!isArchivedXmlEntry || !isXmlParseFailure) return false
     val normalizedMessage = message.orEmpty().lowercase(Locale.US)
     return UnexpectedXmlEndMessages.any(normalizedMessage::contains)
 }
@@ -328,7 +344,7 @@ private class AppleHealthXmlHandler(
                 val referencedPaths = route.paths
                     .map { it.normalizedAppleWorkoutRoutePath() }
                     .distinct()
-                workout.addRouteReferences(referencedPaths.size)
+                workout.addRouteReferences(referencedPaths)
                 referencedPaths
                     .mapNotNull(routeFiles::get)
                     .forEach(workout::addRoute)
@@ -403,7 +419,7 @@ private class MutableAppleWorkout(
     override val metadata: MutableMap<String, String> = linkedMapOf()
     val events = mutableListOf<AppleWorkoutEvent>()
     private val routes = mutableListOf<AppleWorkoutRouteFile>()
-    private var routeReferences = 0
+    private val routeReferencePaths = mutableListOf<String>()
     private val workoutActivityType = attributes.value("workoutActivityType") ?: "Workout"
     private val sourceName = attributes.value("sourceName")
     private val sourceVersion = attributes.value("sourceVersion")
@@ -444,8 +460,8 @@ private class MutableAppleWorkout(
         routes += route
     }
 
-    fun addRouteReferences(count: Int) {
-        routeReferences += count
+    fun addRouteReferences(paths: List<String>) {
+        routeReferencePaths += paths
     }
 
     fun toWorkout(): AppleWorkout =
@@ -466,7 +482,8 @@ private class MutableAppleWorkout(
             metadata = metadata.toMap(),
             events = events.toList(),
             routes = routes.distinctBy { it.path },
-            routeReferences = routeReferences,
+            routeReferences = routeReferencePaths.distinct().size,
+            routeReferencePaths = routeReferencePaths.distinct(),
         )
 }
 

@@ -1272,6 +1272,15 @@ internal fun AppleHealthImportCard(
                     modifier = Modifier.padding(top = 8.dp),
                 )
 
+                if (importResult.workoutRoutesIncomplete) {
+                    Text(
+                        text = stringResource(R.string.settings_apple_health_import_routes_incomplete),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

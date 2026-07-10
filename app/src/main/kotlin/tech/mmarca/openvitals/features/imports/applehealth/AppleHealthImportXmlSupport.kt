@@ -51,8 +51,8 @@ internal class CountingInputStream(delegate: InputStream) : FilterInputStream(de
 }
 
 internal class AppleHealthZipReadException(
-    entryName: String?,
-    bytesRead: Long?,
+    val entryName: String?,
+    val decompressedBytesRead: Long?,
     cause: Throwable,
 ) : Exception(
     buildString {
@@ -61,9 +61,9 @@ internal class AppleHealthZipReadException(
             append(" while reading ")
             append(entryName)
         }
-        if (bytesRead != null) {
+        if (decompressedBytesRead != null) {
             append(" after ")
-            append(bytesRead)
+            append(decompressedBytesRead)
             append(" decompressed byte(s)")
         }
         append(". The selected ZIP is likely incomplete, corrupt, not fully downloaded, or Android stopped providing the document stream. ")
