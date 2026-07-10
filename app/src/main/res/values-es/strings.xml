@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenVitals</string>
-
     <string name="cd_back">Atrás</string>
     <string name="cd_settings">Ajustes</string>
     <string name="cd_achievements">Logros</string>
@@ -10,28 +9,28 @@
     <string name="cd_edit_dashboard">Editar resumen</string>
     <string name="cd_finish_dashboard_editing">Terminar edición del resumen</string>
     <string name="cd_edit_saved_drinks">Editar bebidas guardadas</string>
-    <string name="cd_done_editing_saved_drinks">Terminar edición de bebidas guardadas</string>
+    <string name="cd_done_editing_saved_drinks">Bebidas guardadas editadas</string>
     <string name="cd_edit_drink">Editar bebida</string>
     <string name="cd_delete_drink">Eliminar bebida</string>
     <string name="cd_move_drink_category">Mover categoría de bebida</string>
     <string name="cd_expand_drink_category">Expandir %1$s</string>
     <string name="cd_collapse_drink_category">Contraer %1$s</string>
-    <string name="cd_edit_manual_entry_widgets">Editar widgets de añadir entrada</string>
-    <string name="cd_finish_manual_entry_editing">Terminar edición de widgets de añadir entrada</string>
+    <string name="cd_edit_manual_entry_widgets">Editar y añadir widgets</string>
+    <string name="cd_finish_manual_entry_editing">Terminar de editar y añadir widgets</string>
     <string name="cd_edit_recording_dashboard">Editar panel de grabación</string>
     <string name="cd_finish_recording_dashboard_editing">Terminar edición del panel de grabación</string>
-    <string name="cd_move_widget_up">Mover widget arriba</string>
-    <string name="cd_move_widget_down">Mover widget abajo</string>
-    <string name="cd_edit_metric_sections">Editar secciones de métrica</string>
-    <string name="cd_finish_metric_section_editing">Terminar edición de secciones de métrica</string>
-    <string name="cd_move_section_up">Mover sección arriba</string>
-    <string name="cd_move_section_down">Mover sección abajo</string>
+    <string name="cd_move_widget_up">Subir el widget</string>
+    <string name="cd_move_widget_down">Bajar el widget</string>
+    <string name="cd_edit_metric_sections">Editar métricas</string>
+    <string name="cd_finish_metric_section_editing">Terminar de editar las métricas</string>
+    <string name="cd_move_section_up">Subir la sección</string>
+    <string name="cd_move_section_down">Bajar la sección</string>
     <string name="cd_remove_widget">Quitar widget</string>
-    <string name="cd_decrease_recording_dashboard_widget_size">Hacer widget más pequeño</string>
-    <string name="cd_increase_recording_dashboard_widget_size">Hacer widget más grande</string>
-    <string name="cd_exit_recording_focus_mode">Salir del modo enfoque</string>
-    <string name="cd_toggle_recording_outdoor_mode">Cambiar modo de legibilidad al aire libre</string>
-    <string name="cd_recenter_map">Recentrar mapa</string>
+    <string name="cd_decrease_recording_dashboard_widget_size">Reducir el widget</string>
+    <string name="cd_increase_recording_dashboard_widget_size">Ampliar el widget</string>
+    <string name="cd_exit_recording_focus_mode">Salir del modo de concentración</string>
+    <string name="cd_toggle_recording_outdoor_mode">Activar/desactivar modo exteriores</string>
+    <string name="cd_recenter_map">Volver a centrar el mapa</string>
     <string name="cd_delete_entry">Eliminar entrada</string>
     <string name="cd_edit_entry">Editar entrada</string>
     <string name="cd_previous_day">Día anterior</string>
@@ -40,7 +39,7 @@
     <string name="cd_next_period">Periodo siguiente</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_add">Añadir</string>
-    <string name="action_add_custom">Añadir personalizado</string>
+    <string name="action_add_custom">Añadir a medida</string>
     <string name="action_save">Guardar</string>
     <string name="action_close">Cerrar</string>
     <string name="action_delete">Eliminar</string>
@@ -75,7 +74,6 @@
     <string name="not_recorded">No registrado</string>
     <string name="no_data">Sin datos</string>
     <string name="loading">Cargando...</string>
-
     <string name="home_metric_widget_description">Métrica de OpenVitals</string>
     <string name="home_metric_widget_config_title">Elegir métrica</string>
     <string name="home_metric_widget_config_prompt">Elige la métrica para el widget:</string>
@@ -103,14 +101,13 @@
     <string name="home_widget_body_energy_steady">Estable</string>
     <string name="home_widget_body_energy_limited">Limitada</string>
     <string name="home_widget_body_energy_low">Baja</string>
-
     <string name="screen_steps">Pasos</string>
     <string name="screen_activities">Actividades</string>
     <string name="screen_calories">Calorías</string>
     <string name="screen_activity_detail">Detalle de actividad</string>
     <string name="screen_sleep">Sueño</string>
     <string name="screen_sleep_detail">Detalle de sueño</string>
-    <string name="screen_heart_vitals">Corazón y constantes</string>
+    <string name="screen_heart_vitals">Corazón y signos vitales</string>
     <string name="screen_stress_tracking">Seguimiento de estrés</string>
     <string name="screen_body_energy">Energía corporal</string>
     <string name="screen_training_readiness">Preparación para entrenar</string>
@@ -129,7 +126,6 @@
     <string name="screen_carbs_entry">Entrada de carbohidratos</string>
     <string name="screen_body_measurement_entry">Entrada de medida corporal</string>
     <string name="screen_vitals_measurement_entry">Entrada de constantes</string>
-
     <string name="bottom_nav_dashboard">Resumen</string>
     <string name="manual_entry_hydration_title">Hidratación</string>
     <string name="manual_entry_activity_title">Actividad</string>
@@ -138,7 +134,7 @@
     <string name="manual_entry_select_time">Seleccionar hora de entrada</string>
     <string name="manual_entry_add_widgets">Añadir widgets de entrada</string>
     <string name="manual_entry_all_widgets_added">Todos los widgets de entrada ya están visibles.</string>
-    <string name="manual_entry_write_permission_title">Permiso de escritura de hidratación</string>
+    <string name="manual_entry_write_permission_title">Acceso de escritura para hidratación</string>
     <string name="manual_entry_activity_write_permission_title">Permisos de escritura de actividad</string>
     <string name="manual_entry_mindfulness_write_permission_title">Permiso de escritura de mindfulness</string>
     <string name="manual_entry_carbs_write_permission_title">Permiso de escritura de carbohidratos</string>
@@ -406,7 +402,6 @@
     <string name="vitals_entry_add_selected">Añadir %1$s</string>
     <string name="vitals_entry_invalid_value">Introduce un valor válido para esta constante.</string>
     <string name="vitals_entry_write_failed">No se pudo guardar la constante: %1$s</string>
-
     <string name="range_day">Día</string>
     <string name="range_week">Semana</string>
     <string name="range_month">Mes</string>
@@ -421,7 +416,6 @@
     <string name="period_last_30_days">Últimos 30 días</string>
     <string name="period_last_365_days">Últimos 365 días</string>
     <string name="period_selected">Periodo seleccionado</string>
-
     <string name="metric_steps">Pasos</string>
     <string name="metric_distance">Distancia</string>
     <string name="metric_average_pace">Ritmo medio</string>
@@ -442,8 +436,8 @@
     <string name="metric_logged_days">Días registrados</string>
     <string name="metric_latest_weight">Último peso</string>
     <string name="metric_body_fat">Grasa corporal</string>
-    <string name="metric_avg_heart_rate">Frecuencia cardiaca media</string>
-    <string name="metric_average_heart_rate">Frecuencia cardiaca media</string>
+    <string name="metric_avg_heart_rate">Frecuencia cardíaca promedio</string>
+    <string name="metric_average_heart_rate">Frecuencia cardíaca normal</string>
     <string name="metric_resting_heart_rate">Frecuencia en reposo</string>
     <string name="metric_hrv">Variabilidad de la frecuencia cardiaca (HRV)</string>
     <string name="metric_cardio_load">Carga cardiovascular</string>
@@ -452,7 +446,7 @@
     <string name="metric_blood_pressure">Presión arterial</string>
     <string name="metric_spo2">SpO2</string>
     <string name="metric_oxygen_saturation">Saturación de oxígeno</string>
-    <string name="metric_vo2_max">VO2 máx.</string>
+    <string name="metric_vo2_max">VO2 máx (consumo máximo de oxígeno)</string>
     <string name="metric_mindfulness">Mindfulness</string>
     <string name="metric_total_mindfulness">Mindfulness total</string>
     <string name="metric_cycle">Ciclo</string>
@@ -521,7 +515,6 @@
     <string name="metric_average_power">Potencia media</string>
     <string name="metric_steps_cadence">Cadencia de pasos</string>
     <string name="metric_cycling_cadence">Cadencia de ciclismo</string>
-
     <string name="unit_steps">pasos</string>
     <string name="unit_pushes">impulsos</string>
     <string name="unit_reps">reps</string>
@@ -531,11 +524,11 @@
     <string name="unit_tests">pruebas</string>
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
-
     <string name="section_activities">Actividades</string>
     <string name="section_activity_type_stats">Por tipo de actividad</string>
     <plurals name="activity_type_stats_activity_count">
         <item quantity="one">%d actividad</item>
+        <item quantity="many">%d actividades</item>
         <item quantity="other">%d actividades</item>
     </plurals>
     <string name="section_planned_workouts">Entrenamientos planificados</string>
@@ -556,7 +549,7 @@
     <string name="sleep_score_rating_good">Bueno</string>
     <string name="sleep_score_rating_fair">Aceptable</string>
     <string name="sleep_score_rating_poor">Bajo</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">Cómo se calcula</string>
     <string name="sleep_score_day_numbers_title">Números de hoy</string>
     <string name="sleep_score_references_title">Enlaces de respaldo</string>
@@ -644,7 +637,7 @@
     <string name="section_cardiovascular">Cardiovascular</string>
     <string name="section_respiratory">Respiratorio</string>
     <string name="section_respiratory_rate_daily_breakdown">Desglose diario de frecuencia respiratoria</string>
-    <string name="section_vo2_max_history">Historial de VO2 máx.</string>
+    <string name="section_vo2_max_history">Historial de VO2 máximo</string>
     <string name="section_display">Visualización</string>
     <string name="section_privacy">Privacidad</string>
     <string name="section_cycle_calendar">Calendario del ciclo</string>
@@ -658,7 +651,6 @@
     <string name="section_vitamins">Vitaminas</string>
     <string name="section_minerals">Minerales</string>
     <string name="section_other_nutrients">Otros nutrientes</string>
-
     <string name="summary_daily_average">media diaria de %1$s</string>
     <string name="summary_days_in_range">%1$s días en el rango</string>
     <string name="summary_entries">%1$s entradas</string>
@@ -887,7 +879,6 @@
     <string name="cd_decrease_hydration_reminder_interval">Reducir intervalo de recordatorio de hidratación</string>
     <string name="cd_increase_hydration_reminder_interval">Aumentar intervalo de recordatorio de hidratación</string>
     <string name="unit_percent_symbol">%</string>
-
     <string name="message_no_dashboard_data">No hay datos del resumen disponibles.</string>
     <string name="message_missing_permissions_title">Faltan algunos permisos</string>
     <string name="message_missing_permissions_body">Concede los permisos que faltan para ver un resumen completo.</string>
@@ -908,7 +899,7 @@
     <string name="dashboard_sensor_status_title">Batería de sensores</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% mínimo</string>
     <string name="dashboard_sensor_battery_unknown">Batería pendiente</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d activos &#8226; %2$d conectados</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d activos • %2$d conectados</string>
     <string name="dashboard_sensor_status_all_disabled">Todos los sensores desactivados</string>
     <string name="dashboard_delete_activity_title">¿Borrar actividad?</string>
     <string name="dashboard_delete_activity_message">¿Borrar esta actividad de %1$s de OpenVitals?</string>
@@ -994,7 +985,6 @@
     <string name="message_no_route_data">No hay datos de ruta registrados.</string>
     <string name="message_no_stages">No hay fases registradas.</string>
     <string name="message_no_kcal">Sin kcal</string>
-
     <string name="onboarding_tagline">Tus datos de salud, en tu dispositivo</string>
     <string name="onboarding_privacy_title">Privacidad primero</string>
     <string name="onboarding_privacy_body">No hace falta cuenta. Los datos permanecen en tu dispositivo. Sin subida a la nube, sin analíticas y sin anuncios.</string>
@@ -1043,7 +1033,6 @@
     <string name="onboarding_category_vitals_desc">Health Connect pedirá:\n* Presión arterial\n* Saturación de oxígeno\n* Frecuencia respiratoria\n* Temperatura corporal\n* VO2 máx.\n* Glucosa en sangre\n* Temperatura de la piel, si es compatible</string>
     <string name="onboarding_category_cycle_tracking">Seguimiento del ciclo</string>
     <string name="onboarding_category_cycle_tracking_desc">Health Connect pedirá datos sensibles del ciclo:\n* Flujo menstrual\n* Periodos menstruales\n* Pruebas de ovulación\n* Moco cervical\n* Temperatura corporal basal\n* Sangrado intermenstrual\n* Actividad sexual</string>
-
     <string name="settings_all_requestable_granted">Todos los permisos solicitables concedidos</string>
     <string name="settings_manual_permissions_title">Permisos manuales requeridos</string>
     <string name="settings_manual_permissions_body">Algunos permisos de Health Connect no pueden concederse desde el diálogo normal. Abre Health Connect y actívalos para OpenVitals.</string>
@@ -1072,7 +1061,7 @@
     <string name="settings_sensors_capabilities_title">Capacidades</string>
     <string name="settings_sensors_capability_heart_rate">Frecuencia cardiaca</string>
     <string name="settings_sensors_capability_cycling_cadence">Cadencia</string>
-    <string name="settings_sensors_capability_cycling_power">Potencia</string>
+    <string name="settings_sensors_capability_cycling_power">Fuerza de tus piernas al pedalear</string>
     <string name="settings_sensors_capability_cycling_speed">Velocidad</string>
     <string name="settings_sensors_capability_running_speed_cadence">Velocidad/cadencia de carrera</string>
     <string name="settings_sensors_capability_conflict">%1$s ya está asignado a %2$s</string>
@@ -1255,7 +1244,7 @@
     <string name="settings_apple_health_import_progress_writing">Escribiendo registros</string>
     <string name="settings_apple_health_import_progress_finishing">Finalizando importación</string>
     <string name="settings_apple_health_import_progress_building_report">Creando informe</string>
-    <string name="settings_apple_health_import_progress_complete">Completado</string>
+    <string name="settings_apple_health_import_progress_complete">Completo</string>
     <string name="settings_apple_health_import_progress">%1$s. %2$d elementos analizados, %3$d registros importados.</string>
     <string name="settings_apple_health_import_progress_with_percent">%1$d%%. %2$s. Seleccionados %3$d/%4$d registros, importados %5$d.</string>
     <string name="settings_apple_health_import_background">La importación continúa en segundo plano si sales de la app.</string>
@@ -1323,7 +1312,7 @@
     <string name="settings_offline_maps_importing">Importando...</string>
     <string name="settings_offline_maps_import_progress_queued">En cola</string>
     <string name="settings_offline_maps_import_progress_copying">Copiando mapa</string>
-    <string name="settings_offline_maps_import_progress_complete">Completado</string>
+    <string name="settings_offline_maps_import_progress_complete">Completo</string>
     <string name="settings_offline_maps_import_progress">%1$s</string>
     <string name="settings_offline_maps_import_progress_with_percent">%1$s • %2$d%%</string>
     <string name="settings_offline_maps_import_background">La importación continúa en segundo plano si sales de la app.</string>
@@ -1366,7 +1355,6 @@
     <string name="settings_debug_logs_saved">Registros de depuración guardados</string>
     <string name="settings_debug_logs_save_failed">No se pudieron guardar los registros de diagnóstico</string>
     <string name="settings_app_version">Versión %1$s (%2$d)</string>
-
     <string name="detail_metrics">Métricas</string>
     <string name="detail_session_details">Detalles de la sesión</string>
     <string name="detail_duration">Duración</string>
@@ -1407,7 +1395,6 @@
     <string name="detail_stage_events">Eventos de fases</string>
     <string name="detail_stages">Fases</string>
     <string name="detail_sleep_session">Sesión de sueño</string>
-
     <string name="recording_actively_recorded">Registrado activamente</string>
     <string name="recording_automatically_recorded">Registrado automáticamente</string>
     <string name="recording_manual_entry">Entrada manual</string>
@@ -1420,7 +1407,6 @@
     <string name="device_fitness_band">Pulsera de actividad</string>
     <string name="device_chest_strap">Banda pectoral</string>
     <string name="device_smart_display">Pantalla inteligente</string>
-
     <string name="sleep_stage_awake">Despierto</string>
     <string name="sleep_stage_sleeping">Durmiendo</string>
     <string name="sleep_stage_out_of_bed">Fuera de la cama</string>
@@ -1430,7 +1416,6 @@
     <string name="sleep_stage_awake_in_bed">Despierto en cama</string>
     <string name="sleep_stage_unknown">Desconocido</string>
     <string name="sleep_stages_share_title">Porcentaje del tiempo en cama</string>
-
     <string name="cycle_permissions_missing_title">Faltan permisos del ciclo</string>
     <string name="cycle_permissions_missing_body">Concede permisos de seguimiento del ciclo para mostrar días de periodo, pruebas de ovulación, moco cervical y temperatura basal.</string>
     <string name="cycle_observation_menstruation_period">Periodo menstrual</string>
@@ -1482,7 +1467,6 @@
     <string name="weekday_friday_short">V</string>
     <string name="weekday_saturday_short">S</string>
     <string name="weekday_sunday_short">D</string>
-
     <string name="vitals_permissions_needed_title">Permisos de constantes necesarios</string>
     <string name="vitals_permissions_needed_body">Concede permisos de presión arterial, saturación de oxígeno, frecuencia respiratoria, temperatura, VO2 máx. y glucosa para completar esta pantalla.</string>
     <string name="vitals_respiratory_rate_readings">Lecturas de frecuencia respiratoria</string>
@@ -1496,7 +1480,6 @@
     <string name="heart_rate_days_at_or_below">Días con %1$d lpm o menos</string>
     <string name="cd_decrease_hr_threshold">Reducir umbral de frecuencia cardiaca</string>
     <string name="cd_increase_hr_threshold">Aumentar umbral de frecuencia cardiaca</string>
-
     <string name="meal_breakfast">Desayuno</string>
     <string name="meal_lunch">Almuerzo</string>
     <string name="meal_dinner">Cena</string>
@@ -1507,7 +1490,6 @@
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">azúcar %1$sg</string>
-
     <string name="caffeine_section_overview">Resumen</string>
     <string name="caffeine_section_dashboard">Panel</string>
     <string name="caffeine_section_analytics">Analíticas</string>
@@ -1572,7 +1554,6 @@
     <string name="caffeine_reference_efsa">Notas de EFSA sobre seguridad de cafeína y sueño</string>
     <string name="caffeine_reference_health_connect">Campos del registro de nutrición de Health Connect</string>
     <string name="unknown_source">Fuente desconocida</string>
-
     <string name="achievements_legacy_title">Insignias de actividad heredadas</string>
     <string name="achievements_progress_summary">%1$d de %2$d desbloqueadas</string>
     <string name="achievements_data_window">%1$s a %2$s · %3$s días registrados</string>
@@ -1583,7 +1564,7 @@
     <string name="achievements_total_floors">Pisos totales</string>
     <string name="achievements_filter_all">Todo</string>
     <string name="achievements_category_daily_steps">Pasos diarios</string>
-    <string name="achievements_category_lifetime_distance">Distancia total</string>
+    <string name="achievements_category_lifetime_distance">Distancia acumulada</string>
     <string name="achievements_category_daily_floors">Pisos diarios</string>
     <string name="achievements_category_lifetime_floors">Pisos totales</string>
     <string name="achievements_daily_steps_requirement">%1$s pasos en un día</string>
@@ -1600,7 +1581,6 @@
     <string name="achievements_no_floor_data_title">Sin datos de pisos</string>
     <string name="achievements_no_floor_data_body">Las insignias de pisos se desbloquean cuando Health Connect tiene datos de pisos subidos.</string>
     <string name="achievements_error_title">Logros no disponibles</string>
-
     <string name="data_confidence_title">Confianza de los datos</string>
     <string name="data_confidence_high">Confianza alta</string>
     <string name="data_confidence_medium">Confianza media</string>
@@ -1621,12 +1601,10 @@
     <string name="data_confidence_warning_manual">Este periodo incluye entradas manuales.</string>
     <string name="data_confidence_warning_calculated">Este valor es derivado, no medido directamente.</string>
     <string name="data_confidence_warning_no_sources">Este agregado no expone detalles por origen.</string>
-
     <string name="privacy_policy_title">Política de privacidad</string>
     <string name="privacy_policy_body_1">OpenVitals lee datos de Health Connect para mostrar pasos, entrenamientos, sueño, frecuencia cardiaca, peso, calorías, hidratación, nutrición, mindfulness y constantes en tu dispositivo. Las entradas que registres explícitamente, incluidas las rutas GPX/KML/KMZ importadas y los archivos FIT importados, se escriben en Health Connect.</string>
     <string name="privacy_policy_body_2">Esta app no sube tus datos de salud a un servicio en la nube, no incluye anuncios y no comparte datos con terceros.</string>
-    <string name="privacy_policy_body_3">OpenVitals no es un dispositivo médico y no diagnostica, trata, cura ni previene ninguna enfermedad o afección médica. No sustituye el asesoramiento, diagnóstico ni tratamiento de un profesional sanitario cualificado.</string>
-
+    <string name="privacy_policy_body_3">OpenVitals no es un dispositivo médico y no diagnostica, trata, cura ni previene ninguna enfermedad o afección médica. No sustituye el asesoramiento, el diagnóstico ni el tratamiento médicos proporcionados por un profesional sanitario cualificado.</string>
     <string name="action_continue">Continuar</string>
     <string name="settings_body_energy_group_title">Energía corporal</string>
     <string name="settings_body_energy_group_body">Calibración para la energía estimada durante el día y las zonas de esfuerzo.</string>
@@ -1637,55 +1615,55 @@
     <string name="body_energy_calibration_max_hr">Frecuencia cardiaca máxima</string>
     <string name="body_energy_calibration_resting_hr">Frecuencia cardiaca en reposo</string>
     <string name="body_energy_calibration_manual_zones">Zonas cardiacas manuales</string>
-    <string name="body_energy_calibration_manual_zones_body">Límites inferiores opcionales en lpm para las zonas 1-5.</string>
-    <string name="body_energy_calibration_zone_1">Límite inferior de zona 1 (lpm)</string>
-    <string name="body_energy_calibration_zone_2">Límite inferior de zona 2 (lpm)</string>
-    <string name="body_energy_calibration_zone_3">Límite inferior de zona 3 (lpm)</string>
-    <string name="body_energy_calibration_zone_4">Límite inferior de zona 4 (lpm)</string>
-    <string name="body_energy_calibration_zone_5">Límite inferior de zona 5 (lpm)</string>
+    <string name="body_energy_calibration_manual_zones_body">Zonas 1-5 o límite de frecuencia cardíaca (latidos por minuto).</string>
+    <string name="body_energy_calibration_zone_1">Intensidad más baja de entrenamiento, (50% - 60% de tu frecuencia cardíaca máxima)</string>
+    <string name="body_energy_calibration_zone_2">Intensidad de ejercicio aeróbico bajo-moderado (entre el 60 % y 75 % de frecuencia cardíaca máxima</string>
+    <string name="body_energy_calibration_zone_3">Zona de ritmo moderado a intenso (entre el 70% y el 80% de tu Frecuencia Cardíaca Máxima)</string>
+    <string name="body_energy_calibration_zone_4">Zona de umbral (80-90% de tu Frecuencia Cardíaca Máxima)</string>
+    <string name="body_energy_calibration_zone_5">Límite inferior de la Zona 5 de frecuencia cardíaca (90% de tu frecuencia cardíaca máxima)</string>
     <string name="body_energy_calibration_use_auto">Usar estimaciones automáticas</string>
     <string name="body_energy_calibration_skip">Omitir por ahora</string>
     <string name="body_energy_calibration_saved">Calibración de energía corporal guardada</string>
     <string name="body_energy_calibration_reset">Calibración de energía corporal restablecida a automático</string>
     <string name="body_energy_not_set_up">No configurado</string>
-    <string name="body_energy_timeline_estimated">Estimado por OpenVitals</string>
+    <string name="body_energy_timeline_estimated">Valorada por OpenVitals</string>
     <string name="body_energy_timeline_current">Actual</string>
     <string name="body_energy_timeline_start">Inicio</string>
     <string name="body_energy_timeline_charged">Cargada</string>
     <string name="body_energy_timeline_drained">Consumida</string>
     <string name="body_energy_timeline_confidence">Confianza</string>
-    <string name="body_energy_timeline_no_data">No hay una línea temporal de energía corporal usable para este periodo.</string>
-    <string name="body_energy_timeline_day_title">Línea temporal diaria</string>
-    <string name="body_energy_timeline_low_confidence">Algunos tramos son estimados porque la calibración o los datos de Health Connect están incompletos.</string>
-    <string name="body_energy_why_title">Qué la movió</string>
-    <string name="body_energy_why_empty">Aún no hubo un factor claro de carga o consumo que dominara este día.</string>
-    <string name="body_energy_influence_sleep_recovery">Recuperación por sueño</string>
+    <string name="body_energy_timeline_no_data">No se dispone de un historial de la energía corporal utilizable para este período.</string>
+    <string name="body_energy_timeline_day_title">Cronología diaria</string>
+    <string name="body_energy_timeline_low_confidence">Algunas categorías son estimaciones, ya que los datos de calibración o de Health Connect están incompletos.</string>
+    <string name="body_energy_why_title">¿Qué influyó en esto?</string>
+    <string name="body_energy_why_empty">Hasta el momento, ningún factor claro de carga o consumo ha predominado en este día.</string>
+    <string name="body_energy_influence_sleep_recovery">Recuperación del sueño</string>
     <string name="body_energy_influence_quiet_rest">Descanso tranquilo</string>
     <string name="body_energy_influence_exertion">Esfuerzo</string>
     <string name="body_energy_influence_elevated_hr">Frecuencia cardiaca elevada</string>
-    <string name="body_energy_influence_recovery_debt">Deuda de recuperación</string>
+    <string name="body_energy_influence_recovery_debt">Cansancio acumulado</string>
     <string name="body_energy_influence_no_data">Sin datos</string>
     <string name="body_energy_influence_steady">Estable</string>
-    <string name="body_energy_reason_sleep_recovery_detail">Los tramos de sueño cargaron la estimación desde la puntuación anterior.</string>
-    <string name="body_energy_reason_quiet_rest_detail">La frecuencia baja estando despierto añadió una pequeña carga de recuperación.</string>
-    <string name="body_energy_reason_exertion_detail">La intensidad cardiaca o los entrenamientos registrados consumieron la estimación.</string>
-    <string name="body_energy_reason_elevated_hr_detail">La frecuencia despierto por encima del reposo añadió consumo por estrés.</string>
-    <string name="body_energy_reason_recovery_debt_detail">Un esfuerzo reciente más duro mantuvo después un pequeño consumo activo.</string>
-    <string name="body_energy_reason_no_data_detail">Health Connect no proporcionó señal suficiente para este tramo.</string>
-    <string name="body_energy_reason_steady_detail">La estimación se mantuvo mayormente estable.</string>
+    <string name="body_energy_reason_sleep_recovery_detail">Los periodos de sueño han incrementado la estimación con respecto al valor anterior.</string>
+    <string name="body_energy_reason_quiet_rest_detail">Una frecuencia cardíaca baja durante la vigilia proporcionó un pequeño impulso a la recuperación.</string>
+    <string name="body_energy_reason_exertion_detail">La intensidad de la frecuencia cardíaca o los entrenamientos registrados redujeron la estimación.</string>
+    <string name="body_energy_reason_elevated_hr_detail">La frecuencia cardíaca en estado de vigilia, por encima del nivel en reposo, supuso un desgaste adicional debido al estrés.</string>
+    <string name="body_energy_reason_recovery_debt_detail">El esfuerzo más intenso de hace poco ha provocado que siga habiendo una pequeña pérdida de líquido después.</string>
+    <string name="body_energy_reason_no_data_detail">Health Connect no proporcionó señal suficiente para este rango.</string>
+    <string name="body_energy_reason_steady_detail">La estimación se mantuvo prácticamente estable.</string>
     <string name="body_energy_inputs_title">Entradas usadas</string>
     <string name="body_energy_inputs_summary">Algoritmo v%1$d, tramos de %2$d minutos</string>
     <string name="body_energy_input_heart_rate">Muestras de frecuencia cardiaca</string>
     <string name="body_energy_input_sleep">Sesiones de sueño</string>
     <string name="body_energy_input_workouts">Entrenamientos</string>
     <string name="body_energy_input_resting_hr">Frecuencia cardiaca en reposo</string>
-    <string name="body_energy_input_hr_baseline">Base de frecuencia cardiaca</string>
-    <string name="body_energy_input_hrv">Modificador de HRV</string>
+    <string name="body_energy_input_hr_baseline">Frecuencia cardíaca basal (ritmo cardíaco en reposo)</string>
+    <string name="body_energy_input_hrv">Variabilidad de la frecuencia cardíaca</string>
     <string name="body_energy_input_respiratory">Modificador respiratorio</string>
     <string name="body_energy_input_previous_score">Puntuación anterior</string>
     <string name="body_energy_input_calibration">Calibración</string>
     <string name="body_energy_input_available">Disponible</string>
-    <string name="body_energy_input_missing">Falta</string>
+    <string name="body_energy_input_missing">Ausente</string>
     <string name="body_energy_input_optional">No presente</string>
     <string name="body_energy_input_records">%1$d registros</string>
     <string name="body_energy_input_sessions">%1$d sesiones</string>
@@ -1694,9 +1672,10 @@
     <string name="body_energy_calibration_mode_auto">Estimaciones automáticas</string>
     <string name="body_energy_calibration_mode_manual_values">Valores manuales</string>
     <string name="body_energy_calibration_mode_manual_zones">Zonas manuales</string>
-    <string name="body_energy_calculation_title">Cómo se estima la energía corporal</string>
-    <string name="body_energy_calculation_body">OpenVitals divide el día seleccionado en tramos cortos, empieza desde la puntuación anterior disponible cuando es posible, suma carga por sueño o descanso tranquilo y resta consumo por esfuerzo, frecuencia despierto elevada y deuda de recuperación tras esfuerzos más duros.</string>
-    <string name="body_energy_calculation_inputs_body">La frecuencia cardiaca, frecuencia en reposo, zonas personales, sueño, entrenamientos, HRV y frecuencia respiratoria pueden mejorar la estimación. Las entradas ausentes hacen la estimación más conservadora y bajan la confianza.</string>
-    <string name="body_energy_calculation_limits_body">Esta es una estimación de bienestar en el dispositivo, no una medición directa ni consejo médico. Las entradas y razones mostradas se exponen para que el método pueda revisarse y mejorarse.</string>
+    <string name="body_energy_calculation_title">¿Cómo se calcula la energía corporal?</string>
+    <string name="body_energy_calculation_body">OpenVitals divide el día seleccionado en pequeños intervalos, parte de la puntuación disponible anterior cuando es posible, y a continuación suma la energía obtenida durante el sueño o el descanso tranquilo y resta la energía consumida por el esfuerzo físico, la frecuencia cardíaca elevada en estado de vigilia y la deuda de recuperación tras un esfuerzo más intenso.</string>
+    <string name="body_energy_calculation_inputs_body">La frecuencia cardíaca, la frecuencia cardíaca en reposo, las zonas personales, el sueño, los entrenamientos, la variabilidad de la frecuencia cardíaca (VFC) y la frecuencia respiratoria pueden mejorar la estimación. Si faltan datos, la estimación será más conservadora y el nivel de confianza será menor.</string>
+    <string name="body_energy_calculation_limits_body">Se trata de una estimación del bienestar realizada por el propio dispositivo, no de una medición directa ni de un consejo médico. Los datos introducidos y las razones que se muestran tienen como objetivo permitir revisar y mejorar el método.</string>
     <string name="metric_body_energy">Energía corporal</string>
+    <string name="settings_apple_health_import_routes_incomplete">Se han importado los registros de salud, pero algunas rutas no estaban disponibles porque el código postal no era correcto. El informe de importación enumera las actividades afectadas para que se puedan recuperar manualmente.</string>
 </resources>
