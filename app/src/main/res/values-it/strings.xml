@@ -549,7 +549,7 @@
     <string name="sleep_score_rating_good">Buono</string>
     <string name="sleep_score_rating_fair">Sufficiente</string>
     <string name="sleep_score_rating_poor">Scarso</string>
-    <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
+    <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">Come viene calcolato</string>
     <string name="sleep_score_day_numbers_title">Valori di oggi</string>
     <string name="sleep_score_references_title">Riferimenti</string>
@@ -899,7 +899,7 @@
     <string name="dashboard_sensor_status_title">Batteria sensori</string>
     <string name="dashboard_sensor_battery_lowest">%1$d%% minimo</string>
     <string name="dashboard_sensor_battery_unknown">Batteria non ancora disponibile</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d attivi &#8226; %2$d connessi</string>
+    <string name="dashboard_sensor_status_active_connected">%1$d attivi • %2$d connessi</string>
     <string name="dashboard_sensor_status_all_disabled">Tutti i sensori disabilitati</string>
     <string name="dashboard_delete_activity_title">Eliminare l\'attività?</string>
     <string name="dashboard_delete_activity_message">Eliminare questa attività %1$s da OpenVitals?</string>
@@ -1489,7 +1489,6 @@
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">zucchero %1$sg</string>
-
     <string name="caffeine_section_overview">Panoramica</string>
     <string name="caffeine_section_dashboard">Dashboard</string>
     <string name="caffeine_section_analytics">Analisi</string>
@@ -1554,7 +1553,6 @@
     <string name="caffeine_reference_efsa">Note EFSA su sicurezza della caffeina e sonno</string>
     <string name="caffeine_reference_health_connect">Campi dei record nutrizionali di Health Connect</string>
     <string name="unknown_source">Fonte sconosciuta</string>
-
     <string name="achievements_legacy_title">Medaglie attività legacy</string>
     <string name="achievements_progress_summary">%1$d di %2$d sbloccati</string>
     <string name="achievements_data_window">%1$s a %2$s · %3$s giorni tracciati</string>
@@ -1606,7 +1604,6 @@
     <string name="privacy_policy_body_1">OpenVitals legge i dati da Health Connect per mostrare passi, allenamenti, sonno, frequenza cardiaca, peso, calorie, idratazione, nutrizione, consapevolezza e parametri vitali sul dispositivo. Le voci registrate esplicitamente, inclusi i percorsi GPX/KML/KMZ importati e i file FIT importati, vengono scritte in Health Connect.</string>
     <string name="privacy_policy_body_2">Questa app non carica i dati sanitari su un servizio cloud, non include pubblicità e non condivide dati con terze parti.</string>
     <string name="privacy_policy_body_3">OpenVitals non è un dispositivo medico e non diagnostica, tratta, cura né previene alcuna malattia o condizione medica. Non sostituisce il parere medico, la diagnosi o il trattamento di un professionista sanitario qualificato.</string>
-
     <string name="action_continue">Continua</string>
     <string name="settings_body_energy_group_title">Energia corporea</string>
     <string name="settings_body_energy_group_body">Calibrazione per energia stimata durante la giornata e zone di sforzo.</string>
@@ -1679,4 +1676,5 @@
     <string name="body_energy_calculation_inputs_body">Frequenza cardiaca, frequenza a riposo, zone personali, sonno, allenamenti, HRV e frequenza respiratoria possono migliorare la stima. Gli input mancanti rendono la stima più conservativa e riducono l\'attendibilità.</string>
     <string name="body_energy_calculation_limits_body">Questa è una stima di benessere sul dispositivo, non una misurazione diretta o un consiglio medico. Gli input e i motivi mostrati sono esposti per poter rivedere e migliorare il metodo.</string>
     <string name="metric_body_energy">Energia corporea</string>
+    <string name="settings_apple_health_import_routes_incomplete">Le cartelle cliniche sono state importate, ma alcuni percorsi di allenamento non erano disponibili perché il codice postale terminava in modo imprevisto. Il report di importazione elenca le attività interessate, che possono essere recuperate manualmente.</string>
 </resources>
