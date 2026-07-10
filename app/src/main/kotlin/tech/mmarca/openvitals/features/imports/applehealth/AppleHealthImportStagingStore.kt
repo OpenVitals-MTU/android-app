@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.imports.applehealth
 import android.content.Context
 import android.net.Uri
 import java.io.File
+import java.io.IOException
 import java.util.Properties
 
 internal data class AppleHealthStagedExport(
@@ -30,15 +31,33 @@ internal object AppleHealthImportStagingStore {
         file.parentFile?.mkdirs()
         val tempFile = File(file.parentFile, "${file.name}.tmp")
         tempFile.delete()
-        val bytesCopied = context.contentResolver.openInputStream(sourceUri)
-            ?.use { input ->
-                tempFile.outputStream().use { output ->
+        val bytesCopied = try {
+            context.contentResolver.openInputStream(sourceUri)
+                ?.use { input ->
+                    tempFile.outputStream().use { output ->
+                        val copied = input.copyTo(output)
+                        output.fd.sync()
+                        copied
+                    }
+                }
+                ?: throw IllegalArgumentException("Unable to open Apple Health export.")
+        } catch (error: Exception) {
+            tempFile.delete()
+            throw error
+        }
+        fingerprint.expectedBytes?.let { expectedBytes ->
+            if (bytesCopied != expectedBytes) {
+                tempFile.delete()
+                throw AppleHealthExportCopyException(expectedBytes, bytesCopied)
+            }
+        }
+        if (!tempFile.renameTo(file)) {
+            tempFile.inputStream().use { input ->
+                file.outputStream().use { output ->
                     input.copyTo(output)
+                    output.fd.sync()
                 }
             }
-            ?: throw IllegalArgumentException("Unable to open Apple Health export.")
-        if (!tempFile.renameTo(file)) {
-            tempFile.copyTo(file, overwrite = true)
             tempFile.delete()
         }
         metadata.write(sourceUri, fingerprint, bytesCopied)
@@ -60,6 +79,7 @@ internal object AppleHealthImportStagingStore {
         fileBytes: Long,
     ): Boolean {
         if (!exists() || fileBytes <= 0L) return false
+        if (fingerprint.expectedBytes?.let { expected -> expected != fileBytes } == true) return false
         val properties = runCatching {
             Properties().apply {
                 inputStream().use(::load)
@@ -104,3 +124,14 @@ internal object AppleHealthImportStagingStore {
     private const val KeySize = "size"
     private const val KeyBytesCopied = "bytesCopied"
 }
+
+internal class AppleHealthExportCopyException(
+    expectedBytes: Long,
+    copiedBytes: Long,
+) : IOException(
+    "Apple Health export copy was incomplete: Android reported $expectedBytes byte(s), but only " +
+        "$copiedBytes byte(s) were copied into app storage. Download the ZIP fully to local storage and select it again.",
+)
+
+private val AppleHealthExportFingerprint.expectedBytes: Long?
+    get() = size?.takeIf { it > 0L }

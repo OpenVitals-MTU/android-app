@@ -357,7 +357,7 @@ class SettingsViewModelTest {
         vm.analyzeAppleHealthExport(secondUri)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { importService.analyzeAppleHealthExport(any(), any()) }
+        coVerify(exactly = 1) { importService.analyzeStagedAppleHealthExport(any(), any(), any()) }
         assertEquals(firstAnalysis, vm.uiState.value.appleHealthImportAnalysis)
         assertEquals(setOf(AppleHealthImportCategory.ACTIVITY), vm.uiState.value.selectedAppleHealthImportCategories)
         verify { importController.persistReadPermission(firstUri) }
@@ -390,7 +390,7 @@ class SettingsViewModelTest {
         vm.analyzeAppleHealthExport(secondUri)
         advanceUntilIdle()
 
-        coVerify(exactly = 2) { importService.analyzeAppleHealthExport(any(), any()) }
+        coVerify(exactly = 2) { importService.analyzeStagedAppleHealthExport(any(), any(), any()) }
     }
 
     @Test fun `bulk route import writes each selected file`() = runTest {
@@ -552,7 +552,7 @@ class SettingsViewModelTest {
 
     private fun importService(): AppleHealthImportService =
         mockk<AppleHealthImportService>().also { service ->
-            coEvery { service.analyzeAppleHealthExport(any(), any()) } returns appleHealthAnalysis()
+            coEvery { service.analyzeStagedAppleHealthExport(any(), any(), any()) } returns appleHealthAnalysis()
             coEvery { service.fingerprintOf(any()) } returns AppleHealthExportFingerprint(
                 displayName = "export.zip",
                 size = 1L,

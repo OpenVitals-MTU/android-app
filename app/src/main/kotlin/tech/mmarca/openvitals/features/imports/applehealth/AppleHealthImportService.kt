@@ -42,74 +42,119 @@ class AppleHealthImportService
             progress: suspend (AppleHealthImportProgress) -> Unit = {},
         ): AppleHealthImportAnalysisResult =
             withContext(Dispatchers.IO) {
-                val importLogs = mutableListOf<String>()
-                fun log(message: String) {
-                    importLogs.addImportInfo(message)
-                }
-                log("Apple Health analysis requested uri=$uri")
-                val analysisState = StreamingAppleHealthScanAnalysisState(
-                    mindfulnessAvailable = importRepository.isMindfulnessAvailable(),
-                    onProgress = progress,
-                    importLogs = importLogs,
-                )
-                val parsed = parseExport(
+                analyzeAppleHealthExportSource(
+                    uri = uri,
                     exportLabel = uri.toString(),
                     openInput = { context.contentResolver.openInputStream(uri) },
-                    analysisState,
-                    importLogs,
-                    progress,
-                    options = AppleHealthParseOptions(parseRouteFiles = false, parseRecordDetails = false),
-                )
-
-                progress(analysisState.progressSnapshot(AppleHealthImportPhase.CONVERTING))
-                log("Stage started: Summarizing compatible categories")
-                val summaries = analysisState.typeSummaries()
-                val totals = summaries.totals()
-                val diagnostics = analysisState.diagnostics()
-                val diagnosticSummaries = analysisState.diagnosticSummaries()
-                val categorySummaries = analysisState.categorySummaries()
-                log(
-                    "Stage finished: Summarizing compatible categories compatible=${totals.converted} " +
-                        "categories=${categorySummaries.size} unsupported=${totals.unsupported} " +
-                        "skipped=${totals.skipped} failed=${totals.failed}",
-                )
-                log(
-                    "Analysis completed converted=${totals.converted} " +
-                        "categories=${categorySummaries.size} unsupported=${totals.unsupported} " +
-                        "skipped=${totals.skipped} failed=${totals.failed} " +
-                        "diagnostics=${diagnostics.size}",
-                )
-                progress(analysisState.progressSnapshot(AppleHealthImportPhase.BUILDING_REPORT))
-                log(
-                    "Stage started: Building report diagnostics=${diagnostics.size} " +
-                        "diagnosticGroups=${diagnosticSummaries.size} typeSummaries=${summaries.size}",
-                )
-                log("Stage finished: Building report")
-                val reportText = buildReportText(
-                    parsed = parsed,
-                    imported = 0,
-                    selectedCategories = null,
-                    summaries = summaries,
-                    categorySummaries = categorySummaries,
-                    diagnostics = diagnostics,
-                    diagnosticSummaries = diagnosticSummaries,
-                    importLogs = importLogs,
-                )
-                AppleHealthImportAnalysisResult(
-                    parsedRecords = parsed.parsedRecords,
-                    parsedWorkouts = parsed.parsedWorkouts,
-                    parsedCorrelations = parsed.parsedCorrelations,
-                    parsedActivitySummaries = parsed.parsedActivitySummaries,
-                    convertedRecords = totals.converted,
-                    unsupportedElements = totals.unsupported,
-                    skippedRecords = totals.skipped,
-                    failedRecords = totals.failed,
-                    categorySummaries = categorySummaries,
-                    typeSummaries = summaries,
-                    diagnostics = diagnostics,
-                    shareableReportText = reportText,
+                    progress = progress,
                 )
             }
+
+        suspend fun analyzeStagedAppleHealthExport(
+            uri: Uri,
+            fingerprint: AppleHealthExportFingerprint,
+            progress: suspend (AppleHealthImportProgress) -> Unit = {},
+        ): AppleHealthImportAnalysisResult =
+            withContext(Dispatchers.IO) {
+                val importLogs = mutableListOf<String>()
+                try {
+                    progress(AppleHealthImportProgress(phase = AppleHealthImportPhase.QUEUED))
+                    importLogs.addImportInfo(
+                        "Stage started: Copying Apple Health export into app storage for analysis " +
+                            "providerBytes=${fingerprint.size ?: -1}",
+                    )
+                    val stagedExport = AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+                    importLogs.addImportInfo(
+                        "Stage finished: Copying Apple Health export into app storage for analysis " +
+                            "bytes=${stagedExport.bytes} reused=${stagedExport.reused}",
+                    )
+                    analyzeAppleHealthExportSource(
+                        uri = uri,
+                        exportLabel = stagedExport.file.absolutePath,
+                        openInput = stagedExport.file::inputStream,
+                        progress = progress,
+                        importLogs = importLogs,
+                    )
+                } catch (error: Exception) {
+                    AppleHealthImportStagingStore.clear(context)
+                    throw error
+                }
+            }
+
+        private suspend fun analyzeAppleHealthExportSource(
+            uri: Uri,
+            exportLabel: String,
+            openInput: () -> InputStream?,
+            progress: suspend (AppleHealthImportProgress) -> Unit,
+            importLogs: MutableList<String> = mutableListOf(),
+        ): AppleHealthImportAnalysisResult {
+            fun log(message: String) {
+                importLogs.addImportInfo(message)
+            }
+            log("Apple Health analysis requested uri=$uri")
+            val analysisState = StreamingAppleHealthScanAnalysisState(
+                mindfulnessAvailable = importRepository.isMindfulnessAvailable(),
+                onProgress = progress,
+                importLogs = importLogs,
+            )
+            val parsed = parseExport(
+                exportLabel = exportLabel,
+                openInput = openInput,
+                analysisState,
+                importLogs,
+                progress,
+                options = AppleHealthParseOptions(parseRouteFiles = false, parseRecordDetails = false),
+            )
+
+            progress(analysisState.progressSnapshot(AppleHealthImportPhase.CONVERTING))
+            log("Stage started: Summarizing compatible categories")
+            val summaries = analysisState.typeSummaries()
+            val totals = summaries.totals()
+            val diagnostics = analysisState.diagnostics()
+            val diagnosticSummaries = analysisState.diagnosticSummaries()
+            val categorySummaries = analysisState.categorySummaries()
+            log(
+                "Stage finished: Summarizing compatible categories compatible=${totals.converted} " +
+                    "categories=${categorySummaries.size} unsupported=${totals.unsupported} " +
+                    "skipped=${totals.skipped} failed=${totals.failed}",
+            )
+            log(
+                "Analysis completed converted=${totals.converted} " +
+                    "categories=${categorySummaries.size} unsupported=${totals.unsupported} " +
+                    "skipped=${totals.skipped} failed=${totals.failed} " +
+                    "diagnostics=${diagnostics.size}",
+            )
+            progress(analysisState.progressSnapshot(AppleHealthImportPhase.BUILDING_REPORT))
+            log(
+                "Stage started: Building report diagnostics=${diagnostics.size} " +
+                    "diagnosticGroups=${diagnosticSummaries.size} typeSummaries=${summaries.size}",
+            )
+            log("Stage finished: Building report")
+            val reportText = buildReportText(
+                parsed = parsed,
+                imported = 0,
+                selectedCategories = null,
+                summaries = summaries,
+                categorySummaries = categorySummaries,
+                diagnostics = diagnostics,
+                diagnosticSummaries = diagnosticSummaries,
+                importLogs = importLogs,
+            )
+            return AppleHealthImportAnalysisResult(
+                parsedRecords = parsed.parsedRecords,
+                parsedWorkouts = parsed.parsedWorkouts,
+                parsedCorrelations = parsed.parsedCorrelations,
+                parsedActivitySummaries = parsed.parsedActivitySummaries,
+                convertedRecords = totals.converted,
+                unsupportedElements = totals.unsupported,
+                skippedRecords = totals.skipped,
+                failedRecords = totals.failed,
+                categorySummaries = categorySummaries,
+                typeSummaries = summaries,
+                diagnostics = diagnostics,
+                shareableReportText = reportText,
+            )
+        }
 
         suspend fun fingerprintOf(uri: Uri): AppleHealthExportFingerprint =
             withContext(Dispatchers.IO) {

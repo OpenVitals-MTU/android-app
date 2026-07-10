@@ -266,7 +266,7 @@ class SettingsViewModel @Inject constructor(
 
         runCatching {
             appleHealthImportWorkController.persistReadPermission(uri)
-            appleHealthImportService.analyzeAppleHealthExport(uri) { progress ->
+            appleHealthImportService.analyzeStagedAppleHealthExport(uri, fingerprint) { progress ->
                 _uiState.value = _uiState.value.copy(
                     appleHealthAnalysisProgress = progress,
                 )

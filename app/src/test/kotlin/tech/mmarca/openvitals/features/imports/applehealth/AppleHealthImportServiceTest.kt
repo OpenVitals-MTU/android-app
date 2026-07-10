@@ -23,6 +23,7 @@ import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
+import java.io.File
 import java.nio.file.Files
 import java.time.Instant
 import java.time.ZoneOffset
@@ -888,6 +889,95 @@ class AppleHealthImportServiceTest {
         assertEquals(zip.size.toLong(), second.bytes)
         assertEquals(first.file, second.file)
         verify(exactly = 1) { resolver.openInputStream(uri) }
+    }
+
+    @Test
+    fun `staging store rejects a short provider copy`() {
+        val bytes = "partial export".toByteArray()
+        val uri = mockk<Uri>()
+        val context = mockk<Context>()
+        val resolver = mockk<ContentResolver>()
+        val filesDir = Files.createTempDirectory("apple-health-short-stage").toFile()
+        val fingerprint = AppleHealthExportFingerprint(
+            displayName = "export.zip",
+            size = bytes.size.toLong() + 100L,
+        )
+
+        every { uri.toString() } returns "content://example/short-apple-health-export.zip"
+        every { context.filesDir } returns filesDir
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(bytes)
+
+        val error = assertThrows(AppleHealthExportCopyException::class.java) {
+            AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+        }
+
+        assertTrue(error.message.orEmpty().contains("reported ${fingerprint.size} byte(s)"))
+        assertTrue(error.message.orEmpty().contains("only ${bytes.size} byte(s) were copied"))
+        assertFalse(File(filesDir, "apple_health_import/staged_export.bin").exists())
+    }
+
+    @Test
+    fun `staged analysis reuses its verified copy for import`() = runTest {
+        val xml =
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
+                    unit="count" value="100" />
+            </HealthData>
+            """.trimIndent()
+        val zip = zipExport(xml)
+        val uri = mockk<Uri>()
+        val context = mockk<Context>()
+        val resolver = mockk<ContentResolver>()
+        val repository = mockk<AppleHealthImportRepository>()
+        val filesDir = Files.createTempDirectory("apple-health-staged-analysis").toFile()
+        val fingerprint = AppleHealthExportFingerprint(displayName = "export.zip", size = zip.size.toLong())
+
+        every { uri.toString() } returns "content://example/staged-analysis-export.zip"
+        every { context.filesDir } returns filesDir
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } answers { ByteArrayInputStream(zip) }
+        every { repository.isMindfulnessAvailable() } returns true
+
+        val result = AppleHealthImportService(context, repository).analyzeStagedAppleHealthExport(uri, fingerprint)
+        val reused = AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+
+        assertEquals(1, result.parsedRecords)
+        assertTrue(result.shareableReportText.contains("Copying Apple Health export into app storage for analysis"))
+        assertTrue(result.shareableReportText.contains("bytes=${zip.size} reused=false"))
+        assertTrue(reused.reused)
+        verify(exactly = 1) { resolver.openInputStream(uri) }
+    }
+
+    @Test
+    fun `failed staged analysis clears the local copy before retry`() = runTest {
+        val malformedXml = "<HealthData><Record".toByteArray()
+        val uri = mockk<Uri>()
+        val context = mockk<Context>()
+        val resolver = mockk<ContentResolver>()
+        val repository = mockk<AppleHealthImportRepository>()
+        val filesDir = Files.createTempDirectory("apple-health-failed-analysis").toFile()
+        val fingerprint = AppleHealthExportFingerprint(
+            displayName = "export.xml",
+            size = malformedXml.size.toLong(),
+        )
+
+        every { uri.toString() } returns "content://example/malformed-export.xml"
+        every { context.filesDir } returns filesDir
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } answers { ByteArrayInputStream(malformedXml) }
+        every { repository.isMindfulnessAvailable() } returns true
+
+        val analysisError = runCatching {
+            AppleHealthImportService(context, repository).analyzeStagedAppleHealthExport(uri, fingerprint)
+        }.exceptionOrNull()
+        val restaged = AppleHealthImportStagingStore.stage(context, uri, fingerprint)
+
+        assertTrue(analysisError is AppleHealthXmlParseException)
+        assertFalse(restaged.reused)
+        verify(exactly = 2) { resolver.openInputStream(uri) }
     }
 
     @Test
