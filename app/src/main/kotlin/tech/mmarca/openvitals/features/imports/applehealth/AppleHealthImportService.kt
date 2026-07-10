@@ -163,6 +163,7 @@ class AppleHealthImportService
                 val converter = AppleHealthImportConverter(
                     mindfulnessAvailable = importRepository.isMindfulnessAvailable(),
                     diagnosticLimit = MaxRawDiagnostics,
+                    reportUnavailableWorkoutRoutes = AppleHealthImportCategory.WORKOUTS in selectedCategories,
                 )
                 // Serializes every onProgress invocation: the worker's progress callback mutates
                 // shared state and must never run concurrently from parse thread + writer.
@@ -187,6 +188,9 @@ class AppleHealthImportService
                 writer.publishProgress = { phase ->
                     progressMutex.withLock { progress(importState.progressSnapshot(phase)) }
                 }
+                if (AppleHealthImportCategory.WORKOUTS !in selectedCategories) {
+                    log("Workout route ZIP scan skipped because Workouts and routes was not selected")
+                }
 
                 // Pipeline: parse+convert (this coroutine) overlaps duplicate-check+insert (writer).
                 val parsed = coroutineScope {
@@ -206,6 +210,9 @@ class AppleHealthImportService
                             state = importState,
                             importLogs = importLogs,
                             progress = progress,
+                            options = AppleHealthParseOptions(
+                                parseRouteFiles = AppleHealthImportCategory.WORKOUTS in selectedCategories,
+                            ),
                         )
 
                         progressMutex.withLock { progress(importState.progressSnapshot(AppleHealthImportPhase.CONVERTING)) }

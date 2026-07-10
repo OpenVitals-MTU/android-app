@@ -429,6 +429,76 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
+    fun `service skips damaged workout routes when workouts are not selected`() = runTest {
+        val xml =
+            """
+            <HealthData>
+                <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Apple Watch"
+                    startDate="2026-01-01 22:00:00 +0000" endDate="2026-01-02 06:00:00 +0000"
+                    value="HKCategoryValueSleepAnalysisAsleepCore" />
+                <Workout workoutActivityType="HKWorkoutActivityTypeRunning" sourceName="Apple Watch"
+                    startDate="2022-06-09 16:13:00 +0000" endDate="2022-06-09 16:43:00 +0000"
+                    duration="30" durationUnit="min">
+                    <WorkoutRoute sourceName="Apple Watch"
+                        startDate="2022-06-09 16:13:00 +0000" endDate="2022-06-09 16:43:00 +0000">
+                        <FileReference path="/workout-routes/route_2022-06-09_4.13pm.gpx" />
+                    </WorkoutRoute>
+                </Workout>
+            </HealthData>
+            """.trimIndent()
+        val routePath = "apple_health_export/workout-routes/route_2022-06-09_4.13pm.gpx"
+        val gpx = buildString {
+            appendLine("<gpx><trk><trkseg>")
+            repeat(2_000) { index ->
+                appendLine("<trkpt lat=\"59.${index.toString().padStart(6, '0')}\" lon=\"24.000000\"><ele>$index</ele></trkpt>")
+            }
+            appendLine("</trkseg></trk></gpx>")
+        }
+        val damagedZip = zipExport(
+            xml,
+            mapOf(routePath to gpx),
+        ).truncateInsideEntry(routePath)
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<AppleHealthImportRepository>()
+        val insertedRecords = slot<List<androidx.health.connect.client.records.Record>>()
+
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(damagedZip)
+        every { repository.isMindfulnessAvailable() } returns true
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        coEvery { repository.insertImportedRecords(capture(insertedRecords)) } just runs
+
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(
+            uri,
+            selectedCategories = setOf(
+                AppleHealthImportCategory.SLEEP,
+                AppleHealthImportCategory.BODY,
+                AppleHealthImportCategory.VITALS,
+                AppleHealthImportCategory.NUTRITION,
+                AppleHealthImportCategory.HYDRATION,
+                AppleHealthImportCategory.MINDFULNESS,
+            ),
+        )
+
+        assertEquals(1, result.parsedRecords)
+        assertEquals(1, result.parsedWorkouts)
+        assertEquals(1, result.importedRecords)
+        assertFalse(result.workoutRoutesIncomplete)
+        assertTrue(insertedRecords.captured.single() is SleepSessionRecord)
+        assertFalse(result.diagnostics.any { it.reasonCode == "route_archive_truncated" })
+        assertFalse(result.diagnostics.any { it.reasonCode == "workout_route_unavailable" })
+        assertTrue(result.shareableReportText.contains("parseRouteFiles=false"))
+        assertTrue(
+            result.shareableReportText.contains(
+                "Workout route ZIP scan skipped because Workouts and routes was not selected",
+            ),
+        )
+        coVerify(exactly = 1) { repository.insertImportedRecords(any()) }
+    }
+
+    @Test
     fun `parser does not recover a truncated route before export xml`() {
         val routePath = "apple_health_export/workout-routes/route_before_export.gpx"
         val zip = zipExport(

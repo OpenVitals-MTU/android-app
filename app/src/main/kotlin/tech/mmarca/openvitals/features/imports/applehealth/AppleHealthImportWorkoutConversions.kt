@@ -23,7 +23,7 @@ internal fun AppleHealthImportConverter.convertWorkouts(
             invalid(workout.workoutActivityType, "Workout is missing endDate.", start.instant.toString())
         }
         val interval = interval(start, end)
-        if (workout.unavailableRoutePaths.isNotEmpty()) {
+        if (reportUnavailableWorkoutRoutes && workout.unavailableRoutePaths.isNotEmpty()) {
             skipped(
                 appleType = workout.workoutActivityType,
                 reasonCode = "workout_route_unavailable",

@@ -20,6 +20,7 @@ internal data class MutableAppleImportTypeStats(
 internal class AppleHealthImportConverter(
     internal val mindfulnessAvailable: Boolean,
     private val diagnosticLimit: Int = Int.MAX_VALUE,
+    internal val reportUnavailableWorkoutRoutes: Boolean = true,
 ) {
     private val diagnostics = mutableListOf<AppleHealthImportDiagnostic>()
     private val diagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
