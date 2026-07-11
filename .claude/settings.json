@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(pacman -Ss '^flutter$')",
+      "Bash(pacman -Q flutter dart)",
+      "Bash(timeout 8 curl -sS -o /dev/null -w \"storage.googleapis.com:%{http_code}\\\\n\" https://storage.googleapis.com)",
+      "Bash(timeout 8 curl -sS -o /dev/null -w \"github.com:%{http_code}\\\\n\" https://github.com)",
+      "Read(//home/manu/Documents/repos/OpenVitals/app/src/main/kotlin/tech/mmarca/openvitals/**)",
+      "Bash(wc -l core/period/*.kt core/geo/*.kt core/presentation/*.kt)",
+      "Read(//home/manu/Documents/repos/OpenVitals/app/src/main/kotlin/tech/mmarca/openvitals/core/period/**)",
+      "Read(//home/manu/Documents/repos/OpenVitals/app/src/main/kotlin/tech/mmarca/openvitals/core/presentation/**)"
+    ]
+  }
+}

@@ -1,0 +1,839 @@
+// ignore_for_file: prefer_initializing_formals
+import 'dart:math' as math;
+
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import '../../core/time/local_date.dart';
+import '../model/heart_models.dart';
+import '../model/activity_models.dart';
+import '../model/sleep_models.dart';
+import '../model/vitals_models.dart';
+import '../preferences/body_energy_calibration.dart';
+import '../preferences/body_profile.dart';
+
+part 'body_energy_timeline.freezed.dart';
+
+/// Faithful port of `BodyEnergyTimeline` from the Kotlin app: the value types
+/// referenced by `DashboardData` plus the 5-minute-bucket timeline algorithm.
+const int bodyEnergyTimelineBucketMinutes = 5;
+const int bodyEnergyTimelineAlgorithmVersion = 2;
+
+enum BodyEnergyConfidence {
+  high('HIGH'),
+  medium('MEDIUM'),
+  low('LOW'),
+  noData('NO_DATA');
+
+  const BodyEnergyConfidence(this.storageName);
+
+  final String storageName;
+
+  static BodyEnergyConfidence? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
+
+enum BodyEnergyBucketState {
+  sleep('SLEEP'),
+  rest('REST'),
+  activity('ACTIVITY'),
+  stress('STRESS'),
+  unmeasurable('UNMEASURABLE');
+
+  const BodyEnergyBucketState(this.storageName);
+
+  final String storageName;
+
+  static BodyEnergyBucketState? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
+
+enum BodyEnergyPrimaryInfluence {
+  sleepRecovery('SLEEP_RECOVERY'),
+  quietRest('QUIET_REST'),
+  exertion('EXERTION'),
+  elevatedHeartRate('ELEVATED_HEART_RATE'),
+  recoveryDebt('RECOVERY_DEBT'),
+  noData('NO_DATA'),
+  steady('STEADY');
+
+  const BodyEnergyPrimaryInfluence(this.storageName);
+
+  final String storageName;
+
+  static BodyEnergyPrimaryInfluence? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
+
+enum BodyEnergyCalibrationMode {
+  automatic('AUTOMATIC'),
+  manualValues('MANUAL_VALUES'),
+  manualZones('MANUAL_ZONES');
+
+  const BodyEnergyCalibrationMode(this.storageName);
+
+  final String storageName;
+
+  static BodyEnergyCalibrationMode? fromStorage(String value) {
+    for (final entry in values) {
+      if (entry.storageName == value) return entry;
+    }
+    return null;
+  }
+}
+
+@freezed
+abstract class BodyEnergyTimelinePoint with _$BodyEnergyTimelinePoint {
+  const factory BodyEnergyTimelinePoint.build({
+    required DateTime time,
+    required int score,
+    required double delta,
+    required BodyEnergyBucketState state,
+    required BodyEnergyConfidence confidence,
+    required double charge,
+    required double intensityDrain,
+    required double stressDrain,
+    required double recoveryDebtDrain,
+    required BodyEnergyPrimaryInfluence primaryInfluence,
+  }) = _BodyEnergyTimelinePoint;
+
+  factory BodyEnergyTimelinePoint({
+    required DateTime time,
+    required int score,
+    required double delta,
+    required BodyEnergyBucketState state,
+    required BodyEnergyConfidence confidence,
+    double? charge,
+    double intensityDrain = 0.0,
+    double stressDrain = 0.0,
+    double recoveryDebtDrain = 0.0,
+    BodyEnergyPrimaryInfluence primaryInfluence =
+        BodyEnergyPrimaryInfluence.steady,
+  }) =>
+      BodyEnergyTimelinePoint.build(
+        time: time,
+        score: score,
+        delta: delta,
+        state: state,
+        confidence: confidence,
+        charge: charge ?? math.max(delta, 0.0),
+        intensityDrain: intensityDrain,
+        stressDrain: stressDrain,
+        recoveryDebtDrain: recoveryDebtDrain,
+        primaryInfluence: primaryInfluence,
+      );
+}
+
+@freezed
+abstract class BodyEnergyInputSummary with _$BodyEnergyInputSummary {
+  const factory BodyEnergyInputSummary({
+    @Default(bodyEnergyTimelineAlgorithmVersion) int algorithmVersion,
+    @Default(bodyEnergyTimelineBucketMinutes) int bucketMinutes,
+    @Default(0) int heartRateSampleCount,
+    @Default(0) int hrvSampleCount,
+    @Default(0) int sleepSessionCount,
+    @Default(0) int workoutCount,
+    @Default(0) int respiratorySampleCount,
+    @Default(false) bool hasRestingHeartRate,
+    @Default(false) bool hasBaselineRestingHeartRate,
+    @Default(false) bool hasObservedMaxHeartRate,
+    @Default(false) bool hasHrvBaseline,
+    @Default(false) bool hasRespiratoryBaseline,
+    int? previousEndScore,
+    @Default(BodyEnergyCalibrationMode.automatic)
+    BodyEnergyCalibrationMode calibrationMode,
+  }) = _BodyEnergyInputSummary;
+}
+
+@freezed
+abstract class BodyEnergyTimeline with _$BodyEnergyTimeline {
+  const factory BodyEnergyTimeline({
+    required LocalDate date,
+    required int startScore,
+    required int currentScore,
+    required int charged,
+    required int drained,
+    required List<BodyEnergyTimelinePoint> points,
+    required BodyEnergyConfidence confidence,
+    required String confidenceReason,
+    @Default(BodyEnergyInputSummary()) BodyEnergyInputSummary inputSummary,
+    DateTime? generatedAt,
+    @Default('') String signature,
+  }) = _BodyEnergyTimeline;
+
+  static BodyEnergyTimeline empty({
+    required LocalDate date,
+    required String reason,
+    BodyEnergyInputSummary inputSummary = const BodyEnergyInputSummary(),
+  }) =>
+      BodyEnergyTimeline(
+        date: date,
+        startScore: 50,
+        currentScore: 50,
+        charged: 0,
+        drained: 0,
+        points: const [],
+        confidence: BodyEnergyConfidence.noData,
+        confidenceReason: reason,
+        inputSummary: inputSummary,
+      );
+}
+
+/// Inputs for [calculateBodyEnergyTimeline]. The Kotlin `zone` parameter is
+/// dropped in favour of device-local conversions (consistent with the rest of
+/// the port).
+class BodyEnergyTimelineInputs {
+  BodyEnergyTimelineInputs({
+    required this.date,
+    required this.heartRateSamples,
+    this.hrvSamples = const <HrvSample>[],
+    this.sleepSessions = const <SleepData>[],
+    this.workouts = const <ExerciseData>[],
+    this.respiratoryRateSamples = const <RespiratoryRateEntry>[],
+    this.restingHeartRateBpm,
+    this.baselineRestingHeartRateBpm,
+    this.observedMaxHeartRateBpm,
+    this.hrvBaselineRmssdMs,
+    this.respiratoryRateBaseline,
+    this.previousEndScore,
+    this.calibration = BodyEnergyCalibration.automatic,
+    this.bodyProfile = const BodyProfile(),
+    DateTime? now,
+  }) : now = now ?? DateTime.now().toUtc();
+
+  final LocalDate date;
+  final List<HeartRateSample> heartRateSamples;
+  final List<HrvSample> hrvSamples;
+  final List<SleepData> sleepSessions;
+  final List<ExerciseData> workouts;
+  final List<RespiratoryRateEntry> respiratoryRateSamples;
+  final int? restingHeartRateBpm;
+  final int? baselineRestingHeartRateBpm;
+  final int? observedMaxHeartRateBpm;
+  final double? hrvBaselineRmssdMs;
+  final double? respiratoryRateBaseline;
+  final int? previousEndScore;
+  final BodyEnergyCalibration calibration;
+  final BodyProfile bodyProfile;
+  final DateTime now;
+}
+
+BodyEnergyTimeline calculateBodyEnergyTimeline(
+  BodyEnergyTimelineInputs inputs,
+) {
+  final dayStart = inputs.date.atTimeInstant(0);
+  final dayEnd = inputs.date.plusDays(1).atTimeInstant(0);
+  final usableEnd = _minInstant(
+    dayEnd,
+    inputs.date == LocalDate.now() ? inputs.now : dayEnd,
+  );
+  final inputSummary = _inputSummary(
+    inputs,
+    heartRateSampleCount: inputs.heartRateSamples
+        .where(
+          (sample) =>
+              !sample.time.isBefore(dayStart) && sample.time.isBefore(dayEnd),
+        )
+        .length,
+  );
+  final totalMinutes = math.max(0, usableEnd.difference(dayStart).inMinutes);
+  final bucketCount =
+      (totalMinutes + bodyEnergyTimelineBucketMinutes - 1) ~/
+          bodyEnergyTimelineBucketMinutes;
+  if (bucketCount <= 0) {
+    return BodyEnergyTimeline.empty(
+      date: inputs.date,
+      reason: 'No timeline window is available.',
+      inputSummary: inputSummary,
+    );
+  }
+
+  final sortedHeartRate = inputs.heartRateSamples
+      .where(
+        (sample) =>
+            !sample.time.isBefore(dayStart) && sample.time.isBefore(dayEnd),
+      )
+      .toList()
+    ..sort((a, b) => a.time.compareTo(b.time));
+  final heartRateAverages = _bucketedAverages<HeartRateSample>(
+    sortedHeartRate,
+    bucketCount: bucketCount,
+    dayStart: dayStart,
+    time: (sample) => sample.time,
+    value: (sample) => sample.beatsPerMinute.toDouble(),
+  );
+  final hrvAverages = _bucketedAverages<HrvSample>(
+    inputs.hrvSamples,
+    bucketCount: bucketCount,
+    dayStart: dayStart,
+    time: (sample) => sample.time,
+    value: (sample) => sample.rmssdMs,
+  );
+  final respiratoryAverages = _bucketedAverages<RespiratoryRateEntry>(
+    inputs.respiratoryRateSamples,
+    bucketCount: bucketCount,
+    dayStart: dayStart,
+    time: (sample) => sample.time,
+    value: (sample) => sample.breathsPerMinute,
+  );
+  final intensityContext = _resolveIntensityContext(inputs, sortedHeartRate);
+  final hasSleep = inputs.sleepSessions.any(
+    (session) =>
+        session.endTime.isAfter(dayStart) && session.startTime.isBefore(dayEnd),
+  );
+  if (sortedHeartRate.isEmpty && !hasSleep) {
+    return BodyEnergyTimeline.empty(
+      date: inputs.date,
+      reason: 'Heart rate or sleep data is needed for Body Energy.',
+      inputSummary: inputSummary,
+    );
+  }
+
+  var score = (inputs.previousEndScore ?? 50).clamp(0, 100).toDouble();
+  final startScore = score.round();
+  var charged = 0.0;
+  var drained = 0.0;
+  var continuousActivityMinutes = 0.0;
+  var recoveryDebtBuckets = 0;
+  var highConfidenceBuckets = 0;
+  var mediumConfidenceBuckets = 0;
+  var lowConfidenceBuckets = 0;
+
+  final points = <BodyEnergyTimelinePoint>[];
+  for (var index = 0; index < bucketCount; index++) {
+    final bucketStart = dayStart.add(
+      Duration(minutes: index * bodyEnergyTimelineBucketMinutes),
+    );
+    final bucketEnd = _minInstant(
+      bucketStart.add(
+        const Duration(minutes: bodyEnergyTimelineBucketMinutes),
+      ),
+      usableEnd,
+    );
+    final bucketMinutes =
+        bucketEnd.difference(bucketStart).inSeconds.toDouble() / 60.0;
+    if (bucketMinutes <= 0.0) continue;
+
+    final avgHeartRate = heartRateAverages[index];
+    final sleepMinutes = inputs.sleepSessions.fold<double>(
+      0.0,
+      (sum, session) =>
+          sum +
+          _overlapMinutes(
+            session.startTime,
+            session.endTime,
+            bucketStart,
+            bucketEnd,
+          ),
+    );
+    final workoutMinutes = inputs.workouts.fold<double>(
+      0.0,
+      (sum, workout) =>
+          sum +
+          _overlapMinutes(
+            workout.startTime,
+            workout.endTime,
+            bucketStart,
+            bucketEnd,
+          ),
+    );
+    final hrvFactor = _hrvRecoveryFactor(
+      inputs.hrvBaselineRmssdMs,
+      hrvAverages[index],
+    );
+    final respirationFactor = _respiratoryStressFactor(
+      inputs.respiratoryRateBaseline,
+      respiratoryAverages[index],
+    );
+    final zone = avgHeartRate != null ? intensityContext.zoneFor(avgHeartRate) : 0;
+    final activeByHeartRate = zone >= 2;
+    final active = workoutMinutes > 0.0 || activeByHeartRate;
+
+    continuousActivityMinutes =
+        active ? continuousActivityMinutes + bucketMinutes : 0.0;
+    final double fatigueMultiplier;
+    if (continuousActivityMinutes >= 90.0) {
+      fatigueMultiplier = 1.5;
+    } else if (continuousActivityMinutes >= 45.0) {
+      fatigueMultiplier = 1.2;
+    } else {
+      fatigueMultiplier = 1.0;
+    }
+    final exerciseMultiplier = workoutMinutes > 0.0 ? 1.15 : 1.0;
+    final double rawStressDrain;
+    if (avgHeartRate == null) {
+      rawStressDrain = 0.0;
+    } else {
+      final resting = intensityContext.restingHeartRateBpm;
+      if (resting == null || workoutMinutes > 0.0 || sleepMinutes > 0.0) {
+        rawStressDrain = 0.0;
+      } else if (avgHeartRate >= resting + 25) {
+        rawStressDrain = 0.05 * bucketMinutes;
+      } else if (avgHeartRate >= resting + 15) {
+        rawStressDrain = 0.025 * bucketMinutes;
+      } else {
+        rawStressDrain = 0.0;
+      }
+    }
+    final double rawIntensityDrain;
+    if (avgHeartRate != null) {
+      rawIntensityDrain = _drainRateForZone(zone) *
+          bucketMinutes *
+          exerciseMultiplier *
+          fatigueMultiplier;
+    } else if (workoutMinutes >= 2.0) {
+      rawIntensityDrain = 0.05 * workoutMinutes;
+    } else {
+      rawIntensityDrain = 0.0;
+    }
+    final rawRecoveryDebtDrain =
+        recoveryDebtBuckets > 0 ? 0.015 * bucketMinutes : 0.0;
+    final drainMultiplier = math.max(
+      hrvFactor.drainMultiplier,
+      respirationFactor.drainMultiplier,
+    );
+    final intensityDrain = rawIntensityDrain * drainMultiplier;
+    final stressDrain = rawStressDrain * drainMultiplier;
+    final recoveryDebtDrain = rawRecoveryDebtDrain * drainMultiplier;
+    final drain = intensityDrain + stressDrain + recoveryDebtDrain;
+
+    if (zone >= 3 && workoutMinutes > 0.0) {
+      recoveryDebtBuckets =
+          math.max(recoveryDebtBuckets, math.min(zone * 6, 36));
+    } else if (recoveryDebtBuckets > 0) {
+      recoveryDebtBuckets -= 1;
+    }
+
+    final bool restEligible;
+    if (avgHeartRate == null) {
+      restEligible = false;
+    } else {
+      final resting = intensityContext.restingHeartRateBpm;
+      restEligible = resting != null && avgHeartRate <= resting + 8;
+    }
+    final double charge;
+    if (sleepMinutes > 0.0) {
+      charge = 0.10 *
+          sleepMinutes *
+          hrvFactor.chargeMultiplier /
+          respirationFactor.chargePenalty;
+    } else if (restEligible && recoveryDebtBuckets == 0 && drain <= 0.05) {
+      charge = 0.015 * bucketMinutes;
+    } else {
+      charge = 0.0;
+    }
+
+    final delta = charge - drain;
+    score = (score + delta).clamp(0.0, 100.0);
+    if (delta > 0) {
+      charged += delta;
+    } else {
+      drained += -delta;
+    }
+
+    final BodyEnergyBucketState state;
+    if (sleepMinutes > 0.0) {
+      state = BodyEnergyBucketState.sleep;
+    } else if (workoutMinutes > 0.0 || zone >= 2) {
+      state = BodyEnergyBucketState.activity;
+    } else if (stressDrain > 0.0) {
+      state = BodyEnergyBucketState.stress;
+    } else if (restEligible) {
+      state = BodyEnergyBucketState.rest;
+    } else if (avgHeartRate == null) {
+      state = BodyEnergyBucketState.unmeasurable;
+    } else {
+      state = BodyEnergyBucketState.rest;
+    }
+    final primaryInfluence = _primaryInfluence(
+      charge: charge,
+      intensityDrain: intensityDrain,
+      stressDrain: stressDrain,
+      recoveryDebtDrain: recoveryDebtDrain,
+      sleepMinutes: sleepMinutes,
+      state: state,
+    );
+    final BodyEnergyConfidence confidence;
+    if (avgHeartRate == null && sleepMinutes <= 0.0) {
+      confidence = BodyEnergyConfidence.low;
+    } else if (intensityContext.confidence == BodyEnergyConfidence.high) {
+      confidence = BodyEnergyConfidence.high;
+    } else if (intensityContext.confidence == BodyEnergyConfidence.medium) {
+      confidence = BodyEnergyConfidence.medium;
+    } else {
+      confidence = BodyEnergyConfidence.low;
+    }
+    switch (confidence) {
+      case BodyEnergyConfidence.high:
+        highConfidenceBuckets += 1;
+      case BodyEnergyConfidence.medium:
+        mediumConfidenceBuckets += 1;
+      case BodyEnergyConfidence.low:
+        lowConfidenceBuckets += 1;
+      case BodyEnergyConfidence.noData:
+        break;
+    }
+    points.add(
+      BodyEnergyTimelinePoint.build(
+        time: bucketStart,
+        score: score.round().clamp(0, 100),
+        delta: delta,
+        state: state,
+        confidence: confidence,
+        charge: charge,
+        intensityDrain: intensityDrain,
+        stressDrain: stressDrain,
+        recoveryDebtDrain: recoveryDebtDrain,
+        primaryInfluence: primaryInfluence,
+      ),
+    );
+  }
+
+  final confidence = _overallConfidence(
+    high: highConfidenceBuckets,
+    medium: mediumConfidenceBuckets,
+    low: lowConfidenceBuckets,
+    total: points.length,
+  );
+  return BodyEnergyTimeline(
+    date: inputs.date,
+    startScore: startScore,
+    currentScore: points.isEmpty ? startScore : points.last.score,
+    charged: charged.round(),
+    drained: drained.round(),
+    points: points,
+    confidence: confidence,
+    confidenceReason: _confidenceReason(confidence, intensityContext),
+    inputSummary: inputSummary,
+  );
+}
+
+BodyEnergyInputSummary _inputSummary(
+  BodyEnergyTimelineInputs inputs, {
+  required int heartRateSampleCount,
+}) =>
+    BodyEnergyInputSummary(
+      algorithmVersion: bodyEnergyTimelineAlgorithmVersion,
+      bucketMinutes: bodyEnergyTimelineBucketMinutes,
+      heartRateSampleCount: heartRateSampleCount,
+      hrvSampleCount: inputs.hrvSamples.length,
+      sleepSessionCount: inputs.sleepSessions.length,
+      workoutCount: inputs.workouts.length,
+      respiratorySampleCount: inputs.respiratoryRateSamples.length,
+      hasRestingHeartRate: inputs.restingHeartRateBpm != null,
+      hasBaselineRestingHeartRate: inputs.baselineRestingHeartRateBpm != null,
+      hasObservedMaxHeartRate: inputs.observedMaxHeartRateBpm != null,
+      hasHrvBaseline: inputs.hrvBaselineRmssdMs != null,
+      hasRespiratoryBaseline: inputs.respiratoryRateBaseline != null,
+      previousEndScore: inputs.previousEndScore,
+      calibrationMode: _calibrationMode(
+        inputs.calibration,
+        inputs.bodyProfile,
+        inputs.date,
+      ),
+    );
+
+BodyEnergyCalibrationMode _calibrationMode(
+  BodyEnergyCalibration calibration,
+  BodyProfile bodyProfile,
+  LocalDate date,
+) {
+  final normalizedCalibration = calibration.normalized();
+  final normalizedProfile = bodyProfile.normalized(today: date);
+  if (normalizedCalibration.useManualZones &&
+      normalizedCalibration.manualZoneThresholdsBpm != null) {
+    return BodyEnergyCalibrationMode.manualZones;
+  }
+  if (normalizedProfile.maxHeartRateBpm != null ||
+      normalizedProfile.restingHeartRateBpm != null ||
+      normalizedProfile.birthYear != null) {
+    return BodyEnergyCalibrationMode.manualValues;
+  }
+  return BodyEnergyCalibrationMode.automatic;
+}
+
+BodyEnergyPrimaryInfluence _primaryInfluence({
+  required double charge,
+  required double intensityDrain,
+  required double stressDrain,
+  required double recoveryDebtDrain,
+  required double sleepMinutes,
+  required BodyEnergyBucketState state,
+}) {
+  if (state == BodyEnergyBucketState.unmeasurable) {
+    return BodyEnergyPrimaryInfluence.noData;
+  }
+  if (charge > 0.0 && sleepMinutes > 0.0) {
+    return BodyEnergyPrimaryInfluence.sleepRecovery;
+  }
+  if (charge > 0.0) return BodyEnergyPrimaryInfluence.quietRest;
+
+  final maxDrain =
+      math.max(intensityDrain, math.max(stressDrain, recoveryDebtDrain));
+  if (maxDrain <= 0.0) return BodyEnergyPrimaryInfluence.steady;
+  if (maxDrain == intensityDrain) return BodyEnergyPrimaryInfluence.exertion;
+  if (maxDrain == stressDrain) {
+    return BodyEnergyPrimaryInfluence.elevatedHeartRate;
+  }
+  return BodyEnergyPrimaryInfluence.recoveryDebt;
+}
+
+class _IntensityContext {
+  const _IntensityContext({
+    required this.restingHeartRateBpm,
+    required this.maxHeartRateBpm,
+    required this.manualZones,
+    required this.confidence,
+  });
+
+  final int? restingHeartRateBpm;
+  final int? maxHeartRateBpm;
+  final HeartZoneThresholds? manualZones;
+  final BodyEnergyConfidence confidence;
+
+  int zoneFor(double heartRateBpm) {
+    final zones = manualZones;
+    if (zones != null) {
+      if (heartRateBpm >= zones.zone5LowerBpm) return 5;
+      if (heartRateBpm >= zones.zone4LowerBpm) return 4;
+      if (heartRateBpm >= zones.zone3LowerBpm) return 3;
+      if (heartRateBpm >= zones.zone2LowerBpm) return 2;
+      if (heartRateBpm >= zones.zone1LowerBpm) return 1;
+      return 0;
+    }
+    final resting = restingHeartRateBpm;
+    if (resting == null) return 0;
+    final max = maxHeartRateBpm;
+    if (max == null) return 0;
+    if (max <= resting) return 0;
+    final reserve = ((heartRateBpm - resting) / (max - resting).toDouble())
+        .clamp(0.0, 1.0);
+    if (reserve >= 0.90) return 5;
+    if (reserve >= 0.75) return 4;
+    if (reserve >= 0.60) return 3;
+    if (reserve >= 0.45) return 2;
+    if (reserve >= 0.30) return 1;
+    return 0;
+  }
+}
+
+_IntensityContext _resolveIntensityContext(
+  BodyEnergyTimelineInputs inputs,
+  List<HeartRateSample> heartRateSamples,
+) {
+  final calibration = inputs.calibration.normalized();
+  final profile = inputs.bodyProfile.normalized(today: inputs.date);
+  if (calibration.useManualZones &&
+      calibration.manualZoneThresholdsBpm != null) {
+    return _IntensityContext(
+      restingHeartRateBpm: profile.restingHeartRateBpm ??
+          inputs.restingHeartRateBpm ??
+          inputs.baselineRestingHeartRateBpm ??
+          _estimatedRestingHeartRate(heartRateSamples),
+      maxHeartRateBpm: profile.maxHeartRateBpm,
+      manualZones: calibration.manualZoneThresholdsBpm,
+      confidence: BodyEnergyConfidence.high,
+    );
+  }
+
+  final resting = profile.restingHeartRateBpm ??
+      inputs.restingHeartRateBpm ??
+      inputs.baselineRestingHeartRateBpm ??
+      _estimatedRestingHeartRate(heartRateSamples);
+  final observedMaxCandidates = <int>[
+    if (profile.maxHeartRateBpm != null) profile.maxHeartRateBpm!,
+    if (inputs.observedMaxHeartRateBpm != null) inputs.observedMaxHeartRateBpm!,
+    if (heartRateSamples.isNotEmpty)
+      heartRateSamples
+          .map((sample) => sample.beatsPerMinute)
+          .reduce(math.max),
+  ];
+  final observedMax = observedMaxCandidates.isEmpty
+      ? null
+      : observedMaxCandidates.reduce(math.max);
+  final ageYears = profile.ageYears(today: inputs.date);
+  final ageMax = ageYears != null ? 220 - ageYears : null;
+  final int? maxHeartRate;
+  if (profile.maxHeartRateBpm != null) {
+    maxHeartRate = profile.maxHeartRateBpm;
+  } else if (resting != null &&
+      observedMax != null &&
+      observedMax >= math.max(150, resting + 60)) {
+    maxHeartRate = observedMax;
+  } else if (ageMax != null) {
+    maxHeartRate = ageMax;
+  } else if (resting != null && observedMax != null) {
+    maxHeartRate = math.max(observedMax + 10, resting + 70);
+  } else if (resting != null) {
+    maxHeartRate = resting + 70;
+  } else {
+    maxHeartRate = null;
+  }
+  final BodyEnergyConfidence confidence;
+  if (profile.maxHeartRateBpm != null && resting != null) {
+    confidence = BodyEnergyConfidence.high;
+  } else if (resting != null &&
+      observedMax != null &&
+      maxHeartRate == observedMax) {
+    confidence = BodyEnergyConfidence.medium;
+  } else if (resting != null && ageMax != null) {
+    confidence = BodyEnergyConfidence.medium;
+  } else if (resting != null && maxHeartRate != null) {
+    confidence = BodyEnergyConfidence.low;
+  } else {
+    confidence = BodyEnergyConfidence.low;
+  }
+  return _IntensityContext(
+    restingHeartRateBpm: resting,
+    maxHeartRateBpm: maxHeartRate,
+    manualZones: null,
+    confidence: confidence,
+  );
+}
+
+class _HrvFactor {
+  const _HrvFactor(this.drainMultiplier, this.chargeMultiplier);
+
+  final double drainMultiplier;
+  final double chargeMultiplier;
+}
+
+class _RespiratoryFactor {
+  const _RespiratoryFactor(this.drainMultiplier, this.chargePenalty);
+
+  final double drainMultiplier;
+  final double chargePenalty;
+}
+
+_HrvFactor _hrvRecoveryFactor(double? baseline, double? average) {
+  if (baseline == null || average == null) return const _HrvFactor(1.0, 1.0);
+  if (average < baseline * 0.75) return const _HrvFactor(1.18, 0.75);
+  if (average < baseline * 0.90) return const _HrvFactor(1.08, 0.90);
+  if (average > baseline * 1.10) return const _HrvFactor(0.96, 1.12);
+  return const _HrvFactor(1.0, 1.0);
+}
+
+_RespiratoryFactor _respiratoryStressFactor(double? baseline, double? average) {
+  if (baseline == null || average == null) {
+    return const _RespiratoryFactor(1.0, 1.0);
+  }
+  if (average >= baseline + 3.0) return const _RespiratoryFactor(1.12, 1.15);
+  if (average >= baseline + 1.5) return const _RespiratoryFactor(1.05, 1.06);
+  return const _RespiratoryFactor(1.0, 1.0);
+}
+
+double _drainRateForZone(int zone) {
+  switch (zone) {
+    case 1:
+      return 0.03;
+    case 2:
+      return 0.07;
+    case 3:
+      return 0.14;
+    case 4:
+      return 0.25;
+    case 5:
+      return 0.40;
+    default:
+      return 0.0;
+  }
+}
+
+BodyEnergyConfidence _overallConfidence({
+  required int high,
+  required int medium,
+  required int low,
+  required int total,
+}) {
+  if (total == 0) return BodyEnergyConfidence.noData;
+  final covered = high + medium + low;
+  if (covered == 0) return BodyEnergyConfidence.noData;
+  final highRatio = high / total.toDouble();
+  final mediumOrHighRatio = (high + medium) / total.toDouble();
+  if (highRatio >= 0.55) return BodyEnergyConfidence.high;
+  if (mediumOrHighRatio >= 0.55) return BodyEnergyConfidence.medium;
+  return BodyEnergyConfidence.low;
+}
+
+String _confidenceReason(
+  BodyEnergyConfidence confidence,
+  _IntensityContext context,
+) {
+  switch (confidence) {
+    case BodyEnergyConfidence.high:
+      return 'Heart-rate intensity has strong calibration.';
+    case BodyEnergyConfidence.medium:
+      return 'Heart-rate intensity uses observed or age-based calibration.';
+    case BodyEnergyConfidence.low:
+      if (context.restingHeartRateBpm == null ||
+          context.maxHeartRateBpm == null) {
+        return 'Calibration is incomplete, so automatic estimates are conservative.';
+      }
+      return 'Some timeline buckets have sparse Health Connect data.';
+    case BodyEnergyConfidence.noData:
+      return 'No usable Health Connect data was available.';
+  }
+}
+
+int? _estimatedRestingHeartRate(List<HeartRateSample> samples) {
+  if (samples.isEmpty) return null;
+  final sorted = samples.map((sample) => sample.beatsPerMinute).toList()..sort();
+  final index =
+      ((sorted.length - 1) * 0.1).round().clamp(0, sorted.length - 1);
+  return sorted[index].clamp(40, 100);
+}
+
+double _overlapMinutes(
+  DateTime sourceStart,
+  DateTime sourceEnd,
+  DateTime start,
+  DateTime end,
+) {
+  final overlapStart = sourceStart.isAfter(start) ? sourceStart : start;
+  final overlapEnd = sourceEnd.isBefore(end) ? sourceEnd : end;
+  if (!overlapEnd.isAfter(overlapStart)) return 0.0;
+  return overlapEnd.difference(overlapStart).inSeconds.toDouble() / 60.0;
+}
+
+List<double?> _bucketedAverages<T>(
+  List<T> samples, {
+  required int bucketCount,
+  required DateTime dayStart,
+  required DateTime Function(T) time,
+  required double Function(T) value,
+}) {
+  if (bucketCount <= 0 || samples.isEmpty) {
+    return List<double?>.filled(math.max(bucketCount, 0), null);
+  }
+  final sums = List<double>.filled(bucketCount, 0.0);
+  final counts = List<int>.filled(bucketCount, 0);
+  for (final sample in samples) {
+    final minutesFromStart = time(sample).difference(dayStart).inMinutes;
+    if (minutesFromStart < 0) continue;
+    final bucketIndex = minutesFromStart ~/ bodyEnergyTimelineBucketMinutes;
+    if (bucketIndex >= 0 && bucketIndex < bucketCount) {
+      final sampleValue = value(sample);
+      if (sampleValue.isFinite) {
+        sums[bucketIndex] += sampleValue;
+        counts[bucketIndex] += 1;
+      }
+    }
+  }
+  return List<double?>.generate(
+    bucketCount,
+    (index) => counts[index] > 0 ? sums[index] / counts[index] : null,
+  );
+}
+
+DateTime _minInstant(DateTime a, DateTime b) => a.isBefore(b) ? a : b;

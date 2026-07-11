@@ -1,0 +1,32 @@
+/* ============================================================================
+   OpenVitals — Spacing (4dp Material grid) & component metrics
+   Values used throughout the source: card padding 16, metric-tile padding 12,
+   dashboard action height ~48, icon-surface button 52, top-bar 64.
+   ========================================================================= */
+
+:root {
+  /* 4dp base grid */
+  --ov-space-1:  4px;
+  --ov-space-2:  8px;
+  --ov-space-3:  12px;
+  --ov-space-4:  16px;
+  --ov-space-5:  20px;
+  --ov-space-6:  24px;
+  --ov-space-8:  32px;
+  --ov-space-10: 40px;
+  --ov-space-12: 48px;
+
+  /* Screen gutters */
+  --ov-screen-gutter: 16px;
+
+  /* Component metrics (from source) */
+  --ov-card-padding:        16px;  /* OpenVitalsCardHorizontalPadding */
+  --ov-metric-tile-padding: 12px;  /* OpenVitalsMetricTilePadding */
+  --ov-metric-tile-gap:     8px;   /* OpenVitalsMetricTileSpacing */
+  --ov-section-gap:         8px;   /* OpenVitalsSectionSpacing */
+  --ov-action-row-height:   48px;  /* dashboard quick-action height */
+  --ov-icon-surface-size:   52px;  /* OpenVitalsIconSurfaceButton */
+  --ov-icon-button-size:    44px;  /* min touch target */
+  --ov-top-bar-height:      64px;
+  --ov-nav-bar-height:      80px;
+}

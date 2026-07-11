@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The 1x1 one-tap beverage tile: the whole surface logs the drink. Ported from
+    the Kotlin `res/xml/home_quick_beverage_one_tap_widget_info.xml` — deliberately
+    non-resizable (no resizeMode, no maxResize*), so the single 88x88dp size bucket
+    is the only thing it ever has to render. Same `android:configure` deviation as
+    the 2x1: MainActivity, because the drink catalog lives in Dart.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="1800000"
+    android:description="@string/home_quick_beverage_one_tap_widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:configure="tech.mmarca.openvitals.MainActivity"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

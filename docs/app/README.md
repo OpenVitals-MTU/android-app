@@ -10,4 +10,4 @@ These pages document user-facing behavior that cuts across several feature areas
 - [Local and connected editions](local-and-connected-editions.md): boundary between the local app and planned connected app work.
 - [FAQ](faq.md): common support answers about uploads, permissions, old data, editing, routes, sensors, and notifications.
 - [Screenshots](screenshots.md): image inventory for app-facing documentation.
-- [Support](support.md): support boundaries, translation links, useful user docs, and privacy expectations for diagnostics.
+- [Support](support.md): support boundaries, useful user docs, and privacy expectations for diagnostics.

@@ -38,6 +38,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
 - Health Connect permission onboarding with clear data categories and a one-tap full setup option
 - Manual logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrate entries, body measurements, vitals, mindfulness, and activities
+- Home-screen widgets for key metrics and one-tap beverage logging
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - GPX/KML/KMZ route import, FIT activity/course/workout import, offline PMTiles/Mapsforge map packs, and GPS activity recording with review before saving
@@ -57,7 +58,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 
 - Try the latest beta from Google Play or Codeberg releases
 - Report bugs and feature requests on [Codeberg issues](https://codeberg.org/OpenVitals/android-app/issues)
-- Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/)
+- Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/) — see [`docs/engineering/translations.md`](docs/engineering/translations.md)
 - Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
 - Star or follow the project on [Codeberg](https://codeberg.org/OpenVitals/android-app) or the [GitHub mirror](https://github.com/mmarca-tech/OpenVitals)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
@@ -87,6 +88,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Write-permission requests available during one-tap setup or from Add entry and metric entry screens, while dashboard views stay read-only
 - Daily Readiness, Body Energy, Training Readiness, and Stress Tracking screens with rule-based local explanations and confidence context
 - Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
+- Home-screen widgets for steps, hydration, and a configurable metric, plus one-tap beverage-logging widgets
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
 - Data Importers setting for supported Apple Health `export.xml` or `export.zip` records and FIT activity/course/workout files
@@ -124,19 +126,22 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
   - Cycle tracking: sensitive optional access, grouped separately so you can grant or skip it explicitly
   - Manual entry write access: available from one-tap onboarding or when you use Add entry or a metric entry screen that needs it
 - Permissions can be managed later in Settings
-- Health Connect remains the source of truth; OpenVitals does not store health records locally
+- Health Connect remains the source of truth; OpenVitals does not store health records locally (a small local database caches derived summaries only)
 - Imported Apple Health export records are written to Health Connect and are not uploaded to an OpenVitals service
 
 The merged app manifest does not request the `INTERNET` permission.
 
+Full privacy statement: [`PRIVACY.md`](PRIVACY.md).
+
 ## Platform requirements
 
-- Android only
+- Android only today
 - `minSdk 26`
 - `compileSdk 37`
 - `targetSdk 36`
-- JDK 17 / Java 17 toolchain
 - Health Connect required
+
+The app is built with Flutter, and the iOS target in [`ios/`](ios) still builds, but no HealthKit bridge exists yet: on any platform other than Android the health backend resolves to `UnsupportedHealthDataSource` and every read returns empty. Android is the only shipping platform.
 
 Health Connect platform notes:
 
@@ -144,44 +149,58 @@ Health Connect platform notes:
 - On Android 13 and older, the Health Connect app must be installed separately
 - Health Connect is not supported in work profiles
 - Mindfulness sessions require a Health Connect provider version that supports `FEATURE_MINDFULNESS_SESSION`
-- The app uses `androidx.health.connect:connect-client` 1.2.0-alpha04 so AndroidX maps newer activity, mindfulness, and aggregation APIs to the current platform permissions
+- The app uses `androidx.health.connect:connect-client` 1.2.0-alpha04 (via the in-repo [`packages/health_connect_native`](packages/health_connect_native) plugin) so AndroidX maps newer activity, mindfulness, and aggregation APIs to the current platform permissions
 
 ## Build from source
 
-1. Install a recent Android Studio with Android SDK 37.0 and JDK 17 support.
-2. Clone this repository.
-3. Open the project in Android Studio, or build from the command line.
+Requirements:
 
-In a complete checkout:
+- Flutter SDK 3.44.x (Dart 3.12+). CI pins `ghcr.io/cirruslabs/flutter:3.44.6`.
+- Android SDK Platform 37 and Build-Tools 37.0.0 (`compileSdk = 37`, needed by connect-client 1.2.0-alpha04)
+- JDK 17
+- Android Studio is optional; the command line is enough
+
+Clone the repository, then:
 
 ```bash
-./gradlew :app:assembleDebug
+flutter pub get
+flutter run                 # debug build on a connected device or emulator
 ```
 
-To run the same basic checks used by CI:
+The debug build installs as `tech.mmarca.openvitals.debug`, so it can live next to a release install without a signature clash.
+
+Build a release APK:
 
 ```bash
-./gradlew verifyCi
+flutter build apk --release
+```
+
+Release signing is read from the process environment only — no keystore and no credentials are ever committed, and nothing is read from `gradle.properties` or `local.properties`:
+
+- `OPENVITALS_RELEASE_STORE_FILE`
+- `OPENVITALS_RELEASE_STORE_PASSWORD`
+- `OPENVITALS_RELEASE_KEY_ALIAS`
+- `OPENVITALS_RELEASE_KEY_PASSWORD` (for a PKCS12 store, the store password is also the key password)
+
+**A release build without those variables is unsigned, by design.** It does not silently fall back to the debug key: an unsigned artifact fails loudly, whereas a debug-signed one looks fine until it reaches a real device and cannot update the installed app.
+
+Checks, which mirror the ones CI runs:
+
+```bash
+flutter test
+flutter analyze lib test
+dart run tool/verify_l10n.dart   # translation coverage + placeholder gate
+flutter gen-l10n                 # generated l10n must be up to date with the ARBs
 git diff --check
 ```
 
-To install on a connected device or emulator:
+Code generation (freezed, json_serializable, riverpod, drift) is not checked in as a build step — regenerate after touching an annotated model:
 
 ```bash
-./gradlew :app:installDebug
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-On Windows, Gradle or Android Studio can occasionally keep lint cache jars open under `app/build`. If cleaning fails with a locked `lint-cache` jar, stop Gradle daemons first:
-
-```powershell
-.\gradlew.bat --stop
-Get-CimInstance Win32_Process |
-  Where-Object { $_.CommandLine -like '*org.gradle.launcher.daemon.bootstrap.GradleDaemon*' } |
-  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-Remove-Item -LiteralPath app/build -Recurse -Force
-```
-
-More local development notes are in [`docs/engineering/development.md`](docs/engineering/development.md).
+Translation work is documented in [`docs/engineering/translations.md`](docs/engineering/translations.md).
 
 After launching the app:
 
@@ -194,40 +213,45 @@ After launching the app:
 
 OpenVitals is intentionally simple today:
 
-- one local Android app module
-- Jetpack Compose UI with Material 3 app shell and theming
-- Navigation Compose
-- `ViewModel` + `StateFlow`
-- Hilt constructor injection for repositories, services, and ViewModels
-- Health Connect AndroidX client wrapped by `HealthConnectManager`
-- WorkManager for user-started Apple Health imports that need to continue outside the Settings screen
-- feature-specific repositories for activity, sleep, heart, body, hydration, caffeine, nutrition, mindfulness, cycle, and vitals
-- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, caffeine preferences, data import status, timer/background-sound settings, hydration container sizes, and reminders
-- shared presentation formatters for units and date/time labels
+- one Flutter app, plus one in-repo plugin package for the native Health Connect bridge
+- Material 3 UI, `dynamic_color` theming
+- Riverpod for state and dependency wiring: `Notifier`/`AsyncNotifier` per screen, providers instead of a DI container
+- immutable state classes generated with `freezed`
+- `go_router` for navigation
+- `drift` for a small local database that caches derived summaries (Health Connect stays the source of truth)
+- Health Connect reached through the `health_connect_native` Pigeon plugin, wrapped by `HealthDataSource` and a narrow set of feature repositories (activity, sleep, heart, body, body energy, hydration, caffeine, nutrition, mindfulness, cycle, vitals)
+- Android home-screen widgets rendered by Glance, fed snapshots pushed from Dart
+- `shared_preferences` for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, caffeine preferences, import status, recording preferences, hydration containers, and reminders
+- shared presentation formatters for units and date/time labels; storage is always metric, imperial is a display/input preference only
 
-The current architecture is documented in more detail in [`docs/engineering/architecture.md`](docs/engineering/architecture.md).
+Implementation rules for new work are in [`AGENTS.md`](AGENTS.md).
 
 ## Project layout
 
-- [`app/`](app): Android app module
-- [`app/src/main/kotlin/tech/mmarca/openvitals/core/period/`](app/src/main/kotlin/tech/mmarca/openvitals/core/period): app-local period/date-window primitives
-- [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
-- [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
-- [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
-- [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
-- [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components
+- [`lib/features/`](lib/features): feature screens, notifiers, and feature-specific cards/charts
+- [`lib/data/`](lib/data): repositories over Health Connect reads, drift database, and preferences
+- [`lib/domain/`](lib/domain): pure models, insight calculations, queries, and preference enums
+- [`lib/health/`](lib/health): `HealthDataSource`, permission model, and the native Health Connect data source
+- [`lib/core/`](lib/core): period/date-window math, presentation formatters, geo, reminders, diagnostics
+- [`lib/ui/`](lib/ui): shared scaffolding, components, charts, and theme
+- [`lib/l10n/`](lib/l10n): ARB catalogs (the l10n source of truth) and generated `AppLocalizations`
+- [`packages/health_connect_native/`](packages/health_connect_native): Pigeon plugin wrapping the AndroidX Health Connect client
+- [`android/`](android): Android host app, Glance widgets, release signing
+- [`tool/`](tool): repo tooling, including the translation validator
+- [`scripts/`](scripts): CI, release, and Codeberg publishing scripts
+- [`.woodpecker/`](.woodpecker): Woodpecker CI pipelines (tests and releases)
 - [`docs/`](docs): app guide, feature guide, engineering docs, how-to guides, proposals, reference material, and release notes
 
 ## Documentation
 
+- [`docs/README.md`](docs/README.md): documentation index
 - [`docs/app/README.md`](docs/app/README.md): user guide, permissions, privacy, FAQ, screenshots, and support
 - [`docs/features/README.md`](docs/features/README.md): grouped feature guide
-- [`docs/features/feature-map.md`](docs/features/feature-map.md): map from features to routes, widgets, and packages
-- [`docs/engineering/development.md`](docs/engineering/development.md): local build, verification, CI, and Windows cleanup notes
-- [`docs/engineering/architecture.md`](docs/engineering/architecture.md): current architecture and target direction
-- [`docs/engineering/feature-playbook.md`](docs/engineering/feature-playbook.md): checklist for adding a new metric feature
+- [`docs/features/feature-map.md`](docs/features/feature-map.md): map from features to routes, screens, and packages
+- [`docs/engineering/README.md`](docs/engineering/README.md): architecture, development, feature playbook, and translations
+- [`Features.md`](Features.md): functional inventory of view, write, import, settings, and privacy capabilities
+- [`CHANGELOG.md`](CHANGELOG.md): user-facing release history
 - [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
-
 
 ## License
 

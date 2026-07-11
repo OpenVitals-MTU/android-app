@@ -1,0 +1,54 @@
+<!-- @dsCard group="Colors" viewport="700x210" name="Primary & brand" subtitle="Canonical light scheme — blue primary, teal tertiary" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--ov-background); font-family: var(--ov-font-sans); }
+  .grid { padding: 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .sw { border-radius: var(--ov-radius-md); height: 84px; display: flex; align-items: flex-end;
+        padding: 10px; box-sizing: border-box; }
+  .meta { margin-top: 8px; }
+  .name { font: 500 13px/16px var(--ov-font-sans); color: var(--ov-on-surface); }
+  .hex  { font: 500 12px/16px var(--ov-font-mono); color: var(--ov-on-surface-variant); letter-spacing: 0.02em; }
+  .chip { font: 500 11px/14px var(--ov-font-sans); border-radius: var(--ov-radius-xs); padding: 3px 7px; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div>
+    <div class="sw" style="background:var(--ov-primary)"><span class="chip" style="background:rgba(255,255,255,.16);color:var(--ov-on-primary)">on-primary</span></div>
+    <div class="meta"><div class="name">Primary</div><div class="hex">#006E8F</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-primary-container)"><span class="chip" style="color:var(--ov-on-primary-container)">on</span></div>
+    <div class="meta"><div class="name">Primary container</div><div class="hex">#C3E8FF</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-tertiary)"><span class="chip" style="background:rgba(255,255,255,.16);color:var(--ov-on-tertiary)">on</span></div>
+    <div class="meta"><div class="name">Tertiary</div><div class="hex">#2F6F4F</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-tertiary-container)"><span class="chip" style="color:var(--ov-on-tertiary-container)">on</span></div>
+    <div class="meta"><div class="name">Tertiary container</div><div class="hex">#9CF3D9</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-secondary)"><span class="chip" style="background:rgba(255,255,255,.16);color:var(--ov-on-secondary)">on</span></div>
+    <div class="meta"><div class="name">Secondary</div><div class="hex">#5E5F68</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-secondary-container)"><span class="chip" style="color:var(--ov-on-secondary-container)">on</span></div>
+    <div class="meta"><div class="name">Secondary container</div><div class="hex">#E2E1EC</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-brand-coral)"><span class="chip" style="background:rgba(255,255,255,.18);color:#fff">coral</span></div>
+    <div class="meta"><div class="name">Brand coral</div><div class="hex">#9B4438</div></div>
+  </div>
+  <div>
+    <div class="sw" style="background:var(--ov-error)"><span class="chip" style="background:rgba(255,255,255,.18);color:var(--ov-on-error)">on</span></div>
+    <div class="meta"><div class="name">Error</div><div class="hex">#BA1A1A</div></div>
+  </div>
+</div>
+</body>
+</html>

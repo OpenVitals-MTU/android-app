@@ -22,7 +22,7 @@ Display preferences affect app presentation only. They do not rewrite Health Con
 
 Metric-specific settings include:
 
-- Rolling dates mode, such as calendar week/month/year or rolling 7/30/365-day windows.
+- Activity week mode, such as Monday-to-Sunday or rolling last 7 days.
 - Favorite or latest activity defaults used by activity entry and recording setup.
 - Calorie data mode, including optional OpenVitals total-calorie calculation when Health Connect totals are missing.
 - Sleep range mode, including rolling 24 hours, noon boundary, and evening boundary.
@@ -43,7 +43,7 @@ OpenVitals asks for read permissions for dashboard and detail views. Write permi
 
 ## Data Importers And Sensors
 
-Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ route import, and FIT activity/course/workout import, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. GPX/KML/KMZ bulk import writes selected route files directly after route import permissions are granted. Import results can be copied or downloaded as a full text report with summary, selected categories, logs, diagnostics, and failure details.
+Settings provide Data Importers for Apple Health export import and FIT activity/course/workout import, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Import results can be copied or downloaded as a full text report with summary, selected categories, logs, diagnostics, and failure details.
 
 ## Diagnostics And App Information
 

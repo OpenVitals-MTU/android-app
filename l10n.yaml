@@ -1,0 +1,20 @@
+# Configuration for `flutter gen-l10n`.
+#
+# The ARB catalogs in `arb-dir` ARE the source of truth for translations —
+# Weblate edits them directly. `app_en.arb` is the template: add a new string
+# there (with its `@key` placeholder metadata), and translators fill in the
+# locale files. Nothing generates these files; hand-edit `app_en.arb` freely.
+#
+# Locale ARBs are deliberately PARTIAL. gen-l10n falls back to the template
+# message for any key a locale omits and reports it as
+# `"de": N untranslated message(s).` — that count is real coverage, not noise,
+# so `untranslated-messages-file` is intentionally NOT set (it would silence it).
+#
+# `tool/verify_l10n.dart` gates the catalogs (coverage, placeholder parity,
+# stale keys, ICU syntax, language-picker agreement) in CI and in `flutter test`.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-dir: lib/l10n
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false

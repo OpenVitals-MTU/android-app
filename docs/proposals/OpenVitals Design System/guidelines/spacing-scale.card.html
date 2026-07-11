@@ -1,0 +1,24 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Spacing scale" subtitle="4dp Material grid" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--ov-background); font-family: var(--ov-font-sans); color: var(--ov-on-surface); }
+  .wrap { padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; align-items: center; gap: 14px; }
+  .tag { font: 500 11px/16px var(--ov-font-mono); color: var(--ov-on-surface-variant); width: 96px; flex: 0 0 auto; }
+  .bar { height: 14px; border-radius: 3px; background: var(--ov-primary); }
+</style>
+</head>
+<body>
+<div class="wrap" id="w"></div>
+<script>
+  const steps = [['space-1',4],['space-2',8],['space-3',12],['space-4',16],['space-5',20],['space-6',24],['space-8',32],['space-10',40],['space-12',48]];
+  document.getElementById('w').innerHTML = steps.map(([n,v]) =>
+    `<div class="row"><span class="tag">--ov-${n}</span><div class="bar" style="width:${v}px"></div><span class="tag" style="width:auto">${v}px</span></div>`
+  ).join('');
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@ when:
 
 variables:
   - &alpine_image alpine:3.20
-  - &android_image ghcr.io/cirruslabs/android-sdk:tools
+  - &flutter_image ghcr.io/cirruslabs/flutter:3.44.6
   - &ruby_image ruby:3.3
   - &fastlane_environment
     FASTLANE_DISABLE_COLORS: "1"
@@ -19,6 +19,8 @@ variables:
     FASTLANE_SKIP_UPDATE_CHECK: "1"
 
 steps:
+  # Everything the pipeline needs to know is resolved ONCE here and handed to the
+  # later steps as a sourceable env file in the shared workspace.
   - name: resolve-release-context
     image: *alpine_image
     commands:
@@ -30,7 +32,7 @@ steps:
   - name: unit-tests
     depends_on:
       - resolve-release-context
-    image: *android_image
+    image: *flutter_image
     commands:
       - set -eu
       - |
@@ -38,12 +40,12 @@ steps:
           echo "Skipping prerelease unit tests for production deployment."
           exit 0
         fi
-      - scripts/ci-android-gradle.sh verifyCiUnitTest
+      - scripts/ci-flutter.sh test
 
   - name: release-preflight
     depends_on:
       - unit-tests
-    image: *android_image
+    image: *flutter_image
     commands:
       - set -eu
       - |
@@ -52,13 +54,16 @@ steps:
           git diff --check
           exit 0
         fi
-      - scripts/ci-android-gradle.sh verifyCiPreflight
+      - scripts/ci-flutter.sh analyze lib test
+      - dart run tool/verify_l10n.dart
+      - flutter gen-l10n
+      - git diff --exit-code lib/l10n
       - git diff --check
 
-  - name: build-apk
+  - name: build
     depends_on:
       - release-preflight
-    image: *android_image
+    image: *flutter_image
     environment:
       OPENVITALS_RELEASE_KEYSTORE_BASE64:
         from_secret: OPENVITALS_RELEASE_KEYSTORE_BASE64
@@ -73,46 +78,55 @@ steps:
     commands:
       - set -eu
       - . .woodpecker/tmp/release-context.env
+      # Assert the signing material up front. The Gradle config deliberately does NOT
+      # fall back to the debug key, so a missing secret would otherwise surface as a
+      # silently unsigned artifact.
       - test -n "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}"
       - test -n "$${OPENVITALS_RELEASE_STORE_PASSWORD}"
       - test -n "$${OPENVITALS_RELEASE_KEY_ALIAS}"
       - keystore_path="$${CI_WORKSPACE}/.woodpecker/tmp/openvitals-release.p12"
       - printf '%s' "$${OPENVITALS_RELEASE_KEYSTORE_BASE64}" | base64 -d > "$${keystore_path}"
       - export OPENVITALS_RELEASE_STORE_FILE="$${keystore_path}"
+      # PKCS12 has a single password: the key password IS the store password.
       - export OPENVITALS_RELEASE_KEY_PASSWORD="$${OPENVITALS_RELEASE_STORE_PASSWORD}"
+      # Fail fast and legibly on a bad secret or a wrong alias, rather than 8 minutes
+      # later inside Gradle.
       - keytool -list -storetype PKCS12 -keystore "$${keystore_path}" -storepass "$${OPENVITALS_RELEASE_STORE_PASSWORD}" -alias "$${OPENVITALS_RELEASE_KEY_ALIAS}" >/dev/null
-      - export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
-      - export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
-      - if [ -n "$${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
-      - if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
-      - test -n "$${OPENVITALS_APK_ABI_FILTERS}"
+      - test -n "$${OPENVITALS_TARGET_PLATFORMS}"
+      - test -n "$${OPENVITALS_VERSION_CODE}"
       - |
-        set -- "$${OPENVITALS_GRADLE_TASK}"
-        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          set -- "$${@}" "$${OPENVITALS_BUNDLE_TASK}"
+        set -- build apk --release \
+          --target-platform "$${OPENVITALS_TARGET_PLATFORMS}" \
+          --build-number "$${OPENVITALS_VERSION_CODE}"
+        if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
+          set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
         fi
-        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
-          set -- "$${@}" ":app:assembleDebug"
+        if [ -n "$${OPENVITALS_DART_DEFINES:-}" ]; then
+          set -- "$${@}" $${OPENVITALS_DART_DEFINES}
         fi
-        env OPENVITALS_APK_ABI_FILTERS="$${OPENVITALS_APK_ABI_FILTERS}" scripts/ci-android-gradle.sh --stacktrace "$${@}"
-      - apk_path="$$(find "app/build/outputs/apk/$${OPENVITALS_APK_VARIANT_DIR}" -maxdepth 1 -name '*.apk' | head -n 1)"
-      - test -n "$${apk_path}"
-      - artifact_path=".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"
-      - cp "$${apk_path}" "$${artifact_path}"
+        scripts/ci-flutter.sh "$${@}"
+      - apk_path="build/app/outputs/flutter-apk/app-release.apk"
+      - test -f "$${apk_path}"
+      - cp "$${apk_path}" ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}"
       - (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_APK_BASENAME}" > "$${OPENVITALS_APK_BASENAME}.sha256")
       - |
-        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
-          debug_apk_path="$$(find "app/build/outputs/apk/debug" -maxdepth 1 -name '*.apk' | head -n 1)"
-          test -n "$${debug_apk_path}"
-          cp "$${debug_apk_path}" ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}"
-          (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_DEBUG_APK_BASENAME}" > "$${OPENVITALS_DEBUG_APK_BASENAME}.sha256")
-        fi
-      - |
         if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
-          aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
-          test -n "$${aab_path}"
+          set -- build appbundle --release \
+            --target-platform "$${OPENVITALS_TARGET_PLATFORMS}" \
+            --build-number "$${OPENVITALS_VERSION_CODE}"
+          if [ -n "$${OPENVITALS_VERSION_NAME:-}" ]; then
+            set -- "$${@}" --build-name "$${OPENVITALS_VERSION_NAME}"
+          fi
+          if [ -n "$${OPENVITALS_DART_DEFINES:-}" ]; then
+            set -- "$${@}" $${OPENVITALS_DART_DEFINES}
+          fi
+          scripts/ci-flutter.sh "$${@}"
+          aab_path="build/app/outputs/bundle/release/app-release.aab"
+          test -f "$${aab_path}"
           cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
         fi
+      # Nightly keeps a single stable download page, so the `nightly` tag is force-moved
+      # to this commit through the Forgejo API (a git push would need write creds).
       - |
         if { [ "$${CI_PIPELINE_EVENT}" = "cron" ] || [ "$${CI_PIPELINE_EVENT}" = "manual" ]; } && [ "$${OPENVITALS_RELEASE_CHANNEL}" = "nightly" ]; then
           test -n "$${CODEBERG_RELEASE_API_KEY}"
@@ -123,7 +137,7 @@ steps:
 
   - name: publish-play-open-testing
     depends_on:
-      - build-apk
+      - build
     image: *ruby_image
     environment:
       <<: *fastlane_environment
@@ -152,7 +166,7 @@ steps:
 
   - name: publish-play-production
     depends_on:
-      - build-apk
+      - build
     image: *ruby_image
     environment:
       <<: *fastlane_environment
@@ -180,7 +194,7 @@ steps:
 
   - name: publish-codeberg-release
     depends_on:
-      - build-apk
+      - build
     image: *alpine_image
     environment:
       CODEBERG_RELEASE_API_KEY:
@@ -192,27 +206,14 @@ steps:
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/publish-codeberg-release.sh
       - |
-        if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
-          scripts/publish-codeberg-release.sh \
-            "$${OPENVITALS_RELEASE_TAG}" \
-            .woodpecker/tmp/release-title.txt \
-            .woodpecker/tmp/release-notes.md \
-            "$${OPENVITALS_RELEASE_PRERELEASE}" \
-            "$${OPENVITALS_RELEASE_TARGET}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256" \
-            ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}" \
-            ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}.sha256"
-        else
-          scripts/publish-codeberg-release.sh \
-            "$${OPENVITALS_RELEASE_TAG}" \
-            .woodpecker/tmp/release-title.txt \
-            .woodpecker/tmp/release-notes.md \
-            "$${OPENVITALS_RELEASE_PRERELEASE}" \
-            "$${OPENVITALS_RELEASE_TARGET}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
-        fi
+        scripts/publish-codeberg-release.sh \
+          "$${OPENVITALS_RELEASE_TAG}" \
+          .woodpecker/tmp/release-title.txt \
+          .woodpecker/tmp/release-notes.md \
+          "$${OPENVITALS_RELEASE_PRERELEASE}" \
+          "$${OPENVITALS_RELEASE_TARGET}" \
+          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
+          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
     when:
       - event: manual
       - event: cron
@@ -240,6 +241,9 @@ steps:
       - event: cron
         cron: nightly
 
+  # Promotes the versioned Codeberg prerelease to stable, but ONLY after Play
+  # production accepted the AAB -- so the download page never advertises a release
+  # that failed to ship.
   - name: publish-codeberg-stable
     depends_on:
       - publish-play-production

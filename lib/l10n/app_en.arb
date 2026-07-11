@@ -1,0 +1,3330 @@
+{
+  "@@locale": "en",
+  "appName": "OpenVitals",
+  "cdBack": "Back",
+  "cdSettings": "Settings",
+  "cdAchievements": "Achievements",
+  "cdDailyReadiness": "Daily Readiness",
+  "cdSensorBatteryStatus": "Sensor battery status",
+  "cdEditDashboard": "Edit summary",
+  "cdFinishDashboardEditing": "Finish editing summary",
+  "cdEditSavedDrinks": "Edit saved drinks",
+  "cdDoneEditingSavedDrinks": "Done editing saved drinks",
+  "cdEditDrink": "Edit drink",
+  "cdDeleteDrink": "Delete drink",
+  "cdMoveDrinkCategory": "Move drink category",
+  "cdExpandDrinkCategory": "Expand {arg0}",
+  "@cdExpandDrinkCategory": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "cdCollapseDrinkCategory": "Collapse {arg0}",
+  "@cdCollapseDrinkCategory": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "cdEditManualEntryWidgets": "Edit add entry widgets",
+  "cdFinishManualEntryEditing": "Finish editing add entry widgets",
+  "cdEditRecordingDashboard": "Edit recording dashboard",
+  "cdFinishRecordingDashboardEditing": "Finish editing recording dashboard",
+  "cdMoveWidgetUp": "Move widget up",
+  "cdMoveWidgetDown": "Move widget down",
+  "cdEditMetricSections": "Edit metric sections",
+  "cdFinishMetricSectionEditing": "Finish editing metric sections",
+  "cdMoveSectionUp": "Move section up",
+  "cdMoveSectionDown": "Move section down",
+  "cdRemoveWidget": "Remove widget",
+  "cdDecreaseRecordingDashboardWidgetSize": "Make widget smaller",
+  "cdIncreaseRecordingDashboardWidgetSize": "Make widget larger",
+  "cdExitRecordingFocusMode": "Exit focus mode",
+  "cdToggleRecordingOutdoorMode": "Toggle outdoor readability mode",
+  "cdRecenterMap": "Recenter map",
+  "cdDeleteEntry": "Delete entry",
+  "cdEditEntry": "Edit entry",
+  "cdPreviousDay": "Previous day",
+  "cdNextDay": "Next day",
+  "cdPreviousPeriod": "Previous period",
+  "cdNextPeriod": "Next period",
+  "cdOpenCalendar": "Open calendar",
+  "actionCancel": "Cancel",
+  "actionAdd": "Add",
+  "actionAddCustom": "Add custom",
+  "actionSave": "Save",
+  "actionClose": "Close",
+  "actionContinue": "Continue",
+  "actionDelete": "Delete",
+  "actionDetails": "Details",
+  "actionEdit": "Edit",
+  "actionEnable": "Enable",
+  "actionGetStarted": "Get started",
+  "actionGrant": "Grant",
+  "actionGrantPermission": "Grant permission",
+  "actionLoadMoreEntries": "Load 10 more",
+  "actionShowCalculation": "Show calculation",
+  "actionHideCalculation": "Hide calculation",
+  "actionNotNow": "Not now",
+  "actionAccept": "I accept",
+  "actionOpen": "Open",
+  "actionPause": "Pause",
+  "actionReview": "Review",
+  "actionResume": "Resume",
+  "actionRefresh": "Refresh",
+  "actionSelect": "Select",
+  "actionStart": "Start",
+  "actionFinish": "Finish",
+  "actionDiscard": "Discard",
+  "unknownError": "Unknown error",
+  "screenErrorNotFound": "The requested item was not found.",
+  "screenErrorMissingArgument": "Required information is missing.",
+  "screenErrorPermissionDenied": "Permission is required to load this data.",
+  "screenErrorHealthConnectUnavailable": "Health Connect is not available on this device.",
+  "screenErrorLoadSleepSession": "Unable to load sleep session.",
+  "screenErrorLoadSleepPeriod": "Unable to load sleep data.",
+  "notAvailable": "Not available",
+  "notRecorded": "Not recorded",
+  "noData": "No data",
+  "loading": "Loading...",
+  "homeMetricWidgetDescription": "OpenVitals metric",
+  "homeMetricWidgetConfigTitle": "Choose metric",
+  "homeMetricWidgetConfigPrompt": "Choose the metric for the widget:",
+  "homeMetricWidgetNoMetrics": "No metrics available.",
+  "homeMetricWidgetPermissionNeeded": "Grant permission in OpenVitals",
+  "homeMetricWidgetUpdateFailed": "Unable to update",
+  "homeMetricWidgetOpenForDetails": "Open for details",
+  "homeMetricWidgetNotConfigured": "Select a metric",
+  "homeQuickBeverageWidgetDescription": "Quick beverage",
+  "homeQuickBeverageOneTapWidgetDescription": "Quick beverage 1x1",
+  "homeQuickBeverageWidgetConfigTitle": "Choose beverage",
+  "homeQuickBeverageWidgetConfigPrompt": "Choose the beverage for the widget:",
+  "homeQuickBeverageWidgetNoDrinks": "No beverages available.",
+  "homeQuickBeverageWidgetNotConfigured": "Select a beverage",
+  "homeQuickBeverageWidgetTapToLog": "Tap to log",
+  "homeQuickBeverageWidgetSaved": "Saved now",
+  "homeQuickBeverageWidgetSavedNutrition": "Saved as nutrition",
+  "homeDailyReadinessWidgetDescription": "OpenVitals daily readiness",
+  "homeBodyEnergyWidgetDescription": "OpenVitals body energy",
+  "homeTodayVitalsWidgetDescription": "OpenVitals today vitals",
+  "homeWidgetTodayTitle": "Today",
+  "homeWidgetContext": "Context",
+  "homeWidgetHrvShort": "HRV",
+  "homeWidgetBodyEnergyCharged": "Charged",
+  "homeWidgetBodyEnergySteady": "Steady",
+  "homeWidgetBodyEnergyLimited": "Limited",
+  "homeWidgetBodyEnergyLow": "Low",
+  "screenSteps": "Steps",
+  "screenActivities": "Activities",
+  "screenCalories": "Calories",
+  "screenActivityDetail": "Activity detail",
+  "screenSleep": "Sleep",
+  "screenSleepDetail": "Sleep detail",
+  "screenHeartVitals": "Heart & Vitals",
+  "screenStressTracking": "Stress Tracking",
+  "screenBodyEnergy": "Body Energy",
+  "screenTrainingReadiness": "Training Readiness",
+  "screenBody": "Body",
+  "screenHydration": "Beverages",
+  "screenNutrition": "Nutrition",
+  "screenMindfulness": "Mindfulness",
+  "screenCycle": "Cycle",
+  "screenDailyReadiness": "Daily Readiness",
+  "screenSettings": "Settings",
+  "screenAchievements": "Achievements",
+  "screenManualEntry": "Add entry",
+  "screenHydrationEntry": "Beverage entry",
+  "screenActivityEntry": "Activity entry",
+  "screenMindfulnessEntry": "Mindfulness entry",
+  "screenCarbsEntry": "Carbs entry",
+  "screenBodyMeasurementEntry": "Body measurement entry",
+  "screenVitalsMeasurementEntry": "Vitals entry",
+  "bottomNavDashboard": "Summary",
+  "manualEntryHydrationTitle": "Beverages",
+  "manualEntryActivityTitle": "Activity",
+  "manualEntryDateLabel": "Entry date",
+  "manualEntryTimeLabel": "Entry time",
+  "manualEntrySelectTime": "Select entry time",
+  "manualEntryAddWidgets": "Add entry widgets",
+  "manualEntryAllWidgetsAdded": "All entry widgets are already shown.",
+  "manualEntryWritePermissionTitle": "Beverage write permission",
+  "manualEntryActivityWritePermissionTitle": "Activity write permissions",
+  "manualEntryMindfulnessWritePermissionTitle": "Mindfulness write permission",
+  "manualEntryCarbsWritePermissionTitle": "Carbs write permission",
+  "manualEntryBodyWritePermissionTitle": "{arg0} write permission",
+  "@manualEntryBodyWritePermissionTitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "manualEntryVitalsWritePermissionTitle": "{arg0} write permission",
+  "@manualEntryVitalsWritePermissionTitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "mindfulnessEntrySubtitle": "Mindfulness sessions are saved directly to Health Connect.",
+  "mindfulnessEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add mindfulness entries, we need write permission. OpenVitals will not store these sessions; entries are saved in Health Connect.",
+  "activityEntrySubtitle": "Create a Health Connect activity session. Imported route or activity details are written only when you save.",
+  "activityEntryPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add activities, we need Health Connect write permissions for sessions, routes, distance, elevation, calories, and recorded sensor metrics such as heart rate; treadmill entries ask for steps when needed. OpenVitals will not store these entries; they are saved in Health Connect.",
+  "activityEntrySourceBody": "Create an activity manually, use an existing plan, or record a GPS route.",
+  "activityEntryCreateManual": "Create manually",
+  "activityEntryCreateFromExistingPlan": "Create from existing plan",
+  "activityEntryRecordGps": "Record activity",
+  "activityEntryChooseAnotherSource": "Choose another method",
+  "activityEntryTypeLabel": "Activity type",
+  "activityEntryTitleLabel": "Title",
+  "activityEntryStartDateLabel": "Start date",
+  "activityEntryStartTimeLabel": "Start time",
+  "activityEntrySelectTime": "Select start time",
+  "activityEntryDurationLabel": "Duration min",
+  "activityEntryRepetitionsTitle": "Repetitions",
+  "activityEntryStepsTitle": "Steps",
+  "activityEntryRepetitionModeTotal": "Total",
+  "activityEntryRepetitionModeSets": "Sets",
+  "activityEntryRepetitionsLabel": "Reps",
+  "activityEntryStepsLabel": "Steps",
+  "activityEntrySetRepetitionsLabel": "Set {arg0} reps",
+  "@activityEntrySetRepetitionsLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntrySetRestLabel": "Rest time",
+  "activityEntryAddSet": "Add set",
+  "activityEntryTrainingPlansTitle": "Training plans",
+  "activityEntryTrainingPlansLoading": "Loading Health Connect plans",
+  "activityEntryTrainingPlansEmpty": "No Health Connect plans for this date and activity type",
+  "activityEntryTrainingPlanLabel": "Training plan",
+  "activityEntryTrainingPlanSelect": "Select a plan",
+  "activityEntryTrainingPlanNew": "New plan",
+  "activityEntryTrainingPlanUnnamed": "Unnamed plan",
+  "activityEntrySaveTrainingPlan": "Save plan",
+  "activityEntryUpdateTrainingPlan": "Update plan",
+  "activityEntryPlanActivityPickerTitle": "Activities with plans",
+  "activityEntryPlanActivityPickerEmpty": "No Health Connect plans found",
+  "activityEntryPlanPickerTitle": "Choose a plan",
+  "activityEntryPlanPickerEmpty": "No plans found for this activity",
+  "activityEntryPlanChooseActivity": "Choose another activity",
+  "activityEntryPlanOneSetSummary": "1 set • {arg0} reps",
+  "@activityEntryPlanOneSetSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryPlanSummary": "{arg0} sets • {arg1} reps",
+  "@activityEntryPlanSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryPlanPreviewReps": "{arg0} reps",
+  "@activityEntryPlanPreviewReps": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryPlanPreviewRest": "rest {arg0} sec",
+  "@activityEntryPlanPreviewRest": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryPlanPreviewMore": "+{arg0} more",
+  "@activityEntryPlanPreviewMore": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryDistanceLabel": "Distance {arg0}",
+  "@activityEntryDistanceLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryElevationLabel": "Climb {arg0}",
+  "@activityEntryElevationLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryNotesLabel": "Notes",
+  "activityEntryFeelingLabel": "How did it feel?",
+  "activityEntryFeelingGreat": "Great",
+  "activityEntryFeelingGood": "Good",
+  "activityEntryFeelingHard": "Hard",
+  "activityEntryFeelingRough": "Rough",
+  "activityEntryImportedRoute": "Imported route",
+  "activityEntryRecordingTitle": "Recording activity",
+  "activityEntryRecordingReadyBody": "Choose the activity type, then start when you are ready. After finishing, you can review and add details before saving.",
+  "activityEntryRecordingGoToActivityScreen": "Go to activity screen",
+  "activityEntryRecordingActive": "Recording",
+  "activityEntryRecordingPaused": "Paused",
+  "activityEntryRecordingIdle": "Idle",
+  "activityEntryRecordingResting": "Resting",
+  "activityEntryRecordingGpsFix": "GPS ready",
+  "activityEntryRecordingGpsPoor": "Weak GPS",
+  "activityEntryRecordingGpsLost": "GPS lost",
+  "activityEntryRecordingGpsOff": "GPS off",
+  "activityEntryRecordingTabMap": "Map",
+  "activityEntryRecordingTabStats": "Stats",
+  "activityEntryRecordingTabIntervals": "Intervals",
+  "activityEntryRecordingTabByTime": "By time",
+  "activityEntryRecordingTabByDistance": "By distance",
+  "activityEntryRecordingTimeSplit": "Time split",
+  "activityEntryRecordingDistanceSplit": "Distance split",
+  "activityEntryRecordingSplitMinutes": "{arg0} min",
+  "@activityEntryRecordingSplitMinutes": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryRecordingSplitInterval": "Interval {arg0}",
+  "@activityEntryRecordingSplitInterval": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryRecordingSplitTimeRange": "{arg0}-{arg1} min",
+  "@activityEntryRecordingSplitTimeRange": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryRecordingSplitElapsed": "Elapsed",
+  "activityEntryRecordingSplitAvg": "Avg",
+  "activityEntryRecordingSplitMax": "Max",
+  "activityEntryRecordingNoIntervals": "No intervals yet",
+  "activityEntryRecordingNoTimeSplits": "No time splits yet",
+  "activityEntryRecordingNoDistanceSplits": "No distance splits yet",
+  "activityEntryRecordingLap": "Lap",
+  "activityEntryRecordingMarker": "Add Marker",
+  "activityEntryRecordingMarkerDefaultName": "Marker {arg0}",
+  "@activityEntryRecordingMarkerDefaultName": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryRecordingMarkersTitle": "Markers",
+  "activityEntryRecordingMarkerName": "Name",
+  "activityEntryRecordingMarkerNote": "Note",
+  "activityEntryRecordingWaitingForGps": "Waiting for a precise GPS fix",
+  "activityEntryRecordingGpsWaiting": "Waiting for a precise GPS fix before start.",
+  "activityEntryRecordingGpsWaitingAccuracy": "Waiting for better GPS accuracy • {arg0}",
+  "@activityEntryRecordingGpsWaitingAccuracy": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryRecordingGpsReady": "GPS ready • accuracy {arg0}",
+  "@activityEntryRecordingGpsReady": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryRecordingGpsDisabled": "Turn on GPS to start recording.",
+  "activityEntryRecordingDistance": "Distance",
+  "activityEntryRecordingTotalTime": "Total time",
+  "activityEntryRecordingMovingTime": "Moving time",
+  "activityEntryRecordingRestTime": "Rest time",
+  "activityEntryRecordingSpeed": "Speed",
+  "activityEntryRecordingMaxSpeed": "Max speed",
+  "activityEntryRecordingAverageSpeed": "Avg speed",
+  "activityEntryRecordingAverageMovingSpeed": "Avg moving speed",
+  "activityEntryRecordingElevationGain": "Climb",
+  "activityEntryRecordingPoints": "Points",
+  "activityEntryRecordingRestSecondsLabel": "Rest seconds",
+  "activityEntryRecordingEndSet": "End set",
+  "activityEntryRecordingStartNextSet": "Start next set",
+  "activityEntryRecordingEndSession": "Finish session",
+  "activityEntryRecordingRestRemaining": "Rest {arg0}",
+  "@activityEntryRecordingRestRemaining": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryRecordingFinishHint": "Finish opens the activity details form so you can add title, notes, calories, or adjust values before saving.",
+  "activityEntryRecordingRepetitionCorrectionHint": "Use + or - if the sensor misses or adds a rep.",
+  "activityEntryRecordingAccuracy": "Last accuracy {arg0}",
+  "@activityEntryRecordingAccuracy": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryRecordingFocus": "Focus",
+  "activityEntryRecordingDashboardLayout": "Dashboard layout",
+  "activityEntryRecordingDashboardLayoutTwoByFour": "2x4",
+  "activityEntryRecordingDashboardLayoutThreeByFour": "3x4",
+  "activityEntryRecordingDashboardLayoutLargeTop": "Large top",
+  "activityEntryRecordingDashboardAddField": "Add widget",
+  "activityEntryRouteSummary": "{arg0} • {arg1} • {arg2} gain • {arg3} points",
+  "@activityEntryRouteSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      },
+      "arg3": {
+        "type": "int"
+      }
+    }
+  },
+  "activityEntryRouteAverageMetrics": "Avg pace {arg0} • avg speed {arg1}",
+  "@activityEntryRouteAverageMetrics": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryAdd": "Save activity",
+  "activityEntryInvalidValue": "Fix the highlighted fields before saving the activity.",
+  "activityEntryErrorActivityTypeRoute": "Choose an activity type that supports GPS routes.",
+  "activityEntryErrorTrainingPlanTitleRequired": "Enter a title to save this training plan.",
+  "activityEntryErrorStartDate": "Choose a valid start date.",
+  "activityEntryErrorStartTime": "Choose a valid start time.",
+  "activityEntryErrorStartTimeAfterRoute": "Start time must be at or before the imported route start.",
+  "activityEntryErrorDuration": "Duration must be between 1 minute and 7 days.",
+  "activityEntryErrorRepetitions": "Enter positive counts. Rest must fit inside the activity duration.",
+  "activityEntryErrorDistance": "Enter a distance greater than 0.",
+  "activityEntryErrorDistanceUnsupported": "This activity type does not support distance.",
+  "activityEntryErrorElevation": "Enter elevation greater than 0.",
+  "activityEntryErrorElevationUnsupported": "This activity type does not support elevation gain.",
+  "activityEntryErrorActiveCalories": "Enter active calories greater than 0.",
+  "activityEntryErrorTotalCalories": "Enter total calories greater than 0.",
+  "activityEntryErrorTotalCaloriesBelowActive": "Total calories cannot be lower than active calories.",
+  "activityEntryLocationPermissionNeeded": "Precise location permission is required to record GPS activities.",
+  "activityEntryNotificationPermissionNeeded": "Notification permission is required so OpenVitals can show an ongoing recording notification.",
+  "activityEntryActivityRecognitionPermissionNeeded": "Activity recognition permission is required to count treadmill steps.",
+  "activityEntryRouteImportFailed": "Could not import activity file: {arg0}",
+  "@activityEntryRouteImportFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryRecordingFailed": "Could not record activity: {arg0}",
+  "@activityEntryRecordingFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityEntryWriteFailed": "Could not write activity entry: {arg0}",
+  "@activityEntryWriteFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRouteOpenInMap": "Open route in map app",
+  "activityRouteExportGpx": "Save GPX",
+  "activityRouteExportKmz": "Save KMZ",
+  "activityRouteExportSaved": "Route saved.",
+  "activityRouteExportFailed": "Could not save route file.",
+  "activityRouteOpenChooserTitle": "Open route with",
+  "activityRouteOpenFailed": "No map app could open this route.",
+  "activityDetailAnalysisTitle": "Route analysis",
+  "activityDetailTabMarkers": "Markers",
+  "activityDetailNoMarkers": "No markers yet",
+  "activityRecordingVoiceSummary": "Time {arg0}. Distance {arg1}. Average speed {arg2}. Current lap {arg3}.",
+  "@activityRecordingVoiceSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      },
+      "arg3": {
+        "type": "int"
+      }
+    }
+  },
+  "activityRecordingVoiceLap": "Lap {arg0}. {arg1}",
+  "@activityRecordingVoiceLap": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingVoiceIdle": "Idle.",
+  "activityRecordingVoiceResumed": "Recording resumed.",
+  "activityRecordingNotificationChannel": "Activity recording",
+  "activityRecordingNotificationTitle": "Recording activity",
+  "activityRecordingNotificationRecording": "Recording • {arg0} total • {arg1} moving • {arg2} • {arg3}",
+  "@activityRecordingNotificationRecording": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      },
+      "arg3": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingNotificationPaused": "Paused • {arg0} total • {arg1} moving • {arg2} • {arg3}",
+  "@activityRecordingNotificationPaused": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      },
+      "arg3": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingNotificationRepetitionRecording": "Recording • {arg0} total • {arg1} {arg2}",
+  "@activityRecordingNotificationRepetitionRecording": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingNotificationRepetitionPaused": "Paused • {arg0} total • {arg1} {arg2}",
+  "@activityRecordingNotificationRepetitionPaused": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingNotificationRepetitionResting": "Resting • {arg0} total • {arg1} left",
+  "@activityRecordingNotificationRepetitionResting": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingNotificationTimedRecording": "Recording • {arg0} total",
+  "@activityRecordingNotificationTimedRecording": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingNotificationTimedPaused": "Paused • {arg0} total",
+  "@activityRecordingNotificationTimedPaused": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRecordingErrorService": "Could not start activity recording service.",
+  "activityRecordingErrorPreciseLocationPermission": "Precise location permission is required for reliable GPS tracks.",
+  "activityRecordingErrorNotificationPermission": "Notification permission is required to show the ongoing recording notification.",
+  "activityRecordingErrorActivityRecognitionPermission": "Activity recognition permission is required to count treadmill steps.",
+  "activityRecordingErrorWaitingForGps": "Wait for a precise GPS fix before starting.",
+  "activityRecordingErrorProvider": "Turn on GPS to record a route.",
+  "activityRecordingErrorUnsupportedType": "This activity type cannot be recorded live.",
+  "activityRecordingErrorProximitySensor": "This device does not expose a proximity sensor for push-up counting.",
+  "activityRecordingErrorAccelerometer": "This device does not expose an accelerometer for this recording.",
+  "activityRecordingErrorStepDetector": "This device does not expose Android step detector events.",
+  "activityRecordingHowItWorks": "How recording works",
+  "activityRecordingGuidancePushUps": "Place the phone screen-up under the chest or head area. The proximity sensor counts a rep when you move close to the phone.",
+  "activityRecordingGuidancePullUps": "Secure the phone on your body. The accelerometer counts the pull and relax motion.",
+  "activityRecordingGuidanceRopeSkipping": "Keep the phone secured on your body. The accelerometer counts jumps.",
+  "activityRecordingGuidanceTrampolineJumping": "Keep the phone secured on your body. Jump detection uses a longer jump window than rope skipping.",
+  "activityRecordingGuidanceTreadmill": "Carry the phone on your body. Android’s step detector counts steps; no GPS route is recorded.",
+  "activityRecordingSensorReady": "Sensor ready",
+  "activityRecordingSensorUnavailableManual": "Live counting is unavailable on this device. Manual entry is still available.",
+  "activityRecordingActivityRecognitionMissing": "Grant activity recognition to count treadmill steps.",
+  "exerciseTypeRunning": "Running",
+  "exerciseTypeBiking": "Biking",
+  "exerciseTypeWalking": "Walking",
+  "exerciseTypeHiking": "Hiking",
+  "exerciseTypeWheelchair": "Wheelchair",
+  "exerciseTypeRowing": "Rowing",
+  "exerciseTypePaddling": "Paddling",
+  "exerciseTypeSkiing": "Skiing",
+  "exerciseTypeSnowboarding": "Snowboarding",
+  "exerciseTypeSnowshoeing": "Snowshoeing",
+  "exerciseTypeSkating": "Skating",
+  "exerciseTypeSailing": "Sailing",
+  "exerciseTypeSurfing": "Surfing",
+  "exerciseTypeSwimmingOpenWater": "Swimming (open water)",
+  "exerciseTypeGolf": "Golf",
+  "exerciseTypeStrengthTraining": "Strength training",
+  "exerciseTypeTreadmill": "Treadmill",
+  "exerciseTypePushUps": "Push-ups",
+  "exerciseTypePullUps": "Pull-ups",
+  "exerciseTypeRopeSkipping": "Rope skipping",
+  "exerciseTypeTrampolineJumping": "Trampoline jumping",
+  "exerciseTypeOtherWorkout": "Other workout",
+  "mindfulnessEntryUnavailable": "Mindfulness sessions are unavailable in this Health Connect provider.",
+  "mindfulnessEntryTimerTitle": "Timer",
+  "mindfulnessEntryManualTitle": "Manual entry",
+  "mindfulnessEntryIntervalBell": "Interval bell",
+  "mindfulnessEntryIntervalMinutes": "Interval (min)",
+  "mindfulnessEntryBellSound": "Bell sound",
+  "mindfulnessEntryBackgroundSound": "Background sound",
+  "mindfulnessBellStruck": "Soft strike",
+  "mindfulnessBellRubbed": "Warm bowl",
+  "mindfulnessBellBright": "Bright bowl",
+  "mindfulnessBellTemple": "Temple bowl",
+  "mindfulnessBellHarmony": "Harmony",
+  "mindfulnessBackgroundNone": "None",
+  "mindfulnessBackgroundBowl": "Bowl",
+  "mindfulnessBackgroundMeditation": "Meditation",
+  "mindfulnessBackgroundChimes": "Chimes",
+  "mindfulnessBackgroundDreamscape": "Dreamscape",
+  "mindfulnessEntryStartTimer": "Start",
+  "mindfulnessEntryStopTimer": "Stop",
+  "mindfulnessEntryResumeTimer": "Resume",
+  "mindfulnessEntryDiscardTimer": "Discard",
+  "mindfulnessEntrySaveSession": "Save session",
+  "mindfulnessEntryMinutes": "Minutes",
+  "mindfulnessEntryAddMinutes": "Add minutes",
+  "mindfulnessEntryInvalidTimer": "Enter a valid timer duration and interval.",
+  "mindfulnessEntryInvalidManual": "Enter valid mindfulness minutes.",
+  "mindfulnessEntryTimerTooShort": "Meditation must be at least 1 minute to save.",
+  "mindfulnessEntryWriteFailed": "Could not save mindfulness session: {arg0}",
+  "@mindfulnessEntryWriteFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "mindfulnessEntryCompleted": "Timer complete",
+  "mindfulnessRemindersTitle": "Mindfulness reminders",
+  "mindfulnessRemindersSummaryOff": "Off by default. Enable a once-daily reminder for your mindfulness goal.",
+  "mindfulnessRemindersSummaryOn": "Daily at {arg0}",
+  "@mindfulnessRemindersSummaryOn": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "mindfulnessRemindersPermissionNeeded": "Grant notification permission to enable mindfulness reminders.",
+  "mindfulnessRemindersTime": "Reminder time",
+  "mindfulnessRemindersGoalNote": "Reminders pause after today's mindfulness goal is met and resume tomorrow.",
+  "mindfulnessReminderNotificationChannel": "Mindfulness reminders",
+  "mindfulnessReminderNotificationChannelDesc": "Optional reminders to complete your daily mindfulness goal.",
+  "mindfulnessReminderNotificationTitle": "Mindfulness reminder",
+  "mindfulnessReminderNotificationBody": "Your goal is {arg0} today. Take a mindful pause when you can.",
+  "@mindfulnessReminderNotificationBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "mindfulnessReminderNotificationProgress": "{arg0} / {arg1}",
+  "@mindfulnessReminderNotificationProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyEntrySubtitle": "{arg0} entries are saved directly to Health Connect.",
+  "@bodyEntrySubtitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyEntryPermissionNeeded": "To add {arg0} entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.",
+  "@bodyEntryPermissionNeeded": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyEntryValueLabel": "{arg0} ({arg1})",
+  "@bodyEntryValueLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyEntryAddSelected": "Add {arg0}",
+  "@bodyEntryAddSelected": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyEntryInvalidValue": "Enter a valid value for this measurement.",
+  "bodyEntryWriteFailed": "Could not save body measurement: {arg0}",
+  "@bodyEntryWriteFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "carbsEntrySubtitle": "Carbs entries are saved directly to Health Connect.",
+  "carbsEntryPermissionNeeded": "To add carbs entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.",
+  "carbsEntryValueLabel": "Carbs ({arg0})",
+  "@carbsEntryValueLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "carbsEntryAdd": "Add carbs",
+  "carbsEntryInvalidValue": "Enter a valid carbs amount.",
+  "carbsEntryWriteFailed": "Could not save carbs: {arg0}",
+  "@carbsEntryWriteFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "vitalsEntrySubtitle": "{arg0} entries are saved directly to Health Connect.",
+  "@vitalsEntrySubtitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "vitalsEntryPermissionNeeded": "To add {arg0} entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.",
+  "@vitalsEntryPermissionNeeded": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "vitalsEntryValueLabel": "{arg0} ({arg1})",
+  "@vitalsEntryValueLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "vitalsEntrySystolicLabel": "Systolic (mmHg)",
+  "vitalsEntryDiastolicLabel": "Diastolic (mmHg)",
+  "vitalsEntryAddSelected": "Add {arg0}",
+  "@vitalsEntryAddSelected": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "vitalsEntryInvalidValue": "Enter a valid value for this vital.",
+  "vitalsEntryWriteFailed": "Could not save vital: {arg0}",
+  "@vitalsEntryWriteFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "rangeDay": "Day",
+  "rangeWeek": "Week",
+  "rangeMonth": "Month",
+  "rangeYear": "Year",
+  "periodToday": "Today",
+  "periodYesterday": "Yesterday",
+  "periodThisWeek": "This week",
+  "periodWeekOf": "Week of {arg0}",
+  "@periodWeekOf": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "periodThisMonth": "This month",
+  "periodThisYear": "This year",
+  "periodLast7Days": "Last 7 days",
+  "periodLast30Days": "Last 30 days",
+  "periodLast365Days": "Last 365 days",
+  "periodSelected": "Selected period",
+  "metricSteps": "Steps",
+  "metricDistance": "Distance",
+  "metricAveragePace": "Average pace",
+  "metricAverageSpeed": "Average speed",
+  "metricCaloriesBurned": "Total calories burned",
+  "metricCaloriesOut": "Total calories",
+  "metricCaloriesIn": "Calories in",
+  "metricFloorsClimbed": "Floors climbed",
+  "metricActiveCalories": "Active calories",
+  "metricElevation": "Elevation",
+  "metricElevationGained": "Elevation gained",
+  "metricWheelchairPushes": "Wheelchair pushes",
+  "metricWorkout": "Workout",
+  "metricSleep": "Sleep",
+  "metricHydration": "Beverages",
+  "metricTotalHydration": "Total hydration",
+  "metricHydrationTrend": "Beverage trend",
+  "metricLoggedDays": "Logged days",
+  "metricLatestWeight": "Latest weight",
+  "metricBodyFat": "Body fat",
+  "metricAvgHeartRate": "Avg heart rate",
+  "metricAverageHeartRate": "Average heart rate",
+  "metricRestingHeartRate": "Resting heart rate",
+  "metricHrv": "Heart rate variability (HRV)",
+  "metricCardioLoad": "Cardio load",
+  "metricWeeklyCardioLoad": "Weekly cardio",
+  "metricEnergyBurned": "Total calories",
+  "metricBloodPressure": "Blood pressure",
+  "metricSpo2": "SpO2",
+  "metricOxygenSaturation": "Oxygen saturation",
+  "metricVo2Max": "VO2 max",
+  "metricMindfulness": "Mindfulness",
+  "metricTotalMindfulness": "Total mindfulness",
+  "metricCycle": "Cycle",
+  "metricCycleTracking": "Cycle tracking",
+  "metricPeriodDays": "Period days",
+  "metricOvulationTests": "Ovulation tests",
+  "metricLatestBbt": "Latest BBT",
+  "metricWeight": "Weight",
+  "metricHeight": "Height",
+  "metricBmi": "BMI",
+  "metricFfmi": "FFMI",
+  "metricLeanMass": "Lean mass",
+  "metricBmr": "BMR",
+  "metricBoneMass": "Bone mass",
+  "metricBodyWaterMass": "Body water mass",
+  "metricLatest": "Latest",
+  "metricChange": "Change",
+  "metricMacros": "Macros",
+  "metricProtein": "Protein",
+  "metricCarbs": "Carbs",
+  "metricFat": "Fat",
+  "metricDietaryFiber": "Dietary fiber",
+  "metricSugar": "Sugar",
+  "metricEnergyFromFat": "Calories from fat",
+  "metricMonounsaturatedFat": "Monounsaturated fat",
+  "metricPolyunsaturatedFat": "Polyunsaturated fat",
+  "metricSaturatedFat": "Saturated fat",
+  "metricTransFat": "Trans fat",
+  "metricUnsaturatedFat": "Unsaturated fat",
+  "metricCholesterol": "Cholesterol",
+  "metricBiotin": "Biotin",
+  "metricFolate": "Folate",
+  "metricFolicAcid": "Folic acid",
+  "metricNiacin": "Niacin",
+  "metricPantothenicAcid": "Pantothenic acid",
+  "metricRiboflavin": "Riboflavin",
+  "metricThiamin": "Thiamin",
+  "metricVitaminA": "Vitamin A",
+  "metricVitaminB12": "Vitamin B12",
+  "metricVitaminB6": "Vitamin B6",
+  "metricVitaminC": "Vitamin C",
+  "metricVitaminD": "Vitamin D",
+  "metricVitaminE": "Vitamin E",
+  "metricVitaminK": "Vitamin K",
+  "metricCalcium": "Calcium",
+  "metricChloride": "Chloride",
+  "metricChromium": "Chromium",
+  "metricCopper": "Copper",
+  "metricIodine": "Iodine",
+  "metricIron": "Iron",
+  "metricMagnesium": "Magnesium",
+  "metricManganese": "Manganese",
+  "metricMolybdenum": "Molybdenum",
+  "metricPhosphorus": "Phosphorus",
+  "metricPotassium": "Potassium",
+  "metricSelenium": "Selenium",
+  "metricSodium": "Sodium",
+  "metricZinc": "Zinc",
+  "metricCaffeine": "Caffeine",
+  "metricRespiratoryRate": "Respiratory rate",
+  "metricAvgRespiratoryRate": "Avg respiratory rate",
+  "metricBodyTemp": "Body temp",
+  "metricBloodGlucose": "Blood glucose",
+  "metricSkinTemperature": "Skin temperature",
+  "metricRecordedSpeed": "Recorded speed",
+  "metricAveragePower": "Average power",
+  "metricStepsCadence": "Step cadence",
+  "metricCyclingCadence": "Cycling cadence",
+  "unitSteps": "steps",
+  "unitReps": "reps",
+  "unitPushes": "pushes",
+  "unitFloors": "floors",
+  "unitDays": "days",
+  "unitNights": "nights",
+  "unitTests": "tests",
+  "unitTotal": "total",
+  "unitGrams": "g",
+  "sectionActivities": "Activities",
+  "sectionActivityTypeStats": "By activity type",
+  "activityTypeStatsActivityCount": "{count, plural, one{# activity} other{# activities}}",
+  "@activityTypeStatsActivityCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sectionPlannedWorkouts": "Planned workouts",
+  "activitiesFilterActivityTypeLabel": "Activity type",
+  "activitiesFilterAll": "All activities",
+  "activitiesKeyMetrics": "Key metrics",
+  "recoverySleepScore": "Sleep score",
+  "recoverySleepDuration": "Sleep duration",
+  "recoverySleepSchedule": "Sleep schedule",
+  "recoveryRemSleep": "REM sleep",
+  "recoveryDeepSleep": "Deep sleep",
+  "recoverySleepEfficiency": "Sleep efficiency",
+  "sleepScoreConfidenceHigh": "High confidence",
+  "sleepScoreConfidenceMedium": "Medium confidence",
+  "sleepScoreConfidenceLow": "Low confidence",
+  "sleepScoreConfidenceNoData": "No data",
+  "sleepScoreRatingExcellent": "Excellent",
+  "sleepScoreRatingGood": "Good",
+  "sleepScoreRatingFair": "Fair",
+  "sleepScoreRatingPoor": "Poor",
+  "dashboardSleepScoreSubtitle": "{arg0} • {arg1}",
+  "@dashboardSleepScoreSubtitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "sleepScoreCalculationTitle": "How it is calculated",
+  "sleepScoreDayNumbersTitle": "Today values",
+  "sleepScoreReferencesTitle": "Backed links",
+  "sleepScoreCalculationSummary": "OpenVitals scores objective sleep health from duration, efficiency, continuity, and regularity. It does not diagnose sleep disorders.",
+  "sleepScoreFormula": "Sleep score = duration 35 + efficiency 30 + continuity 20 + regularity 15",
+  "sleepScoreFormulaBody": "Duration gives full credit for 7-9 h. Efficiency uses total sleep time divided by time in bed. Continuity uses wake after sleep onset. Regularity compares today's sleep midpoint with recent nights.",
+  "sleepScoreComponentsBody": "Sleep-stage data improves confidence, but REM and deep sleep are not heavily scored because consumer stage estimates can vary. If regularity history is missing, OpenVitals uses a neutral regularity value and lowers confidence.",
+  "sleepScoreNotDiagnostic": "This score is a daily guide from Health Connect records, not a diagnosis or treatment recommendation.",
+  "sleepScoreComponentDuration": "Duration",
+  "sleepScoreComponentEfficiency": "Efficiency",
+  "sleepScoreComponentContinuity": "Continuity",
+  "sleepScoreComponentRegularity": "Regularity",
+  "sleepScoreTotalSleep": "Total sleep",
+  "sleepScoreTimeInBed": "Time in bed",
+  "sleepScoreEfficiency": "Efficiency",
+  "sleepScoreWaso": "Wake after sleep",
+  "sleepScoreRegularity": "Timing difference",
+  "sleepScoreBaselineNights": "Baseline nights",
+  "sleepScoreStageRecords": "Stage records",
+  "sleepScoreQualityNoData": "Insufficient sleep data for a score.",
+  "sleepScoreQualityStageAwake": "Uses sleep stages and awake stages from Health Connect.",
+  "sleepScoreQualityStageOnly": "Uses sleep stages; awake continuity may be estimated.",
+  "sleepScoreQualitySessionOnly": "Uses sleep session timing only; confidence is limited.",
+  "sleepScoreReferenceAasm": "AASM adult sleep duration",
+  "sleepScoreReferenceSleepHealth": "Multidimensional sleep health",
+  "sleepScoreReferenceEfficiency": "Sleep efficiency definition",
+  "sleepScoreReferenceRegularity": "Sleep regularity research",
+  "sleepEfficiencyConfidenceHigh": "High confidence",
+  "sleepEfficiencyConfidenceLow": "Low confidence",
+  "sleepEfficiencyConfidenceNoData": "No data",
+  "sleepEfficiencyCalculationTitle": "How it is calculated",
+  "sleepEfficiencyDayNumbersTitle": "Today values",
+  "sleepEfficiencyReferencesTitle": "Backed links",
+  "sleepEfficiencyCalculationSummary": "Sleep efficiency is the percentage of the sleep window spent asleep. Higher values usually mean less time awake in bed.",
+  "sleepEfficiencyFormula": "Sleep efficiency = total sleep time / time in bed x 100",
+  "sleepEfficiencyFormulaBody": "Total sleep time is the sum of Health Connect sleep stages when stages are available. Time in bed is the main sleep session start-to-end window.",
+  "sleepEfficiencyDataBody": "When sleep stages are missing, Health Connect may only provide a session duration. OpenVitals can still show an estimate, but confidence is low because awake time in bed may be hidden.",
+  "sleepEfficiencyNotDiagnostic": "Sleep efficiency is a sleep-continuity signal, not a diagnosis. Persistently low values can be worth discussing with a clinician.",
+  "sleepEfficiencyQualityNoData": "Insufficient sleep data for efficiency.",
+  "sleepEfficiencyQualityStageBased": "Uses Health Connect sleep stages for total sleep time.",
+  "sleepEfficiencyQualitySessionOnly": "Uses session timing only; awake time may be missing.",
+  "sleepEfficiencyReferenceDefinition": "Sleep efficiency definition",
+  "sleepEfficiencyReferenceDenominator": "Sleep efficiency denominator research",
+  "sleepEfficiencyReferenceMethods": "Sleep assessment methods review",
+  "cardioLoadConfidenceHigh": "High confidence",
+  "cardioLoadConfidenceMedium": "Medium confidence",
+  "cardioLoadConfidenceLow": "Low confidence",
+  "cardioLoadConfidenceNoData": "No data",
+  "cardioLoadCalculationTitle": "How it is calculated",
+  "cardioLoadDayNumbersTitle": "Today values",
+  "cardioLoadReferencesTitle": "Backed links",
+  "cardioLoadCalculationSummary": "OpenVitals uses HR-based TRIMP when heart-rate data is available, then falls back to movement only when HR is not usable.",
+  "cardioLoadFormula": "TRIMP = minutes x HRR x 0.64 x e^(1.92 x HRR)",
+  "cardioLoadFormulaBody": "HRR is heart-rate reserve: (heart rate - resting heart rate) / (max heart rate - resting heart rate). OpenVitals sums this over available heart-rate intervals for the day.",
+  "cardioLoadMappingBody": "When recorded activities exist, heart-rate samples are mapped by timestamp into each activity start and end window. Without activity windows, only elevated heart-rate intervals are counted. If HR is not usable, movement and active calories are shown as a low-confidence fallback.",
+  "cardioLoadMethod": "Method",
+  "cardioLoadTrimpScore": "TRIMP score",
+  "cardioLoadHrCoverage": "HR coverage",
+  "cardioLoadExpectedCoverage": "Expected coverage",
+  "cardioLoadRestingHr": "Resting HR",
+  "cardioLoadMaxHr": "Max HR",
+  "cardioLoadHrSamples": "HR samples",
+  "cardioLoadActivityWindows": "Activity windows",
+  "cardioLoadActivityMinutes": "Activity minutes",
+  "cardioLoadMovementFallback": "Movement fallback",
+  "cardioLoadMethodActivityWindows": "TRIMP from activity HR",
+  "cardioLoadMethodElevatedHr": "TRIMP from elevated HR",
+  "cardioLoadMethodMovementFallback": "Movement fallback",
+  "cardioLoadMethodNoData": "Insufficient data",
+  "cardioLoadCalibrationObservedResting": "Resting HR observed",
+  "cardioLoadCalibrationEstimatedResting": "Resting HR estimated",
+  "cardioLoadCalibrationObservedMax": "Max HR observed",
+  "cardioLoadCalibrationEstimatedMax": "Max HR estimated",
+  "cardioLoadReferenceBanister": "Banister TRIMP equation",
+  "cardioLoadReferenceTrainingLoad": "Training-load monitoring review",
+  "cardioLoadReferenceHealthConnect": "Health Connect workout HR mapping",
+  "sectionSleepSessions": "Sleep sessions",
+  "sectionWeight": "Weight",
+  "sectionEntries": "Entries",
+  "sectionMeals": "Meals",
+  "sectionSessions": "Sessions",
+  "sectionDailyBreakdown": "Daily breakdown",
+  "sectionVitals": "Vitals",
+  "sectionHeart": "Heart",
+  "sectionCardiovascular": "Cardiovascular",
+  "sectionRespiratory": "Respiratory",
+  "sectionRespiratoryRateDailyBreakdown": "Respiratory rate daily breakdown",
+  "sectionVo2MaxHistory": "VO2 max history",
+  "sectionDisplay": "Display",
+  "sectionPrivacy": "Privacy",
+  "sectionCycleCalendar": "Cycle calendar",
+  "sectionBasalBodyTemperature": "Basal body temperature",
+  "sectionStatistics": "Statistics",
+  "sectionCalorieTrends": "Calorie trends",
+  "sectionNutritionTrends": "Nutrition trends",
+  "sectionBodyTrends": "Body trends",
+  "sectionCarbohydrates": "Carbohydrates",
+  "sectionFats": "Fats",
+  "sectionVitamins": "Vitamins",
+  "sectionMinerals": "Minerals",
+  "sectionOtherNutrients": "Other nutrients",
+  "summaryDailyAverage": "{arg0} daily average",
+  "@summaryDailyAverage": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryDaysInRange": "{arg0} days in range",
+  "@summaryDaysInRange": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryEntries": "{arg0} entries",
+  "@summaryEntries": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryReadings": "{arg0} readings",
+  "@summaryReadings": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryNights": "{arg0} nights",
+  "@summaryNights": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryRecordedStages": "{arg0} recorded stages",
+  "@summaryRecordedStages": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryAverage": "Avg",
+  "summaryAvgValue": "Avg {arg0}",
+  "@summaryAvgValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryAvgValueRange": "Avg {arg0} · range {arg1}-{arg2}",
+  "@summaryAvgValueRange": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryValueAvg": "{arg0} avg",
+  "@summaryValueAvg": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryRange": "Range",
+  "summarySamples": "Samples",
+  "summaryRecorded": "{arg0}-{arg1} recorded",
+  "@summaryRecorded": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryRestingValue": "Resting {arg0}",
+  "@summaryRestingValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryHrvValue": "HRV {arg0}",
+  "@summaryHrvValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryLastUpdate": "Last update {arg0}",
+  "@summaryLastUpdate": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryNow": "Now",
+  "summaryToday": "{arg0} today",
+  "@summaryToday": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryOnDate": "{arg0} on {arg1}",
+  "@summaryOnDate": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryEmptyToday": "{arg0} yet today.",
+  "@summaryEmptyToday": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryEmptyDay": "{arg0} on this day.",
+  "@summaryEmptyDay": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryAcrossSelectedPeriod": "Across selected period",
+  "summaryLatestTemperature": "Latest {arg0} · {arg1}",
+  "@summaryLatestTemperature": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryTemperatureRange": "Range {arg0}-{arg1} · {arg2} readings",
+  "@summaryTemperatureRange": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "summarySleepEndingToday": "Sleep ending today",
+  "summarySleepEndingOn": "Sleep ending on {arg0}",
+  "@summarySleepEndingOn": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "statTotal": "Total",
+  "statTime": "Time",
+  "statActiveDays": "Active days",
+  "statAverage": "Average",
+  "statLowest": "Lowest",
+  "statHighest": "Highest",
+  "statReadings": "Readings",
+  "statDailyAverage": "Daily average",
+  "caloriesStatActiveAverage": "Active average",
+  "caloriesStatBmrReadings": "BMR readings",
+  "statAverageDuration": "Average duration",
+  "statTotalIntake": "Total intake",
+  "statBestDay": "Best day",
+  "statNightsLogged": "Nights logged",
+  "statLongestSleep": "Longest sleep",
+  "statLongestWorkout": "Longest workout",
+  "statAverageMovingPace": "Avg moving pace",
+  "statFastestPace": "Fastest pace",
+  "statBestSpeed": "Best speed",
+  "statLongestSession": "Longest session",
+  "statBbtReadings": "BBT readings",
+  "statGoalStreak": "Goal streak",
+  "statLongestGoalStreak": "Longest streak",
+  "statGoalsMet": "Goals met",
+  "statSuccessRate": "Success rate",
+  "statAverageGap": "Avg gap",
+  "statVsPreviousDay": "Vs previous day",
+  "statVsPreviousWeek": "Vs previous week",
+  "statVsPreviousMonth": "Vs previous month",
+  "statVsPreviousYear": "Vs previous year",
+  "statBaseline": "Baseline",
+  "stat30DayBaseline": "30-day avg",
+  "stat60DayBaseline": "60-day avg",
+  "stat90DayBaseline": "90-day avg",
+  "statUsualRange": "Usual range",
+  "statBaselineDeviation": "Baseline deviation",
+  "baselineStatusUsual": "Usual",
+  "baselineStatusAbove": "Above",
+  "baselineStatusBelow": "Below",
+  "baselineStatusUnusualHigh": "Unusual high",
+  "baselineStatusUnusualLow": "Unusual low",
+  "sectionMetricContext": "Context",
+  "interpretationBpTitle": "Blood pressure category",
+  "interpretationBpNormal": "Normal",
+  "interpretationBpElevated": "Elevated",
+  "interpretationBpStage1": "Stage 1 high blood pressure",
+  "interpretationBpStage2": "Stage 2 high blood pressure",
+  "interpretationBpSevere": "Severe range reference",
+  "interpretationBpBody": "This reading falls in the {arg0} range. A single app reading is not a diagnosis.",
+  "@interpretationBpBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationBpSevereBody": "This reading is above the severe range reference. Recheck it; seek urgent care if symptoms are present or the reading stays very high.",
+  "interpretationBpSource": "Source: American Heart Association adult blood pressure categories.",
+  "interpretationBmiTitle": "BMI category",
+  "interpretationBmiUnderweight": "Underweight",
+  "interpretationBmiHealthy": "Healthy weight",
+  "interpretationBmiOverweight": "Overweight",
+  "interpretationBmiObesity1": "Obesity class 1",
+  "interpretationBmiObesity2": "Obesity class 2",
+  "interpretationBmiObesity3": "Obesity class 3",
+  "interpretationBmiBody": "Adult BMI screening category only; BMI does not measure body composition.",
+  "interpretationBmiSource": "Source: CDC adult BMI categories.",
+  "interpretationFfmiTitle": "FFMI category",
+  "interpretationFfmiBelowAverage": "Below average",
+  "interpretationFfmiAverage": "Average",
+  "interpretationFfmiAboveAverage": "Above average",
+  "interpretationFfmiExcellent": "Excellent",
+  "interpretationFfmiSuperior": "Superior",
+  "interpretationFfmiExceptional": "Exceptional",
+  "interpretationFfmiElite": "Elite",
+  "interpretationFfmiBody": "FFMI {arg0}; adjusted FFMI {arg1}. Uses your latest weight, body fat, and height.",
+  "@interpretationFfmiBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationFfmiSource": "Source: ffmicalculators.com indicative adjusted FFMI categories.",
+  "interpretationSleepTitle": "Sleep target",
+  "interpretationSleepBelow": "Below target",
+  "interpretationSleepNear": "Near target",
+  "interpretationSleepMet": "Target met",
+  "interpretationSleepBelowBody": "Average sleep is {arg0} below your configured target.",
+  "@interpretationSleepBelowBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationSleepNearBody": "Average sleep is close to your configured target: {arg0} vs {arg1}.",
+  "@interpretationSleepNearBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationSleepMetBody": "Average sleep meets your configured target: {arg0} vs {arg1}.",
+  "@interpretationSleepMetBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationSleepSource": "Based on your configured sleep target, not a medical sleep assessment.",
+  "interpretationMacroTitle": "Macro split",
+  "interpretationMacroWithin": "Within reference split",
+  "interpretationMacroOutside": "Outside reference split",
+  "interpretationMacroBody": "Protein {arg0}, carbs {arg1}, fat {arg2} of logged macro calories.",
+  "@interpretationMacroBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationMacroSource": "Source: National Academies AMDR adult reference; logged macros only.",
+  "interpretationWorkoutTitle": "Workout guideline progress",
+  "interpretationWorkoutNone": "No logged minutes",
+  "interpretationWorkoutBelow": "Below weekly reference",
+  "interpretationWorkoutApproaching": "Approaching weekly reference",
+  "interpretationWorkoutMet": "Weekly reference met",
+  "interpretationWorkoutBody": "Logged {arg0} toward the 150 min/week adult reference ({arg1}). Intensity is not verified.",
+  "@interpretationWorkoutBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationWorkoutBodyWeeklyAverage": "Weekly average {arg0} toward the 150 min/week adult reference ({arg1}). Intensity is not verified.",
+  "@interpretationWorkoutBodyWeeklyAverage": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "interpretationWorkoutSource": "Source: HHS adult physical activity guideline reference.",
+  "interpretationVitalTitle": "Vital context",
+  "interpretationVitalWithin": "Within broad adult reference",
+  "interpretationVitalBelow": "Below broad adult reference",
+  "interpretationVitalAbove": "Above broad adult reference",
+  "interpretationVitalOxygenBelowTypical": "Below typical oxygen range",
+  "interpretationVitalOxygenLow": "Low oxygen reference",
+  "interpretationVitalOxygenVeryLow": "Very low oxygen reference",
+  "interpretationVitalRestingHrBody": "Broad adult reference only; fitness, medication, stress, illness, and timing can change what is usual for you.",
+  "interpretationVitalRespiratoryBody": "Broad adult reference only; activity, anxiety, illness, and measurement timing can affect respiratory rate.",
+  "interpretationVitalTemperatureBody": "Temperature varies by measurement site and time of day; use this as context only.",
+  "interpretationVitalOxygenBody": "Pulse oximeter readings can be affected by device, skin, circulation, motion, and conditions.",
+  "interpretationVitalSource": "Source: MedlinePlus adult vital sign reference.",
+  "interpretationOxygenSource": "Source: MedlinePlus and FDA pulse oximeter context.",
+  "sectionCrossMetricInsights": "Cross-metric insights",
+  "crossMetricPositiveLink": "Positive link",
+  "crossMetricNegativeLink": "Negative link",
+  "crossMetricWeakLink": "Weak link",
+  "crossMetricCorrelation": "{arg0}",
+  "@crossMetricCorrelation": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "crossMetricPairedDays": "{arg0} paired days",
+  "@crossMetricPairedDays": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "crossSleepHrvTitle": "Sleep vs HRV",
+  "crossSleepHrvPositive": "More sleep tends to align with higher HRV in this period.",
+  "crossSleepHrvNegative": "More sleep tends to align with lower HRV in this period.",
+  "crossSleepHrvNeutral": "Sleep and HRV do not show a clear pattern in this period.",
+  "crossWorkoutRestingHrTitle": "Workouts vs resting heart rate",
+  "crossWorkoutRestingHrPositive": "More workout minutes tend to align with higher resting heart rate in this period.",
+  "crossWorkoutRestingHrNegative": "More workout minutes tend to align with lower resting heart rate in this period.",
+  "crossWorkoutRestingHrNeutral": "Workout minutes and resting heart rate do not show a clear pattern in this period.",
+  "crossHydrationWeightTitle": "Hydration vs weight fluctuation",
+  "crossHydrationWeightPositive": "More hydration tends to align with larger weight swings in this period.",
+  "crossHydrationWeightNegative": "More hydration tends to align with smaller weight swings in this period.",
+  "crossHydrationWeightNeutral": "Hydration and weight fluctuation do not show a clear pattern in this period.",
+  "crossMindfulnessSleepTitle": "Mindfulness vs sleep",
+  "crossMindfulnessSleepPositive": "More mindfulness minutes tend to align with longer sleep in this period.",
+  "crossMindfulnessSleepNegative": "More mindfulness minutes tend to align with shorter sleep in this period.",
+  "crossMindfulnessSleepNeutral": "Mindfulness and sleep do not show a clear pattern in this period.",
+  "legendLess": "Less",
+  "legendMore": "More",
+  "dailyGoal": "Daily goal",
+  "goalProgress": "{arg0} of {arg1} tracked days met",
+  "@goalProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "cdDecreaseDailyGoal": "Decrease daily goal",
+  "cdIncreaseDailyGoal": "Increase daily goal",
+  "hydrationDailyGoal": "Daily goal",
+  "hydrationGoalProgress": "{arg0} of {arg1} tracked days met",
+  "@hydrationGoalProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "hydrationRemindersTitle": "Beverage reminders",
+  "hydrationRemindersSummaryOff": "Off by default. Enable reminders during active hours until today's hydration goal is met.",
+  "hydrationRemindersSummaryOn": "Every {arg0} min • {arg1}-{arg2}",
+  "@hydrationRemindersSummaryOn": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationRemindersPermissionNeeded": "Grant notification permission to enable beverage reminders.",
+  "hydrationRemindersInterval": "Reminder interval",
+  "hydrationRemindersIntervalValue": "Every {arg0} min",
+  "@hydrationRemindersIntervalValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "hydrationRemindersActiveStart": "Active from",
+  "hydrationRemindersActiveEnd": "Active until",
+  "hydrationRemindersGoalNote": "Reminders pause after today's goal is met and resume tomorrow.",
+  "hydrationReminderNotificationChannel": "Beverage reminders",
+  "hydrationReminderNotificationChannelDesc": "Optional reminders to log beverages during active hours.",
+  "hydrationReminderNotificationTitle": "Beverage reminder",
+  "hydrationReminderNotificationBody": "You're at {arg0} of {arg1} today. Add a drink when you can.",
+  "@hydrationReminderNotificationBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationReminderNotificationProgress": "{arg0} / {arg1}",
+  "@hydrationReminderNotificationProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationTrackerTitle": "Log beverage",
+  "hydrationTrackerSubtitle": "Saved directly to Health Connect",
+  "hydrationTrackerPermissionNeeded": "For the summary, OpenVitals only asks for view permissions. To add this manual entry, we need write permission. OpenVitals will not store this data; entries are saved in Health Connect.",
+  "hydrationNutritionPermissionNeeded": "Grant nutrition write permission to save drink nutrients in Health Connect.",
+  "hydrationCustomDrinksTitle": "Saved drinks",
+  "hydrationCatalogDrinksTitle": "Drink catalog",
+  "hydrationCatalogSearch": "Search drinks",
+  "hydrationCatalogFrequentlyConsumed": "Frequently consumed",
+  "hydrationCatalogSavedOutside": "Saved drinks",
+  "hydrationCatalogSectionWater": "Water",
+  "hydrationCatalogSectionCoffees": "Coffees",
+  "hydrationCatalogSectionEnergyDrinks": "Energy drinks",
+  "hydrationCatalogSectionTeas": "Teas",
+  "hydrationCatalogSectionChocolateDrinks": "Chocolate drinks",
+  "hydrationCatalogSectionCarbonatedSoftDrinks": "Carbonated soft drinks",
+  "hydrationCatalogSectionOtherDrinks": "Other drinks",
+  "hydrationCatalogSectionCount": "{arg0} drinks",
+  "@hydrationCatalogSectionCount": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "hydrationNewDrinkAction": "New drink",
+  "hydrationNewDrinkTitle": "New drink",
+  "hydrationEditDrinkTitle": "Edit drink",
+  "hydrationLogSavedDrinkTitle": "Log {arg0}",
+  "@hydrationLogSavedDrinkTitle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationCustomDrinkName": "Name",
+  "hydrationCustomDrinkCategory": "Category",
+  "hydrationCustomDrinkNoCategory": "No category",
+  "hydrationCustomDrinkHydrationImpact": "Hydration impact",
+  "hydrationImpactCountsFully": "Counts fully",
+  "hydrationImpactCountsPartially": "Counts partially",
+  "hydrationImpactDoesNotCount": "Does not count",
+  "hydrationImpactCountsFullyBody": "All drink volume counts toward hydration.",
+  "hydrationImpactCountsPartiallyBody": "Use a percentage of this drink.",
+  "hydrationImpactDoesNotCountBody": "Save it without adding hydration.",
+  "hydrationImpactPercentLabel": "Counts as hydration (%)",
+  "hydrationImpactInvalidPercent": "Enter a percentage above 0 and below 100.",
+  "hydrationCustomDrinkNutrients": "Nutrients",
+  "hydrationCustomDrinkAddNutrient": "Add nutrient",
+  "hydrationCustomDrinkLiquidOnly": "Liquid only",
+  "hydrationCustomDrinkNutrientCount": "Nutrients: {arg0}",
+  "@hydrationCustomDrinkNutrientCount": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "hydrationSavedDrinkAmountNoHydration": "{arg0} • Does not count as hydration",
+  "@hydrationSavedDrinkAmountNoHydration": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationSavedDrinkAmountPartialHydration": "{arg0} • Counts {arg1}% as hydration",
+  "@hydrationSavedDrinkAmountPartialHydration": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "hydrationNonHydratingDrinkSavedHint": "Saved as nutrition only. No hydration was added.",
+  "hydrationEntryNutritionOnly": "Beverage",
+  "hydrationEntryNoHydration": "No hydration impact",
+  "hydrationCustomDrinkAmountGrams": "Amount (g)",
+  "hydrationCustomDrinkAmountKcal": "Amount (kcal)",
+  "hydrationCustomDrinkInvalid": "Enter a drink name, amount, and positive nutrient amounts.",
+  "hydrationInvalidAmount": "Enter an amount greater than zero and no more than 100 L.",
+  "hydrationDrinkAmountLabel": "Amount ({arg0})",
+  "@hydrationDrinkAmountLabel": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationDrinkInvalidAmountRange": "Enter an amount from {arg0} to {arg1}.",
+  "@hydrationDrinkInvalidAmountRange": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "hydrationWriteFailed": "Could not save hydration entry: {arg0}",
+  "@hydrationWriteFailed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "cdDecreaseHydrationGoal": "Decrease hydration goal",
+  "cdIncreaseHydrationGoal": "Increase hydration goal",
+  "cdDecreaseHydrationReminderInterval": "Decrease hydration reminder interval",
+  "cdIncreaseHydrationReminderInterval": "Increase hydration reminder interval",
+  "unitPercentSymbol": "%",
+  "messageNoDashboardData": "No summary data available.",
+  "messageMissingPermissionsTitle": "Some permissions are missing",
+  "messageMissingPermissionsBody": "Grant the missing permissions to see a complete summary.",
+  "messageHealthConnectRateLimited": "Health Connect rate limit reached. Please wait about {arg0} min and try again.",
+  "@messageHealthConnectRateLimited": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "messageNoWorkoutsDay": "No workouts recorded on this day.",
+  "messageNoSleepDay": "No sleep session ended on this day.",
+  "messageNoBloodPressure": "No blood pressure reading.",
+  "messageNoOxygen": "No oxygen reading.",
+  "messageNoVo2Max": "No VO2 max reading.",
+  "messageNoBloodGlucose": "No blood glucose reading.",
+  "messageNoSkinTemperature": "No skin temperature reading.",
+  "messageCycleBrowse": "View cycle calendar and readings.",
+  "dashboardAddWidgets": "Add widgets",
+  "dashboardAllWidgetsAdded": "All widgets are already on the summary.",
+  "dashboardActionLog": "Log",
+  "dashboardActionStartWorkout": "Start workout",
+  "dashboardActivitiesToday": "Activities",
+  "dashboardSensorStatusTitle": "Sensor battery",
+  "dashboardSensorBatteryLowest": "{arg0}% lowest",
+  "@dashboardSensorBatteryLowest": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardSensorBatteryUnknown": "Battery pending",
+  "dashboardSensorStatusActiveConnected": "{arg0} active • {arg1} connected",
+  "@dashboardSensorStatusActiveConnected": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardSensorStatusAllDisabled": "All sensors disabled",
+  "dashboardDeleteActivityTitle": "Delete activity?",
+  "dashboardDeleteActivityMessage": "Delete this {arg0} activity from OpenVitals?",
+  "@dashboardDeleteActivityMessage": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardReadinessTitle": "Daily Readiness",
+  "dashboardReadinessScore": "Readiness",
+  "dashboardReadinessBodyEnergy": "Body Energy",
+  "dashboardReadinessTraining": "Training Readiness",
+  "dashboardReadinessHrvStatus": "HRV Status",
+  "dashboardReadinessIntensityMinutes": "Intensity Minutes",
+  "dashboardReadinessStressLevel": "Stress Level",
+  "dashboardReadinessRecommended": "Recommended",
+  "dashboardReadinessAvoid": "Avoid",
+  "dashboardReadinessAlternative": "Alternative",
+  "dashboardReadinessStrain": "Strain target",
+  "dashboardReadinessGoal": "Adaptive goal",
+  "dashboardReadinessRecoveryMode": "Recovery Mode",
+  "dashboardReadinessRecoveryModeBody": "Activity goals are reduced so you can focus on rest.",
+  "dashboardReadinessWhy": "Why this recommendation",
+  "stressDetailsHowTracked": "How this is tracked",
+  "stressDetailsHowTrackedBody": "OpenVitals estimates physiological stress locally from HRV versus your baseline, resting heart rate versus your baseline, and average heart rate compared with resting heart rate. It is a strain estimate, not a diagnosis or a mental-stress detector.",
+  "stressDetailsScale": "Scale: 0-25 resting, 26-50 low, 51-75 medium, 76-100 high.",
+  "stressDetailsInputs": "Inputs used",
+  "stressDetailsNoInputs": "No usable HRV or heart-rate baseline signals were available.",
+  "stressDetailsDataCoverage": "Data coverage",
+  "stressDetailsNoDataCoverage": "No same-day HR or HRV sample coverage was available.",
+  "stressDetailsCaveats": "Caveats",
+  "stressDetailsRelaxationPrompt": "If this feels accurate, try a short breathing or mindfulness session and re-check after a quiet period.",
+  "readinessDetailsHowCalculated": "How this is calculated",
+  "readinessDetailsSignalsUsed": "Signals used",
+  "readinessDetailsGuidance": "What this means",
+  "readinessDetailsCaveats": "Caveats",
+  "readinessDetailsCaveatLocal": "This is a local rule-based estimate from the data currently available in OpenVitals.",
+  "readinessDetailsCaveatNotMedical": "It is not a diagnosis, medical advice, coaching, or injury prediction.",
+  "readinessDetailsCaveatMissingData": "Missing permissions, sparse samples, or missing baselines lower confidence.",
+  "readinessDetailsScoreStrong": "Strong",
+  "readinessDetailsScoreSteady": "Steady",
+  "readinessDetailsScoreLimited": "Limited",
+  "readinessDetailsScoreLow": "Low",
+  "readinessDetailsScoreNeedsMoreData": "Needs more data",
+  "bodyEnergyDetailsHowCalculatedBody": "Body Energy uses recovery-side signals: sleep score, HRV status, resting heart rate, physiological stress, temperature, hydration, nutrition, and mindfulness. It estimates how much recovery capacity is visible today.",
+  "bodyEnergyDetailsScale": "Scale: 80-100 strong, 60-79 steady, 40-59 limited, 0-39 low.",
+  "bodyEnergyDetailsSummary": "A recovery-side score for how much energy your current body signals support today.",
+  "bodyEnergyDetailsNoSignals": "No usable recovery-side signals were available.",
+  "trainingReadinessDetailsHowCalculatedBody": "Training Readiness uses training-side signals: sleep, HRV status, resting heart rate, training load, intensity minutes, physiological stress, temperature, and activity context. It estimates whether harder training fits today.",
+  "trainingReadinessDetailsScale": "Scale: 80-100 ready for hard training, 60-79 controlled training, 40-59 light training, 0-39 rest-focused.",
+  "trainingReadinessDetailsSummary": "A training-side score for how well current recovery and load signals support exercise intensity.",
+  "trainingReadinessDetailsNoSignals": "No usable training-side signals were available.",
+  "dashboardGoalOf": "of {arg0}",
+  "@dashboardGoalOf": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "caloriesEstimatedActiveBmr": "No total record, est. active + BMR",
+  "caloriesEstimatedValue": "Est. {arg0}",
+  "@caloriesEstimatedValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardWeeklyCardioLoadProgress": "{arg0} of {arg1}",
+  "@dashboardWeeklyCardioLoadProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardCardioLoadPercentOnly": "{arg0}%",
+  "@dashboardCardioLoadPercentOnly": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardCardioLoadPercent": "{arg0}% load",
+  "@dashboardCardioLoadPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardCardioLoadTodayDelta": "+{arg0}% today",
+  "@dashboardCardioLoadTodayDelta": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "messageNoActivitiesPeriod": "No activities in the selected period.",
+  "plannedWorkoutCompleted": "Completed",
+  "plannedWorkoutBlocks": "{arg0} blocks",
+  "@plannedWorkoutBlocks": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "messageNoStepUpdates": "No step updates were recorded",
+  "messageNoDistanceUpdates": "No distance updates were recorded",
+  "messageNoCaloriesBurned": "No total calorie data was recorded",
+  "messageNoFloorsClimbed": "No floors climbed data was recorded",
+  "messageNoActiveCalories": "No active calories data was recorded",
+  "messageNoCalorieDataPeriod": "No total, active, or BMR calorie data in this period.",
+  "messageNoElevation": "No elevation data was recorded",
+  "messageNoWheelchairPushes": "No wheelchair push data was recorded",
+  "messageNoSleepDaySelected": "No sleep data for the selected day.",
+  "messageNoSleepPeriod": "No sleep data in the selected period.",
+  "messageNoHeartPeriod": "No heart rate data in the selected period.\n\nMake sure the heart rate permission is granted and a connected device has synced data.",
+  "messageNoHeartSamplesDay": "No heart rate samples recorded on this day.",
+  "messageHeartEmptyHint": "Try another date or check that a connected device synced point-in-time heart data.",
+  "messageNoWeightPeriod": "No weight data in the selected period.\n\nSync a scale or wearable that reports weight to Health Connect.",
+  "messageNoHydrationPeriod": "No beverage entries were recorded for this period.",
+  "messageNoHydrationAddedPeriod": "No hydration impact was added for this period.",
+  "messageNoNutritionPeriod": "No nutrition entries were recorded for this period.",
+  "messageNoMindfulnessPeriod": "No mindfulness sessions were recorded for this period.",
+  "messageNoVitalsPeriod": "No vitals were recorded for this period.",
+  "messageNoReadingsPeriod": "No readings in this period.",
+  "messageNoCyclePeriod": "No cycle data was recorded for this period.",
+  "messageNoSegments": "No segments recorded.",
+  "messageNoLaps": "No laps recorded.",
+  "messageNoRoutePoints": "No route points recorded.",
+  "messageRouteConsentRequired": "Route data is available, but route access has not been granted yet. Open Health Connect permissions from Settings to enable route previews.",
+  "messageNoRouteData": "No route data recorded.",
+  "messageNoStages": "No stages recorded.",
+  "messageNoKcal": "No kcal",
+  "onboardingTagline": "Your health data, on your device",
+  "onboardingPrivacyTitle": "Privacy first",
+  "onboardingPrivacyBody": "No account required. Data stays on your device. No cloud upload, no analytics, no ads.",
+  "healthDisclaimerTitle": "Health disclaimer",
+  "healthDisclaimerBody": "OpenVitals is for general wellness and informational use only. It is not a medical device and does not provide medical advice. It does not diagnose, treat, cure, or prevent any disease or medical condition. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.",
+  "onboardingHealthConnectTitle": "Powered by Health Connect",
+  "onboardingHealthConnectBody": "Reads from the secure on-device Android health store and saves entries you create back to Health Connect. Works with all data imported into Health Connect.",
+  "onboardingPermissionsHeader": "HEALTH CONNECT PERMISSIONS",
+  "onboardingGrantCore": "Grant required Health Connect permissions",
+  "onboardingGrantAll": "Grant required Health Connect permissions",
+  "onboardingGrantRemaining": "Grant remaining available permissions",
+  "onboardingOpenRequiredPermissions": "Open required Health Connect permissions",
+  "onboardingUnableOpenPermissions": "Unable to open Health Connect permissions.",
+  "onboardingHealthConnectNotSupported": "Health Connect is not supported on this device.",
+  "onboardingHealthConnectNeedsPlayStore": "This device is running Android 13 with the standalone Health Connect app installed. Sadly, this version depends on Google Play Store services, which are missing on this device, so Health Connect rejects requests before OpenVitals can read your data. OpenVitals cannot fix or bypass this device-side Health Connect issue. The only way to solve it is to install Google Play services or upgrade to Android 14 or higher, where Health Connect is part of the operating system and does not need Google services.",
+  "onboardingHealthConnectUpdate": "Health Connect needs to be installed or updated to use this app.",
+  "onboardingInstallHealthConnect": "Install Health Connect",
+  "onboardingStatusNotSupported": "Not supported",
+  "onboardingStatusGranted": "Granted",
+  "onboardingStatusPartiallyGranted": "{arg0}/{arg1} granted",
+  "@onboardingStatusPartiallyGranted": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingStatusManual": "Open settings",
+  "onboardingStatusRequired": "Required",
+  "onboardingStatusOptional": "Optional",
+  "onboardingCategoryActivitySleep": "Activity & sleep",
+  "onboardingCategoryActivitySleepDesc": "Health Connect will ask for:\n* Steps\n* Distance\n* Exercise\n* Sleep",
+  "onboardingCategoryHeartRecovery": "Heart & vitals",
+  "onboardingCategoryHeartRecoveryDesc": "Health Connect will ask for:\n* Heart rate\n* Resting heart rate\n* Heart rate variability",
+  "onboardingCategoryBody": "Body",
+  "onboardingCategoryBodyDesc": "Health Connect will ask for:\n* Weight\n* Height\n* Body fat\n* Lean body mass\n* Basal metabolic rate\n* Bone mass\n* Body water mass",
+  "onboardingCategoryActivityExtras": "Activity extras",
+  "onboardingCategoryActivityExtrasDesc": "Health Connect will ask for:\n* Total calories burned\n* Active calories burned\n* Floors climbed\n* Elevation gained\n* Wheelchair pushes\n* Speed\n* Power\n* Steps cadence\n* Cycling pedaling cadence\n* Planned exercise, when supported",
+  "onboardingCategoryNutritionHydration": "Nutrition & hydration",
+  "onboardingCategoryNutritionHydrationDesc": "Health Connect will ask for:\n* Hydration\n* Nutrition",
+  "onboardingCategoryManualEntryWrite": "Manual entry write access",
+  "onboardingCategoryManualEntryWriteDesc": "Health Connect will ask for write access to:\n* Exercise\n* Distance\n* Elevation gained\n* Active calories burned\n* Total calories burned\n* Exercise route\n* Hydration\n* Weight\n* Height\n* Body fat\n* Blood pressure\n* Oxygen saturation\n* Respiratory rate\n* Body temperature\n* Mindfulness, when supported",
+  "onboardingCategoryDataImportWrite": "Data import write access",
+  "onboardingCategoryDataImportWriteDesc": "Health Connect will ask for write access to imported records:\n* Activity, exercise, calories, and distance\n* Heart rate, resting heart rate, and heart rate variability\n* Body measurements\n* Hydration and nutrition\n* Sleep\n* Vitals\n* Mindfulness, when supported\n* Cycle tracking records",
+  "onboardingCategoryMindfulness": "Mindfulness",
+  "onboardingCategoryMindfulnessDesc": "Health Connect will ask for:\n* Mindfulness sessions",
+  "onboardingCategoryMindfulnessUnavailable": "Mindfulness sessions require a newer Health Connect version.",
+  "onboardingCategoryAdditionalDataAccess": "Additional data access",
+  "onboardingCategoryAdditionalDataAccessDesc": "In Health Connect permissions, open OpenVitals > Additional access and set:\n* Access past data: Enable\n* Access data in the background: Enable\n* Access exercise routes: Always",
+  "onboardingCategoryAdditionalDataAccessManualNote": "{arg0}\n\nIf Access exercise routes is missing from the access dialog, open Health Connect settings for OpenVitals and set it under Additional access.",
+  "@onboardingCategoryAdditionalDataAccessManualNote": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCategoryVitals": "Vitals",
+  "onboardingCategoryVitalsDesc": "Health Connect will ask for:\n* Blood pressure\n* Oxygen saturation\n* Respiratory rate\n* Body temperature\n* VO2 max\n* Blood glucose\n* Skin temperature, when supported",
+  "onboardingCategoryCycleTracking": "Cycle tracking",
+  "onboardingCategoryCycleTrackingDesc": "Health Connect will ask for sensitive cycle data:\n* Menstruation flow\n* Menstruation periods\n* Ovulation tests\n* Cervical mucus\n* Basal body temperature\n* Intermenstrual bleeding\n* Sexual activity",
+  "settingsAllRequestableGranted": "All requestable permissions granted",
+  "settingsManualPermissionsTitle": "Manual permissions required",
+  "settingsManualPermissionsBody": "Some Health Connect permissions cannot be granted from the normal request dialog. Open Health Connect and enable them for OpenVitals.",
+  "settingsOpenHealthPermissions": "Open Health Connect permissions",
+  "settingsDisplayGroupTitle": "Display",
+  "settingsDisplayGroupBody": "Language, units, and theme",
+  "settingsActivitiesGroupTitle": "Activities",
+  "settingsActivitiesGroupBody": "Rolling dates, favorite activity, recording, and offline maps",
+  "settingsSensorsGroupTitle": "Sensors & devices",
+  "settingsSensorsGroupBody": "Heart rate, cadence, and power sensors",
+  "settingsSensorsEmptyTitle": "No sensors yet",
+  "settingsSensorsEmptyBody": "Add a Bluetooth heart rate strap, cadence sensor, power meter, or footpod to use during activity recording.",
+  "settingsSensorsAddDevice": "Add sensor",
+  "settingsSensorsEditDevice": "Edit sensor",
+  "settingsSensorsRemoveDevice": "Remove sensor",
+  "settingsSensorsDeviceName": "Device name",
+  "settingsSensorsEnabled": "Enabled",
+  "settingsSensorsBatteryPercent": "Battery {arg0}%",
+  "@settingsSensorsBatteryPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsSensorsBatteryUnknown": "Battery pending",
+  "settingsSensorsScanning": "Scanning for nearby sensors…",
+  "settingsSensorsScanStopped": "Scan stopped",
+  "settingsSensorsScanEmpty": "No sensors found yet. Make sure your sensor is awake and close to your phone.",
+  "settingsSensorsShowAllDevices": "Show all devices",
+  "settingsSensorsOpenBluetooth": "Open Bluetooth settings",
+  "settingsSensorsDiscovering": "Discovering sensor capabilities…",
+  "settingsSensorsCapabilitiesTitle": "Capabilities",
+  "settingsSensorsCapabilityHeartRate": "Heart rate",
+  "settingsSensorsCapabilityCyclingCadence": "Cycling cadence",
+  "settingsSensorsCapabilityCyclingPower": "Cycling power",
+  "settingsSensorsCapabilityCyclingSpeed": "Cycling speed",
+  "settingsSensorsCapabilityRunningSpeedCadence": "Running speed/cadence",
+  "settingsSensorsCapabilityConflict": "{arg0} is already assigned to {arg1}",
+  "@settingsSensorsCapabilityConflict": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSensorsWheelCircumference": "Wheel circumference (mm)",
+  "activityRecordingSensorsTitle": "Sensors",
+  "activityRecordingSensorsAddInSettings": "Add sensors in Settings",
+  "activityRecordingSensorsNotConfigured": "Not configured",
+  "activityRecordingSensorsConnected": "Connected",
+  "activityRecordingSensorsConnecting": "Connecting",
+  "activityRecordingSensorsReconnecting": "Reconnecting",
+  "activityRecordingSensorsDisabled": "Disabled",
+  "activityRecordingSensorsWaitingForData": "Waiting for sensor data…",
+  "activityRecordingSensorsWaitingShort": "—",
+  "activityRecordingSensorsNoSignalShort": "No signal",
+  "activityRecordingSensorsGarminBroadcastHint": "Connected, but the watch is not broadcasting heart rate. On Garmin: Settings → Watch Sensors → Wrist Heart Rate → Broadcast Heart Rate, then start it on the watch. Disconnect Gadgetbridge first, or use a BLE chest strap instead.",
+  "activityRecordingSensorsRecordedTitle": "Recorded sensor data",
+  "activityRecordingLiveHeartRate": "Heart rate",
+  "activityRecordingLiveCadence": "Cadence",
+  "activityRecordingLivePower": "Power",
+  "activityRecordingLiveSpeed": "Speed",
+  "activityRecordingNotificationHeartRate": "HR {arg0}",
+  "@activityRecordingNotificationHeartRate": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNutritionGroupTitle": "Nutrition",
+  "settingsNutritionGroupBody": "Calories data and caffeine personalization",
+  "settingsCaloriesGroupTitle": "Calories",
+  "settingsCaloriesGroupBody": "Total calories data",
+  "settingsCaffeineGroupTitle": "Caffeine",
+  "settingsCaffeineGroupBody": "Half-life, bedtime, sleep threshold, and personalization.",
+  "settingsRecoveryGroupTitle": "Recovery",
+  "settingsRecoveryGroupBody": "Sleep range and Body Energy calibration",
+  "settingsSleepGroupTitle": "Sleep",
+  "settingsSleepGroupBody": "Sleep range",
+  "settingsCycleGroupTitle": "Menstrual cycle",
+  "settingsCycleGroupBody": "Cycle data and Health Connect permissions",
+  "settingsDataImportGroupTitle": "Data Importers",
+  "settingsDataImportGroupBody": "Import Apple Health exports, route files, and FIT files",
+  "settingsPermissionsGroupTitle": "Permissions",
+  "settingsPermissionsGroupBody": "Health data access and manual permission steps",
+  "settingsHealthConnectGroupTitle": "Health Connect",
+  "settingsHealthConnectGroupBody": "Sync, permissions, access, and app lock",
+  "settingsDebugDiagnosticsGroupTitle": "Debug diagnostics",
+  "settingsDebugDiagnosticsGroupBody": "Save sanitized diagnostics logs for troubleshooting",
+  "settingsHealthConnectSyncTitle": "Sync with Health Connect",
+  "settingsHealthConnectSyncBody": "When on, OpenVitals reads and writes health data according to your permissions. When off, sync pauses without revoking access.",
+  "settingsHealthConnectManageAccess": "Manage access",
+  "settingsHealthConnectManageAccessBody": "Open Health Connect to review or change which data OpenVitals can use.",
+  "healthConnectAccessInsufficientTitle": "Choose data to share",
+  "healthConnectAccessInsufficientBody": "OpenVitals needs Health Connect access to show this information. Set up the data you want to share to continue.",
+  "healthConnectAccessDoubleCancelTitle": "Permissions need attention",
+  "healthConnectAccessDoubleCancelBody": "Health Connect permissions were not granted. Open Health Connect settings to choose which data to share with OpenVitals.",
+  "healthConnectSyncPaused": "Health Connect sync is paused",
+  "healthConnectSyncInProgress": "Syncing with Health Connect…",
+  "healthConnectDataSourceManage": "Manage data sources",
+  "healthConnectDataSourceManageBody": "See which apps write data to Health Connect and manage their access.",
+  "dashboardHealthConnectPromoTitle": "Set up your health data",
+  "dashboardHealthConnectPromoBody": "Get a unified view of your activity, sleep, and heart data from the apps and devices you already use.",
+  "dashboardHealthConnectPromoAction": "Get started",
+  "dashboardHealthConnectSyncPausedBody": "Turn sync back on in Settings to refresh your dashboard.",
+  "dashboardHealthConnectInstallAction": "Install Health Connect",
+  "healthConnectMatchmakingTitle": "Connect your apps",
+  "healthConnectMatchmakingBody": "Find apps and devices that can share data OpenVitals is ready to read.",
+  "healthConnectMatchmakingAction": "Find data sources",
+  "healthConnectPromoteActivityTitle": "Unlock activity insights",
+  "healthConnectPromoteActivityBody": "Allow activity data to see steps, distance, workouts, and trends in OpenVitals.",
+  "healthConnectPromoteActivitiesTitle": "See your workouts",
+  "healthConnectPromoteActivitiesBody": "Allow exercise session access to browse activities synced through Health Connect.",
+  "healthConnectPromoteCaloriesTitle": "Track calories burned",
+  "healthConnectPromoteCaloriesBody": "Allow calorie data to compare active and total burn over time.",
+  "healthConnectPromoteSleepTitle": "See your sleep",
+  "healthConnectPromoteSleepBody": "Allow sleep data to view stages, duration, and sleep score trends.",
+  "healthConnectPromoteHeartTitle": "Monitor heart health",
+  "healthConnectPromoteHeartBody": "Allow heart rate and HRV data to track resting rate and variability.",
+  "healthConnectPromoteVitalsTitle": "Unlock vitals",
+  "healthConnectPromoteVitalsBody": "Allow vitals data to see blood pressure, SpO2, and related measurements.",
+  "healthConnectPromoteBodyTitle": "Track body metrics",
+  "healthConnectPromoteBodyBody": "Allow body composition data to follow weight, BMI, and related trends.",
+  "healthConnectPromoteHydrationTitle": "Track beverages",
+  "healthConnectPromoteHydrationBody": "Allow hydration and nutrition data to see daily drinks and history.",
+  "healthConnectPromoteNutritionTitle": "See nutrition",
+  "healthConnectPromoteNutritionBody": "Allow nutrition data to review calories and macros from your sources.",
+  "healthConnectPromoteMindfulnessTitle": "Track mindfulness",
+  "healthConnectPromoteMindfulnessBody": "Allow mindfulness session data to see your practice over time.",
+  "healthConnectPromoteCycleTitle": "Track cycle data",
+  "healthConnectPromoteCycleBody": "Allow menstrual cycle data to view flow, symptoms, and related records.",
+  "healthConnectPromoteReadinessTitle": "Improve readiness insights",
+  "healthConnectPromoteReadinessBody": "Allow additional Health Connect data to refine daily readiness scores.",
+  "healthConnectNewPermissionsTitle": "New data available",
+  "healthConnectNewPermissionsBody": "OpenVitals can now read additional health data types. Grant access to use the new features.",
+  "healthConnectNewPermissionsAction": "Review permissions",
+  "privacyReconsentTitle": "Privacy policy updated",
+  "privacyReconsentBody": "Our privacy policy has changed. Review and accept to continue syncing with Health Connect.",
+  "privacyReconsentAction": "Review policy",
+  "dashboardSummaryToday": "Today",
+  "settingsDebugLogsTitle": "Sanitized diagnostics logs",
+  "settingsDebugLogsBody": "Share or save OpenVitals diagnostics log entries as a text file. The export drops or redacts identifiers, locations, dates, URIs, raw sensor payloads, and unrelated app logs before writing.",
+  "settingsDebugLogsShare": "Share logs",
+  "settingsDebugLogsShareChooserTitle": "Share diagnostics logs",
+  "settingsDebugLogsShareFailed": "Could not share diagnostics logs",
+  "settingsDebugLogsSave": "Save logs",
+  "settingsDebugLogsSaved": "Debug logs saved",
+  "settingsDebugLogsSaveFailed": "Could not save diagnostics logs",
+  "settingsPrivacyPolicyLink": "View privacy policy",
+  "settingsAppLockTitle": "App lock",
+  "settingsAppLockBody": "Require device unlock to open OpenVitals.",
+  "onboardingCoreRequired": "Activity, sleep, and heart rate access are needed to get started. You can add more data types later from Settings.",
+  "settingsLanguageTitle": "Language",
+  "settingsLanguageBody": "Choose app language or follow your system setting.",
+  "settingsLanguageSystem": "System",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageSpanish": "Spanish",
+  "settingsLanguageGerman": "German",
+  "settingsLanguageItalian": "Italian",
+  "settingsLanguageEstonian": "Estonian",
+  "settingsUnitsTitle": "Units",
+  "settingsUnitsBody": "Choose how distances, weights, hydration, and temperature are displayed.",
+  "settingsUnitMetric": "Metric",
+  "settingsUnitImperial": "Imperial",
+  "settingsThemeTitle": "Theme",
+  "settingsThemeBody": "Choose app appearance independently from Android dark mode.",
+  "settingsThemeSystem": "System",
+  "settingsThemeLight": "Light",
+  "settingsThemeDark": "Dark",
+  "settingsThemeAmoled": "AMOLED",
+  "settingsDynamicColorTitle": "Dynamic color (Material You)",
+  "settingsDynamicColorBody": "Tint OpenVitals from your Android wallpaper. Off uses the OpenVitals blue and teal brand palette.",
+  "settingsActivityWeekTitle": "Rolling dates",
+  "settingsActivityWeekBody": "Use rolling 7, 30, and 365-day windows instead of calendar week, month, and year.",
+  "settingsActivityWeekMondayToSunday": "Calendar",
+  "settingsActivityWeekLast7Days": "Rolling",
+  "settingsFavoriteActivityTitle": "Favorite activity",
+  "settingsFavoriteActivityBody": "Use the latest recorded activity by default, or choose one activity type to always preselect.",
+  "settingsFavoriteActivityLatest": "Use latest",
+  "settingsActivityRecordingTitle": "Activity recording",
+  "settingsActivityRecordingBody": "Tune live GPS recording without changing the saved activity details workflow.",
+  "settingsActivityRecordingKeepScreenOnTitle": "Screen always on",
+  "settingsActivityRecordingKeepScreenOnBody": "Keep the screen awake while an activity recording is active.",
+  "settingsActivityRecordingAutoIdleTitle": "Auto-idle",
+  "settingsActivityRecordingAutoIdleBody": "Pause moving time when you stop for longer than the selected timeout.",
+  "settingsActivityRecordingIdleTimeoutTitle": "Idle timeout",
+  "settingsActivityRecordingAccuracyTitle": "Required GPS accuracy",
+  "settingsActivityRecordingRouteGapTitle": "New route segment after gap",
+  "settingsActivityRecordingTimeIntervalTitle": "Recording time interval",
+  "settingsActivityRecordingDistanceIntervalTitle": "Recording distance interval",
+  "settingsActivityRecordingBarometerTitle": "Barometer climb",
+  "settingsActivityRecordingBarometerBody": "Use pressure changes for climb when the device has a barometer.",
+  "settingsActivityRecordingRestBellTitle": "Rest timer bell",
+  "settingsActivityRecordingRestBellBody": "Play a soft bell when set rest countdowns finish.",
+  "settingsActivityRecordingVoiceTitle": "Voice announcements",
+  "settingsActivityRecordingVoiceBody": "Speak periodic progress, idle/resume, and lap updates while recording.",
+  "settingsActivityRecordingVoiceTimeTitle": "Announce by time",
+  "settingsActivityRecordingVoiceDistanceTitle": "Announce by distance",
+  "settingsActivityRecordingVoiceIdleTitle": "Idle announcements",
+  "settingsActivityRecordingVoiceIdleBody": "Say when auto-idle starts and when recording resumes.",
+  "settingsActivityRecordingVoiceLapTitle": "Lap announcements",
+  "settingsActivityRecordingVoiceLapBody": "Say a progress summary when you mark a lap.",
+  "settingsActivityRecordingSeconds": "{arg0} s",
+  "@settingsActivityRecordingSeconds": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsActivityRecordingHalfSecond": "0.5 s",
+  "settingsActivityRecordingMeters": "{arg0} m",
+  "@settingsActivityRecordingMeters": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsActivityRecordingAuto": "Auto",
+  "settingsActivityRecordingOff": "Off",
+  "settingsCalorieDataTitle": "Total calories data",
+  "settingsCalorieDataBody": "Show plain Health Connect total calories by default. Turn on OpenVitals calculations to fill missing totals from active calories and BMR.",
+  "settingsCaffeineTitle": "Caffeine model",
+  "settingsCaffeineBody": "These values personalize caffeine level, bedtime forecast, and safe-sleep insights. Entries remain in Health Connect.",
+  "settingsBodyProfileTitle": "Body profile",
+  "settingsBodyProfileBody": "Age, weight, and heart rate personalize Body Energy and Caffeine estimates. All fields are optional.",
+  "settingsBodyProfileWeight": "Weight",
+  "settingsSleepRangeTitle": "Sleep range",
+  "settingsSleepRangeBody": "Choose which day sleep sessions are assigned to.",
+  "settingsSleepRangeRolling24h": "Rolling 24h",
+  "settingsSleepRangeNoon": "Noon",
+  "settingsSleepRangeEvening": "18:00",
+  "settingsCyclePermissionsTitle": "Cycle permissions",
+  "settingsCyclePermissionsGranted": "{arg0}/{arg1} cycle permissions granted.",
+  "@settingsCyclePermissionsGranted": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportTitle": "Apple Health Importer",
+  "settingsAppleHealthImportBody": "Import Health Connect-compatible records from Apple Health export.xml or export.zip, with duplicate checks and a shareable diagnostics report.",
+  "settingsAppleHealthImportPermissions": "{arg0}/{arg1} import permissions granted.",
+  "@settingsAppleHealthImportPermissions": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportGrant": "Grant import permissions",
+  "settingsAppleHealthImportAction": "Import Apple Health export",
+  "settingsAppleHealthImportAnalyzeAction": "Analyze Apple Health export",
+  "settingsAppleHealthImportChooseAnotherAction": "Choose another Apple Health export",
+  "settingsAppleHealthImportSelectedAction": "Import selected categories",
+  "settingsAppleHealthImportAnalyzing": "Analyzing...",
+  "settingsAppleHealthImporting": "Importing...",
+  "settingsAppleHealthImportProgressQueued": "Queued",
+  "settingsAppleHealthImportProgressParsing": "Scanning export",
+  "settingsAppleHealthImportProgressConverting": "Converting records",
+  "settingsAppleHealthImportProgressCheckingDuplicates": "Checking duplicates",
+  "settingsAppleHealthImportProgressWriting": "Writing records",
+  "settingsAppleHealthImportProgressFinishing": "Finalizing import",
+  "settingsAppleHealthImportProgressBuildingReport": "Building report",
+  "settingsAppleHealthImportProgressComplete": "Complete",
+  "settingsAppleHealthImportProgress": "{arg0}. Scanned {arg1} items, imported {arg2} records.",
+  "@settingsAppleHealthImportProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportProgressWithPercent": "{arg0}%. {arg1}. Selected {arg2}/{arg3} records, imported {arg4}.",
+  "@settingsAppleHealthImportProgressWithPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      },
+      "arg4": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportProgressWithScanPercent": "{arg0}%. {arg1}. Scanned {arg2}/{arg3} items. Selected {arg4}/{arg5} records, imported {arg6}.",
+  "@settingsAppleHealthImportProgressWithScanPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      },
+      "arg4": {
+        "type": "int"
+      },
+      "arg5": {
+        "type": "int"
+      },
+      "arg6": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportBackground": "Import continues in the background while you leave the app.",
+  "settingsAppleHealthImportNotificationChannel": "Apple Health imports",
+  "settingsAppleHealthImportNotificationTitle": "Importing Apple Health export",
+  "settingsAppleHealthImportNotificationText": "{arg0}. Scanned {arg1}, imported {arg2}.",
+  "@settingsAppleHealthImportNotificationText": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportNotificationTextWithPercent": "{arg0}%. {arg1}. Selected {arg2}/{arg3}, imported {arg4}.",
+  "@settingsAppleHealthImportNotificationTextWithPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      },
+      "arg4": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportNotificationTextWithScanPercent": "{arg0}%. {arg1}. Scanned {arg2}/{arg3}, imported {arg4}.",
+  "@settingsAppleHealthImportNotificationTextWithScanPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      },
+      "arg4": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportResult": "Imported {arg0}. Duplicates {arg1}. Not selected {arg2}. Unsupported {arg3}. Skipped {arg4}. Failed {arg5}.",
+  "@settingsAppleHealthImportResult": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      },
+      "arg4": {
+        "type": "int"
+      },
+      "arg5": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportRoutesIncomplete": "Health records were imported, but some workout routes were unavailable because the ZIP ended unexpectedly. The import report lists affected activities for manual recovery.",
+  "settingsAppleHealthImportAnalysisResult": "Scanned {arg0} items. Found {arg1} compatible records. Unsupported {arg2}. Failed {arg3}.",
+  "@settingsAppleHealthImportAnalysisResult": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportChooseCategories": "Choose what to write to Health Connect.",
+  "settingsAppleHealthImportCategoryCount": "{arg0} records",
+  "@settingsAppleHealthImportCategoryCount": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportCategoryCountRoutes": "{arg0} records, {arg1} with routes",
+  "@settingsAppleHealthImportCategoryCountRoutes": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAppleHealthImportCategoryWorkouts": "Workouts and routes",
+  "settingsAppleHealthImportCategoryWorkoutsDesc": "Exercise sessions and attached workout route geometry.",
+  "settingsAppleHealthImportCategoryActivity": "Activity metrics",
+  "settingsAppleHealthImportCategoryActivityDesc": "Steps, distance, calories, floors, elevation, wheelchair pushes, and speed.",
+  "settingsAppleHealthImportCategoryHeart": "Heart",
+  "settingsAppleHealthImportCategoryHeartDesc": "Heart rate and resting heart rate records.",
+  "settingsAppleHealthImportCategorySleep": "Sleep",
+  "settingsAppleHealthImportCategorySleepDesc": "Sleep sessions and stages.",
+  "settingsAppleHealthImportCategoryBody": "Body measurements",
+  "settingsAppleHealthImportCategoryBodyDesc": "Weight, height, body fat, lean mass, BMR, bone mass, and body water.",
+  "settingsAppleHealthImportCategoryVitals": "Vitals",
+  "settingsAppleHealthImportCategoryVitalsDesc": "Blood pressure, oxygen saturation, respiratory rate, body temperature, blood glucose, and VO2 max.",
+  "settingsAppleHealthImportCategoryNutrition": "Nutrition",
+  "settingsAppleHealthImportCategoryNutritionDesc": "Food energy, macros, caffeine, minerals, and vitamins.",
+  "settingsAppleHealthImportCategoryHydration": "Hydration",
+  "settingsAppleHealthImportCategoryHydrationDesc": "Water intake records.",
+  "settingsAppleHealthImportCategoryMindfulness": "Mindfulness",
+  "settingsAppleHealthImportCategoryMindfulnessDesc": "Mindfulness session records when Health Connect supports them.",
+  "settingsAppleHealthImportCategoryCycle": "Cycle tracking",
+  "settingsAppleHealthImportCategoryCycleDesc": "Menstruation, ovulation, cervical mucus, bleeding, basal body temperature, and sexual activity records.",
+  "settingsAppleHealthImportCopyReport": "Copy report",
+  "settingsAppleHealthImportCopyError": "Copy error",
+  "settingsAppleHealthImportSaveReport": "Download full report",
+  "settingsAppleHealthImportReportCopied": "Import report copied.",
+  "settingsAppleHealthImportErrorCopied": "Import error copied.",
+  "settingsAppleHealthImportReportSaved": "Import report saved.",
+  "settingsAppleHealthImportReportSaveFailed": "Unable to save import report.",
+  "settingsAppleHealthImportError": "Import failed: {arg0}",
+  "@settingsAppleHealthImportError": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAppleHealthImportPermissionDenied": "Access to the selected file was lost, so the import couldn't continue. Select the same Apple Health export again to pick up right where it left off.",
+  "settingsRouteImportTitle": "GPX/KML/KMZ Importer",
+  "settingsRouteImportBody": "Import GPX, KML, or KMZ route files. Review one file before saving, or bulk import multiple files directly into Health Connect.",
+  "settingsRouteImportPermissions": "{arg0}/{arg1} route import permissions granted.",
+  "@settingsRouteImportPermissions": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRouteImportGrant": "Grant route import permissions",
+  "settingsRouteImportAction": "Import GPX/KML/KMZ file",
+  "settingsRouteImportBulkAction": "Bulk import GPX/KML/KMZ files",
+  "settingsRouteImporting": "Importing routes...",
+  "settingsRouteImportProgress": "File {arg0}/{arg1}. Imported {arg2}, failed {arg3}.",
+  "@settingsRouteImportProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      },
+      "arg3": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRouteImportResult": "Imported {arg0}. Failed {arg1}. Selected {arg2}.",
+  "@settingsRouteImportResult": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRouteImportError": "Route import warning: {arg0}",
+  "@settingsRouteImportError": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsFitImportTitle": "FIT Importer",
+  "settingsFitImportBody": "Import FIT activity, course, or workout files, review detected details, and choose whether to save them to Health Connect.",
+  "settingsFitImportAction": "Import FIT file",
+  "settingsOfflineMapsTitle": "Offline maps",
+  "settingsOfflineMapsBody": "Import PMTiles or Mapsforge .map/.maps packs for fully offline activity maps. Protomaps-compatible PMTiles basemaps and Mapsforge maps are supported.",
+  "settingsOfflineMapsEmpty": "No offline maps imported yet.",
+  "settingsOfflineMapsFormatPmtiles": "PMTiles",
+  "settingsOfflineMapsFormatMapsforge": "Mapsforge",
+  "settingsOfflineMapsRenderFormatTitle": "Render format",
+  "settingsOfflineMapsRenderFormatOption": "{arg0} ({arg1})",
+  "@settingsOfflineMapsRenderFormatOption": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsOfflineMapsRenderFormatBody": "OpenVitals renders every imported pack in the selected format together.",
+  "settingsOfflineMapsPackDetail": "{arg0} • {arg1} • {arg2}",
+  "@settingsOfflineMapsPackDetail": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsOfflineMapsImportAction": "Import offline map",
+  "settingsOfflineMapsImporting": "Importing...",
+  "settingsOfflineMapsImportProgressQueued": "Queued",
+  "settingsOfflineMapsImportProgressCopying": "Copying map",
+  "settingsOfflineMapsImportProgressComplete": "Complete",
+  "settingsOfflineMapsImportProgress": "{arg0}",
+  "@settingsOfflineMapsImportProgress": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsOfflineMapsImportProgressWithPercent": "{arg0} • {arg1}%",
+  "@settingsOfflineMapsImportProgressWithPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsOfflineMapsImportBackground": "Import continues in the background while you leave the app.",
+  "settingsOfflineMapsImportResult": "Imported {arg0} ({arg1}).",
+  "@settingsOfflineMapsImportResult": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsOfflineMapsImportError": "Map import failed: {arg0}",
+  "@settingsOfflineMapsImportError": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsOfflineMapsImportNotificationChannel": "Offline map imports",
+  "settingsOfflineMapsImportNotificationTitle": "Importing offline map",
+  "settingsOfflineMapsImportNotificationText": "{arg0}.",
+  "@settingsOfflineMapsImportNotificationText": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsOfflineMapsImportNotificationTextWithPercent": "{arg0} • {arg1}%.",
+  "@settingsOfflineMapsImportNotificationTextWithPercent": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsOfflineMapsHelpPrompt": "Do you want to learn how to add offline maps? Go to:",
+  "settingsOfflineMapsHelpLink": "Open offline maps guide",
+  "sectionSupport": "Support",
+  "settingsSupportTitle": "Support OpenVitals",
+  "settingsSupportBody": "Report bugs, join community support discussions, or help fund ongoing development.",
+  "settingsSupportIssuesAction": "Report an issue",
+  "settingsSupportDiscussionAction": "Join Zulip discussions",
+  "settingsSupportAction": "Open Liberapay",
+  "crashReportEmailChooserTitle": "Email OpenVitals report",
+  "crashReportFallbackTitle": "No email app found",
+  "crashReportFallbackBody": "Copy the report or save it as a text file, then send it to {arg0} later.",
+  "@crashReportFallbackBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "crashReportFallbackCopy": "Copy report",
+  "crashReportFallbackSave": "Save text file",
+  "crashReportFallbackCopied": "Report copied.",
+  "crashReportFallbackSaved": "Report saved.",
+  "crashReportFallbackSaveFailed": "Could not save report.",
+  "crashReportFallbackSaveUnavailable": "No file saver found. Report copied.",
+  "crashReportClipboardLabel": "OpenVitals report",
+  "settingsPrivacyNoAccount": "No account required",
+  "settingsPrivacyNoCloud": "No cloud sync of health data",
+  "settingsPrivacyNoAnalytics": "No analytics SDK",
+  "settingsPrivacyNoAds": "No ads or third-party tracking",
+  "settingsPrivacyOnDevice": "Data stays on your device",
+  "settingsPrivacyReadOnly": "Read-only except entries you explicitly log",
+  "settingsAppVersion": "Version {arg0} ({arg1})",
+  "@settingsAppVersion": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "detailMetrics": "Metrics",
+  "detailSessionDetails": "Session details",
+  "detailDuration": "Duration",
+  "detailMovingTime": "Moving time",
+  "detailType": "Type",
+  "detailStarted": "Started",
+  "detailEnded": "Ended",
+  "detailStartZone": "Start zone",
+  "detailEndZone": "End zone",
+  "detailRecording": "Recording",
+  "detailSourcePackage": "Source package",
+  "detailDeviceType": "Device type",
+  "detailDeviceMaker": "Device maker",
+  "detailDeviceModel": "Device model",
+  "detailLastModified": "Last modified",
+  "detailRecordId": "Record id",
+  "detailClientRecordId": "Client record id",
+  "detailClientVersion": "Client version",
+  "detailPlannedSessionId": "Planned session id",
+  "detailNotes": "Notes",
+  "detailTitle": "Title",
+  "detailTime": "Time",
+  "detailRepetitions": "Repetitions",
+  "detailSet": "Set",
+  "detailLength": "Length",
+  "detailSegments": "Segments",
+  "detailLaps": "Laps",
+  "detailLap": "Lap {arg0}",
+  "@detailLap": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "detailRoute": "Route",
+  "detailStatus": "Status",
+  "detailStatusAvailable": "Available",
+  "detailPoints": "Points",
+  "detailStartPoint": "Start point",
+  "detailEndPoint": "End point",
+  "detailAltitude": "Altitude {arg0}",
+  "@detailAltitude": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "detailHorizontalAccuracy": "Horizontal accuracy {arg0}",
+  "@detailHorizontalAccuracy": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "detailVerticalAccuracy": "Vertical accuracy {arg0}",
+  "@detailVerticalAccuracy": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "detailStageEvents": "Stage events",
+  "detailStages": "Stages",
+  "detailSleepSession": "Sleep session",
+  "recordingActivelyRecorded": "Actively recorded",
+  "recordingAutomaticallyRecorded": "Automatically recorded",
+  "recordingManualEntry": "Manual entry",
+  "recordingUnknown": "Unknown",
+  "deviceWatch": "Watch",
+  "devicePhone": "Phone",
+  "deviceScale": "Scale",
+  "deviceRing": "Ring",
+  "deviceHeadMounted": "Head-mounted",
+  "deviceFitnessBand": "Fitness band",
+  "deviceChestStrap": "Chest strap",
+  "deviceSmartDisplay": "Smart display",
+  "sleepStageAwake": "Awake",
+  "sleepStageSleeping": "Sleeping",
+  "sleepStageOutOfBed": "Out of bed",
+  "sleepStageLight": "Light",
+  "sleepStageDeep": "Deep",
+  "sleepStageRem": "REM",
+  "sleepStageAwakeInBed": "Awake in bed",
+  "sleepStageUnknown": "Unknown",
+  "sleepStagesShareTitle": "Share of time in bed",
+  "cyclePermissionsMissingTitle": "Cycle permissions missing",
+  "cyclePermissionsMissingBody": "Grant cycle tracking permissions to show period days, ovulation tests, cervical mucus, and basal temperature.",
+  "cycleObservationMenstruationPeriod": "Menstruation period",
+  "cycleObservationMenstruationFlow": "Menstruation flow",
+  "cycleObservationOvulationTest": "Ovulation test",
+  "cycleObservationCervicalMucus": "Cervical mucus",
+  "cycleObservationBasalBodyTemperature": "Basal body temperature",
+  "cycleObservationIntermenstrualBleeding": "Intermenstrual bleeding",
+  "cycleObservationSexualActivity": "Sexual activity",
+  "cycleProtectionProtected": "Protected",
+  "cycleProtectionUnprotected": "Unprotected",
+  "cycleProtectionUnknown": "Protection unknown",
+  "cycleBasalTemperatureValue": "%1$.1f C · {arg1}",
+  "@cycleBasalTemperatureValue": {
+    "placeholders": {
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "cycleDaysValue": "{arg0} {arg1}",
+  "@cycleDaysValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "cycleDaySingular": "day",
+  "cycleDayPlural": "days",
+  "cycleFlowLight": "Light",
+  "cycleFlowMedium": "Medium",
+  "cycleFlowHeavy": "Heavy",
+  "cycleOvulationPositive": "Positive",
+  "cycleOvulationHigh": "High",
+  "cycleOvulationNegative": "Negative",
+  "cycleOvulationInconclusive": "Inconclusive",
+  "cycleMucusDry": "Dry",
+  "cycleMucusSticky": "Sticky",
+  "cycleMucusCreamy": "Creamy",
+  "cycleMucusWatery": "Watery",
+  "cycleMucusEggWhite": "Egg white",
+  "cycleMucusUnusual": "Unusual",
+  "cycleMucusLight": "light",
+  "cycleMucusMedium": "medium",
+  "cycleMucusHeavy": "heavy",
+  "cycleMucusValue": "{arg0}, {arg1}",
+  "@cycleMucusValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "measurementLocationArmpit": "Armpit",
+  "measurementLocationFinger": "Finger",
+  "measurementLocationForehead": "Forehead",
+  "measurementLocationMouth": "Mouth",
+  "measurementLocationRectum": "Rectum",
+  "measurementLocationTemporalArtery": "Temporal artery",
+  "measurementLocationToe": "Toe",
+  "measurementLocationEar": "Ear",
+  "measurementLocationWrist": "Wrist",
+  "measurementLocationVagina": "Vagina",
+  "measurementLocationUnknown": "Measurement location unknown",
+  "weekdayMondayShort": "M",
+  "weekdayTuesdayShort": "T",
+  "weekdayWednesdayShort": "W",
+  "weekdayThursdayShort": "T",
+  "weekdayFridayShort": "F",
+  "weekdaySaturdayShort": "S",
+  "weekdaySundayShort": "S",
+  "vitalsPermissionsNeededTitle": "Vitals permissions needed",
+  "vitalsPermissionsNeededBody": "Grant blood pressure, oxygen saturation, respiratory rate, temperature, VO2 max, and glucose permissions to fill this screen.",
+  "vitalsRespiratoryRateReadings": "Respiratory rate readings",
+  "vitalsBodyTemperatureReadings": "Body temperature readings",
+  "heartRateHealthChecksTitle": "Heart rate checks",
+  "heartRateHighTitle": "High heart rate",
+  "heartRateLowTitle": "Low heart rate",
+  "heartRateSamplesAtOrAbove": "Samples at/above {arg0} bpm",
+  "@heartRateSamplesAtOrAbove": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "heartRateSamplesAtOrBelow": "Samples at/below {arg0} bpm",
+  "@heartRateSamplesAtOrBelow": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "heartRateDaysAtOrAbove": "Days at/above {arg0} bpm",
+  "@heartRateDaysAtOrAbove": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "heartRateDaysAtOrBelow": "Days at/below {arg0} bpm",
+  "@heartRateDaysAtOrBelow": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "cdDecreaseHrThreshold": "Decrease heart rate threshold",
+  "cdIncreaseHrThreshold": "Increase heart rate threshold",
+  "mealBreakfast": "Breakfast",
+  "mealLunch": "Lunch",
+  "mealDinner": "Dinner",
+  "mealSnack": "Snack",
+  "mealGeneric": "Meal",
+  "macroProteinShort": "P {arg0}g",
+  "@macroProteinShort": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "macroCarbsShort": "C {arg0}g",
+  "@macroCarbsShort": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "macroFatShort": "F {arg0}g",
+  "@macroFatShort": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "macroFiber": "fiber {arg0}g",
+  "@macroFiber": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "macroSugar": "sugar {arg0}g",
+  "@macroSugar": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineSectionOverview": "Overview",
+  "caffeineSectionDashboard": "Dashboard",
+  "caffeineSectionAnalytics": "Analytics",
+  "caffeineSectionSleep": "Sleep impact",
+  "caffeineSectionSources": "Sources",
+  "caffeineSectionEntries": "Entries",
+  "caffeineSectionScience": "Science",
+  "caffeineSetupTitle": "Personalize caffeine insights",
+  "caffeineSetupBody": "OpenVitals found caffeine data. Personalization improves the caffeine curve and bedtime forecast.",
+  "caffeineCurrentTitle": "Active caffeine",
+  "caffeineTodayTotal": "Today total",
+  "caffeineTimeToSafe": "Time to safe",
+  "caffeineSleepStatusUnlikely": "Sleep impact unlikely",
+  "caffeineSleepStatusUnlikelyBody": "{arg0} active now, below your {arg1} sleep threshold.",
+  "@caffeineSleepStatusUnlikelyBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineSleepStatusElevatedNow": "Elevated now",
+  "caffeineSleepStatusElevatedNowBody": "{arg0} active now. Estimated below threshold in {arg1}; bedtime forecast is {arg2} at {arg3}.",
+  "@caffeineSleepStatusElevatedNowBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      },
+      "arg3": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineSleepStatusMayAffect": "May affect sleep",
+  "caffeineSleepStatusMayAffectBody": "Bedtime forecast is {arg0} at {arg1}, above your {arg2} threshold.",
+  "@caffeineSleepStatusMayAffectBody": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeinePeriodTotal": "Period total",
+  "caffeineDailyAverage": "Daily average",
+  "caffeineLoggedDays": "Logged days",
+  "caffeinePeakDay": "Peak day",
+  "caffeinePeakDayValue": "{arg0} - {arg1}",
+  "@caffeinePeakDayValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineCurveTitle": "Caffeine curve",
+  "caffeineThresholdLine": "Sleep threshold {arg0}",
+  "@caffeineThresholdLine": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineBedtimeForecast": "Bedtime forecast",
+  "caffeineBedtimeSummary": "At {arg0} with threshold {arg1}",
+  "@caffeineBedtimeSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineSafeNights": "Safe nights",
+  "caffeineSafeStreak": "Safe streak",
+  "caffeineTopSource": "Top source",
+  "caffeineSleepThreshold": "Sleep threshold",
+  "caffeineDailyImpact": "Daily and bedtime impact",
+  "caffeineSafeCalendar": "Safe-night calendar",
+  "caffeineSources": "Source apps",
+  "caffeineItems": "Items",
+  "caffeineInferredCategories": "Inferred categories",
+  "caffeineTimeOfDay": "Time of day",
+  "caffeineEntry": "Caffeine entry",
+  "caffeineInferredCategory": "Category: {arg0}",
+  "@caffeineInferredCategory": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineCatalogMatch": "Catalog: {arg0}",
+  "@caffeineCatalogMatch": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineCategory": "Category",
+  "caffeineCatalog": "Catalog",
+  "caffeineCatalogMatchDetail": "{arg0}, typical {arg1}, {arg2} match",
+  "@caffeineCatalogMatchDetail": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineHealthConnectSourceLabel": "Source",
+  "caffeineHealthConnectMealLabel": "Meal",
+  "caffeineHealthConnectDurationLabel": "Duration",
+  "caffeineCurrentContribution": "{arg0} active",
+  "@caffeineCurrentContribution": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "caffeineCurrentContributionLabel": "Current",
+  "caffeineDose": "Dose",
+  "caffeinePeak": "Peak",
+  "caffeinePeakTime": "Peak time",
+  "caffeineContributionCurve": "Contribution curve",
+  "caffeineEmpty": "No caffeine entries for this period. Caffeinated drinks added through hydration or nutrition will appear here when Health Connect includes caffeine.",
+  "caffeineScienceTitle": "How the estimate works",
+  "caffeineScienceBody": "OpenVitals reads caffeine from Health Connect nutrition records in milligrams, then estimates absorption across your configured absorption window and exponential elimination from your personalized half-life.",
+  "caffeineScienceMeasurements": "Measurements used",
+  "caffeineScienceMeasurementsBody": "The recorded dose always comes from Health Connect. Start/end time, entry name, meal type, and data-origin package are used for timing, matching, and analytics labels. Catalog matches only annotate entries; they never replace the recorded dose.",
+  "caffeineScienceLimits": "This is a practical population model, not medical advice. Pregnancy, medications, liver disease, genetics, smoking, alcohol, sensitivity, and habituation can all shift caffeine response.",
+  "caffeineReferencesTitle": "Research and references",
+  "caffeineReferenceDrake": "Caffeine timing and sleep, Drake 2013",
+  "caffeineReferenceNehlig": "Individual caffeine metabolism, Nehlig 2018",
+  "caffeineReferenceEfsa": "EFSA caffeine safety and sleep notes",
+  "caffeineReferenceHealthConnect": "Health Connect nutrition record fields",
+  "unknownSource": "Unknown source",
+  "achievementsLegacyTitle": "Legacy activity badges",
+  "achievementsProgressSummary": "{arg0} of {arg1} unlocked",
+  "@achievementsProgressSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementsDataWindow": "{arg0} to {arg1} · {arg2} tracked days",
+  "@achievementsDataWindow": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      },
+      "arg2": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsTrackedDays": "Tracked days",
+  "achievementsBestSteps": "Best steps",
+  "achievementsTotalDistance": "Total distance",
+  "achievementsBestFloors": "Best floors",
+  "achievementsTotalFloors": "Total floors",
+  "achievementsFilterAll": "All",
+  "achievementsCategoryDailySteps": "Daily steps",
+  "achievementsCategoryLifetimeDistance": "Lifetime distance",
+  "achievementsCategoryDailyFloors": "Daily floors",
+  "achievementsCategoryLifetimeFloors": "Lifetime floors",
+  "achievementsDailyStepsRequirement": "{arg0} steps in one day",
+  "@achievementsDailyStepsRequirement": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsLifetimeDistanceRequirement": "{arg0} total distance",
+  "@achievementsLifetimeDistanceRequirement": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsDailyFloorsRequirement": "{arg0} floors in one day",
+  "@achievementsDailyFloorsRequirement": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsLifetimeFloorsRequirement": "{arg0} total floors",
+  "@achievementsLifetimeFloorsRequirement": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsProgressValue": "{arg0} of {arg1}",
+  "@achievementsProgressValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      },
+      "arg1": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsAchievedOn": "Unlocked {arg0}",
+  "@achievementsAchievedOn": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementsEarnedOnce": "Earned",
+  "achievementsEarnedTimes": "{arg0} times",
+  "@achievementsEarnedTimes": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementsLocked": "Locked",
+  "achievementsNoDataTitle": "No activity history",
+  "achievementsNoDataBody": "No step or distance records were returned from Health Connect. Check that activity data exists and that history access is granted for older records.",
+  "achievementsNoFloorDataTitle": "No floor data",
+  "achievementsNoFloorDataBody": "Floor badges unlock when Health Connect has floors climbed data.",
+  "achievementsErrorTitle": "Achievements unavailable",
+  "dataConfidenceTitle": "Data confidence",
+  "dataConfidenceHigh": "High confidence",
+  "dataConfidenceMedium": "Medium confidence",
+  "dataConfidenceLow": "Low confidence",
+  "dataConfidenceCoverage": "{arg0} of {arg1} days tracked ({arg2}%)",
+  "@dataConfidenceCoverage": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      },
+      "arg2": {
+        "type": "int"
+      }
+    }
+  },
+  "dataConfidenceSamples": "{arg0} records",
+  "@dataConfidenceSamples": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "dataConfidenceSourceUnavailable": "Source details not available for this aggregate",
+  "dataConfidenceSourceSingle": "Source: {arg0}",
+  "@dataConfidenceSourceSingle": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "dataConfidenceSourceMixed": "Mixed sources: {arg0}",
+  "@dataConfidenceSourceMixed": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "dataConfidenceKindMeasured": "Measured Health Connect records",
+  "dataConfidenceKindAggregated": "Aggregated from Health Connect records",
+  "dataConfidenceKindCalculated": "Calculated by OpenVitals",
+  "dataConfidenceKindEstimated": "Estimated or derived value",
+  "dataConfidenceKindMixed": "Mixed measured and calculated data",
+  "dataConfidenceWarningLowCoverage": "Missing days can weaken averages and trends.",
+  "dataConfidenceWarningSparse": "Sparse data: trends and statistics may be unstable.",
+  "dataConfidenceWarningMixedSources": "Source changes may explain jumps or duplicated-looking data.",
+  "dataConfidenceWarningManual": "Manual entries are included in this period.",
+  "dataConfidenceWarningCalculated": "This value is derived, not directly measured.",
+  "dataConfidenceWarningNoSources": "This aggregate does not expose source-level details.",
+  "settingsBodyEnergyGroupTitle": "Body Energy",
+  "settingsBodyEnergyGroupBody": "Calibration for estimated intraday energy and effort zones.",
+  "bodyEnergyCalibrationTitle": "Turn on Body Energy",
+  "bodyEnergyCalibrationBody": "OpenVitals estimates drain from heart-rate intensity over time, using your age, weight, and heart rate from the Body profile in Settings.",
+  "bodyEnergyCalibrationOptionalBody": "Manual heart-rate zones below are optional. If you skip them, OpenVitals uses automatic estimates from Health Connect data and shows lower confidence when calibration is uncertain.",
+  "bodyEnergyCalibrationBirthYear": "Birth year",
+  "bodyEnergyCalibrationMaxHr": "Max heart rate",
+  "bodyEnergyCalibrationRestingHr": "Resting heart rate",
+  "bodyEnergyCalibrationManualZones": "Manual heart zones",
+  "bodyEnergyCalibrationManualZonesBody": "Optional bpm lower bounds for zones 1-5.",
+  "bodyEnergyCalibrationZone1": "Zone 1 lower bpm",
+  "bodyEnergyCalibrationZone2": "Zone 2 lower bpm",
+  "bodyEnergyCalibrationZone3": "Zone 3 lower bpm",
+  "bodyEnergyCalibrationZone4": "Zone 4 lower bpm",
+  "bodyEnergyCalibrationZone5": "Zone 5 lower bpm",
+  "bodyEnergyCalibrationUseAuto": "Use automatic estimates",
+  "bodyEnergyCalibrationSkip": "Skip for now",
+  "bodyEnergyCalibrationSaved": "Body Energy calibration saved",
+  "bodyEnergyCalibrationReset": "Body Energy calibration reset to automatic",
+  "bodyEnergyNotSetUp": "Not set up",
+  "bodyEnergyTimelineEstimated": "Estimated by OpenVitals",
+  "bodyEnergyTimelineCurrent": "Current",
+  "bodyEnergyTimelineStart": "Start",
+  "bodyEnergyTimelineCharged": "Charged",
+  "bodyEnergyTimelineDrained": "Drained",
+  "bodyEnergyTimelineConfidence": "Confidence",
+  "bodyEnergyTimelineNoData": "No usable Body Energy timeline for this period.",
+  "bodyEnergyTimelineDayTitle": "Daily timeline",
+  "bodyEnergyTimelineLowConfidence": "Some buckets are estimated because calibration or Health Connect data is incomplete.",
+  "bodyEnergyWhyTitle": "What moved it",
+  "bodyEnergyWhyEmpty": "No clear charge or drain dominated this day yet.",
+  "bodyEnergyInfluenceSleepRecovery": "Sleep recovery",
+  "bodyEnergyInfluenceQuietRest": "Quiet rest",
+  "bodyEnergyInfluenceExertion": "Exertion",
+  "bodyEnergyInfluenceElevatedHr": "Elevated heart rate",
+  "bodyEnergyInfluenceRecoveryDebt": "Recovery debt",
+  "bodyEnergyInfluenceNoData": "No data",
+  "bodyEnergyInfluenceSteady": "Steady",
+  "bodyEnergyReasonSleepRecoveryDetail": "Sleep buckets charged the estimate from the previous score.",
+  "bodyEnergyReasonQuietRestDetail": "Low heart rate while awake added a small recovery charge.",
+  "bodyEnergyReasonExertionDetail": "Heart-rate intensity or recorded workouts drained the estimate.",
+  "bodyEnergyReasonElevatedHrDetail": "Awake heart rate above resting level added stress drain.",
+  "bodyEnergyReasonRecoveryDebtDetail": "Recent harder effort kept a small drain active afterward.",
+  "bodyEnergyReasonNoDataDetail": "Health Connect did not provide enough signal for this bucket.",
+  "bodyEnergyReasonSteadyDetail": "The estimate stayed mostly stable.",
+  "bodyEnergyInputsTitle": "Inputs used",
+  "bodyEnergyInputsSummary": "Algorithm v{arg0}, {arg1}-minute buckets",
+  "@bodyEnergyInputsSummary": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      },
+      "arg1": {
+        "type": "int"
+      }
+    }
+  },
+  "bodyEnergyInputHeartRate": "Heart rate samples",
+  "bodyEnergyInputSleep": "Sleep sessions",
+  "bodyEnergyInputWorkouts": "Workouts",
+  "bodyEnergyInputRestingHr": "Resting heart rate",
+  "bodyEnergyInputHrBaseline": "Heart-rate baseline",
+  "bodyEnergyInputHrv": "HRV modifier",
+  "bodyEnergyInputRespiratory": "Respiration modifier",
+  "bodyEnergyInputPreviousScore": "Previous score",
+  "bodyEnergyInputCalibration": "Calibration",
+  "bodyEnergyInputAvailable": "Available",
+  "bodyEnergyInputMissing": "Missing",
+  "bodyEnergyInputOptional": "Not present",
+  "bodyEnergyInputRecords": "{arg0} records",
+  "@bodyEnergyInputRecords": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "bodyEnergyInputSessions": "{arg0} sessions",
+  "@bodyEnergyInputSessions": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "bodyEnergyInputWorkoutsValue": "{arg0} workouts",
+  "@bodyEnergyInputWorkoutsValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "int"
+      }
+    }
+  },
+  "bodyEnergyInputPreviousScoreValue": "{arg0} start",
+  "@bodyEnergyInputPreviousScoreValue": {
+    "placeholders": {
+      "arg0": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyEnergyCalibrationModeAuto": "Automatic estimates",
+  "bodyEnergyCalibrationModeManualValues": "Manual values",
+  "bodyEnergyCalibrationModeManualZones": "Manual zones",
+  "bodyEnergyCalculationTitle": "How Body Energy is estimated",
+  "bodyEnergyCalculationBody": "OpenVitals divides the selected day into short buckets, starts from the previous available score when possible, then adds charge from sleep or quiet rest and subtracts drain from exertion, elevated awake heart rate, and recovery debt after harder effort.",
+  "bodyEnergyCalculationInputsBody": "Heart rate, resting heart rate, personal zones, sleep, workouts, HRV, and respiratory rate can all improve the estimate. Missing inputs make the estimate more conservative and lower confidence.",
+  "bodyEnergyCalculationLimitsBody": "This is an on-device wellness estimate, not a direct measurement or medical advice. The displayed inputs and reasons are exposed so the method can be reviewed and improved.",
+  "metricBodyEnergy": "Body Energy",
+  "privacyPolicyTitle": "Privacy policy",
+  "privacyPolicyBody1": "OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log, including imported GPX/KML/KMZ routes and imported FIT files, are written to Health Connect.",
+  "privacyPolicyBody2": "This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.",
+  "privacyPolicyBody3": "OpenVitals is not a medical device and does not diagnose, treat, cure, or prevent any disease or medical condition. It is not a substitute for medical advice, diagnosis, or treatment from a qualified healthcare professional.",
+  "linkCouldNotOpen": "The link could not be opened."
+}

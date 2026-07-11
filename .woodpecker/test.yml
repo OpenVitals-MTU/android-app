@@ -4,20 +4,28 @@ when:
     branch: main
 
 variables:
-  - &android_image ghcr.io/cirruslabs/android-sdk:tools
+  # Pinned to the Flutter version the app is developed against (see pubspec `sdk: ^3.12.2`).
+  - &flutter_image ghcr.io/cirruslabs/flutter:3.44.6
 
 steps:
   - name: unit-tests
-    image: *android_image
+    image: *flutter_image
     commands:
       - set -eu
-      - scripts/ci-android-gradle.sh verifyCiUnitTest
+      - scripts/ci-flutter.sh test
 
   - name: app-preflight
     depends_on:
       - unit-tests
-    image: *android_image
+    image: *flutter_image
     commands:
       - set -eu
-      - scripts/ci-android-gradle.sh verifyCiPreflight
+      - scripts/ci-flutter.sh analyze lib test
+      # Translation gate. ARB is the source of truth (Weblate edits it directly), so
+      # this is what stops a below-threshold or placeholder-broken locale from merging.
+      - dart run tool/verify_l10n.dart
+      # Staleness gate: catches "Weblate merged an ARB but nobody re-ran gen-l10n",
+      # which would otherwise ship stale generated Dart against fresh translations.
+      - flutter gen-l10n
+      - git diff --exit-code lib/l10n
       - git diff --check

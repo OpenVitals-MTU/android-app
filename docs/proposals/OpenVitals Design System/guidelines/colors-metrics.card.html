@@ -1,0 +1,31 @@
+<!-- @dsCard group="Colors" viewport="700x260" name="Metric accents" subtitle="Fixed per-metric palette — one accent per metric" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; background: var(--ov-background); font-family: var(--ov-font-sans); }
+  .grid { padding: 24px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px 12px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .dot { width: 40px; height: 40px; border-radius: var(--ov-radius-full); }
+  .name { font: 500 11px/14px var(--ov-font-sans); color: var(--ov-on-surface); }
+  .hex  { font: 500 10px/13px var(--ov-font-mono); color: var(--ov-on-surface-variant); }
+</style>
+</head>
+<body>
+<div class="grid" id="g"></div>
+<script>
+  const metrics = [
+    ['Steps','#4CAF50'],['Distance','#2196F3'],['Sleep','#673AB7'],['Heart','#E91E63'],
+    ['Vitals','#D32F2F'],['Weight','#FF9800'],['Calories','#F44336'],['Hydration','#03A9F4'],
+    ['Nutrition','#43A047'],['Workout','#00BCD4'],['Body fat','#795548'],['Floors','#FFC107'],
+    ['Active cal','#FF5722'],['Elevation','#8BC34A'],['Wheelchair','#00897B'],['Mindful','#8E6C8A'],
+    ['Cycle','#C35B7A'],['Recording','#FFB300'],
+  ];
+  document.getElementById('g').innerHTML = metrics.map(([n,c]) =>
+    `<div class="cell"><div class="dot" style="background:${c}"></div><div class="name">${n}</div><div class="hex">${c}</div></div>`
+  ).join('');
+</script>
+</body>
+</html>

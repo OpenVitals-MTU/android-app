@@ -1,0 +1,210 @@
+/* ============================================================================
+   OpenVitals — Color tokens
+   ----------------------------------------------------------------------------
+   Two palettes ship with OpenVitals:
+
+   1. CANONICAL (:root)  — the app's own static Material 3 Light color scheme,
+      lifted verbatim from ui/theme/Theme.kt + Color.kt. This is what renders
+      when Material You dynamic color is unavailable/disabled. Blue primary,
+      teal tertiary, cool neutrals. Deterministic, brand-owned.
+
+   2. WARM  ([data-theme="warm"]) — a Material You dynamic-color INSTANCE
+      sampled from the reference screenshots (warm terracotta seed). This is
+      what all 8 shipped screenshots show and what the app icon evokes. Use it
+      when a mock should match the photographed product. Values are sampled,
+      not from source (dynamic color is wallpaper-derived, per-device).
+
+   Metric accent colors and brand colors are FIXED (from Color.kt) and shared
+   by both palettes.
+   ========================================================================= */
+
+:root {
+  /* ---- Base brand (Color.kt) ---- */
+  --ov-brand-blue:  #006E8F;   /* OpenVitalsBlue  — primary seed */
+  --ov-brand-green: #2F6F4F;   /* OpenVitalsGreen — tertiary seed */
+  --ov-brand-coral: #9B4438;   /* OpenVitalsCoral — accent */
+
+  /* ---- Canonical light scheme (Theme.kt · LightColorScheme) ---- */
+  --ov-primary:                 #006E8F;
+  --ov-on-primary:              #FFFFFF;
+  --ov-primary-container:       #C3E8FF;
+  --ov-on-primary-container:    #001F2A;
+
+  --ov-secondary:               #5E5F68;
+  --ov-on-secondary:            #FFFFFF;
+  --ov-secondary-container:     #E2E1EC;
+  --ov-on-secondary-container:  #1B1B23;
+
+  --ov-tertiary:                #2F6F4F;
+  --ov-on-tertiary:             #FFFFFF;
+  --ov-tertiary-container:      #9CF3D9;
+  --ov-on-tertiary-container:   #002117;
+
+  --ov-error:                   #BA1A1A;
+  --ov-on-error:                #FFFFFF;
+  --ov-error-container:         #FFDAD6;
+  --ov-on-error-container:      #410002;
+
+  --ov-background:              #FCFCFF;
+  --ov-on-background:           #1A1C1E;
+  --ov-surface:                 #FCFCFF;
+  --ov-on-surface:              #1A1C1E;
+  --ov-surface-variant:         #DCE3E9;
+  --ov-on-surface-variant:      #40484D;
+
+  --ov-outline:                 #70787E;
+  --ov-outline-variant:         #C0C8CE;
+
+  --ov-surface-container-lowest:  #FFFFFF;
+  --ov-surface-container-low:     #F4F6F8;
+  --ov-surface-container:         #EFF1F4;
+  --ov-surface-container-high:    #E9ECEF;
+  --ov-surface-container-highest: #E3E6E9;
+
+  /* ---- Fixed metric accent palette (Color.kt) ---- */
+  --ov-metric-steps:           #4CAF50;
+  --ov-metric-distance:        #2196F3;
+  --ov-metric-sleep:           #673AB7;
+  --ov-metric-heart:           #E91E63;
+  --ov-metric-vitals:          #D32F2F;
+  --ov-metric-weight:          #FF9800;
+  --ov-metric-calories:        #F44336;
+  --ov-metric-hydration:       #03A9F4;
+  --ov-metric-nutrition:       #43A047;
+  --ov-metric-workout:         #00BCD4;
+  --ov-metric-body-fat:        #795548;
+  --ov-metric-floors:          #FFC107;
+  --ov-metric-active-calories: #FF5722;
+  --ov-metric-elevation:       #8BC34A;
+  --ov-metric-wheelchair:      #00897B;
+  --ov-metric-mindfulness:     #8E6C8A;
+  --ov-metric-cycle:           #C35B7A;
+
+  /* Activity-recording outdoor (high-contrast) accents */
+  --ov-recording-accent:        #FFB300;
+  --ov-recording-accent-muted:  #FF8F00;
+  --ov-recording-light-accent:  #E65100;
+}
+
+/* ============================================================================
+   WARM — Material You dynamic-color instance (sampled from screenshots)
+   Set data-theme="warm" on any container (UI kits use it on the phone frame).
+   ========================================================================= */
+[data-theme="warm"] {
+  --ov-primary:                 #8A4B2A;   /* terracotta — Log / accents */
+  --ov-on-primary:              #FFFFFF;
+  --ov-primary-container:       #FFDBC8;
+  --ov-on-primary-container:    #341100;
+
+  --ov-secondary:               #4A2A1B;   /* espresso — Start / headings */
+  --ov-on-secondary:            #FBEDE6;
+  --ov-secondary-container:     #F3D9C9;
+  --ov-on-secondary-container:  #3A2117;
+
+  --ov-tertiary:                #2F6F4F;
+  --ov-on-tertiary:             #FFFFFF;
+  --ov-tertiary-container:      #9CF3D9;
+  --ov-on-tertiary-container:   #002117;
+
+  --ov-error:                   #9B4438;
+  --ov-on-error:                #FFFFFF;
+  --ov-error-container:         #FFDBD1;
+  --ov-on-error-container:      #3A0B04;
+
+  --ov-background:              #FCEEE9;
+  --ov-on-background:           #3A2117;
+  --ov-surface:                 #FCEEE9;
+  --ov-on-surface:              #3A2117;   /* dark espresso text */
+  --ov-surface-variant:         #F2DDD1;
+  --ov-on-surface-variant:      #6B4A3A;   /* muted brown labels */
+
+  --ov-outline:                 #9C7A69;
+  --ov-outline-variant:         #E2C7B7;
+
+  --ov-surface-container-lowest:  #FFF8F5;
+  --ov-surface-container-low:     #FAE7DF;
+  --ov-surface-container:         #F6DFD4;   /* card peach */
+  --ov-surface-container-high:    #F1D6C8;
+  --ov-surface-container-highest: #EDCEBE;
+}
+
+/* ============================================================================
+   DARK — the app's static Dark color scheme (Theme.kt · DarkColorScheme).
+   Set data-theme="dark". Metric accents are shared (see :root).
+   ========================================================================= */
+[data-theme="dark"] {
+  --ov-primary:                 #82D2F2;   /* Blue80 */
+  --ov-on-primary:              #003547;
+  --ov-primary-container:       #004E66;
+  --ov-on-primary-container:    #BDEAFF;
+
+  --ov-secondary:               #C6C7D0;   /* BlueGrey80 */
+  --ov-on-secondary:            #30313A;
+  --ov-secondary-container:     #474852;
+  --ov-on-secondary-container:  #E2E1EC;
+
+  --ov-tertiary:                #80D7BE;   /* Teal80 */
+  --ov-on-tertiary:             #00382B;
+  --ov-tertiary-container:      #00513F;
+  --ov-on-tertiary-container:   #9CF3D9;
+
+  --ov-error:                   #FFB4AB;
+  --ov-on-error:                #690005;
+  --ov-error-container:         #93000A;
+  --ov-on-error-container:      #FFDAD6;
+
+  --ov-background:              #101416;
+  --ov-on-background:           #E0E3E6;
+  --ov-surface:                 #1A1C1E;
+  --ov-on-surface:              #E0E3E6;
+  --ov-surface-variant:         #40484D;
+  --ov-on-surface-variant:      #C0C8CE;
+
+  --ov-outline:                 #8A9298;
+  --ov-outline-variant:         #40484D;
+
+  --ov-surface-container-lowest:  #0B0F11;
+  --ov-surface-container-low:     #15191B;
+  --ov-surface-container:         #2B2D30;
+  --ov-surface-container-high:    #303437;
+  --ov-surface-container-highest: #3B3F42;
+}
+
+/* AMOLED — true-black variant (Theme.kt · toAmoledColorScheme). */
+[data-theme="amoled"] {
+  --ov-primary:                 #82D2F2;
+  --ov-on-primary:              #003547;
+  --ov-primary-container:       #004E66;
+  --ov-on-primary-container:    #BDEAFF;
+
+  --ov-secondary:               #C6C7D0;
+  --ov-on-secondary:            #30313A;
+  --ov-secondary-container:     #474852;
+  --ov-on-secondary-container:  #E2E1EC;
+
+  --ov-tertiary:                #80D7BE;
+  --ov-on-tertiary:             #00382B;
+  --ov-tertiary-container:      #00513F;
+  --ov-on-tertiary-container:   #9CF3D9;
+
+  --ov-error:                   #FFB4AB;
+  --ov-on-error:                #690005;
+  --ov-error-container:         #93000A;
+  --ov-on-error-container:      #FFDAD6;
+
+  --ov-background:              #000000;
+  --ov-on-background:           #E0E3E6;
+  --ov-surface:                 #000000;
+  --ov-on-surface:              #E0E3E6;
+  --ov-surface-variant:         #242424;
+  --ov-on-surface-variant:      #C0C8CE;
+
+  --ov-outline:                 #8A9298;
+  --ov-outline-variant:         #3A3A3A;
+
+  --ov-surface-container-lowest:  #000000;
+  --ov-surface-container-low:     #030303;
+  --ov-surface-container:         #080808;
+  --ov-surface-container-high:    #101010;
+  --ov-surface-container-highest: #181818;
+}

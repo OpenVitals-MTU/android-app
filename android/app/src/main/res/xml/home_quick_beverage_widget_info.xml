@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The 2x1 quick-beverage tile (Add / Edit). Ported from the Kotlin
+    `res/xml/home_quick_beverage_widget_info.xml`, with one deviation:
+    `android:configure` points at MainActivity (the Flutter activity) instead of
+    the native `HomeQuickBeverageWidgetConfigurationActivity`, because the drink
+    catalog lives in Dart (drift). The `home_widget` plugin recognises the
+    APPWIDGET_CONFIGURE intent and hands the appWidgetId to Dart, which resolves
+    it back to this widget and shows the beverage picker.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:maxResizeWidth="360dp"
+    android:maxResizeHeight="180dp"
+    android:updatePeriodMillis="1800000"
+    android:description="@string/home_quick_beverage_widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:configure="tech.mmarca.openvitals.MainActivity"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

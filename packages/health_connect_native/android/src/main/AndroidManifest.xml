@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        The `namespace` is declared in android/build.gradle. Health Connect
+        `<uses-permission>` entries live in the HOST APP manifest (they must be
+        declared by the installable app), so this library manifest is empty.
+    -->
+</manifest>

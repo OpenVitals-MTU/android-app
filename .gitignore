@@ -1,31 +1,50 @@
-# Claude / AI
-.claude/
-.cursor/
-.copilot/
-.aider*
-.ai/
-*.claude
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# Gradle
-.gradle/
-.kotlin/
-build/
-**/build/
-*.jar
-!gradle/wrapper/gradle-wrapper.jar
-# Local configuration
-local.properties
-*.local.properties
-
-# Android Studio / IntelliJ
-.idea/
+# IntelliJ related
 *.iml
-*.iws
 *.ipr
-captures/
-.externalNativeBuild/
-.cxx/
+*.iws
+.idea/
 
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+debug-screenshots/
+.claude/
 # Keystore / signing
 *.jks
 *.keystore
@@ -36,15 +55,10 @@ keystore.properties
 .woodpecker/*.env
 .woodpecker/secrets/
 .woodpecker/tmp/
-!gradle/wrapper/gradle-wrapper.jar
 
-# Generated
-gen/
-out/
-*.salive
+# Local release helpers
+.env
+.env.local
 
-# OS
-.DS_Store
-Thumbs.db
-debug_files/
-OpenVitals Design System/
+# Stray crash dumps
+Error in OpenVitals *.txt

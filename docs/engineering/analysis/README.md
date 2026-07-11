@@ -2,11 +2,6 @@
 
 This folder collects current architecture and implementation review material for OpenVitals.
 
-The detailed review artifacts currently live under [`../reviews`](../reviews). Start with:
+No review artifacts are tracked in this repository yet. Add new analysis documents to this folder and link them from here so the engineering docs index stays stable.
 
-- [`2026-06-23-codebase-review.md`](../reviews/2026-06-23-codebase-review.md): senior codebase review.
-- [`2026-06-23-action-plan.md`](../reviews/2026-06-23-action-plan.md): follow-up action plan.
-- [`2026-06-23-phase-3-large-file-report.md`](../reviews/2026-06-23-phase-3-large-file-report.md): large-file and decomposition notes.
-- [`2026-06-24-phase-4-dependency-maintenance-report.md`](../reviews/2026-06-24-phase-4-dependency-maintenance-report.md): dependency maintenance review.
-
-Use this index together with [`../architecture.md`](../architecture.md), [`../feature-playbook.md`](../feature-playbook.md), and the current [feature map](../../features/feature-map.md). If new analysis documents are added, link them from here so the engineering docs index remains stable.
+Use this index together with [`../architecture.md`](../architecture.md), [`../feature-playbook.md`](../feature-playbook.md), and the current [feature map](../../features/feature-map.md).

@@ -1,0 +1,307 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
+// ignore_for_file: type=lint
+// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
+
+part of 'body_metric_notifier.dart';
+
+// **************************************************************************
+// FreezedGenerator
+// **************************************************************************
+
+// dart format off
+T _$identity<T>(T value) => value;
+/// @nodoc
+mixin _$BodyMetricState {
+
+ LocalDate get selectedDate; TimeRange get selectedRange; bool get isLoading; ScreenError? get error; BodyPeriodData? get data;
+/// Create a copy of BodyMetricState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$BodyMetricStateCopyWith<BodyMetricState> get copyWith => _$BodyMetricStateCopyWithImpl<BodyMetricState>(this as BodyMetricState, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BodyMetricState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,data);
+
+@override
+String toString() {
+  return 'BodyMetricState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, data: $data)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $BodyMetricStateCopyWith<$Res>  {
+  factory $BodyMetricStateCopyWith(BodyMetricState value, $Res Function(BodyMetricState) _then) = _$BodyMetricStateCopyWithImpl;
+@useResult
+$Res call({
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, BodyPeriodData? data
+});
+
+
+$BodyPeriodDataCopyWith<$Res>? get data;
+
+}
+/// @nodoc
+class _$BodyMetricStateCopyWithImpl<$Res>
+    implements $BodyMetricStateCopyWith<$Res> {
+  _$BodyMetricStateCopyWithImpl(this._self, this._then);
+
+  final BodyMetricState _self;
+  final $Res Function(BodyMetricState) _then;
+
+/// Create a copy of BodyMetricState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,}) {
+  return _then(_self.copyWith(
+selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
+as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
+as TimeRange,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
+as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as ScreenError?,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
+as BodyPeriodData?,
+  ));
+}
+/// Create a copy of BodyMetricState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$BodyPeriodDataCopyWith<$Res>? get data {
+    if (_self.data == null) {
+    return null;
+  }
+
+  return $BodyPeriodDataCopyWith<$Res>(_self.data!, (value) {
+    return _then(_self.copyWith(data: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [BodyMetricState].
+extension BodyMetricStatePatterns on BodyMetricState {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _BodyMetricState value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _BodyMetricState() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _BodyMetricState value)  $default,){
+final _that = this;
+switch (_that) {
+case _BodyMetricState():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _BodyMetricState value)?  $default,){
+final _that = this;
+switch (_that) {
+case _BodyMetricState() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  BodyPeriodData? data)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _BodyMetricState() when $default != null:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  BodyPeriodData? data)  $default,) {final _that = this;
+switch (_that) {
+case _BodyMetricState():
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LocalDate selectedDate,  TimeRange selectedRange,  bool isLoading,  ScreenError? error,  BodyPeriodData? data)?  $default,) {final _that = this;
+switch (_that) {
+case _BodyMetricState() when $default != null:
+return $default(_that.selectedDate,_that.selectedRange,_that.isLoading,_that.error,_that.data);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _BodyMetricState extends BodyMetricState {
+  const _BodyMetricState({required this.selectedDate, this.selectedRange = TimeRange.month, this.isLoading = true, this.error, this.data}): super._();
+  
+
+@override final  LocalDate selectedDate;
+@override@JsonKey() final  TimeRange selectedRange;
+@override@JsonKey() final  bool isLoading;
+@override final  ScreenError? error;
+@override final  BodyPeriodData? data;
+
+/// Create a copy of BodyMetricState
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$BodyMetricStateCopyWith<_BodyMetricState> get copyWith => __$BodyMetricStateCopyWithImpl<_BodyMetricState>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BodyMetricState&&(identical(other.selectedDate, selectedDate) || other.selectedDate == selectedDate)&&(identical(other.selectedRange, selectedRange) || other.selectedRange == selectedRange)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.data, data) || other.data == data));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,selectedDate,selectedRange,isLoading,error,data);
+
+@override
+String toString() {
+  return 'BodyMetricState(selectedDate: $selectedDate, selectedRange: $selectedRange, isLoading: $isLoading, error: $error, data: $data)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$BodyMetricStateCopyWith<$Res> implements $BodyMetricStateCopyWith<$Res> {
+  factory _$BodyMetricStateCopyWith(_BodyMetricState value, $Res Function(_BodyMetricState) _then) = __$BodyMetricStateCopyWithImpl;
+@override @useResult
+$Res call({
+ LocalDate selectedDate, TimeRange selectedRange, bool isLoading, ScreenError? error, BodyPeriodData? data
+});
+
+
+@override $BodyPeriodDataCopyWith<$Res>? get data;
+
+}
+/// @nodoc
+class __$BodyMetricStateCopyWithImpl<$Res>
+    implements _$BodyMetricStateCopyWith<$Res> {
+  __$BodyMetricStateCopyWithImpl(this._self, this._then);
+
+  final _BodyMetricState _self;
+  final $Res Function(_BodyMetricState) _then;
+
+/// Create a copy of BodyMetricState
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? selectedDate = null,Object? selectedRange = null,Object? isLoading = null,Object? error = freezed,Object? data = freezed,}) {
+  return _then(_BodyMetricState(
+selectedDate: null == selectedDate ? _self.selectedDate : selectedDate // ignore: cast_nullable_to_non_nullable
+as LocalDate,selectedRange: null == selectedRange ? _self.selectedRange : selectedRange // ignore: cast_nullable_to_non_nullable
+as TimeRange,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
+as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as ScreenError?,data: freezed == data ? _self.data : data // ignore: cast_nullable_to_non_nullable
+as BodyPeriodData?,
+  ));
+}
+
+/// Create a copy of BodyMetricState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$BodyPeriodDataCopyWith<$Res>? get data {
+    if (_self.data == null) {
+    return null;
+  }
+
+  return $BodyPeriodDataCopyWith<$Res>(_self.data!, (value) {
+    return _then(_self.copyWith(data: value));
+  });
+}
+}
+
+// dart format on

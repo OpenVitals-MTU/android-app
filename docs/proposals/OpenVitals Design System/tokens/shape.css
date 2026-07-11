@@ -1,0 +1,23 @@
+/* ============================================================================
+   OpenVitals — Shape (Material 3 · AppShapes in Theme.kt) & Elevation
+   All corners are rounded; cards sit flat (0dp) on tonal surfaces, so depth
+   comes from surface-container tone steps rather than shadow.
+   ========================================================================= */
+
+:root {
+  /* Corner radii — verbatim from AppShapes */
+  --ov-radius-xs:  8px;    /* extraSmall — progress fills, tiny chips */
+  --ov-radius-sm:  12px;   /* small — inputs, drink rows */
+  --ov-radius-md:  16px;   /* medium — DEFAULT card radius */
+  --ov-radius-lg:  24px;   /* large — segmented pills, selectors */
+  --ov-radius-xl:  32px;   /* extraLarge — hero/onboarding cards */
+  --ov-radius-full: 999px; /* circular icon buttons, rings */
+
+  /* Elevation — OpenVitals cards are flat (0dp). Depth = tone, not shadow.
+     These optional shadows are for lifted/overlay surfaces only (dialogs,
+     FAB, date picker). */
+  --ov-elevation-0: none;
+  --ov-elevation-1: 0 1px 2px rgba(26, 28, 30, 0.10), 0 1px 3px rgba(26, 28, 30, 0.06);
+  --ov-elevation-2: 0 2px 6px rgba(26, 28, 30, 0.12), 0 1px 2px rgba(26, 28, 30, 0.08);
+  --ov-elevation-3: 0 6px 14px rgba(26, 28, 30, 0.14), 0 2px 4px rgba(26, 28, 30, 0.08);
+}

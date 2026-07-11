@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The configurable metric tile. Ported from the Kotlin
+    `res/xml/home_metric_widget_info.xml`, with one deviation: `android:configure`
+    points at MainActivity (the Flutter activity) instead of a native
+    configuration activity, because the metric catalog and its formatting live in
+    Dart. The `home_widget` plugin recognises the APPWIDGET_CONFIGURE intent and
+    hands the appWidgetId to Dart (`initiallyLaunchedFromHomeWidgetConfigure`).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="140dp"
+    android:minHeight="88dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:maxResizeWidth="360dp"
+    android:maxResizeHeight="180dp"
+    android:updatePeriodMillis="1800000"
+    android:description="@string/home_metric_widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:configure="tech.mmarca.openvitals.MainActivity"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

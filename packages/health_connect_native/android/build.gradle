@@ -1,0 +1,54 @@
+// Gradle build for the `health_connect_native` Flutter plugin (Android only).
+//
+// Built-in Kotlin (Flutter 3.44+ / AGP 9): the plugin does NOT apply the Kotlin
+// Gradle Plugin itself — AGP applies KGP automatically for modules with Kotlin
+// sources. So only `com.android.library` is declared here, and Kotlin options use
+// the top-level `kotlin { compilerOptions {} }` DSL (not the deprecated
+// `android.kotlinOptions`). This keeps the plugin off the "applies KGP" warning.
+// Repositories (google/mavenCentral) come from the app root's `allprojects` block.
+plugins {
+    id "com.android.library"
+}
+
+group = "tech.mmarca.openvitals.health_connect_native"
+version = "1.0"
+
+android {
+    namespace = "tech.mmarca.openvitals.health_connect_native"
+    // compileSdk 37 matches the host app and the reference: connect-client
+    // 1.2.0-alpha04 maps its newer records/permissions against API 37.
+    compileSdk = 37
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        // minSdk 26 is required by Health Connect (androidx.health) and matches
+        // the host app.
+        minSdk = 26
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        // MindfulnessSessionRecord + its aggregate metric and feature flag are
+        // gated behind an experimental opt-in in connect-client; opt in here so
+        // the record converter/aggregate map can reference them.
+        freeCompilerArgs.add("-opt-in=androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi")
+    }
+}
+
+dependencies {
+    // AndroidX Health Connect Kotlin client. Pinned to 1.2.0-alpha04 to match the
+    // reference OpenVitals app exactly: this version's AndroidX shim maps newer
+    // records (StepsCadence/CyclingPedalingCadence, mindfulness, aggregation) onto
+    // the permissions the current platform Health Connect module actually grants.
+    // On the older 1.1.0 line, cadence maps to READ_STEPS_CADENCE /
+    // READ_CYCLING_PEDALING_CADENCE, which the OS-module HC never exposes as
+    // grantable — that left onboarding's Activity Extras stuck at 9/11.
+    implementation "androidx.health.connect:connect-client:1.2.0-alpha04"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+}

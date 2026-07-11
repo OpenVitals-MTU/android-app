@@ -1,0 +1,4 @@
+enum RefreshMode {
+  normal,
+  force,
+}
