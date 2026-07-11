@@ -1350,7 +1350,7 @@
     <string name="settings_debug_logs_body">Comparte o guarda los registros de diagnóstico de OpenVitals como archivo de texto. La exportación elimina u oculta identificadores, ubicaciones, fechas, URI, datos brutos de sensores y registros de otras apps antes de escribir.</string>
     <string name="settings_debug_logs_share">Compartir registros</string>
     <string name="settings_debug_logs_share_chooser_title">Compartir registros de diagnóstico</string>
-    <string name="settings_debug_logs_share_failed">No se pudieron compartir los registros de diagnóstico</string>
+    <string name="settings_debug_logs_share_failed">Error al compartir los registros de diagnóstico</string>
     <string name="settings_debug_logs_save">Guardar registros</string>
     <string name="settings_debug_logs_saved">Registros de depuración guardados</string>
     <string name="settings_debug_logs_save_failed">No se pudieron guardar los registros de diagnóstico</string>
