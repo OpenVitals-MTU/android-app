@@ -1,38 +1,50 @@
 # Changelog
 
-## 2.0.0 - 2026-07-11
+## 2.0.1 - 2026-07-11
 
 ### English
 
 - Rebuild OpenVitals on Flutter. Same app, same features, same Health Connect data - and the foundation for an iOS version later.
-- Your settings carry over automatically: goals, units, theme, caffeine profile, custom drinks, paired sensors, reminders, activity notes, and offline maps. Health Connect data is stored outside the app and is untouched. Only your dashboard tile order and quick-beverage widget selection need setting again.
+- Your settings carry over automatically on first launch: goals, units, theme, caffeine profile, custom drinks, paired sensors, reminders, activity notes, and offline maps. Health Connect data is stored outside the app and is untouched. Only your dashboard tile order and quick-beverage widget selection need setting again.
+- Add activity splits: any run, walk or ride is broken into segments (1 km by default, configurable in Settings) showing pace, heart rate, elevation, and how each segment compares to the activity's average. Laps recorded by your watch are shown as they were recorded.
 - Make Apple Health imports much faster on large exports by skipping records in categories you did not select, and show real progress while the export is scanned instead of sitting at 0%.
 - Fix missing heart rate at the start of a recorded activity.
+- Fix the dashboard showing default goals instead of yours, drink names in the beverage breakdown, the missing beverage list in the Day view, and the metric carousel refusing to swipe after you moved a tile between pages.
 - Share sanitized diagnostics logs directly from Settings.
+- Note: hydration and mindfulness reminders may now arrive a few minutes later than the time you set. Google restricts exact alarms to alarm-clock and calendar apps, so reminders are delivered in a short window instead.
 
 ### Espanol
 
 - Reconstruye OpenVitals sobre Flutter. La misma app, las mismas funciones, los mismos datos de Health Connect, y la base para una futura version de iOS.
-- Tus ajustes se conservan automaticamente: objetivos, unidades, tema, perfil de cafeina, bebidas personalizadas, sensores emparejados, recordatorios, notas de actividad y mapas sin conexion. Los datos de Health Connect se guardan fuera de la app y no se ven afectados. Solo el orden de los paneles y la seleccion del widget de bebida deben configurarse de nuevo.
+- Tus ajustes se conservan automaticamente al primer inicio: objetivos, unidades, tema, perfil de cafeina, bebidas personalizadas, sensores emparejados, recordatorios, notas de actividad y mapas sin conexion. Los datos de Health Connect se guardan fuera de la app y no se ven afectados. Solo el orden de los paneles y la seleccion del widget de bebida deben configurarse de nuevo.
+- Anade segmentos de actividad: cualquier carrera, paseo o salida se divide en tramos (1 km por defecto, configurable en Ajustes) con ritmo, frecuencia cardiaca, desnivel y comparacion con la media de la actividad. Las vueltas registradas por tu reloj se muestran tal como se grabaron.
 - Acelera mucho las importaciones de Apple Health en exportaciones grandes al omitir los registros de categorias no seleccionadas, y muestra progreso real mientras se analiza la exportacion en lugar de quedarse en 0%.
 - Corrige la falta de frecuencia cardiaca al inicio de una actividad grabada.
+- Corrige el panel mostrando objetivos por defecto en lugar de los tuyos, los nombres de bebidas en el desglose, la lista de bebidas ausente en la vista Dia, y el carrusel de metricas que dejaba de deslizarse tras mover un panel entre paginas.
 - Comparte registros de diagnostico saneados directamente desde Ajustes.
+- Nota: los recordatorios de hidratacion y mindfulness pueden llegar unos minutos mas tarde de la hora fijada. Google restringe las alarmas exactas a apps de despertador y calendario, asi que se entregan en una ventana breve.
 
 ### Deutsch
 
 - Baut OpenVitals auf Flutter neu auf. Gleiche App, gleiche Funktionen, gleiche Health-Connect-Daten - und die Grundlage fuer eine spaetere iOS-Version.
-- Deine Einstellungen werden automatisch uebernommen: Ziele, Einheiten, Design, Koffeinprofil, eigene Getraenke, gekoppelte Sensoren, Erinnerungen, Aktivitaetsnotizen und Offline-Karten. Health-Connect-Daten liegen ausserhalb der App und bleiben unberuehrt. Nur die Reihenfolge der Dashboard-Kacheln und die Auswahl des Getraenke-Widgets muessen neu gesetzt werden.
+- Deine Einstellungen werden beim ersten Start automatisch uebernommen: Ziele, Einheiten, Design, Koffeinprofil, eigene Getraenke, gekoppelte Sensoren, Erinnerungen, Aktivitaetsnotizen und Offline-Karten. Health-Connect-Daten liegen ausserhalb der App und bleiben unberuehrt. Nur die Reihenfolge der Dashboard-Kacheln und die Auswahl des Getraenke-Widgets muessen neu gesetzt werden.
+- Ergaenzt Aktivitaets-Abschnitte: jeder Lauf, Spaziergang oder jede Fahrt wird in Segmente unterteilt (standardmaessig 1 km, in den Einstellungen konfigurierbar) mit Tempo, Herzfrequenz, Hoehenmetern und dem Vergleich zum Durchschnitt der Aktivitaet. Von der Uhr aufgezeichnete Runden werden so gezeigt, wie sie aufgezeichnet wurden.
 - Beschleunigt Apple-Health-Importe bei grossen Exporten deutlich, indem Datensaetze nicht gewaehlter Kategorien uebersprungen werden, und zeigt echten Fortschritt waehrend des Scans statt bei 0% zu verharren.
 - Behebt fehlende Herzfrequenz zu Beginn einer aufgezeichneten Aktivitaet.
+- Behebt das Dashboard, das Standardziele statt deiner eigenen zeigte, die Getraenkenamen in der Aufschluesselung, die fehlende Getraenkeliste in der Tagesansicht und das Metrik-Karussell, das nach dem Verschieben einer Kachel nicht mehr wischbar war.
 - Teilt bereinigte Diagnoseprotokolle direkt aus den Einstellungen.
+- Hinweis: Trink- und Achtsamkeits-Erinnerungen koennen jetzt einige Minuten spaeter eintreffen als eingestellt. Google beschraenkt exakte Alarme auf Wecker- und Kalender-Apps, daher werden sie in einem kurzen Zeitfenster zugestellt.
 
 ### Italiano
 
 - Ricostruisce OpenVitals su Flutter. Stessa app, stesse funzioni, stessi dati di Health Connect, e la base per una futura versione iOS.
-- Le tue impostazioni vengono mantenute automaticamente: obiettivi, unita, tema, profilo caffeina, bevande personalizzate, sensori accoppiati, promemoria, note delle attivita e mappe offline. I dati di Health Connect sono salvati fuori dall'app e non sono interessati. Solo l'ordine dei riquadri e la selezione del widget bevanda vanno riconfigurati.
+- Le tue impostazioni vengono mantenute automaticamente al primo avvio: obiettivi, unita, tema, profilo caffeina, bevande personalizzate, sensori accoppiati, promemoria, note delle attivita e mappe offline. I dati di Health Connect sono salvati fuori dall'app e non sono interessati. Solo l'ordine dei riquadri e la selezione del widget bevanda vanno riconfigurati.
+- Aggiunge i segmenti di attivita: ogni corsa, camminata o uscita viene divisa in tratti (1 km di default, configurabile nelle Impostazioni) con ritmo, frequenza cardiaca, dislivello e confronto con la media dell'attivita. I giri registrati dall'orologio sono mostrati come sono stati registrati.
 - Rende molto piu veloci le importazioni Apple Health su esportazioni grandi saltando i record delle categorie non selezionate, e mostra un avanzamento reale durante la scansione invece di restare a 0%.
 - Corregge la frequenza cardiaca mancante all'inizio di un'attivita registrata.
+- Corregge la dashboard che mostrava gli obiettivi predefiniti invece dei tuoi, i nomi delle bevande nel riepilogo, la lista bevande mancante nella vista Giorno e il carosello delle metriche che non scorreva piu dopo aver spostato un riquadro tra le pagine.
 - Condivide i log diagnostici sanificati direttamente dalle Impostazioni.
+- Nota: i promemoria di idratazione e mindfulness possono arrivare qualche minuto piu tardi dell'orario impostato. Google limita le sveglie esatte alle app di allarme e calendario, quindi vengono consegnati in una breve finestra.
 
 ## 1.9.0 - 2026-07-09
 
