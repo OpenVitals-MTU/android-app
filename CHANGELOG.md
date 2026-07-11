@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.0.2 - 2026-07-12
+
+### English
+
+- Show the steps, distance, calories and elevation your watch records alongside a walk or run. A watch writes them as records separate from the activity itself, so the activity's own page reported them as "Not available" - while charting that same activity's step cadence and splits directly below.
+- Chart the speed and cadence a ride or run recorded, and stop the metrics list advertising figures the activity was never going to have, such as "Wheelchair pushes" on a bike ride. A value that was actually recorded is never hidden.
+- Fix the large empty gap above and below the recording dashboard, most obvious in outdoor mode, where it read as a broken screen.
+- Fix the crash when importing an offline map pack or a large Apple Health export.
+- Fix adding a home-screen widget: the metric widget opened the beverage picker, the picker could crash after a choice, and the widget was sometimes never created at all.
+
+### Espanol
+
+- Muestra los pasos, la distancia, las calorias y el desnivel que tu reloj registra junto a un paseo o una carrera. El reloj los escribe como registros separados de la propia actividad, asi que su pagina los daba como "No disponible" mientras mostraba justo debajo la cadencia y los segmentos de esa misma actividad.
+- Muestra en graficos la velocidad y la cadencia registradas en una salida o una carrera, y deja de anunciar metricas que la actividad nunca iba a tener, como "Empujes de silla de ruedas" en una salida en bici. Un valor realmente registrado nunca se oculta.
+- Corrige el gran hueco vacio encima y debajo del panel de grabacion, muy visible en modo exterior, donde parecia una pantalla rota.
+- Corrige el fallo al importar un mapa sin conexion o una exportacion grande de Apple Health.
+- Corrige la adicion de widgets a la pantalla de inicio: el widget de metrica abria el selector de bebidas, el selector podia fallar tras elegir, y a veces el widget no se creaba.
+
+### Deutsch
+
+- Zeigt Schritte, Distanz, Kalorien und Hoehenmeter, die deine Uhr neben einem Spaziergang oder Lauf aufzeichnet. Die Uhr schreibt sie getrennt von der Aktivitaet selbst, daher meldete deren Seite "Nicht verfuegbar" - und stellte direkt darunter Schrittfrequenz und Abschnitte derselben Aktivitaet dar.
+- Stellt aufgezeichnete Geschwindigkeit und Trittfrequenz als Diagramme dar und kuendigt keine Werte mehr an, die die Aktivitaet nie haben konnte, etwa "Rollstuhl-Stoesse" bei einer Radtour. Ein tatsaechlich aufgezeichneter Wert wird nie ausgeblendet.
+- Korrigiert die grosse Luecke ueber und unter dem Aufzeichnungs-Dashboard, besonders sichtbar im Outdoor-Modus, wo sie wie ein kaputter Bildschirm wirkte.
+- Korrigiert den Absturz beim Import einer Offline-Karte oder eines grossen Apple-Health-Exports.
+- Korrigiert das Hinzufuegen von Startbildschirm-Widgets: das Metrik-Widget oeffnete die Getraenkeauswahl, die Auswahl konnte nach der Wahl abstuerzen, und das Widget wurde manchmal gar nicht erstellt.
+
+### Italiano
+
+- Mostra i passi, la distanza, le calorie e il dislivello che il tuo orologio registra insieme a una camminata o a una corsa. L'orologio li scrive come record separati dall'attivita stessa, quindi la sua pagina li dava come "Non disponibile" mentre subito sotto mostrava la cadenza e i segmenti della stessa attivita.
+- Mostra in grafici la velocita e la cadenza registrate in un'uscita o in una corsa, e smette di annunciare metriche che l'attivita non avrebbe mai avuto, come "Spinte carrozzina" in un giro in bici. Un valore davvero registrato non viene mai nascosto.
+- Corregge il grande spazio vuoto sopra e sotto la dashboard di registrazione, evidente in modalita esterna, dove sembrava una schermata rotta.
+- Corregge il crash durante l'importazione di una mappa offline o di un grande export di Apple Health.
+- Corregge l'aggiunta dei widget alla schermata home: il widget metrica apriva il selettore bevande, il selettore poteva bloccarsi dopo la scelta e a volte il widget non veniva creato.
+
 ## 2.0.1 - 2026-07-11
 
 ### English
