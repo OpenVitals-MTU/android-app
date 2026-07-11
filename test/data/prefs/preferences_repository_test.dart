@@ -95,6 +95,50 @@ void main() {
     });
   });
 
+  group('the unit-system default is a function of the locale, not the host', () {
+    // Before the locale seam was injected, this default came straight off
+    // `Platform.localeName`, so it was whatever the machine running the test
+    // happened to be set to -- which is why the listenable test below still has
+    // to toggle "to whichever value differs from the default" rather than just
+    // naming one. These pin it.
+    Future<PreferencesRepository> repoIn(
+      String localeName, [
+      Map<String, Object> initial = const {},
+    ]) async {
+      SharedPreferences.setMockInitialValues(initial);
+      final prefs = await SharedPreferences.getInstance();
+      return PreferencesRepository(prefs, localeName: localeName);
+    }
+
+    test('a US device starts out imperial', () async {
+      expect((await repoIn('en_US')).unitSystem, UnitSystem.imperial);
+      // The country may arrive with a charset/modifier suffix attached.
+      expect((await repoIn('en_US.UTF-8')).unitSystem, UnitSystem.imperial);
+    });
+
+    test('the rest of the world starts out metric', () async {
+      for (final locale in ['en_GB', 'de_DE', 'fr_FR', 'ja_JP']) {
+        expect(
+          (await repoIn(locale)).unitSystem,
+          UnitSystem.metric,
+          reason: locale,
+        );
+      }
+    });
+
+    test('a locale with no country is metric, not a crash', () async {
+      expect((await repoIn('en')).unitSystem, UnitSystem.metric);
+      expect((await repoIn('')).unitSystem, UnitSystem.metric);
+    });
+
+    test('a stored choice wins over the locale', () async {
+      // The locale only ever seeds a user who has never picked. Someone in the
+      // US who chose metric must stay metric.
+      final repo = await repoIn('en_US', {'unit_system': 'metric'});
+      expect(repo.unitSystem, UnitSystem.metric);
+    });
+  });
+
   group('enum-backed reactive values', () {
     test('unitSystem set/read and notifies the listenable', () async {
       final repo = await newRepo();

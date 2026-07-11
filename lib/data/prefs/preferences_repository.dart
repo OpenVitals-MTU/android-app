@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/period/period_range_preference_key.dart';
 import '../../core/period/time_range.dart';
-import '../../core/time/local_date.dart';
 import '../../domain/insights/daily_goals.dart';
 import '../../domain/model/hydration_reminder_config.dart';
 import '../../domain/model/mindfulness_models.dart';
@@ -24,6 +22,9 @@ import '../../domain/preferences/body_profile.dart';
 import '../../domain/preferences/caffeine_preferences.dart';
 import '../../domain/preferences/sleep_range_mode.dart';
 import '../../domain/preferences/unit_system.dart';
+import 'device_locale.dart';
+import 'prefs_codec.dart';
+import 'prefs_migrations.dart';
 
 /// Port of the Kotlin `PreferencesRepository` over `shared_preferences`.
 ///
@@ -35,9 +36,24 @@ import '../../domain/preferences/unit_system.dart';
 /// Note: SharedPreferences updates its in-memory cache synchronously, so the
 /// void setters here fire the async platform write without awaiting while
 /// remaining immediately readable (matching the Kotlin `apply()` semantics).
+///
+/// The string codec lives in `prefs_codec.dart`, the one-shot read migration in
+/// `prefs_migrations.dart` and the locale-derived unit-system default in
+/// `device_locale.dart` — none of those need a store, so none of them belong
+/// here.
 class PreferencesRepository {
-  PreferencesRepository(this._prefs)
-      : _unitSystem = ValueNotifier(_readUnitSystem(_prefs)),
+  /// [localeName] only seeds the unit system for a user who has never chosen
+  /// one; it defaults to the device locale. It exists so that default is
+  /// testable — `Platform.localeName` is not a compile-time constant, hence the
+  /// factory.
+  factory PreferencesRepository(
+    SharedPreferences prefs, {
+    String? localeName,
+  }) =>
+      PreferencesRepository._(prefs, localeName ?? Platform.localeName);
+
+  PreferencesRepository._(this._prefs, String localeName)
+      : _unitSystem = ValueNotifier(_readUnitSystem(_prefs, localeName)),
         _appLanguage = ValueNotifier(_readAppLanguage(_prefs)),
         _appThemeMode = ValueNotifier(_readAppThemeMode(_prefs)),
         _dynamicColor = ValueNotifier(_readDynamicColor(_prefs)),
@@ -49,6 +65,10 @@ class PreferencesRepository {
             ValueNotifier(_readShowOpenVitalsCalculatedCalories(_prefs)),
         _healthConnectSyncEnabled =
             ValueNotifier(_readHealthConnectSyncEnabled(_prefs)) {
+    // Runs once per construction, before the body profile is read — it used to
+    // hide inside that read, which made a write look like a read. It is a no-op
+    // unless a legacy install has values to fold in.
+    migrateLegacyBodyProfileValues(_prefs);
     _bodyEnergyCalibration = ValueNotifier(_readBodyEnergyCalibration());
     _caffeinePreferences = ValueNotifier(_readCaffeinePreferences());
     _bodyProfile = ValueNotifier(_readBodyProfile());
@@ -262,10 +282,10 @@ class PreferencesRepository {
 
   void setBodyProfile(BodyProfile profile) {
     final normalized = profile.normalized();
-    _putOrRemoveInt(_keyBodyProfileBirthYear, normalized.birthYear);
-    _putOrRemoveDouble(_keyBodyProfileWeightKg, normalized.weightKg);
-    _putOrRemoveInt(_keyBodyProfileRestingHrBpm, normalized.restingHeartRateBpm);
-    _putOrRemoveInt(_keyBodyProfileMaxHrBpm, normalized.maxHeartRateBpm);
+    _putOrRemoveInt(keyBodyProfileBirthYear, normalized.birthYear);
+    _putOrRemoveDouble(keyBodyProfileWeightKg, normalized.weightKg);
+    _putOrRemoveInt(keyBodyProfileRestingHrBpm, normalized.restingHeartRateBpm);
+    _putOrRemoveInt(keyBodyProfileMaxHrBpm, normalized.maxHeartRateBpm);
     _bodyProfile.value = normalized;
   }
 
@@ -291,7 +311,7 @@ class PreferencesRepository {
   }
 
   TimeRange timeRangeFor(PeriodRangePreferenceKey key) =>
-      _enumByName(TimeRange.values, _prefs.getString(key.storageKey)) ??
+      enumByName(TimeRange.values, _prefs.getString(key.storageKey)) ??
       key.defaultRange;
 
   void setTimeRangeFor(PeriodRangePreferenceKey key, TimeRange range) =>
@@ -308,11 +328,11 @@ class PreferencesRepository {
         enabled: _prefs.getBool(_keyHydrationRemindersEnabled) ?? false,
         intervalMinutes: _prefs.getInt(_keyHydrationReminderIntervalMinutes) ??
             HydrationReminderConfig.defaultIntervalMinutes,
-        activeStartTime: _toReminderTimeOrDefault(
+        activeStartTime: toReminderTimeOrDefault(
           _prefs.getString(_keyHydrationReminderActiveStartTime),
           HydrationReminderConfig.defaultActiveStartTime,
         ),
-        activeEndTime: _toReminderTimeOrDefault(
+        activeEndTime: toReminderTimeOrDefault(
           _prefs.getString(_keyHydrationReminderActiveEndTime),
           HydrationReminderConfig.defaultActiveEndTime,
         ),
@@ -337,7 +357,7 @@ class PreferencesRepository {
     for (final entry
         in _prefs.getStringList(_keyHydrationContainerVolumeMilliliters) ??
             const <String>[]) {
-      final separatorIndex = entry.indexOf(_keyValuePairSeparator);
+      final separatorIndex = entry.indexOf(valuePairSeparator);
       if (separatorIndex <= 0 || separatorIndex == entry.length - 1) continue;
       final key = entry.substring(0, separatorIndex);
       final value = double.tryParse(entry.substring(separatorIndex + 1));
@@ -360,7 +380,7 @@ class PreferencesRepository {
     _putStringList(
       _keyHydrationContainerVolumeMilliliters,
       values.entries
-          .map((e) => '${e.key}$_keyValuePairSeparator${e.value}')
+          .map((e) => '${e.key}$valuePairSeparator${e.value}')
           .toSet()
           .toList(),
     );
@@ -386,7 +406,7 @@ class PreferencesRepository {
   List<CustomHydrationDrink> customHydrationDrinks() {
     final drinks =
         (_prefs.getStringList(_keyCustomHydrationDrinks) ?? const <String>[])
-            .map(_toCustomHydrationDrink)
+            .map(toCustomHydrationDrink)
             .whereType<CustomHydrationDrink>()
             .toList();
     if (drinks.isEmpty) return const <CustomHydrationDrink>[];
@@ -411,7 +431,7 @@ class PreferencesRepository {
   }
 
   void saveCustomHydrationDrink(CustomHydrationDrink drink) {
-    final normalized = _normalizedCustomHydrationDrink(drink);
+    final normalized = normalizedCustomHydrationDrink(drink);
     if (normalized == null) return;
     final current = customHydrationDrinks();
     bool matches(CustomHydrationDrink d) =>
@@ -464,7 +484,7 @@ class PreferencesRepository {
   MindfulnessReminderConfig mindfulnessReminderConfig() =>
       MindfulnessReminderConfig(
         enabled: _prefs.getBool(_keyMindfulnessRemindersEnabled) ?? false,
-        reminderTime: _toReminderTimeOrDefault(
+        reminderTime: toReminderTimeOrDefault(
           _prefs.getString(_keyMindfulnessReminderTime),
           MindfulnessReminderConfig.defaultReminderTime,
         ),
@@ -491,11 +511,11 @@ class PreferencesRepository {
             _maxMindfulnessTimerMinutes,
           )
         : null;
-    final bellSound = _toMindfulnessBellSound(
+    final bellSound = toMindfulnessBellSound(
           _prefs.getString(_keyMindfulnessTimerBellSound),
         ) ??
         MindfulnessBellSound.struck;
-    final backgroundSound = _optionalBackgroundSound(
+    final backgroundSound = optionalBackgroundSound(
           _prefs.getString(_keyMindfulnessTimerBackgroundSound),
         ) ??
         MindfulnessBackgroundSound.none;
@@ -531,12 +551,12 @@ class PreferencesRepository {
   List<String>? dashboardWidgetOrder() => _readOrderList(_keyDashboardWidgetOrder);
 
   void setDashboardWidgetOrder(List<String> widgetIds) =>
-      _putString(_keyDashboardWidgetOrder, widgetIds.join(_keyValueSeparator));
+      _putString(_keyDashboardWidgetOrder, widgetIds.join(valueSeparator));
 
   List<String>? dashboardRingOrder() => _readOrderList(_keyDashboardRingOrder);
 
   void setDashboardRingOrder(List<String> ringIds) =>
-      _putString(_keyDashboardRingOrder, ringIds.join(_keyValueSeparator));
+      _putString(_keyDashboardRingOrder, ringIds.join(valueSeparator));
 
   /// The dashboard metric tiles the user has hidden (keyed by tile title).
   Set<String> dashboardHiddenWidgets() =>
@@ -550,14 +570,14 @@ class PreferencesRepository {
       _readOrderList(_keyManualEntryWidgetOrder);
 
   void setManualEntryWidgetOrder(List<String> widgetIds) =>
-      _putString(_keyManualEntryWidgetOrder, widgetIds.join(_keyValueSeparator));
+      _putString(_keyManualEntryWidgetOrder, widgetIds.join(valueSeparator));
 
   List<String>? metricDetailSectionOrder() =>
       _readOrderList(_keyMetricDetailSectionOrder);
 
   void setMetricDetailSectionOrder(List<String> sectionIds) => _putString(
         _keyMetricDetailSectionOrder,
-        sectionIds.join(_keyValueSeparator),
+        sectionIds.join(valueSeparator),
       );
 
   Set<String> acknowledgedPermissions() =>
@@ -713,7 +733,7 @@ class PreferencesRepository {
     final raw =
         _prefs.getString(_activityRecordingDashboardLayoutKey(activityTypeId));
     if (raw == null) return ActivityRecordingDashboardLayout();
-    return _layoutFromPreferenceString(raw) ??
+    return layoutFromPreferenceString(raw) ??
         ActivityRecordingDashboardLayout();
   }
 
@@ -724,7 +744,7 @@ class PreferencesRepository {
     if (activityTypeId.trim().isEmpty) return;
     _putString(
       _activityRecordingDashboardLayoutKey(activityTypeId),
-      _layoutToPreferenceString(layout),
+      layoutToPreferenceString(layout),
     );
   }
   // endregion
@@ -746,27 +766,30 @@ class PreferencesRepository {
   }
 
   // region Reads used to seed the reactive notifiers.
-  static UnitSystem _readUnitSystem(SharedPreferences prefs) =>
-      _enumByName(UnitSystem.values, prefs.getString(_keyUnitSystem)) ??
-      _defaultUnitSystem();
+  static UnitSystem _readUnitSystem(
+    SharedPreferences prefs,
+    String localeName,
+  ) =>
+      enumByName(UnitSystem.values, prefs.getString(_keyUnitSystem)) ??
+      unitSystemForLocale(localeName);
 
   static AppLanguage _readAppLanguage(SharedPreferences prefs) =>
-      _enumByName(AppLanguage.values, prefs.getString(_keyAppLanguage)) ??
+      enumByName(AppLanguage.values, prefs.getString(_keyAppLanguage)) ??
       AppLanguage.system;
 
   static AppThemeMode _readAppThemeMode(SharedPreferences prefs) =>
-      _enumByName(AppThemeMode.values, prefs.getString(_keyAppThemeMode)) ??
+      enumByName(AppThemeMode.values, prefs.getString(_keyAppThemeMode)) ??
       AppThemeMode.system;
 
   static bool _readDynamicColor(SharedPreferences prefs) =>
       prefs.getBool(_keyDynamicColor) ?? false;
 
   static SleepRangeMode _readSleepRangeMode(SharedPreferences prefs) =>
-      _enumByName(SleepRangeMode.values, prefs.getString(_keySleepRangeMode)) ??
+      enumByName(SleepRangeMode.values, prefs.getString(_keySleepRangeMode)) ??
       SleepRangeMode.evening18h;
 
   static ActivityWeekMode _readActivityWeekMode(SharedPreferences prefs) =>
-      _enumByName(
+      enumByName(
         ActivityWeekMode.values,
         prefs.getString(_keyActivityWeekMode),
       ) ??
@@ -792,49 +815,12 @@ class PreferencesRepository {
         setupCompleted: _prefs.getBool(_keyBodyEnergySetupCompleted) ?? false,
       ).normalized();
 
-  BodyProfile _readBodyProfile() {
-    final hasNewProfileData = _prefs.containsKey(_keyBodyProfileBirthYear) ||
-        _prefs.containsKey(_keyBodyProfileWeightKg) ||
-        _prefs.containsKey(_keyBodyProfileRestingHrBpm) ||
-        _prefs.containsKey(_keyBodyProfileMaxHrBpm);
-    if (!hasNewProfileData) {
-      _migrateLegacyBodyProfileValues();
-    }
-    return BodyProfile(
-      birthYear: _intOrNull(_keyBodyProfileBirthYear),
-      weightKg: _doubleOrNull(_keyBodyProfileWeightKg),
-      restingHeartRateBpm: _intOrNull(_keyBodyProfileRestingHrBpm),
-      maxHeartRateBpm: _intOrNull(_keyBodyProfileMaxHrBpm),
-    ).normalized();
-  }
-
-  void _migrateLegacyBodyProfileValues() {
-    final legacyBirthYear = _intOrNull(_keyBodyEnergyBirthYear);
-    final legacyAgeYears = _intOrNull(_keyCaffeineAgeYears);
-    final legacyWeightKg = _doubleOrNull(_keyCaffeineWeightKg);
-    final legacyRestingHr = _intOrNull(_keyBodyEnergyRestingHrBpm);
-    final legacyMaxHr = _intOrNull(_keyBodyEnergyMaxHrBpm);
-    final migratedBirthYear = legacyBirthYear ??
-        (legacyAgeYears != null ? LocalDate.now().year - legacyAgeYears : null);
-    if (migratedBirthYear == null &&
-        legacyWeightKg == null &&
-        legacyRestingHr == null &&
-        legacyMaxHr == null) {
-      return;
-    }
-    if (migratedBirthYear != null) {
-      _putInt(_keyBodyProfileBirthYear, migratedBirthYear);
-    }
-    if (legacyWeightKg != null) {
-      _putDouble(_keyBodyProfileWeightKg, legacyWeightKg);
-    }
-    if (legacyRestingHr != null) {
-      _putInt(_keyBodyProfileRestingHrBpm, legacyRestingHr);
-    }
-    if (legacyMaxHr != null) {
-      _putInt(_keyBodyProfileMaxHrBpm, legacyMaxHr);
-    }
-  }
+  BodyProfile _readBodyProfile() => BodyProfile(
+        birthYear: _intOrNull(keyBodyProfileBirthYear),
+        weightKg: _doubleOrNull(keyBodyProfileWeightKg),
+        restingHeartRateBpm: _intOrNull(keyBodyProfileRestingHrBpm),
+        maxHeartRateBpm: _intOrNull(keyBodyProfileMaxHrBpm),
+      ).normalized();
 
   CaffeinePreferences _readCaffeinePreferences() => CaffeinePreferences(
         profileCompleted: _prefs.getBool(_keyCaffeineProfileCompleted) ?? false,
@@ -844,22 +830,22 @@ class PreferencesRepository {
             CaffeinePreferences.defaultAbsorptionMinutes,
         sleepThresholdMg: _prefs.getInt(_keyCaffeineSleepThresholdMg) ??
             CaffeinePreferences.defaultSleepThresholdMg,
-        bedtime: _toReminderTimeOrDefault(
+        bedtime: toReminderTimeOrDefault(
           _prefs.getString(_keyCaffeineBedtime),
           CaffeinePreferences.defaultBedtime,
         ),
-        sleepSensitivity: _enumByName(
+        sleepSensitivity: enumByName(
               CaffeineSleepSensitivity.values,
               _prefs.getString(_keyCaffeineSleepSensitivity),
             ) ??
             CaffeineSleepSensitivity.normal,
         smoker: _prefs.getBool(_keyCaffeineSmoker) ?? false,
-        alcoholUse: _enumByName(
+        alcoholUse: enumByName(
               CaffeineAlcoholUse.values,
               _prefs.getString(_keyCaffeineAlcoholUse),
             ) ??
             CaffeineAlcoholUse.none,
-        caffeineHabituation: _enumByName(
+        caffeineHabituation: enumByName(
               CaffeineHabituation.values,
               _prefs.getString(_keyCaffeineHabituation),
             ) ??
@@ -867,17 +853,17 @@ class PreferencesRepository {
         liverImpairment: _prefs.getBool(_keyCaffeineLiverImpairment) ?? false,
         medicationInteraction:
             _prefs.getBool(_keyCaffeineMedicationInteraction) ?? false,
-        cyp1a2Genotype: _enumByName(
+        cyp1a2Genotype: enumByName(
               CaffeineGenotype.values,
               _prefs.getString(_keyCaffeineCyp1a2Genotype),
             ) ??
             CaffeineGenotype.unknown,
-        ahrGenotype: _enumByName(
+        ahrGenotype: enumByName(
               CaffeineGenotype.values,
               _prefs.getString(_keyCaffeineAhrGenotype),
             ) ??
             CaffeineGenotype.unknown,
-        hormonalStatus: _enumByName(
+        hormonalStatus: enumByName(
               CaffeineHormonalStatus.values,
               _prefs.getString(_keyCaffeineHormonalStatus),
             ) ??
@@ -885,106 +871,25 @@ class PreferencesRepository {
       ).normalized();
   // endregion
 
-  // region Custom hydration drink serialization.
-  CustomHydrationDrink? _normalizedCustomHydrationDrink(
-    CustomHydrationDrink drink,
-  ) {
-    final normalizedName = drink.name.trim();
-    if (drink.id.isEmpty || normalizedName.isEmpty) return null;
-    if (drink.volumeMilliliters <= 0.0 || !drink.volumeMilliliters.isFinite) {
-      return null;
-    }
-    if (drink.hydrationMultiplier < 0.0 ||
-        drink.hydrationMultiplier > 1.0 ||
-        !drink.hydrationMultiplier.isFinite) {
-      return null;
-    }
-    final filtered = drink.nutrientValues.entries
-        .where((e) => e.value > 0.0 && e.value.isFinite)
-        .toList()
-      ..sort((a, b) => a.key.storageName.compareTo(b.key.storageName));
-    final normalizedNutrients = <NutritionNutrient, double>{
-      for (final entry in filtered) entry.key: entry.value,
-    };
-    return drink.copyWith(
-      name: normalizedName,
-      nutrientValues: normalizedNutrients,
-    );
-  }
-
-  String _customHydrationDrinkToPreferenceString(CustomHydrationDrink drink) {
-    final nutrients = drink.nutrientValues.entries
-        .map((e) =>
-            '${e.key.storageName}$_keyValuePairSeparator${e.value}')
-        .join(_keyNutrientSeparator);
-    return [
-      _encodePreferenceValue(drink.id),
-      _encodePreferenceValue(drink.name),
-      drink.volumeMilliliters.toString(),
-      drink.hydrationMultiplier.toString(),
-      _encodePreferenceValue(nutrients),
-    ].join(_keyLayoutSectionSeparator);
-  }
-
-  CustomHydrationDrink? _toCustomHydrationDrink(String value) {
-    final parts = _splitWithLimit(value, _keyLayoutSectionSeparator, 5);
-    if (parts.length < 4) return null;
-    final id = _decodePreferenceValue(parts[0]);
-    if (id.isEmpty) return null;
-    final name = _decodePreferenceValue(parts[1]);
-    if (name.isEmpty) return null;
-    final volume = double.tryParse(parts[2]);
-    if (volume == null || volume <= 0.0 || !volume.isFinite) return null;
-    final parsedMultiplier = double.tryParse(parts[3]);
-    final hydrationMultiplier = (parsedMultiplier != null &&
-            parsedMultiplier >= 0.0 &&
-            parsedMultiplier <= 1.0 &&
-            parsedMultiplier.isFinite)
-        ? parsedMultiplier
-        : 1.0;
-    final nutrientValues = <NutritionNutrient, double>{};
-    final rawNutrients = parts.length > 4 ? parts[4] : null;
-    if (rawNutrients != null) {
-      for (final section
-          in _decodePreferenceValue(rawNutrients).split(_keyNutrientSeparator)) {
-        final sections =
-            _splitWithLimit(section, _keyValuePairSeparator, 2);
-        final nutrient = sections.isEmpty
-            ? null
-            : NutritionNutrient.fromStorage(sections[0]);
-        if (nutrient == null) continue;
-        final amount =
-            sections.length > 1 ? double.tryParse(sections[1]) : null;
-        if (amount == null || amount <= 0.0 || !amount.isFinite) continue;
-        nutrientValues[nutrient] = amount;
-      }
-    }
-    return CustomHydrationDrink(
-      id: id,
-      name: name,
-      volumeMilliliters: volume,
-      hydrationMultiplier: hydrationMultiplier,
-      nutrientValues: nutrientValues,
-    );
-  }
-
+  // region Custom hydration drink storage (the codec itself is in
+  // prefs_codec.dart).
   List<String> _customHydrationDrinkOrder() =>
-      (_prefs.getString(_keyCustomHydrationDrinkOrder)?.split(_keyValueSeparator) ??
+      (_prefs.getString(_keyCustomHydrationDrinkOrder)?.split(valueSeparator) ??
               const <String>[])
-          .map(_decodePreferenceValue)
+          .map(decodePreferenceValue)
           .where((it) => it.isNotEmpty)
           .toList();
 
   void _persistCustomHydrationDrinks(List<CustomHydrationDrink> drinks) {
     _putStringList(
       _keyCustomHydrationDrinks,
-      drinks.map(_customHydrationDrinkToPreferenceString).toSet().toList(),
+      drinks.map(customHydrationDrinkToPreferenceString).toSet().toList(),
     );
     _putString(
       _keyCustomHydrationDrinkOrder,
       drinks
-          .map((drink) => _encodePreferenceValue(drink.id))
-          .join(_keyValueSeparator),
+          .map((drink) => encodePreferenceValue(drink.id))
+          .join(valueSeparator),
     );
   }
   // endregion
@@ -992,7 +897,7 @@ class PreferencesRepository {
   // region Small helpers.
   List<String>? _readOrderList(String key) => _prefs
       .getString(key)
-      ?.split(_keyValueSeparator)
+      ?.split(valueSeparator)
       .where((it) => it.isNotEmpty)
       .toList();
 
@@ -1002,75 +907,10 @@ class PreferencesRepository {
   String _activityRecordingDashboardLayoutKey(String activityTypeId) =>
       '$_keyActivityRecordingDashboardLayoutPrefix$activityTypeId';
 
-  String _layoutToPreferenceString(ActivityRecordingDashboardLayout layout) {
-    final normalized = layout.normalized();
-    final items = normalized.items
-        .map((item) =>
-            '${item.field.storageName}$_keyValuePairSeparator'
-            '${item.size.toPreferenceString()}')
-        .join(_keyValueSeparator);
-    return '${normalized.template.storageName}'
-        '$_keyLayoutSectionSeparator$items';
-  }
-
-  ActivityRecordingDashboardLayout? _layoutFromPreferenceString(String value) {
-    final sections =
-        _splitWithLimit(value, _keyLayoutSectionSeparator, 2);
-    final template = sections.isEmpty
-        ? null
-        : ActivityRecordingDashboardTemplate.fromStorage(sections.first);
-    if (template == null) return null;
-    final fields = <ActivityRecordingDashboardField>[];
-    final sizes =
-        <ActivityRecordingDashboardField, ActivityRecordingDashboardItemSize>{};
-    if (sections.length > 1) {
-      for (final entry in sections[1].split(_keyValueSeparator)) {
-        final itemSections =
-            _splitWithLimit(entry, _keyValuePairSeparator, 2);
-        final field = itemSections.isEmpty
-            ? null
-            : ActivityRecordingDashboardField.fromStorage(itemSections.first);
-        if (field == null) continue;
-        final size = itemSections.length > 1
-            ? ActivityRecordingDashboardItemSize.fromPreferenceString(
-                itemSections[1],
-              )
-            : null;
-        fields.add(field);
-        if (size != null) sizes[field] = size;
-      }
-    }
-    return ActivityRecordingDashboardLayout(
-      template: template,
-      fields: fields,
-      sizes: sizes,
-    ).normalized();
-  }
-
   int? _intOrNull(String key) => _prefs.containsKey(key) ? _prefs.getInt(key) : null;
 
   double? _doubleOrNull(String key) =>
       _prefs.containsKey(key) ? _prefs.getDouble(key) : null;
-
-  LocalTime _toReminderTimeOrDefault(String? value, LocalTime fallback) {
-    if (value == null) return fallback;
-    return _parseLocalTime(value) ?? fallback;
-  }
-
-  MindfulnessBellSound? _toMindfulnessBellSound(String? value) {
-    if (value == null) return null;
-    switch (value) {
-      case 'SOFT':
-        return MindfulnessBellSound.struck;
-      case 'DEEP':
-        return MindfulnessBellSound.temple;
-      default:
-        return MindfulnessBellSound.fromStorage(value);
-    }
-  }
-
-  MindfulnessBackgroundSound? _optionalBackgroundSound(String? value) =>
-      value == null ? null : MindfulnessBackgroundSound.fromStorage(value);
 
   void _putOrRemoveInt(String key, int? value) {
     if (value != null) {
@@ -1103,55 +943,6 @@ class PreferencesRepository {
       unawaited(_prefs.setStringList(key, value));
 
   void _remove(String key) => unawaited(_prefs.remove(key));
-
-  static String _encodePreferenceValue(String value) =>
-      Uri.encodeQueryComponent(value);
-
-  static String _decodePreferenceValue(String value) =>
-      Uri.decodeQueryComponent(value);
-
-  static List<String> _splitWithLimit(String value, String separator, int limit) {
-    final parts = <String>[];
-    var start = 0;
-    while (parts.length < limit - 1) {
-      final index = value.indexOf(separator, start);
-      if (index < 0) break;
-      parts.add(value.substring(start, index));
-      start = index + separator.length;
-    }
-    parts.add(value.substring(start));
-    return parts;
-  }
-
-  static LocalTime? _parseLocalTime(String value) {
-    final parts = value.split(':');
-    if (parts.length < 2) return null;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    final second = parts.length > 2 ? int.tryParse(parts[2]) : 0;
-    if (hour == null || minute == null || second == null) return null;
-    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-    if (second < 0 || second > 59) return null;
-    return LocalTime(hour, minute, second);
-  }
-
-  static T? _enumByName<T extends Enum>(List<T> values, String? name) =>
-      name == null ? null : values.firstWhereOrNull((e) => e.name == name);
-
-  static UnitSystem _defaultUnitSystem() =>
-      _imperialCountries.contains(_deviceCountry())
-          ? UnitSystem.imperial
-          : UnitSystem.metric;
-
-  static String _deviceCountry() {
-    final locale = Platform.localeName;
-    final underscore = locale.indexOf('_');
-    if (underscore < 0) return '';
-    var country = locale.substring(underscore + 1);
-    final terminator = country.indexOf(RegExp(r'[.@]'));
-    if (terminator >= 0) country = country.substring(0, terminator);
-    return country.toUpperCase();
-  }
   // endregion
 
   // region Keys and constants (verbatim from the Kotlin companion object).
@@ -1253,20 +1044,15 @@ class PreferencesRepository {
       'high_heart_rate_threshold_bpm';
   static const String _keyLowHeartRateThresholdBpm =
       'low_heart_rate_threshold_bpm';
-  static const String _keyBodyEnergyBirthYear = 'body_energy_birth_year';
-  static const String _keyBodyEnergyMaxHrBpm = 'body_energy_max_hr_bpm';
-  static const String _keyBodyEnergyRestingHrBpm = 'body_energy_resting_hr_bpm';
+  // The body profile keys (and the legacy body-energy/caffeine keys they were
+  // migrated from) live in prefs_migrations.dart — see keyBodyProfileBirthYear
+  // and friends, imported above.
   static const String _keyBodyEnergyZoneThresholdsBpm =
       'body_energy_zone_thresholds_bpm';
   static const String _keyBodyEnergyUseManualZones =
       'body_energy_use_manual_zones';
   static const String _keyBodyEnergySetupCompleted =
       'body_energy_setup_completed';
-  static const String _keyBodyProfileBirthYear = 'body_profile_birth_year';
-  static const String _keyBodyProfileWeightKg = 'body_profile_weight_kg';
-  static const String _keyBodyProfileRestingHrBpm =
-      'body_profile_resting_hr_bpm';
-  static const String _keyBodyProfileMaxHrBpm = 'body_profile_max_hr_bpm';
   static const String _keyCaffeineProfileCompleted =
       'caffeine_profile_completed';
   static const String _keyCaffeineHalfLifeMinutes = 'caffeine_half_life_minutes';
@@ -1275,8 +1061,6 @@ class PreferencesRepository {
   static const String _keyCaffeineSleepThresholdMg =
       'caffeine_sleep_threshold_mg';
   static const String _keyCaffeineBedtime = 'caffeine_bedtime';
-  static const String _keyCaffeineAgeYears = 'caffeine_age_years';
-  static const String _keyCaffeineWeightKg = 'caffeine_weight_kg';
   static const String _keyCaffeineSleepSensitivity =
       'caffeine_sleep_sensitivity';
   static const String _keyCaffeineSmoker = 'caffeine_smoker';
@@ -1300,10 +1084,8 @@ class PreferencesRepository {
       'mindfulness_reminders_enabled';
   static const String _keyMindfulnessReminderTime = 'mindfulness_reminder_time';
 
-  static const String _keyValueSeparator = ',';
-  static const String _keyValuePairSeparator = '=';
-  static const String _keyNutrientSeparator = ';';
-  static const String _keyLayoutSectionSeparator = '|';
+  // The separators and the percent-encoding of stored values live in
+  // prefs_codec.dart, which is where they are actually applied.
 
   static const double _defaultHydrationDailyGoalLiters = 2.0;
   static const double _minHydrationDailyGoalLiters = 0.25;
@@ -1314,6 +1096,5 @@ class PreferencesRepository {
   static const int _missingExerciseType = -2147483648; // Int.MIN_VALUE
   static const double _missingHydrationAmountMilliliters = -1.0;
   static const int _maxCustomHydrationDrinks = 25;
-  static const Set<String> _imperialCountries = {'US', 'LR', 'MM'};
   // endregion
 }
