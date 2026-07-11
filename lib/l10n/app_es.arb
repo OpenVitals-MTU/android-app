@@ -1720,5 +1720,65 @@
     "bodyEnergyCalibrationZone2": "Límite inferior de zona 2 (lpm)",
     "bodyEnergyCalibrationZone3": "Límite inferior de zona 3 (lpm)",
     "bodyEnergyCalibrationZone4": "Límite inferior de zona 4 (lpm)",
-    "bodyEnergyCalibrationZone5": "Límite inferior de zona 5 (lpm)"
+    "bodyEnergyCalibrationZone5": "Límite inferior de zona 5 (lpm)",
+    "activitySplitsLapsTitle": "Vueltas",
+    "activitySplitsLapsBody": "Registrado por el dispositivo o la aplicación que guardó esta actividad.",
+    "activitySplitsDerivedTitle": "Ritmos · cada {distance}",
+    "@activitySplitsDerivedTitle": {
+        "description": "Header of the splits card when splits are derived from the GPS route or speed samples. {distance} is an already-formatted distance such as '1 km' or '1 mi'.",
+        "placeholders": {
+            "distance": {
+                "type": "String",
+                "example": "1 km"
+            }
+        }
+    },
+    "activitySplitsEstimatedTitle": "Parciales · estimado",
+    "activitySplitsEstimatedBody": "Esta actividad no dispone de datos de distancia por tiempo, por lo que cada tiempo parcial muestra el ritmo medio de la actividad.",
+    "activitySplitsHeaderSplit": "Tiempos parciales",
+    "activitySplitsHeaderLap": "Vuelta",
+    "activitySplitsPartial": "parcial",
+    "activitySplitsFaster": "{delta} más rápido que la media",
+    "@activitySplitsFaster": {
+        "description": "Semantics label for a split quicker than the activity average.",
+        "placeholders": {
+            "delta": {
+                "type": "String",
+                "example": "0:12"
+            }
+        }
+    },
+    "activitySplitsSlower": "{delta} más lento que la media",
+    "@activitySplitsSlower": {
+        "description": "Semantics label for a split slower than the activity average.",
+        "placeholders": {
+            "delta": {
+                "type": "String",
+                "example": "0:12"
+            }
+        }
+    },
+    "settingsActivitySplitDistanceTitle": "Distancia parcial",
+    "settingsActivitySplitDistanceBody": "Con qué frecuencia la pantalla de detalles de la actividad muestra una división cuando la grabación no tiene vueltas propias.",
+    "settingsActivitySplitDistanceChoice": "Cada parcial",
+    "activitySplitDistanceKilometers": "{distance} km",
+    "@activitySplitDistanceKilometers": {
+        "description": "A split-distance preset in kilometres.",
+        "placeholders": {
+            "distance": {
+                "type": "String",
+                "example": "0.5"
+            }
+        }
+    },
+    "activitySplitDistanceMiles": "{distance} mi",
+    "@activitySplitDistanceMiles": {
+        "description": "A split-distance preset in miles.",
+        "placeholders": {
+            "distance": {
+                "type": "String",
+                "example": "0.25"
+            }
+        }
+    }
 }
