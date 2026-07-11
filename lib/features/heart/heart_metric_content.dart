@@ -23,6 +23,7 @@ import 'heart_metric_cards.dart';
 import 'heart_metric_notifier.dart';
 import 'heart_metric_ordered_sections.dart';
 import 'heart_metric_shared_sections.dart';
+import '../../core/stats/stats.dart';
 
 /// Called when a manual OpenVitals measurement entry should be edited/deleted.
 typedef VitalsMeasurementCallback = void Function(
@@ -1331,14 +1332,14 @@ class HeartMetricContentView extends StatelessWidget {
   }
 }
 
-double _avg(Iterable<double> values) {
-  final list = values.toList();
-  return list.isEmpty ? 0 : list.reduce((a, b) => a + b) / list.length;
-}
+/// Zero on empty is preserved from the hand-rolled originals, but it is dead code:
+/// every call site is already guarded on `isNotEmpty`. Same for the bang on
+/// [minOf]/[maxOf], whose ancestors threw on empty for the same unreachable case.
+double _avg(Iterable<double> values) => averageOrZero(values);
 
-double _min(Iterable<double> values) => values.reduce((a, b) => a < b ? a : b);
+double _min(Iterable<double> values) => minOf(values)!;
 
-double _max(Iterable<double> values) => values.reduce((a, b) => a > b ? a : b);
+double _max(Iterable<double> values) => maxOf(values)!;
 
 class _LoadingBlock extends StatelessWidget {
   const _LoadingBlock();

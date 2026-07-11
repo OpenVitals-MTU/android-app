@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../core/time/local_date.dart';
+import '../../core/stats/stats.dart' as stats;
 
 part 'personal_baseline.freezed.dart';
 
@@ -99,11 +100,13 @@ BaselineSummary? _baselineSummary(
 
   if (windowValues.length < _minimumBaselineSamples) return null;
 
-  final average = _average(windowValues);
-  final standardDeviation = _standardDeviation(windowValues, average);
+  // Non-null by the guard above: a baseline needs at least
+  // `_minimumBaselineSamples` values before it means anything.
+  final mean = stats.average(windowValues)!;
+  final standardDeviation = _standardDeviation(windowValues, mean);
   return BaselineSummary(
     windowDays: windowDays,
-    average: average,
+    average: mean,
     standardDeviation: standardDeviation,
     sampleCount: windowValues.length,
   );
@@ -128,9 +131,6 @@ BaselineStatus _baselineStatus(double currentValue, BaselineSummary summary) {
   if (currentValue < summary.usualLow) return BaselineStatus.below;
   return BaselineStatus.usual;
 }
-
-double _average(List<double> values) =>
-    values.fold<double>(0.0, (sum, value) => sum + value) / values.length;
 
 double _standardDeviation(List<double> values, double average) {
   final variance = values.fold<double>(

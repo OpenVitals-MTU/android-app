@@ -10,6 +10,7 @@ import '../../../health/health_permissions.dart';
 import '../contract/heart_repository.dart';
 import 'repository_time.dart';
 import 'health_connect_gating.dart';
+import '../../../core/stats/stats.dart';
 
 /// Port of the Kotlin `HeartRepositoryImpl`. Thin, permission-aware facade over
 /// [HealthDataSource]; reads degrade to empty/null when the backing permission
@@ -271,15 +272,11 @@ class HeartRepositoryImpl implements HeartRepository {
     return _dataSource.readDailyHRV(period.start, period.end);
   }
 
-  int? _averageBpm(List<RestingHeartRateSample> samples) {
-    if (samples.isEmpty) return null;
-    final sum = samples.fold<int>(0, (a, s) => a + s.beatsPerMinute);
-    return (sum / samples.length).round();
-  }
+  /// Null, never zero: "no resting-HR reading today" is not "0 bpm", and four
+  /// consumers on the heart screens branch on exactly that null.
+  int? _averageBpm(List<RestingHeartRateSample> samples) =>
+      average(samples.map((s) => s.beatsPerMinute))?.round();
 
-  double? _averageRmssd(List<HrvSample> samples) {
-    if (samples.isEmpty) return null;
-    final sum = samples.fold<double>(0, (a, s) => a + s.rmssdMs);
-    return sum / samples.length;
-  }
+  double? _averageRmssd(List<HrvSample> samples) =>
+      average(samples.map((s) => s.rmssdMs));
 }

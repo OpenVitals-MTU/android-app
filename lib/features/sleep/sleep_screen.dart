@@ -152,9 +152,7 @@ class _SleepContent extends StatelessWidget {
     );
     final selectedDay = daySelection.selectedDate;
     final nights = sleepNights(display.durationPoints);
-    final averageHours = nights.isEmpty
-        ? 0.0
-        : nights.fold(0.0, (sum, n) => sum + n.hours) / nights.length;
+    final averageHours = sleepAverageHours(nights);
     final summaryValue =
         '${l10n.summaryAvgValue('${formatter.decimal(averageHours, 1)}h')} · '
         '${l10n.summaryNights(formatter.count(nights.length))}';

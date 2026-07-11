@@ -6,6 +6,7 @@ import '../../../../domain/model/heart_models.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_surface.dart';
 import '../../../activity/activity_heart_rate_chart_card.dart';
+import '../../../../core/stats/stats.dart';
 
 /// Port of the Kotlin `ActivityRecordedSensorSummary` (in
 /// `recording/ActivityRecordingSensorUi.kt`): what a finished recording — or an
@@ -135,6 +136,6 @@ class ActivityRecordedSensorSummary extends StatelessWidget {
     return rows;
   }
 
-  static double _average(List<double> values) =>
-      values.reduce((a, b) => a + b) / values.length;
+  /// Non-null at both call sites, which are guarded on `isNotEmpty`.
+  static double _average(List<double> values) => average(values)!;
 }

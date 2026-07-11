@@ -24,6 +24,7 @@ import '../../ui/components/period_comparison_stat.dart';
 import '../../ui/components/personal_baseline_stat.dart';
 import '../../ui/theme/app_colors.dart';
 import 'sleep_presentation.dart';
+import '../../core/stats/stats.dart';
 
 /// Port of the Kotlin `SleepMetricOrderedSections.kt` section bodies. The screen
 /// composes these; each one is a plain widget over a [SleepDisplay].
@@ -58,9 +59,10 @@ DailyGoalProgress sleepGoalProgress({
 List<SleepDurationPoint> sleepNights(List<SleepDurationPoint> points) =>
     [for (final point in points) if (point.hours > 0.0) point];
 
-double _averageHours(List<SleepDurationPoint> nights) => nights.isEmpty
-    ? 0.0
-    : nights.fold(0.0, (sum, night) => sum + night.hours) / nights.length;
+/// Zero, not null, when nothing was logged: a period with no sleep really did
+/// average zero hours, and the tiles and charts render it as such.
+double sleepAverageHours(List<SleepDurationPoint> nights) =>
+    averageOrZero(nights.map((night) => night.hours));
 
 /// Kotlin `SleepStatisticsSectionContent`: goal statistics, the period grid, the
 /// sleep-target reading, then the sleep-vs-HRV correlation.
@@ -87,11 +89,11 @@ class SleepStatisticsSectionContent extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final nights = sleepNights(display.durationPoints);
     final totalHours = nights.fold(0.0, (sum, night) => sum + night.hours);
-    final averageHours = _averageHours(nights);
+    final averageHours = sleepAverageHours(nights);
     final longestHours =
         nights.isEmpty ? 0.0 : nights.map((n) => n.hours).reduce((a, b) => a > b ? a : b);
     final previousAverageHours =
-        _averageHours(sleepNights(display.previousDurationPoints));
+        sleepAverageHours(sleepNights(display.previousDurationPoints));
 
     DisplayValue hours(double value) => sleepHoursDisplay(value, formatter);
 
@@ -195,7 +197,7 @@ class SleepTargetContextSection extends StatelessWidget {
     if (nights.isEmpty) return const SizedBox.shrink();
 
     final interpretation =
-        sleepTargetInterpretation(_averageHours(nights), targetHours);
+        sleepTargetInterpretation(sleepAverageHours(nights), targetHours);
     if (interpretation == null) return const SizedBox.shrink();
 
     final average = sleepHoursDisplay(interpretation.averageHours, formatter).text;

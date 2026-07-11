@@ -32,6 +32,7 @@ import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/theme/app_colors.dart';
 import '../heart/heart_metric.dart';
 import '../heart/heart_metric_cards.dart';
+import '../../core/stats/stats.dart';
 
 // Vitals accent colours, ported from the Kotlin `HeartVitalsPresentation.kt`.
 const Color _oxygenColor = Color(0xFF00897B);
@@ -1073,14 +1074,14 @@ String? _singleSource(Iterable<String> sources) {
   return distinct.length == 1 ? distinct.first : null;
 }
 
-double _avg(Iterable<double> values) {
-  final list = values.toList();
-  return list.isEmpty ? 0 : list.reduce((a, b) => a + b) / list.length;
-}
+/// Zero on empty is preserved from the hand-rolled originals, but it is dead code:
+/// every call site is already guarded on `isNotEmpty`. Same for the bang on
+/// [minOf]/[maxOf], whose ancestors threw on empty for the same unreachable case.
+double _avg(Iterable<double> values) => averageOrZero(values);
 
-double _min(Iterable<double> values) => values.reduce(math.min);
+double _min(Iterable<double> values) => minOf(values)!;
 
-double _max(Iterable<double> values) => values.reduce(math.max);
+double _max(Iterable<double> values) => maxOf(values)!;
 
 class _LoadingBlock extends StatelessWidget {
   const _LoadingBlock();

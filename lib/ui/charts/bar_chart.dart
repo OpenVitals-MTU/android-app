@@ -4,6 +4,7 @@ import '../../core/period/time_range.dart';
 import '../../core/time/local_date.dart';
 import '../components/ov_card.dart';
 import 'chart_axis.dart';
+import '../../core/stats/stats.dart';
 
 /// A single dated value fed into the period charts. Port of Kotlin
 /// `PeriodChartValue`.
@@ -62,15 +63,10 @@ double _aggregate(List<double> values, PeriodBarAggregation aggregation) {
     case PeriodBarAggregation.sum:
       return values.fold(0.0, (sum, value) => sum + value);
     case PeriodBarAggregation.average:
-      return _averageOrZero(values);
+      return averageOrZero(values);
     case PeriodBarAggregation.averageNonZero:
-      return _averageOrZero(values.where((value) => value > 0.0).toList());
+      return averageOrZero(values.where((value) => value > 0.0).toList());
   }
-}
-
-double _averageOrZero(List<double> values) {
-  if (values.isEmpty) return 0.0;
-  return values.fold(0.0, (sum, value) => sum + value) / values.length;
 }
 
 List<PeriodChartBucket> _dailyBuckets(

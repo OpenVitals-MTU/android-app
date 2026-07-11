@@ -22,6 +22,7 @@ import '../../ui/components/period_comparison_stat.dart';
 import '../../ui/components/personal_baseline_stat.dart';
 import '../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../ui/theme/app_colors.dart';
+import '../../core/stats/stats.dart';
 
 /// Port of the Kotlin `HeartMetricSharedSections.kt`: the section bodies shared
 /// by the ten heart + vitals period-detail screens (data confidence, metric
@@ -263,11 +264,9 @@ Widget bodyTemperatureContextCardContent(
 
 // ── Statistics ────────────────────────────────────────────────────────────────
 
-double _average(Iterable<double> values) {
-  final list = values.toList();
-  if (list.isEmpty) return 0;
-  return list.reduce((a, b) => a + b) / list.length;
-}
+/// Zero on empty is preserved from the hand-rolled original, but it is dead code:
+/// every call site is already guarded on `isNotEmpty`.
+double _average(Iterable<double> values) => averageOrZero(values);
 
 /// Kotlin `HeartNumericStatisticsContent`: the shared avg/low/high/readings
 /// grid, plus the previous-period comparison and the personal-baseline stats.

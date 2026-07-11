@@ -3,6 +3,7 @@ import '../insights/activity_splits.dart';
 import 'activity_models.dart';
 import 'exercise_session_metrics.dart';
 import 'heart_models.dart';
+import '../../core/stats/stats.dart';
 
 const double _minBackfillDistanceMeters = 1.0;
 const double _minBackfillElevationMeters = 1.0;
@@ -74,7 +75,7 @@ extension ActivityBackfill on ExerciseData {
     required List<SpeedSample> speedSamples,
     required List<ActivityCadenceSample> cadenceSamples,
   }) {
-    final heartRateAverage = _averageOfInts(
+    final heartRateAverage = average(
       heartRateSamples
           .map((sample) => sample.beatsPerMinute)
           .where((bpm) => bpm > 0)
@@ -95,7 +96,7 @@ extension ActivityBackfill on ExerciseData {
       ),
       averageSpeedMetersPerSecond: _backfilledByDouble(
         averageSpeedMetersPerSecond,
-        _averageOfDoubles(
+        average(
           speedSamples
               .map((sample) => sample.metersPerSecond)
               .where((speed) => speed > 0.0 && speed.isFinite)
@@ -104,7 +105,7 @@ extension ActivityBackfill on ExerciseData {
       ),
       averageStepsCadenceRate: _backfilledByDouble(
         averageStepsCadenceRate,
-        _averageOfDoubles(
+        average(
           cadenceSamples
               .where((sample) => sample.kind == ActivityCadenceKind.steps)
               .map((sample) => sample.rate)
@@ -114,7 +115,7 @@ extension ActivityBackfill on ExerciseData {
       ),
       averageCyclingCadenceRpm: _backfilledByDouble(
         averageCyclingCadenceRpm,
-        _averageOfDoubles(
+        average(
           cadenceSamples
               .where((sample) => sample.kind == ActivityCadenceKind.cycling)
               .map((sample) => sample.rate)
@@ -194,12 +195,3 @@ int? _backfilledByInt(int? current, int? value) {
   return current;
 }
 
-double? _averageOfInts(List<int> values) {
-  if (values.isEmpty) return null;
-  return values.reduce((a, b) => a + b) / values.length;
-}
-
-double? _averageOfDoubles(List<double> values) {
-  if (values.isEmpty) return null;
-  return values.reduce((a, b) => a + b) / values.length;
-}

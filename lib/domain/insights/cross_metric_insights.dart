@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../core/time/local_date.dart';
+import '../../core/stats/stats.dart';
 
 part 'cross_metric_insights.freezed.dart';
 
@@ -76,9 +77,9 @@ CrossMetricInsight? crossMetricInsight(
   if (pairs.length < _minimumCrossMetricPairs) return null;
 
   final primaryAverage =
-      _average(pairs.map((pair) => pair.$1).toList());
+      average(pairs.map((pair) => pair.$1).toList())!;
   final secondaryAverage =
-      _average(pairs.map((pair) => pair.$2).toList());
+      average(pairs.map((pair) => pair.$2).toList())!;
   final primaryVariance = pairs.fold<double>(
     0.0,
     (sum, pair) => sum + (pair.$1 - primaryAverage) * (pair.$1 - primaryAverage),
@@ -106,5 +107,3 @@ CrossMetricInsight? crossMetricInsight(
   );
 }
 
-double _average(List<double> values) =>
-    values.fold<double>(0.0, (sum, value) => sum + value) / values.length;
