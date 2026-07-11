@@ -4,6 +4,49 @@ set -eu
 # Prepares the CI container for a Flutter/Android build, then execs `flutter "$@"`.
 # Replaces the Kotlin app's ci-android-gradle.sh + ci-android-setup.sh + ci-gradle.sh.
 
+# --- Native-assets toolchain (needed by EVERY flutter command) -----------------
+# vector_map_tiles 10.x draws tiles on the GPU via flutter_scene, whose
+# flutter_scene_importer package has a native-assets build hook that shells out to
+# CMake (>= 3.21) and Ninja. Those hooks run for `flutter test` and `flutter analyze`
+# too -- not just builds -- so without a toolchain every step dies with
+# "Building native assets failed" and a bare `ProcessException: No such file or
+# directory / Command: cmake`, which does not name the missing tool.
+#
+# The Flutter image does not ship CMake. Install it once, here.
+CMAKE_MIN_MAJOR=3
+CMAKE_MIN_MINOR=21
+
+cmake_is_new_enough() {
+    command -v cmake >/dev/null 2>&1 || return 1
+    v="$(cmake --version 2>/dev/null | head -n 1 | sed -n 's/.* \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')"
+    [ -n "$v" ] || return 1
+    maj="${v% *}"; min="${v#* }"
+    [ "$maj" -gt "$CMAKE_MIN_MAJOR" ] && return 0
+    [ "$maj" -eq "$CMAKE_MIN_MAJOR" ] && [ "$min" -ge "$CMAKE_MIN_MINOR" ]
+}
+
+if ! cmake_is_new_enough || ! command -v ninja >/dev/null 2>&1; then
+    echo "Installing the native-assets toolchain (cmake >= $CMAKE_MIN_MAJOR.$CMAKE_MIN_MINOR, ninja, clang)"
+    sudo_cmd=""
+    [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1 && sudo_cmd="sudo"
+    if command -v apt-get >/dev/null 2>&1; then
+        $sudo_cmd apt-get update -qq
+        $sudo_cmd apt-get install -y -qq --no-install-recommends \
+            cmake ninja-build clang pkg-config >/dev/null
+    else
+        echo "No apt-get available; cannot install the native-assets toolchain." >&2
+        exit 1
+    fi
+fi
+
+# Fail here, naming the tool, rather than inside a build hook that does not.
+if ! cmake_is_new_enough; then
+    echo "cmake >= $CMAKE_MIN_MAJOR.$CMAKE_MIN_MINOR is required by flutter_scene_importer's build hook." >&2
+    echo "Found: $(cmake --version 2>/dev/null | head -n 1 || echo 'none')" >&2
+    exit 1
+fi
+command -v ninja >/dev/null 2>&1 || { echo "ninja is required by the native-assets build hook." >&2; exit 1; }
+
 # --- Android SDK (only when we are actually building for Android) -------------
 # `flutter test` and `flutter analyze` run on the Dart VM and never touch the Android
 # SDK, so provisioning it for them is pure cost -- and a failure point that has no

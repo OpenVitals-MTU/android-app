@@ -9,8 +9,18 @@
   Dart 3.12.0, which is why the pubspec constraint is `^3.12.0` and not the 3.12.2 a newer local
   toolchain happens to ship — raising it would break CI with a version-solve error, not a clear one.
 - Android SDK Platform 37 with SDK Build-Tools 37.0.0 — `compileSdk = 37`, because the
-  Health Connect `connect-client` alpha resolves its record/permission mappings against API 37
+  Health Connect `connect-client` alpha resolves its record/permission mappings against API 37.
+  Note the package is **`platforms;android-37.0`**, not `android-37` (Android ships
+  minor-versioned platforms now), and `sdkmanager` only *warns* on an unknown package — it
+  exits 0, so a typo here fails much later inside Gradle looking like something else.
 - JDK 17
+- **CMake ≥ 3.21 and Ninja.** `vector_map_tiles` 10.x renders tiles on the GPU via
+  `flutter_scene`, whose `flutter_scene_importer` native-assets build hook shells out to CMake.
+  **That hook runs on `flutter test` and `flutter analyze` too, not just builds** — so without
+  CMake *every* Flutter command dies with `Building native assets failed` and a bare
+  `ProcessException: No such file or directory / Command: cmake`, which never names the missing
+  tool. If you use a snap-installed Flutter, its bundled CMake 3.16 shadows the host one and
+  causes exactly this.
 - `minSdk` is 26 (Health Connect); `targetSdk` is 36
 
 Generated code (`*.g.dart`, `*.freezed.dart`, `lib/l10n/app_localizations*.dart`) is **tracked**, and
