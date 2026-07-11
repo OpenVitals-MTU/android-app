@@ -1,7 +1,6 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/heart_rate_sample_reduction.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -10,6 +9,7 @@ import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/heart_repository.dart';
 import 'repository_time.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `HeartRepositoryImpl`. Thin, permission-aware facade over
 /// [HealthDataSource]; reads degrade to empty/null when the backing permission
@@ -25,18 +25,13 @@ class HeartRepositoryImpl implements HeartRepository {
 
   final HealthDataSource _dataSource;
 
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
-
   @override
   Future<HeartPeriodData> loadHeartPeriod(
     PeriodLoadQuery query,
     HeartPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final isDay = query.range == TimeRange.day;
     final windows = query.windows;
     final selected = query.selectedDate;
@@ -119,13 +114,13 @@ class HeartRepositoryImpl implements HeartRepository {
 
   @override
   Future<List<HeartRateSample>> loadHeartRateSamplesForDay(LocalDate date) async =>
-      _daySamples(date, await _grantedIfAvailable());
+      _daySamples(date, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<HeartRateSample>> loadRawHeartRateSamplesForDayGraph(
     LocalDate date,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHeartRate)) return const [];
     return _dataSource.readRawHeartRateSamples(
       localDayStart(date),
@@ -138,7 +133,7 @@ class HeartRepositoryImpl implements HeartRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHeartRate)) return const [];
     final samples = await _dataSource.readHeartRateSamples(
       localDayStart(start),
@@ -160,7 +155,7 @@ class HeartRepositoryImpl implements HeartRepository {
     DateTime start,
     DateTime end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHeartRate)) return const [];
     if (!end.isAfter(start)) return const [];
 
@@ -184,36 +179,36 @@ class HeartRepositoryImpl implements HeartRepository {
     LocalDate start,
     LocalDate end,
   ) async =>
-      _dailySummaries(DatePeriod(start, end), await _grantedIfAvailable());
+      _dailySummaries(DatePeriod(start, end), await _dataSource.grantedIfAvailable());
 
   @override
   Future<int?> loadRestingHeartRate(LocalDate date) async =>
-      _restingBpm(date, await _grantedIfAvailable());
+      _restingBpm(date, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<DailyRestingHR>> loadDailyRestingHR(
     LocalDate start,
     LocalDate end,
   ) async =>
-      _dailyRestingHR(DatePeriod(start, end), await _grantedIfAvailable());
+      _dailyRestingHR(DatePeriod(start, end), await _dataSource.grantedIfAvailable());
 
   @override
   Future<double?> loadHrvRmssd(LocalDate date) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHrv)) return null;
     return _dataSource.readHrvRmssd(date);
   }
 
   @override
   Future<List<HrvSample>> loadHrvSamples(DateTime start, DateTime end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHrv)) return const [];
     return _dataSource.readHrvSamples(start, end);
   }
 
   @override
   Future<List<DailyHrv>> loadDailyHRV(LocalDate start, LocalDate end) async =>
-      _dailyHrv(DatePeriod(start, end), await _grantedIfAvailable());
+      _dailyHrv(DatePeriod(start, end), await _dataSource.grantedIfAvailable());
 
   // ── Private gated reads ─────────────────────────────────────────────────
 

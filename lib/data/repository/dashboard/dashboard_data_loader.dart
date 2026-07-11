@@ -10,7 +10,6 @@ import '../../../domain/insights/sleep_score.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/dashboard_data.dart';
 import '../../../domain/model/dashboard_query.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/heart_models.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/sleep_daily_summary.dart';
@@ -20,6 +19,7 @@ import '../../../domain/preferences/sleep_range_mode.dart';
 import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/body_energy_repository.dart';
+import '../impl/health_connect_gating.dart';
 import '../impl/repository_time.dart';
 
 /// Port of the Kotlin `DashboardDataLoader`.
@@ -45,13 +45,8 @@ class DashboardDataLoader {
   static const int _cardioLoadHistoryPeriods = 4;
   static const int _weeklyCardioHeartRateSampleWeeks = 2;
 
-  Future<Set<String>> _grantedPermissionsIfAvailable() async =>
-      _hc.cachedAvailability == HealthConnectAvailability.available
-          ? _hc.grantedPermissions()
-          : <String>{};
-
   Future<DashboardData> loadDashboard(DashboardQuery query) async {
-    final granted = await _grantedPermissionsIfAvailable();
+    final granted = await _hc.grantedIfAvailable();
     final showEstimatedCalories =
         _preferences?.showOpenVitalsCalculatedCaloriesListenable.value ?? false;
     return _loadDashboardUncached(

@@ -1,6 +1,5 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/model/sleep_session_merging.dart';
@@ -9,6 +8,7 @@ import '../../../domain/query/sleep_period_data.dart';
 import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/sleep_repository.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `SleepRepositoryImpl`.
 class SleepRepositoryImpl implements SleepRepository {
@@ -16,18 +16,13 @@ class SleepRepositoryImpl implements SleepRepository {
 
   final HealthDataSource _dataSource;
 
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
-
   @override
   Future<SleepPeriodData> loadSleepPeriod(
     PeriodLoadQuery query,
     SleepRangeMode sleepRangeMode, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readSleep)) {
       return const SleepPeriodData();
     }
@@ -50,7 +45,7 @@ class SleepRepositoryImpl implements SleepRepository {
 
   @override
   Future<List<SleepData>> loadSleepSessions(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readSleep)) return const [];
     // Widen by a day either side, merge, then keep sessions whose end date
     // falls within [start, end] (matches the Kotlin filtering).

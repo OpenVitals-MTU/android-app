@@ -1,6 +1,5 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/model/vitals_models.dart';
 import '../../../domain/query/vitals_period_data.dart';
@@ -9,17 +8,13 @@ import '../../../health/health_permissions.dart';
 import '../contract/vitals_repository.dart';
 import 'repository_exceptions.dart';
 import 'repository_time.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `VitalsRepositoryImpl`.
 class VitalsRepositoryImpl implements VitalsRepository {
   VitalsRepositoryImpl(this._dataSource);
 
   final HealthDataSource _dataSource;
-
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
 
   @override
   Set<String> get phase3Permissions =>
@@ -36,7 +31,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
 
   @override
   Future<Set<String>> missingPermissions() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return phase3Permissions.difference(granted);
   }
 
@@ -46,7 +41,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
     VitalsPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final missing = phase3Permissions.difference(granted);
     final w = query.windows;
 
@@ -131,47 +126,47 @@ class VitalsRepositoryImpl implements VitalsRepository {
     LocalDate start,
     LocalDate end,
   ) async =>
-      _bloodPressure(start, end, await _grantedIfAvailable());
+      _bloodPressure(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<SpO2Entry>> loadSpO2(LocalDate start, LocalDate end) async =>
-      _spO2(start, end, await _grantedIfAvailable());
+      _spO2(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<RespiratoryRateEntry>> loadRespiratoryRate(
     LocalDate start,
     LocalDate end,
   ) async =>
-      _respiratoryRate(start, end, await _grantedIfAvailable());
+      _respiratoryRate(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<BodyTempEntry>> loadBodyTemperature(
     LocalDate start,
     LocalDate end,
   ) async =>
-      _bodyTemperature(start, end, await _grantedIfAvailable());
+      _bodyTemperature(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<Vo2MaxEntry>> loadVo2Max(LocalDate start, LocalDate end) async =>
-      _vo2Max(start, end, await _grantedIfAvailable());
+      _vo2Max(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<BloodGlucoseEntry>> loadBloodGlucose(
     LocalDate start,
     LocalDate end,
   ) async =>
-      _bloodGlucose(start, end, await _grantedIfAvailable());
+      _bloodGlucose(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<SkinTemperatureEntry>> loadSkinTemperature(
     LocalDate start,
     LocalDate end,
   ) async =>
-      _skinTemperature(start, end, await _grantedIfAvailable());
+      _skinTemperature(start, end, await _dataSource.grantedIfAvailable());
 
   @override
   Future<bool> hasVitalsWritePermission(VitalsMeasurementType type) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(vitalsWritePermissions(type));
   }
 
@@ -209,7 +204,7 @@ class VitalsRepositoryImpl implements VitalsRepository {
   }
 
   Future<void> _requireWrite(VitalsMeasurementType type) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final missing = vitalsWritePermissions(type).difference(granted);
     if (missing.isNotEmpty) {
       throw MissingHealthPermissionException(

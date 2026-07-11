@@ -2,24 +2,19 @@ import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/body_models.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/body_period_data.dart';
 import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/body_repository.dart';
 import 'repository_exceptions.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `BodyRepositoryImpl`.
 class BodyRepositoryImpl implements BodyRepository {
   BodyRepositoryImpl(this._dataSource);
 
   final HealthDataSource _dataSource;
-
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
 
   @override
   Set<String> bodyWritePermissions(BodyMeasurementType type) => switch (type) {
@@ -34,7 +29,7 @@ class BodyRepositoryImpl implements BodyRepository {
     BodyPeriodMetric metric, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final w = query.windows;
 
     Future<List<T>> read<T>(
@@ -174,31 +169,31 @@ class BodyRepositoryImpl implements BodyRepository {
 
   @override
   Future<List<WeightEntry>> loadWeightEntries(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readWeight)) return const [];
     return _dataSource.readWeightEntries(start, end);
   }
 
   @override
-  Future<double?> loadLatestHeight() async => _latestHeightCm(await _grantedIfAvailable());
+  Future<double?> loadLatestHeight() async => _latestHeightCm(await _dataSource.grantedIfAvailable());
 
   @override
   Future<List<HeightEntry>> loadHeightEntries(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHeight)) return const [];
     return _dataSource.readHeightEntries(start, end);
   }
 
   @override
   Future<List<BodyFatEntry>> loadBodyFatEntries(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBodyFat)) return const [];
     return _dataSource.readBodyFatEntries(start, end);
   }
 
   @override
   Future<double?> loadLatestLeanBodyMass() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readLeanMass)) return null;
     return _dataSource.readLatestLeanBodyMass();
   }
@@ -208,42 +203,42 @@ class BodyRepositoryImpl implements BodyRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readLeanMass)) return const [];
     return _dataSource.readLeanBodyMassEntries(start, end);
   }
 
   @override
   Future<double?> loadLatestBMR() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBmr)) return null;
     return _dataSource.readLatestBMR();
   }
 
   @override
   Future<List<BmrEntry>> loadBmrEntries(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBmr)) return const [];
     return _dataSource.readBmrEntries(start, end);
   }
 
   @override
   Future<double?> loadLatestBoneMass() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBoneMass)) return null;
     return _dataSource.readLatestBoneMass();
   }
 
   @override
   Future<List<BoneMassEntry>> loadBoneMassEntries(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBoneMass)) return const [];
     return _dataSource.readBoneMassEntries(start, end);
   }
 
   @override
   Future<double?> loadLatestBodyWaterMass() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBodyWaterMass)) return null;
     return _dataSource.readLatestBodyWaterMass();
   }
@@ -253,14 +248,14 @@ class BodyRepositoryImpl implements BodyRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readBodyWaterMass)) return const [];
     return _dataSource.readBodyWaterMassEntries(start, end);
   }
 
   @override
   Future<bool> hasBodyWritePermission(BodyMeasurementType type) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(bodyWritePermissions(type));
   }
 
@@ -298,7 +293,7 @@ class BodyRepositoryImpl implements BodyRepository {
   }
 
   Future<void> _requireWrite(BodyMeasurementType type) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final missing = bodyWritePermissions(type).difference(granted);
     if (missing.isNotEmpty) {
       throw const MissingHealthPermissionException(

@@ -1,13 +1,13 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/cycle_models.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/cycle_period_data.dart';
 import '../../../health/health_data_source.dart';
 import '../../../health/health_permissions.dart';
 import '../contract/cycle_repository.dart';
 import 'repository_time.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `CycleRepositoryImpl`.
 class CycleRepositoryImpl implements CycleRepository {
@@ -15,18 +15,13 @@ class CycleRepositoryImpl implements CycleRepository {
 
   final HealthDataSource _dataSource;
 
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
-
   @override
   Set<String> get phase4Permissions =>
       _dataSource.permissionService.phase4Permissions;
 
   @override
   Future<Set<String>> missingPermissions() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return phase4Permissions.difference(granted);
   }
 
@@ -43,7 +38,7 @@ class CycleRepositoryImpl implements CycleRepository {
 
   @override
   Future<CycleData> loadCycleData(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final s = localDayStart(start);
     final e = localDayEnd(end);
 

@@ -1,7 +1,6 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/nutrition_period_data.dart';
@@ -10,17 +9,13 @@ import '../../../health/health_permissions.dart';
 import '../contract/nutrition_repository.dart';
 import 'repository_exceptions.dart';
 import 'repository_time.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `NutritionRepositoryImpl`.
 class NutritionRepositoryImpl implements NutritionRepository {
   NutritionRepositoryImpl(this._dataSource);
 
   final HealthDataSource _dataSource;
-
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
 
   @override
   Set<String> get nutritionWritePermissions => {HcPermissions.writeNutrition};
@@ -30,7 +25,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final hasPerm = granted.contains(HcPermissions.readNutrition);
     final w = query.windows;
     final isDay = query.range == TimeRange.day;
@@ -62,7 +57,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<List<DailyMacros>> loadDailyMacros(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readNutrition)) return const [];
     return _dataSource.readDailyMacros(start, end);
   }
@@ -72,14 +67,14 @@ class NutritionRepositoryImpl implements NutritionRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readNutrition)) return const [];
     return _dataSource.readNutritionEntries(localDayStart(start), localDayEnd(end));
   }
 
   @override
   Future<bool> hasNutritionWritePermission() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(nutritionWritePermissions);
   }
 
@@ -100,7 +95,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
   }
 
   Future<void> _requireWrite() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.containsAll(nutritionWritePermissions)) {
       throw const MissingHealthPermissionException(
         'Missing Health Connect nutrition write permission.',

@@ -4,7 +4,6 @@ import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../domain/model/activity_models.dart';
 import '../../../domain/model/exercise_session_metrics.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
@@ -13,6 +12,7 @@ import '../../../health/health_permissions.dart';
 import '../contract/activity_repository.dart';
 import 'repository_exceptions.dart';
 import 'repository_time.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `ActivityRepositoryImpl`.
 class ActivityRepositoryImpl implements ActivityRepository {
@@ -28,11 +28,6 @@ class ActivityRepositoryImpl implements ActivityRepository {
   final PreferencesRepository? _preferences;
   final ActivityMarkerRepository? _markers;
 
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
-
   @override
   Future<ActivityPeriodData> loadActivityPeriod(
     PeriodLoadQuery query, {
@@ -41,7 +36,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     bool includeWheelchairPushes = false,
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final w = query.windows;
     final includeActiveCalories = granted.contains(HcPermissions.readActiveCalories);
 
@@ -97,7 +92,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
 
   @override
   Future<List<DailySteps>> loadDailySteps(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readSteps)) return const [];
     return _dataSource.readDailySteps(
       _activityHistoryStart(start, end, granted),
@@ -133,14 +128,14 @@ class ActivityRepositoryImpl implements ActivityRepository {
   Future<List<ActivityProgressPoint>> loadActivityProgress({
     LocalDate? date,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readSteps)) return const [];
     return _dataSource.readRawActivityProgress(date ?? LocalDate.now());
   }
 
   @override
   Future<List<ExerciseData>> loadWorkouts(LocalDate start, LocalDate end) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readExercise)) return const [];
     return _dataSource.readExerciseSessions(localDayStart(start), localDayEnd(end));
   }
@@ -150,7 +145,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readExercise)) return const [];
     // Distance / speed are gated independently: an ungranted metric is left out
     // of the aggregate and comes back null, rather than failing the read.
@@ -174,7 +169,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     DateTime start,
     DateTime end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final wanted = <ExerciseSessionMetric>{
       if (granted.contains(HcPermissions.readDistance))
         ExerciseSessionMetric.distance,
@@ -200,7 +195,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     // Gated like every other metric read: without the SPEED permission the
     // caller gets "no speed samples", not an exception. The activity detail
     // screen degrades to route-derived (or estimated) splits.
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readSpeed)) return const [];
     return _dataSource.readSpeedSamples(start, end);
   }
@@ -248,7 +243,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readNutrition)) return const [];
     return _dataSource.readDailyNutrition(start, end, includeHydration: false);
   }
@@ -294,7 +289,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
 
   @override
   Future<bool> hasActivityWritePermission() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(activityWritePermissions());
   }
 
@@ -307,7 +302,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
     required bool includeTotalCalories,
     bool includeSteps = false,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(
       activityWritePermissionsFor(
         includeRoute: includeRoute,
@@ -324,7 +319,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
   Future<bool> hasActivityWritePermissionForRequest(
     ActivityWriteRequest request,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(activityWritePermissionsForRequest(request));
   }
 

@@ -6,7 +6,6 @@ import '../../../core/time/local_date.dart';
 import '../../../data/local/beverage/beverage_store.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../domain/model/caffeine_models.dart';
-import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/hydration_period_data.dart';
@@ -15,6 +14,7 @@ import '../../../health/health_permissions.dart';
 import '../contract/hydration_repository.dart';
 import 'repository_exceptions.dart';
 import 'repository_time.dart';
+import 'health_connect_gating.dart';
 
 /// Port of the Kotlin `HydrationRepositoryImpl`.
 ///
@@ -33,11 +33,6 @@ class HydrationRepositoryImpl implements HydrationRepository {
   final HealthDataSource _dataSource;
   final PreferencesRepository? _preferences;
   final BeverageStore? _beverages;
-
-  Future<Set<String>> _grantedIfAvailable() async =>
-      _dataSource.cachedAvailability == HealthConnectAvailability.available
-          ? _dataSource.grantedPermissions()
-          : <String>{};
 
   @override
   Set<String> get hydrationWritePermissions => {HcPermissions.writeHydration};
@@ -115,7 +110,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
     PeriodLoadQuery query, {
     RefreshMode refreshMode = RefreshMode.normal,
   }) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     final hasPerm = granted.contains(HcPermissions.readHydration);
     final w = query.windows;
     final isDay = query.range == TimeRange.day;
@@ -150,7 +145,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHydration)) return const [];
     return _dataSource.readDailyHydration(start, end);
   }
@@ -160,14 +155,14 @@ class HydrationRepositoryImpl implements HydrationRepository {
     LocalDate start,
     LocalDate end,
   ) async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.contains(HcPermissions.readHydration)) return const [];
     return _dataSource.readHydrationEntries(localDayStart(start), localDayEnd(end));
   }
 
   @override
   Future<bool> hasHydrationWritePermission() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     return granted.containsAll(hydrationWritePermissions);
   }
 
@@ -195,7 +190,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
     await _requireWrite();
     final clientRecordId = await _dataSource.deleteHydrationEntry(id);
     if (clientRecordId != null) {
-      final granted = await _grantedIfAvailable();
+      final granted = await _dataSource.grantedIfAvailable();
       if (granted.contains(HcPermissions.writeNutrition)) {
         await _dataSource.deleteHydrationNutritionEntry(clientRecordId);
       }
@@ -203,7 +198,7 @@ class HydrationRepositoryImpl implements HydrationRepository {
   }
 
   Future<void> _requireWrite() async {
-    final granted = await _grantedIfAvailable();
+    final granted = await _dataSource.grantedIfAvailable();
     if (!granted.containsAll(hydrationWritePermissions)) {
       throw const MissingHealthPermissionException(
         'Missing Health Connect hydration write permission.',
