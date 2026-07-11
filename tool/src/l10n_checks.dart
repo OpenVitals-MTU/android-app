@@ -112,7 +112,7 @@ L10nCheckResult checkCatalogs({
 
   final Map<String, _Catalog> parsed = <String, _Catalog>{};
   for (final ArbSource source in sources) {
-    final _Catalog? catalog = _parseCatalog(source, errors);
+    final _Catalog? catalog = _parseCatalog(source, errors, templateLocale);
     if (catalog != null) parsed[source.locale] = catalog;
   }
 
@@ -237,7 +237,11 @@ L10nCheckResult checkCatalogs({
 
 /// Parses one ARB file: JSON validity (1), `@@locale` agreement (1),
 /// duplicate keys (2), and the ICU body of every message (8).
-_Catalog? _parseCatalog(ArbSource source, List<String> errors) {
+_Catalog? _parseCatalog(
+  ArbSource source,
+  List<String> errors,
+  String templateLocale,
+) {
   // 2. Duplicates first: jsonDecode silently keeps the LAST of a repeated key,
   // so by the time we have a Map the evidence is gone.
   for (final String key in findDuplicateTopLevelKeys(source.contents)) {
@@ -262,6 +266,27 @@ _Catalog? _parseCatalog(ArbSource source, List<String> errors) {
     errors.add(
       '${source.fileName}: @@locale is "$declared" but the filename says '
       '"${source.locale}"',
+    );
+  }
+
+  // 1b. The TEMPLATE must not declare `@@locale` at all.
+  //
+  // This is not stylistic. `app_en.arb` is Weblate's `new_base`: when a
+  // translator starts a new language, Weblate COPIES that file and then fills in
+  // the units. It treats `@@locale` as an inert `@@`-key and never rewrites it,
+  // so every new locale would inherit `"@@locale": "en"` and gen-l10n would fail
+  // with "the locale specified in @@locale and the arb filename do not match".
+  // It bit Galician exactly this way. gen-l10n resolves the template's locale
+  // from the filename, so the key buys nothing and costs every future language.
+  //
+  // (Weblate DOES preserve a correct `@@locale` on an existing file, which is why
+  // the locale ARBs may keep theirs.)
+  if (source.locale == templateLocale && declared != null) {
+    errors.add(
+      '${source.fileName}: the template must NOT declare @@locale. Weblate copies '
+      'this file to seed every new language and does not rewrite the key, so each '
+      'one would inherit "$declared" and break gen-l10n. The locale comes from the '
+      'filename.',
     );
   }
 
