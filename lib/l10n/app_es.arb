@@ -1716,9 +1716,9 @@
             }
         }
     },
-    "bodyEnergyCalibrationZone1": "Zona 1: pulso más bajo",
-    "bodyEnergyCalibrationZone2": "Zona 2: menos pulsaciones por minuto",
-    "bodyEnergyCalibrationZone3": "Zona 3: pulsaciones por minuto moderadas",
-    "bodyEnergyCalibrationZone4": "Zona 4: pulsaciones por minuto moderadas",
-    "bodyEnergyCalibrationZone5": "Zona 5: pulsaciones por minuto muy altas"
+    "bodyEnergyCalibrationZone1": "Límite inferior de zona 1 (lpm)",
+    "bodyEnergyCalibrationZone2": "Límite inferior de zona 2 (lpm)",
+    "bodyEnergyCalibrationZone3": "Límite inferior de zona 3 (lpm)",
+    "bodyEnergyCalibrationZone4": "Límite inferior de zona 4 (lpm)",
+    "bodyEnergyCalibrationZone5": "Límite inferior de zona 5 (lpm)"
 }
