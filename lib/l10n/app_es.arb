@@ -1481,7 +1481,7 @@
     "mealBreakfast": "Desayuno",
     "mealLunch": "Almuerzo",
     "mealDinner": "Cena",
-    "mealSnack": "Snack",
+    "mealSnack": "Aperitivo",
     "mealGeneric": "Comida",
     "macroProteinShort": "P {arg0}g",
     "macroCarbsShort": "C {arg0}g",
@@ -1521,7 +1521,7 @@
     "caffeineSleepThreshold": "Umbral de sueño",
     "caffeineDailyImpact": "Impacto diario y al dormir",
     "caffeineSafeCalendar": "Calendario de noches seguras",
-    "caffeineSources": "Apps de origen",
+    "caffeineSources": "Aplicaciones de origen",
     "caffeineItems": "Elementos",
     "caffeineInferredCategories": "Categorías inferidas",
     "caffeineTimeOfDay": "Hora del día",
@@ -1540,14 +1540,14 @@
     "caffeinePeak": "Pico",
     "caffeinePeakTime": "Hora pico",
     "caffeineContributionCurve": "Curva de contribución",
-    "caffeineEmpty": "No hay entradas de cafeína para este periodo. Las bebidas con cafeína añadidas mediante hidratación o nutrición aparecerán aquí cuando Health Connect incluya cafeína.",
-    "caffeineScienceTitle": "Cómo funciona la estimación",
-    "caffeineScienceBody": "OpenVitals lee cafeína de registros de nutrición de Health Connect en miligramos y después estima la absorción durante tu ventana de absorción configurada y la eliminación exponencial según tu semivida personalizada.",
+    "caffeineEmpty": "No hay registros de cafeína para este periodo. Las bebidas con cafeína que se consuman como parte de la hidratación o la nutrición aparecerán aquí cuando Health Connect incluya la cafeína.",
+    "caffeineScienceTitle": "¿Cómo funciona la estimación?",
+    "caffeineScienceBody": "OpenVitals lee los datos sobre cafeína de los registros nutricionales de Health Connect en miligramos y, a continuación, calcula la absorción a lo largo del intervalo de absorción que hayas configurado y la eliminación exponencial a partir de tu vida media personalizada.",
     "caffeineScienceMeasurements": "Mediciones usadas",
-    "caffeineScienceMeasurementsBody": "La dosis registrada siempre proviene de Health Connect. La hora de inicio/fin, el nombre de la entrada, el tipo de comida y el paquete de origen de datos se usan para horarios, coincidencias y etiquetas de análisis. Las coincidencias del catálogo solo anotan entradas; nunca sustituyen la dosis registrada.",
-    "caffeineScienceLimits": "Este es un modelo poblacional práctico, no consejo médico. Embarazo, medicamentos, enfermedad hepática, genética, tabaquismo, alcohol, sensibilidad y habituación pueden cambiar la respuesta a la cafeína.",
+    "caffeineScienceMeasurementsBody": "La dosis registrada siempre procede de Health Connect. La hora de inicio y fin, el nombre de la entrada, el tipo de comida y el paquete de origen de los datos se utilizan para las etiquetas de cronometraje, correspondencia y análisis. Las coincidencias del catálogo solo sirven para anotar las entradas; nunca sustituyen a la dosis registrada.",
+    "caffeineScienceLimits": "Se trata de un modelo poblacional práctico, no de un consejo médico. El embarazo, los medicamentos, las enfermedades hepáticas, la genética, el tabaco, el alcohol, la sensibilidad y la habituación pueden influir en la forma en que el organismo responde a la cafeína.",
     "caffeineReferencesTitle": "Investigación y referencias",
-    "caffeineReferenceDrake": "Momento de cafeína y sueño, Drake 2013",
+    "caffeineReferenceDrake": "Consumo de cafeína y sueño, Drake 2013",
     "caffeineReferenceNehlig": "Metabolismo individual de la cafeína, Nehlig 2018",
     "caffeineReferenceEfsa": "Notas de EFSA sobre seguridad de cafeína y sueño",
     "caffeineReferenceHealthConnect": "Campos del registro de nutrición de Health Connect",
@@ -1669,5 +1669,53 @@
     "privacyPolicyBody1": "OpenVitals lee datos de Health Connect para mostrar pasos, entrenamientos, sueño, frecuencia cardiaca, peso, calorías, hidratación, nutrición, mindfulness y constantes en tu dispositivo. Las entradas que registres explícitamente, incluidas las rutas GPX/KML/KMZ importadas y los archivos FIT importados, se escriben en Health Connect.",
     "privacyPolicyBody2": "Esta app no sube tus datos de salud a un servicio en la nube, no incluye anuncios y no comparte datos con terceros.",
     "privacyPolicyBody3": "OpenVitals no es un dispositivo médico y no diagnostica, trata, cura ni previene ninguna enfermedad o afección médica. No sustituye el asesoramiento, el diagnóstico ni el tratamiento médicos proporcionados por un profesional sanitario cualificado.",
-    "linkCouldNotOpen": "No se pudo abrir el enlace."
+    "linkCouldNotOpen": "No se pudo abrir el enlace.",
+    "settingsAppleHealthImportProgressWithScanPercent": "{arg0}%. {arg1}. Se han escaneado {arg2}/{arg3} elementos. Se han seleccionado {arg4}/{arg5} registros y se han importado {arg6}.",
+    "@settingsAppleHealthImportProgressWithScanPercent": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "String"
+            },
+            "arg2": {
+                "type": "int"
+            },
+            "arg3": {
+                "type": "int"
+            },
+            "arg4": {
+                "type": "int"
+            },
+            "arg5": {
+                "type": "int"
+            },
+            "arg6": {
+                "type": "int"
+            }
+        }
+    },
+    "settingsAppleHealthImportNotificationTextWithScanPercent": "{arg0}%. {arg1}. Se ha escaneado {arg2}/{arg3} y se ha importado {arg4}.",
+    "@settingsAppleHealthImportNotificationTextWithScanPercent": {
+        "placeholders": {
+            "arg0": {
+                "type": "int"
+            },
+            "arg1": {
+                "type": "String"
+            },
+            "arg2": {
+                "type": "int"
+            },
+            "arg3": {
+                "type": "int"
+            },
+            "arg4": {
+                "type": "int"
+            }
+        }
+    },
+    "bodyEnergyCalibrationZone1": "Zona 1: pulso más bajo",
+    "bodyEnergyCalibrationZone2": "Zona 2: menos pulsaciones por minuto"
 }
