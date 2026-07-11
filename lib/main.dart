@@ -3,14 +3,18 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'bootstrap/reminder_bootstrap.dart';
+import 'data/migration/kotlin_data_migration.dart';
+import 'data/migration/legacy_data_source.dart';
 import 'di/providers.dart';
 import 'features/homewidgets/home_widget_beverage_log.dart';
 import 'features/homewidgets/home_widget_configure.dart';
 import 'features/homewidgets/home_widget_launch.dart';
+import 'features/homewidgets/home_widget_service.dart';
 import 'features/imports/route_import_intent.dart';
 
 /// App entry point.
@@ -35,6 +39,17 @@ Future<void> main() async {
   // update or reinstall invalidates it (see home_widget_beverage_log.dart).
   unawaited(registerHomeWidgetInteractivity());
   final prefs = await SharedPreferences.getInstance();
+  // In-place upgrade from the Kotlin app: its data survives the update but lives
+  // in files Flutter does not read. This lifts it across exactly once, and never
+  // throws. It must run before the container: `prefs` is handed in so its
+  // in-memory cache reflects the writes, and drift opens lazily, so the copied
+  // database only has to land before the container is first used — which it does.
+  await migrateKotlinDataIfNeeded(
+    prefs: prefs,
+    native: const MethodChannelLegacyDataSource(),
+    documentsDir: await getApplicationDocumentsDirectory(),
+    widgets: const PluginHomeWidgetClient(),
+  );
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),

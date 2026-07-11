@@ -23,6 +23,7 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -135,8 +136,72 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+        // Reads the *Kotlin* app's local data, which an in-place Play update
+        // leaves behind under the same `/data/data/tech.mmarca.openvitals/`
+        // (same applicationId, same certificate). Dart migrates it exactly once
+        // — see `lib/data/migration/kotlin_data_migration.dart`.
+        //
+        // This bridge is deliberately READ-ONLY. It never writes the Flutter
+        // preferences file: `shared_preferences_android` encodes a Dart `double`
+        // and a `List<String>` as *prefixed strings*, an internal encoding that
+        // has already changed between plugin versions. So native hands Dart plain
+        // typed values and Dart writes them back through the `SharedPreferences`
+        // API, letting the plugin own its own encoding.
+        MethodChannel(messenger, LEGACY_MIGRATION_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasLegacyData" -> result.success(hasLegacyData())
+                "readLegacyPrefs" ->
+                    result.success(readLegacyPrefs(call.argument<String>("name")))
+                "legacyDatabasePath" ->
+                    result.success(getDatabasePath(LEGACY_DATABASE_NAME).absolutePath)
+                "legacyFilesDir" -> result.success(filesDir.absolutePath)
+                else -> result.notImplemented()
+            }
+        }
         // Cold start: the launching intent is already set on the activity.
         capturePendingRouteImport(intent)
+    }
+
+    /**
+     * Whether the Kotlin app ever ran here: its main preferences file is written
+     * on first launch, so its presence is the migration's trigger.
+     *
+     * `getSharedPreferences(...).all.isEmpty()` would be wrong — asking for a
+     * missing file *creates* an empty one, and the Flutter app writing its own
+     * prefs must never be mistaken for legacy data. So the file is probed
+     * directly on disk instead.
+     */
+    private fun hasLegacyData(): Boolean = legacyPrefsFile(LEGACY_PREFS_NAME).exists()
+
+    private fun legacyPrefsFile(name: String): File =
+        File(File(applicationInfo.dataDir, "shared_prefs"), "$name.xml")
+
+    /**
+     * Every entry of a legacy preferences file, as values the
+     * `StandardMessageCodec` can carry.
+     *
+     * `Float` widens to `Double` **through its shortest decimal string**, not
+     * through `toDouble()`: the Kotlin app wrote goals and weights with
+     * `putFloat`, and `2.2f.toDouble()` is 2.200000047683716, which would surface
+     * in a Dart text field. `2.2f.toString()` is the shortest decimal that
+     * round-trips the float ("2.2"), so parsing it as a double reproduces the
+     * number the user actually typed.
+     *
+     * `Set<String>` becomes a `List<String>` (the codec has no set); the Dart
+     * repository reads those keys with `getStringList`, and the two Kotlin
+     * set-valued keys are unordered there too. `Int`/`Long` both arrive in Dart
+     * as `int`, and `Boolean`/`String` map across unchanged.
+     */
+    private fun readLegacyPrefs(name: String?): Map<String, Any?> {
+        if (name.isNullOrBlank() || !legacyPrefsFile(name).exists()) return emptyMap()
+        return getSharedPreferences(name, Context.MODE_PRIVATE).all
+            .mapValues { (_, value) ->
+                when (value) {
+                    is Float -> value.toString().toDouble()
+                    is Set<*> -> value.filterIsInstance<String>()
+                    else -> value
+                }
+            }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -352,7 +417,14 @@ class MainActivity : FlutterFragmentActivity() {
         const val PROXIMITY_CHANNEL = "tech.mmarca.openvitals/recording_sensors/proximity"
         const val STEP_DETECTOR_CHANNEL = "tech.mmarca.openvitals/recording_sensors/step_detector"
         const val ROUTE_IMPORT_CHANNEL = "tech.mmarca.openvitals/route_import"
+        const val LEGACY_MIGRATION_CHANNEL = "tech.mmarca.openvitals/legacy_migration"
         const val ACTIVITY_RECOGNITION_REQUEST_CODE = 4031
+
+        /** Room database of the Kotlin app; drift reads the same file. */
+        const val LEGACY_DATABASE_NAME = "openvitals.db"
+
+        /** The Kotlin `PreferencesRepository.PREFS_FILE`. */
+        const val LEGACY_PREFS_NAME = "openvitals_prefs"
 
         /** The route formats the activity-entry form can parse (no TCX). */
         val ROUTE_IMPORT_EXTENSIONS = listOf(".gpx", ".kml", ".kmz", ".fit")
