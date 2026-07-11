@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/period/period_range_preference_key.dart';
 import '../../core/period/time_range.dart';
 import '../../core/presentation/unit_formatter.dart';
+import '../../domain/model/nutrition_models.dart';
+import '../../l10n/app_localizations.dart';
 import '../../navigation/app_routes.dart';
 import '../../state/app_providers.dart';
 import '../../ui/charts/period_chart.dart';
@@ -12,6 +15,7 @@ import '../../ui/components/health_connect_gate.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/ov_card.dart';
+import '../../ui/components/paginated_entry_list.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../health/health_permissions.dart';
 import 'hydration_notifier.dart';
@@ -96,6 +100,11 @@ List<Widget> _content(
       // Reminders are configurable with no data logged yet — that is exactly
       // when a user wants to switch them on.
       _padded(const HydrationReminderCard()),
+      // Kotlin renders its ENTRIES section in the empty branch too: a period can
+      // hold nutrition-only beverages (a drink with nutrients but no volume),
+      // which log no litres yet still belong in the history.
+      if (state.entries.isNotEmpty)
+        _HydrationEntriesContent(entries: state.entries, formatter: formatter),
     ];
   }
 
@@ -153,6 +162,11 @@ List<Widget> _content(
     const SectionHeader('Statistics'),
     _padded(_HydrationStatisticsCard(state: state, formatter: formatter)),
     _padded(const HydrationReminderCard()),
+    // Kotlin's `MetricDetailSectionId.ENTRIES` — the per-entry beverage history,
+    // rendered last. This is the day view's "line info": one row per logged
+    // drink, with its name, time, source and volume.
+    if (state.entries.isNotEmpty)
+      _HydrationEntriesContent(entries: state.entries, formatter: formatter),
   ];
 }
 
@@ -271,7 +285,12 @@ class _HydrationDrinkBreakdownCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            slice.label,
+                            // A drink with no name of its own (another app's
+                            // plain water log) is "Beverage" — never its
+                            // originating package name.
+                            slice.label ??
+                                AppLocalizations.of(context)
+                                    .hydrationEntryNutritionOnly,
                             style: theme.textTheme.bodyMedium,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -364,6 +383,111 @@ class _HydrationStatisticsCard extends StatelessWidget {
                   ],
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Kotlin `HydrationEntriesContent`: the beverage history, newest first, as a
+/// paginated list of rows.
+///
+/// DEVIATION from Kotlin, which makes each row swipe-to-delete and (for an
+/// OpenVitals hydration record) edit-tappable. The Dart screen has no delete or
+/// edit path yet — the same Phase 6 gap the "+ add drink" action already routes
+/// around — so the rows are read-only. Restoring the *information* is what was
+/// missing; the affordances follow with the rest of Phase 6.
+class _HydrationEntriesContent extends StatelessWidget {
+  const _HydrationEntriesContent({
+    required this.entries,
+    required this.formatter,
+  });
+
+  final List<HydrationEntry> entries;
+  final UnitFormatter formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...entries]
+      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    return PaginatedEntryList<HydrationEntry>(
+      title: AppLocalizations.of(context).sectionEntries,
+      entries: sorted,
+      rowBuilder: (context, entry) =>
+          _HydrationEntryRow(entry: entry, formatter: formatter),
+    );
+  }
+}
+
+/// Kotlin `HydrationEntryRowContent`: one logged beverage — its name, when it
+/// was drunk, where it came from, and how much it hydrated.
+///
+/// A nutrition-only entry (a drink logged with nutrients but no volume) is
+/// titled by its name and reports no hydration impact, exactly as in Kotlin.
+class _HydrationEntryRow extends StatelessWidget {
+  const _HydrationEntryRow({required this.entry, required this.formatter});
+
+  final HydrationEntry entry;
+  final UnitFormatter formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+
+    final isNutritionOnly =
+        entry.recordType == HydrationEntryRecordType.nutritionOnly;
+    final dateText = DateFormat.yMMMd(locale).format(entry.startTime);
+    final startText = DateFormat.jm(locale).format(entry.startTime);
+    final name = entry.displayName?.trim();
+    final hasName = name != null && name.isNotEmpty;
+
+    // Kotlin titles a hydration row by its date, because its hydration entries
+    // never carry a name (it only joins the paired nutrition record for the
+    // nutrition-only rows). We do have the name — see `hydration_entry_merge` —
+    // and a drink's name is what a beverage history is for, so it leads when we
+    // have one and falls back to Kotlin's date otherwise.
+    final titleText = hasName
+        ? name
+        : (isNutritionOnly ? l10n.hydrationEntryNutritionOnly : dateText);
+    final subtitleText = isNutritionOnly || hasName
+        ? '$dateText • $startText'
+        : '$startText - ${DateFormat.jm(locale).format(entry.endTime)}';
+    final amountText = isNutritionOnly
+        ? l10n.hydrationEntryNoHydration
+        : formatter.hydration(entry.liters).text;
+
+    return OpenVitalsCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titleText, style: theme.textTheme.bodyMedium),
+                  Text(
+                    subtitleText,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 4),
+                  SourceChip(source: entry.source),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              amountText,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color:
+                    isNutritionOnly ? scheme.secondary : AppColors.hydration,
+              ),
+            ),
           ],
         ),
       ),

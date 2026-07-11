@@ -295,7 +295,7 @@ as int,
 /// @nodoc
 mixin _$HydrationDrinkSlice {
 
- String get label; double get liters;
+ String? get label; double get liters;
 /// Create a copy of HydrationDrinkSlice
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -326,7 +326,7 @@ abstract mixin class $HydrationDrinkSliceCopyWith<$Res>  {
   factory $HydrationDrinkSliceCopyWith(HydrationDrinkSlice value, $Res Function(HydrationDrinkSlice) _then) = _$HydrationDrinkSliceCopyWithImpl;
 @useResult
 $Res call({
- String label, double liters
+ String? label, double liters
 });
 
 
@@ -343,10 +343,10 @@ class _$HydrationDrinkSliceCopyWithImpl<$Res>
 
 /// Create a copy of HydrationDrinkSlice
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? label = null,Object? liters = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? label = freezed,Object? liters = null,}) {
   return _then(_self.copyWith(
-label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
-as String,liters: null == liters ? _self.liters : liters // ignore: cast_nullable_to_non_nullable
+label: freezed == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String?,liters: null == liters ? _self.liters : liters // ignore: cast_nullable_to_non_nullable
 as double,
   ));
 }
@@ -432,7 +432,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String label,  double liters)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? label,  double liters)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HydrationDrinkSlice() when $default != null:
 return $default(_that.label,_that.liters);case _:
@@ -453,7 +453,7 @@ return $default(_that.label,_that.liters);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String label,  double liters)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? label,  double liters)  $default,) {final _that = this;
 switch (_that) {
 case _HydrationDrinkSlice():
 return $default(_that.label,_that.liters);case _:
@@ -473,7 +473,7 @@ return $default(_that.label,_that.liters);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String label,  double liters)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? label,  double liters)?  $default,) {final _that = this;
 switch (_that) {
 case _HydrationDrinkSlice() when $default != null:
 return $default(_that.label,_that.liters);case _:
@@ -491,7 +491,7 @@ class _HydrationDrinkSlice implements HydrationDrinkSlice {
   const _HydrationDrinkSlice({required this.label, required this.liters});
   
 
-@override final  String label;
+@override final  String? label;
 @override final  double liters;
 
 /// Create a copy of HydrationDrinkSlice
@@ -524,7 +524,7 @@ abstract mixin class _$HydrationDrinkSliceCopyWith<$Res> implements $HydrationDr
   factory _$HydrationDrinkSliceCopyWith(_HydrationDrinkSlice value, $Res Function(_HydrationDrinkSlice) _then) = __$HydrationDrinkSliceCopyWithImpl;
 @override @useResult
 $Res call({
- String label, double liters
+ String? label, double liters
 });
 
 
@@ -541,10 +541,10 @@ class __$HydrationDrinkSliceCopyWithImpl<$Res>
 
 /// Create a copy of HydrationDrinkSlice
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? label = null,Object? liters = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? label = freezed,Object? liters = null,}) {
   return _then(_HydrationDrinkSlice(
-label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
-as String,liters: null == liters ? _self.liters : liters // ignore: cast_nullable_to_non_nullable
+label: freezed == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String?,liters: null == liters ? _self.liters : liters // ignore: cast_nullable_to_non_nullable
 as double,
   ));
 }

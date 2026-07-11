@@ -266,6 +266,72 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the carousel still swipes after a tile is dragged to another '
+      'page', (tester) async {
+    // Regression: dragging a tile onto *another page* edge-scrolls the pager,
+    // which unmounts the source page — and with it the LongPressDraggable the
+    // finger is holding. Flutter skips `onDragEnd` for an unmounted draggable,
+    // so the carousel never learned the drag had finished, kept
+    // `NeverScrollableScrollPhysics` forever, and swiping died until the app
+    // was restarted.
+    _usePhoneViewport(tester);
+    await tester.pumpWidget(
+      await _bootstrap(
+        availability: HealthConnectAvailability.available,
+        dataBuilder: _threePageData,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit dashboard'));
+    await tester.pumpAndSettle();
+
+    final pager = find.byType(PageView);
+    int currentPage() =>
+        tester.widget<PageView>(pager).controller!.page!.round();
+    Finder tilesInPager() =>
+        find.descendant(of: pager, matching: find.byType(LongPressDraggable<int>));
+
+    expect(currentPage(), 0);
+
+    // Pick up a tile on page 0 and hold it against the right edge until the
+    // carousel edge-scrolls to page 1 — page 0 (and the dragged tile's widget)
+    // is now off-screen and unmounted.
+    final gesture = await tester.startGesture(
+      tester.getCenter(tilesInPager().first),
+    );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+    final rect = tester.getRect(pager);
+    await gesture.moveTo(Offset(rect.right - 8, rect.center.dy));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    // Back out of the edge zone so the pager stops auto-paging, and let the
+    // page-1 animation finish (which is what unmounts page 0).
+    await gesture.moveTo(rect.center);
+    await tester.pumpAndSettle();
+    expect(currentPage(), 1);
+
+    // Drop it on a tile of the page we landed on: the reorder itself works.
+    await gesture.moveTo(tester.getCenter(tilesInPager().first));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // Still in edit mode, the pager must swipe again — the drag is over.
+    await tester.fling(pager, const Offset(-300, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(currentPage(), 2, reason: 'carousel stopped swiping after a reorder');
+
+    // And it keeps swiping once edit mode is left (the carousel's State is
+    // reused across the toggle, so a stuck drag would survive it).
+    await tester.tap(find.byTooltip('Done'));
+    await tester.pumpAndSettle();
+    await tester.fling(pager, const Offset(300, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(currentPage(), 1,
+        reason: 'carousel stopped swiping after leaving edit mode');
+  });
+
   testWidgets('edit mode enters/exits and reorder+remove render without error',
       (tester) async {
     _usePhoneViewport(tester);

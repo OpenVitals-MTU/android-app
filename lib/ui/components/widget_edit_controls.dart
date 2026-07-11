@@ -19,7 +19,6 @@ class ReorderableEditTile extends StatelessWidget {
     this.feedbackBorderRadius = const BorderRadius.all(Radius.circular(20)),
     this.highlightScale = 1.04,
     this.onDragStarted,
-    this.onDragUpdate,
     this.onDragEnd,
   });
 
@@ -36,9 +35,16 @@ class ReorderableEditTile extends StatelessWidget {
   /// How much a tile swells when a drag hovers over it.
   final double highlightScale;
 
-  /// Hooks for a host that scrolls or pages while a drag is in flight.
+  /// Hooks for a host that tracks a drag in flight (e.g. to suspend its own
+  /// scroll physics). [onDragEnd] is guaranteed to fire exactly once per drag,
+  /// including when this tile was unmounted mid-drag — see [build].
+  ///
+  /// There is deliberately no `onDragUpdate` hook: Flutter mutes it for an
+  /// unmounted draggable (`drag_target.dart`, `if (mounted && ...)`), and a
+  /// host that pages or scrolls *will* unmount the tile the finger is holding.
+  /// Track the pointer from the host instead (a [Listener] around the viewport
+  /// stays mounted for the whole drag).
   final VoidCallback? onDragStarted;
-  final ValueChanged<DragUpdateDetails>? onDragUpdate;
   final VoidCallback? onDragEnd;
 
   final Widget child;
@@ -54,8 +60,15 @@ class ReorderableEditTile extends StatelessWidget {
         child: LongPressDraggable<int>(
           data: index,
           onDragStarted: onDragStarted,
-          onDragUpdate: onDragUpdate,
+          // `onDragEnd` alone is NOT enough: Flutter only calls it `if (mounted)`,
+          // and a host that pages the dragged tile off-screen (the dashboard
+          // carousel's edge-scroll) unmounts it before the drop. `onDragCompleted`
+          // (accepted) and `onDraggableCanceled` (rejected) carry no such guard,
+          // and exactly one of them fires for every drag — so together they always
+          // report the end. Without them the host's "a drag is in flight" flag
+          // stuck on, and the dashboard carousel stopped scrolling for good.
           onDragEnd: onDragEnd == null ? null : (_) => onDragEnd!(),
+          onDragCompleted: onDragEnd,
           onDraggableCanceled:
               onDragEnd == null ? null : (_, _) => onDragEnd!(),
           feedback: SizedBox.fromSize(

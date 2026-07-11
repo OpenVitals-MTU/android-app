@@ -568,8 +568,12 @@ class _MetricCarouselState extends State<_MetricCarousel> {
     _edgeScrollDirection = 0;
   }
 
+  /// Ends a reorder drag: stops edge-scrolling and hands the pager its physics
+  /// back. Idempotent, because it is reached from several places that each only
+  /// *sometimes* fire (see [_cell] and the pager's [Listener]).
   void _endDrag() {
     _stopEdgeScroll();
+    if (_draggingIndex == null) return;
     setState(() => _draggingIndex = null);
   }
 
@@ -590,10 +594,15 @@ class _MetricCarouselState extends State<_MetricCarousel> {
   /// one page per [_edgeScrollInterval] — the Flutter equivalent of the Kotlin
   /// carousel's edge-scroll `LaunchedEffect` loop.
   ///
-  /// The repeat is driven by a [Timer], not by this callback: `onDragUpdate`
-  /// only fires while the pointer *moves*, so a finger held still at the edge
+  /// The repeat is driven by a [Timer], not by this callback: pointer moves
+  /// only arrive while the finger *moves*, so a finger held still at the edge
   /// would page exactly once and then stall. This only re-arms the timer when
   /// the edge zone changes, so holding at the edge keeps paging.
+  ///
+  /// Fed from the pager's own [Listener], not from the dragged tile: paging
+  /// away from the tile's page unmounts it, and Flutter mutes an unmounted
+  /// draggable's `onDragUpdate`. The pager outlives the drag, so its pointer
+  /// stream is the only one that keeps tracking the finger across pages.
   void _maybeEdgeScroll(Offset globalPosition, int pageCount) {
     if (pageCount <= 1) {
       _stopEdgeScroll();
@@ -653,16 +662,30 @@ class _MetricCarouselState extends State<_MetricCarousel> {
         SizedBox(
           key: _pagerKey,
           height: pageHeight,
-          child: PageView.builder(
-            controller: _controller,
-            // While dragging, the drag gesture owns the pointer; edge-scroll
-            // drives paging instead of user swipes.
-            physics: _draggingIndex != null
-                ? const NeverScrollableScrollPhysics()
-                : null,
-            itemCount: pages.length,
-            onPageChanged: (page) => setState(() => _page = page),
-            itemBuilder: (context, index) => _buildPage(context, index, pages),
+          // The reorder drag is tracked here rather than on the tile being
+          // dragged. A cross-page drag edge-scrolls the tile's own page out of
+          // the PageView (which caches nothing off-screen), unmounting it — and
+          // Flutter mutes an unmounted draggable's `onDragUpdate`/`onDragEnd`.
+          // The pointer's hit-test path is captured on pointer-down and still
+          // includes this Listener, so it hears the whole drag either way.
+          child: Listener(
+            onPointerMove: (event) {
+              if (_draggingIndex == null) return;
+              _maybeEdgeScroll(event.position, pages.length);
+            },
+            onPointerUp: (_) => _endDrag(),
+            onPointerCancel: (_) => _endDrag(),
+            child: PageView.builder(
+              controller: _controller,
+              // While dragging, the drag gesture owns the pointer; edge-scroll
+              // drives paging instead of user swipes.
+              physics: _draggingIndex != null
+                  ? const NeverScrollableScrollPhysics()
+                  : null,
+              itemCount: pages.length,
+              onPageChanged: (page) => setState(() => _page = page),
+              itemBuilder: (context, index) => _buildPage(context, index, pages),
+            ),
           ),
         ),
         if (pages.length > 1)
@@ -727,7 +750,6 @@ class _MetricCarouselState extends State<_MetricCarousel> {
                                 col,
                             pageTiles: pageTiles,
                             cellWidth: cellWidth,
-                            pageCount: pages.length,
                           ),
                         ),
                       ],
@@ -748,7 +770,6 @@ class _MetricCarouselState extends State<_MetricCarousel> {
     required int flatIndex,
     required List<StatTileData> pageTiles,
     required double cellWidth,
-    required int pageCount,
   }) {
     if (localIndex >= pageTiles.length) return const SizedBox.shrink();
     final tile = pageTiles[localIndex];
@@ -773,8 +794,9 @@ class _MetricCarouselState extends State<_MetricCarousel> {
       onReorder: (from, to) => widget.onReorder?.call(from, to),
       feedbackSize: Size(cellWidth, _MetricCarousel._tileHeight),
       onDragStarted: () => setState(() => _draggingIndex = flatIndex),
-      onDragUpdate: (details) =>
-          _maybeEdgeScroll(details.globalPosition, pageCount),
+      // Edge-scroll is fed by the pager's Listener; this tile stops being told
+      // anything once a cross-page drag unmounts it. `onDragEnd` is kept as the
+      // in-page path (it also reports drops that never left this page).
       onDragEnd: _endDrag,
       child: _editCard(context, tile),
     );

@@ -9,6 +9,7 @@ import '../../core/time/local_date.dart';
 import '../../di/providers.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../domain/model/refresh_mode.dart';
+import 'hydration_entry_merge.dart';
 
 part 'hydration_notifier.freezed.dart';
 
@@ -29,11 +30,17 @@ abstract class HydrationSummary with _$HydrationSummary {
   }) = _HydrationSummary;
 }
 
-/// A single drink-type breakdown slice (label + summed litres over the period).
+/// A single drink-type breakdown slice (drink name + summed litres over the
+/// period).
+///
+/// [label] is null when the drink has no name at all — a bare `HydrationRecord`
+/// from another app, which Health Connect gives us as a volume and a package
+/// name and nothing else. The screen names those slices; a package name
+/// ("tech.mmarca.openvitals") is never a drink name.
 @freezed
 abstract class HydrationDrinkSlice with _$HydrationDrinkSlice {
   const factory HydrationDrinkSlice({
-    required String label,
+    required String? label,
     required double liters,
   }) = _HydrationDrinkSlice;
 }
@@ -101,14 +108,26 @@ class HydrationNotifier extends Notifier<HydrationState> {
 
     try {
       final data = await repo.loadHydrationPeriod(query, refreshMode: refreshMode);
+      // The drink's name and nutrients live on the paired NutritionRecord, not
+      // on the HydrationRecord — Kotlin's `HydrationViewModel.load()` joins the
+      // two here too. Without the nutrition read permission this is an empty
+      // list, and the entries simply stay unnamed.
+      final window = query.windows.current;
+      final nutritionEntries = await ref
+          .read(nutritionRepositoryProvider)
+          .loadNutritionEntries(window.start, window.end);
       if (!ref.mounted || generation != _generation) return;
+      final entries = mergeHydrationAndNutrition(
+        hydrationEntries: data.hydrationEntries,
+        nutritionEntries: nutritionEntries,
+      );
       state = state.copyWith(
         isLoading: false,
         error: null,
         dailyHydration: data.dailyHydration,
-        entries: data.hydrationEntries,
+        entries: entries,
         summary: _summarize(data.dailyHydration, goal),
-        drinkBreakdown: _drinkBreakdown(data.hydrationEntries),
+        drinkBreakdown: _drinkBreakdown(entries),
       );
     } catch (error) {
       if (!ref.mounted || generation != _generation) return;
@@ -171,18 +190,22 @@ HydrationSummary _summarize(List<DailyHydration> days, double goalLiters) {
   );
 }
 
-/// Groups hydration entries by their drink label (display name, else source),
-/// summing litres — the read-only analogue of the Kotlin drink history. Only
+/// Groups hydration entries by drink name, summing litres. Only
 /// hydration-bearing entries are counted (nutrition-only entries carry no
 /// volume).
+///
+/// The name comes from the paired nutrition record (see
+/// [mergeHydrationAndNutrition]); drinks with no name group together under a
+/// single null-labelled slice, which the screen titles. It must never fall back
+/// to [HydrationEntry.source] — that is the originating *package*, so an entry
+/// this very app wrote rendered as "tech.mmarca.openvitals".
 List<HydrationDrinkSlice> _drinkBreakdown(List<HydrationEntry> entries) {
-  final byLabel = <String, double>{};
+  final byLabel = <String?, double>{};
   for (final entry in entries) {
     if (entry.liters <= 0.0) continue;
     final displayName = entry.displayName?.trim();
-    final label = (displayName != null && displayName.isNotEmpty)
-        ? displayName
-        : (entry.source.trim().isEmpty ? 'Other' : entry.source.trim());
+    final label =
+        (displayName != null && displayName.isNotEmpty) ? displayName : null;
     byLabel[label] = (byLabel[label] ?? 0.0) + entry.liters;
   }
   final slices = byLabel.entries

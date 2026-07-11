@@ -42,6 +42,13 @@ String? pairedHydrationClientRecordId(String clientRecordId) =>
         ? clientRecordId.substring(_pairedHydrationNutritionPrefix.length)
         : null;
 
+/// True when OpenVitals wrote this nutrition record on its own — a beverage
+/// logged with nutrients but no hydration volume (e.g. a zero-multiplier drink),
+/// rather than the nutrition half of a hydration entry. The two prefixes are
+/// disjoint: a paired record starts `openvitals_hydration_nutrition_`.
+bool isStandaloneNutritionClientRecordId(String clientRecordId) =>
+    clientRecordId.startsWith(_standaloneNutritionPrefix);
+
 String _normalizedDrinkName(String name) => name.trim().toLowerCase();
 
 bool _isOpenVitalsHydrationEntry(HydrationEntry entry) =>
