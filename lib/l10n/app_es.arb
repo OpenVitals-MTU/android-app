@@ -1717,5 +1717,8 @@
         }
     },
     "bodyEnergyCalibrationZone1": "Zona 1: pulso más bajo",
-    "bodyEnergyCalibrationZone2": "Zona 2: menos pulsaciones por minuto"
+    "bodyEnergyCalibrationZone2": "Zona 2: menos pulsaciones por minuto",
+    "bodyEnergyCalibrationZone3": "Zona 3: pulsaciones por minuto moderadas",
+    "bodyEnergyCalibrationZone4": "Zona 4: pulsaciones por minuto moderadas",
+    "bodyEnergyCalibrationZone5": "Zona 5: pulsaciones por minuto muy altas"
 }
