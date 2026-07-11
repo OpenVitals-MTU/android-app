@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/nutrition`, `features/manualentry/nutrition`, `data/repository/NutritionRepository.kt`.
-> **Navigation:** `Screen.Nutrition`, `Screen.CarbsEntry`, `Screen.Metric`; widgets `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT`.
+> **Implementation:** `lib/features/nutrition/`, `lib/features/manualentry/carbs_entry_screen.dart`, `lib/data/repository/contract/nutrition_repository.dart` (+ `impl/nutrition_repository_impl.dart`).
+> **Navigation:** `/nutrition` (overview); `/metric/:metricId` for `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT` (all → the parametric `NutritionMetricScreen`); `/manual_entry/carbs`.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md).
 
 The nutrition feature owns period-based nutrition detail screens for intake metrics read from Health Connect.

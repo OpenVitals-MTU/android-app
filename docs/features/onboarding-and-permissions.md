@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/onboarding`, `healthconnect`, `features/settings`.
-> **Navigation:** `Screen.Onboarding`, `Screen.SettingsHealthConnect`.
+> **Implementation:** `lib/features/onboarding/`, `lib/health/` (`health_data_source.dart`, `health_permissions.dart`), `lib/ui/components/health_connect_gate.dart`, `lib/features/settings/`.
+> **Navigation:** `/onboarding` (the start destination until onboarding is completed), `/settings/health_connect`.
 > **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Health Connect](../app/health-connect.md).
 
 Onboarding prepares OpenVitals for local Health Connect use without requiring an account or cloud sync.

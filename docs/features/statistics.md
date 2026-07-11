@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented shared behavior across metric detail screens.
 > **Audience:** Users and contributors.
-> **Implementation:** `core/period`, feature ViewModels, feature presentation mappers.
-> **Navigation:** metric detail screens opened from dashboard widgets.
+> **Implementation:** `lib/core/period/`, `lib/ui/components/metric_detail_scaffold.dart`, `lib/ui/charts/`, `lib/domain/insights/` (period comparison, personal baselines, data confidence), per-feature Riverpod notifiers and presentation files.
+> **Navigation:** metric detail screens opened from dashboard tiles (`/metric/:metricId` and the aggregate routes).
 > **Related:** [Feature map](feature-map.md), [Health Connect metrics dashboard](health-connect-metrics-dashboard.md), [Metric detail customization](metric-detail-customization.md).
 
 Statistics help turn raw records into context across time.

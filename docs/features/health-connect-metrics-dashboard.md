@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/dashboard`, `data/repository/HealthRepository.kt`.
-> **Navigation:** `Screen.Dashboard`, `Screen.Metric`, dashboard widgets in `DashboardWidgetId`.
+> **Implementation:** `lib/features/dashboard/`, `lib/data/repository/dashboard/dashboard_data_loader.dart`, `lib/data/repository/contract/health_repository.dart`.
+> **Navigation:** `/dashboard`; tiles link to `/metric/:metricId` and to the aggregate routes (`/body`, `/heart_vitals`, `/calories`, `/nutrition`, `/activity/cardio_load`, `/daily_readiness/body_energy/:date`). Metric route ids are `DashboardMetricId`; the read set is `DashboardMetric`.
 > **Related:** [Feature map](feature-map.md), [Metric detail customization](metric-detail-customization.md), [Permissions](../app/permissions.md).
 
 OpenVitals treats Health Connect as the source of truth. The dashboard reads granted Health Connect records, groups them into scan-friendly widgets, and links each widget to a focused detail screen.

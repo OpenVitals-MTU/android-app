@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/settings`, `data/repository/PreferencesRepository.kt`.
-> **Navigation:** `Screen.Settings` and settings subsection routes; sections in `SettingsSection`.
+> **Implementation:** `lib/features/settings/`, `lib/data/prefs/preferences_repository.dart`, `lib/state/app_providers.dart`.
+> **Navigation:** `/settings` plus one pushed route per `SettingsSection` (`lib/features/settings/settings_section.dart`): `/settings/display`, `/activities`, `/sensors`, `/nutrition`, `/recovery`, `/data_import`, `/health_connect`, and `/debug_diagnostics` in diagnostics builds only.
 > **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Metric detail customization](metric-detail-customization.md).
 
 Settings centralize app preferences, Health Connect access, imports, sensors, goals, reminders, and diagnostics.

@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/manualentry/activity/routeimport`.
-> **Navigation:** `Screen.SettingsDataImport`, then `Screen.ActivityEntry` for review.
+> **Implementation:** `lib/features/manualentry/activity/routeimport/`, `lib/features/imports/`.
+> **Navigation:** `/settings/data_import`, then `/manual_entry/activity` for review.
 > **Related:** [Feature map](feature-map.md), [GPX/KML/KMZ route import](route-file-import.md), [Recording of activity](activity-recording.md), [Apple Health import](apple-health-import.md).
 
 FIT import lives in Settings, Data Importers. It lets users bring supported activity, course, and workout files into OpenVitals for review before saving to Health Connect.

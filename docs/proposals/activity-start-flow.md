@@ -1,26 +1,42 @@
 # Activity Start Flow Analysis
 
-> **Status:** Analysis and proposal context. Current implemented behavior remains documented in [Recording of activity](../features/activity-recording.md).
+> **Status: MOSTLY IMPLEMENTED.** This analysis was written against the retired Kotlin app. Five of its seven simplification ideas shipped in the Flutter app and are no longer proposals — see [What has since shipped](#what-has-since-shipped) below. The "Current Entry Points", "Recording Flow", "Manual Activity Flow" and "Planned Workout Flow" sections below describe the **pre-simplification** flow and are kept as the analysis that motivated the change; they are **not** a description of the app today. Current implemented behavior is [Recording of activity](../features/activity-recording.md).
 > **Implementation map:** [Feature map](../features/feature-map.md).
 
-This document maps the current paths for starting or creating an activity, then proposes ways to reduce taps and make the intent clearer.
+This document maps the paths for starting or creating an activity, then proposes ways to reduce taps and make the intent clearer.
 
 For a clearer breakdown of each proposed improvement, see [Activity start flow simplification proposals](activity-start-flow-proposals.md).
 
+## What Has Since Shipped
+
+Verified against the Flutter code on 2026-07-11:
+
+| Idea | Status | Where |
+|---|---|---|
+| 1. Intent-specific activity entry routes | **Shipped** | `AppRoutes.activityEntryLocation({mode, planId, activityTypeId})` builds `/manual_entry/activity?mode=record\|manual\|plan&planId=…&activityTypeId=…`; the router parses all three ([`app_router.dart`](../../lib/navigation/app_router.dart)) and `ActivityEntryController._applyLaunchIntent` acts on them ([`activity_entry_notifier.dart`](../../lib/features/manualentry/activity/activity_entry_notifier.dart)) |
+| 2. Merge GPS setup and first start | **Shipped** | The setup screen's primary button is `Start` and calls `startGpsRecording(initialFix)` directly; there is no intermediate idle dashboard on the common path ([`activity_recording_setup_screen.dart`](../../lib/features/manualentry/activity/recording/activity_recording_setup_screen.dart), `_startRecording` in [`activity_entry_screen.dart`](../../lib/features/manualentry/activity_entry_screen.dart)) |
+| 3. Replace source chooser with a start sheet | **Not implemented** | No bottom sheet exists; the source chooser is still the fallback when no launch intent is supplied |
+| 4. Make planned workout rows actionable | **Shipped** | A planned-workout row pushes `activityEntryLocation(planId: id)` ([`activities_ordered_sections.dart`](../../lib/features/activity/activities_ordered_sections.dart)) |
+| 5. Auto-skip single-choice plan steps | **Shipped** | `_autoAdvancePlanSelection` applies the only selectable plan, or the only activity type, without asking ([`activity_entry_notifier.dart`](../../lib/features/manualentry/activity/activity_entry_notifier.dart)) |
+| 6. Split dashboard actions by intent | **Shipped** | The dashboard's two actions are `Log` (→ `/manual_entry`) and `Start workout` (→ `/manual_entry/activity?mode=record`, straight into recording setup) ([`dashboard_screen.dart`](../../lib/features/dashboard/dashboard_screen.dart)) |
+| 7. Continue active or draft recordings first | **Partial** | The activity entry screen restores an in-progress recording draft when reopened (`recordingDraftStore`, `isRecordingDraft`), but the dashboard has no "continue recording" affordance |
+
 ## Current Entry Points
 
-Activity creation is routed through `Screen.ActivityEntry` (`manual_entry/activity`). That destination starts in `ActivityEntryMode.CHOOSE_SOURCE`, so most paths first land on a source chooser before they can record, create a manual entry, import a route, or use a planned workout.
+> Historical: this section describes the Kotlin-era flow, before ideas 1, 2, 4, 5 and 6 shipped.
 
-Relevant code touchpoints:
+Activity creation is routed through the activity-entry destination (`/manual_entry/activity`). Without a launch intent that destination still starts in `ActivityEntryFormMode.chooseSource`, so a path that supplies no `mode` / `planId` / `activityTypeId` lands on a source chooser before it can record, create a manual entry, import a route, or use a planned workout.
 
-- `navigation/AppNavigation.kt`: dashboard quick actions, activity add action, and navigation into `Screen.ActivityEntry`.
-- `navigation/AppNavigationManualEntryRoutes.kt`: activity entry route wiring.
-- `features/dashboard/DashboardQuickActions.kt`: dashboard `Log` and `Start` buttons.
-- `features/manualentry/activity/ActivityEntryScreen.kt`: permission gates and source actions.
-- `features/manualentry/activity/ActivityEntryFormContent.kt`: mode-to-screen switch.
-- `features/manualentry/activity/recording/ActivityRecordingSetupScreen.kt`: pre-recording setup.
-- `features/manualentry/activity/recording/ActivityRecordingScreen.kt`: live/idle recording dashboard.
-- `features/activity/ActivitiesOverviewSections.kt`: planned workout list, currently display-only.
+Relevant code touchpoints (Flutter):
+
+- [`lib/navigation/app_routes.dart`](../../lib/navigation/app_routes.dart): the `/manual_entry/activity` path, `ActivityEntryMode`, and `activityEntryLocation(...)`.
+- [`lib/navigation/app_router.dart`](../../lib/navigation/app_router.dart): activity entry route wiring (`_manualEntryRoutes`).
+- [`lib/features/dashboard/dashboard_screen.dart`](../../lib/features/dashboard/dashboard_screen.dart): the dashboard `Log` and `Start workout` buttons.
+- [`lib/features/manualentry/activity_entry_screen.dart`](../../lib/features/manualentry/activity_entry_screen.dart): permission gates, source actions, and the mode-to-screen switch.
+- [`lib/features/manualentry/activity/activity_entry_notifier.dart`](../../lib/features/manualentry/activity/activity_entry_notifier.dart) and [`activity_entry_state.dart`](../../lib/features/manualentry/activity/activity_entry_state.dart): `ActivityEntryFormMode` and the launch-intent handling.
+- [`lib/features/manualentry/activity/recording/activity_recording_setup_screen.dart`](../../lib/features/manualentry/activity/recording/activity_recording_setup_screen.dart): pre-recording setup.
+- [`lib/features/manualentry/activity/recording/activity_recording_screen.dart`](../../lib/features/manualentry/activity/recording/activity_recording_screen.dart): live recording dashboard.
+- [`lib/features/activity/activities_ordered_sections.dart`](../../lib/features/activity/activities_ordered_sections.dart): the planned-workout list (now actionable).
 
 ## Recording Flow
 
@@ -197,11 +213,13 @@ If an activity recording is active or an unsaved recording draft exists, the das
 
 ## Suggested Implementation Order
 
-1. Add route/start intent support to `ActivityEntryViewModel` and `Screen.ActivityEntry`.
-2. Wire dashboard `Start` to open recording setup directly with the preferred live activity.
-3. Change GPS setup so the primary action starts recording when a fix is ready.
-4. Make planned workout rows actionable and route by `planId`.
-5. Auto-skip single-choice plan picker states.
-6. Revisit dashboard quick action copy and layout once the direct routes exist.
+Steps 1-6 are **done** in the Flutter app; they are kept here as the record of the order that was followed.
 
-This order reduces the common recording path first while building reusable navigation primitives for manual entries and planned workouts.
+1. ~~Add route/start intent support to the activity-entry controller and the `/manual_entry/activity` route.~~ Done — `ActivityEntryController.launchMode` / `launchPlanId` / `launchActivityTypeId`, fed by `AppRoutes.activityEntryLocation(...)`.
+2. ~~Wire dashboard `Start` to open recording setup directly with the preferred live activity.~~ Done — `Start workout` pushes `?mode=record`.
+3. ~~Change GPS setup so the primary action starts recording when a fix is ready.~~ Done — setup's `Start` calls `startGpsRecording(initialFix)`.
+4. ~~Make planned workout rows actionable and route by `planId`.~~ Done — the row pushes `?planId=…`.
+5. ~~Auto-skip single-choice plan picker states.~~ Done — `_autoAdvancePlanSelection`.
+6. ~~Revisit dashboard quick action copy and layout once the direct routes exist.~~ Done — `Log` / `Start workout`.
+
+Still open: the start sheet (idea 3) and a dashboard-level "continue in-progress recording" affordance (idea 7).

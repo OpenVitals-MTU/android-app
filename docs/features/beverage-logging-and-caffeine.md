@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/manualentry/hydration`, `features/hydration`, `features/caffeine`, `features/nutrition`.
-> **Navigation:** `Screen.HydrationEntry`, `Screen.HydrationEntryLogDrink`, widgets `HYDRATION`, `CAFFEINE`.
+> **Implementation:** `lib/features/manualentry/hydration_entry_screen.dart` + `hydration_catalog*.dart`, `lib/features/hydration/`, `lib/features/caffeine/`, `lib/features/nutrition/`, `lib/data/local/beverage/beverage_store.dart` (the drift `beverages` table), `lib/domain/insights/caffeine_health_drink_catalog.dart`.
+> **Navigation:** `/manual_entry/hydration`, `/manual_entry/hydration/log/:hydrationDrinkId`, `/metric/HYDRATION`, `/metric/CAFFEINE`.
 > **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Caffeine sleep proposal](../proposals/caffeine-aware-sleep-insights.md).
 
 OpenVitals supports beverage logging as an explicit Health Connect write flow for hydration, caffeine, and selected nutrition values.

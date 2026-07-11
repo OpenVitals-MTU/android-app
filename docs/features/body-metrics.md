@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/body`, `features/manualentry/body`, `data/repository/BodyRepository.kt`.
-> **Navigation:** `Screen.Body`, `Screen.Metric`, body entry routes; widgets `WEIGHT`, `HEIGHT`, `BMI`, `FFMI`, `BODY_FAT`, `LEAN_MASS`, `BMR`, `BONE_MASS`, `BODY_WATER_MASS`.
+> **Implementation:** `lib/features/body/`, `lib/features/manualentry/body_measurement_entry_screen.dart`, `lib/data/repository/contract/body_repository.dart` (+ `impl/body_repository_impl.dart`).
+> **Navigation:** `/body`; `/metric/:metricId` for `WEIGHT`, `HEIGHT`, `BMI`, `FFMI`, `BODY_FAT`, `LEAN_MASS`, `BONE_MASS`, `BODY_WATER_MASS` — all of which render the same `BodyScreen` aggregate. `/manual_entry/body/:bodyMeasurementType` (+ `/edit/:bodyEntryId`) for entry. (`BMR` is a body metric conceptually, but `/metric/BMR` is claimed earlier by `CaloriesScreen`.)
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Statistics](statistics.md).
 
 The body feature owns period-based detail screens for body measurement and composition metrics read from Health Connect.
@@ -34,8 +34,8 @@ Body metrics follow the canonical period-detail pattern:
 - Entry lists that allow edit/delete only for OpenVitals-created records.
 - Reorderable metric detail sections.
 
-Manual body entry lives under `features/manualentry/body` and writes explicit user-entered records to Health Connect. The dashboard and body detail screens remain read-oriented.
+Manual body entry is `lib/features/manualentry/body_measurement_entry_screen.dart` (there is no `manualentry/body/` subdirectory) and writes explicit user-entered records to Health Connect. The dashboard and body detail screens remain read-oriented.
 
 ## Data Boundaries
 
-The body feature reads through `BodyRepository`. New body metric work should keep feature-specific formatting, cards, charts, and rows in `features/body`; shared components should only move out when another feature really reuses them.
+The body feature reads through `BodyRepository` (contract in `lib/data/repository/contract/`, implementation in `impl/`), with state in `BodyMetricNotifier`. Unlike the other metric families there is no parametric per-metric screen: every body id renders the one `BodyScreen`, which shows the composition metrics inline. New body metric work should keep feature-specific formatting, cards, charts, and rows in `lib/features/body/`; shared components should only move out when another feature really reuses them.

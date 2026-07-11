@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior and support policy.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/settings`, diagnostics-gated settings, local support docs.
-> **Navigation:** `Screen.SettingsDebugDiagnostics` in diagnostics builds, Settings support links.
+> **Implementation:** `lib/features/settings/`, `lib/core/diagnostics/` (`kDiagnosticsEnabled` gates both the settings card and the route), local support docs.
+> **Navigation:** `/settings/debug_diagnostics`, registered only in diagnostics-enabled builds; Settings support links.
 > **Related:** [Feature map](feature-map.md), [Privacy](../app/privacy.md), [Support](../app/support.md).
 
 OpenVitals is designed as a local-first Health Connect app.

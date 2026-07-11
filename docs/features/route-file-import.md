@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/manualentry/activity/routeimport`, `features/activity`.
-> **Navigation:** `Screen.ActivityEntry`, `ManualEntryWidgetId.ACTIVITY`.
+> **Implementation:** `lib/features/manualentry/activity/routeimport/`, `lib/features/imports/` (`route_import_intent.dart`, `pending_route_import.dart`), `lib/features/activity/`.
+> **Navigation:** `/manual_entry/activity` (review step); `ManualEntryWidgetId.activity`.
 > **Related:** [Feature map](feature-map.md), [FIT files import](fit-files-import.md), [Offline maps support](offline-maps-support.md).
 
 OpenVitals can import GPX, KML, and KMZ route files from Activity Entry, preview the result, and save supported activities to Health Connect.

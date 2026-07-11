@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/hydration/reminders`, `features/mindfulness/reminders`, `features/settings`.
+> **Implementation:** `lib/features/hydration/reminders/`, `lib/features/mindfulness/reminders/`, `lib/bootstrap/reminder_bootstrap.dart`, `lib/features/settings/`. Reminders are exact alarms scheduled with `android_alarm_manager_plus`; the alarm isolate wakes the app, re-checks today's actual intake, and only then notifies.
 > **Navigation:** hydration detail, mindfulness detail, reminder-related settings.
 > **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Mindfulness](mindfulness.md).
 

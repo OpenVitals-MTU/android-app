@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/manualentry/activity`, `features/manualentry/activity/recording`, `features/activity`.
-> **Navigation:** `Screen.ActivityEntry`, `Screen.ActivityEntryEdit`, `ManualEntryWidgetId.ACTIVITY`.
+> **Implementation:** `lib/features/manualentry/activity/` (incl. `activity/recording/`), `lib/features/manualentry/activity_entry_screen.dart`, `lib/features/activity/`.
+> **Navigation:** `/manual_entry/activity?mode=record` (the dashboard's Start action goes straight here), `/manual_entry/activity`, `/manual_entry/activity/edit/:activityEntryId`; `ManualEntryWidgetId.activity`.
 > **Related:** [Feature map](feature-map.md), [Activity and training plans](activity-training-plans.md), [Bluetooth LE sensors](ble-sensors.md).
 
 OpenVitals can record activities locally, review the result, and then save the activity to Health Connect.

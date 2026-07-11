@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior for local derived views.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/activity`, `features/readiness`, `features/bodyenergy`, `features/recovery`, `domain/insights`.
-> **Navigation:** `Screen.Metric`, `Screen.DailyReadiness`; widgets `CARDIO_LOAD`, `WEEKLY_CARDIO_LOAD`, `BODY_ENERGY`.
+> **Implementation:** `lib/features/activity/cardio_load_detail_screen.dart`, `lib/features/readiness/`, `lib/features/bodyenergy/`, `lib/features/recovery/`, `lib/domain/insights/`.
+> **Navigation:** `/activity/cardio_load` and `/metric/{CARDIO_LOAD,WEEKLY_CARDIO_LOAD}`; `/daily_readiness` and its detail routes; Body Energy opens `/daily_readiness/body_energy/:date` (`/metric/BODY_ENERGY` has no dedicated screen and falls through to a placeholder).
 > **Related:** [Feature map](feature-map.md), [Daily readiness](daily-readiness.md), [Body Energy](body-energy.md).
 
 Some OpenVitals dashboard values are not raw Health Connect record types. They are local calculations built from Health Connect data and app preferences.

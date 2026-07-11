@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/sleep`, `data/repository/SleepRepository.kt`.
-> **Navigation:** `Screen.Sleep`, `Screen.SleepDetail`, widget `SLEEP`.
+> **Implementation:** `lib/features/sleep/`, `lib/data/repository/contract/sleep_repository.dart` (+ `impl/sleep_repository_impl.dart`), `lib/domain/usecase/load_sleep_period_use_case.dart`.
+> **Navigation:** `/sleep`, `/sleep_detail/:sleepId`, `/metric/SLEEP`.
 > **Related:** [Feature map](feature-map.md), [Sleep score and recovery](sleep-score-and-recovery.md), [Statistics](statistics.md).
 
 The sleep feature owns the main period-based sleep detail screen and individual sleep-session detail route.

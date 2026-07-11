@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/activity`, `features/manualentry/activity`.
-> **Navigation:** `Screen.Activity`, `Screen.ActivityEntry`, widget `WORKOUT`.
+> **Implementation:** `lib/features/activity/` (`activities_ordered_sections.dart` renders the planned-workout rows), `lib/features/manualentry/activity/` (`activity_training_plan_section.dart`, `activity_plan_picker_cards.dart`).
+> **Navigation:** `/activity`, `/metric/WORKOUT`, `/manual_entry/activity?mode=plan` and `/manual_entry/activity?planId=<id>` (a planned-workout row opens its plan directly).
 > **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Activity start proposals](../proposals/activity-start-flow.md).
 
 OpenVitals supports both activity entry setup and planned workout context.

@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/activity`, `data/repository/ActivityRepository.kt`.
-> **Navigation:** `Screen.Metric`; widgets `STEPS`, `DISTANCE`, `CALORIES_OUT`, `ACTIVE_CALORIES`, `FLOORS`, `ELEVATION`, `WHEELCHAIR_PUSHES`.
+> **Implementation:** `lib/features/activity/`, `lib/data/repository/contract/activity_repository.dart` (+ `impl/activity_repository_impl.dart`).
+> **Navigation:** `/metric/:metricId` for `STEPS`, `DISTANCE`, `FLOORS`, `ELEVATION`, `WHEELCHAIR_PUSHES` (→ `ActivityMetricScreen`); `/calories` and `/metric/{CALORIES_OUT,ACTIVE_CALORIES,BMR}` (→ `CaloriesScreen`).
 > **Related:** [Feature map](feature-map.md), [Statistics](statistics.md), [Recording of activity](activity-recording.md).
 
 The activity feature owns period-based detail screens for movement metrics and workout sessions. It is separate from activity recording: recording and manual activity entry create records, while these screens read and explain existing Health Connect data.
@@ -35,7 +35,9 @@ Activity metric screens follow the shared period-detail model:
 - Statistics, comparisons, baselines, confidence, and source context.
 - Reorderable metric detail sections.
 
-The feature uses `ActivityRepository` through activity ViewModels. New activity metric work should keep metric-specific charts and rows in `features/activity` and use the shared period scaffold instead of adding a new screen shell.
+The five movement metrics share **one parametric screen**: `ActivityMetricScreen` (`lib/features/activity/activity_metric_screen.dart`) is configured by the `ActivityMetric` enum (`activity_metric.dart`), which carries each metric's title, accent, required Health Connect permission, and value extraction. There is no `StepsScreen` or `FloorsScreen`. Calories, active calories and BMR are intercepted before that branch and render the `CaloriesScreen` aggregate.
+
+State lives in `ActivityMetricNotifier` (a Riverpod `Notifier` over a `freezed` `ActivityMetricState`), which loads through `ActivityRepository`. Period selection is **not** owned by the notifier — `MetricDetailScaffold` owns it and hands a `PeriodSelection` down. New activity metric work should keep metric-specific charts and rows in `lib/features/activity/` and use the shared scaffold instead of adding a new screen shell.
 
 ## Related Features
 

@@ -2,8 +2,8 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/homewidgets`.
-> **Navigation:** Android launcher widget configuration activities; dashboard widgets in `DashboardWidgetId`.
+> **Implementation:** `lib/features/homewidgets/` (`HomeWidgetId`, `HomeWidgetService`, snapshots, alarm refresh, configure app).
+> **Navigation:** Launcher widget configuration is a second entry path in `lib/main.dart` (`ACTION_APPWIDGET_CONFIGURE` → `HomeWidgetConfigureApp`, no router). Widget taps deep-link into app routes. Widget types are `HomeWidgetId`, not the dashboard's `DashboardMetricId`.
 > **Related:** [Feature map](feature-map.md), [Health Connect metrics dashboard](health-connect-metrics-dashboard.md), [Daily readiness](daily-readiness.md).
 
 OpenVitals provides Android home screen widgets for quick health summaries and fast beverage logging.

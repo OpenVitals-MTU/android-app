@@ -1,6 +1,6 @@
 # Activity Start Flow Simplification Proposals
 
-> **Status:** Proposal, not the current implemented flow.
+> **Status: IMPLEMENTED.** All five proposals below (intent-specific routes, merged GPS setup + start, actionable planned-workout rows, auto-skipped single-choice plan steps, dashboard actions split by intent) shipped in the Flutter app — verified against the code on 2026-07-11; see the status table in [Activity start flow analysis](activity-start-flow.md#what-has-since-shipped) for the file-by-file evidence. The "Current Problem" subsections below describe the **pre-simplification** behavior and are kept as the rationale, not as a description of the app today. The one idea from the analysis doc that did **not** ship is the start sheet.
 > **Current behavior source:** [Recording of activity](../features/activity-recording.md) and [Activity and training plans](../features/activity-training-plans.md).
 > **Implementation map:** [Feature map](../features/feature-map.md).
 
@@ -10,7 +10,7 @@ The core product goal is:
 
 > When the user taps a button, the next screen should match the intent of that button.
 
-Today, many activity-related actions open the same generic Activity Entry source chooser. That keeps the code centralized, but it adds extra screens and makes the user decide again what they already meant to do. The sections below describe intended improvements, not behavior that should be assumed to exist in the app today.
+Before these changes, many activity-related actions opened the same generic Activity Entry source chooser. That kept the code centralized, but it added extra screens and made the user decide again what they already meant to do. The sections below describe those improvements and the friction that motivated them.
 
 ## 1. Intent-Specific Activity Entry Routes
 
