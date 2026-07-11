@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/presentation/reorder.dart';
+import '../../di/providers.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../domain/model/activity_models.dart';
@@ -152,6 +153,12 @@ class _DashboardBodyState extends ConsumerState<_DashboardBody>
       data,
       formatter,
       l10n,
+      // The user's goals, not the defaults. The summary used to hardcode them,
+      // so a 6,000-step goal still read "of 8,000" here while the detail screen
+      // showed 6,000.
+      goals: DashboardGoals.fromPreferences(
+        ref.watch(preferencesRepositoryProvider),
+      ),
       includeUnsupported: state.editing,
     );
     // Flutter's layout is a deny-list (hiddenTiles) where Kotlin's is an

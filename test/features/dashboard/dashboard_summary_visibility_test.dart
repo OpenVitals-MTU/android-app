@@ -17,6 +17,7 @@ DashboardSummary _summaryFor(
   double? spo2,
   BodyEnergyTimeline? bodyEnergyTimeline,
   bool includeUnsupported = false,
+  DashboardGoals? goals,
 }) =>
     buildDashboardSummary(
       DashboardData(
@@ -27,6 +28,7 @@ DashboardSummary _summaryFor(
       ),
       UnitFormatter(unitSystemProvider: () => UnitSystem.metric),
       l10n,
+      goals: goals ?? kDefaultDashboardGoals,
       includeUnsupported: includeUnsupported,
     );
 

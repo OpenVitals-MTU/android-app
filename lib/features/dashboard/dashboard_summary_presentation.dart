@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/presentation/unit_formatter.dart';
+import '../../data/prefs/preferences_repository.dart';
+import '../../domain/insights/daily_goals.dart';
 import '../../domain/insights/sleep_score.dart';
 import '../../domain/model/dashboard_data.dart';
 import '../../domain/model/dashboard_query.dart';
@@ -76,26 +78,95 @@ class DashboardSummary {
   final Set<String> unsupportedTitles;
 }
 
-/// Default daily goals, from the Kotlin `DashboardDailyGoals` /
-/// `MetricDailyGoalKey` defaults. The Flutter port has no per-user goal store
-/// yet, so these fixed defaults drive the ring/tile progress fractions.
-class _Goals {
-  const _Goals._();
-  static const double steps = 8000;
-  static const double distanceMeters = 5000;
-  static const double caloriesOutKcal = 2000;
-  static const double activeCaloriesKcal = 400;
-  static const double floors = 10;
-  static const double elevationMeters = 100;
-  static const double wheelchairPushes = 1000;
-  static const double sleepHours = 8;
-  static const double hydrationLiters = 2;
-  static const double caloriesInKcal = 2000;
-  static const double proteinGrams = 50;
-  static const double carbsGrams = 275;
-  static const double fatGrams = 70;
-  static const double mindfulnessMinutes = 10;
+/// The user's daily goals, driving every ring/tile progress fraction and the
+/// "x of y" subtitles on the summary.
+///
+/// These MUST come from [PreferencesRepository]. This class used to hold fixed
+/// constants, with a comment claiming "the Flutter port has no per-user goal
+/// store yet" — which stopped being true once the goal store landed. The result
+/// was that the dashboard silently ignored every customised goal (a 6,000-step
+/// goal still read "of 8,000" and filled the ring against 8,000) while the
+/// detail screens, which do read the store, showed the right number. Two
+/// screens, two answers, no error.
+class DashboardGoals {
+  const DashboardGoals({
+    required this.steps,
+    required this.distanceMeters,
+    required this.caloriesOutKcal,
+    required this.activeCaloriesKcal,
+    required this.floors,
+    required this.elevationMeters,
+    required this.wheelchairPushes,
+    required this.sleepHours,
+    required this.hydrationLiters,
+    required this.caloriesInKcal,
+    required this.proteinGrams,
+    required this.carbsGrams,
+    required this.fatGrams,
+    required this.mindfulnessMinutes,
+  });
+
+  /// Reads every goal the summary needs. Hydration has its OWN preference key
+  /// (`hydration_daily_goal_liters`), separate from [MetricDailyGoalKey].
+  factory DashboardGoals.fromPreferences(PreferencesRepository prefs) =>
+      DashboardGoals(
+        steps: prefs.dailyGoalFor(MetricDailyGoalKey.steps),
+        distanceMeters: prefs.dailyGoalFor(MetricDailyGoalKey.distanceMeters),
+        caloriesOutKcal: prefs.dailyGoalFor(MetricDailyGoalKey.caloriesOutKcal),
+        activeCaloriesKcal:
+            prefs.dailyGoalFor(MetricDailyGoalKey.activeCaloriesKcal),
+        floors: prefs.dailyGoalFor(MetricDailyGoalKey.floors),
+        elevationMeters: prefs.dailyGoalFor(MetricDailyGoalKey.elevationMeters),
+        wheelchairPushes:
+            prefs.dailyGoalFor(MetricDailyGoalKey.wheelchairPushes),
+        sleepHours: prefs.dailyGoalFor(MetricDailyGoalKey.sleepHours),
+        hydrationLiters: prefs.hydrationDailyGoalLiters,
+        caloriesInKcal: prefs.dailyGoalFor(MetricDailyGoalKey.caloriesInKcal),
+        proteinGrams: prefs.dailyGoalFor(MetricDailyGoalKey.proteinGrams),
+        carbsGrams: prefs.dailyGoalFor(MetricDailyGoalKey.carbsGrams),
+        fatGrams: prefs.dailyGoalFor(MetricDailyGoalKey.fatGrams),
+        mindfulnessMinutes:
+            prefs.dailyGoalFor(MetricDailyGoalKey.mindfulnessMinutes),
+      );
+
+  final double steps;
+  final double distanceMeters;
+  final double caloriesOutKcal;
+  final double activeCaloriesKcal;
+  final double floors;
+  final double elevationMeters;
+  final double wheelchairPushes;
+  final double sleepHours;
+  final double hydrationLiters;
+  final double caloriesInKcal;
+  final double proteinGrams;
+  final double carbsGrams;
+  final double fatGrams;
+  final double mindfulnessMinutes;
 }
+
+/// The out-of-the-box goals -- the same defaults [MetricDailyGoalKey] carries.
+///
+/// For TESTS, and for a caller that genuinely has no preferences (there is none
+/// in the app today). Production code must use [DashboardGoals.fromPreferences]:
+/// reaching for this from a screen is exactly the bug that made the dashboard
+/// tell a user with a 6,000-step goal that it was 8,000.
+const DashboardGoals kDefaultDashboardGoals = DashboardGoals(
+  steps: 8000,
+  distanceMeters: 5000,
+  caloriesOutKcal: 2000,
+  activeCaloriesKcal: 400,
+  floors: 10,
+  elevationMeters: 100,
+  wheelchairPushes: 1000,
+  sleepHours: 8,
+  hydrationLiters: 2,
+  caloriesInKcal: 2000,
+  proteinGrams: 50,
+  carbsGrams: 275,
+  fatGrams: 70,
+  mindfulnessMinutes: 10,
+);
 
 double _fraction(double current, double target) =>
     target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
@@ -125,15 +196,16 @@ DashboardSummary buildDashboardSummary(
   DashboardData data,
   UnitFormatter f,
   AppLocalizations l10n, {
+  required DashboardGoals goals,
   bool includeUnsupported = false,
 }) {
   final unsupportedTitles = <String>{};
   final steps = RingCardData(
     title: 'Steps',
     value: f.count(data.steps),
-    subtitle: 'steps of ${f.count(_Goals.steps.round())}',
+    subtitle: 'steps of ${f.count(goals.steps.round())}',
     accent: AppColors.steps,
-    progress: _fraction(data.steps.toDouble(), _Goals.steps),
+    progress: _fraction(data.steps.toDouble(), goals.steps),
     location: AppRoutes.metricLocation('STEPS'),
   );
 
@@ -224,7 +296,7 @@ DashboardSummary buildDashboardSummary(
     unit: distance.unit,
     icon: Icons.straighten,
     accent: AppColors.distance,
-    progress: _fraction(data.distanceMeters, _Goals.distanceMeters),
+    progress: _fraction(data.distanceMeters, goals.distanceMeters),
     location: AppRoutes.metricLocation('DISTANCE'),
   );
 
@@ -237,7 +309,7 @@ DashboardSummary buildDashboardSummary(
     unit: caloriesOutValue?.unit,
     icon: Icons.local_fire_department,
     accent: AppColors.calories,
-    progress: _fraction(data.caloriesKcal, _Goals.caloriesOutKcal),
+    progress: _fraction(data.caloriesKcal, goals.caloriesOutKcal),
     location: AppRoutes.calories,
   );
 
@@ -250,7 +322,7 @@ DashboardSummary buildDashboardSummary(
     unit: activeValue?.unit,
     icon: Icons.local_fire_department,
     accent: AppColors.activeCalories,
-    progress: _fraction(activeCalories ?? 0, _Goals.activeCaloriesKcal),
+    progress: _fraction(activeCalories ?? 0, goals.activeCaloriesKcal),
     location: AppRoutes.calories,
   );
 
@@ -261,7 +333,7 @@ DashboardSummary buildDashboardSummary(
     value: floors == null ? null : f.count(floors),
     icon: Icons.stairs,
     accent: AppColors.floors,
-    progress: _fraction((floors ?? 0).toDouble(), _Goals.floors),
+    progress: _fraction((floors ?? 0).toDouble(), goals.floors),
     location: AppRoutes.metricLocation('FLOORS'),
   );
 
@@ -274,7 +346,7 @@ DashboardSummary buildDashboardSummary(
     unit: elevationValue?.unit,
     icon: Icons.terrain,
     accent: AppColors.elevation,
-    progress: _fraction(elevation ?? 0, _Goals.elevationMeters),
+    progress: _fraction(elevation ?? 0, goals.elevationMeters),
     location: AppRoutes.metricLocation('ELEVATION'),
   );
 
@@ -285,7 +357,7 @@ DashboardSummary buildDashboardSummary(
     value: pushes == null ? null : f.count(pushes),
     icon: Icons.accessible_forward,
     accent: AppColors.wheelchairPushes,
-    progress: _fraction((pushes ?? 0).toDouble(), _Goals.wheelchairPushes),
+    progress: _fraction((pushes ?? 0).toDouble(), goals.wheelchairPushes),
     location: AppRoutes.metricLocation('WHEELCHAIR_PUSHES'),
   );
 
@@ -305,7 +377,7 @@ DashboardSummary buildDashboardSummary(
     showTitle: false,
     progress: _fraction(
       (sleep?.durationMs ?? 0).toDouble(),
-      _Goals.sleepHours * 3600 * 1000,
+      goals.sleepHours * 3600 * 1000,
     ),
     location: AppRoutes.sleep,
   );
@@ -341,7 +413,7 @@ DashboardSummary buildDashboardSummary(
     unit: hydration.unit,
     icon: Icons.local_drink,
     accent: AppColors.hydration,
-    progress: _fraction(data.hydrationLiters, _Goals.hydrationLiters),
+    progress: _fraction(data.hydrationLiters, goals.hydrationLiters),
     location: AppRoutes.metricLocation('HYDRATION'),
   );
 
@@ -355,7 +427,7 @@ DashboardSummary buildDashboardSummary(
     unit: caloriesInValue?.unit,
     icon: Icons.restaurant,
     accent: AppColors.nutrition,
-    progress: _fraction(caloriesIn ?? 0, _Goals.caloriesInKcal),
+    progress: _fraction(caloriesIn ?? 0, goals.caloriesInKcal),
     location: AppRoutes.nutrition,
   );
 
@@ -373,9 +445,9 @@ DashboardSummary buildDashboardSummary(
     );
   }
 
-  addGrams(DashboardMetric.protein, 'Protein', data.proteinGrams, _Goals.proteinGrams);
-  addGrams(DashboardMetric.carbs, 'Carbs', data.carbsGrams, _Goals.carbsGrams);
-  addGrams(DashboardMetric.fat, 'Fat', data.fatGrams, _Goals.fatGrams);
+  addGrams(DashboardMetric.protein, 'Protein', data.proteinGrams, goals.proteinGrams);
+  addGrams(DashboardMetric.carbs, 'Carbs', data.carbsGrams, goals.carbsGrams);
+  addGrams(DashboardMetric.fat, 'Fat', data.fatGrams, goals.fatGrams);
 
   final caffeine = _positive(data.caffeineGrams);
   add(
@@ -633,7 +705,7 @@ DashboardSummary buildDashboardSummary(
     accent: AppColors.mindfulness,
     progress: _fraction(
       (data.mindfulnessMinutes ?? 0).toDouble(),
-      _Goals.mindfulnessMinutes,
+      goals.mindfulnessMinutes,
     ),
     location: AppRoutes.metricLocation('MINDFULNESS'),
   );
