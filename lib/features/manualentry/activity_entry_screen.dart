@@ -178,36 +178,67 @@ class _ActivityEntryScreenState extends ConsumerState<ActivityEntryScreen>
       builder: (context, state, _) {
         return Scaffold(
           appBar: AppBar(title: Text(l10n.manualEntryActivityTitle)),
-          body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: _content(state, formatter),
-                ),
-              ],
-            ),
-          ),
+          body: SafeArea(child: _body(state, formatter)),
         );
       },
     );
   }
 
-  /// Kotlin `ActivityEntryFormContent`'s mode switch.
-  Widget _content(ActivityEntryUiState state, UnitFormatter formatter) {
-    switch (state.mode) {
-      case ActivityEntryFormMode.recording:
-        return _ActivityEntryRecordingContent(
+  /// The live recording dashboard REPLACES the screen — Kotlin swaps the form out
+  /// for `ActivityEntryRecordingContent` at `fillMaxSize` — so it is the one thing
+  /// here that must NOT go inside the form's scroll view.
+  ///
+  /// It lays out with [Expanded] (which a scrollable's unbounded height forbids)
+  /// and it scrolls itself, so being a ListView child forced it to be boxed at a
+  /// fraction of the screen instead. That fraction WAS the empty space: a dead band
+  /// below the controls and the form's own padding above the dashboard, both of
+  /// them glaring once outdoor mode paints the background pure black.
+  ///
+  /// Everything else on this screen is a card and still belongs in the scroll view.
+  Widget _body(ActivityEntryUiState state, UnitFormatter formatter) {
+    final recorder = _controller.activityRecorder;
+    if (state.mode != ActivityEntryFormMode.recording || recorder == null) {
+      return _scrollableForm(_content(state, formatter));
+    }
+    return ValueListenableBuilder<ActivityRecordingState>(
+      valueListenable: recorder.state,
+      builder: (context, recordingState, _) {
+        final content = _ActivityEntryRecordingContent(
           controller: _controller,
           state: state,
+          recordingState: recordingState,
           unitFormatter: formatter,
           onRequestLocationPermission: _requestLocationPermission,
           onRequestActivityRecognitionPermission:
               _requestActivityRecognitionPermission,
           onRequestWritePermission: _requestWritePermission,
         );
+        // The setup card is a card like any other and keeps the padded scroll view.
+        return isRecordingDashboardVisible(recordingState)
+            ? content
+            : _scrollableForm(content);
+      },
+    );
+  }
+
+  Widget _scrollableForm(Widget child) => ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: child,
+          ),
+        ],
+      );
+
+  /// Kotlin `ActivityEntryFormContent`'s mode switch.
+  Widget _content(ActivityEntryUiState state, UnitFormatter formatter) {
+    switch (state.mode) {
+      case ActivityEntryFormMode.recording:
+        // Handled by _body, which can see the recorder state that decides whether
+        // this is the padded setup card or the full-bleed dashboard. Reachable
+        // only with no recorder attached, in which case there is nothing to show.
+        return const SizedBox.shrink();
       case ActivityEntryFormMode.chooseSource:
         return ActivityEntrySourceCard(
           state: state,
@@ -281,6 +312,7 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
   const _ActivityEntryRecordingContent({
     required this.controller,
     required this.state,
+    required this.recordingState,
     required this.unitFormatter,
     required this.onRequestLocationPermission,
     required this.onRequestActivityRecognitionPermission,
@@ -289,6 +321,7 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
 
   final ActivityEntryController controller;
   final ActivityEntryUiState state;
+  final ActivityRecordingState recordingState;
   final UnitFormatter unitFormatter;
   final VoidCallback onRequestLocationPermission;
   final VoidCallback onRequestActivityRecognitionPermission;
@@ -318,64 +351,54 @@ class _ActivityEntryRecordingContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recorder = controller.activityRecorder;
-    if (recorder == null) return const SizedBox.shrink();
+    if (!isRecordingDashboardVisible(recordingState)) {
+      return ActivityRecordingSetupScreen(
+        state: state,
+        recordingState: recordingState,
+        unitFormatter: unitFormatter,
+        onSelectActivityType: controller.selectActivityType,
+        // Kotlin's setup Start begins the session immediately, handing the
+        // pre-start fix over as the first route point.
+        onStartRecording: (initialFix, restSeconds) => _startRecording(
+          ref,
+          controller,
+          initialFix: initialFix,
+          restSeconds: restSeconds,
+        ),
+        onRequestLocationPermission: onRequestLocationPermission,
+        onRequestActivityRecognitionPermission:
+            onRequestActivityRecognitionPermission,
+        onChooseSource: controller.chooseSource,
+        onRequestWritePermission: onRequestWritePermission,
+      );
+    }
 
-    return ValueListenableBuilder<ActivityRecordingState>(
-      valueListenable: recorder.state,
-      builder: (context, recordingState, _) {
-        // Kotlin's `isRecordingDashboardVisible`: the dashboard replaces the
-        // setup card once a session is live or an activity has been prepared.
-        final showDashboard =
-            recordingState.isActive || recordingState.activityTypeId != null;
-        if (!showDashboard) {
-          return ActivityRecordingSetupScreen(
-            state: state,
-            recordingState: recordingState,
-            unitFormatter: unitFormatter,
-            onSelectActivityType: controller.selectActivityType,
-            // Kotlin's setup Start begins the session immediately, handing the
-            // pre-start fix over as the first route point.
-            onStartRecording: (initialFix, restSeconds) => _startRecording(
-              ref,
-              controller,
-              initialFix: initialFix,
-              restSeconds: restSeconds,
-            ),
-            onRequestLocationPermission: onRequestLocationPermission,
-            onRequestActivityRecognitionPermission:
-                onRequestActivityRecognitionPermission,
-            onChooseSource: controller.chooseSource,
-            onRequestWritePermission: onRequestWritePermission,
-          );
-        }
-
-        return SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.82,
-          child: ActivityRecordingScreen(
-            state: recordingState,
-            unitFormatter: unitFormatter,
-            onStartRecording: (initialFix) =>
-                controller.startGpsRecording(initialFix: initialFix),
-            onPauseRecording: controller.pauseGpsRecording,
-            onResumeRecording: controller.resumeGpsRecording,
-            onAddLap: controller.addRecordingLap,
-            onAddMarker: controller.addRecordingMarker,
-            onUpdateMarker: controller.updateRecordingMarker,
-            onDeleteMarker: controller.deleteRecordingMarker,
-            onUpdateDashboardLayout: controller.updateRecordingDashboardLayout,
-            onChooseSource: controller.chooseSource,
-            onAdjustRepetitionCount: controller.adjustRepetitionRecording,
-            onEndRepetitionSet: controller.endRepetitionSet,
-            onStartNextRepetitionSet: controller.startNextRepetitionSet,
-            onFinishRecording: () =>
-                controller.finishGpsRecording(ref.read(unitSystemProvider)),
-            // Kotlin threads the theme-mode preference through so the outdoor
-            // high-contrast theme can pick its light or dark scheme.
-            appThemeMode: ref.watch(appThemeModeProvider),
-          ),
-        );
-      },
+    return ActivityRecordingScreen(
+      state: recordingState,
+      unitFormatter: unitFormatter,
+      onStartRecording: (initialFix) =>
+          controller.startGpsRecording(initialFix: initialFix),
+      onPauseRecording: controller.pauseGpsRecording,
+      onResumeRecording: controller.resumeGpsRecording,
+      onAddLap: controller.addRecordingLap,
+      onAddMarker: controller.addRecordingMarker,
+      onUpdateMarker: controller.updateRecordingMarker,
+      onDeleteMarker: controller.deleteRecordingMarker,
+      onUpdateDashboardLayout: controller.updateRecordingDashboardLayout,
+      onChooseSource: controller.chooseSource,
+      onAdjustRepetitionCount: controller.adjustRepetitionRecording,
+      onEndRepetitionSet: controller.endRepetitionSet,
+      onStartNextRepetitionSet: controller.startNextRepetitionSet,
+      onFinishRecording: () =>
+          controller.finishGpsRecording(ref.read(unitSystemProvider)),
+      // Kotlin threads the theme-mode preference through so the outdoor
+      // high-contrast theme can pick its light or dark scheme.
+      appThemeMode: ref.watch(appThemeModeProvider),
     );
   }
 }
+
+/// Kotlin's `isRecordingDashboardVisible`: the dashboard replaces the setup card
+/// once a session is live or an activity has been prepared.
+bool isRecordingDashboardVisible(ActivityRecordingState state) =>
+    state.isActive || state.activityTypeId != null;

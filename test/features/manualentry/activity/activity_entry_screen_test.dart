@@ -16,7 +16,10 @@ import 'package:openvitals/features/manualentry/activity/activity_entry_source_c
 import 'package:openvitals/features/manualentry/activity/activity_entry_types.dart';
 import 'package:openvitals/features/manualentry/activity/activity_plan_picker_cards.dart';
 import 'package:openvitals/features/manualentry/activity/recording/activity_recording.dart';
+import 'package:openvitals/features/manualentry/activity/recording/activity_recording_screen.dart';
+import 'package:openvitals/features/manualentry/activity/recording/activity_recording_setup_screen.dart';
 import 'package:openvitals/features/manualentry/activity_entry_screen.dart';
+import 'package:openvitals/navigation/app_routes.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/state/app_providers.dart';
 
@@ -34,6 +37,8 @@ void main() {
     _FakeHealthRepository? health,
     UnitSystem unitSystem = UnitSystem.metric,
     String? activityEntryId,
+    ActivityEntryMode? mode,
+    _FakeRecordingController? recorder,
   }) async {
     tester.view.physicalSize = const Size(1000, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -60,12 +65,15 @@ void main() {
           healthRepositoryProvider
               .overrideWithValue(health ?? _FakeHealthRepository()),
           activityRecordingControllerProvider
-              .overrideWithValue(_FakeRecordingController()),
+              .overrideWithValue(recorder ?? _FakeRecordingController()),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: ActivityEntryScreen(activityEntryId: activityEntryId),
+          home: ActivityEntryScreen(
+            activityEntryId: activityEntryId,
+            mode: mode,
+          ),
         ),
       ),
     );
@@ -309,6 +317,76 @@ void main() {
       await tester.tap(find.text('Choose another method'));
       await tester.pumpAndSettle();
       expect(find.byType(ActivityEntrySourceCard), findsOneWidget);
+    });
+  });
+
+  group('the live recording dashboard', () {
+    // It used to be a child of the form's ListView. A scrollable gives its
+    // children unbounded height, so the dashboard's Expanded regions could not
+    // lay out, and it was boxed at 0.82 * the screen height instead. That
+    // fraction WAS the reported empty space -- a dead band under the controls,
+    // the form's padding above -- and outdoor mode painted it pure black.
+
+    _FakeRecordingController recordingOn() => _FakeRecordingController()
+      ..state.value = const ActivityRecordingState(
+        // A timed type, so this exercises the dashboard without a map.
+        activityTypeId: 'treadmill',
+        recordingKind: ActivityRecordingKind.timed,
+      );
+
+    testWidgets('fills the body instead of a fraction of the screen',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        mode: ActivityEntryMode.record,
+        recorder: recordingOn(),
+      );
+
+      expect(find.byType(ActivityRecordingScreen), findsOneWidget);
+
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final appBarHeight = tester.getSize(find.byType(AppBar)).height;
+      final dashboardHeight =
+          tester.getSize(find.byType(ActivityRecordingScreen)).height;
+
+      // Every pixel under the app bar, not 82% of them.
+      expect(dashboardHeight, closeTo(screenHeight - appBarHeight, 1.0));
+    });
+
+    testWidgets('is not inside the form scroll view', (tester) async {
+      await pumpScreen(
+        tester,
+        mode: ActivityEntryMode.record,
+        recorder: recordingOn(),
+      );
+
+      // The root cause, asserted directly: inside a Scrollable it CANNOT fill the
+      // height, so any future re-wrap brings the empty space straight back.
+      expect(
+        find.ancestor(
+          of: find.byType(ActivityRecordingScreen),
+          matching: find.byType(Scrollable),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('the setup card, by contrast, stays in the scroll view',
+        (tester) async {
+      // Only the LIVE dashboard is full-bleed. The setup card is a card like any
+      // other and must keep the form's padding and scrolling.
+      await pumpScreen(tester, mode: ActivityEntryMode.record);
+
+      expect(find.byType(ActivityRecordingSetupScreen), findsOneWidget);
+      expect(find.byType(ActivityRecordingScreen), findsNothing);
+      expect(
+        find.ancestor(
+          of: find.byType(ActivityRecordingSetupScreen),
+          matching: find.byType(Scrollable),
+        ),
+        findsWidgets,
+      );
     });
   });
 }

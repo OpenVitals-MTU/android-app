@@ -265,7 +265,15 @@ class _ActivityRecordingScreenState
         },
       ],
     );
-    if (!_isOutdoorMode) return column;
+    // The dashboard fills the screen rather than sitting in the entry form's
+    // padded scroll view, so it carries its own side padding. It goes INSIDE the
+    // outdoor ColoredBox below, or outdoor mode would paint the background up to
+    // a margin and leave a frame of the ordinary theme colour around it.
+    final padded = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: column,
+    );
+    if (!_isOutdoorMode) return padded;
 
     // Kotlin backs the non-focus column with `colorScheme.background` while
     // outdoor mode is on: pure black (dark scheme) or pure white (light).
@@ -277,7 +285,7 @@ class _ActivityRecordingScreenState
           appThemeMode: widget.appThemeMode,
         ),
       ),
-      child: column,
+      child: padded,
     );
   }
 
