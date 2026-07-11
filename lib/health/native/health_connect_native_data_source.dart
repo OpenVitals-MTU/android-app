@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:health_connect_native/health_connect_native.dart';
 
 import '../../core/time/local_date.dart';
@@ -53,12 +54,77 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   /// Maps a Pigeon epoch-millis field back to a local [DateTime].
   DateTime _fromMs(int epochMs) => DateTime.fromMillisecondsSinceEpoch(epochMs);
 
-  Future<T> _catch<T>(Future<T> Function() block, T fallback) async {
+  /// Degrade one metric to [fallback] rather than failing the whole screen.
+  ///
+  /// This mirrors the Kotlin readers, which swallow a Health Connect failure per
+  /// metric. What it must NOT do is swallow it in silence: a revoked permission,
+  /// a Pigeon codec mismatch and a provider that fell over all used to produce
+  /// the same empty list, with nowhere in the app to find out a read had failed
+  /// at all. The log is what makes the difference visible — it lands in logcat,
+  /// which is exactly what Settings' "share diagnostics" already collects.
+  ///
+  /// The failure is still absorbed: callers keep the degrade they were written
+  /// against, so this is purely additive.
+  Future<T> _catch<T>(
+    Future<T> Function() block,
+    T fallback, {
+    String? read,
+  }) async {
     try {
       return await block();
-    } catch (_) {
+    } catch (error, stack) {
+      debugPrint(
+        'HealthConnectNativeDataSource: ${read ?? 'read'} failed, '
+        'degrading to fallback: $error\n$stack',
+      );
       return fallback;
     }
+  }
+
+  /// The 39-way list read: fetch, map, optionally sort.
+  ///
+  /// The `try` deliberately wraps ONLY the bridge call, never [map]. That is how
+  /// the hand-written reads behaved, and the distinction matters: a failing
+  /// bridge is an expected, degradable condition, whereas a mapper that throws is
+  /// a bug in our own code — and burying it inside the guard would turn it into a
+  /// silently empty list, which is precisely the failure mode this class already
+  /// suffers from too much of.
+  ///
+  /// [sortBy] exists because the reads genuinely disagree about ordering and the
+  /// disagreement is not arbitrary: eight of them sort here, while the heart
+  /// samples are sorted downstream instead, and the cadence samples are already
+  /// sorted by the native reader. Sleep sessions MUST sort — `mergeSleepSessions`
+  /// assumes ascending input. Passing it explicitly at the nine sites that sort
+  /// today keeps every one of those decisions intact and, for once, visible.
+  Future<List<T>> _readList<M, T>(
+    String read,
+    Future<List<M>> Function() call,
+    T Function(M msg) map, {
+    DateTime Function(T entry)? sortBy,
+  }) async {
+    // `const <M>[]` is illegal — a type variable cannot appear in a constant.
+    final msgs = await _catch(call, <M>[], read: read);
+    final entries = [for (final m in msgs) map(m)];
+    if (sortBy != null) {
+      entries.sort((a, b) => sortBy(a).compareTo(sortBy(b)));
+    }
+    return entries;
+  }
+
+  /// The 17-way read-one-by-id: null when absent, and null when the read failed.
+  Future<T?> _readOne<M extends Object, T>(
+    String read,
+    Future<M?> Function() call,
+    T Function(M msg) map,
+  ) async {
+    final msg = await _catch<M?>(call, null, read: read);
+    return msg == null ? null : map(msg);
+  }
+
+  /// One day-windowed aggregate total, or null when the device records none.
+  Future<double?> _readDayTotal(String metric, LocalDate date) async {
+    final agg = await _aggregate([metric], _dayStart(date), _dayEnd(date));
+    return agg[metric];
   }
 
   Future<Map<String, double?>> _aggregate(
@@ -168,34 +234,16 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   // ── Activity ──────────────────────────────────────────────────────────────
 
   @override
-  Future<int> readSteps(LocalDate date) async {
-    final agg = await _aggregate(
-      const ['Steps.count'],
-      _dayStart(date),
-      _dayEnd(date),
-    );
-    return (agg['Steps.count'] ?? 0).round();
-  }
+  Future<int> readSteps(LocalDate date) async =>
+      (await _readDayTotal('Steps.count', date) ?? 0).round();
 
   @override
-  Future<double> readDistanceMeters(LocalDate date) async {
-    final agg = await _aggregate(
-      const ['Distance.distance'],
-      _dayStart(date),
-      _dayEnd(date),
-    );
-    return agg['Distance.distance'] ?? 0.0;
-  }
+  Future<double> readDistanceMeters(LocalDate date) async =>
+      await _readDayTotal('Distance.distance', date) ?? 0.0;
 
   @override
-  Future<int> readFloorsClimbed(LocalDate date) async {
-    final agg = await _aggregate(
-      const ['FloorsClimbed.floors'],
-      _dayStart(date),
-      _dayEnd(date),
-    );
-    return (agg['FloorsClimbed.floors'] ?? 0).round();
-  }
+  Future<int> readFloorsClimbed(LocalDate date) async =>
+      (await _readDayTotal('FloorsClimbed.floors', date) ?? 0).round();
 
   @override
   Future<List<DailySteps>> readDailySteps(
@@ -298,27 +346,15 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     return chunks;
   }
 
+  // Null, not zero: "this device records no elevation" and "you climbed nothing
+  // today" are different, and the metric screens key on which.
   @override
-  Future<double?> readElevationGained(LocalDate date) async {
-    final agg = await _aggregate(
-      const ['ElevationGained.elevation'],
-      _dayStart(date),
-      _dayEnd(date),
-    );
-    // Null, not zero: "this device records no elevation" and "you climbed
-    // nothing today" are different, and the metric screens key on which.
-    return agg['ElevationGained.elevation'];
-  }
+  Future<double?> readElevationGained(LocalDate date) =>
+      _readDayTotal('ElevationGained.elevation', date);
 
   @override
-  Future<int?> readWheelchairPushes(LocalDate date) async {
-    final agg = await _aggregate(
-      const ['WheelchairPushes.count'],
-      _dayStart(date),
-      _dayEnd(date),
-    );
-    return agg['WheelchairPushes.count']?.round();
-  }
+  Future<int?> readWheelchairPushes(LocalDate date) async =>
+      (await _readDayTotal('WheelchairPushes.count', date))?.round();
 
   /// Kotlin `ActivityHealthReader.readRawActivityProgress`: the day's metrics
   /// aggregated into hourly buckets and accumulated, so each point is the
@@ -618,12 +654,14 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   }
 
   @override
-  Future<ExerciseData?> readExerciseSession(String id) async {
-    final m = await _catch(() => _api.readExerciseSessionById(id), null);
-    // The list read backfills route-derived distance/elevation; a session opened
-    // by id must not silently miss them just because it took the other door.
-    return m == null ? null : _exerciseData(m).withRouteBackfilledMetrics();
-  }
+  Future<ExerciseData?> readExerciseSession(String id) => _readOne(
+        'readExerciseSession',
+        () => _api.readExerciseSessionById(id),
+        // The list read backfills route-derived distance/elevation; a session
+        // opened by id must not silently miss them just because it took the
+        // other door.
+        (m) => _exerciseData(m).withRouteBackfilledMetrics(),
+      );
 
   @override
   Future<ExerciseSessionMetrics> readExerciseSessionMetrics(
@@ -632,25 +670,25 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     Set<ExerciseSessionMetric> metrics,
   ) async {
     if (metrics.isEmpty) return ExerciseSessionMetrics.none;
-    final m = await _catch(
+    final read = await _readOne(
+      'readExerciseSessionMetrics',
       () => _api.readExerciseSessionMetrics(
         start.millisecondsSinceEpoch,
         end.millisecondsSinceEpoch,
         [for (final metric in metrics) metric.wireName],
       ),
-      null,
+      (m) => ExerciseSessionMetrics(
+        totalDistanceMeters: m.totalDistanceMeters,
+        averageSpeedMetersPerSecond: m.averageSpeedMetersPerSecond,
+        steps: m.steps,
+        totalCaloriesKcal: m.totalCaloriesKcal,
+        activeCaloriesKcal: m.activeCaloriesKcal,
+        elevationGainedMeters: m.elevationGainedMeters,
+        floorsClimbed: m.floorsClimbed,
+        wheelchairPushes: m.wheelchairPushes,
+      ),
     );
-    if (m == null) return ExerciseSessionMetrics.none;
-    return ExerciseSessionMetrics(
-      totalDistanceMeters: m.totalDistanceMeters,
-      averageSpeedMetersPerSecond: m.averageSpeedMetersPerSecond,
-      steps: m.steps,
-      totalCaloriesKcal: m.totalCaloriesKcal,
-      activeCaloriesKcal: m.activeCaloriesKcal,
-      elevationGainedMeters: m.elevationGainedMeters,
-      floorsClimbed: m.floorsClimbed,
-      wheelchairPushes: m.wheelchairPushes,
-    );
+    return read ?? ExerciseSessionMetrics.none;
   }
 
   @override
@@ -672,39 +710,34 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   }
 
   @override
-  Future<List<SpeedSample>> readSpeedSamples(DateTime start, DateTime end) async {
-    final msgs = await _catch(
-      () => _api.readSpeedSamples(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <SpeedSampleMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        SpeedSample(
+  Future<List<SpeedSample>> readSpeedSamples(DateTime start, DateTime end) =>
+      _readList(
+        'readSpeedSamples',
+        () => _api.readSpeedSamples(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => SpeedSample(
           time: _fromMs(m.timeEpochMs),
           metersPerSecond: m.metersPerSecond,
           source: m.source,
         ),
-    ]..sort((a, b) => a.time.compareTo(b.time));
-  }
+        sortBy: (e) => e.time,
+      );
 
   @override
   Future<List<ActivityCadenceSample>> readActivityCadenceSamples(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readActivityCadenceSamples(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <ActivityCadenceSampleMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        ActivityCadenceSample(
+  ) =>
+      // Already sorted by the native reader — no `sortBy` here.
+      _readList(
+        'readActivityCadenceSamples',
+        () => _api.readActivityCadenceSamples(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => ActivityCadenceSample(
           time: _fromMs(m.timeEpochMs),
           rate: m.rate,
           // Cycling is revolutions per minute; steps cadence is steps per
@@ -714,8 +747,7 @@ class HealthConnectNativeDataSource extends HealthDataSource {
               : ActivityCadenceKind.steps,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<PlannedExerciseData>> readPlannedExerciseSessions(
@@ -723,29 +755,26 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     DateTime end,
   ) async {
     if (!isPlannedExerciseAvailable()) return const <PlannedExerciseData>[];
-    final msgs = await _catch(
+    return _readList(
+      'readPlannedExerciseSessions',
       () => _api.readPlannedExerciseSessions(
         start.millisecondsSinceEpoch,
         end.millisecondsSinceEpoch,
       ),
-      const <PlannedExerciseSessionMsg>[],
+      (m) => PlannedExerciseData(
+        id: m.id,
+        title: m.title,
+        exerciseType: m.exerciseType,
+        startTime: _fromMs(m.startEpochMs),
+        endTime: _fromMs(m.endEpochMs),
+        hasExplicitTime: m.hasExplicitTime,
+        completedExerciseSessionId: m.completedExerciseSessionId,
+        notes: m.notes,
+        blockCount: m.blocks.length,
+        source: m.source,
+        blocks: [for (final block in m.blocks) _plannedBlock(block)],
+      ),
     );
-    return [
-      for (final m in msgs)
-        PlannedExerciseData(
-          id: m.id,
-          title: m.title,
-          exerciseType: m.exerciseType,
-          startTime: _fromMs(m.startEpochMs),
-          endTime: _fromMs(m.endEpochMs),
-          hasExplicitTime: m.hasExplicitTime,
-          completedExerciseSessionId: m.completedExerciseSessionId,
-          notes: m.notes,
-          blockCount: m.blocks.length,
-          source: m.source,
-          blocks: [for (final block in m.blocks) _plannedBlock(block)],
-        ),
-    ];
   }
 
   @override
@@ -864,63 +893,59 @@ class HealthConnectNativeDataSource extends HealthDataSource {
         null,
       );
 
+  /// The named macro fields are a projection of the decoded nutrient map, which
+  /// the entry also carries whole — so decode once and read it twice.
+  NutritionEntry _nutritionEntry(NutritionEntryMsg m) {
+    final nutrients = _nutrientMap(m.nutrientValues);
+    return NutritionEntry(
+      time: _fromMs(m.startEpochMs),
+      endTime: _fromMs(m.endEpochMs),
+      mealType: m.mealType,
+      name: m.name,
+      energyKcal: nutrients[NutritionNutrient.energy],
+      proteinGrams: nutrients[NutritionNutrient.protein],
+      carbsGrams: nutrients[NutritionNutrient.totalCarbohydrate],
+      fatGrams: nutrients[NutritionNutrient.totalFat],
+      fiberGrams: nutrients[NutritionNutrient.dietaryFiber],
+      sugarGrams: nutrients[NutritionNutrient.sugar],
+      source: m.source,
+      nutrientValues: nutrients,
+      id: m.id,
+      clientRecordId: m.clientRecordId,
+      isOpenVitalsEntry: m.isOpenVitalsEntry,
+    );
+  }
+
   @override
   Future<List<NutritionEntry>> readNutritionEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readNutritionEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <NutritionEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        () {
-          final nutrients = _nutrientMap(m.nutrientValues);
-          return NutritionEntry(
-            time: _fromMs(m.startEpochMs),
-            endTime: _fromMs(m.endEpochMs),
-            mealType: m.mealType,
-            name: m.name,
-            energyKcal: nutrients[NutritionNutrient.energy],
-            proteinGrams: nutrients[NutritionNutrient.protein],
-            carbsGrams: nutrients[NutritionNutrient.totalCarbohydrate],
-            fatGrams: nutrients[NutritionNutrient.totalFat],
-            fiberGrams: nutrients[NutritionNutrient.dietaryFiber],
-            sugarGrams: nutrients[NutritionNutrient.sugar],
-            source: m.source,
-            nutrientValues: nutrients,
-            id: m.id,
-            clientRecordId: m.clientRecordId,
-            isOpenVitalsEntry: m.isOpenVitalsEntry,
-          );
-        }(),
-    ];
-  }
+  ) =>
+      _readList(
+        'readNutritionEntries',
+        () => _api.readNutritionEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        _nutritionEntry,
+      );
 
   @override
   Future<List<DailyMacros>> readDailyMacros(
     LocalDate startDate,
     LocalDate endDate,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readDailyMacros(
-        _dayStart(startDate).millisecondsSinceEpoch,
-        _dayEnd(endDate).millisecondsSinceEpoch,
-      ),
-      const <DailyMacrosMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        DailyMacros(
+  ) =>
+      _readList(
+        'readDailyMacros',
+        () => _api.readDailyMacros(
+          _dayStart(startDate).millisecondsSinceEpoch,
+          _dayEnd(endDate).millisecondsSinceEpoch,
+        ),
+        (m) => DailyMacros(
           date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
           nutrientValues: _nutrientMap(m.nutrientValues),
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<DailyNutrition>> readDailyNutrition(
@@ -928,27 +953,23 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     LocalDate endDate, {
     bool includeHydration = true,
     bool includeEstimatedCalories = false,
-  }) async {
-    final msgs = await _catch(
-      () => _api.readDailyNutrition(
-        _dayStart(startDate).millisecondsSinceEpoch,
-        _dayEnd(endDate).millisecondsSinceEpoch,
-        includeHydration,
-        true, // includeCalories (always on, matching the reference default)
-        includeEstimatedCalories,
-      ),
-      const <DailyNutritionMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        DailyNutrition(
+  }) =>
+      _readList(
+        'readDailyNutrition',
+        () => _api.readDailyNutrition(
+          _dayStart(startDate).millisecondsSinceEpoch,
+          _dayEnd(endDate).millisecondsSinceEpoch,
+          includeHydration,
+          true, // includeCalories (always on, matching the reference default)
+          includeEstimatedCalories,
+        ),
+        (m) => DailyNutrition(
           date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
           hydrationLiters: m.hydrationLiters,
           caloriesBurnedKcal: m.caloriesBurnedKcal,
           caloriesBurnedSource: _caloriesSource(m.caloriesBurnedSource),
         ),
-    ];
-  }
+      );
 
   // ── Hydration (Phase 2) — typed via native HydrationHealthReader ────────────
 
@@ -1002,22 +1023,22 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<HydrationEntry>> readHydrationEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readHydrationEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <HydrationEntryMsg>[],
-    );
-    return [for (final m in msgs) _hydrationEntry(m)];
-  }
+  ) =>
+      _readList(
+        'readHydrationEntries',
+        () => _api.readHydrationEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        _hydrationEntry,
+      );
 
   @override
-  Future<HydrationEntry?> readHydrationEntry(String id) async {
-    final m = await _catch(() => _api.readHydrationEntry(id), null);
-    return m == null ? null : _hydrationEntry(m);
-  }
+  Future<HydrationEntry?> readHydrationEntry(String id) => _readOne(
+        'readHydrationEntry',
+        () => _api.readHydrationEntry(id),
+        _hydrationEntry,
+      );
 
   // ── Body (Phase 1) — typed via native BodyHealthReader ──────────────────────
 
@@ -1061,43 +1082,43 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<WeightEntry>> readWeightEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readWeightEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <WeightEntryMsg>[],
-    );
-    return [for (final m in msgs) _weightEntry(m)];
-  }
+  ) =>
+      _readList(
+        'readWeightEntries',
+        () => _api.readWeightEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _weightEntry,
+      );
 
   @override
-  Future<WeightEntry?> readLatestWeight() async {
-    final m = await _catch(() => _api.readLatestWeight(), null);
-    return m == null ? null : _weightEntry(m);
-  }
+  Future<WeightEntry?> readLatestWeight() => _readOne(
+        'readLatestWeight',
+        () => _api.readLatestWeight(),
+        _weightEntry,
+      );
 
   @override
   Future<List<HeightEntry>> readHeightEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readHeightEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <HeightEntryMsg>[],
-    );
-    return [for (final m in msgs) _heightEntry(m)];
-  }
+  ) =>
+      _readList(
+        'readHeightEntries',
+        () => _api.readHeightEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _heightEntry,
+      );
 
   @override
-  Future<HeightEntry?> readLatestHeightEntry() async {
-    final m = await _catch(() => _api.readLatestHeightEntry(), null);
-    return m == null ? null : _heightEntry(m);
-  }
+  Future<HeightEntry?> readLatestHeightEntry() => _readOne(
+        'readLatestHeightEntry',
+        () => _api.readLatestHeightEntry(),
+        _heightEntry,
+      );
 
   @override
   Future<double?> readLatestHeight() async =>
@@ -1107,142 +1128,141 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<BodyFatEntry>> readBodyFatEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBodyFatEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <BodyFatEntryMsg>[],
-    );
-    return [for (final m in msgs) _bodyFatEntry(m)];
-  }
+  ) =>
+      _readList(
+        'readBodyFatEntries',
+        () => _api.readBodyFatEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        _bodyFatEntry,
+      );
 
   @override
-  Future<double?> readLatestBodyFat() async {
-    final m = await _catch(() => _api.readLatestBodyFat(), null);
-    return m?.percent;
-  }
+  Future<double?> readLatestBodyFat() => _readOne(
+        'readLatestBodyFat',
+        () => _api.readLatestBodyFat(),
+        (m) => m.percent,
+      );
+
+  // Lean / bone / body-water mass share one wire type (`BodyMassEntryMsg`) and
+  // three domain types. The domain types stay distinct — a bone mass is not a
+  // body-water mass — so the reads differ only in which constructor they name.
 
   @override
   Future<List<LeanBodyMassEntry>> readLeanBodyMassEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readLeanBodyMassEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <BodyMassEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        LeanBodyMassEntry(
-            time: _fromMs(m.timeEpochMs), massKg: m.massKg, source: m.source),
-    ];
-  }
+  ) =>
+      _readList(
+        'readLeanBodyMassEntries',
+        () => _api.readLeanBodyMassEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => LeanBodyMassEntry(
+          time: _fromMs(m.timeEpochMs),
+          massKg: m.massKg,
+          source: m.source,
+        ),
+      );
 
   @override
-  Future<double?> readLatestLeanBodyMass() async {
-    final m = await _catch(() => _api.readLatestLeanBodyMass(), null);
-    return m?.massKg;
-  }
+  Future<double?> readLatestLeanBodyMass() => _readOne(
+        'readLatestLeanBodyMass',
+        () => _api.readLatestLeanBodyMass(),
+        (m) => m.massKg,
+      );
 
   @override
-  Future<List<BmrEntry>> readBmrEntries(LocalDate start, LocalDate end) async {
-    final msgs = await _catch(
-      () => _api.readBmrEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <BmrEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        BmrEntry(
-            time: _fromMs(m.timeEpochMs),
-            kcalPerDay: m.kcalPerDay,
-            source: m.source),
-    ];
-  }
+  Future<List<BmrEntry>> readBmrEntries(LocalDate start, LocalDate end) =>
+      _readList(
+        'readBmrEntries',
+        () => _api.readBmrEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => BmrEntry(
+          time: _fromMs(m.timeEpochMs),
+          kcalPerDay: m.kcalPerDay,
+          source: m.source,
+        ),
+      );
 
   @override
-  Future<double?> readLatestBMR() async {
-    final m = await _catch(() => _api.readLatestBmr(), null);
-    return m?.kcalPerDay;
-  }
+  Future<double?> readLatestBMR() => _readOne(
+        'readLatestBMR',
+        () => _api.readLatestBmr(),
+        (m) => m.kcalPerDay,
+      );
 
   @override
   Future<List<BoneMassEntry>> readBoneMassEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBoneMassEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <BodyMassEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        BoneMassEntry(
-            time: _fromMs(m.timeEpochMs), massKg: m.massKg, source: m.source),
-    ];
-  }
+  ) =>
+      _readList(
+        'readBoneMassEntries',
+        () => _api.readBoneMassEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => BoneMassEntry(
+          time: _fromMs(m.timeEpochMs),
+          massKg: m.massKg,
+          source: m.source,
+        ),
+      );
 
   @override
-  Future<double?> readLatestBoneMass() async {
-    final m = await _catch(() => _api.readLatestBoneMass(), null);
-    return m?.massKg;
-  }
+  Future<double?> readLatestBoneMass() => _readOne(
+        'readLatestBoneMass',
+        () => _api.readLatestBoneMass(),
+        (m) => m.massKg,
+      );
 
   @override
   Future<List<BodyWaterMassEntry>> readBodyWaterMassEntries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBodyWaterMassEntries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <BodyMassEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        BodyWaterMassEntry(
-            time: _fromMs(m.timeEpochMs), massKg: m.massKg, source: m.source),
-    ];
-  }
+  ) =>
+      _readList(
+        'readBodyWaterMassEntries',
+        () => _api.readBodyWaterMassEntries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => BodyWaterMassEntry(
+          time: _fromMs(m.timeEpochMs),
+          massKg: m.massKg,
+          source: m.source,
+        ),
+      );
 
   @override
-  Future<double?> readLatestBodyWaterMass() async {
-    final m = await _catch(() => _api.readLatestBodyWaterMass(), null);
-    return m?.massKg;
-  }
+  Future<double?> readLatestBodyWaterMass() => _readOne(
+        'readLatestBodyWaterMass',
+        () => _api.readLatestBodyWaterMass(),
+        (m) => m.massKg,
+      );
 
   @override
   Future<BodyMeasurementEntry?> readBodyMeasurementEntry(
     BodyMeasurementType type,
     String id,
-  ) async {
-    final m = await _catch(
-      () => _api.readBodyMeasurementEntry(_bodyTypeMsg(type), id),
-      null,
-    );
-    return m == null
-        ? null
-        : BodyMeasurementEntry(
-            id: m.id,
-            type: _bodyType(m.type),
-            time: _fromMs(m.timeEpochMs),
-            value: m.value,
-            source: m.source,
-            isOpenVitalsEntry: m.isOpenVitalsEntry,
-          );
-  }
+  ) =>
+      _readOne(
+        'readBodyMeasurementEntry',
+        () => _api.readBodyMeasurementEntry(_bodyTypeMsg(type), id),
+        (m) => BodyMeasurementEntry(
+          id: m.id,
+          type: _bodyType(m.type),
+          time: _fromMs(m.timeEpochMs),
+          value: m.value,
+          source: m.source,
+          isOpenVitalsEntry: m.isOpenVitalsEntry,
+        ),
+      );
 
   // ── Heart ─────────────────────────────────────────────────────────────────
 
@@ -1262,21 +1282,18 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     // Adaptive: high-frequency days would blow past page limits, so aggregate
     // them into chart buckets; short (workout) ranges keep raw samples.
     if (shouldUseAggregatedHeartRateSamples(end.difference(start))) {
-      final buckets = await _catch(
+      return _readList(
+        'readHeartRateAggregatedBuckets',
         () => _api.readHeartRateAggregatedBuckets(
           start.millisecondsSinceEpoch,
           end.millisecondsSinceEpoch,
           heartRateChartBucketDuration.inMilliseconds,
         ),
-        const <HeartRateAggBucketMsg>[],
+        (b) => heartRateSampleFromAggregateBucket(
+          startTime: _fromMs(b.startEpochMs),
+          avgBpm: b.avgBpm,
+        ),
       );
-      return [
-        for (final b in buckets)
-          heartRateSampleFromAggregateBucket(
-            startTime: _fromMs(b.startEpochMs),
-            avgBpm: b.avgBpm,
-          ),
-      ];
     }
     return readRawHeartRateSamples(start, end);
   }
@@ -1285,16 +1302,16 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<HeartRateSample>> readRawHeartRateSamples(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readRawHeartRateSamples(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <HeartRateSampleMsg>[],
-    );
-    return [for (final m in msgs) _heartRateSample(m)];
-  }
+  ) =>
+      // Sorted downstream, not here — no `sortBy`.
+      _readList(
+        'readRawHeartRateSamples',
+        () => _api.readRawHeartRateSamples(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        _heartRateSample,
+      );
 
   @override
   Future<int?> readAvgHeartRate(LocalDate date) => _catch(
@@ -1309,46 +1326,38 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<HeartRateSummary>> readDailyHeartRateSummaries(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readDailyHeartRateSummaries(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <HeartRateSummaryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        HeartRateSummary(
+  ) =>
+      _readList(
+        'readDailyHeartRateSummaries',
+        () => _api.readDailyHeartRateSummaries(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => HeartRateSummary(
           date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
           avgBpm: m.avgBpm,
           minBpm: m.minBpm,
           maxBpm: m.maxBpm,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<RestingHeartRateSample>> readRestingHeartRateSamples(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readRestingHeartRateSamples(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <RestingHeartRateSampleMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        RestingHeartRateSample(
+  ) =>
+      _readList(
+        'readRestingHeartRateSamples',
+        () => _api.readRestingHeartRateSamples(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => RestingHeartRateSample(
           time: _fromMs(m.timeEpochMs),
           beatsPerMinute: m.beatsPerMinute,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<int?> readRestingHeartRate(LocalDate date) => _catch(
@@ -1363,37 +1372,33 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<DailyRestingHR>> readDailyRestingHR(
     LocalDate start,
     LocalDate end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readDailyRestingHR(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <DailyRestingHRMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        DailyRestingHR(
+  ) =>
+      _readList(
+        'readDailyRestingHR',
+        () => _api.readDailyRestingHR(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => DailyRestingHR(
           date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
           bpm: m.bpm,
         ),
-    ];
-  }
+      );
 
   @override
-  Future<List<HrvSample>> readHrvSamples(DateTime start, DateTime end) async {
-    final msgs = await _catch(
-      () => _api.readHrvSamples(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <HrvSampleMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        HrvSample(time: _fromMs(m.timeEpochMs), rmssdMs: m.rmssdMs, source: m.source),
-    ];
-  }
+  Future<List<HrvSample>> readHrvSamples(DateTime start, DateTime end) =>
+      _readList(
+        'readHrvSamples',
+        () => _api.readHrvSamples(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => HrvSample(
+          time: _fromMs(m.timeEpochMs),
+          rmssdMs: m.rmssdMs,
+          source: m.source,
+        ),
+      );
 
   @override
   Future<double?> readHrvRmssd(LocalDate date) async {
@@ -1404,22 +1409,18 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   }
 
   @override
-  Future<List<DailyHrv>> readDailyHRV(LocalDate start, LocalDate end) async {
-    final msgs = await _catch(
-      () => _api.readDailyHRV(
-        _dayStart(start).millisecondsSinceEpoch,
-        _dayEnd(end).millisecondsSinceEpoch,
-      ),
-      const <DailyHrvMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        DailyHrv(
+  Future<List<DailyHrv>> readDailyHRV(LocalDate start, LocalDate end) =>
+      _readList(
+        'readDailyHRV',
+        () => _api.readDailyHRV(
+          _dayStart(start).millisecondsSinceEpoch,
+          _dayEnd(end).millisecondsSinceEpoch,
+        ),
+        (m) => DailyHrv(
           date: LocalDate.fromDateTime(_fromMs(m.dateEpochMs)),
           rmssdMs: m.rmssdMs,
         ),
-    ];
-  }
+      );
 
   // ── Vitals (Phase 3) — typed via native VitalsHealthReader ──────────────────
 
@@ -1473,146 +1474,129 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<BloodPressureEntry>> readBloodPressureEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBloodPressureEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <BloodPressureEntryMsg>[],
-    );
-    return [for (final m in msgs) _bloodPressureEntry(m)]
-      ..sort((a, b) => a.time.compareTo(b.time));
-  }
+  ) =>
+      _readList(
+        'readBloodPressureEntries',
+        () => _api.readBloodPressureEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        _bloodPressureEntry,
+        sortBy: (e) => e.time,
+      );
 
   @override
-  Future<BloodPressureEntry?> readLatestBloodPressure(LocalDate date) async {
-    final m = await _catch(
-      () => _api.readLatestBloodPressure(
-        _dayStart(date).millisecondsSinceEpoch,
-        _dayEnd(date).millisecondsSinceEpoch,
-      ),
-      null,
-    );
-    return m == null ? null : _bloodPressureEntry(m);
-  }
+  Future<BloodPressureEntry?> readLatestBloodPressure(LocalDate date) =>
+      _readOne(
+        'readLatestBloodPressure',
+        () => _api.readLatestBloodPressure(
+          _dayStart(date).millisecondsSinceEpoch,
+          _dayEnd(date).millisecondsSinceEpoch,
+        ),
+        _bloodPressureEntry,
+      );
 
   @override
-  Future<List<SpO2Entry>> readSpO2Entries(DateTime start, DateTime end) async {
-    final msgs = await _catch(
-      () => _api.readSpO2Entries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <SpO2EntryMsg>[],
-    );
-    return [for (final m in msgs) _spO2Entry(m)]
-      ..sort((a, b) => a.time.compareTo(b.time));
-  }
+  Future<List<SpO2Entry>> readSpO2Entries(DateTime start, DateTime end) =>
+      _readList(
+        'readSpO2Entries',
+        () => _api.readSpO2Entries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        _spO2Entry,
+        sortBy: (e) => e.time,
+      );
 
   @override
-  Future<SpO2Entry?> readLatestSpO2(LocalDate date) async {
-    final m = await _catch(
-      () => _api.readLatestSpO2(
-        _dayStart(date).millisecondsSinceEpoch,
-        _dayEnd(date).millisecondsSinceEpoch,
-      ),
-      null,
-    );
-    return m == null ? null : _spO2Entry(m);
-  }
+  Future<SpO2Entry?> readLatestSpO2(LocalDate date) => _readOne(
+        'readLatestSpO2',
+        () => _api.readLatestSpO2(
+          _dayStart(date).millisecondsSinceEpoch,
+          _dayEnd(date).millisecondsSinceEpoch,
+        ),
+        _spO2Entry,
+      );
 
   @override
   Future<List<RespiratoryRateEntry>> readRespiratoryRateEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readRespiratoryRateEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <RespiratoryRateEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        RespiratoryRateEntry(
+  ) =>
+      _readList(
+        'readRespiratoryRateEntries',
+        () => _api.readRespiratoryRateEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => RespiratoryRateEntry(
           time: _fromMs(m.timeEpochMs),
           breathsPerMinute: m.breathsPerMinute,
           source: m.source,
           id: m.id,
           isOpenVitalsEntry: m.isOpenVitalsEntry,
         ),
-    ]..sort((a, b) => a.time.compareTo(b.time));
-  }
+        sortBy: (e) => e.time,
+      );
 
   @override
   Future<List<BodyTempEntry>> readBodyTemperatureEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBodyTemperatureEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <BodyTempEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        BodyTempEntry(
+  ) =>
+      _readList(
+        'readBodyTemperatureEntries',
+        () => _api.readBodyTemperatureEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => BodyTempEntry(
           time: _fromMs(m.timeEpochMs),
           temperatureCelsius: m.temperatureCelsius,
           source: m.source,
           id: m.id,
           isOpenVitalsEntry: m.isOpenVitalsEntry,
         ),
-    ]..sort((a, b) => a.time.compareTo(b.time));
-  }
+        sortBy: (e) => e.time,
+      );
 
   @override
   Future<List<Vo2MaxEntry>> readVo2MaxEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readVo2MaxEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <Vo2MaxEntryMsg>[],
-    );
-    return [for (final m in msgs) _vo2MaxEntry(m)]
-      ..sort((a, b) => a.time.compareTo(b.time));
-  }
+  ) =>
+      _readList(
+        'readVo2MaxEntries',
+        () => _api.readVo2MaxEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        _vo2MaxEntry,
+        sortBy: (e) => e.time,
+      );
 
   @override
-  Future<Vo2MaxEntry?> readLatestVo2Max(LocalDate date) async {
-    final m = await _catch(
-      () => _api.readLatestVo2Max(
-        _dayStart(date).millisecondsSinceEpoch,
-        _dayEnd(date).millisecondsSinceEpoch,
-      ),
-      null,
-    );
-    return m == null ? null : _vo2MaxEntry(m);
-  }
+  Future<Vo2MaxEntry?> readLatestVo2Max(LocalDate date) => _readOne(
+        'readLatestVo2Max',
+        () => _api.readLatestVo2Max(
+          _dayStart(date).millisecondsSinceEpoch,
+          _dayEnd(date).millisecondsSinceEpoch,
+        ),
+        _vo2MaxEntry,
+      );
 
   @override
   Future<List<BloodGlucoseEntry>> readBloodGlucoseEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBloodGlucoseEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <BloodGlucoseEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        BloodGlucoseEntry(
+  ) =>
+      _readList(
+        'readBloodGlucoseEntries',
+        () => _api.readBloodGlucoseEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => BloodGlucoseEntry(
           time: _fromMs(m.timeEpochMs),
           millimolesPerLiter: m.millimolesPerLiter,
           specimenSource: m.specimenSource,
@@ -1620,8 +1604,8 @@ class HealthConnectNativeDataSource extends HealthDataSource {
           relationToMeal: m.relationToMeal,
           source: m.source,
         ),
-    ]..sort((a, b) => a.time.compareTo(b.time));
-  }
+        sortBy: (e) => e.time,
+      );
 
   @override
   Future<List<SkinTemperatureEntry>> readSkinTemperatureEntries(
@@ -1629,26 +1613,24 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     DateTime end,
   ) async {
     if (!isSkinTemperatureAvailable()) return const <SkinTemperatureEntry>[];
-    final msgs = await _catch(
+    return _readList(
+      'readSkinTemperatureEntries',
       () => _api.readSkinTemperatureEntries(
         start.millisecondsSinceEpoch,
         end.millisecondsSinceEpoch,
       ),
-      const <SkinTemperatureEntryMsg>[],
+      (m) => SkinTemperatureEntry(
+        startTime: _fromMs(m.startEpochMs),
+        endTime: _fromMs(m.endEpochMs),
+        baselineCelsius: m.baselineCelsius,
+        averageDeltaCelsius: m.averageDeltaCelsius,
+        minDeltaCelsius: m.minDeltaCelsius,
+        maxDeltaCelsius: m.maxDeltaCelsius,
+        measurementLocation: m.measurementLocation,
+        source: m.source,
+      ),
+      sortBy: (e) => e.time,
     );
-    return [
-      for (final m in msgs)
-        SkinTemperatureEntry(
-          startTime: _fromMs(m.startEpochMs),
-          endTime: _fromMs(m.endEpochMs),
-          baselineCelsius: m.baselineCelsius,
-          averageDeltaCelsius: m.averageDeltaCelsius,
-          minDeltaCelsius: m.minDeltaCelsius,
-          maxDeltaCelsius: m.maxDeltaCelsius,
-          measurementLocation: m.measurementLocation,
-          source: m.source,
-        ),
-    ]..sort((a, b) => a.time.compareTo(b.time));
   }
 
   // ── Sleep (Phase 7) — typed via native SleepHealthReader; merge in Dart ─────
@@ -1685,23 +1667,25 @@ class HealthConnectNativeDataSource extends HealthDataSource {
 
   @override
   Future<List<SleepData>> readSleepSessions(DateTime start, DateTime end) async {
-    final msgs = await _catch(
+    // `sortBy` is load-bearing: mergeSleepSessions assumes ascending input.
+    final sessions = await _readList(
+      'readSleepSessions',
       () => _api.readSleepSessionsRaw(
         start.millisecondsSinceEpoch,
         end.millisecondsSinceEpoch,
       ),
-      const <SleepDataMsg>[],
+      _sleepData,
+      sortBy: (e) => e.startTime,
     );
-    final sessions = [for (final m in msgs) _sleepData(m)]
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
     return mergeSleepSessions(sessions);
   }
 
   @override
-  Future<SleepData?> readSleepSession(String id) async {
-    final m = await _catch(() => _api.readSleepSessionById(id), null);
-    return m == null ? null : _sleepData(m);
-  }
+  Future<SleepData?> readSleepSession(String id) => _readOne(
+        'readSleepSession',
+        () => _api.readSleepSessionById(id),
+        _sleepData,
+      );
 
   @override
   Future<SleepReadData> readSleepData(
@@ -1735,156 +1719,128 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<List<MenstruationFlowEntry>> readMenstruationFlowEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readMenstruationFlowEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <MenstruationFlowEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        MenstruationFlowEntry(
+  ) =>
+      _readList(
+        'readMenstruationFlowEntries',
+        () => _api.readMenstruationFlowEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => MenstruationFlowEntry(
           time: _fromMs(m.timeEpochMs),
           flow: m.flow,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<MenstruationPeriodEntry>> readMenstruationPeriods(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readMenstruationPeriods(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <MenstruationPeriodEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        MenstruationPeriodEntry(
+  ) =>
+      _readList(
+        'readMenstruationPeriods',
+        () => _api.readMenstruationPeriods(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => MenstruationPeriodEntry(
           startTime: _fromMs(m.startEpochMs),
           endTime: _fromMs(m.endEpochMs),
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<OvulationTestEntry>> readOvulationTests(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readOvulationTests(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <OvulationTestEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        OvulationTestEntry(
+  ) =>
+      _readList(
+        'readOvulationTests',
+        () => _api.readOvulationTests(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => OvulationTestEntry(
           time: _fromMs(m.timeEpochMs),
           result: m.result,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<CervicalMucusEntry>> readCervicalMucusEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readCervicalMucusEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <CervicalMucusEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        CervicalMucusEntry(
+  ) =>
+      _readList(
+        'readCervicalMucusEntries',
+        () => _api.readCervicalMucusEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => CervicalMucusEntry(
           time: _fromMs(m.timeEpochMs),
           appearance: m.appearance,
           sensation: m.sensation,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<BasalBodyTemperatureEntry>> readBasalBodyTemperatureEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readBasalBodyTemperatureEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <BasalBodyTemperatureEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        BasalBodyTemperatureEntry(
+  ) =>
+      _readList(
+        'readBasalBodyTemperatureEntries',
+        () => _api.readBasalBodyTemperatureEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => BasalBodyTemperatureEntry(
           time: _fromMs(m.timeEpochMs),
           temperatureCelsius: m.temperatureCelsius,
           measurementLocation: m.measurementLocation,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<IntermenstrualBleedingEntry>> readIntermenstrualBleedingEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readIntermenstrualBleedingEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <IntermenstrualBleedingEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        IntermenstrualBleedingEntry(
+  ) =>
+      _readList(
+        'readIntermenstrualBleedingEntries',
+        () => _api.readIntermenstrualBleedingEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => IntermenstrualBleedingEntry(
           time: _fromMs(m.timeEpochMs),
           source: m.source,
         ),
-    ];
-  }
+      );
 
   @override
   Future<List<SexualActivityEntry>> readSexualActivityEntries(
     DateTime start,
     DateTime end,
-  ) async {
-    final msgs = await _catch(
-      () => _api.readSexualActivityEntries(
-        start.millisecondsSinceEpoch,
-        end.millisecondsSinceEpoch,
-      ),
-      const <SexualActivityEntryMsg>[],
-    );
-    return [
-      for (final m in msgs)
-        SexualActivityEntry(
+  ) =>
+      _readList(
+        'readSexualActivityEntries',
+        () => _api.readSexualActivityEntries(
+          start.millisecondsSinceEpoch,
+          end.millisecondsSinceEpoch,
+        ),
+        (m) => SexualActivityEntry(
           time: _fromMs(m.timeEpochMs),
           protectionUsed: m.protectionUsed,
           source: m.source,
         ),
-    ];
-  }
+      );
 
   // ── Writes ────────────────────────────────────────────────────────────────
 
@@ -1937,21 +1893,24 @@ class HealthConnectNativeDataSource extends HealthDataSource {
     DateTime end,
   ) async {
     if (!isMindfulnessSessionAvailable()) return const <MindfulnessSession>[];
-    final msgs = await _catch(
+    return _readList(
+      'readMindfulnessSessions',
       () => _api.readMindfulnessSessions(
         start.millisecondsSinceEpoch,
         end.millisecondsSinceEpoch,
       ),
-      const <MindfulnessSessionMsg>[],
+      _mindfulnessSession,
     );
-    return [for (final m in msgs) _mindfulnessSession(m)];
   }
 
   @override
   Future<MindfulnessSession?> readMindfulnessSession(String id) async {
     if (!isMindfulnessSessionAvailable()) return null;
-    final m = await _catch(() => _api.readMindfulnessSession(id), null);
-    return m == null ? null : _mindfulnessSession(m);
+    return _readOne(
+      'readMindfulnessSession',
+      () => _api.readMindfulnessSession(id),
+      _mindfulnessSession,
+    );
   }
 
   @override
@@ -2049,23 +2008,20 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   Future<VitalsMeasurementEntry?> readVitalsMeasurementEntry(
     VitalsMeasurementType type,
     String id,
-  ) async {
-    final m = await _catch(
-      () => _api.readVitalsMeasurementEntry(_vitalsTypeMsg(type), id),
-      null,
-    );
-    return m == null
-        ? null
-        : VitalsMeasurementEntry(
-            id: m.id,
-            type: _vitalsType(m.type),
-            time: _fromMs(m.timeEpochMs),
-            value: m.value,
-            secondaryValue: m.secondaryValue,
-            source: m.source,
-            isOpenVitalsEntry: m.isOpenVitalsEntry,
-          );
-  }
+  ) =>
+      _readOne(
+        'readVitalsMeasurementEntry',
+        () => _api.readVitalsMeasurementEntry(_vitalsTypeMsg(type), id),
+        (m) => VitalsMeasurementEntry(
+          id: m.id,
+          type: _vitalsType(m.type),
+          time: _fromMs(m.timeEpochMs),
+          value: m.value,
+          secondaryValue: m.secondaryValue,
+          source: m.source,
+          isOpenVitalsEntry: m.isOpenVitalsEntry,
+        ),
+      );
 
   @override
   Future<void> updateVitalsMeasurementEntry(
