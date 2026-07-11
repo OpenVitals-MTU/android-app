@@ -1,5 +1,6 @@
 import '../core/time/local_date.dart';
 import '../domain/model/activity_models.dart';
+import '../domain/model/exercise_session_metrics.dart';
 import '../domain/model/body_models.dart';
 import '../domain/model/cycle_models.dart';
 import '../domain/model/health_connect_availability.dart';
@@ -153,6 +154,17 @@ class HealthDataSource {
     LocalDate date,
   ) async =>
       const <ActivityProgressPoint>[];
+
+  /// The sibling-record totals for one exercise session's window (steps,
+  /// distance, calories, elevation...). A session record carries none of them; see
+  /// [ExerciseSessionMetrics]. [metrics] is what the caller holds a read
+  /// permission for -- anything omitted comes back null.
+  Future<ExerciseSessionMetrics> readExerciseSessionMetrics(
+    DateTime start,
+    DateTime end,
+    Set<ExerciseSessionMetric> metrics,
+  ) async =>
+      ExerciseSessionMetrics.none;
 
   Future<List<SpeedSample>> readSpeedSamples(DateTime start, DateTime end) async =>
       const <SpeedSample>[];

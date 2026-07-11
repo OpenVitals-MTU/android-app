@@ -4,8 +4,11 @@ import android.util.Log
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseCompletionGoal
+import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.WheelchairPushesRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -131,6 +134,65 @@ internal class ActivityHealthReader(
   suspend fun readExerciseSessionById(id: String): ExerciseDataMsg? =
     support.withNullableLogging("readExerciseSessionById[$id]") {
       support.client().readRecord(ExerciseSessionRecord::class, id).record.toMsg()
+    }
+
+  /**
+   * Every sibling-record total for one session's window.
+   *
+   * A watch records a walk as an `ExerciseSessionRecord` plus separate Steps /
+   * Distance / Calories / Elevation records covering the same span, so the
+   * session on its own knows nothing but its duration. Aggregating its window is
+   * the only way to get the rest back, and it is what the activity detail screen
+   * needs in order to stop reporting "Not available" for numbers the watch did
+   * in fact record.
+   *
+   * [metrics] carries only what the caller holds a read permission for. An
+   * unknown name is skipped rather than throwing, so an older host stays
+   * compatible with a newer caller. An aggregate failure degrades to null metrics
+   * rather than failing the read (rate limits still propagate, so
+   * [HealthConnectReaderSupport] can wait them out and retry).
+   */
+  suspend fun readExerciseSessionMetrics(
+    start: Instant,
+    end: Instant,
+    metrics: List<String>,
+  ): ExerciseSessionMetricsMsg =
+    support.withLogging(
+      "readExerciseSessionMetrics[$start..$end]",
+      EMPTY_SESSION_METRICS,
+    ) {
+      val requested = metrics.mapNotNull { SESSION_METRICS[it] }.toSet()
+      if (requested.isEmpty() || !end.isAfter(start)) return@withLogging EMPTY_SESSION_METRICS
+
+      val aggregate = runCatching {
+        support.client().aggregate(
+          AggregateRequest(
+            metrics = requested,
+            timeRangeFilter = TimeRangeFilter.between(start, end),
+          ),
+        )
+      }.onFailure {
+        if (HealthConnectRateLimitBackoff.isRateLimitFailure(it)) throw it
+        Log.e(TAG, "Failed readExerciseSessionMetrics aggregate ${support.diagnosticsSummary()}", it)
+      }.getOrNull() ?: return@withLogging EMPTY_SESSION_METRICS
+
+      // Only report a metric that was actually asked for: a total absent from an
+      // aggregate the caller never requested is "unknown", not "zero".
+      fun <T : Any> read(metric: AggregateMetric<T>): T? =
+        if (metric in requested) aggregate[metric] else null
+
+      ExerciseSessionMetricsMsg(
+        totalDistanceMeters = read(DistanceRecord.DISTANCE_TOTAL)?.inMeters,
+        averageSpeedMetersPerSecond = read(SpeedRecord.SPEED_AVG)?.inMetersPerSecond,
+        steps = read(StepsRecord.COUNT_TOTAL),
+        totalCaloriesKcal = read(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories,
+        activeCaloriesKcal =
+          read(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories,
+        elevationGainedMeters =
+          read(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)?.inMeters,
+        floorsClimbed = read(FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL)?.toLong(),
+        wheelchairPushes = read(WheelchairPushesRecord.COUNT_TOTAL),
+      )
     }
 
   suspend fun readSpeedSamples(start: Instant, end: Instant): List<SpeedSampleMsg> =
@@ -815,3 +877,28 @@ private fun PlannedExerciseStepMsg.toRecord(): PlannedExerciseStep =
     },
     performanceTargets = emptyList(),
   )
+
+/// An all-null result: nothing was asked for, or nothing could be read.
+private val EMPTY_SESSION_METRICS = ExerciseSessionMetricsMsg(
+  totalDistanceMeters = null,
+  averageSpeedMetersPerSecond = null,
+  steps = null,
+  totalCaloriesKcal = null,
+  activeCaloriesKcal = null,
+  elevationGainedMeters = null,
+  floorsClimbed = null,
+  wheelchairPushes = null,
+)
+
+/// Wire name -> aggregate, kept in step with Dart's `ExerciseSessionMetric`. A name
+/// missing from this map is skipped, so a newer caller cannot break an older host.
+private val SESSION_METRICS: Map<String, AggregateMetric<*>> = mapOf(
+  "distance" to DistanceRecord.DISTANCE_TOTAL,
+  "speed" to SpeedRecord.SPEED_AVG,
+  "steps" to StepsRecord.COUNT_TOTAL,
+  "totalCalories" to TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+  "activeCalories" to ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+  "elevation" to ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
+  "floors" to FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
+  "wheelchairPushes" to WheelchairPushesRecord.COUNT_TOTAL,
+)

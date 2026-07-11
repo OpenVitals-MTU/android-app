@@ -5,6 +5,7 @@ import 'package:health_connect_native/health_connect_native.dart';
 import '../../core/time/local_date.dart';
 import '../../domain/model/activity_backfill.dart';
 import '../../domain/model/activity_models.dart';
+import '../../domain/model/exercise_session_metrics.dart';
 import '../../domain/model/activity_session_deduplication.dart';
 import '../../domain/model/body_models.dart';
 import '../../domain/model/cycle_models.dart';
@@ -619,7 +620,37 @@ class HealthConnectNativeDataSource extends HealthDataSource {
   @override
   Future<ExerciseData?> readExerciseSession(String id) async {
     final m = await _catch(() => _api.readExerciseSessionById(id), null);
-    return m == null ? null : _exerciseData(m);
+    // The list read backfills route-derived distance/elevation; a session opened
+    // by id must not silently miss them just because it took the other door.
+    return m == null ? null : _exerciseData(m).withRouteBackfilledMetrics();
+  }
+
+  @override
+  Future<ExerciseSessionMetrics> readExerciseSessionMetrics(
+    DateTime start,
+    DateTime end,
+    Set<ExerciseSessionMetric> metrics,
+  ) async {
+    if (metrics.isEmpty) return ExerciseSessionMetrics.none;
+    final m = await _catch(
+      () => _api.readExerciseSessionMetrics(
+        start.millisecondsSinceEpoch,
+        end.millisecondsSinceEpoch,
+        [for (final metric in metrics) metric.wireName],
+      ),
+      null,
+    );
+    if (m == null) return ExerciseSessionMetrics.none;
+    return ExerciseSessionMetrics(
+      totalDistanceMeters: m.totalDistanceMeters,
+      averageSpeedMetersPerSecond: m.averageSpeedMetersPerSecond,
+      steps: m.steps,
+      totalCaloriesKcal: m.totalCaloriesKcal,
+      activeCaloriesKcal: m.activeCaloriesKcal,
+      elevationGainedMeters: m.elevationGainedMeters,
+      floorsClimbed: m.floorsClimbed,
+      wheelchairPushes: m.wheelchairPushes,
+    );
   }
 
   @override

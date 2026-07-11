@@ -3,6 +3,7 @@ import '../../../core/period/time_range.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../domain/model/activity_models.dart';
+import '../../../domain/model/exercise_session_metrics.dart';
 import '../../../domain/model/health_connect_availability.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
@@ -164,6 +165,35 @@ class ActivityRepositoryImpl implements ActivityRepository {
   @override
   Future<ExerciseData?> loadWorkout(String id) =>
       _dataSource.readExerciseSession(id);
+
+  /// Each metric is gated on its OWN read permission, exactly as the list read
+  /// gates distance and speed: an ungranted metric is simply left out of the
+  /// request and comes back null, instead of failing the whole read.
+  @override
+  Future<ExerciseSessionMetrics> loadWorkoutMetrics(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final granted = await _grantedIfAvailable();
+    final wanted = <ExerciseSessionMetric>{
+      if (granted.contains(HcPermissions.readDistance))
+        ExerciseSessionMetric.distance,
+      if (granted.contains(HcPermissions.readSpeed)) ExerciseSessionMetric.speed,
+      if (granted.contains(HcPermissions.readSteps)) ExerciseSessionMetric.steps,
+      if (granted.contains(HcPermissions.readTotalCalories))
+        ExerciseSessionMetric.totalCalories,
+      if (granted.contains(HcPermissions.readActiveCalories))
+        ExerciseSessionMetric.activeCalories,
+      if (granted.contains(HcPermissions.readElevation))
+        ExerciseSessionMetric.elevation,
+      if (granted.contains(HcPermissions.readFloors))
+        ExerciseSessionMetric.floors,
+      if (granted.contains(HcPermissions.readWheelchairPushes))
+        ExerciseSessionMetric.wheelchairPushes,
+    };
+    if (wanted.isEmpty) return ExerciseSessionMetrics.none;
+    return _dataSource.readExerciseSessionMetrics(start, end, wanted);
+  }
 
   @override
   Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) async {

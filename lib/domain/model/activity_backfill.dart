@@ -1,5 +1,7 @@
 import '../../core/geo/geo_distance.dart';
+import '../insights/activity_splits.dart';
 import 'activity_models.dart';
+import 'exercise_session_metrics.dart';
 import 'heart_models.dart';
 
 const double _minBackfillDistanceMeters = 1.0;
@@ -30,6 +32,43 @@ extension ActivityBackfill on ExerciseData {
     );
   }
 
+  /// Fill in the totals a session record does not carry, read from the sibling
+  /// records covering its window (see [ExerciseSessionMetrics]).
+  ///
+  /// Health Connect is the authority here, so this runs BEFORE the sample-derived
+  /// backfill: a real DistanceRecord beats a distance integrated from speed. Only
+  /// missing fields are touched -- a figure the session already stated is never
+  /// overwritten.
+  ExerciseData withSessionMetricsBackfilled(ExerciseSessionMetrics metrics) =>
+      copyWith(
+        totalDistanceMeters: _backfilledByDouble(
+          totalDistanceMeters,
+          metrics.totalDistanceMeters,
+        ),
+        averageSpeedMetersPerSecond: _backfilledByDouble(
+          averageSpeedMetersPerSecond,
+          metrics.averageSpeedMetersPerSecond,
+        ),
+        steps: _backfilledByInt(steps, metrics.steps),
+        totalCaloriesKcal: _backfilledByDouble(
+          totalCaloriesKcal,
+          metrics.totalCaloriesKcal,
+        ),
+        activeCaloriesKcal: _backfilledByDouble(
+          activeCaloriesKcal,
+          metrics.activeCaloriesKcal,
+        ),
+        elevationGainedMeters: _backfilledByDouble(
+          elevationGainedMeters,
+          metrics.elevationGainedMeters,
+        ),
+        floorsClimbed: _backfilledByInt(floorsClimbed, metrics.floorsClimbed),
+        wheelchairPushes: _backfilledByInt(
+          wheelchairPushes,
+          metrics.wheelchairPushes,
+        ),
+      );
+
   ExerciseData withSampleBackfilledMetrics({
     required List<HeartRateSample> heartRateSamples,
     required List<SpeedSample> speedSamples,
@@ -42,6 +81,14 @@ extension ActivityBackfill on ExerciseData {
           .toList(),
     );
     return copyWith(
+      // A watch that records speed but writes no DistanceRecord leaves the session
+      // with no distance at all -- while the splits card, integrating these very
+      // samples, cheerfully reports "every 1 km". Integrate them here too, so the
+      // two can never disagree.
+      totalDistanceMeters: _backfilledByDouble(
+        totalDistanceMeters,
+        distanceFromSpeedSamples(speedSamples),
+      ),
       averageHeartRateBpm: _backfilledByInt(
         averageHeartRateBpm,
         heartRateAverage?.round(),

@@ -2735,6 +2735,85 @@ data class ExerciseDataMsg (
   }
 }
 
+/**
+ * The sibling-record totals for one exercise session's window — the numbers the
+ * `ExerciseSessionRecord` itself does not carry. Every field is null when the
+ * caller did not ask for that metric, or when no such record covers the window.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class ExerciseSessionMetricsMsg (
+  /** `DistanceRecord.DISTANCE_TOTAL`. */
+  val totalDistanceMeters: Double? = null,
+  /** `SpeedRecord.SPEED_AVG`. */
+  val averageSpeedMetersPerSecond: Double? = null,
+  /** `StepsRecord.COUNT_TOTAL`. */
+  val steps: Long? = null,
+  /** `TotalCaloriesBurnedRecord.ENERGY_TOTAL`, in kcal. */
+  val totalCaloriesKcal: Double? = null,
+  /** `ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL`, in kcal. */
+  val activeCaloriesKcal: Double? = null,
+  /** `ElevationGainedRecord.ELEVATION_GAINED_TOTAL`. */
+  val elevationGainedMeters: Double? = null,
+  /** `FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL`. */
+  val floorsClimbed: Long? = null,
+  /** `WheelchairPushesRecord.COUNT_TOTAL`. */
+  val wheelchairPushes: Long? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): ExerciseSessionMetricsMsg {
+      val totalDistanceMeters = pigeonVar_list[0] as Double?
+      val averageSpeedMetersPerSecond = pigeonVar_list[1] as Double?
+      val steps = pigeonVar_list[2] as Long?
+      val totalCaloriesKcal = pigeonVar_list[3] as Double?
+      val activeCaloriesKcal = pigeonVar_list[4] as Double?
+      val elevationGainedMeters = pigeonVar_list[5] as Double?
+      val floorsClimbed = pigeonVar_list[6] as Long?
+      val wheelchairPushes = pigeonVar_list[7] as Long?
+      return ExerciseSessionMetricsMsg(totalDistanceMeters, averageSpeedMetersPerSecond, steps, totalCaloriesKcal, activeCaloriesKcal, elevationGainedMeters, floorsClimbed, wheelchairPushes)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      totalDistanceMeters,
+      averageSpeedMetersPerSecond,
+      steps,
+      totalCaloriesKcal,
+      activeCaloriesKcal,
+      elevationGainedMeters,
+      floorsClimbed,
+      wheelchairPushes,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as ExerciseSessionMetricsMsg
+    return MessagesPigeonUtils.deepEquals(this.totalDistanceMeters, other.totalDistanceMeters) && MessagesPigeonUtils.deepEquals(this.averageSpeedMetersPerSecond, other.averageSpeedMetersPerSecond) && MessagesPigeonUtils.deepEquals(this.steps, other.steps) && MessagesPigeonUtils.deepEquals(this.totalCaloriesKcal, other.totalCaloriesKcal) && MessagesPigeonUtils.deepEquals(this.activeCaloriesKcal, other.activeCaloriesKcal) && MessagesPigeonUtils.deepEquals(this.elevationGainedMeters, other.elevationGainedMeters) && MessagesPigeonUtils.deepEquals(this.floorsClimbed, other.floorsClimbed) && MessagesPigeonUtils.deepEquals(this.wheelchairPushes, other.wheelchairPushes)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.totalDistanceMeters)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.averageSpeedMetersPerSecond)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.steps)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.totalCaloriesKcal)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.activeCaloriesKcal)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.elevationGainedMeters)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.floorsClimbed)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.wheelchairPushes)
+    return result
+  }
+  override fun toString(): String {
+    return "ExerciseSessionMetricsMsg(totalDistanceMeters=$totalDistanceMeters, averageSpeedMetersPerSecond=$averageSpeedMetersPerSecond, steps=$steps, totalCaloriesKcal=$totalCaloriesKcal, activeCaloriesKcal=$activeCaloriesKcal, elevationGainedMeters=$elevationGainedMeters, floorsClimbed=$floorsClimbed, wheelchairPushes=$wheelchairPushes)"
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class SpeedSampleMsg (
   val timeEpochMs: Long,
@@ -4023,90 +4102,95 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       183.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          SpeedSampleMsg.fromList(it)
+          ExerciseSessionMetricsMsg.fromList(it)
         }
       }
       184.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ActivityCadenceSampleMsg.fromList(it)
+          SpeedSampleMsg.fromList(it)
         }
       }
       185.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          PlannedExerciseStepMsg.fromList(it)
+          ActivityCadenceSampleMsg.fromList(it)
         }
       }
       186.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          PlannedExerciseBlockMsg.fromList(it)
+          PlannedExerciseStepMsg.fromList(it)
         }
       }
       187.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          PlannedExerciseSessionMsg.fromList(it)
+          PlannedExerciseBlockMsg.fromList(it)
         }
       }
       188.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          PlannedExerciseWriteRequestMsg.fromList(it)
+          PlannedExerciseSessionMsg.fromList(it)
         }
       }
       189.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ImportSampleMsg.fromList(it)
+          PlannedExerciseWriteRequestMsg.fromList(it)
         }
       }
       190.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ImportSleepStageMsg.fromList(it)
+          ImportSampleMsg.fromList(it)
         }
       }
       191.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ImportRecordMsg.fromList(it)
+          ImportSleepStageMsg.fromList(it)
         }
       }
       192.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ActivityPauseIntervalMsg.fromList(it)
+          ImportRecordMsg.fromList(it)
         }
       }
       193.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          BleHeartRateSampleMsg.fromList(it)
+          ActivityPauseIntervalMsg.fromList(it)
         }
       }
       194.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          BlePowerSampleMsg.fromList(it)
+          BleHeartRateSampleMsg.fromList(it)
         }
       }
       195.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          BleCyclingCadenceSampleMsg.fromList(it)
+          BlePowerSampleMsg.fromList(it)
         }
       }
       196.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          BleSpeedSampleMsg.fromList(it)
+          BleCyclingCadenceSampleMsg.fromList(it)
         }
       }
       197.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          BleStepsCadenceSampleMsg.fromList(it)
+          BleSpeedSampleMsg.fromList(it)
         }
       }
       198.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ActivityBleSamplesMsg.fromList(it)
+          BleStepsCadenceSampleMsg.fromList(it)
         }
       }
       199.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          ActivityWriteRequestMsg.fromList(it)
+          ActivityBleSamplesMsg.fromList(it)
         }
       }
       200.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          ActivityWriteRequestMsg.fromList(it)
+        }
+      }
+      201.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           SleepDataMsg.fromList(it)
         }
@@ -4332,76 +4416,80 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(182)
         writeValue(stream, value.toList())
       }
-      is SpeedSampleMsg -> {
+      is ExerciseSessionMetricsMsg -> {
         stream.write(183)
         writeValue(stream, value.toList())
       }
-      is ActivityCadenceSampleMsg -> {
+      is SpeedSampleMsg -> {
         stream.write(184)
         writeValue(stream, value.toList())
       }
-      is PlannedExerciseStepMsg -> {
+      is ActivityCadenceSampleMsg -> {
         stream.write(185)
         writeValue(stream, value.toList())
       }
-      is PlannedExerciseBlockMsg -> {
+      is PlannedExerciseStepMsg -> {
         stream.write(186)
         writeValue(stream, value.toList())
       }
-      is PlannedExerciseSessionMsg -> {
+      is PlannedExerciseBlockMsg -> {
         stream.write(187)
         writeValue(stream, value.toList())
       }
-      is PlannedExerciseWriteRequestMsg -> {
+      is PlannedExerciseSessionMsg -> {
         stream.write(188)
         writeValue(stream, value.toList())
       }
-      is ImportSampleMsg -> {
+      is PlannedExerciseWriteRequestMsg -> {
         stream.write(189)
         writeValue(stream, value.toList())
       }
-      is ImportSleepStageMsg -> {
+      is ImportSampleMsg -> {
         stream.write(190)
         writeValue(stream, value.toList())
       }
-      is ImportRecordMsg -> {
+      is ImportSleepStageMsg -> {
         stream.write(191)
         writeValue(stream, value.toList())
       }
-      is ActivityPauseIntervalMsg -> {
+      is ImportRecordMsg -> {
         stream.write(192)
         writeValue(stream, value.toList())
       }
-      is BleHeartRateSampleMsg -> {
+      is ActivityPauseIntervalMsg -> {
         stream.write(193)
         writeValue(stream, value.toList())
       }
-      is BlePowerSampleMsg -> {
+      is BleHeartRateSampleMsg -> {
         stream.write(194)
         writeValue(stream, value.toList())
       }
-      is BleCyclingCadenceSampleMsg -> {
+      is BlePowerSampleMsg -> {
         stream.write(195)
         writeValue(stream, value.toList())
       }
-      is BleSpeedSampleMsg -> {
+      is BleCyclingCadenceSampleMsg -> {
         stream.write(196)
         writeValue(stream, value.toList())
       }
-      is BleStepsCadenceSampleMsg -> {
+      is BleSpeedSampleMsg -> {
         stream.write(197)
         writeValue(stream, value.toList())
       }
-      is ActivityBleSamplesMsg -> {
+      is BleStepsCadenceSampleMsg -> {
         stream.write(198)
         writeValue(stream, value.toList())
       }
-      is ActivityWriteRequestMsg -> {
+      is ActivityBleSamplesMsg -> {
         stream.write(199)
         writeValue(stream, value.toList())
       }
-      is SleepDataMsg -> {
+      is ActivityWriteRequestMsg -> {
         stream.write(200)
+        writeValue(stream, value.toList())
+      }
+      is SleepDataMsg -> {
+        stream.write(201)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -4580,6 +4668,21 @@ interface HealthConnectHostApi {
    */
   fun readExerciseSessionsWithMetrics(startEpochMs: Long, endEpochMs: Long, includeDistance: Boolean, includeSpeed: Boolean, callback: (Result<List<ExerciseDataMsg>>) -> Unit)
   fun readExerciseSessionById(id: String, callback: (Result<ExerciseDataMsg?>) -> Unit)
+  /**
+   * Every sibling-record total for ONE session's window.
+   *
+   * An `ExerciseSessionRecord` carries none of these: a watch writes its steps,
+   * distance, calories and elevation as separate records covering the same span,
+   * so the only way to attach them to the session is to aggregate over its
+   * window. [readExerciseSessionsWithMetrics] does this for a LIST of sessions
+   * but only for distance and speed; opening one session needs the rest of them.
+   *
+   * [metrics] names the aggregates the caller holds a read permission for — see
+   * `ExerciseSessionMetric.wireName`. An unnamed metric is left out of the
+   * request and comes back null; an unknown name is ignored rather than throwing,
+   * so an older host stays compatible with a newer caller.
+   */
+  fun readExerciseSessionMetrics(startEpochMs: Long, endEpochMs: Long, metrics: List<String>, callback: (Result<ExerciseSessionMetricsMsg>) -> Unit)
   fun readSpeedSamples(startEpochMs: Long, endEpochMs: Long, callback: (Result<List<SpeedSampleMsg>>) -> Unit)
   /**
    * Cycling-pedaling and steps cadence samples in the window, merged and
@@ -6342,6 +6445,28 @@ interface HealthConnectHostApi {
             val args = message as List<Any?>
             val idArg = args[0] as String
             api.readExerciseSessionById(idArg) { result: Result<ExerciseDataMsg?> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.health_connect_native.HealthConnectHostApi.readExerciseSessionMetrics$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val startEpochMsArg = args[0] as Long
+            val endEpochMsArg = args[1] as Long
+            val metricsArg = args[2] as List<String>
+            api.readExerciseSessionMetrics(startEpochMsArg, endEpochMsArg, metricsArg) { result: Result<ExerciseSessionMetricsMsg> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))

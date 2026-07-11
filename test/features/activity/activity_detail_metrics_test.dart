@@ -7,6 +7,7 @@ import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/data/repository/contract/heart_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
+import 'package:openvitals/domain/model/exercise_session_metrics.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/activity/activity_detail_screen.dart';
@@ -62,16 +63,29 @@ class _FakeActivityRepository implements ActivityRepository {
     required this.workout,
     this.speedSamples = const <SpeedSample>[],
     this.cadenceSamples = const <ActivityCadenceSample>[],
+    this.sessionMetrics = ExerciseSessionMetrics.none,
     this.cadenceThrows = false,
+    this.metricsThrow = false,
   });
 
   final ExerciseData? workout;
   final List<SpeedSample> speedSamples;
   final List<ActivityCadenceSample> cadenceSamples;
+  final ExerciseSessionMetrics sessionMetrics;
   final bool cadenceThrows;
+  final bool metricsThrow;
 
   @override
   Future<ExerciseData?> loadWorkout(String id) async => workout;
+
+  @override
+  Future<ExerciseSessionMetrics> loadWorkoutMetrics(
+    DateTime start,
+    DateTime end,
+  ) async {
+    if (metricsThrow) throw StateError('STEPS permission denied');
+    return sessionMetrics;
+  }
 
   @override
   Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) async =>
@@ -107,7 +121,9 @@ Future<void> _pump(
   required ExerciseData workout,
   List<SpeedSample> speedSamples = const <SpeedSample>[],
   List<ActivityCadenceSample> cadenceSamples = const <ActivityCadenceSample>[],
+  ExerciseSessionMetrics sessionMetrics = ExerciseSessionMetrics.none,
   bool cadenceThrows = false,
+  bool metricsThrow = false,
 }) async {
   // The unit system follows the host locale unless pinned, which would make the
   // km/h assertions below pass in Europe and fail in the US.
@@ -131,7 +147,9 @@ Future<void> _pump(
             workout: workout,
             speedSamples: speedSamples,
             cadenceSamples: cadenceSamples,
+            sessionMetrics: sessionMetrics,
             cadenceThrows: cadenceThrows,
+            metricsThrow: metricsThrow,
           ),
         ),
         heartRepositoryProvider.overrideWithValue(_FakeHeartRepository()),
@@ -303,6 +321,76 @@ void main() {
 
     expect(find.text('Steps'), findsOneWidget);
     expect(find.text('1,234'), findsOneWidget);
+  });
+
+  // The watch bug, end to end. The walk's own record is nearly empty: the steps,
+  // distance, calories and elevation were written as SEPARATE records covering
+  // the same window, which is how a two-hour walk came to report "Steps: Not
+  // available" directly above a chart of its own step cadence.
+  group('a walking activity recorded by a watch', () {
+    testWidgets('shows the totals its session record never carried',
+        (tester) async {
+      await _pump(
+        tester,
+        workout: _workout(
+          exerciseType: ExerciseSessionType.walking,
+          totalDistanceMeters: null,
+        ),
+        sessionMetrics: const ExerciseSessionMetrics(
+          totalDistanceMeters: 4500.0,
+          steps: 6200,
+          totalCaloriesKcal: 320.0,
+          activeCaloriesKcal: 210.0,
+          elevationGainedMeters: 48.0,
+        ),
+      );
+
+      expect(find.text('6,200'), findsOneWidget);
+      expect(find.text('4.5 km'), findsOneWidget);
+      expect(find.text('320 kcal'), findsOneWidget);
+      expect(find.text('210 kcal'), findsOneWidget);
+      expect(find.text('48 m'), findsOneWidget);
+    });
+
+    testWidgets('derives a distance from speed when no distance was written',
+        (tester) async {
+      // A watch that records speed but writes no DistanceRecord left the session
+      // with no distance at all — while the splits card, integrating these very
+      // samples, cheerfully reported "every 1 km".
+      await _pump(
+        tester,
+        workout: _workout(
+          exerciseType: ExerciseSessionType.walking,
+          totalDistanceMeters: null,
+        ),
+        speedSamples: [
+          for (var i = 0; i <= 3600; i += 60)
+            SpeedSample(
+              time: _at(i),
+              metersPerSecond: 2.0,
+              source: 'watch',
+            ),
+        ],
+      );
+
+      // 2 m/s held for an hour.
+      expect(find.text('7.2 km'), findsOneWidget);
+    });
+
+    testWidgets('a failing metrics read costs the numbers, not the screen',
+        (tester) async {
+      await _pump(
+        tester,
+        workout: _workout(
+          exerciseType: ExerciseSessionType.walking,
+          totalDistanceMeters: null,
+        ),
+        metricsThrow: true,
+      );
+
+      expect(find.text('Metrics'), findsOneWidget);
+      expect(find.textContaining('Unable to load activity'), findsNothing);
+    });
   });
 
   testWidgets('a strength session shows no distance metrics at all',

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/domain/model/activity_backfill.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
+import 'package:openvitals/domain/model/exercise_session_metrics.dart';
 import 'package:openvitals/domain/model/heart_models.dart';
 
 final DateTime _epoch = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -12,6 +13,11 @@ ExerciseData _workout({
   double? averageSpeedMetersPerSecond,
   double? averageStepsCadenceRate,
   double? averageCyclingCadenceRpm,
+  int? steps,
+  double? totalCaloriesKcal,
+  double? activeCaloriesKcal,
+  int? floorsClimbed,
+  int? wheelchairPushes,
   ExerciseRouteData route = const ExerciseRouteData(),
 }) =>
     ExerciseData(
@@ -28,6 +34,11 @@ ExerciseData _workout({
       averageSpeedMetersPerSecond: averageSpeedMetersPerSecond,
       averageStepsCadenceRate: averageStepsCadenceRate,
       averageCyclingCadenceRpm: averageCyclingCadenceRpm,
+      steps: steps,
+      totalCaloriesKcal: totalCaloriesKcal,
+      activeCaloriesKcal: activeCaloriesKcal,
+      floorsClimbed: floorsClimbed,
+      wheelchairPushes: wheelchairPushes,
       route: route,
     );
 
@@ -216,5 +227,117 @@ void main() {
     expect(result.averageSpeedMetersPerSecond ?? 0.0, closeTo(5.0, 0.001));
     expect(result.averageStepsCadenceRate ?? 0.0, closeTo(190.0, 0.001));
     expect(result.averageCyclingCadenceRpm ?? 0.0, closeTo(95.0, 0.001));
+  });
+
+  // The watch bug: the session record carries a duration and nothing else,
+  // because the walk's steps/distance/calories/elevation were written as
+  // separate records over the same window.
+  test('session-metrics backfill fills the totals the session never carried',
+      () {
+    final workout = _workout();
+
+    final result = workout.withSessionMetricsBackfilled(
+      const ExerciseSessionMetrics(
+        totalDistanceMeters: 4500.0,
+        averageSpeedMetersPerSecond: 1.25,
+        steps: 6200,
+        totalCaloriesKcal: 320.0,
+        activeCaloriesKcal: 210.0,
+        elevationGainedMeters: 48.0,
+        floorsClimbed: 3,
+        wheelchairPushes: 0,
+      ),
+    );
+
+    expect(result.totalDistanceMeters ?? 0.0, closeTo(4500.0, 0.001));
+    expect(result.averageSpeedMetersPerSecond ?? 0.0, closeTo(1.25, 0.001));
+    expect(result.steps, 6200);
+    expect(result.totalCaloriesKcal ?? 0.0, closeTo(320.0, 0.001));
+    expect(result.activeCaloriesKcal ?? 0.0, closeTo(210.0, 0.001));
+    expect(result.elevationGainedMeters ?? 0.0, closeTo(48.0, 0.001));
+    expect(result.floorsClimbed, 3);
+    // A zero total is an empty summary, not a measurement — the same rule the
+    // route backfill applies. Nobody wants "Wheelchair pushes: 0" on a walk.
+    expect(result.wheelchairPushes, isNull);
+  });
+
+  test('session-metrics backfill preserves what the session did record', () {
+    final workout = _workout(
+      totalDistanceMeters: 5000.0,
+      steps: 7000,
+      totalCaloriesKcal: 400.0,
+      elevationGainedMeters: 60.0,
+    );
+
+    final result = workout.withSessionMetricsBackfilled(
+      const ExerciseSessionMetrics(
+        totalDistanceMeters: 4500.0,
+        steps: 6200,
+        totalCaloriesKcal: 320.0,
+        elevationGainedMeters: 48.0,
+        activeCaloriesKcal: 210.0,
+      ),
+    );
+
+    expect(result.totalDistanceMeters ?? 0.0, closeTo(5000.0, 0.001));
+    expect(result.steps, 7000);
+    expect(result.totalCaloriesKcal ?? 0.0, closeTo(400.0, 0.001));
+    expect(result.elevationGainedMeters ?? 0.0, closeTo(60.0, 0.001));
+    // ...and still fills the one it did not.
+    expect(result.activeCaloriesKcal ?? 0.0, closeTo(210.0, 0.001));
+  });
+
+  test('an ungranted or unrecorded metric stays missing, never zero', () {
+    final result = _workout().withSessionMetricsBackfilled(
+      ExerciseSessionMetrics.none,
+    );
+
+    expect(result.totalDistanceMeters, isNull);
+    expect(result.steps, isNull);
+    expect(result.totalCaloriesKcal, isNull);
+    expect(result.elevationGainedMeters, isNull);
+  });
+
+  // The treadmill/watch case: speed is recorded but no DistanceRecord is ever
+  // written, so the session has no distance at all — while the splits card,
+  // integrating these very samples, cheerfully reports "every 1 km".
+  test('sample backfill integrates a distance from speed when none was written',
+      () {
+    final workout = _workout();
+
+    final result = workout.withSampleBackfilledMetrics(
+      heartRateSamples: const [],
+      speedSamples: [
+        for (var i = 0; i <= 600; i++)
+          SpeedSample(
+            time: _epoch.add(Duration(seconds: i)),
+            metersPerSecond: 2.0,
+            source: 'watch',
+          ),
+      ],
+      cadenceSamples: const [],
+    );
+
+    // 2 m/s held for 600 s.
+    expect(result.totalDistanceMeters ?? 0.0, closeTo(1200.0, 1.0));
+  });
+
+  test('a recorded distance beats one integrated from speed', () {
+    final workout = _workout(totalDistanceMeters: 1000.0);
+
+    final result = workout.withSampleBackfilledMetrics(
+      heartRateSamples: const [],
+      speedSamples: [
+        for (var i = 0; i <= 600; i++)
+          SpeedSample(
+            time: _epoch.add(Duration(seconds: i)),
+            metersPerSecond: 2.0,
+            source: 'watch',
+          ),
+      ],
+      cadenceSamples: const [],
+    );
+
+    expect(result.totalDistanceMeters ?? 0.0, closeTo(1000.0, 0.001));
   });
 }

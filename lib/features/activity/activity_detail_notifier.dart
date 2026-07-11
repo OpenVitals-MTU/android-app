@@ -7,6 +7,7 @@ import '../../di/providers.dart';
 import '../../domain/insights/activity_splits.dart';
 import '../../domain/model/activity_backfill.dart';
 import '../../domain/model/activity_models.dart';
+import '../../domain/model/exercise_session_metrics.dart';
 import '../../domain/model/heart_models.dart';
 import '../../state/app_providers.dart';
 
@@ -91,15 +92,26 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
       final cadenceSamples = await _loadCadenceSamples(repo, workout);
       if (!ref.mounted || generation != _generation) return;
 
-      // A session record often carries no averages of its own — the numbers live
-      // only in the samples. Without this the screen contradicts itself: a full
-      // cadence trace charted below a "Cycling cadence: Not available" row.
-      // (Kotlin `ActivityDetailViewModel` backfills at exactly this point.)
-      final backfilledWorkout = workout.withSampleBackfilledMetrics(
-        heartRateSamples: heartRateSamples,
-        speedSamples: speedSamples,
-        cadenceSamples: cadenceSamples,
-      );
+      // An ExerciseSessionRecord carries almost nothing: a watch writes the walk
+      // as a session and its steps, distance, calories and elevation as SEPARATE
+      // records over the same span. Read alone, the session has a duration and
+      // little else — which is how a recorded walk came to report "Steps: Not
+      // available" directly above a chart of its own step cadence. Aggregating
+      // the session's window is the only way to get those numbers back.
+      //
+      // Health Connect first (it is the authority), then the samples, which fill
+      // whatever is still missing — the averages, and a distance integrated from
+      // speed when the device wrote no DistanceRecord at all.
+      final sessionMetrics = await _loadWorkoutMetrics(repo, workout);
+      if (!ref.mounted || generation != _generation) return;
+
+      final backfilledWorkout = workout
+          .withSessionMetricsBackfilled(sessionMetrics)
+          .withSampleBackfilledMetrics(
+            heartRateSamples: heartRateSamples,
+            speedSamples: speedSamples,
+            cadenceSamples: cadenceSamples,
+          );
 
       state = ActivityDetailState(
         isLoading: false,
@@ -137,6 +149,21 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
       return await repo.loadSpeedSamples(workout.startTime, workout.endTime);
     } catch (_) {
       return const <SpeedSample>[];
+    }
+  }
+
+  /// The session-window aggregate. Every metric inside is already gated on its
+  /// own read permission, so a missing grant costs that one number; a failing
+  /// read costs all of them, and neither is a reason to fail the screen — the
+  /// workout itself loaded fine.
+  Future<ExerciseSessionMetrics> _loadWorkoutMetrics(
+    ActivityRepository repo,
+    ExerciseData workout,
+  ) async {
+    try {
+      return await repo.loadWorkoutMetrics(workout.startTime, workout.endTime);
+    } catch (_) {
+      return ExerciseSessionMetrics.none;
     }
   }
 

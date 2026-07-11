@@ -841,6 +841,19 @@ class HealthConnectNativePlugin :
     callback: (Result<ExerciseDataMsg?>) -> Unit,
   ) = launchCatching(callback) { requireActivityReader().readExerciseSessionById(id) }
 
+  override fun readExerciseSessionMetrics(
+    startEpochMs: Long,
+    endEpochMs: Long,
+    metrics: List<String>,
+    callback: (Result<ExerciseSessionMetricsMsg>) -> Unit,
+  ) = launchCatching(callback) {
+    requireActivityReader().readExerciseSessionMetrics(
+      instant(startEpochMs),
+      instant(endEpochMs),
+      metrics,
+    )
+  }
+
   override fun readSpeedSamples(
     startEpochMs: Long,
     endEpochMs: Long,

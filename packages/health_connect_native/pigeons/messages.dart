@@ -640,6 +640,46 @@ class ExerciseDataMsg {
   );
 }
 
+/// The sibling-record totals for one exercise session's window — the numbers the
+/// `ExerciseSessionRecord` itself does not carry. Every field is null when the
+/// caller did not ask for that metric, or when no such record covers the window.
+class ExerciseSessionMetricsMsg {
+  /// `DistanceRecord.DISTANCE_TOTAL`.
+  final double? totalDistanceMeters;
+
+  /// `SpeedRecord.SPEED_AVG`.
+  final double? averageSpeedMetersPerSecond;
+
+  /// `StepsRecord.COUNT_TOTAL`.
+  final int? steps;
+
+  /// `TotalCaloriesBurnedRecord.ENERGY_TOTAL`, in kcal.
+  final double? totalCaloriesKcal;
+
+  /// `ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL`, in kcal.
+  final double? activeCaloriesKcal;
+
+  /// `ElevationGainedRecord.ELEVATION_GAINED_TOTAL`.
+  final double? elevationGainedMeters;
+
+  /// `FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL`.
+  final int? floorsClimbed;
+
+  /// `WheelchairPushesRecord.COUNT_TOTAL`.
+  final int? wheelchairPushes;
+
+  ExerciseSessionMetricsMsg(
+    this.totalDistanceMeters,
+    this.averageSpeedMetersPerSecond,
+    this.steps,
+    this.totalCaloriesKcal,
+    this.activeCaloriesKcal,
+    this.elevationGainedMeters,
+    this.floorsClimbed,
+    this.wheelchairPushes,
+  );
+}
+
 class SpeedSampleMsg {
   final int timeEpochMs;
   final double metersPerSecond;
@@ -1243,6 +1283,26 @@ abstract class HealthConnectHostApi {
   );
   @async
   ExerciseDataMsg? readExerciseSessionById(String id);
+
+  /// Every sibling-record total for ONE session's window.
+  ///
+  /// An `ExerciseSessionRecord` carries none of these: a watch writes its steps,
+  /// distance, calories and elevation as separate records covering the same span,
+  /// so the only way to attach them to the session is to aggregate over its
+  /// window. [readExerciseSessionsWithMetrics] does this for a LIST of sessions
+  /// but only for distance and speed; opening one session needs the rest of them.
+  ///
+  /// [metrics] names the aggregates the caller holds a read permission for — see
+  /// `ExerciseSessionMetric.wireName`. An unnamed metric is left out of the
+  /// request and comes back null; an unknown name is ignored rather than throwing,
+  /// so an older host stays compatible with a newer caller.
+  @async
+  ExerciseSessionMetricsMsg readExerciseSessionMetrics(
+    int startEpochMs,
+    int endEpochMs,
+    List<String> metrics,
+  );
+
   @async
   List<SpeedSampleMsg> readSpeedSamples(int startEpochMs, int endEpochMs);
 

@@ -411,6 +411,21 @@ List<_Node> _routeNodes(List<ExerciseRoutePoint> points) {
   return nodes;
 }
 
+/// The total distance a run of SpeedRecord samples implies, by the same
+/// trapezoidal integration the speed-sourced splits are cut from.
+///
+/// This is the treadmill/watch case: the device records speed but writes no
+/// DistanceRecord, so nothing else on the screen knows how far the session went
+/// -- while the splits card, cutting the very same samples, happily reports
+/// "every 1 km". Null when the samples imply no distance at all.
+double? distanceFromSpeedSamples(List<SpeedSample> samples) {
+  final sorted = [...samples]..sort((a, b) => a.time.compareTo(b.time));
+  final nodes = _speedNodes(sorted);
+  if (nodes.isEmpty) return null;
+  final meters = nodes.last.cumulativeMeters;
+  return meters.isFinite && meters > 0 ? meters : null;
+}
+
 /// Speed samples → cumulative distance by trapezoidal integration of v·dt.
 /// No altitude: a SpeedRecord says nothing about the ground going up.
 List<_Node> _speedNodes(List<SpeedSample> samples) {

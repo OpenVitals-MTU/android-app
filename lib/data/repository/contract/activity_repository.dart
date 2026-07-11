@@ -1,6 +1,7 @@
 import '../../../core/period/period_load_query.dart';
 import '../../../core/time/local_date.dart';
 import '../../../domain/model/activity_models.dart';
+import '../../../domain/model/exercise_session_metrics.dart';
 import '../../../domain/model/nutrition_models.dart';
 import '../../../domain/model/refresh_mode.dart';
 import '../../../domain/query/activity_period_data.dart';
@@ -39,6 +40,11 @@ abstract interface class ActivityRepository {
   );
 
   Future<ExerciseData?> loadWorkout(String id);
+
+  /// The steps / distance / calories / elevation totals a session record does not
+  /// carry, aggregated over its own window. Only the metrics the user has granted
+  /// a read permission for come back; the rest stay null.
+  Future<ExerciseSessionMetrics> loadWorkoutMetrics(DateTime start, DateTime end);
 
   Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end);
 
