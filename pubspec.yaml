@@ -132,6 +132,28 @@ dependencies:
   # Gradle plugin and breaks this AGP 9 build (see package_info_plus above).
   # 12.0.2 is the newest release that still resolves against win32 ^5.5.3.
   share_plus: ^12.0.2
+  # Picks INPUT files (offline map packs, Apple Health exports, FIT/GPX routes).
+  #
+  # NOT file_selector, which cannot do this job on Android at all: its
+  # FileSelectorApiImpl reads the whole picked file into a byte[] and ships it
+  # across the Pigeon channel (`new byte[size]` + `readFully`), so a 205 MB map
+  # pack threw OutOfMemoryError against a 256 MB heap, and an Apple Health
+  # export.zip -- routinely gigabytes -- never stood a chance. file_picker with
+  # `withData: false` hands back a PATH and stream-copies, so size stops mattering.
+  #
+  # file_selector is still used for SAVING (getSaveLocation), which reads nothing.
+  # Safe against the AGP-9 trap: file_picker 11 wants win32 ^5.9 and pulls no
+  # package_info_plus (see the pins above).
+  # Held at 9.x DELIBERATELY. 10.x/11.x rewrote the Android side in Kotlin and skip
+  # applying the Kotlin Gradle plugin under AGP 9 without declaring a `kotlin {}` block,
+  # so their sources never compile: "cannot find symbol: FilePickerPlugin" in
+  # GeneratedPluginRegistrant. 9.x's Android side is pure Java -- no KGP, no trap -- and
+  # it still streams the file (8 KB buffer) instead of slurping it. Verify with a real
+  # `flutter build apk` before bumping.
+  file_picker: ^9.2.3
+  # XFile, shared by file_picker and file_selector. Direct, because the pick
+  # helpers hand XFiles back to the callers.
+  cross_file: ^0.3.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

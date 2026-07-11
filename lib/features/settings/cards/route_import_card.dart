@@ -1,4 +1,6 @@
-import 'package:file_selector/file_selector.dart';
+import 'package:cross_file/cross_file.dart';
+
+import '../../../core/presentation/file_picking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -209,21 +211,16 @@ class RouteImportCard extends ConsumerWidget {
   Future<XFile?> _pickSingle() {
     final picker = pickRouteFile;
     if (picker != null) return picker();
-    return openFile(acceptedTypeGroups: const [_routeTypeGroup]);
+    return pickInputFile();
   }
 
   Future<List<XFile>> _pickMultiple() {
     final picker = pickRouteFiles;
     if (picker != null) return picker();
-    return openFiles(acceptedTypeGroups: const [_routeTypeGroup]);
+    return pickInputFiles();
   }
 }
 
-const XTypeGroup _routeTypeGroup = XTypeGroup(
-  label: 'Routes',
-  extensions: ['gpx', 'kml', 'kmz', 'fit'],
-  mimeTypes: kRouteImportMimeTypes,
-);
 
 /// The card header: icon + title + body copy. Shared shape between the route and
 /// FIT import cards.

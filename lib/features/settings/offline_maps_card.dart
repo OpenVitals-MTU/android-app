@@ -1,6 +1,8 @@
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart';
+import 'package:cross_file/cross_file.dart';
+
+import '../../core/presentation/file_picking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -170,19 +172,14 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
   /// Kotlin launches `OpenDocument()` with `OfflineMapMimeTypes` (ending in
   /// `*/*`); the unconstrained fallback group keeps packs with generic MIME
   /// types selectable on every platform.
+  /// A map pack is hundreds of MB, so it MUST be picked by path.
+  /// `file_selector` reads the whole file into memory and dies (see
+  /// [pickInputFile]). The extension is checked after the pick, because SAF has no
+  /// MIME type for `.pmtiles`/`.map` and never filtered on it anyway.
   Future<XFile?> _pickFile() {
     final picker = widget.pickOfflineMapFile;
     if (picker != null) return picker();
-    return openFile(
-      acceptedTypeGroups: const [
-        XTypeGroup(
-          label: 'Offline maps',
-          extensions: ['pmtiles', 'map', 'maps'],
-          mimeTypes: kOfflineMapMimeTypes,
-        ),
-        XTypeGroup(),
-      ],
-    );
+    return pickInputFile();
   }
 
   Future<void> _pickAndImport(OfflineMapImportController controller) async {

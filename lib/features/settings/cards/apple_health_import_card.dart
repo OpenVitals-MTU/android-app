@@ -1,6 +1,10 @@
 import 'dart:io';
 
+// Still used for SAVING the import report (getSaveLocation reads nothing, so the
+// byte-slurping bug that forced the pick path off file_selector does not apply).
 import 'package:file_selector/file_selector.dart';
+
+import '../../../core/presentation/file_picking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -394,16 +398,10 @@ class AppleHealthImportCard extends ConsumerWidget {
   Future<AppleHealthExportSource?> _pickSource() async {
     final picker = pickExportSource;
     if (picker != null) return picker();
-    final file = await openFile(
-      acceptedTypeGroups: const [
-        XTypeGroup(
-          label: 'Apple Health export',
-          extensions: ['zip', 'xml'],
-          mimeTypes: kAppleHealthExportMimeTypes,
-        ),
-        XTypeGroup(),
-      ],
-    );
+    // An export.zip is routinely GIGABYTES. It must be picked by path:
+    // `file_selector` reads the whole file into a byte[] and would OOM long before
+    // the importer ever saw it (see [pickInputFile]).
+    final file = await pickInputFile();
     if (file == null) return null;
     // The picker's reported length is the expectation the staging store then
     // verifies its copy against (Kotlin: the SAF `SIZE` column).
