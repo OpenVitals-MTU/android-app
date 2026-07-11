@@ -5,6 +5,7 @@ import '../../core/presentation/screen_error.dart';
 import '../../data/repository/contract/activity_repository.dart';
 import '../../di/providers.dart';
 import '../../domain/insights/activity_splits.dart';
+import '../../domain/model/activity_backfill.dart';
 import '../../domain/model/activity_models.dart';
 import '../../domain/model/heart_models.dart';
 import '../../state/app_providers.dart';
@@ -12,8 +13,8 @@ import '../../state/app_providers.dart';
 part 'activity_detail_notifier.freezed.dart';
 
 /// The Riverpod port of the Kotlin `ActivityDetailUiState` — a single workout
-/// plus its in-session heart-rate and speed samples, and the splits derived
-/// from them.
+/// plus its in-session heart-rate, speed and cadence samples, and the splits
+/// derived from them.
 @freezed
 abstract class ActivityDetailState with _$ActivityDetailState {
   const ActivityDetailState._();
@@ -24,6 +25,8 @@ abstract class ActivityDetailState with _$ActivityDetailState {
     ExerciseData? workout,
     @Default(<HeartRateSample>[]) List<HeartRateSample> heartRateSamples,
     @Default(<SpeedSample>[]) List<SpeedSample> speedSamples,
+    @Default(<ActivityCadenceSample>[])
+    List<ActivityCadenceSample> cadenceSamples,
     @Default(ActivitySplits.none()) ActivitySplits splits,
   }) = _ActivityDetailState;
 }
@@ -32,8 +35,8 @@ abstract class ActivityDetailState with _$ActivityDetailState {
 ///
 /// One instance per detail screen: the screen creates an auto-dispose provider
 /// bound to its `activityId` (so two stacked detail screens stay independent),
-/// and [build] kicks off the first load. The cadence/marker/route-backfill
-/// slices the Kotlin loads are out of scope for this batch.
+/// and [build] kicks off the first load. The marker/route-backfill slices the
+/// Kotlin loads are still out of scope.
 class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
   ActivityDetailNotifier(this.activityId);
 
@@ -85,14 +88,27 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
       if (!ref.mounted || generation != _generation) return;
       final speedSamples = await _loadSpeedSamples(repo, workout);
       if (!ref.mounted || generation != _generation) return;
+      final cadenceSamples = await _loadCadenceSamples(repo, workout);
+      if (!ref.mounted || generation != _generation) return;
+
+      // A session record often carries no averages of its own — the numbers live
+      // only in the samples. Without this the screen contradicts itself: a full
+      // cadence trace charted below a "Cycling cadence: Not available" row.
+      // (Kotlin `ActivityDetailViewModel` backfills at exactly this point.)
+      final backfilledWorkout = workout.withSampleBackfilledMetrics(
+        heartRateSamples: heartRateSamples,
+        speedSamples: speedSamples,
+        cadenceSamples: cadenceSamples,
+      );
 
       state = ActivityDetailState(
         isLoading: false,
-        workout: workout,
+        workout: backfilledWorkout,
         heartRateSamples: heartRateSamples,
         speedSamples: speedSamples,
+        cadenceSamples: cadenceSamples,
         splits: computeActivitySplits(
-          workout: workout,
+          workout: backfilledWorkout,
           heartRateSamples: heartRateSamples,
           speedSamples: speedSamples,
           splitDistanceMeters: splitDistanceMeters,
@@ -121,6 +137,27 @@ class ActivityDetailNotifier extends Notifier<ActivityDetailState> {
       return await repo.loadSpeedSamples(workout.startTime, workout.endTime);
     } catch (_) {
       return const <SpeedSample>[];
+    }
+  }
+
+  /// Cadence samples drive their own chart cards and nothing else, so — like the
+  /// speed read above — a failure costs a card, not the screen.
+  ///
+  /// Health Connect tags each sample with the record it came from, so a ride
+  /// yields cycling-kind samples and a run yields steps-kind ones; the screen
+  /// renders whichever kinds actually came back rather than guessing from the
+  /// exercise type.
+  Future<List<ActivityCadenceSample>> _loadCadenceSamples(
+    ActivityRepository repo,
+    ExerciseData workout,
+  ) async {
+    try {
+      return await repo.loadActivityCadenceSamples(
+        workout.startTime,
+        workout.endTime,
+      );
+    } catch (_) {
+      return const <ActivityCadenceSample>[];
     }
   }
 }

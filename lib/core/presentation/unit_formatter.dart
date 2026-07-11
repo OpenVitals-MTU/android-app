@@ -159,7 +159,14 @@ class UnitFormatter {
 
   DisplayValue power(double watts) => DisplayValue(decimal(watts, 0), 'W');
 
+  /// Pedalling cadence: revolutions per minute.
   DisplayValue cadence(double value) => DisplayValue(decimal(value, 1), 'rpm');
+
+  /// Step cadence: steps per minute. Deliberately NOT [cadence] -- the Kotlin app
+  /// formatted both through one `rpm` formatter, which labelled a runner's step
+  /// cadence with a unit of revolutions. Same number, wrong unit.
+  DisplayValue stepsCadence(double value) =>
+      DisplayValue(decimal(value, 1), 'spm');
 
   DisplayValue? averagePace(double distanceMeters, int durationMs) {
     if (distanceMeters <= 0.0 || durationMs <= 0) return null;

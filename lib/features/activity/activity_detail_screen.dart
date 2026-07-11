@@ -5,13 +5,18 @@ import 'package:intl/intl.dart';
 import '../../core/presentation/screen_error.dart';
 import '../../core/presentation/unit_formatter.dart';
 import '../../domain/model/activity_models.dart';
-import '../../domain/model/heart_models.dart';
+import '../../domain/model/nutrition_models.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/app_providers.dart';
 import '../../ui/components/loading_state.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'activity_detail_notifier.dart';
+import 'activity_heart_rate_chart_card.dart';
+import 'activity_metric_relevance.dart';
+import 'activity_metrics.dart';
+import 'activity_session_metric_chart_cards.dart';
 import 'activity_splits_card.dart';
 import 'exercise_labels.dart';
 import 'maps/route_geometry.dart';
@@ -89,7 +94,37 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
               ),
             ),
           if (state.heartRateSamples.isNotEmpty)
-            _padded(_HeartRateCard(samples: state.heartRateSamples)),
+            _padded(
+              ActivityHeartRateChartCard(
+                samples: state.heartRateSamples,
+                sessionStart: workout.startTime,
+                sessionEnd: workout.endTime,
+                unitFormatter: formatter,
+              ),
+            ),
+          if (state.speedSamples.isNotEmpty)
+            _padded(
+              ActivitySpeedChartCard(
+                samples: state.speedSamples,
+                sessionStart: workout.startTime,
+                sessionEnd: workout.endTime,
+                unitFormatter: formatter,
+              ),
+            ),
+          // One card per cadence kind that actually recorded something: a ride
+          // yields cycling samples, a run yields step samples, and neither has to
+          // be inferred from the exercise type.
+          for (final kind in ActivityCadenceKind.values)
+            if (state.cadenceSamples.any((sample) => sample.kind == kind))
+              _padded(
+                ActivityCadenceChartCard(
+                  samples: state.cadenceSamples,
+                  kind: kind,
+                  sessionStart: workout.startTime,
+                  sessionEnd: workout.endTime,
+                  unitFormatter: formatter,
+                ),
+              ),
           _padded(_SessionDetailsCard(workout: workout)),
           if (workout.route.status == ExerciseRouteStatus.data &&
               workout.route.points.isNotEmpty)
@@ -175,83 +210,145 @@ class _MetricsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const na = 'Not available';
+    final l10n = AppLocalizations.of(context);
+    final type = workout.exerciseType;
     final distance = workout.totalDistanceMeters;
-    final pace = distance != null && distance > 0
-        ? formatter.averagePace(distance, workout.durationMs)?.text
-        : null;
-    final speed = distance != null && distance > 0
-        ? formatter.averageSpeed(distance, workout.durationMs).text
-        : null;
-    return _DetailSectionCard(
-      title: 'Metrics',
-      rows: [
-        ('Duration', formatter.duration(workout.durationMs)),
-        ('Steps', workout.steps != null ? formatter.count(workout.steps!) : na),
-        ('Distance', distance != null ? formatter.distance(distance).text : na),
-        ('Average pace', pace ?? na),
-        ('Average speed', speed ?? na),
-        (
-          'Average heart rate',
-          workout.averageHeartRateBpm != null
-              ? formatter.heartRate(workout.averageHeartRateBpm!).text
-              : na,
-        ),
-        (
-          'Calories burned',
-          workout.totalCaloriesKcal != null
-              ? formatter.energy(workout.totalCaloriesKcal!).text
-              : na,
-        ),
-        (
-          'Active calories',
-          workout.activeCaloriesKcal != null
-              ? formatter.energy(workout.activeCaloriesKcal!).text
-              : na,
-        ),
-        (
-          'Floors climbed',
-          workout.floorsClimbed != null
-              ? formatter.count(workout.floorsClimbed!)
-              : na,
-        ),
-        (
-          'Elevation gained',
-          workout.elevationGainedMeters != null
-              ? formatter.elevation(workout.elevationGainedMeters!).text
-              : na,
-        ),
-        (
-          'Wheelchair pushes',
-          workout.wheelchairPushes != null
-              ? formatter.count(workout.wheelchairPushes!)
-              : na,
-        ),
-      ],
+    final hasDistance = distance != null && distance > 0;
+    final pausedMs = pausedDurationMs(workout);
+
+    final rows = <(String, String)>[];
+
+    /// Shows [metric] when it HAS a value, and when it does not, only if its
+    /// absence means something for this kind of activity — that is the whole
+    /// fix for a bike ride reporting "Wheelchair pushes: Not available".
+    /// Recorded data is never hidden: a non-null [value] always gets a row.
+    void add(ActivityMetric metric, String label, String? value) {
+      if (value == null && !isMetricRelevant(metric, type)) return;
+      rows.add((label, value ?? l10n.notAvailable));
+    }
+
+    add(
+      ActivityMetric.duration,
+      l10n.detailDuration,
+      formatter.duration(workout.durationMs),
     );
-  }
-}
-
-class _HeartRateCard extends StatelessWidget {
-  const _HeartRateCard({required this.samples});
-
-  final List<HeartRateSample> samples;
-
-  @override
-  Widget build(BuildContext context) {
-    final bpms = samples.map((s) => s.beatsPerMinute).toList();
-    final min = bpms.reduce((a, b) => a < b ? a : b);
-    final max = bpms.reduce((a, b) => a > b ? a : b);
-    final avg = (bpms.reduce((a, b) => a + b) / bpms.length).round();
-    return _DetailSectionCard(
-      title: 'Heart rate',
-      rows: [
-        ('Samples', '${samples.length}'),
-        ('Average', '$avg bpm'),
-        ('Min', '$min bpm'),
-        ('Max', '$max bpm'),
-      ],
+    // Only worth a row once some of the session was actually spent stopped.
+    if (pausedMs > 0) {
+      add(
+        ActivityMetric.movingTime,
+        l10n.detailMovingTime,
+        formatter.duration(movingDurationMs(workout)),
+      );
+    }
+    add(
+      ActivityMetric.steps,
+      l10n.metricSteps,
+      workout.steps != null ? formatter.count(workout.steps!) : null,
     );
+    add(
+      ActivityMetric.distance,
+      l10n.metricDistance,
+      distance != null ? formatter.distance(distance).text : null,
+    );
+    // Pace and speed are the SAME fact rendered two ways (distance over duration),
+    // so pace always has a value and the show-if-it-has-a-value rule would keep it
+    // on every bike ride. Which of the two to render is a presentation choice, not
+    // a question about the data, so it is gated on the type outright: a cyclist
+    // reads km/h, a runner reads min/km. Not computing it is what hides the row.
+    add(
+      ActivityMetric.averagePace,
+      l10n.metricAveragePace,
+      hasDistance && isMetricRelevant(ActivityMetric.averagePace, type)
+          ? formatter.averagePace(distance, workout.durationMs)?.text
+          : null,
+    );
+    add(
+      ActivityMetric.averageSpeed,
+      l10n.metricAverageSpeed,
+      hasDistance
+          ? formatter.averageSpeed(distance, workout.durationMs).text
+          : null,
+    );
+    // Distinct from "Average speed" above, which this app derives from distance
+    // over duration. This is the figure the device itself recorded.
+    add(
+      ActivityMetric.recordedSpeed,
+      l10n.metricRecordedSpeed,
+      workout.averageSpeedMetersPerSecond != null
+          ? formatter.speed(workout.averageSpeedMetersPerSecond!).text
+          : null,
+    );
+    add(
+      ActivityMetric.averageHeartRate,
+      l10n.metricAverageHeartRate,
+      workout.averageHeartRateBpm != null
+          ? formatter.heartRate(workout.averageHeartRateBpm!).text
+          : null,
+    );
+    add(
+      ActivityMetric.averagePower,
+      l10n.metricAveragePower,
+      workout.averagePowerWatts != null
+          ? formatter.power(workout.averagePowerWatts!).text
+          : null,
+    );
+    add(
+      ActivityMetric.stepsCadence,
+      l10n.metricStepsCadence,
+      workout.averageStepsCadenceRate != null
+          ? formatter.stepsCadence(workout.averageStepsCadenceRate!).text
+          : null,
+    );
+    add(
+      ActivityMetric.cyclingCadence,
+      l10n.metricCyclingCadence,
+      workout.averageCyclingCadenceRpm != null
+          ? formatter.cadence(workout.averageCyclingCadenceRpm!).text
+          : null,
+    );
+    add(
+      ActivityMetric.caloriesBurned,
+      l10n.metricCaloriesBurned,
+      switch (workout.totalCaloriesKcal) {
+        // Flag an estimate as an estimate, rather than passing our own arithmetic
+        // off as something the device measured (Kotlin `calories_estimated_value`).
+        final kcal? when workout.totalCaloriesSource ==
+                CaloriesBurnedSource.estimatedActiveAndBmr =>
+          l10n.caloriesEstimatedValue(formatter.energy(kcal).text),
+        final kcal? => formatter.energy(kcal).text,
+        null => null,
+      },
+    );
+    add(
+      ActivityMetric.activeCalories,
+      l10n.metricActiveCalories,
+      workout.activeCaloriesKcal != null
+          ? formatter.energy(workout.activeCaloriesKcal!).text
+          : null,
+    );
+    add(
+      ActivityMetric.floorsClimbed,
+      l10n.metricFloorsClimbed,
+      workout.floorsClimbed != null
+          ? formatter.count(workout.floorsClimbed!)
+          : null,
+    );
+    add(
+      ActivityMetric.elevationGained,
+      l10n.metricElevationGained,
+      workout.elevationGainedMeters != null
+          ? formatter.elevation(workout.elevationGainedMeters!).text
+          : null,
+    );
+    add(
+      ActivityMetric.wheelchairPushes,
+      l10n.metricWheelchairPushes,
+      workout.wheelchairPushes != null
+          ? formatter.count(workout.wheelchairPushes!)
+          : null,
+    );
+
+    return _DetailSectionCard(title: l10n.detailMetrics, rows: rows);
   }
 }
 

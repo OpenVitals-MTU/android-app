@@ -14,7 +14,7 @@ import '../../domain/insights/daily_goals.dart';
 import '../../domain/model/activity_models.dart';
 import '../../domain/model/heart_models.dart';
 import '../../domain/model/nutrition_models.dart';
-import '../manualentry/activity/activity_entry_types.dart';
+import 'activity_metrics.dart';
 import 'exercise_labels.dart';
 
 part 'activities_notifier.freezed.dart';
@@ -400,7 +400,7 @@ List<ActivityTypeAggregate> activityTypeAggregatesOf(
     // `movingDurationMs`): per workout, subtract the summed pause-segment
     // durations from its total duration, then aggregate over the group.
     final totalMovingDuration =
-        group.fold<int>(0, (sum, w) => sum + _movingDurationMs(w));
+        group.fold<int>(0, (sum, w) => sum + movingDurationMs(w));
     final averageMovingSpeed = totalDistance > 0 && totalMovingDuration > 0
         ? _finitePositive(totalDistance / (totalMovingDuration / 1000.0))
         : null;
@@ -448,28 +448,10 @@ double? _finitePositive(double value) =>
 double? _workoutMovingSpeedMetersPerSecond(ExerciseData workout) {
   final distance = workout.totalDistanceMeters;
   if (distance == null || distance <= 0) return null;
-  final movingMs = _movingDurationMs(workout);
+  final movingMs = movingDurationMs(workout);
   if (movingMs <= 0) return null;
   return _finitePositive(distance / (movingMs / 1000.0));
 }
-
-/// Summed pause-segment duration of a workout, each coerced >= 0 and the total
-/// capped at the workout's own duration (Kotlin `ActivityMetrics.pausedDurationMs`).
-int _pausedDurationMs(ExerciseData workout) {
-  final total = math.max(0, workout.durationMs);
-  var paused = 0;
-  for (final segment in workout.segments) {
-    if (segment.segmentType == ExerciseSegmentType.pause) {
-      paused += math.max(0, segment.durationMs);
-    }
-  }
-  return math.min(paused, total);
-}
-
-/// Moving (non-paused) duration of a workout in ms
-/// (Kotlin `ActivityMetrics.movingDurationMs`).
-int _movingDurationMs(ExerciseData workout) =>
-    math.max(0, math.max(0, workout.durationMs) - _pausedDurationMs(workout));
 
 List<ActivityOverviewDay> _activityOverviewDays({
   required LocalDate start,

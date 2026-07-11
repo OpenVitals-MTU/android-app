@@ -191,8 +191,16 @@ void main() {
     expect(find.byType(ActivitySplitsCard), findsOneWidget);
     expect(find.text('Splits · every 1 km'), findsOneWidget);
     expect(find.text('Laps'), findsNothing);
-    // The heart rate that falls inside split 1 is shown on its row.
-    expect(find.textContaining('150 bpm'), findsOneWidget);
+    // The heart rate that falls inside split 1 is shown on its row. Scope the
+    // finder to the splits card: the heart-rate CHART below it now reports the
+    // same 150 bpm as its average, which is correct and not what this asserts.
+    expect(
+      find.descendant(
+        of: find.byType(ActivitySplitsCard),
+        matching: find.textContaining('150 bpm'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the split-distance preference drives the header and the cuts',
