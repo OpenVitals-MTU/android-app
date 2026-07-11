@@ -11,7 +11,9 @@ when:
 
 variables:
   - &alpine_image alpine:3.20
-  - &flutter_image ghcr.io/cirruslabs/flutter:3.44.6
+  # cirruslabs publishes one image per Flutter release; 3.44.0 is the newest that
+  # exists. See the note in test.yml before bumping.
+  - &flutter_image ghcr.io/cirruslabs/flutter:3.44.0
   - &ruby_image ruby:3.3
   - &fastlane_environment
     FASTLANE_DISABLE_COLORS: "1"

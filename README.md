@@ -155,7 +155,7 @@ Health Connect platform notes:
 
 Requirements:
 
-- Flutter SDK 3.44.x (Dart 3.12+). CI pins `ghcr.io/cirruslabs/flutter:3.44.6`.
+- Flutter SDK 3.44.x (Dart 3.12+). CI runs `ghcr.io/cirruslabs/flutter:3.44.0`.
 - Android SDK Platform 37 and Build-Tools 37.0.0 (`compileSdk = 37`, needed by connect-client 1.2.0-alpha04)
 - JDK 17
 - Android Studio is optional; the command line is enough

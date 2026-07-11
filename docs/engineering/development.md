@@ -2,7 +2,12 @@
 
 ## Build Requirements
 
-- Flutter SDK 3.44.x (CI pins `ghcr.io/cirruslabs/flutter:3.44.6`; Dart SDK `^3.12.2`)
+- Flutter SDK 3.44.x (Dart `^3.12.0`). CI runs `ghcr.io/cirruslabs/flutter:3.44.0` — cirruslabs
+  publishes one image per Flutter release, and 3.44.0 is the newest that exists. A tag it has not
+  built fails the pipeline with `manifest unknown`, so check
+  [the tag list](https://ghcr.io/v2/cirruslabs/flutter/tags/list) before bumping. That image carries
+  Dart 3.12.0, which is why the pubspec constraint is `^3.12.0` and not the 3.12.2 a newer local
+  toolchain happens to ship — raising it would break CI with a version-solve error, not a clear one.
 - Android SDK Platform 37 with SDK Build-Tools 37.0.0 — `compileSdk = 37`, because the
   Health Connect `connect-client` alpha resolves its record/permission mappings against API 37
 - JDK 17
