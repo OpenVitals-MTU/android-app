@@ -58,8 +58,6 @@ steps:
         fi
       - scripts/ci-flutter.sh analyze lib test
       - dart run tool/verify_l10n.dart
-      - flutter gen-l10n
-      - git diff --exit-code lib/l10n
       - git diff --check
 
   - name: build

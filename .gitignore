@@ -75,3 +75,10 @@ Error in OpenVitals *.txt
 # Design-system reference bundle (React/TS UI kit). Kept on disk as a design
 # reference, but not versioned in the app repo -- the Kotlin repo gitignored it too.
 docs/proposals/OpenVitals Design System/
+
+# Generated localizations. `generate: true` in pubspec means flutter regenerates
+# these from lib/l10n/*.arb on every `pub get` / build, so tracking them added
+# nothing and made every Weblate pull request unmergeable: Weblate edits the ARBs
+# and cannot run gen-l10n, so the committed output was stale by construction.
+lib/l10n/app_localizations.dart
+lib/l10n/app_localizations_*.dart

@@ -28,8 +28,4 @@ steps:
       # Translation gate. ARB is the source of truth (Weblate edits it directly), so
       # this is what stops a below-threshold or placeholder-broken locale from merging.
       - dart run tool/verify_l10n.dart
-      # Staleness gate: catches "Weblate merged an ARB but nobody re-ran gen-l10n",
-      # which would otherwise ship stale generated Dart against fresh translations.
-      - flutter gen-l10n
-      - git diff --exit-code lib/l10n
       - git diff --check
