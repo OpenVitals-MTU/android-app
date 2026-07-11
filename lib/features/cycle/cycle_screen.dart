@@ -17,6 +17,7 @@ import '../../ui/components/metric_detail_scaffold.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'cycle_notifier.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Menstrual-cycle read-detail screen, ported from the Kotlin `CycleScreen` +
 /// `CyclePeriodContent`. Shows the period's summary (period days, ovulation
@@ -77,7 +78,7 @@ List<Widget> _content(
       ];
     }
     return [
-      _padded(
+      sectionPadded(
         const MetricCardPlaceholder(
           title: 'Cycle tracking',
           icon: Icons.calendar_month,
@@ -93,7 +94,7 @@ List<Widget> _content(
   final observations = _observations(data, formatter);
 
   return [
-    _padded(
+    sectionPadded(
       Row(
         children: [
           Expanded(
@@ -125,7 +126,7 @@ List<Widget> _content(
         ],
       ),
     ),
-    _padded(
+    sectionPadded(
       _CycleStatisticsCard(
         rows: [
           ('Period days', formatter.count(summary.periodDays)),
@@ -142,7 +143,7 @@ List<Widget> _content(
     ),
     const SectionHeader('Entries'),
     for (final observation in observations)
-      _padded(_CycleObservationRow(observation: observation)),
+      sectionPadded(_CycleObservationRow(observation: observation)),
   ];
 }
 
@@ -472,7 +473,3 @@ class _CycleStatisticsCard extends StatelessWidget {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );

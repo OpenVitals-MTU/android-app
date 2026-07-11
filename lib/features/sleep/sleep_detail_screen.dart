@@ -15,6 +15,7 @@ import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'sleep_cards.dart';
 import 'sleep_detail_notifier.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Single sleep-session detail pushed over the shell (`/sleep_detail/:sleepId`).
 /// Port of the Kotlin `SleepDetailScreen` + the detail cards in `SleepCards.kt`:
@@ -69,10 +70,10 @@ class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: SleepSummaryCard(session: session, formatter: formatter),
         ),
-        _padded(SleepStageBreakdownCard(session: session, formatter: formatter)),
-        _padded(SleepSessionDetailsCard(session: session)),
+        sectionPadded(SleepStageBreakdownCard(session: session, formatter: formatter)),
+        sectionPadded(SleepSessionDetailsCard(session: session)),
         if (stages.isNotEmpty) ...[
-          _padded(
+          sectionPadded(
             SleepSectionCard(
               title: l10n.detailStageEvents,
               child: Text(
@@ -84,7 +85,7 @@ class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
             ),
           ),
           for (final stage in stages)
-            _padded(SleepStageEventRow(stage: stage, formatter: formatter)),
+            sectionPadded(SleepStageEventRow(stage: stage, formatter: formatter)),
         ],
         const SizedBox(height: 16),
       ],
@@ -92,10 +93,6 @@ class _SleepDetailScreenState extends ConsumerState<SleepDetailScreen> {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 String _errorText(AppLocalizations l10n, ScreenError error) => switch (error) {
       ScreenErrorMessage(:final text) => text,

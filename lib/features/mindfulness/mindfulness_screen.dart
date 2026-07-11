@@ -23,6 +23,7 @@ import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'mindfulness_notifier.dart';
 import 'reminders/mindfulness_reminder_card.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Mindfulness read-detail screen, ported from the Kotlin `MindfulnessScreen` +
 /// `MindfulnessPeriodContent`. Shows the period's total mindfulness time, a
@@ -87,7 +88,7 @@ List<Widget> _content(
       ];
     }
     return [
-      _padded(
+      sectionPadded(
         const MetricCardPlaceholder(
           title: 'Mindfulness',
           icon: Icons.self_improvement,
@@ -97,7 +98,7 @@ List<Widget> _content(
       ),
       // Reminders are configurable with no sessions logged yet — that is exactly
       // when a user wants to switch them on.
-      _padded(const MindfulnessReminderCard()),
+      sectionPadded(const MindfulnessReminderCard()),
     ];
   }
 
@@ -109,7 +110,7 @@ List<Widget> _content(
     ..sort((a, b) => b.startTime.compareTo(a.startTime));
 
   return [
-    _padded(
+    sectionPadded(
       Row(
         children: [
           Expanded(
@@ -141,7 +142,7 @@ List<Widget> _content(
         ],
       ),
     ),
-    _padded(
+    sectionPadded(
       MetricBarChart(
         title: 'Mindfulness',
         values: chartValues,
@@ -154,7 +155,7 @@ List<Widget> _content(
             formatter.minutes(value.round()).text,
       ),
     ),
-    _padded(
+    sectionPadded(
       _MindfulnessStatisticsCard(
         rows: [
           ('Total', formatter.duration(summary.totalMs)),
@@ -166,10 +167,10 @@ List<Widget> _content(
     ),
     const SectionHeader('Sessions'),
     for (final session in sorted)
-      _padded(
+      sectionPadded(
         _MindfulnessSessionRow(session: session, formatter: formatter),
       ),
-    _padded(const MindfulnessReminderCard()),
+    sectionPadded(const MindfulnessReminderCard()),
   ];
 }
 
@@ -328,7 +329,3 @@ class _MindfulnessStatisticsCard extends StatelessWidget {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );

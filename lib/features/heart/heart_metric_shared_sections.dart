@@ -23,6 +23,7 @@ import '../../ui/components/personal_baseline_stat.dart';
 import '../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../core/stats/stats.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Port of the Kotlin `HeartMetricSharedSections.kt`: the section bodies shared
 /// by the ten heart + vitals period-detail screens (data confidence, metric
@@ -30,10 +31,6 @@ import '../../core/stats/stats.dart';
 
 /// Kotlin `metricModifier()` — the standard horizontal inset every heart
 /// section content uses.
-Widget heartPadded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 /// Kotlin `entryListTitle(date, ...)`: "Entries" or "Entries · Jan 5, 2026".
 String heartEntryListTitle(BuildContext context, LocalDate? titleDate) {
@@ -66,7 +63,7 @@ class HeartRawDataConfidenceContent<T> extends StatelessWidget {
   final Color accentColor;
 
   @override
-  Widget build(BuildContext context) => heartPadded(DataConfidenceCard(
+  Widget build(BuildContext context) => sectionPadded(DataConfidenceCard(
         confidence: dataConfidence(
           period,
           [for (final entry in entries) instantToLocalDate(time(entry))],
@@ -95,7 +92,7 @@ class HeartAggregateDataConfidenceContent extends StatelessWidget {
   final Color accentColor;
 
   @override
-  Widget build(BuildContext context) => heartPadded(DataConfidenceCard(
+  Widget build(BuildContext context) => sectionPadded(DataConfidenceCard(
         confidence: dataConfidence(
           period,
           trackedDates,
@@ -158,7 +155,7 @@ class BloodPressureContextCardContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(l10n.sectionMetricContext),
-        heartPadded(MetricInterpretationCard(
+        sectionPadded(MetricInterpretationCard(
           title: l10n.interpretationBpTitle,
           status: status,
           body: interpretation.category == BloodPressureCategory.severeReference
@@ -200,7 +197,7 @@ class VitalContextCardContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(l10n.sectionMetricContext),
-        heartPadded(MetricInterpretationCard(
+        sectionPadded(MetricInterpretationCard(
           title: l10n.interpretationVitalTitle,
           status: vitalContextStatusText(resolved.status, l10n),
           body: body(l10n),
@@ -316,7 +313,7 @@ class HeartNumericStatisticsContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(l10n.sectionStatistics),
-        heartPadded(InsightStatGrid(
+        sectionPadded(InsightStatGrid(
           stats: [
             InsightStat(
               title: l10n.statAverage,
@@ -434,7 +431,7 @@ class BloodPressureStatisticsContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(l10n.sectionStatistics),
-        heartPadded(InsightStatGrid(
+        sectionPadded(InsightStatGrid(
           stats: [
             InsightStat(
               title: l10n.metricLatest,

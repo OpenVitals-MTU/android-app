@@ -24,6 +24,9 @@ import 'heart_metric_notifier.dart';
 import 'heart_metric_ordered_sections.dart';
 import 'heart_metric_shared_sections.dart';
 import '../../core/stats/stats.dart';
+import '../../ui/components/loading_state.dart';
+import '../../ui/components/section_padding.dart';
+import 'heart_chart_series.dart';
 
 /// Called when a manual OpenVitals measurement entry should be edited/deleted.
 typedef VitalsMeasurementCallback = void Function(
@@ -70,7 +73,7 @@ class HeartMetricContentView extends StatelessWidget {
   Widget build(BuildContext context) {
     final result = state.result;
     if (result == null) {
-      if (state.isLoading) return const _LoadingBlock();
+      if (state.isLoading) return const SectionLoading();
       return _placeholder();
     }
     return ChartDaySelectionScope(
@@ -131,7 +134,7 @@ class HeartMetricContentView extends StatelessWidget {
         period: period,
         selectedDate: null,
         intradayChart: samples.length > 1
-            ? heartPadded(HeartTimelineCard(
+            ? sectionPadded(HeartTimelineCard(
                 date: state.selectedDate,
                 points: [
                   for (final s in samples) (s.time, s.beatsPerMinute.toDouble())
@@ -170,8 +173,8 @@ class HeartMetricContentView extends StatelessWidget {
       );
     }
     if (isDay) {
-      if (state.isLoading) return const _LoadingBlock();
-      return heartPadded(const HeartRateEmptyDayCard());
+      if (state.isLoading) return const SectionLoading();
+      return sectionPadded(const HeartRateEmptyDayCard());
     }
 
     final summaries = [...result.dailySummaries]
@@ -189,9 +192,9 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
-        series: _heartRateSeries(summaries, l10n),
+        series: heartRateSeries(summaries, l10n),
         selectedRange: state.selectedRange,
         period: period,
         accentColor: metric.accentColor,
@@ -257,7 +260,7 @@ class HeartMetricContentView extends StatelessWidget {
   }
 
   Widget _thresholdChecks(HeartPeriodLoadResult result) =>
-      heartPadded(HeartRateThresholdChecksContent(
+      sectionPadded(HeartRateThresholdChecksContent(
         highCheck: heartRateThresholdCheck(
           selectedRange: state.selectedRange,
           type: HeartRateThresholdCheckType.high,
@@ -308,7 +311,7 @@ class HeartMetricContentView extends StatelessWidget {
         period: period,
         selectedDate: null,
         intradayChart: daySamples.length > 1
-            ? heartPadded(HeartTimelineCard(
+            ? sectionPadded(HeartTimelineCard(
                 date: state.selectedDate,
                 points: [
                   for (final s in daySamples)
@@ -326,7 +329,7 @@ class HeartMetricContentView extends StatelessWidget {
         highlightCard: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            heartPadded(HeartDayValueCard(
+            sectionPadded(HeartDayValueCard(
               title: metric.title,
               value: formatter.heartRate(restingBpm).text,
             )),
@@ -401,7 +404,7 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
         series: [
           MetricLineSeries(
@@ -491,7 +494,7 @@ class HeartMetricContentView extends StatelessWidget {
         period: period,
         selectedDate: null,
         intradayChart: daySamples.length > 1
-            ? heartPadded(HeartTimelineCard(
+            ? sectionPadded(HeartTimelineCard(
                 date: state.selectedDate,
                 points: [for (final s in daySamples) (s.time, s.rmssdMs)],
                 averageText: formatter.hrv(hrvMs).text,
@@ -502,7 +505,7 @@ class HeartMetricContentView extends StatelessWidget {
                 maxValue: highHrv + 5,
               ))
             : null,
-        highlightCard: heartPadded(HeartDayValueCard(
+        highlightCard: sectionPadded(HeartDayValueCard(
           title: metric.title,
           value: '${formatter.hrv(hrvMs).text} RMSSD',
         )),
@@ -566,7 +569,7 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
         series: [
           MetricLineSeries(
@@ -640,9 +643,9 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: null,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
-        series: _bloodPressureSeries(sorted, l10n),
+        series: bloodPressureSeries(sorted, l10n, state.selectedRange),
         selectedRange: state.selectedRange,
         period: period,
         accentColor: metric.accentColor,
@@ -702,11 +705,12 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
-        series: _singleSeries(
+        series: singleSeries(
           [for (final e in sorted) (e.time, e.percent)],
           metric.accentColor,
+          state.selectedRange,
         ),
         selectedRange: state.selectedRange,
         period: period,
@@ -789,11 +793,12 @@ class HeartMetricContentView extends StatelessWidget {
       period: period,
       selectedDate: null,
       periodChart: entries.length > 1
-          ? heartPadded(MetricLineChart(
+          ? sectionPadded(MetricLineChart(
               title: metric.title,
-              series: _singleSeries(
+              series: singleSeries(
                 [for (final e in sorted) (e.time, e.vo2MaxMlPerKgPerMin)],
                 metric.accentColor,
+                state.selectedRange,
               ),
               selectedRange: state.selectedRange,
               period: period,
@@ -805,7 +810,7 @@ class HeartMetricContentView extends StatelessWidget {
               valueFormatter: (value) => formatter.vo2Max(value).text,
             ))
           : null,
-      highlightCard: heartPadded(MetricCard(
+      highlightCard: sectionPadded(MetricCard(
         title: metric.title,
         value: latestValue.value,
         unit: latestValue.unit,
@@ -859,9 +864,10 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
-        series: _respiratoryRateSeries(entries, l10n),
+        series: respiratoryRateSeries(entries, l10n, state.selectedRange,
+            color: metric.accentColor, dayLabel: metric.title),
         selectedRange: state.selectedRange,
         period: period,
         accentColor: metric.accentColor,
@@ -954,11 +960,12 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: null,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
-        series: _singleSeries(
+        series: singleSeries(
           [for (final e in sorted) (e.time, e.temperatureCelsius)],
           metric.accentColor,
+          state.selectedRange,
         ),
         selectedRange: state.selectedRange,
         period: period,
@@ -1021,11 +1028,12 @@ class HeartMetricContentView extends StatelessWidget {
       selectedRange: state.selectedRange,
       period: period,
       selectedDate: selectedDay,
-      periodChart: heartPadded(MetricLineChart(
+      periodChart: sectionPadded(MetricLineChart(
         title: metric.title,
-        series: _singleSeries(
+        series: singleSeries(
           [for (final e in sorted) (e.time, e.millimolesPerLiter)],
           metric.accentColor,
+          state.selectedRange,
         ),
         selectedRange: state.selectedRange,
         period: period,
@@ -1101,14 +1109,15 @@ class HeartMetricContentView extends StatelessWidget {
       selectedDate: selectedDay,
       periodChart: chartEntries.isEmpty
           ? null
-          : heartPadded(MetricLineChart(
+          : sectionPadded(MetricLineChart(
               title: metric.title,
-              series: _singleSeries(
+              series: singleSeries(
                 [
                   for (final e in chartEntries)
                     (e.time, e.averageDeltaCelsius!),
                 ],
                 metric.accentColor,
+                state.selectedRange,
               ),
               selectedRange: state.selectedRange,
               period: period,
@@ -1173,7 +1182,7 @@ class HeartMetricContentView extends StatelessWidget {
         weekPeriodMode: weekPeriodMode,
       )} · $extra';
 
-  Widget _placeholder() => heartPadded(MetricCardPlaceholder(
+  Widget _placeholder() => sectionPadded(MetricCardPlaceholder(
         title: metric.title,
         icon: metric.icon,
         accentColor: metric.accentColor,
@@ -1181,155 +1190,8 @@ class HeartMetricContentView extends StatelessWidget {
       ));
 
   Widget _emptyOrLoading() =>
-      state.isLoading ? const _LoadingBlock() : _placeholder();
+      state.isLoading ? const SectionLoading() : _placeholder();
 
-  /// Kotlin `heartRateSeries` (`HeartVitalsChartData.kt`): the avg line plus
-  /// min/max lines when any day actually has a range.
-  List<MetricLineSeries> _heartRateSeries(
-    List<HeartRateSummary> summaries,
-    AppLocalizations l10n,
-  ) {
-    final hasRange = summaries.any((s) => s.minBpm != s.maxBpm);
-    return [
-      MetricLineSeries(
-        points: [
-          for (final s in summaries)
-            MetricLinePoint(date: s.date, value: s.avgBpm.toDouble()),
-        ],
-        color: AppColors.heart,
-        label: l10n.summaryAverage,
-      ),
-      if (hasRange) ...[
-        MetricLineSeries(
-          points: [
-            for (final s in summaries)
-              MetricLinePoint(date: s.date, value: s.minBpm.toDouble()),
-          ],
-          color: AppColors.heart.withValues(alpha: 0.55),
-          label: l10n.statLowest,
-        ),
-        MetricLineSeries(
-          points: [
-            for (final s in summaries)
-              MetricLinePoint(date: s.date, value: s.maxBpm.toDouble()),
-          ],
-          color: AppColors.heart.withValues(alpha: 0.9),
-          label: l10n.statHighest,
-        ),
-      ],
-    ];
-  }
-
-  /// Kotlin `bloodPressureSeries`: systolic (VitalsColor) + diastolic
-  /// (HeartColor); raw within a day, daily averages otherwise.
-  List<MetricLineSeries> _bloodPressureSeries(
-    List<BloodPressureEntry> sorted,
-    AppLocalizations l10n,
-  ) {
-    final isDay = state.selectedRange == TimeRange.day;
-    final systolic = [
-      for (final e in sorted)
-        MetricLinePoint(
-          date: instantToLocalDate(e.time),
-          value: e.systolicMmHg.toDouble(),
-          time: e.time,
-        ),
-    ];
-    final diastolic = [
-      for (final e in sorted)
-        MetricLinePoint(
-          date: instantToLocalDate(e.time),
-          value: e.diastolicMmHg.toDouble(),
-          time: e.time,
-        ),
-    ];
-    return [
-      MetricLineSeries(
-        points: isDay ? systolic : dailyAverageLinePoints(systolic),
-        color: AppColors.vitals,
-        label: l10n.vitalsEntrySystolicLabel,
-      ),
-      MetricLineSeries(
-        points: isDay ? diastolic : dailyAverageLinePoints(diastolic),
-        color: AppColors.heart,
-        label: l10n.vitalsEntryDiastolicLabel,
-      ),
-    ];
-  }
-
-  /// Kotlin `respiratoryRateSeries`: raw within a day; daily average plus
-  /// min/max range series otherwise.
-  List<MetricLineSeries> _respiratoryRateSeries(
-    List<RespiratoryRateEntry> entries,
-    AppLocalizations l10n,
-  ) {
-    final sorted = [...entries]..sort((a, b) => a.time.compareTo(b.time));
-    if (state.selectedRange == TimeRange.day) {
-      return _singleSeries(
-        [for (final e in sorted) (e.time, e.breathsPerMinute)],
-        metric.accentColor,
-        label: metric.title,
-      );
-    }
-    final byDate = <LocalDate, List<double>>{};
-    for (final e in sorted) {
-      byDate
-          .putIfAbsent(instantToLocalDate(e.time), () => <double>[])
-          .add(e.breathsPerMinute);
-    }
-    final dates = byDate.keys.toList()..sort((a, b) => a.compareTo(b));
-    final average = <MetricLinePoint>[];
-    final min = <MetricLinePoint>[];
-    final max = <MetricLinePoint>[];
-    for (final date in dates) {
-      final values = byDate[date]!;
-      average.add(MetricLinePoint(date: date, value: _avg(values)));
-      min.add(MetricLinePoint(date: date, value: _min(values)));
-      max.add(MetricLinePoint(date: date, value: _max(values)));
-    }
-    final hasRange = [
-      for (var i = 0; i < min.length; i++) min[i].value != max[i].value
-    ].any((different) => different);
-    return [
-      MetricLineSeries(
-        points: average,
-        color: metric.accentColor,
-        label: l10n.summaryAverage,
-      ),
-      if (hasRange) ...[
-        MetricLineSeries(
-          points: min,
-          color: metric.accentColor.withValues(alpha: 0.55),
-          label: l10n.statLowest,
-        ),
-        MetricLineSeries(
-          points: max,
-          color: AppColors.vitals.withValues(alpha: 0.75),
-          label: l10n.statHighest,
-        ),
-      ],
-    ];
-  }
-
-  /// Raw points within a day; daily averages otherwise.
-  List<MetricLineSeries> _singleSeries(
-    List<(DateTime, double)> raw,
-    Color color, {
-    String? label,
-  }) {
-    final base = [
-      for (final (time, value) in raw)
-        MetricLinePoint(
-          date: instantToLocalDate(time),
-          value: value,
-          time: time,
-        ),
-    ];
-    final points = state.selectedRange == TimeRange.day
-        ? base
-        : dailyAverageLinePoints(base);
-    return [MetricLineSeries(points: points, color: color, label: label)];
-  }
 }
 
 /// Zero on empty is preserved from the hand-rolled originals, but it is dead code:
@@ -1341,12 +1203,3 @@ double _min(Iterable<double> values) => minOf(values)!;
 
 double _max(Iterable<double> values) => maxOf(values)!;
 
-class _LoadingBlock extends StatelessWidget {
-  const _LoadingBlock();
-
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(child: CircularProgressIndicator()),
-      );
-}

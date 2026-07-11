@@ -10,6 +10,23 @@ class FullScreenLoading extends StatelessWidget {
       );
 }
 
+/// A progress indicator sized to stand in for **one section** of a scrolling
+/// screen, rather than the whole screen.
+///
+/// The vertical padding is what reserves roughly a section's worth of height, so
+/// the rest of the page does not jump when the section resolves. This was
+/// written out as a private `_LoadingBlock` in four separate screens (body,
+/// sleep, heart and vitals), byte for byte.
+class SectionLoading extends StatelessWidget {
+  const SectionLoading({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      );
+}
+
 /// A centred inline error message. Port of Kotlin `ErrorMessage`.
 class ErrorMessage extends StatelessWidget {
   const ErrorMessage(this.message, {super.key});

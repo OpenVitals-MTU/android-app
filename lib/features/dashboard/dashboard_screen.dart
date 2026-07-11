@@ -29,6 +29,7 @@ import '../../ui/theme/app_colors.dart';
 import '../activity/exercise_labels.dart';
 import 'dashboard_notifier.dart';
 import 'dashboard_summary_presentation.dart';
+import '../../ui/components/accent_icon_chip.dart';
 
 /// The OpenVitals summary dashboard — the nav-suite home branch rendered inside
 /// the adaptive scaffold.
@@ -1024,7 +1025,7 @@ class _WorkoutCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _AccentIconChip(
+                  AccentIconChip(
                     icon: exerciseTypeIcon(workout.exerciseType),
                     color: AppColors.workout,
                     size: 28,
@@ -1072,33 +1073,6 @@ class _WorkoutCard extends StatelessWidget {
 
 /// A round accent-tinted icon badge (Kotlin `AccentIconChip`): a circle filled
 /// with the accent at 14% alpha and a coloured glyph.
-class _AccentIconChip extends StatelessWidget {
-  const _AccentIconChip({
-    required this.icon,
-    required this.color,
-    this.size = 40,
-    this.iconSize,
-  });
-
-  final IconData icon;
-  final Color color;
-  final double size;
-  final double? iconSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, color: color, size: iconSize ?? size * 0.5),
-    );
-  }
-}
-
 /// The empty-state activities card ("No activities recorded today").
 class _ActivitiesEmptyCard extends StatelessWidget {
   const _ActivitiesEmptyCard({this.onTap});

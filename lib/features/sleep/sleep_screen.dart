@@ -25,6 +25,8 @@ import 'sleep_metric_sections.dart';
 import 'sleep_notifier.dart';
 import 'sleep_presentation.dart';
 import 'sleep_schedule_chart.dart';
+import '../../ui/components/loading_state.dart';
+import '../../ui/components/section_padding.dart';
 
 /// The sleep period-detail screen, a port of the Kotlin `SleepScreen` +
 /// `SleepMetricOrderedSections`.
@@ -108,7 +110,7 @@ class _SleepContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final result = state.result;
     if (result == null) {
-      if (state.isLoading) return const _LoadingBlock();
+      if (state.isLoading) return const SectionLoading();
       return const _SleepMessage('No sleep data for this period.');
     }
 
@@ -122,11 +124,11 @@ class _SleepContent extends StatelessWidget {
     final isDay = state.selectedRange == TimeRange.day;
 
     if (isDay && display.dailySummary == null) {
-      if (state.isLoading) return const _LoadingBlock();
+      if (state.isLoading) return const SectionLoading();
       return const _SleepMessage('No sleep recorded for the selected day.');
     }
     if (!isDay && result.sessions.isEmpty) {
-      if (state.isLoading) return const _LoadingBlock();
+      if (state.isLoading) return const SectionLoading();
       return const _SleepMessage('No sleep recorded for this period.');
     }
 
@@ -177,12 +179,12 @@ class _SleepContent extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _padded(SleepSessionTimelineCard(
+              sectionPadded(SleepSessionTimelineCard(
                 session: display.dailySummary!,
                 formatter: formatter,
                 timeRangeText: _dayTimeRangeText(display.dailySessions),
               )),
-              _padded(SleepStageShareCard(
+              sectionPadded(SleepStageShareCard(
                 summary: display.overviewSummary,
                 formatter: formatter,
               )),
@@ -191,7 +193,7 @@ class _SleepContent extends StatelessWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.activitySummary,
-          _padded(SleepOverviewCard(
+          sectionPadded(SleepOverviewCard(
             summary: display.overviewSummary,
             formatter: formatter,
             periodTitle: periodTitle(
@@ -212,7 +214,7 @@ class _SleepContent extends StatelessWidget {
               // least one night knows when you went to bed; otherwise there is
               // nothing to place on a clock axis and it falls back to durations.
               if (useScheduleChart)
-                _padded(SleepScheduleStageChart(
+                sectionPadded(SleepScheduleStageChart(
                   title: l10n.metricSleep,
                   summaryText: '${periodTitle(
                     l10n,
@@ -227,7 +229,7 @@ class _SleepContent extends StatelessWidget {
                   onDateSelected: daySelection.onDateSelected,
                 ))
               else
-                _padded(MetricBarChart(
+                sectionPadded(MetricBarChart(
                   title: l10n.metricSleep,
                   values: [
                     for (final point in display.durationPoints)
@@ -245,7 +247,7 @@ class _SleepContent extends StatelessWidget {
                   onDateSelected: daySelection.onDateSelected,
                   valueFormatter: (value) => '${formatter.decimal(value, 1)}h',
                 )),
-              _padded(SleepStageShareCard(
+              sectionPadded(SleepStageShareCard(
                 summary: display.overviewSummary,
                 formatter: formatter,
               )),
@@ -268,7 +270,7 @@ class _SleepContent extends StatelessWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.dailyGoal,
-          _padded(DailyGoalCard(
+          sectionPadded(DailyGoalCard(
             goal: sleepHoursDisplay(state.dailyGoalHours, formatter),
             progress: goalProgress,
             icon: kSleepIcon,
@@ -336,20 +338,7 @@ String? _dayTimeRangeText(List<SleepData> sessions) {
       .join(' | ');
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
-class _LoadingBlock extends StatelessWidget {
-  const _LoadingBlock();
-
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(child: CircularProgressIndicator()),
-      );
-}
 
 class _SleepMessage extends StatelessWidget {
   const _SleepMessage(this.message);

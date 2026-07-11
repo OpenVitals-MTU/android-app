@@ -25,6 +25,7 @@ import 'activity_intraday_chart_card.dart';
 import 'activity_metric.dart';
 import 'activity_metric_display.dart';
 import 'activity_metric_notifier.dart';
+import '../../ui/components/section_padding.dart';
 
 /// The shared period-detail screen for the seven movement metrics, a port of the
 /// Kotlin `ActivityMetricScreen` (`ActivityScreen.kt`) and the per-metric
@@ -142,7 +143,7 @@ class _ActivityMetricContent extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => _padded(
+  Widget _placeholder() => sectionPadded(
         MetricCardPlaceholder(
           title: metric.title,
           icon: metric.icon,
@@ -180,7 +181,7 @@ class _ActivityMetricContent extends StatelessWidget {
         MetricDetailSection(
           MetricDetailSectionId.intradayChart,
           visible: isDay,
-          _padded(IntradayActivityChartCard(
+          sectionPadded(IntradayActivityChartCard(
             selectedDate: state.selectedDate,
             title: metric.title,
             valueText: goalFormatter(display.dayTotal).text,
@@ -193,7 +194,7 @@ class _ActivityMetricContent extends StatelessWidget {
         MetricDetailSection(
           MetricDetailSectionId.periodChart,
           visible: !isDay,
-          _padded(MetricBarChart(
+          sectionPadded(MetricBarChart(
             title: metric.title,
             values: metric.chartValues(state.data!),
             selectedRange: state.selectedRange,
@@ -209,7 +210,7 @@ class _ActivityMetricContent extends StatelessWidget {
         MetricDetailSection(
           MetricDetailSectionId.selectedDayEntries,
           visible: selectedDay != null,
-          _padded(ActivityDailyEntriesContent(
+          sectionPadded(ActivityDailyEntriesContent(
             entries: [
               for (final entry in entries)
                 if (entry.date == selectedDay) entry,
@@ -220,7 +221,7 @@ class _ActivityMetricContent extends StatelessWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.dailyGoal,
-          _padded(DailyGoalCard(
+          sectionPadded(DailyGoalCard(
             goal: goalFormatter(state.dailyGoal),
             progress: goalProgress,
             icon: metric.icon,
@@ -234,15 +235,15 @@ class _ActivityMetricContent extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _padded(SectionHeader(l10n.sectionStatistics)),
-              _padded(DailyGoalStatistics(
+              sectionPadded(SectionHeader(l10n.sectionStatistics)),
+              sectionPadded(DailyGoalStatistics(
                 progress: goalProgress,
                 averageGap: goalFormatter(goalProgress.averageGapToGoal),
                 unitFormatter: formatter,
                 icon: metric.icon,
                 accentColor: metric.accentColor,
               )),
-              _padded(InsightStatGrid(
+              sectionPadded(InsightStatGrid(
                 stats: [
                   InsightStat(
                     title: l10n.statTotal,
@@ -302,7 +303,7 @@ class _ActivityMetricContent extends StatelessWidget {
           MetricDetailSectionId.dataConfidence,
           // A single-day period has no coverage story to tell.
           visible: period.start != period.end,
-          _padded(DataConfidenceCard(
+          sectionPadded(DataConfidenceCard(
             confidence: dataConfidence(
               period,
               display.trackedDates,
@@ -314,7 +315,7 @@ class _ActivityMetricContent extends StatelessWidget {
         ),
         MetricDetailSection(
           MetricDetailSectionId.entries,
-          _padded(ActivityDailyEntriesContent(
+          sectionPadded(ActivityDailyEntriesContent(
             entries: entries,
             accentColor: metric.accentColor,
           )),
@@ -324,10 +325,6 @@ class _ActivityMetricContent extends StatelessWidget {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 // ── Route-facing per-metric wrappers (Kotlin `StepsScreen`, `DistanceScreen`, …).
 

@@ -21,6 +21,7 @@ import 'activity_splits_card.dart';
 import 'exercise_labels.dart';
 import 'maps/route_geometry.dart';
 import 'maps/route_map_view.dart';
+import '../../ui/components/section_padding.dart';
 
 final DateFormat _dateTimeFormat = DateFormat('EEE d MMM yyyy · HH:mm');
 
@@ -81,11 +82,11 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          _padded(_WorkoutSummaryCard(workout: workout, formatter: formatter)),
-          _padded(_MetricsCard(workout: workout, formatter: formatter)),
+          sectionPadded(_WorkoutSummaryCard(workout: workout, formatter: formatter)),
+          sectionPadded(_MetricsCard(workout: workout, formatter: formatter)),
           // Hidden entirely when there is nothing to split (a strength session).
           if (state.splits.isNotEmpty)
-            _padded(
+            sectionPadded(
               ActivitySplitsCard(
                 splits: state.splits,
                 formatter: formatter,
@@ -94,7 +95,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
               ),
             ),
           if (state.heartRateSamples.isNotEmpty)
-            _padded(
+            sectionPadded(
               ActivityHeartRateChartCard(
                 samples: state.heartRateSamples,
                 sessionStart: workout.startTime,
@@ -103,7 +104,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
               ),
             ),
           if (state.speedSamples.isNotEmpty)
-            _padded(
+            sectionPadded(
               ActivitySpeedChartCard(
                 samples: state.speedSamples,
                 sessionStart: workout.startTime,
@@ -116,7 +117,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
           // be inferred from the exercise type.
           for (final kind in ActivityCadenceKind.values)
             if (state.cadenceSamples.any((sample) => sample.kind == kind))
-              _padded(
+              sectionPadded(
                 ActivityCadenceChartCard(
                   samples: state.cadenceSamples,
                   kind: kind,
@@ -125,10 +126,10 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                   unitFormatter: formatter,
                 ),
               ),
-          _padded(_SessionDetailsCard(workout: workout)),
+          sectionPadded(_SessionDetailsCard(workout: workout)),
           if (workout.route.status == ExerciseRouteStatus.data &&
               workout.route.points.isNotEmpty)
-            _padded(_RouteMapCard(route: workout.route)),
+            sectionPadded(_RouteMapCard(route: workout.route)),
           const SizedBox(height: 16),
         ],
       ),
@@ -136,10 +137,6 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 class _WorkoutSummaryCard extends StatelessWidget {
   const _WorkoutSummaryCard({required this.workout, required this.formatter});

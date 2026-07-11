@@ -17,6 +17,7 @@ import '../../ui/components/ov_card.dart';
 import '../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../ui/theme/app_colors.dart';
 import 'body_summary.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Ports of the Kotlin `BodyMetricSharedSections.kt` data helpers and the row /
 /// card widgets the aggregate `/body` overview renders
@@ -446,9 +447,9 @@ class BmiContextCards extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _padded(SectionHeader(l10n.sectionMetricContext)),
+        sectionPadded(SectionHeader(l10n.sectionMetricContext)),
         if (bmiResult != null)
-          _padded(MetricInterpretationCard(
+          sectionPadded(MetricInterpretationCard(
             title: l10n.interpretationBmiTitle,
             status: switch (bmiResult.category) {
               BmiCategory.underweight => l10n.interpretationBmiUnderweight,
@@ -465,7 +466,7 @@ class BmiContextCards extends StatelessWidget {
             severity: bmiResult.severity,
           )),
         if (ffmiResult != null && ffmi != null)
-          _padded(MetricInterpretationCard(
+          sectionPadded(MetricInterpretationCard(
             title: l10n.interpretationFfmiTitle,
             status: switch (ffmiResult.category) {
               FfmiCategory.belowAverage => l10n.interpretationFfmiBelowAverage,
@@ -623,10 +624,6 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 extension<T> on T {
   R let<R>(R Function(T) block) => block(this);

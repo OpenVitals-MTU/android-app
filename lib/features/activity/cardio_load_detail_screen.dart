@@ -10,6 +10,7 @@ import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'cardio_load_detail_notifier.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Cardio-load detail pushed over the shell (`/activity/cardio_load`), ported
 /// from the Kotlin `CardioLoadDetailScreen`. Shows today's TRIMP-based cardio
@@ -47,19 +48,15 @@ class CardioLoadDetailScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          _padded(_SummaryCard(estimate: estimate, formatter: formatter)),
+          sectionPadded(_SummaryCard(estimate: estimate, formatter: formatter)),
           const SectionHeader('Today\'s numbers'),
-          _padded(_NumbersCard(state: state, formatter: formatter)),
+          sectionPadded(_NumbersCard(state: state, formatter: formatter)),
         ],
       ),
     );
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({required this.estimate, required this.formatter});

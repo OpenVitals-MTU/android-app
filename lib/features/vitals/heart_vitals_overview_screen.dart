@@ -33,6 +33,9 @@ import '../../ui/theme/app_colors.dart';
 import '../heart/heart_metric.dart';
 import '../heart/heart_metric_cards.dart';
 import '../../core/stats/stats.dart';
+import '../../ui/components/loading_state.dart';
+import '../../ui/components/section_padding.dart';
+import '../heart/heart_chart_series.dart';
 
 // Vitals accent colours, ported from the Kotlin `HeartVitalsPresentation.kt`.
 const Color _oxygenColor = Color(0xFF00897B);
@@ -226,7 +229,7 @@ class _OverviewContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = state.result;
-    if (result == null && state.isLoading) return const _LoadingBlock();
+    if (result == null && state.isLoading) return const SectionLoading();
     final data = result ?? const HeartPeriodLoadResult();
 
     return ChartDaySelectionScope(
@@ -349,12 +352,12 @@ class _HeartSection extends StatelessWidget {
         ]),
         // Kotlin `HeartOverviewChartsContent`.
         if (isDay && daySamples.length > 1)
-          _padded(_dayTimeline(context))
+          sectionPadded(_dayTimeline(context))
         else if (!isDay && summaries.isNotEmpty)
-          _padded(_heartRateChart(context, summaries)),
+          sectionPadded(_heartRateChart(context, summaries)),
         if (!isDay && restingHr.isNotEmpty)
-          _padded(_restingChart(context, restingHr)),
-        if (!isDay && hrv.isNotEmpty) _padded(_hrvChart(context, hrv)),
+          sectionPadded(_restingChart(context, restingHr)),
+        if (!isDay && hrv.isNotEmpty) sectionPadded(_hrvChart(context, hrv)),
       ],
     );
   }
@@ -612,9 +615,9 @@ class _CardiovascularSection extends StatelessWidget {
         ]),
         // Kotlin `CardiovascularOverviewChartsContent`.
         if (_hasRenderableChartData(bloodPressure, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricBloodPressure,
-            series: _bloodPressureSeries(bloodPressure, l10n, range),
+            series: bloodPressureSeries(bloodPressure, l10n, range),
             selectedRange: range,
             period: period,
             accentColor: AppColors.vitals,
@@ -625,9 +628,9 @@ class _CardiovascularSection extends StatelessWidget {
             valueFormatter: (value) => '${value.round()} mmHg',
           )),
         if (_hasRenderableChartData(spO2, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricSpo2,
-            series: _singleSeries(
+            series: singleSeries(
               [for (final e in spO2) (e.time, e.percent)],
               _oxygenColor,
               range,
@@ -647,9 +650,9 @@ class _CardiovascularSection extends StatelessWidget {
             valueFormatter: (value) => formatter.percent(value).text,
           )),
         if (_hasRenderableChartData(vo2Max, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricVo2Max,
-            series: _singleSeries(
+            series: singleSeries(
               [for (final e in vo2Max) (e.time, e.vo2MaxMlPerKgPerMin)],
               _vo2Color,
               range,
@@ -664,9 +667,9 @@ class _CardiovascularSection extends StatelessWidget {
             valueFormatter: (value) => formatter.vo2Max(value).text,
           )),
         if (_hasRenderableChartData(bloodGlucose, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricBloodGlucose,
-            series: _singleSeries(
+            series: singleSeries(
               [for (final e in bloodGlucose) (e.time, e.millimolesPerLiter)],
               _glucoseColor,
               range,
@@ -763,9 +766,10 @@ class _RespiratorySection extends StatelessWidget {
         ]),
         // Kotlin `RespiratoryOverviewChartsContent`.
         if (_hasRenderableChartData(respiratoryRate, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricRespiratoryRate,
-            series: _respiratoryRateSeries(respiratoryRate, l10n, range),
+            series: respiratoryRateSeries(respiratoryRate, l10n, range,
+                color: _respiratoryColor, dayLabel: l10n.metricRespiratoryRate),
             selectedRange: range,
             period: period,
             accentColor: _respiratoryColor,
@@ -785,9 +789,9 @@ class _RespiratorySection extends StatelessWidget {
             valueFormatter: (value) => formatter.respiratoryRate(value).text,
           )),
         if (_hasRenderableChartData(bodyTemperature, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricBodyTemp,
-            series: _singleSeries(
+            series: singleSeries(
               [for (final e in bodyTemperature) (e.time, e.temperatureCelsius)],
               _temperatureColor,
               range,
@@ -802,9 +806,9 @@ class _RespiratorySection extends StatelessWidget {
             valueFormatter: (value) => formatter.temperature(value).text,
           )),
         if (_hasRenderableChartData(skinTemperature, range, (e) => e.time))
-          _padded(MetricLineChart(
+          sectionPadded(MetricLineChart(
             title: l10n.metricSkinTemperature,
-            series: _singleSeries(
+            series: singleSeries(
               [for (final e in skinTemperature) (e.time, e.averageDeltaCelsius!)],
               _temperatureColor,
               range,
@@ -841,119 +845,6 @@ class _RespiratorySection extends StatelessWidget {
     if (summaries.isEmpty) return null;
     return formatter.respiratoryRate(_avg(summaries.map((s) => s.average)));
   }
-}
-
-/// Kotlin `respiratoryRateSeries`: raw within a day; daily average plus
-/// min/max range series otherwise.
-List<MetricLineSeries> _respiratoryRateSeries(
-  List<RespiratoryRateEntry> sorted,
-  AppLocalizations l10n,
-  TimeRange range,
-) {
-  if (range == TimeRange.day) {
-    return _singleSeries(
-      [for (final e in sorted) (e.time, e.breathsPerMinute)],
-      _respiratoryColor,
-      range,
-      label: l10n.metricRespiratoryRate,
-    );
-  }
-    final byDate = <LocalDate, List<double>>{};
-    for (final e in sorted) {
-      byDate
-          .putIfAbsent(instantToLocalDate(e.time), () => <double>[])
-          .add(e.breathsPerMinute);
-    }
-    final dates = byDate.keys.toList()..sort((a, b) => a.compareTo(b));
-    final average = <MetricLinePoint>[];
-    final min = <MetricLinePoint>[];
-    final max = <MetricLinePoint>[];
-    for (final date in dates) {
-      final values = byDate[date]!;
-      average.add(MetricLinePoint(date: date, value: _avg(values)));
-      min.add(MetricLinePoint(date: date, value: _min(values)));
-      max.add(MetricLinePoint(date: date, value: _max(values)));
-    }
-    final hasRange = [
-      for (var i = 0; i < min.length; i++) min[i].value != max[i].value,
-    ].any((different) => different);
-    return [
-      MetricLineSeries(
-        points: average,
-        color: _respiratoryColor,
-        label: l10n.summaryAverage,
-      ),
-      if (hasRange) ...[
-        MetricLineSeries(
-          points: min,
-          color: _respiratoryColor.withValues(alpha: 0.55),
-          label: l10n.statLowest,
-        ),
-        MetricLineSeries(
-          points: max,
-          color: AppColors.vitals.withValues(alpha: 0.75),
-          label: l10n.statHighest,
-        ),
-      ],
-    ];
-  }
-
-/// Kotlin `bloodPressureSeries`: systolic (VitalsColor) + diastolic
-/// (HeartColor); raw within a day, daily averages otherwise.
-List<MetricLineSeries> _bloodPressureSeries(
-  List<BloodPressureEntry> sorted,
-  AppLocalizations l10n,
-  TimeRange range,
-) {
-  final isDay = range == TimeRange.day;
-    final systolic = [
-      for (final e in sorted)
-        MetricLinePoint(
-          date: instantToLocalDate(e.time),
-          value: e.systolicMmHg.toDouble(),
-          time: e.time,
-        ),
-    ];
-    final diastolic = [
-      for (final e in sorted)
-        MetricLinePoint(
-          date: instantToLocalDate(e.time),
-          value: e.diastolicMmHg.toDouble(),
-          time: e.time,
-        ),
-    ];
-    return [
-      MetricLineSeries(
-        points: isDay ? systolic : dailyAverageLinePoints(systolic),
-        color: AppColors.vitals,
-        label: l10n.vitalsEntrySystolicLabel,
-      ),
-      MetricLineSeries(
-        points: isDay ? diastolic : dailyAverageLinePoints(diastolic),
-        color: AppColors.heart,
-        label: l10n.vitalsEntryDiastolicLabel,
-      ),
-    ];
-  }
-
-/// Raw points within a day; daily averages otherwise.
-List<MetricLineSeries> _singleSeries(
-  List<(DateTime, double)> raw,
-  Color color,
-  TimeRange range, {
-  String? label,
-}) {
-  final base = [
-    for (final (time, value) in raw)
-      MetricLinePoint(
-        date: instantToLocalDate(time),
-        value: value,
-        time: time,
-      ),
-  ];
-  final points =
-      range == TimeRange.day ? base : dailyAverageLinePoints(base);
-  return [MetricLineSeries(points: points, color: color, label: label)];
 }
 
 // ── Card grid ────────────────────────────────────────────────────────────────
@@ -1038,10 +929,6 @@ class _MetricCardGrid extends StatelessWidget {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: child,
-    );
 
 String _summary(
   AppLocalizations l10n,
@@ -1083,12 +970,3 @@ double _min(Iterable<double> values) => minOf(values)!;
 
 double _max(Iterable<double> values) => maxOf(values)!;
 
-class _LoadingBlock extends StatelessWidget {
-  const _LoadingBlock();
-
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(child: CircularProgressIndicator()),
-      );
-}

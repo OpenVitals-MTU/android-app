@@ -25,6 +25,7 @@ import '../../ui/components/personal_baseline_stat.dart';
 import '../../ui/theme/app_colors.dart';
 import 'sleep_presentation.dart';
 import '../../core/stats/stats.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Port of the Kotlin `SleepMetricOrderedSections.kt` section bodies. The screen
 /// composes these; each one is a plain widget over a [SleepDisplay].
@@ -100,14 +101,14 @@ class SleepStatisticsSectionContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _padded(DailyGoalStatistics(
+        sectionPadded(DailyGoalStatistics(
           progress: goalProgress,
           averageGap: hours(goalProgress.averageGapToGoal),
           unitFormatter: formatter,
           icon: kSleepIcon,
           accentColor: AppColors.sleep,
         )),
-        _padded(InsightStatGrid(
+        sectionPadded(InsightStatGrid(
           stats: [
             InsightStat(
               title: l10n.statTotal,
@@ -208,7 +209,7 @@ class SleepTargetContextSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(l10n.sectionMetricContext),
-        _padded(MetricInterpretationCard(
+        sectionPadded(MetricInterpretationCard(
           title: l10n.interpretationSleepTitle,
           status: switch (interpretation.status) {
             SleepTargetStatus.belowTarget => l10n.interpretationSleepBelow,
@@ -261,7 +262,7 @@ class SleepHrvInsightSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(l10n.sectionCrossMetricInsights),
-        _padded(CrossMetricInsightCard(
+        sectionPadded(CrossMetricInsightCard(
           insight: insight,
           title: l10n.crossSleepHrvTitle,
           positiveMessage: l10n.crossSleepHrvPositive,
@@ -290,7 +291,7 @@ class SleepDataConfidenceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _padded(DataConfidenceCard(
+    return sectionPadded(DataConfidenceCard(
       confidence: dataConfidence(
         period,
         [for (final night in sleepNights(durationPoints)) night.date],
@@ -394,7 +395,3 @@ class SleepSessionsSection extends StatelessWidget {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );

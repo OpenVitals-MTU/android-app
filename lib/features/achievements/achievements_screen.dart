@@ -9,6 +9,7 @@ import '../../state/app_providers.dart';
 import '../../ui/components/ov_card.dart';
 import 'achievement_catalog.dart';
 import 'achievements_notifier.dart';
+import '../../ui/components/section_padding.dart';
 
 /// Achievements badge grid, ported from the Kotlin `AchievementsScreen` +
 /// `AchievementsContent`. Shows a legacy-progress summary, an aggregate stats
@@ -46,7 +47,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              _padded(
+              sectionPadded(
                 _AchievementSummaryCard(
                   state: state,
                   formatter: formatter,
@@ -62,22 +63,22 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                     setState(() => _selectedCategory = category),
               ),
               if (state.error != null)
-                _padded(_MessageCard(
+                sectionPadded(_MessageCard(
                   title: 'Unable to load achievements',
                   body: _errorText(state.error!),
                 ))
               else if (!state.hasActivityHistory)
-                _padded(const _MessageCard(
+                sectionPadded(const _MessageCard(
                   title: 'No activity history yet',
                   body: 'Start recording steps to unlock achievements.',
                 )),
               if (state.hasActivityHistory && !state.hasFloorHistory)
-                _padded(const _MessageCard(
+                sectionPadded(const _MessageCard(
                   title: 'No floor data',
                   body: 'Floor-climbing badges need a device that tracks floors.',
                 )),
               for (final progress in filtered)
-                _padded(_AchievementBadgeCard(
+                sectionPadded(_AchievementBadgeCard(
                   progress: progress,
                   formatter: formatter,
                 )),
@@ -497,7 +498,3 @@ String _statusText(AchievementProgress progress) {
   return 'Locked';
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );

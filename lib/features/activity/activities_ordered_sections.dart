@@ -40,6 +40,8 @@ import '../../ui/components/swipe_to_delete_entry_row.dart';
 import '../../ui/theme/app_colors.dart';
 import 'activities_notifier.dart';
 import 'exercise_labels.dart';
+import '../../ui/components/section_padding.dart';
+import '../../ui/components/accent_icon_chip.dart';
 
 /// Health Connect `Metadata.RECORDING_METHOD_MANUAL_ENTRY`.
 const int _recordingMethodManualEntry = 3;
@@ -121,20 +123,20 @@ class ActivitiesOrderedSections extends ConsumerWidget {
         MetricDetailSection(
           MetricDetailSectionId.periodChart,
           visible: workouts.isNotEmpty,
-          _padded(_periodChart(formatter, weekPeriodMode)),
+          sectionPadded(_periodChart(formatter, weekPeriodMode)),
         ),
         MetricDetailSection(
           MetricDetailSectionId.selectedDayEntries,
           visible: selectedDay != null && workouts.isNotEmpty,
           selectedDay == null
               ? const SizedBox.shrink()
-              : _padded(_selectedDayEntries(
+              : sectionPadded(_selectedDayEntries(
                   context, ref, notifier, formatter, selectedDay)),
         ),
         MetricDetailSection(
           MetricDetailSectionId.dailyGoal,
           visible: workouts.isNotEmpty,
-          _padded(DailyGoalCard(
+          sectionPadded(DailyGoalCard(
             goal: formatter.minutes(state.dailyGoalMinutes.round()),
             progress: goalProgress,
             icon: Icons.directions_run,
@@ -161,7 +163,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
         MetricDetailSection(
           MetricDetailSectionId.dataConfidence,
           visible: workouts.isNotEmpty && period.start != period.end,
-          _padded(DataConfidenceCard(
+          sectionPadded(DataConfidenceCard(
             confidence: dataConfidence(
               period,
               [for (final w in workouts) instantToLocalDate(w.startTime)],
@@ -195,13 +197,13 @@ class ActivitiesOrderedSections extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showFilter)
-          _padded(_ActivityTypeFilter(
+          sectionPadded(_ActivityTypeFilter(
             selectedActivityType: state.selectedActivityType,
             availableActivityTypes: state.availableActivityTypes,
             onSelect: notifier.selectActivityType,
           )),
         if (state.workouts.isNotEmpty || sortedDays.isNotEmpty || !state.isLoading)
-          _padded(_ActivityPeriodSummaryCard(
+          sectionPadded(_ActivityPeriodSummaryCard(
             state: state,
             period: period,
             days: sortedDays,
@@ -212,12 +214,12 @@ class ActivitiesOrderedSections extends ConsumerWidget {
             onDelete: notifier.deleteActivityEntry,
           )),
         if (state.activityTypeAggregates.isNotEmpty)
-          _padded(_ActivityTypeAggregateCard(
+          sectionPadded(_ActivityTypeAggregateCard(
             aggregates: state.activityTypeAggregates,
             formatter: formatter,
           )),
         if (state.plannedWorkouts.isNotEmpty)
-          _padded(_PlannedWorkoutCard(
+          sectionPadded(_PlannedWorkoutCard(
             plannedWorkouts: state.plannedWorkouts,
             formatter: formatter,
             onStart: (id) =>
@@ -254,7 +256,7 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _padded(SectionHeader(l10n.activitiesKeyMetrics)),
+        sectionPadded(SectionHeader(l10n.activitiesKeyMetrics)),
         _MetricCard(
           title: l10n.metricCardioLoad,
           value: totals.hasCardioLoad
@@ -412,15 +414,15 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _padded(SectionHeader(l10n.sectionStatistics)),
-        _padded(DailyGoalStatistics(
+        sectionPadded(SectionHeader(l10n.sectionStatistics)),
+        sectionPadded(DailyGoalStatistics(
           progress: goalProgress,
           averageGap: formatter.minutes(goalProgress.averageGapToGoal.round()),
           unitFormatter: formatter,
           icon: Icons.directions_run,
           accentColor: AppColors.workout,
         )),
-        _padded(InsightStatGrid(
+        sectionPadded(InsightStatGrid(
           stats: [
             InsightStat(
               title: l10n.statTotal,
@@ -499,8 +501,8 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _padded(SectionHeader(l10n.sectionMetricContext)),
-        _padded(MetricInterpretationCard(
+        sectionPadded(SectionHeader(l10n.sectionMetricContext)),
+        sectionPadded(MetricInterpretationCard(
           title: l10n.interpretationWorkoutTitle,
           status: status,
           body: useWeeklyAverage
@@ -533,8 +535,8 @@ class ActivitiesOrderedSections extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _padded(SectionHeader(l10n.sectionCrossMetricInsights)),
-        _padded(CrossMetricInsightCard(
+        sectionPadded(SectionHeader(l10n.sectionCrossMetricInsights)),
+        sectionPadded(CrossMetricInsightCard(
           insight: insight,
           title: l10n.crossWorkoutRestingHrTitle,
           positiveMessage: l10n.crossWorkoutRestingHrPositive,
@@ -558,10 +560,6 @@ class ActivitiesOrderedSections extends ConsumerWidget {
   }
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 double _weekCount(DatePeriod period) {
   final days = period.end.epochDay - period.start.epochDay + 1;
@@ -920,7 +918,11 @@ class _RowContent extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            _AccentIcon(icon: exerciseTypeIcon(workout.exerciseType)),
+            AccentIconChip(
+              icon: exerciseTypeIcon(workout.exerciseType),
+              color: AppColors.workout,
+              iconSize: 22,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1024,7 +1026,11 @@ class _ActivityTypeAggregateCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _AccentIcon(icon: exerciseTypeIcon(aggregate.exerciseType)),
+              AccentIconChip(
+                icon: exerciseTypeIcon(aggregate.exerciseType),
+                color: AppColors.workout,
+                iconSize: 22,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1176,10 +1182,12 @@ class _PlannedWorkoutCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _AccentIcon(
+          AccentIconChip(
             icon: planned.completedExerciseSessionId != null
                 ? Icons.check_circle_outline
                 : exerciseTypeIcon(planned.exerciseType),
+            color: AppColors.workout,
+            iconSize: 22,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1349,19 +1357,3 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _AccentIcon extends StatelessWidget {
-  const _AccentIcon({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.workout.withValues(alpha: 0.16),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: AppColors.workout, size: 22),
-      );
-}

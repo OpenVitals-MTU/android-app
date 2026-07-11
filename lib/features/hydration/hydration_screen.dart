@@ -20,6 +20,7 @@ import '../../ui/theme/app_colors.dart';
 import '../../health/health_permissions.dart';
 import 'hydration_notifier.dart';
 import 'reminders/hydration_reminder_card.dart';
+import '../../ui/components/section_padding.dart';
 
 /// The hydration period-detail screen, ported from the Kotlin `HydrationScreen`.
 ///
@@ -87,7 +88,7 @@ List<Widget> _content(
       ];
     }
     return [
-      _padded(
+      sectionPadded(
         MetricCardPlaceholder(
           title: 'Hydration',
           icon: Icons.local_drink_outlined,
@@ -99,7 +100,7 @@ List<Widget> _content(
       ),
       // Reminders are configurable with no data logged yet — that is exactly
       // when a user wants to switch them on.
-      _padded(const HydrationReminderCard()),
+      sectionPadded(const HydrationReminderCard()),
       // Kotlin renders its ENTRIES section in the empty branch too: a period can
       // hold nutrition-only beverages (a drink with nutrients but no volume),
       // which log no litres yet still belong in the history.
@@ -116,7 +117,7 @@ List<Widget> _content(
   ];
 
   return [
-    _padded(
+    sectionPadded(
       Row(
         children: [
           Expanded(
@@ -144,7 +145,7 @@ List<Widget> _content(
         ],
       ),
     ),
-    _padded(
+    sectionPadded(
       MetricBarChart(
         title: 'Hydration',
         values: values,
@@ -156,12 +157,12 @@ List<Widget> _content(
         valueFormatter: (value) => formatter.hydration(value).text,
       ),
     ),
-    _padded(_HydrationGoalCard(state: state, formatter: formatter)),
+    sectionPadded(_HydrationGoalCard(state: state, formatter: formatter)),
     if (state.drinkBreakdown.isNotEmpty)
-      _padded(_HydrationDrinkBreakdownCard(state: state, formatter: formatter)),
+      sectionPadded(_HydrationDrinkBreakdownCard(state: state, formatter: formatter)),
     const SectionHeader('Statistics'),
-    _padded(_HydrationStatisticsCard(state: state, formatter: formatter)),
-    _padded(const HydrationReminderCard()),
+    sectionPadded(_HydrationStatisticsCard(state: state, formatter: formatter)),
+    sectionPadded(const HydrationReminderCard()),
     // Kotlin's `MetricDetailSectionId.ENTRIES` — the per-entry beverage history,
     // rendered last. This is the day view's "line info": one row per logged
     // drink, with its name, time, source and volume.
@@ -170,10 +171,6 @@ List<Widget> _content(
   ];
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 class _HydrationGoalCard extends StatelessWidget {
   const _HydrationGoalCard({required this.state, required this.formatter});

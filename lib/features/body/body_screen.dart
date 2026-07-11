@@ -23,6 +23,8 @@ import '../../ui/theme/app_colors.dart';
 import 'body_metric_notifier.dart';
 import 'body_overview_sections.dart';
 import 'body_summary.dart';
+import '../../ui/components/loading_state.dart';
+import '../../ui/components/section_padding.dart';
 
 /// The aggregate `/body` screen, a port of the Kotlin `BodyScreen` +
 /// `renderBodyOverviewOrderedContent` (`BodyMetricOrderedSections.kt`): ONE
@@ -106,7 +108,7 @@ class _BodyOverviewContent extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final data = state.data;
     if (data == null) {
-      if (state.isLoading) return const _LoadingBlock();
+      if (state.isLoading) return const SectionLoading();
       return _placeholder(l10n);
     }
 
@@ -159,8 +161,8 @@ class _BodyOverviewContent extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _padded(SectionHeader(l10n.sectionStatistics)),
-              _padded(InsightStatGrid(
+              sectionPadded(SectionHeader(l10n.sectionStatistics)),
+              sectionPadded(InsightStatGrid(
                 stats: [
                   for (final metric in metricsData)
                     InsightStat(
@@ -189,9 +191,9 @@ class _BodyOverviewContent extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _padded(SectionHeader(l10n.sectionBodyTrends)),
+              sectionPadded(SectionHeader(l10n.sectionBodyTrends)),
               for (final metric in trackedMetricsData)
-                _padded(_metricChart(metric, daySelection, l10n)),
+                sectionPadded(_metricChart(metric, daySelection, l10n)),
             ],
           ),
         ),
@@ -280,7 +282,7 @@ class _BodyOverviewContent extends ConsumerWidget {
         sections: [
           MetricDetailSection(
             MetricDetailSectionId.activitySummary,
-            _padded(MetricCardPlaceholder(
+            sectionPadded(MetricCardPlaceholder(
               title: l10n.screenBody,
               icon: Icons.monitor_weight_outlined,
               accentColor: AppColors.weight,
@@ -291,17 +293,4 @@ class _BodyOverviewContent extends ConsumerWidget {
       );
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
-class _LoadingBlock extends StatelessWidget {
-  const _LoadingBlock();
-
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(child: CircularProgressIndicator()),
-      );
-}

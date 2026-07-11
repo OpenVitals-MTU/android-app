@@ -11,6 +11,7 @@ import '../../ui/components/loading_state.dart';
 import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
 import 'caffeine_notifier.dart';
+import '../../ui/components/section_padding.dart';
 
 /// The caffeine analytics screen, ported from the Kotlin `CaffeineScreen`.
 ///
@@ -70,50 +71,46 @@ List<Widget> _content(
         child: Center(child: CircularProgressIndicator()),
       ),
     const SectionHeader('Caffeine dashboard'),
-    _padded(_CaffeineOverviewCard(insights: home, formatter: formatter)),
-    _padded(_CaffeineCurveCard(insights: home, formatter: formatter)),
+    sectionPadded(_CaffeineOverviewCard(insights: home, formatter: formatter)),
+    sectionPadded(_CaffeineCurveCard(insights: home, formatter: formatter)),
     const SectionHeader('Sleep impact'),
-    _padded(_CaffeineSleepImpactCard(insights: home, formatter: formatter)),
+    sectionPadded(_CaffeineSleepImpactCard(insights: home, formatter: formatter)),
     const SectionHeader('Analytics'),
-    _padded(
+    sectionPadded(
       _AnalyticsRangePicker(
         selected: state.analyticsRange,
         onSelect: notifier.selectAnalyticsRange,
       ),
     ),
-    _padded(
+    sectionPadded(
       _CaffeineAnalyticsSummaryCard(insights: analytics, formatter: formatter),
     ),
-    _padded(
+    sectionPadded(
       _CaffeineDistributionCard(
         title: 'Sources',
         slices: analytics.sourceTotals,
         formatter: formatter,
       ),
     ),
-    _padded(
+    sectionPadded(
       _CaffeineDistributionCard(
         title: 'Items',
         slices: analytics.itemTotals,
         formatter: formatter,
       ),
     ),
-    _padded(
+    sectionPadded(
       _CaffeineDistributionCard(
         title: 'Inferred categories',
         slices: analytics.categoryTotals,
         formatter: formatter,
       ),
     ),
-    _padded(_CaffeineTimeBucketsCard(insights: analytics, formatter: formatter)),
+    sectionPadded(_CaffeineTimeBucketsCard(insights: analytics, formatter: formatter)),
     const SizedBox(height: 16),
   ];
 }
 
-Widget _padded(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: child,
-    );
 
 // ── Current level + today overview ──────────────────────────────────────────
 
