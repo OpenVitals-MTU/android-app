@@ -46,6 +46,13 @@ final unitSystemProvider = Provider<UnitSystem>((ref) {
   return _watchListenable(ref, repo.unitSystemListenable);
 });
 
+/// The split distance for the activity detail screen's splits card, in METERS.
+/// Reactive: changing it in settings re-cuts the splits on the next detail load.
+final activitySplitDistanceMetersProvider = Provider<double>((ref) {
+  final repo = ref.watch(preferencesRepositoryProvider);
+  return _watchListenable(ref, repo.activitySplitDistanceMetersListenable);
+});
+
 /// A [UnitFormatter] bound to the current [unitSystemProvider]. Rebuilds (and so
 /// re-formats every consuming widget) when the unit-system preference changes.
 /// The Kotlin app injects a single `UnitFormatter`; here it is a derived

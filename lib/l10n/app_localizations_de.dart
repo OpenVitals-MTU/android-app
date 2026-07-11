@@ -5909,4 +5909,62 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get linkCouldNotOpen => 'Der Link konnte nicht geöffnet werden.';
+
+  @override
+  String get activitySplitsLapsTitle => 'Laps';
+
+  @override
+  String get activitySplitsLapsBody =>
+      'Recorded by the device or app that saved this activity.';
+
+  @override
+  String activitySplitsDerivedTitle(String distance) {
+    return 'Splits · every $distance';
+  }
+
+  @override
+  String get activitySplitsEstimatedTitle => 'Splits · estimated';
+
+  @override
+  String get activitySplitsEstimatedBody =>
+      'This activity has no per-time distance data, so every split shows the activity\'s average pace.';
+
+  @override
+  String get activitySplitsHeaderSplit => 'Split';
+
+  @override
+  String get activitySplitsHeaderLap => 'Lap';
+
+  @override
+  String get activitySplitsPartial => 'partial';
+
+  @override
+  String activitySplitsFaster(String delta) {
+    return '$delta faster than average';
+  }
+
+  @override
+  String activitySplitsSlower(String delta) {
+    return '$delta slower than average';
+  }
+
+  @override
+  String get settingsActivitySplitDistanceTitle => 'Split distance';
+
+  @override
+  String get settingsActivitySplitDistanceBody =>
+      'How often the activity details screen cuts a split when the recording has no laps of its own.';
+
+  @override
+  String get settingsActivitySplitDistanceChoice => 'Every split';
+
+  @override
+  String activitySplitDistanceKilometers(String distance) {
+    return '$distance km';
+  }
+
+  @override
+  String activitySplitDistanceMiles(String distance) {
+    return '$distance mi';
+  }
 }

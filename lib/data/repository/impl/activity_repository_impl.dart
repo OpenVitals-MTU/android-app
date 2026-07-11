@@ -166,8 +166,14 @@ class ActivityRepositoryImpl implements ActivityRepository {
       _dataSource.readExerciseSession(id);
 
   @override
-  Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) =>
-      _dataSource.readSpeedSamples(start, end);
+  Future<List<SpeedSample>> loadSpeedSamples(DateTime start, DateTime end) async {
+    // Gated like every other metric read: without the SPEED permission the
+    // caller gets "no speed samples", not an exception. The activity detail
+    // screen degrades to route-derived (or estimated) splits.
+    final granted = await _grantedIfAvailable();
+    if (!granted.contains(HcPermissions.readSpeed)) return const [];
+    return _dataSource.readSpeedSamples(start, end);
+  }
 
   @override
   Future<List<ActivityCadenceSample>> loadActivityCadenceSamples(

@@ -3325,5 +3325,65 @@
   "privacyPolicyBody1": "OpenVitals reads data from Health Connect to show steps, workouts, sleep, heart rate, weight, calories, hydration, nutrition, mindfulness, and vitals on your device. Entries you explicitly log, including imported GPX/KML/KMZ routes and imported FIT files, are written to Health Connect.",
   "privacyPolicyBody2": "This app does not upload your health data to a cloud service, does not include ads, and does not share data with third parties.",
   "privacyPolicyBody3": "OpenVitals is not a medical device and does not diagnose, treat, cure, or prevent any disease or medical condition. It is not a substitute for medical advice, diagnosis, or treatment from a qualified healthcare professional.",
-  "linkCouldNotOpen": "The link could not be opened."
+  "linkCouldNotOpen": "The link could not be opened.",
+  "activitySplitsLapsTitle": "Laps",
+  "activitySplitsLapsBody": "Recorded by the device or app that saved this activity.",
+  "activitySplitsDerivedTitle": "Splits · every {distance}",
+  "@activitySplitsDerivedTitle": {
+    "description": "Header of the splits card when splits are derived from the GPS route or speed samples. {distance} is an already-formatted distance such as '1 km' or '1 mi'.",
+    "placeholders": {
+      "distance": {
+        "type": "String",
+        "example": "1 km"
+      }
+    }
+  },
+  "activitySplitsEstimatedTitle": "Splits · estimated",
+  "activitySplitsEstimatedBody": "This activity has no per-time distance data, so every split shows the activity's average pace.",
+  "activitySplitsHeaderSplit": "Split",
+  "activitySplitsHeaderLap": "Lap",
+  "activitySplitsPartial": "partial",
+  "activitySplitsFaster": "{delta} faster than average",
+  "@activitySplitsFaster": {
+    "description": "Semantics label for a split quicker than the activity average.",
+    "placeholders": {
+      "delta": {
+        "type": "String",
+        "example": "0:12"
+      }
+    }
+  },
+  "activitySplitsSlower": "{delta} slower than average",
+  "@activitySplitsSlower": {
+    "description": "Semantics label for a split slower than the activity average.",
+    "placeholders": {
+      "delta": {
+        "type": "String",
+        "example": "0:12"
+      }
+    }
+  },
+  "settingsActivitySplitDistanceTitle": "Split distance",
+  "settingsActivitySplitDistanceBody": "How often the activity details screen cuts a split when the recording has no laps of its own.",
+  "settingsActivitySplitDistanceChoice": "Every split",
+  "activitySplitDistanceKilometers": "{distance} km",
+  "@activitySplitDistanceKilometers": {
+    "description": "A split-distance preset in kilometres.",
+    "placeholders": {
+      "distance": {
+        "type": "String",
+        "example": "0.5"
+      }
+    }
+  },
+  "activitySplitDistanceMiles": "{distance} mi",
+  "@activitySplitDistanceMiles": {
+    "description": "A split-distance preset in miles.",
+    "placeholders": {
+      "distance": {
+        "type": "String",
+        "example": "0.25"
+      }
+    }
+  }
 }

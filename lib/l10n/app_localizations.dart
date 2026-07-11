@@ -10250,6 +10250,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The link could not be opened.'**
   String get linkCouldNotOpen;
+
+  /// No description provided for @activitySplitsLapsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Laps'**
+  String get activitySplitsLapsTitle;
+
+  /// No description provided for @activitySplitsLapsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded by the device or app that saved this activity.'**
+  String get activitySplitsLapsBody;
+
+  /// Header of the splits card when splits are derived from the GPS route or speed samples. {distance} is an already-formatted distance such as '1 km' or '1 mi'.
+  ///
+  /// In en, this message translates to:
+  /// **'Splits · every {distance}'**
+  String activitySplitsDerivedTitle(String distance);
+
+  /// No description provided for @activitySplitsEstimatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Splits · estimated'**
+  String get activitySplitsEstimatedTitle;
+
+  /// No description provided for @activitySplitsEstimatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This activity has no per-time distance data, so every split shows the activity\'s average pace.'**
+  String get activitySplitsEstimatedBody;
+
+  /// No description provided for @activitySplitsHeaderSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Split'**
+  String get activitySplitsHeaderSplit;
+
+  /// No description provided for @activitySplitsHeaderLap.
+  ///
+  /// In en, this message translates to:
+  /// **'Lap'**
+  String get activitySplitsHeaderLap;
+
+  /// No description provided for @activitySplitsPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'partial'**
+  String get activitySplitsPartial;
+
+  /// Semantics label for a split quicker than the activity average.
+  ///
+  /// In en, this message translates to:
+  /// **'{delta} faster than average'**
+  String activitySplitsFaster(String delta);
+
+  /// Semantics label for a split slower than the activity average.
+  ///
+  /// In en, this message translates to:
+  /// **'{delta} slower than average'**
+  String activitySplitsSlower(String delta);
+
+  /// No description provided for @settingsActivitySplitDistanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Split distance'**
+  String get settingsActivitySplitDistanceTitle;
+
+  /// No description provided for @settingsActivitySplitDistanceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'How often the activity details screen cuts a split when the recording has no laps of its own.'**
+  String get settingsActivitySplitDistanceBody;
+
+  /// No description provided for @settingsActivitySplitDistanceChoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Every split'**
+  String get settingsActivitySplitDistanceChoice;
+
+  /// A split-distance preset in kilometres.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} km'**
+  String activitySplitDistanceKilometers(String distance);
+
+  /// A split-distance preset in miles.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} mi'**
+  String activitySplitDistanceMiles(String distance);
 }
 
 class _AppLocalizationsDelegate

@@ -5,12 +5,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/di/providers.dart';
+import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/settings/cards/activity_recording_preferences_card.dart';
+import 'package:openvitals/features/settings/cards/activity_split_distance_card.dart';
 import 'package:openvitals/features/settings/cards/favorite_activity_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
-Future<(Widget, SharedPreferences)> _bootstrap(Widget card) async {
-  SharedPreferences.setMockInitialValues(const <String, Object>{});
+Future<(Widget, SharedPreferences)> _bootstrap(Widget card) =>
+    _bootstrapWith(card);
+
+Future<(Widget, SharedPreferences)> _bootstrapWith(
+  Widget card, {
+  Map<String, Object> seed = const <String, Object>{},
+}) async {
+  SharedPreferences.setMockInitialValues(seed);
   final prefs = await SharedPreferences.getInstance();
   return (
     ProviderScope(
@@ -156,6 +164,58 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repo.favoriteActivityExerciseType, isNull);
+    });
+  });
+
+  group('ActivitySplitDistanceCard', () {
+    testWidgets('offers metric presets and saves the choice in METERS',
+        (tester) async {
+      final (widget, prefs) = await _bootstrapWith(
+        const ActivitySplitDistanceCard(),
+        // The unit system otherwise follows the host locale.
+        seed: {'unit_system': UnitSystem.metric.name},
+      );
+      await tester.pumpWidget(widget);
+      await tester.pumpAndSettle();
+
+      // A repository caches each reactive preference in a ValueNotifier at
+      // construction, so the stored value is re-read through a FRESH instance
+      // after the tap (in the app, one instance is shared via the provider).
+      expect(PreferencesRepository(prefs).activitySplitDistanceMeters, 1000.0);
+
+      expect(find.text('0.5 km'), findsOneWidget);
+      expect(find.text('1 km'), findsOneWidget);
+      expect(find.text('2 km'), findsOneWidget);
+      expect(find.text('5 km'), findsOneWidget);
+
+      await tester.tap(find.text('2 km'));
+      await tester.pumpAndSettle();
+
+      expect(PreferencesRepository(prefs).activitySplitDistanceMeters, 2000.0);
+    });
+
+    testWidgets('offers mile presets in imperial but still stores meters',
+        (tester) async {
+      final (widget, prefs) = await _bootstrapWith(
+        const ActivitySplitDistanceCard(),
+        seed: {'unit_system': UnitSystem.imperial.name},
+      );
+      await tester.pumpWidget(widget);
+      await tester.pumpAndSettle();
+
+      expect(find.text('0.25 mi'), findsOneWidget);
+      expect(find.text('0.5 mi'), findsOneWidget);
+      expect(find.text('1 mi'), findsOneWidget);
+      expect(find.text('5 mi'), findsOneWidget);
+
+      await tester.tap(find.text('1 mi'));
+      await tester.pumpAndSettle();
+
+      // Storage is metric, always: one mile is 1609.344 m, not a rounded 1600.
+      expect(
+        PreferencesRepository(prefs).activitySplitDistanceMeters,
+        closeTo(1609.344, 0.001),
+      );
     });
   });
 }

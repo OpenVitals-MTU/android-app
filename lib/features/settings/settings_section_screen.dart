@@ -11,6 +11,7 @@ import '../../ui/components/app_language_dropdown.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/components/placeholder_screen.dart';
 import 'cards/activity_recording_preferences_card.dart';
+import 'cards/activity_split_distance_card.dart';
 import 'cards/apple_health_import_card.dart';
 import 'cards/body_energy_calibration_card.dart';
 import 'cards/body_profile_card.dart';
@@ -123,8 +124,11 @@ List<Widget> _cards(BuildContext context, WidgetRef ref, SettingsSection section
           ),
         ),
         // Kotlin ACTIVITIES order: week mode, favorite activity, recording
-        // preferences, offline maps (SettingsScreenContent.kt:89-129).
+        // preferences, offline maps (SettingsScreenContent.kt:89-129). The
+        // split-distance card is new (no Kotlin counterpart) and sits with the
+        // other activity-display settings, before the recording tuning block.
         const FavoriteActivityCard(),
+        const ActivitySplitDistanceCard(),
         const ActivityRecordingPreferencesCard(),
         const OfflineMapsCard(),
       ];

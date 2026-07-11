@@ -12,6 +12,7 @@ import '../../ui/components/metric_card.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
 import 'activity_detail_notifier.dart';
+import 'activity_splits_card.dart';
 import 'exercise_labels.dart';
 import 'maps/route_geometry.dart';
 import 'maps/route_map_view.dart';
@@ -77,6 +78,16 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
         children: [
           _padded(_WorkoutSummaryCard(workout: workout, formatter: formatter)),
           _padded(_MetricsCard(workout: workout, formatter: formatter)),
+          // Hidden entirely when there is nothing to split (a strength session).
+          if (state.splits.isNotEmpty)
+            _padded(
+              ActivitySplitsCard(
+                splits: state.splits,
+                formatter: formatter,
+                splitDistanceMeters:
+                    ref.watch(activitySplitDistanceMetersProvider),
+              ),
+            ),
           if (state.heartRateSamples.isNotEmpty)
             _padded(_HeartRateCard(samples: state.heartRateSamples)),
           _padded(_SessionDetailsCard(workout: workout)),

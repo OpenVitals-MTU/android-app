@@ -15,6 +15,7 @@ import '../../domain/model/mindfulness_reminder_config.dart';
 import '../../domain/model/nutrition_models.dart';
 import '../../domain/preferences/activity_recording_dashboard_layout.dart';
 import '../../domain/preferences/activity_recording_preferences.dart';
+import '../../domain/preferences/activity_split_distance.dart';
 import '../../domain/preferences/activity_week_mode.dart';
 import '../../domain/preferences/app_language.dart';
 import '../../domain/preferences/app_theme_mode.dart';
@@ -42,6 +43,8 @@ class PreferencesRepository {
         _dynamicColor = ValueNotifier(_readDynamicColor(_prefs)),
         _sleepRangeMode = ValueNotifier(_readSleepRangeMode(_prefs)),
         _activityWeekMode = ValueNotifier(_readActivityWeekMode(_prefs)),
+        _activitySplitDistanceMeters =
+            ValueNotifier(_readActivitySplitDistanceMeters(_prefs)),
         _showOpenVitalsCalculatedCalories =
             ValueNotifier(_readShowOpenVitalsCalculatedCalories(_prefs)),
         _healthConnectSyncEnabled =
@@ -59,6 +62,7 @@ class PreferencesRepository {
   final ValueNotifier<bool> _dynamicColor;
   final ValueNotifier<SleepRangeMode> _sleepRangeMode;
   final ValueNotifier<ActivityWeekMode> _activityWeekMode;
+  final ValueNotifier<double> _activitySplitDistanceMeters;
   final ValueNotifier<bool> _showOpenVitalsCalculatedCalories;
   final ValueNotifier<bool> _healthConnectSyncEnabled;
   late final ValueNotifier<BodyEnergyCalibration> _bodyEnergyCalibration;
@@ -74,6 +78,8 @@ class PreferencesRepository {
       _sleepRangeMode;
   ValueListenable<ActivityWeekMode> get activityWeekModeListenable =>
       _activityWeekMode;
+  ValueListenable<double> get activitySplitDistanceMetersListenable =>
+      _activitySplitDistanceMeters;
   ValueListenable<bool> get showOpenVitalsCalculatedCaloriesListenable =>
       _showOpenVitalsCalculatedCalories;
   ValueListenable<bool> get healthConnectSyncEnabledListenable =>
@@ -122,6 +128,18 @@ class PreferencesRepository {
   set activityWeekMode(ActivityWeekMode value) {
     _putString(_keyActivityWeekMode, value.name);
     _activityWeekMode.value = value;
+  }
+
+  /// How far apart the activity detail screen cuts derived splits, in METERS
+  /// (storage is metric; the settings UI offers km or mile presets and converts
+  /// on save). Clamped through [ActivitySplitDistance.normalize], so a corrupt
+  /// or out-of-range stored value degrades to the 1 km default instead of
+  /// producing a million-row splits card.
+  double get activitySplitDistanceMeters => _activitySplitDistanceMeters.value;
+  set activitySplitDistanceMeters(double value) {
+    final normalized = ActivitySplitDistance.normalize(value);
+    _putDouble(_keyActivitySplitDistanceMeters, normalized);
+    _activitySplitDistanceMeters.value = normalized;
   }
 
   WeekPeriodMode get weekPeriodMode => activityWeekMode.toWeekPeriodMode();
@@ -753,6 +771,12 @@ class PreferencesRepository {
       ) ??
       ActivityWeekMode.mondayToSunday;
 
+  static double _readActivitySplitDistanceMeters(SharedPreferences prefs) =>
+      ActivitySplitDistance.normalize(
+        prefs.getDouble(_keyActivitySplitDistanceMeters) ??
+            ActivitySplitDistance.defaultMeters,
+      );
+
   static bool _readShowOpenVitalsCalculatedCalories(SharedPreferences prefs) =>
       prefs.getBool(_keyShowOpenVitalsCalculatedCalories) ?? false;
 
@@ -1151,6 +1175,8 @@ class PreferencesRepository {
   static const String _keyDynamicColor = 'dynamic_color';
   static const String _keySleepRangeMode = 'sleep_range_mode';
   static const String _keyActivityWeekMode = 'activity_week_mode';
+  static const String _keyActivitySplitDistanceMeters =
+      'activity_split_distance_meters';
   static const String _keyActivityRecordingAutoIdleEnabled =
       'activity_recording_auto_idle_enabled';
   static const String _keyActivityRecordingAutoIdleTimeoutSeconds =

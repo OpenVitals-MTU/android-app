@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ActivityDetailState {
 
- bool get isLoading; ScreenError? get error; ExerciseData? get workout; List<HeartRateSample> get heartRateSamples;
+ bool get isLoading; ScreenError? get error; ExerciseData? get workout; List<HeartRateSample> get heartRateSamples; List<SpeedSample> get speedSamples; ActivitySplits get splits;
 /// Create a copy of ActivityDetailState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $ActivityDetailStateCopyWith<ActivityDetailState> get copyWith => _$ActivityDeta
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityDetailState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.workout, workout) || other.workout == workout)&&const DeepCollectionEquality().equals(other.heartRateSamples, heartRateSamples));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityDetailState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.workout, workout) || other.workout == workout)&&const DeepCollectionEquality().equals(other.heartRateSamples, heartRateSamples)&&const DeepCollectionEquality().equals(other.speedSamples, speedSamples)&&(identical(other.splits, splits) || other.splits == splits));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,isLoading,error,workout,const DeepCollectionEquality().hash(heartRateSamples));
+int get hashCode => Object.hash(runtimeType,isLoading,error,workout,const DeepCollectionEquality().hash(heartRateSamples),const DeepCollectionEquality().hash(speedSamples),splits);
 
 @override
 String toString() {
-  return 'ActivityDetailState(isLoading: $isLoading, error: $error, workout: $workout, heartRateSamples: $heartRateSamples)';
+  return 'ActivityDetailState(isLoading: $isLoading, error: $error, workout: $workout, heartRateSamples: $heartRateSamples, speedSamples: $speedSamples, splits: $splits)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $ActivityDetailStateCopyWith<$Res>  {
   factory $ActivityDetailStateCopyWith(ActivityDetailState value, $Res Function(ActivityDetailState) _then) = _$ActivityDetailStateCopyWithImpl;
 @useResult
 $Res call({
- bool isLoading, ScreenError? error, ExerciseData? workout, List<HeartRateSample> heartRateSamples
+ bool isLoading, ScreenError? error, ExerciseData? workout, List<HeartRateSample> heartRateSamples, List<SpeedSample> speedSamples, ActivitySplits splits
 });
 
 
@@ -62,13 +62,15 @@ class _$ActivityDetailStateCopyWithImpl<$Res>
 
 /// Create a copy of ActivityDetailState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? isLoading = null,Object? error = freezed,Object? workout = freezed,Object? heartRateSamples = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? isLoading = null,Object? error = freezed,Object? workout = freezed,Object? heartRateSamples = null,Object? speedSamples = null,Object? splits = null,}) {
   return _then(_self.copyWith(
 isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,workout: freezed == workout ? _self.workout : workout // ignore: cast_nullable_to_non_nullable
 as ExerciseData?,heartRateSamples: null == heartRateSamples ? _self.heartRateSamples : heartRateSamples // ignore: cast_nullable_to_non_nullable
-as List<HeartRateSample>,
+as List<HeartRateSample>,speedSamples: null == speedSamples ? _self.speedSamples : speedSamples // ignore: cast_nullable_to_non_nullable
+as List<SpeedSample>,splits: null == splits ? _self.splits : splits // ignore: cast_nullable_to_non_nullable
+as ActivitySplits,
   ));
 }
 /// Create a copy of ActivityDetailState
@@ -165,10 +167,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool isLoading,  ScreenError? error,  ExerciseData? workout,  List<HeartRateSample> heartRateSamples)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool isLoading,  ScreenError? error,  ExerciseData? workout,  List<HeartRateSample> heartRateSamples,  List<SpeedSample> speedSamples,  ActivitySplits splits)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ActivityDetailState() when $default != null:
-return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples);case _:
+return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples,_that.speedSamples,_that.splits);case _:
   return orElse();
 
 }
@@ -186,10 +188,10 @@ return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool isLoading,  ScreenError? error,  ExerciseData? workout,  List<HeartRateSample> heartRateSamples)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool isLoading,  ScreenError? error,  ExerciseData? workout,  List<HeartRateSample> heartRateSamples,  List<SpeedSample> speedSamples,  ActivitySplits splits)  $default,) {final _that = this;
 switch (_that) {
 case _ActivityDetailState():
-return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples);case _:
+return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples,_that.speedSamples,_that.splits);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -206,10 +208,10 @@ return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool isLoading,  ScreenError? error,  ExerciseData? workout,  List<HeartRateSample> heartRateSamples)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool isLoading,  ScreenError? error,  ExerciseData? workout,  List<HeartRateSample> heartRateSamples,  List<SpeedSample> speedSamples,  ActivitySplits splits)?  $default,) {final _that = this;
 switch (_that) {
 case _ActivityDetailState() when $default != null:
-return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples);case _:
+return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples,_that.speedSamples,_that.splits);case _:
   return null;
 
 }
@@ -220,8 +222,8 @@ return $default(_that.isLoading,_that.error,_that.workout,_that.heartRateSamples
 /// @nodoc
 
 
-class _ActivityDetailState implements ActivityDetailState {
-  const _ActivityDetailState({this.isLoading = true, this.error, this.workout, final  List<HeartRateSample> heartRateSamples = const <HeartRateSample>[]}): _heartRateSamples = heartRateSamples;
+class _ActivityDetailState extends ActivityDetailState {
+  const _ActivityDetailState({this.isLoading = true, this.error, this.workout, final  List<HeartRateSample> heartRateSamples = const <HeartRateSample>[], final  List<SpeedSample> speedSamples = const <SpeedSample>[], this.splits = const ActivitySplits.none()}): _heartRateSamples = heartRateSamples,_speedSamples = speedSamples,super._();
   
 
 @override@JsonKey() final  bool isLoading;
@@ -234,6 +236,14 @@ class _ActivityDetailState implements ActivityDetailState {
   return EqualUnmodifiableListView(_heartRateSamples);
 }
 
+ final  List<SpeedSample> _speedSamples;
+@override@JsonKey() List<SpeedSample> get speedSamples {
+  if (_speedSamples is EqualUnmodifiableListView) return _speedSamples;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_speedSamples);
+}
+
+@override@JsonKey() final  ActivitySplits splits;
 
 /// Create a copy of ActivityDetailState
 /// with the given fields replaced by the non-null parameter values.
@@ -245,16 +255,16 @@ _$ActivityDetailStateCopyWith<_ActivityDetailState> get copyWith => __$ActivityD
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityDetailState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.workout, workout) || other.workout == workout)&&const DeepCollectionEquality().equals(other._heartRateSamples, _heartRateSamples));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityDetailState&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.error, error) || other.error == error)&&(identical(other.workout, workout) || other.workout == workout)&&const DeepCollectionEquality().equals(other._heartRateSamples, _heartRateSamples)&&const DeepCollectionEquality().equals(other._speedSamples, _speedSamples)&&(identical(other.splits, splits) || other.splits == splits));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,isLoading,error,workout,const DeepCollectionEquality().hash(_heartRateSamples));
+int get hashCode => Object.hash(runtimeType,isLoading,error,workout,const DeepCollectionEquality().hash(_heartRateSamples),const DeepCollectionEquality().hash(_speedSamples),splits);
 
 @override
 String toString() {
-  return 'ActivityDetailState(isLoading: $isLoading, error: $error, workout: $workout, heartRateSamples: $heartRateSamples)';
+  return 'ActivityDetailState(isLoading: $isLoading, error: $error, workout: $workout, heartRateSamples: $heartRateSamples, speedSamples: $speedSamples, splits: $splits)';
 }
 
 
@@ -265,7 +275,7 @@ abstract mixin class _$ActivityDetailStateCopyWith<$Res> implements $ActivityDet
   factory _$ActivityDetailStateCopyWith(_ActivityDetailState value, $Res Function(_ActivityDetailState) _then) = __$ActivityDetailStateCopyWithImpl;
 @override @useResult
 $Res call({
- bool isLoading, ScreenError? error, ExerciseData? workout, List<HeartRateSample> heartRateSamples
+ bool isLoading, ScreenError? error, ExerciseData? workout, List<HeartRateSample> heartRateSamples, List<SpeedSample> speedSamples, ActivitySplits splits
 });
 
 
@@ -282,13 +292,15 @@ class __$ActivityDetailStateCopyWithImpl<$Res>
 
 /// Create a copy of ActivityDetailState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? isLoading = null,Object? error = freezed,Object? workout = freezed,Object? heartRateSamples = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? isLoading = null,Object? error = freezed,Object? workout = freezed,Object? heartRateSamples = null,Object? speedSamples = null,Object? splits = null,}) {
   return _then(_ActivityDetailState(
 isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as ScreenError?,workout: freezed == workout ? _self.workout : workout // ignore: cast_nullable_to_non_nullable
 as ExerciseData?,heartRateSamples: null == heartRateSamples ? _self._heartRateSamples : heartRateSamples // ignore: cast_nullable_to_non_nullable
-as List<HeartRateSample>,
+as List<HeartRateSample>,speedSamples: null == speedSamples ? _self._speedSamples : speedSamples // ignore: cast_nullable_to_non_nullable
+as List<SpeedSample>,splits: null == splits ? _self.splits : splits // ignore: cast_nullable_to_non_nullable
+as ActivitySplits,
   ));
 }
 
