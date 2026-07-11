@@ -788,6 +788,99 @@ class AppleHealthImportServiceTest {
         assertEquals(1, result.notSelectedRecords)
         assertTrue(insertedRecords.captured.single() is androidx.health.connect.client.records.WeightRecord)
         assertTrue(result.shareableReportText.contains("Not selected: 1"))
+        assertTrue(result.shareableReportText.contains("earlySkippedUnselectedRecords=1"))
+        coVerify(exactly = 1) { repository.insertImportedRecords(any()) }
+    }
+
+    @Test
+    fun `service skips large unselected sections before record materialization`() = runTest {
+        val unselectedHeartRecords = 10_000
+        val xml = buildString {
+            appendLine("<HealthData>")
+            repeat(unselectedHeartRecords) { index ->
+                appendLine(
+                    """<Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Watch $index" """ +
+                        """startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:01 +0000" """ +
+                        """unit="count/min" value="70"><MetadataEntry key="sample" value="$index" /></Record>""",
+                )
+            }
+            appendLine(
+                """<Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Scale" """ +
+                    """startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000" """ +
+                    """unit="kg" value="70" />""",
+            )
+            appendLine("</HealthData>")
+        }
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<AppleHealthImportRepository>()
+        val insertedRecords = slot<List<androidx.health.connect.client.records.Record>>()
+
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
+        every { repository.isMindfulnessAvailable() } returns true
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        coEvery { repository.insertImportedRecords(capture(insertedRecords)) } just runs
+
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(
+            uri,
+            selectedCategories = setOf(AppleHealthImportCategory.BODY),
+        )
+
+        assertEquals(unselectedHeartRecords + 1, result.parsedRecords)
+        assertEquals(unselectedHeartRecords + 1, result.convertedRecords)
+        assertEquals(unselectedHeartRecords, result.notSelectedRecords)
+        assertEquals(1, result.importedRecords)
+        assertTrue(insertedRecords.captured.single() is androidx.health.connect.client.records.WeightRecord)
+        assertTrue(
+            result.shareableReportText.contains(
+                "earlySkippedUnselectedRecords=$unselectedHeartRecords",
+            ),
+        )
+        coVerify(exactly = 1) { repository.insertImportedRecords(any()) }
+    }
+
+    @Test
+    fun `workout selection retains unselected activity samples needed for overlap checks`() = runTest {
+        val xml =
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierDistanceWalkingRunning" sourceName="Apple Watch"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:30:00 +0000"
+                    unit="m" value="5000" />
+                <Workout workoutActivityType="HKWorkoutActivityTypeRunning" sourceName="Apple Watch"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:30:00 +0000"
+                    duration="30" durationUnit="min" totalDistance="5" totalDistanceUnit="km" />
+            </HealthData>
+            """.trimIndent()
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<AppleHealthImportRepository>()
+        val insertedRecords = slot<List<androidx.health.connect.client.records.Record>>()
+
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
+        every { repository.isMindfulnessAvailable() } returns true
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        coEvery { repository.insertImportedRecords(capture(insertedRecords)) } just runs
+
+        val result = AppleHealthImportService(context, repository).importAppleHealthExport(
+            uri,
+            selectedCategories = setOf(AppleHealthImportCategory.WORKOUTS),
+        )
+
+        assertEquals(1, result.importedRecords)
+        assertTrue(insertedRecords.captured.single() is ExerciseSessionRecord)
+        assertEquals(
+            1,
+            result.typeSummaries.single { it.appleType == "HKQuantityTypeIdentifierDistanceWalkingRunning" }.converted,
+        )
+        val workoutSummary = result.typeSummaries.single { it.appleType == "HKWorkoutActivityTypeRunning" }
+        assertEquals(1, workoutSummary.converted)
+        assertEquals(0, workoutSummary.notSelected)
+        assertTrue(result.shareableReportText.contains("earlySkippedUnselectedRecords=0"))
         coVerify(exactly = 1) { repository.insertImportedRecords(any()) }
     }
 

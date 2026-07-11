@@ -545,6 +545,8 @@ class AppleHealthImportService
             @Volatile
             private var notSelectedCount = 0
 
+            private var earlySkippedUnselectedRecords = 0
+
             private var lastProgressParsedElements = 0
 
             val importedRecords: Int
@@ -554,8 +556,26 @@ class AppleHealthImportService
                 importLogs.addImportInfo(message)
             }
 
+            override fun shouldMaterializeRecord(type: String): Boolean {
+                val category = type.analysisCategory(converter.mindfulnessAvailable) ?: return true
+                if (category in selectedCategories) return true
+                return AppleHealthImportCategory.WORKOUTS in selectedCategories &&
+                    (type in AppleDistanceTypes || type == AppleActiveEnergyBurned)
+            }
+
             override fun onParsedType(type: String) {
                 converter.markParsed(type)
+            }
+
+            override fun onRecordSkipped(type: String) {
+                parsedRecords += 1
+                val category = type.analysisCategory(converter.mindfulnessAvailable) ?: return
+                converter.markCompatibleNotSelected(type)
+                earlySkippedUnselectedRecords += 1
+                convertedRecords += 1
+                notSelectedCount += 1
+                categoryStats.add(category = category, convertedRecords = 1)
+                maybeReportProgress()
             }
 
             override fun onRecord(record: AppleRecord) {
@@ -603,7 +623,8 @@ class AppleHealthImportService
                 log(
                     "Stage started: Converting final buffered groups bufferedRecords=${bufferedRecords.size} " +
                         "overlapDedupRecords=${overlapDedupRecords.size} workouts=${bufferedWorkouts.size} " +
-                        "activitySummaries=$parsedActivitySummaries",
+                        "activitySummaries=$parsedActivitySummaries " +
+                        "earlySkippedUnselectedRecords=$earlySkippedUnselectedRecords",
                 )
                 flushBufferedRecords()
                 // Emit-based conversion: converted records flow straight into the batch pipeline

@@ -59,7 +59,10 @@ internal fun ConvertedAppleRecord.hasExerciseRoute(): Boolean =
  * Must stay in sync with [importCategory], which classifies the converted Health Connect record.
  */
 internal fun AppleRecord.analysisCategory(mindfulnessAvailable: Boolean): AppleHealthImportCategory? =
-    when (type) {
+    type.analysisCategory(mindfulnessAvailable)
+
+internal fun String.analysisCategory(mindfulnessAvailable: Boolean): AppleHealthImportCategory? =
+    when (this) {
         AppleStepCount,
         AppleDistanceWalkingRunning,
         AppleDistanceCycling,

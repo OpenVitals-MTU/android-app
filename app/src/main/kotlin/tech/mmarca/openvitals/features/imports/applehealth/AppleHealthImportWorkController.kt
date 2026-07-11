@@ -26,10 +26,18 @@ class AppleHealthImportWorkController @Inject constructor(
         uri: Uri,
         selectedCategories: Set<AppleHealthImportCategory> = AllAppleHealthImportCategories,
         expectedSelectedRecords: Int = 0,
+        expectedParsedElements: Int = 0,
     ): UUID {
         persistReadPermission(uri)
         val request = OneTimeWorkRequestBuilder<AppleHealthImportWorker>()
-            .setInputData(AppleHealthImportWorker.inputData(uri, selectedCategories, expectedSelectedRecords))
+            .setInputData(
+                AppleHealthImportWorker.inputData(
+                    uri,
+                    selectedCategories,
+                    expectedSelectedRecords,
+                    expectedParsedElements,
+                ),
+            )
             .build()
         workManager.enqueueUniqueWork(
             AppleHealthImportWorker.UniqueWorkName,

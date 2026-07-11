@@ -215,7 +215,9 @@ private val UnexpectedXmlEndMessages = listOf(
 )
 
 internal interface AppleHealthXmlEventConsumer {
+    fun shouldMaterializeRecord(type: String): Boolean = true
     fun onParsedType(type: String)
+    fun onRecordSkipped(type: String) = Unit
     fun onRecord(record: AppleRecord)
     fun onWorkout(workout: AppleWorkout)
     fun onCorrelation(correlation: AppleCorrelation)
@@ -249,7 +251,16 @@ private class AppleHealthXmlHandler(
                 val type = attributes.value("type") ?: "Record"
                 countType(type)
                 consumer?.onParsedType(type)
-                stack.addLast(MutableAppleRecord(attributes, stack.lastOrNull() as? MutableAppleCorrelation, parseRecordDetails))
+                val parentCorrelation = stack.lastOrNull() as? MutableAppleCorrelation
+                val shouldMaterialize = parentCorrelation != null || consumer?.shouldMaterializeRecord(type) != false
+                stack.addLast(
+                    if (shouldMaterialize) {
+                        MutableAppleRecord(attributes, parentCorrelation, parseRecordDetails)
+                    } else {
+                        consumer?.onRecordSkipped(type)
+                        SkippedAppleRecord
+                    },
+                )
             }
             "Workout" -> {
                 parsedWorkouts += 1
@@ -267,6 +278,7 @@ private class AppleHealthXmlHandler(
             }
             "MetadataEntry" -> {
                 if (!parseRecordDetails) return
+                if (stack.lastOrNull() === SkippedAppleRecord) return
                 val key = attributes.value("key")
                 val value = attributes.value("value")
                 if (key != null && value != null) {
@@ -307,7 +319,9 @@ private class AppleHealthXmlHandler(
     override fun endElement(uri: String?, localName: String?, qName: String?) {
         when (qName) {
             "Record" -> {
-                val element = stack.removeLastOrNull() as? MutableAppleRecord ?: return
+                val element = stack.removeLastOrNull()
+                if (element === SkippedAppleRecord) return
+                element as? MutableAppleRecord ?: return
                 val record = element.toRecord()
                 val parent = stack.lastOrNull() as? MutableAppleCorrelation
                 if (parent != null) {
@@ -371,6 +385,11 @@ private class AppleHealthXmlHandler(
 
 private sealed interface MutableAppleElement {
     val metadata: MutableMap<String, String>
+}
+
+private object SkippedAppleRecord : MutableAppleElement {
+    override val metadata: MutableMap<String, String>
+        get() = error("Skipped records do not collect metadata")
 }
 
 private class MutableAppleWorkoutRoute : MutableAppleElement {

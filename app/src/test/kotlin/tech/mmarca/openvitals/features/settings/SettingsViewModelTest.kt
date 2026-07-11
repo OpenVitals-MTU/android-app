@@ -306,6 +306,7 @@ class SettingsViewModelTest {
                 uri = uri,
                 selectedCategories = setOf(AppleHealthImportCategory.ACTIVITY),
                 expectedSelectedRecords = 1,
+                expectedParsedElements = 1,
             )
         } returns currentWorkId
         every { importController.errorFor(currentFailure) } returns "current failure"
@@ -547,7 +548,7 @@ class SettingsViewModelTest {
         mockk<AppleHealthImportWorkController>(relaxed = true).also { controller ->
             every { controller.workInfos } returns (workInfos ?: emptyFlow())
             every { controller.enqueue(any()) } returns UUID.randomUUID()
-            every { controller.enqueue(any(), any(), any()) } returns UUID.randomUUID()
+            every { controller.enqueue(any(), any(), any(), any()) } returns UUID.randomUUID()
         }
 
     private fun importService(): AppleHealthImportService =

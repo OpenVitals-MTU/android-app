@@ -320,6 +320,7 @@ class SettingsViewModel @Inject constructor(
             ?.filter { it.category in selectedCategories }
             ?.sumOf { it.convertedRecords }
             ?: 0
+        val expectedParsedElements = state.appleHealthImportAnalysis?.parsedElements ?: 0
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -327,6 +328,7 @@ class SettingsViewModel @Inject constructor(
                 appleHealthImportProgress = AppleHealthImportProgress(
                     phase = AppleHealthImportPhase.QUEUED,
                     expectedSelectedRecords = expectedSelectedRecords,
+                    expectedParsedElements = expectedParsedElements,
                 ),
                 appleHealthImportResult = null,
                 appleHealthImportError = null,
@@ -338,6 +340,7 @@ class SettingsViewModel @Inject constructor(
                     uri = uri,
                     selectedCategories = selectedCategories,
                     expectedSelectedRecords = expectedSelectedRecords,
+                    expectedParsedElements = expectedParsedElements,
                 )
             }
                 .onSuccess { workId ->

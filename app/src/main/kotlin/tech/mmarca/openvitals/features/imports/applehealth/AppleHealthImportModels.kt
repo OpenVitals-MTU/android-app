@@ -42,6 +42,7 @@ data class AppleHealthImportProgress(
     val skippedRecords: Int = 0,
     val failedRecords: Int = 0,
     val expectedSelectedRecords: Int = 0,
+    val expectedParsedElements: Int = 0,
 ) {
     val parsedElements: Int
         get() = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
@@ -51,22 +52,29 @@ data class AppleHealthImportProgress(
 
     val percent: Int?
         get() {
-            val total = expectedSelectedRecords.takeIf { it > 0 } ?: return null
             if (phase == AppleHealthImportPhase.COMPLETE) return 100
-            val selectedProgress = selectedPreparedRecords.coerceAtMost(total)
-            val selectedPercent = (selectedProgress.toDouble() / total * SelectedRecordsPercentCeiling).roundToInt()
+            val scanPercent = expectedParsedElements.takeIf { it > 0 }?.let { total ->
+                (parsedElements.coerceAtMost(total).toDouble() / total * SelectedRecordsPercentCeiling).roundToInt()
+            }
+            val selectedPercent = expectedSelectedRecords.takeIf { it > 0 }?.let { total ->
+                (selectedPreparedRecords.coerceAtMost(total).toDouble() / total * SelectedRecordsPercentCeiling).roundToInt()
+            }
+            val workPercent = scanPercent ?: selectedPercent ?: return null
+            val selectedProgressComplete = expectedSelectedRecords > 0 &&
+                selectedPreparedRecords >= expectedSelectedRecords
+            val scanProgressComplete = expectedParsedElements > 0 && parsedElements >= expectedParsedElements
             val phaseFloor = when (phase) {
                 AppleHealthImportPhase.QUEUED,
                 AppleHealthImportPhase.PARSING,
                 AppleHealthImportPhase.CONVERTING,
                 -> 0
-                AppleHealthImportPhase.CHECKING_DUPLICATES -> if (selectedProgress >= total) 88 else 0
-                AppleHealthImportPhase.WRITING -> if (selectedProgress >= total) 92 else 0
+                AppleHealthImportPhase.CHECKING_DUPLICATES -> if (scanProgressComplete || selectedProgressComplete) 88 else 0
+                AppleHealthImportPhase.WRITING -> if (scanProgressComplete || selectedProgressComplete) 92 else 0
                 AppleHealthImportPhase.FINISHING -> 95
                 AppleHealthImportPhase.BUILDING_REPORT -> 98
                 AppleHealthImportPhase.COMPLETE -> 100
             }
-            return maxOf(selectedPercent, phaseFloor).coerceIn(0, 99)
+            return maxOf(workPercent, phaseFloor).coerceIn(0, 99)
         }
 }
 

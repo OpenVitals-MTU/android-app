@@ -1447,14 +1447,27 @@ internal fun AppleHealthImportCard(
                 )
                 Text(
                     text = importProgress.percent?.let { percent ->
-                        stringResource(
-                            R.string.settings_apple_health_import_progress_with_percent,
-                            percent,
-                            stringResource(importProgress.phase.labelRes),
-                            importProgress.selectedPreparedRecords,
-                            importProgress.expectedSelectedRecords,
-                            importProgress.importedRecords,
-                        )
+                        if (importProgress.expectedParsedElements > 0) {
+                            stringResource(
+                                R.string.settings_apple_health_import_progress_with_scan_percent,
+                                percent,
+                                stringResource(importProgress.phase.labelRes),
+                                importProgress.parsedElements,
+                                importProgress.expectedParsedElements,
+                                importProgress.selectedPreparedRecords,
+                                importProgress.expectedSelectedRecords,
+                                importProgress.importedRecords,
+                            )
+                        } else {
+                            stringResource(
+                                R.string.settings_apple_health_import_progress_with_percent,
+                                percent,
+                                stringResource(importProgress.phase.labelRes),
+                                importProgress.selectedPreparedRecords,
+                                importProgress.expectedSelectedRecords,
+                                importProgress.importedRecords,
+                            )
+                        }
                     } ?: stringResource(
                         R.string.settings_apple_health_import_progress,
                         stringResource(importProgress.phase.labelRes),

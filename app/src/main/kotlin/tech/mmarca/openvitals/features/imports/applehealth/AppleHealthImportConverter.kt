@@ -94,6 +94,13 @@ internal class AppleHealthImportConverter(
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.parsed += 1
     }
 
+    fun markCompatibleNotSelected(appleType: String) {
+        typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.apply {
+            converted += 1
+            notSelected += 1
+        }
+    }
+
     fun diagnosticsSnapshot(): List<AppleHealthImportDiagnostic> = diagnostics.toList()
 
     fun diagnosticSummariesSnapshot(): List<AppleHealthImportDiagnosticSummary> =
