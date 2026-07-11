@@ -5,7 +5,7 @@ is the preferred place for community translation work.
 
 Translate the app here:
 
-[translate.codeberg.org/projects/openvitals/android-app](https://translate.codeberg.org/projects/openvitals/android-app/)
+[translate.codeberg.org/projects/openvitals/mobile-app](https://translate.codeberg.org/projects/openvitals/mobile-app/)
 
 ## Where The Strings Live
 
@@ -51,7 +51,7 @@ One Weblate component for the app UI:
 
 - Project: `OpenVitals`
 - Component: `App`
-- Repository: the Codeberg `OpenVitals/android-app` repository
+- Repository: the Codeberg `OpenVitals/mobile-app` repository
 - VCS mode: `Gitea pull request`
 - File format: `ARB file`
 - File mask: `lib/l10n/app_*.arb`

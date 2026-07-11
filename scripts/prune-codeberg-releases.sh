@@ -10,7 +10,7 @@ Usage:
 Environment:
   CODEBERG_RELEASE_API_KEY  Token used for deleting releases.
                             CODEBERG_TOKEN or FORGEJO_API_TOKEN also work.
-  CODEBERG_REPO             owner/repo, defaults to OpenVitals/android-app.
+  CODEBERG_REPO             owner/repo, defaults to OpenVitals/mobile-app.
   FORGE_URL                 Forge URL, defaults to https://codeberg.org.
   KEEP_RELEASES             Number of versioned releases to keep, defaults to 9.
   DRY_RUN                   true prints deletions, false deletes them.
@@ -53,7 +53,7 @@ done
 CODEBERG_RELEASE_API_KEY="${CODEBERG_RELEASE_API_KEY:-${CODEBERG_TOKEN:-${FORGEJO_API_TOKEN:-}}}"
 
 FORGE_URL="${FORGE_URL:-${CI_FORGE_URL:-https://codeberg.org}}"
-REPO="${CODEBERG_REPO:-${CI_REPO:-OpenVitals/android-app}}"
+REPO="${CODEBERG_REPO:-${CI_REPO:-OpenVitals/mobile-app}}"
 KEEP="${KEEP_RELEASES:-9}"
 DRY_RUN="${DRY_RUN:-true}"
 

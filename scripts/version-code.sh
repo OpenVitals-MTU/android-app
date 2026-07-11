@@ -163,7 +163,7 @@ shift || true
 
 floor="${OPENVITALS_VERSION_CODE_FLOOR:-$DEFAULT_FLOOR}"
 forge_url="${FORGE_URL:-${CI_FORGE_URL:-https://codeberg.org}}"
-repo="${CODEBERG_REPO:-${CI_REPO:-OpenVitals/android-app}}"
+repo="${CODEBERG_REPO:-${CI_REPO:-OpenVitals/mobile-app}}"
 tag=""
 
 case "$mode" in

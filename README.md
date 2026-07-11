@@ -18,8 +18,8 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 | Channel | Link | Best for |
 | --- | --- | --- |
 | Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) |  |
-| Codeberg releases | [Download signed release and debug APKs](https://codeberg.org/OpenVitals/android-app/releases) ||
-| Source | [Codeberg](https://codeberg.org/OpenVitals/android-app) / [GitHub mirror](https://github.com/mmarca-tech/OpenVitals) | |
+| Codeberg releases | [Download signed release and debug APKs](https://codeberg.org/OpenVitals/mobile-app/releases) ||
+| Source | [Codeberg](https://codeberg.org/OpenVitals/mobile-app) / [GitHub mirror](https://github.com/mmarca-tech/OpenVitals) | |
 
 ## Why OpenVitals
 
@@ -57,10 +57,10 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 OpenVitals is still early. Useful feedback is specific: device model, Android version, Health Connect provider version, which permissions were granted, and what screen or workflow failed.
 
 - Try the latest beta from Google Play or Codeberg releases
-- Report bugs and feature requests on [Codeberg issues](https://codeberg.org/OpenVitals/android-app/issues)
-- Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/) — see [`docs/engineering/translations.md`](docs/engineering/translations.md)
+- Report bugs and feature requests on [Codeberg issues](https://codeberg.org/OpenVitals/mobile-app/issues)
+- Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/mobile-app/) — see [`docs/engineering/translations.md`](docs/engineering/translations.md)
 - Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
-- Star or follow the project on [Codeberg](https://codeberg.org/OpenVitals/android-app) or the [GitHub mirror](https://github.com/mmarca-tech/OpenVitals)
+- Star or follow the project on [Codeberg](https://codeberg.org/OpenVitals/mobile-app) or the [GitHub mirror](https://github.com/mmarca-tech/OpenVitals)
 - Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
 - Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)
 

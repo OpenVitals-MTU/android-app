@@ -4,7 +4,7 @@
 
 This document describes the architecture of the OpenVitals Flutter app as it exists today, plus the direction new work should follow.
 
-This app is a 1:1 port of the Kotlin OpenVitals app (`../android-app`). The port keeps the Kotlin app's *architectural principles* — feature-first packages, a shared period shell, permission-aware feature repositories, proportional abstractions — but it does not keep its *mechanics*. Compose is Flutter widgets, ViewModels are Riverpod notifiers, Hilt is Riverpod providers, Room is drift, Navigation Compose is go_router. Where the port deliberately diverged from the Kotlin design, this document says so instead of pretending it didn't.
+This app is a 1:1 port of the Kotlin OpenVitals app, which it replaced in place on this repository (the Kotlin sources survive only in git history, at `23c14d0`). The port keeps the Kotlin app's *architectural principles* — feature-first packages, a shared period shell, permission-aware feature repositories, proportional abstractions — but it does not keep its *mechanics*. Compose is Flutter widgets, ViewModels are Riverpod notifiers, Hilt is Riverpod providers, Room is drift, Navigation Compose is go_router. Where the port deliberately diverged from the Kotlin design, this document says so instead of pretending it didn't.
 
 The goal is unchanged: keep boundaries clear enough that a new metric can be added without copying screen scaffolding, period math, or Health Connect plumbing.
 

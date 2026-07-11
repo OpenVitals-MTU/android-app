@@ -4,7 +4,7 @@ Implementation guide for coding agents working in this repository.
 
 Read this before adding a feature, extending a metric screen, or touching health, l10n, or background code.
 
-This app is a 1:1 Flutter port of the Kotlin OpenVitals app (`../android-app`, same Codeberg repo, same Play listing, same package `tech.mmarca.openvitals`). Behaviour parity with the Kotlin source is the default requirement; deviate only with a reason, and write the reason down.
+This app is a 1:1 Flutter port of the Kotlin OpenVitals app, which it REPLACED in place on this same repository (same Play listing, same package `tech.mmarca.openvitals`, same signing key). The Kotlin sources no longer exist in the working tree -- read them from git history: `git show 23c14d0:app/src/main/kotlin/...`. Behaviour parity with the Kotlin source is the default requirement; deviate only with a reason, and write the reason down.
 
 ## Source Of Truth
 
@@ -127,7 +127,7 @@ After adding any Android-side plugin, build the APK once: some plugins fail only
 
 ## Before Starting
 
-Read [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md), and check the Kotlin source in `../android-app` for the behaviour you are porting.
+Read [docs/engineering/feature-playbook.md](docs/engineering/feature-playbook.md). There is no sibling Kotlin checkout: if you need the original behaviour, read it out of git history (`git show 23c14d0:app/src/main/kotlin/...`).
 
 If the work would mean copying code out of an existing detail screen, stop and ask: "should this be a shared scaffold/component first?" The answer is usually yes for the shell and no for the chart body.
 
