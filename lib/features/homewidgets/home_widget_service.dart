@@ -175,7 +175,9 @@ class HomeWidgetInstance {
 
   final int appWidgetId;
 
-  /// Fully-qualified Android receiver class name.
+  /// The Android receiver class name, as the plugin reports it: either fully
+  /// qualified, or shortened to `.<class>` relative to the applicationId. Compare
+  /// it with [HomeWidgetService.matchesReceiver], never with `==`.
   final String className;
 }
 
@@ -271,11 +273,29 @@ class HomeWidgetService {
     await client.updateWidget(qualifiedAndroidName: qualifiedReceiver(widget));
   }
 
+  /// Whether [className], as [HomeWidgetClient.installedWidgets] reports it, is
+  /// [widget]'s receiver.
+  ///
+  /// **Both spellings have to be accepted.** The plugin reports
+  /// `ComponentName.getShortClassName()`, which drops the applicationId prefix
+  /// *when the class sits under it*. So the very same receiver arrives as
+  /// `.features.homewidgets.HomeMetricWidgetReceiver` in release (applicationId
+  /// `tech.mmarca.openvitals`) and as the fully-qualified
+  /// `tech.mmarca.openvitals.features.homewidgets.HomeMetricWidgetReceiver` in
+  /// debug (applicationId `tech.mmarca.openvitals.debug`, which the class name is
+  /// *not* a suffix of). Matching only the qualified form therefore worked in
+  /// every debug build and matched nothing at all in release: no metric or
+  /// beverage tile ever received a push, and one-tap logging silently did nothing.
+  bool matchesReceiver(HomeWidgetId widget, String className) =>
+      className == qualifiedReceiver(widget) ||
+      className == '.${widget.androidReceiver}';
+
   /// The placed instances of [widget], so per-instance data can be pushed to each.
   Future<List<HomeWidgetInstance>> instancesOf(HomeWidgetId widget) async {
-    final target = qualifiedReceiver(widget);
     final installed = await client.installedWidgets();
-    return installed.where((w) => w.className == target).toList();
+    return installed
+        .where((instance) => matchesReceiver(widget, instance.className))
+        .toList();
   }
 
   /// The configuration [appWidgetId] was set up with — the metric id for the
@@ -297,13 +317,17 @@ class HomeWidgetService {
   /// Which widget [appWidgetId] belongs to, or null when nothing is placed under
   /// that id (the instance was removed, or the host has no widgets at all).
   ///
-  /// The configure launch hands Dart only an `appWidgetId`
-  /// (`initiallyLaunchedFromHomeWidgetConfigure`), and the background log
-  /// callback only gets one off its URI — but the two beverage widgets and the
-  /// metric widget all configure through the same `MainActivity`, so the id must
-  /// be resolved back to a widget *type* before anything can be shown or pushed.
-  /// The receiver class name is what tells them apart, exactly as Kotlin's
-  /// `isQuickBeverageOneTapWidget` checks the provider's `className`.
+  /// The **background beverage-log callback** is the only caller: a tap hands it
+  /// nothing but an appWidgetId off its URI, and the two beverage widgets share a
+  /// key namespace while being separate providers, so the id has to be resolved
+  /// back to a widget *type* before the right receiver can be redrawn. Kotlin's
+  /// `quickBeverageWidgetReceiverClassForAppWidgetId` resolves the same thing the
+  /// same way.
+  ///
+  /// The *configuration* flow deliberately does **not** use this: each widget has
+  /// its own configuration activity, which knows its own type and passes it to
+  /// Dart. Guessing it from the placed instances is what made a metric tile open
+  /// the beverage picker when the appWidgetId it was handed turned out to be stale.
   Future<HomeWidgetId?> widgetOfInstance(int appWidgetId) async {
     final installed = await client.installedWidgets();
     for (final instance in installed) {
@@ -313,11 +337,11 @@ class HomeWidgetService {
     return null;
   }
 
-  /// The widget registered under the fully-qualified [className], or null when it
-  /// is not one of ours.
+  /// The widget registered under [className], or null when it is not one of ours.
+  /// Accepts both spellings the plugin can report — see [matchesReceiver].
   HomeWidgetId? widgetForReceiver(String className) {
     for (final widget in HomeWidgetId.values) {
-      if (qualifiedReceiver(widget) == className) return widget;
+      if (matchesReceiver(widget, className)) return widget;
     }
     return null;
   }

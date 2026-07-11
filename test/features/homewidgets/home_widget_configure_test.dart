@@ -44,13 +44,10 @@ class _ThrowingDashboardDataLoader implements DashboardDataLoader {
 }
 
 class _FakeConfigureChannel implements HomeWidgetConfigureChannel {
-  int finished = 0;
+  final List<int> finished = [];
 
   @override
-  Future<int?> pendingAppWidgetId() async => _appWidgetId;
-
-  @override
-  Future<void> finish() async => finished++;
+  Future<void> finish(int appWidgetId) async => finished.add(appWidgetId);
 }
 
 void main() {
@@ -164,8 +161,9 @@ void main() {
         'tech.mmarca.openvitals.features.homewidgets.HomeMetricWidgetReceiver',
       ),
     );
-    // Only now may the widget be kept (the plugin already set RESULT_CANCELED).
-    expect(channel.finished, 1);
+    // Only now may the widget be kept — and against the id the activity was
+    // launched with (the activity already set RESULT_CANCELED for that same id).
+    expect(channel.finished, [_appWidgetId]);
   });
 
   testWidgets('backing out without picking never finishes the configuration',
@@ -180,7 +178,7 @@ void main() {
     );
 
     // RESULT_CANCELED stands, so Android drops the half-placed widget.
-    expect(channel.finished, 0);
+    expect(channel.finished, isEmpty);
     expect(client.saved, isEmpty);
   });
 
@@ -203,6 +201,6 @@ void main() {
     // the tile up to date rather than leaving it stuck on "Select a metric".
     expect(client.saved['metric.$_appWidgetId.selection_id'], 'STEPS');
     expect(client.saved.containsKey('metric.$_appWidgetId.title'), isFalse);
-    expect(channel.finished, 1);
+    expect(channel.finished, [_appWidgetId]);
   });
 }

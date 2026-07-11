@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The configurable metric tile. Ported from the Kotlin
-    `res/xml/home_metric_widget_info.xml`, with one deviation: `android:configure`
-    points at MainActivity (the Flutter activity) instead of a native
-    configuration activity, because the metric catalog and its formatting live in
-    Dart. The `home_widget` plugin recognises the APPWIDGET_CONFIGURE intent and
-    hands the appWidgetId to Dart (`initiallyLaunchedFromHomeWidgetConfigure`).
+    The configurable metric tile. Ported 1:1 from the Kotlin
+    `res/xml/home_metric_widget_info.xml`, including its dedicated
+    `android:configure` activity: the picker's *contents* are a Flutter screen
+    (the metric catalog lives in Dart), but the activity hosting it is this
+    widget's own, so it is genuinely started for result and knows its type.
+    Pointing this at MainActivity instead — which is singleTop — is what made a
+    metric tile open the beverage picker and then never get placed.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="140dp"
@@ -17,7 +18,7 @@
     android:updatePeriodMillis="1800000"
     android:description="@string/home_metric_widget_description"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:configure="tech.mmarca.openvitals.MainActivity"
+    android:configure="tech.mmarca.openvitals.HomeMetricWidgetConfigureActivity"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:widgetFeatures="reconfigurable" />

@@ -67,6 +67,10 @@ android {
         // (see scripts/version-code.sh), not this file.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // The launcher (and the widget picker) label. Overridden per build type so a
+        // debug install is never mistaken for the real app sitting next to it.
+        manifestPlaceholders["appLabel"] = "OpenVitals"
     }
 
     signingConfigs {
@@ -88,6 +92,10 @@ android {
             // uninstalling to force it would destroy that app's health data.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            // The suffix already separates the packages, but both showed up as plain
+            // "OpenVitals" in the launcher and, worse, as two identical entries in the
+            // widget picker.
+            manifestPlaceholders["appLabel"] = "OpenVitals Debug"
         }
         release {
             // Signed with the SAME key as the published Kotlin app: this build

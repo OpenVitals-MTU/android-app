@@ -154,5 +154,65 @@ void main() {
 
       expect(metrics.map((w) => w.appWidgetId), [1, 3]);
     });
+
+    /// The plugin reports `ComponentName.getShortClassName()`, which strips the
+    /// applicationId prefix when the class sits under it. So the *release* build
+    /// (applicationId `tech.mmarca.openvitals`) reports the short, leading-dot
+    /// form, while debug (`…​.debug`, which the class name is not a suffix of)
+    /// reports the fully-qualified one. Matching only the qualified name made
+    /// every per-instance widget work in debug and silently do nothing in
+    /// release: no metric or beverage tile ever got a push, and one-tap logging
+    /// resolved to no widget at all.
+    group('the release build\'s shortened receiver names', () {
+      const shortMetric = '.features.homewidgets.HomeMetricWidgetReceiver';
+      const shortOneTap =
+          '.features.homewidgets.HomeQuickBeverageOneTapWidgetReceiver';
+
+      test('instancesOf matches them', () async {
+        final client = FakeHomeWidgetClient(installed: const [
+          HomeWidgetInstance(appWidgetId: 7, className: shortMetric),
+          HomeWidgetInstance(appWidgetId: 8, className: shortOneTap),
+        ]);
+        final service = HomeWidgetService(client: client);
+
+        expect(
+          (await service.instancesOf(HomeWidgetId.metric))
+              .map((w) => w.appWidgetId),
+          [7],
+        );
+        expect(
+          (await service.instancesOf(HomeWidgetId.quickBeverageOneTap))
+              .map((w) => w.appWidgetId),
+          [8],
+        );
+        expect(await service.instancesOf(HomeWidgetId.quickBeverage), isEmpty);
+      });
+
+      test('widgetOfInstance resolves them', () async {
+        final client = FakeHomeWidgetClient(installed: const [
+          HomeWidgetInstance(appWidgetId: 8, className: shortOneTap),
+        ]);
+        final service = HomeWidgetService(client: client);
+
+        // The background beverage-log tap: without this, every tap on a release
+        // build resolved to no widget and was dropped.
+        expect(
+          await service.widgetOfInstance(8),
+          HomeWidgetId.quickBeverageOneTap,
+        );
+      });
+
+      test('the fully-qualified debug form keeps working', () {
+        const service = HomeWidgetService();
+
+        expect(
+          service.widgetForReceiver(service.qualifiedReceiver(
+            HomeWidgetId.quickBeverage,
+          )),
+          HomeWidgetId.quickBeverage,
+        );
+        expect(service.widgetForReceiver('com.other.app.Widget'), isNull);
+      });
+    });
   });
 }

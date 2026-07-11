@@ -56,19 +56,24 @@ Future<void> main() async {
     ],
   );
 
-  // A metric or quick-beverage widget being placed (or reconfigured) launches
-  // this same activity with ACTION_APPWIDGET_CONFIGURE — MainActivity is every
-  // configurable widget's `android:configure` target, because the metric catalog
-  // and the drink catalog both live in Dart. It is a modal, single-purpose
-  // launch: show the picker and nothing else, and skip the reminder bootstrap,
-  // which belongs to a real app start.
-  final configureAppWidgetId =
-      await container.read(homeWidgetConfigureChannelProvider).pendingAppWidgetId();
-  if (configureAppWidgetId != null) {
+  // A metric or quick-beverage widget being placed (or reconfigured) starts that
+  // widget's own configuration activity (HomeWidgetConfigureActivity.kt), which
+  // boots this entrypoint in a fresh engine on the initial route
+  // `/widget-configure/<widget>?appWidgetId=<id>`. It is a modal, single-purpose
+  // launch: show that widget's picker and nothing else, and skip the reminder
+  // bootstrap, which belongs to a real app start.
+  //
+  // Both facts come from the route because the activity knows them: nothing here
+  // resolves a type from an appWidgetId, which is what used to put the beverage
+  // picker in front of a metric tile.
+  final configure = parseHomeWidgetConfigureRoute(
+    WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+  );
+  if (configure != null) {
     runApp(
       UncontrolledProviderScope(
         container: container,
-        child: HomeWidgetConfigureApp(appWidgetId: configureAppWidgetId),
+        child: HomeWidgetConfigureApp(request: configure),
       ),
     );
     return;

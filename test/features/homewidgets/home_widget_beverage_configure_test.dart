@@ -91,13 +91,10 @@ class _StubDashboardDataLoader implements DashboardDataLoader {
 }
 
 class _FakeConfigureChannel implements HomeWidgetConfigureChannel {
-  int finished = 0;
+  final List<int> finished = [];
 
   @override
-  Future<int?> pendingAppWidgetId() async => _appWidgetId;
-
-  @override
-  Future<void> finish() async => finished++;
+  Future<void> finish(int appWidgetId) async => finished.add(appWidgetId);
 }
 
 void main() {
@@ -117,14 +114,18 @@ void main() {
         goals: const DailyReadinessGoalInputs(),
       );
 
-  /// The configure launch, exactly as `main()` mounts it: only the appWidgetId is
-  /// known, and the picker has to work out which widget it belongs to.
+  /// The configure launch, exactly as `main()` mounts it: the widget's own
+  /// configuration activity says WHAT is being configured, so the picker is
+  /// handed a type and an id and has nothing to resolve.
   Future<void> pumpConfigure(
     WidgetTester tester, {
     required FakeHomeWidgetClient client,
     required HomeWidgetConfigureChannel channel,
+    required String route,
     List<CustomHydrationDrink> drinks = const [],
   }) async {
+    final request = parseHomeWidgetConfigureRoute(route);
+    expect(request, isNotNull, reason: 'unparseable configure route: $route');
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -141,31 +142,97 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const HomeWidgetConfigurePicker(appWidgetId: _appWidgetId),
+          home: HomeWidgetConfigurePicker(request: request!),
         ),
       ),
     );
     await tester.pumpAndSettle();
   }
 
+  /// The instance the widget's own configure activity was launched for. The
+  /// class name only matters to the *refresher* now — the picker is told its type.
   FakeHomeWidgetClient clientFor(String className) => FakeHomeWidgetClient(
         installed: [
           HomeWidgetInstance(appWidgetId: _appWidgetId, className: className),
         ],
       );
 
+  group('configure route', () {
+    test('carries the widget type and the appWidgetId', () {
+      expect(
+        parseHomeWidgetConfigureRoute('/widget-configure/metric?appWidgetId=13'),
+        const HomeWidgetConfigureRequest(
+          widget: HomeWidgetId.metric,
+          appWidgetId: 13,
+        ),
+      );
+      expect(
+        parseHomeWidgetConfigureRoute(
+          '/widget-configure/quickBeverage?appWidgetId=14',
+        ),
+        const HomeWidgetConfigureRequest(
+          widget: HomeWidgetId.quickBeverage,
+          appWidgetId: 14,
+        ),
+      );
+      expect(
+        parseHomeWidgetConfigureRoute(
+          '/widget-configure/quickBeverageOneTap?appWidgetId=15',
+        ),
+        const HomeWidgetConfigureRequest(
+          widget: HomeWidgetId.quickBeverageOneTap,
+          appWidgetId: 15,
+        ),
+      );
+    });
+
+    test('an ordinary launch is not a configure launch', () {
+      // `main()` must boot the real app for these, not a picker.
+      expect(parseHomeWidgetConfigureRoute(null), isNull);
+      expect(parseHomeWidgetConfigureRoute('/'), isNull);
+      expect(parseHomeWidgetConfigureRoute('/dashboard'), isNull);
+    });
+
+    test('a route it cannot fully understand is refused', () {
+      // No id, an invalid id (0 == INVALID_APPWIDGET_ID), an unknown widget, and
+      // a widget that is not configured per instance: each would leave a picker
+      // wired to nothing.
+      expect(parseHomeWidgetConfigureRoute('/widget-configure/metric'), isNull);
+      expect(
+        parseHomeWidgetConfigureRoute('/widget-configure/metric?appWidgetId=0'),
+        isNull,
+      );
+      expect(
+        parseHomeWidgetConfigureRoute(
+          '/widget-configure/metric?appWidgetId=nope',
+        ),
+        isNull,
+      );
+      expect(
+        parseHomeWidgetConfigureRoute('/widget-configure/nope?appWidgetId=13'),
+        isNull,
+      );
+      expect(
+        parseHomeWidgetConfigureRoute(
+          '/widget-configure/todayVitals?appWidgetId=13',
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('widget-type resolution', () {
-    testWidgets('a beverage appWidgetId opens the beverage picker',
+    testWidgets('a beverage configure route opens the beverage picker',
         (tester) async {
       await pumpConfigure(
         tester,
         client: clientFor(_beverageReceiver),
         channel: _FakeConfigureChannel(),
+        route: '/widget-configure/quickBeverage?appWidgetId=$_appWidgetId',
         drinks: [_water, _espresso],
       );
 
-      // The configure launch hands over an id, not a type: the receiver class
-      // name behind it is what picks the screen.
+      // The type comes from the activity, not from the placed instances.
       expect(find.text(l10n.homeQuickBeverageWidgetConfigPrompt), findsOneWidget);
       expect(find.text(l10n.homeMetricWidgetConfigPrompt), findsNothing);
     });
@@ -175,33 +242,43 @@ void main() {
         tester,
         client: clientFor(_oneTapReceiver),
         channel: _FakeConfigureChannel(),
+        route: '/widget-configure/quickBeverageOneTap?appWidgetId=$_appWidgetId',
         drinks: [_water],
       );
 
       expect(find.text(l10n.homeQuickBeverageWidgetConfigPrompt), findsOneWidget);
     });
 
-    testWidgets('a metric appWidgetId still opens the metric picker',
+    testWidgets('a metric configure route NEVER opens the beverage picker',
+        (tester) async {
+      // The bug this whole flow was rebuilt for: a metric tile showed the drink
+      // list, because the type was guessed from a stale appWidgetId. Even with a
+      // beverage instance sitting under that very id, the metric route wins.
+      await pumpConfigure(
+        tester,
+        client: clientFor(_beverageReceiver),
+        channel: _FakeConfigureChannel(),
+        route: '/widget-configure/metric?appWidgetId=$_appWidgetId',
+        drinks: [_water, _espresso],
+      );
+
+      expect(find.text(l10n.homeMetricWidgetConfigPrompt), findsOneWidget);
+      expect(find.text(l10n.homeQuickBeverageWidgetConfigPrompt), findsNothing);
+      expect(find.text('Water - 500 ml'), findsNothing);
+    });
+
+    testWidgets('a beverage route NEVER opens the metric picker, either',
         (tester) async {
       await pumpConfigure(
         tester,
         client: clientFor(_metricReceiver),
         channel: _FakeConfigureChannel(),
+        route: '/widget-configure/quickBeverage?appWidgetId=$_appWidgetId',
+        drinks: [_water],
       );
 
-      expect(find.text(l10n.homeMetricWidgetConfigPrompt), findsOneWidget);
-      expect(find.text(l10n.homeQuickBeverageWidgetConfigPrompt), findsNothing);
-    });
-
-    testWidgets('an unplaceable id falls back to the metric picker',
-        (tester) async {
-      await pumpConfigure(
-        tester,
-        client: FakeHomeWidgetClient(),
-        channel: _FakeConfigureChannel(),
-      );
-
-      expect(find.text(l10n.homeMetricWidgetConfigPrompt), findsOneWidget);
+      expect(find.text(l10n.homeQuickBeverageWidgetConfigPrompt), findsOneWidget);
+      expect(find.text(l10n.homeMetricWidgetConfigPrompt), findsNothing);
     });
   });
 
@@ -212,6 +289,7 @@ void main() {
         tester,
         client: clientFor(_beverageReceiver),
         channel: _FakeConfigureChannel(),
+        route: '/widget-configure/quickBeverage?appWidgetId=$_appWidgetId',
         drinks: [_water, _espresso],
       );
 
@@ -230,6 +308,7 @@ void main() {
         tester,
         client: clientFor(_beverageReceiver),
         channel: _FakeConfigureChannel(),
+        route: '/widget-configure/quickBeverage?appWidgetId=$_appWidgetId',
       );
 
       expect(find.text(l10n.homeQuickBeverageWidgetNoDrinks), findsOneWidget);
@@ -246,8 +325,8 @@ void main() {
         tester,
         client: client,
         channel: channel,
+        route: '/widget-configure/quickBeverage?appWidgetId=$_appWidgetId',
         drinks: [_water, _espresso],
-        // ignore: require_trailing_commas
       );
       await tester.tap(find.text('Espresso - 30 ml'));
       await tester.pumpAndSettle();
@@ -276,8 +355,9 @@ void main() {
         'manual_entry/hydration/log/espresso',
       );
       expect(client.updated, contains(_beverageReceiver));
-      // Only now may the widget be kept (the plugin already set RESULT_CANCELED).
-      expect(channel.finished, 1);
+      // Only now may the widget be kept — for the id the activity was launched
+      // with, which is the id the launcher is waiting on.
+      expect(channel.finished, [_appWidgetId]);
     });
 
     testWidgets('the 1x1 pick pushes to the 1x1 receiver', (tester) async {
@@ -287,6 +367,7 @@ void main() {
         tester,
         client: client,
         channel: _FakeConfigureChannel(),
+        route: '/widget-configure/quickBeverageOneTap?appWidgetId=$_appWidgetId',
         drinks: [_water],
       );
       await tester.tap(find.text('Water - 500 ml'));
@@ -307,11 +388,12 @@ void main() {
         tester,
         client: client,
         channel: channel,
+        route: '/widget-configure/quickBeverage?appWidgetId=$_appWidgetId',
         drinks: [_water],
       );
 
       // RESULT_CANCELED stands, so Android drops the half-placed widget.
-      expect(channel.finished, 0);
+      expect(channel.finished, isEmpty);
       expect(client.saved, isEmpty);
     });
   });

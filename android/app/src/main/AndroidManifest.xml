@@ -222,7 +222,7 @@
     </queries>
 
     <application
-        android:label="OpenVitals"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
@@ -270,16 +270,15 @@
             <intent-filter>
                 <action android:name="es.antonborri.home_widget.action.LAUNCH" />
             </intent-filter>
-            <!-- The metric widget's configuration activity IS this activity
-                 (@xml/home_metric_widget_info android:configure): the metric
-                 catalog and its formatting live in Dart, so the picker is a
-                 Flutter screen. The plugin reads the appWidgetId off this intent
-                 (`initiallyLaunchedFromHomeWidgetConfigure`), sets RESULT_CANCELED,
-                 and `finishHomeWidgetConfigure` completes with RESULT_OK. -->
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
+            <!-- NOTE: no APPWIDGET_CONFIGURE filter here, deliberately. This
+                 activity is `singleTop`, so a configure intent arriving while the
+                 app was running was delivered to the *running* instance via
+                 onNewIntent: `main()` never re-ran (so the picker read a stale or
+                 absent appWidgetId off the initial intent), and the activity had
+                 never been started for result (so RESULT_OK reached nobody and the
+                 launcher dropped the widget). Each configurable widget now has its
+                 own dedicated configuration activity — see
+                 HomeWidgetConfigureActivity.kt. -->
 
             <!-- "Open with" / "Share" a route file (.gpx/.kml/.kmz/.fit) into the
                  activity-entry form. Mirrors the Kotlin manifest: one filter by
@@ -340,6 +339,67 @@
                 <data android:mimeType="application/vnd.garmin.fit" />
                 <data android:mimeType="application/fit" />
                 <data android:mimeType="application/x-fit" />
+            </intent-filter>
+        </activity>
+
+        <!-- =====================================================================
+             Home-widget configuration activities (ports of the Kotlin
+             `HomeMetricWidgetConfigurationActivity` /
+             `HomeQuickBeverageWidgetConfigurationActivity`). One per configurable
+             widget, so the activity KNOWS what it is configuring and is genuinely
+             `startActivityForResult`-ed by the launcher.
+
+             Three attributes matter and none is incidental:
+             * NO `launchMode` (i.e. `standard`): `singleTop` is precisely what
+               broke the old MainActivity-hosted flow — Android would hand the
+               configure intent to the already-running instance instead of starting
+               a new, for-result activity.
+             * `exported="false"`: the launcher never starts these itself; the
+               AppWidget framework does, through a system-created IntentSender.
+             * `excludeFromRecents="true"`: a modal, single-purpose activity has no
+               business showing up as a task.
+             ===================================================================== -->
+        <activity
+            android:name=".HomeMetricWidgetConfigureActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Shared by BOTH beverage widgets (the 2x1 and the 1x1 one-tap), exactly
+             as Kotlin shared one configuration activity between them: the picker is
+             identical, and the activity resolves which of the two providers is
+             bound to the appWidgetId to know which receiver to push to. -->
+        <activity
+            android:name=".HomeQuickBeverageWidgetConfigureActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
@@ -411,9 +471,13 @@
              Home-screen widgets (Glance). Dart pushes a snapshot into the shared
              `HomeWidgetPreferences` and the composables render it. The metric and
              the two quick-beverage widgets are additionally configurable per
-             instance — their configuration activity is MainActivity (see the
-             APPWIDGET_CONFIGURE filter above), because the metric catalog and the
-             drink catalog both live in Dart. A tap on a beverage tile logs the
+             instance — each points `android:configure` at its OWN activity
+             (HomeMetricWidgetConfigureActivity / HomeQuickBeverageWidgetConfigureActivity,
+             declared above), because the metric catalog and the drink catalog both
+             live in Dart. It must NOT be MainActivity: that is singleTop, so the
+             configure intent was delivered to the already-running instance through
+             onNewIntent, the appWidgetId came back stale (wrong picker), and the
+             launcher never received RESULT_OK (the widget was never created). A tap on a beverage tile logs the
              drink through the HomeWidgetBackgroundReceiver declared above.
              ===================================================================== -->
         <receiver

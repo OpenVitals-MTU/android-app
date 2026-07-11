@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:home_widget/home_widget.dart';
 
 import '../../app.dart';
 import '../../core/time/local_date.dart';
@@ -18,53 +17,122 @@ import 'home_widget_beverage.dart';
 import 'home_widget_service.dart';
 import 'home_widget_snapshots.dart';
 
-/// Configuring a placed metric widget — the Flutter half of the Kotlin
-/// `HomeMetricWidgetConfigurationActivity`.
+/// Configuring a placed home-screen widget — the Flutter half of the Kotlin
+/// `HomeMetricWidgetConfigurationActivity` and
+/// `HomeQuickBeverageWidgetConfigurationActivity`.
 ///
-/// Kotlin could put the picker in a native `ListView` activity because the metric
-/// catalog, its titles and its formatting all live in Kotlin. Here they live in
-/// Dart, so the *Flutter activity is the configuration activity*: the metric
-/// widget's `android:configure` points at `MainActivity`, and the `home_widget`
-/// plugin recognises the `APPWIDGET_CONFIGURE` intent —
-/// [HomeWidget.initiallyLaunchedFromHomeWidgetConfigure] hands us the appWidgetId
-/// (and sets `RESULT_CANCELED` for us, so backing out drops the widget, exactly
-/// as Kotlin's `setResult(RESULT_CANCELED)` in `onCreate` does).
+/// Kotlin could put each picker in a native `ListView` activity because the metric
+/// catalog and the drink catalog both live in Kotlin. Here they live in Dart, so
+/// the picker's *contents* are a Flutter screen — but the activity hosting it is
+/// still the widget's own dedicated one (`HomeWidgetConfigureActivity.kt`), for
+/// two reasons that a single shared `MainActivity` cannot satisfy:
 ///
-/// The picked metric is persisted as the instance's `selection_id`, which is the
-/// contract `HomeWidgetRefresher` reads back to know what each tile shows. Kotlin
-/// additionally kept the choice in an `AppWidgetOptions` bundle and a private
-/// SharedPreferences file, with a "pending metric" TTL to bridge the two — none of
-/// which is needed here: the plugin's preferences file is the single source of
-/// truth for both sides.
+/// 1. It is genuinely `startActivityForResult`-ed by the launcher, so the
+///    `RESULT_OK` a pick sets actually reaches it. MainActivity is `singleTop`:
+///    a configure intent arriving while the app ran went to the *running*
+///    instance, whose result nobody was waiting for, and the launcher silently
+///    dropped the widget.
+/// 2. It *knows* which widget it is configuring and hands that over up front, so
+///    nothing has to guess the type from an appWidgetId that may be stale (a
+///    stale id resolving to a beverage instance is how a metric tile ended up
+///    showing the beverage picker).
+///
+/// The native side hands both facts over as the engine's initial route —
+/// `/widget-configure/<HomeWidgetId.name>?appWidgetId=<id>` — which `main()`
+/// parses with [parseHomeWidgetConfigureRoute].
+///
+/// The picked metric/drink is persisted as the instance's `selection_id`, which is
+/// the contract `HomeWidgetRefresher` reads back to know what each tile shows.
+/// Kotlin additionally kept the choice in an `AppWidgetOptions` bundle and a
+/// private SharedPreferences file, with a "pending metric" TTL to bridge the two —
+/// none of which is needed here: the plugin's preferences file is the single
+/// source of truth for both sides.
 
-/// Thin seam over the plugin's configuration channel, so the picker is testable
+/// Prefix of the initial route the configure activities boot Dart on. Mirrors
+/// `HomeWidgetConfigureActivity.CONFIGURE_ROUTE_PREFIX`.
+const String homeWidgetConfigureRoutePrefix = '/widget-configure/';
+
+/// Mirrors `HomeWidgetConfigureActivity.APP_WIDGET_ID_PARAM`.
+const String homeWidgetConfigureAppWidgetIdParam = 'appWidgetId';
+
+/// Mirrors `HomeWidgetConfigureActivity.CONFIGURE_CHANNEL`.
+const String homeWidgetConfigureChannelName =
+    'tech.mmarca.openvitals/home_widget_configure';
+
+/// What the app was launched to configure: which widget, and which placed
+/// instance of it.
+class HomeWidgetConfigureRequest {
+  const HomeWidgetConfigureRequest({
+    required this.widget,
+    required this.appWidgetId,
+  });
+
+  final HomeWidgetId widget;
+  final int appWidgetId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is HomeWidgetConfigureRequest &&
+      other.widget == widget &&
+      other.appWidgetId == appWidgetId;
+
+  @override
+  int get hashCode => Object.hash(widget, appWidgetId);
+
+  @override
+  String toString() =>
+      'HomeWidgetConfigureRequest(${widget.name}, appWidgetId: $appWidgetId)';
+}
+
+/// The configure request behind an initial [route], or null when this is an
+/// ordinary launch.
+///
+/// Rejects anything it does not fully understand — an unknown widget name, a
+/// widget that is not configurable, a missing or unparseable appWidgetId — so a
+/// malformed route boots the normal app rather than a picker wired to nothing.
+HomeWidgetConfigureRequest? parseHomeWidgetConfigureRoute(String? route) {
+  if (route == null || !route.startsWith(homeWidgetConfigureRoutePrefix)) {
+    return null;
+  }
+  final uri = Uri.tryParse(route);
+  if (uri == null) return null;
+  final name = uri.path.substring(homeWidgetConfigureRoutePrefix.length);
+  final widget = HomeWidgetId.values
+      .where((widget) => widget.isPerInstance && widget.name == name)
+      .firstOrNull;
+  if (widget == null) return null;
+  final id = int.tryParse(
+    uri.queryParameters[homeWidgetConfigureAppWidgetIdParam] ?? '',
+  );
+  // 0 is AppWidgetManager.INVALID_APPWIDGET_ID.
+  if (id == null || id == 0) return null;
+  return HomeWidgetConfigureRequest(widget: widget, appWidgetId: id);
+}
+
+/// Thin seam over the configure activity's channel, so the pickers are testable
 /// without an Android host (the same shape as `HomeWidgetLaunchChannel`).
+///
+/// Deliberately *not* `home_widget`'s `finishHomeWidgetConfigure`: that API reads
+/// the appWidgetId back off the hosting activity's intent, which only works when
+/// the configure target is the activity the intent launched — the single-activity
+/// setup this replaces.
 class HomeWidgetConfigureChannel {
   const HomeWidgetConfigureChannel();
 
-  /// The appWidgetId the app was launched to configure, or null on a normal
-  /// launch (and on every host without the plugin).
-  Future<int?> pendingAppWidgetId() async {
-    try {
-      final id = await HomeWidget.initiallyLaunchedFromHomeWidgetConfigure();
-      // The plugin hands the id over as a String.
-      return id == null ? null : int.tryParse(id);
-    } on PlatformException catch (error) {
-      debugPrint('initiallyLaunchedFromHomeWidgetConfigure failed: $error');
-      return null;
-    } on MissingPluginException {
-      return null;
-    }
-  }
+  static const MethodChannel _channel =
+      MethodChannel(homeWidgetConfigureChannelName);
 
-  /// Completes the configuration with `RESULT_OK`, which is what tells Android to
-  /// keep the widget. Not calling it leaves the `RESULT_CANCELED` the plugin set,
-  /// so a user who backs out never gets a half-configured tile.
-  Future<void> finish() async {
+  /// Completes the configuration with `RESULT_OK` and finishes the activity,
+  /// which is what tells the launcher to keep the widget. Not calling it leaves
+  /// the `RESULT_CANCELED` the activity set in `onCreate`, so a user who backs
+  /// out never gets a half-configured tile.
+  Future<void> finish(int appWidgetId) async {
     try {
-      await HomeWidget.finishHomeWidgetConfigure();
+      await _channel.invokeMethod<void>('finishConfigure', {
+        homeWidgetConfigureAppWidgetIdParam: appWidgetId,
+      });
     } on PlatformException catch (error) {
-      debugPrint('finishHomeWidgetConfigure failed: $error');
+      debugPrint('finishConfigure failed: $error');
     } on MissingPluginException {
       // No host to finish against (tests, desktop).
     }
@@ -81,17 +149,10 @@ final homeWidgetConfigureChannelProvider = Provider<HomeWidgetConfigureChannel>(
 /// configuration launch is a modal, single-purpose activity that finishes as soon
 /// as the user picks (or backs out), and the router's dashboard has no business
 /// booting up behind it. `main()` mounts this instead of the app.
-///
-/// Three widgets configure through here — the metric tile and the two
-/// quick-beverage tiles — but the plugin hands over only the `appWidgetId`, not
-/// which of them was placed. So the id is resolved back to a widget type through
-/// the installed-widget list (its receiver class name), and the matching picker
-/// is shown. Kotlin had no such step: each widget pointed `android:configure` at
-/// its own native activity.
 class HomeWidgetConfigureApp extends ConsumerWidget {
-  const HomeWidgetConfigureApp({super.key, required this.appWidgetId});
+  const HomeWidgetConfigureApp({super.key, required this.request});
 
-  final int appWidgetId;
+  final HomeWidgetConfigureRequest request;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -107,66 +168,33 @@ class HomeWidgetConfigureApp extends ConsumerWidget {
       // must not win the platform-locale resolution here either.
       supportedLocales: OpenVitalsApp.supportedLocales,
       locale: tag == null ? null : Locale(tag),
-      home: HomeWidgetConfigurePicker(appWidgetId: appWidgetId),
+      home: HomeWidgetConfigurePicker(request: request),
     );
   }
 }
 
-/// Resolves which widget [appWidgetId] belongs to, then shows its picker.
+/// The picker for the widget named in [request].
 ///
-/// An id that resolves to nothing (the instance vanished, or the host has no
-/// widgets) falls back to the metric picker — the pre-beverage behaviour, and the
-/// only picker that needs no drink catalog.
-class HomeWidgetConfigurePicker extends ConsumerStatefulWidget {
-  const HomeWidgetConfigurePicker({super.key, required this.appWidgetId});
+/// Synchronous by construction: the configure activity already told us the type,
+/// so there is nothing to resolve and no way to land on the wrong picker. (The
+/// old flow had to guess it from `installedWidgets()`, because every widget
+/// configured through the same activity.)
+class HomeWidgetConfigurePicker extends StatelessWidget {
+  const HomeWidgetConfigurePicker({super.key, required this.request});
 
-  final int appWidgetId;
-
-  @override
-  ConsumerState<HomeWidgetConfigurePicker> createState() =>
-      _HomeWidgetConfigurePickerState();
-}
-
-class _HomeWidgetConfigurePickerState
-    extends ConsumerState<HomeWidgetConfigurePicker> {
-  late final Future<HomeWidgetId?> _widget = _resolve();
-
-  Future<HomeWidgetId?> _resolve() async {
-    try {
-      return await ref
-          .read(homeWidgetServiceProvider)
-          .widgetOfInstance(widget.appWidgetId);
-    } catch (error) {
-      debugPrint('Home widget type resolution failed: $error');
-      return null;
-    }
-  }
+  final HomeWidgetConfigureRequest request;
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<HomeWidgetId?>(
-      future: _widget,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return switch (snapshot.data) {
-          HomeWidgetId.quickBeverage => HomeQuickBeverageWidgetConfigureScreen(
-              appWidgetId: widget.appWidgetId,
-              widgetId: HomeWidgetId.quickBeverage,
-            ),
-          HomeWidgetId.quickBeverageOneTap =>
-            HomeQuickBeverageWidgetConfigureScreen(
-              appWidgetId: widget.appWidgetId,
-              widgetId: HomeWidgetId.quickBeverageOneTap,
-            ),
-          _ => HomeMetricWidgetConfigureScreen(appWidgetId: widget.appWidgetId),
-        };
-      },
-    );
-  }
+  Widget build(BuildContext context) => switch (request.widget) {
+        HomeWidgetId.quickBeverage || HomeWidgetId.quickBeverageOneTap =>
+          HomeQuickBeverageWidgetConfigureScreen(
+            appWidgetId: request.appWidgetId,
+            widgetId: request.widget,
+          ),
+        _ => HomeMetricWidgetConfigureScreen(
+            appWidgetId: request.appWidgetId,
+          ),
+      };
 }
 
 /// The metric picker (Kotlin's `ListView` of `homeMetricWidgetCatalog()`).
@@ -192,7 +220,9 @@ class _HomeMetricWidgetConfigureScreenState
     await ref
         .read(homeWidgetRefresherProvider)
         .configureMetricInstance(metric, appWidgetId: widget.appWidgetId);
-    await ref.read(homeWidgetConfigureChannelProvider).finish();
+    await ref
+        .read(homeWidgetConfigureChannelProvider)
+        .finish(widget.appWidgetId);
     // The activity is finishing; nothing to reset if it somehow is not.
     if (mounted) setState(() => _configuring = false);
   }
@@ -308,7 +338,9 @@ class _HomeQuickBeverageWidgetConfigureScreenState
           widget: widget.widgetId,
           appWidgetId: widget.appWidgetId,
         );
-    await ref.read(homeWidgetConfigureChannelProvider).finish();
+    await ref
+        .read(homeWidgetConfigureChannelProvider)
+        .finish(widget.appWidgetId);
     // The activity is finishing; nothing to reset if it somehow is not.
     if (mounted) setState(() => _configuring = false);
   }
