@@ -64,7 +64,7 @@ void main() {
         alarms: alarms,
       );
 
-  test('arms an exact, wake-up, doze-proof alarm that survives reboot',
+  test('arms an INEXACT, wake-up, doze-proof alarm that survives reboot',
       () async {
     final when = DateTime(2026, 6, 1, 9);
     await scheduler().schedule(when);
@@ -73,10 +73,22 @@ void main() {
     final alarm = alarms.armed.single;
     expect(alarm.time, when);
     expect(alarm.id, 42);
-    // Each of these is load-bearing: inexact slips the reminder, no wakeup means
-    // it waits for the next unlock, Doze eats it overnight, and without
-    // rescheduleOnReboot the chain dies at the next restart.
-    expect(alarm.exact, isTrue);
+
+    // `exact` must stay FALSE, and this is a Play Store constraint, not a
+    // preference. An exact alarm needs SCHEDULE_EXACT_ALARM/USE_EXACT_ALARM, and
+    // USE_EXACT_ALARM is restricted to alarm-clock and calendar apps -- declaring
+    // it on a health dashboard risks the app being pulled. Flipping this back to
+    // true without also removing USE_EXACT_ALARM from the manifest and completing
+    // the Play declaration is how the app gets rejected.
+    expect(
+      alarm.exact,
+      isFalse,
+      reason: 'exact alarms require a Play declaration; see the manifest comment',
+    );
+
+    // The other three are still load-bearing: no wakeup means the reminder waits
+    // for the next unlock, Doze eats it overnight without allowWhileIdle, and
+    // without rescheduleOnReboot the chain dies at the next restart.
     expect(alarm.wakeup, isTrue);
     expect(alarm.allowWhileIdle, isTrue);
     expect(alarm.rescheduleOnReboot, isTrue);

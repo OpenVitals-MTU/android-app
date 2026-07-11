@@ -29,20 +29,26 @@ class AlarmManagerReminderScheduler implements ReminderScheduler {
   final void Function() callback;
   final AndroidAlarmManagerApi alarms;
 
-  /// DELIBERATE DEVIATION from the Kotlin app — do not "fix" this back.
+  /// INEXACT, deliberately — matching the Kotlin app's `setAndAllowWhileIdle`.
   ///
-  /// Kotlin arms *inexact* alarms (`setAndAllowWhileIdle`) and declares no
-  /// exact-alarm permission. Flutter arms **exact** alarms (and so declares
-  /// `SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM`), which fires reminders on time
-  /// instead of whenever Doze next relents. The trade is a Play Store
-  /// exact-alarm justification that Kotlin never had; that was accepted
-  /// knowingly. A parity audit will flag this — it is intentional.
+  /// This briefly armed *exact* alarms (with `SCHEDULE_EXACT_ALARM` /
+  /// `USE_EXACT_ALARM`) so reminders fired on the dot rather than whenever Doze
+  /// relented. Play blocks any upload until exact-alarm use is declared, and
+  /// `USE_EXACT_ALARM` is a RESTRICTED permission Google grants only to apps
+  /// whose core function is an alarm clock or a calendar. A health dashboard is
+  /// neither, so declaring it risks the app being rejected or pulled — not just
+  /// this upload being blocked. A few minutes of drift is not worth that.
+  ///
+  /// `allowWhileIdle` still makes the alarm survive Doze; it just lands inside a
+  /// window rather than at the instant. To restore exact reminders: add
+  /// `SCHEDULE_EXACT_ALARM` ONLY (user-grantable, broadly eligible), complete the
+  /// Play declaration, and flip `exact` back to true. Never add `USE_EXACT_ALARM`.
   @override
   Future<void> schedule(DateTime triggerAt) => alarms.oneShotAt(
         triggerAt,
         alarmId,
         callback,
-        exact: true,
+        exact: false,
         wakeup: true,
         // Fire even in Doze, or an overnight reminder silently slips.
         allowWhileIdle: true,

@@ -122,11 +122,24 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Notifications + reminders (flutter_local_notifications, android_alarm_manager_plus). -->
+    <!-- Notifications + reminders (flutter_local_notifications, android_alarm_manager_plus).
+
+         NO exact-alarm permission, deliberately. Reminders use setAndAllowWhileIdle
+         (inexact, but still delivered during Doze), which is what the Kotlin app did.
+
+         SCHEDULE_EXACT_ALARM and USE_EXACT_ALARM were declared here briefly, to fire
+         reminders on the dot rather than whenever Doze relents. Play rejects an upload
+         until you declare exact-alarm use, and USE_EXACT_ALARM is a RESTRICTED
+         permission that Google grants only to apps whose core function is an alarm
+         clock or a calendar. A health dashboard is not one, so declaring it risks the
+         app being rejected or pulled, not merely this upload being blocked. A few
+         minutes of reminder drift is not worth that.
+
+         If exact reminders are ever wanted back, add SCHEDULE_EXACT_ALARM ONLY (it is
+         user-grantable and broadly eligible), complete the Play declaration, and set
+         `exact: true` in AlarmManagerReminderScheduler. Never add USE_EXACT_ALARM. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- =========================================================================
@@ -368,7 +381,7 @@
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false" />
 
-        <!-- android_alarm_manager_plus: exact reminder scheduling that survives reboot. -->
+        <!-- android_alarm_manager_plus: inexact (Doze-surviving) reminder scheduling that survives reboot. -->
         <service
             android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
             android:permission="android.permission.BIND_JOB_SERVICE"

@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/hydration/reminders/`, `lib/features/mindfulness/reminders/`, `lib/bootstrap/reminder_bootstrap.dart`, `lib/features/settings/`. Reminders are exact alarms scheduled with `android_alarm_manager_plus`; the alarm isolate wakes the app, re-checks today's actual intake, and only then notifies.
+> **Implementation:** `lib/features/hydration/reminders/`, `lib/features/mindfulness/reminders/`, `lib/bootstrap/reminder_bootstrap.dart`, `lib/features/settings/`. Reminders are inexact, Doze-surviving alarms (`setAndAllowWhileIdle`) scheduled with `android_alarm_manager_plus`; the alarm isolate wakes the app, re-checks today's actual intake, and only then notifies. They are inexact on purpose -- exact alarms would require `USE_EXACT_ALARM`, which Google restricts to alarm-clock and calendar apps.
 > **Navigation:** hydration detail, mindfulness detail, reminder-related settings.
 > **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Mindfulness](mindfulness.md).
 

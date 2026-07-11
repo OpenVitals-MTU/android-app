@@ -402,7 +402,7 @@ The rule that survives is the threshold, not the blanket: **if a derived value n
 
 Two mechanisms, both deliberate:
 
-- `android_alarm_manager_plus` — periodic home-widget refresh ([`home_widget_alarm.dart`](../../lib/features/homewidgets/home_widget_alarm.dart)) and the hydration/mindfulness reminder alarms. An exact alarm wakes the app so the reminder can re-check *today's actual intake* before notifying, rather than firing a pre-scheduled notification blind.
+- `android_alarm_manager_plus` — periodic home-widget refresh ([`home_widget_alarm.dart`](../../lib/features/homewidgets/home_widget_alarm.dart)) and the hydration/mindfulness reminder alarms. The alarm wakes the app so the reminder can re-check *today's actual intake* before notifying, rather than firing a pre-scheduled notification blind. The alarms are deliberately INEXACT (`setAndAllowWhileIdle`): exact alarms need `USE_EXACT_ALARM`, which Google restricts to alarm-clock and calendar apps, so declaring it on a health dashboard risks the app being pulled. See the comment in `android/app/src/main/AndroidManifest.xml`.
 - `flutter_foreground_task` — the Apple Health import ([`apple_health_import_task_handler.dart`](../../lib/features/imports/applehealth/apple_health_import_task_handler.dart)) and activity recording, both long-running and user-visible.
 
 Every isolate here builds its own object graph, opens **no drift**, must call `refreshAvailability()` first, and must use `lookupAppLocalizations(...)` rather than a `BuildContext`. Do not design a new feature as if a general background-sync layer or a raw-record database exists.
