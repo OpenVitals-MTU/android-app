@@ -31,6 +31,10 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+# Gradle writes build outputs under android/build/ and android/app/build/ too, which the
+# root-anchored /build/ above does not cover -- two artifacts were committed by accident
+# before this line existed (see the commit that removes them).
+**/build/
 /coverage/
 
 # Symbolication related
@@ -70,6 +74,10 @@ Error in OpenVitals *.txt
 /.kotlin/
 /local.properties
 /app/build/
+# Gradle writes build outputs under android/build/ and android/app/build/ too, which the
+# root-anchored /build/ above does not cover -- two artifacts were committed by accident
+# before this line existed (see the commit that removes them).
+**/build/
 /captures/
 
 # Design-system reference bundle (React/TS UI kit). Kept on disk as a design
