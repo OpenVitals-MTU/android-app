@@ -8,6 +8,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -28,6 +29,32 @@ class HeartRepositoryTest {
     private val heartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
     private val restingHeartRatePermission = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
     private val hrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
+
+    @Test fun `instant range includes samples from a heart rate series starting before the workout`() = runTest {
+        val start = Instant.parse("2026-07-11T08:03:00Z")
+        val end = Instant.parse("2026-07-11T08:35:00Z")
+        val beforeWorkout = HeartRateSample(start.minusSeconds(1), 90L, "gadgetbridge")
+        val firstWorkoutSample = HeartRateSample(start, 120L, "gadgetbridge")
+        val laterWorkoutSample = HeartRateSample(start.plusSeconds(12 * 60), 150L, "gadgetbridge")
+        val afterWorkout = HeartRateSample(end, 100L, "gadgetbridge")
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
+        coEvery { hc.readRawHeartRateSamples(any(), any()) } returns listOf(
+            afterWorkout,
+            laterWorkoutSample,
+            beforeWorkout,
+            firstWorkoutSample,
+        )
+
+        val samples = HeartRepositoryImpl(hc).loadHeartRateSamples(start, end)
+
+        assertEquals(listOf(firstWorkoutSample, laterWorkoutSample), samples)
+        coVerify(exactly = 1) {
+            hc.readRawHeartRateSamples(start.minus(Duration.ofHours(1)), end)
+        }
+        coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }
+    }
 
     @Test fun `DAY average heart rate uses raw full samples for selected day graph`() = runTest {
         val date = LocalDate.of(2026, 6, 27)

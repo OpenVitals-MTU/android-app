@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -35,6 +36,11 @@ class HeartRepositoryImpl @Inject constructor(
 
     companion object {
         private const val TAG = "HeartRepository"
+
+        // Health Connect filters series records by their record boundary, not each nested sample.
+        // Gadgetbridge can group roughly an hour of samples into one HeartRateRecord, so a record
+        // that starts before a workout can still contain samples from the start of that workout.
+        private val HeartRateSeriesLookback = Duration.ofHours(1)
     }
 
     private val readHeartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
@@ -286,7 +292,14 @@ class HeartRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping loadHeartRateSamples missingCount=1")
             return emptyList()
         }
-        return hc.readHeartRateSamples(start, end).reducedForChart()
+        if (!end.isAfter(start)) return emptyList()
+
+        return hc.readRawHeartRateSamples(start.minus(HeartRateSeriesLookback), end)
+            .asSequence()
+            .filter { sample -> !sample.time.isBefore(start) && sample.time.isBefore(end) }
+            .sortedBy { it.time }
+            .toList()
+            .reducedForChart()
     }
 
     private suspend fun loadHeartRateSamples(
