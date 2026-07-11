@@ -84,14 +84,24 @@ void main() {
       );
     });
 
-    test('every locale is above the coverage floor', () {
+    test('every SHIPPED locale is above the coverage floor', () {
+      // Shipped only. An in-progress locale (an ARB with no `AppLanguage`
+      // constant) is *expected* to sit below the floor while Weblate fills it
+      // in; gating it here would make `flutter test` red the moment a new
+      // language is hosted — the same bug the tool used to have.
       final result = checkCatalogs(
         sources: _realCatalogs(),
         templateLocale: _templateLocale,
+        appLanguageSource:
+            File('lib/domain/preferences/app_language.dart').readAsStringSync(),
+        appLanguageDropdownSource:
+            File('lib/ui/components/app_language_dropdown.dart')
+                .readAsStringSync(),
       );
 
       expect(result.coverage, isNotEmpty);
       for (final LocaleCoverage c in result.coverage) {
+        if (c.isInProgress) continue;
         expect(
           c.ratio,
           greaterThan(kDefaultMinCoverage),
@@ -395,25 +405,6 @@ String appLanguageLabel(AppLanguage value) => switch (value) {
     };
 ''';
 
-    test('flags an ARB with no AppLanguage constant (an unselectable language)',
-        () {
-      const String appLanguage = '''
-enum AppLanguage {
-  system(null),
-  english('en');
-  const AppLanguage(this.languageTag);
-  final String? languageTag;
-}
-''';
-      final result = _check(
-        <String, String>{'en': '{"a": "A"}', 'de': '{"a": "A"}'},
-        appLanguageSource: appLanguage,
-        appLanguageDropdownSource: dropdown,
-      );
-      expect(result.errors, _hasError('no AppLanguage constant offers "de"'));
-      expect(result.errors, _hasError('Add a constant'));
-    });
-
     test('flags an AppLanguage constant with no ARB (a silent no-op picker)',
         () {
       const String appLanguage = '''
@@ -471,6 +462,180 @@ String appLanguageLabel(AppLanguage value) => switch (value) {
       expect(tags.values.toSet(), <String>{'en', 'es', 'de', 'it', 'et'});
       // `system` has a null tag but still needs an autonym.
       expect(labelled, containsAll(<String>[...tags.keys, 'system']));
+    });
+  });
+
+  // The reason this concept exists: Weblate hosts a language from 0% and opens
+  // ONE pull request for ALL changed locales. Gating a 5% newcomer on coverage
+  // therefore blocked every other translation fix riding in that same PR.
+  //
+  // SHIPPED   = has an `AppLanguage` constant -> offered to users -> gated.
+  // IN PROGRESS = an ARB, no constant       -> invisible to users -> not gated,
+  //                                            but still fully structure-checked.
+  group('in-progress locales (ARB present, no AppLanguage constant)', () {
+    // `de` is shipped; `gl` deliberately is not.
+    const String appLanguage = '''
+enum AppLanguage {
+  system(null),
+  english('en'),
+  german('de');
+  const AppLanguage(this.languageTag);
+  final String? languageTag;
+}
+''';
+    const String dropdown = '''
+String appLanguageLabel(AppLanguage value) => switch (value) {
+      AppLanguage.system => 'System default',
+      AppLanguage.english => 'English',
+      AppLanguage.german => 'Deutsch',
+    };
+''';
+
+    /// 20 template keys, so 1 key == 5% — Galician's real figure (84/1677).
+    String template([int keys = 20]) =>
+        '{${List<String>.generate(keys, (int i) => '"k$i": "v$i"').join(",")}}';
+    String translated(int keys) =>
+        '{${List<String>.generate(keys, (int i) => '"k$i": "t$i"').join(",")}}';
+
+    L10nCheckResult check(Map<String, String> byLocale) => _check(
+          byLocale,
+          appLanguageSource: appLanguage,
+          appLanguageDropdownSource: dropdown,
+        );
+
+    test('a 5% in-progress locale PASSES, and does not block the other locales',
+        () {
+      // THE regression test. `gl` at 5% used to emit "translation coverage is
+      // 5.0% ...; must be greater than 70.0%" AND "no AppLanguage constant
+      // offers gl", which failed the whole Weblate PR — including the Spanish
+      // fix that happened to be in it.
+      final result = check(<String, String>{
+        'en': template(),
+        'de': translated(20), // the innocent bystander in the same PR
+        'gl': '{"@@locale": "gl", "k0": "Galego"}',
+      });
+
+      expect(
+        result.errors,
+        isEmpty,
+        reason: 'an in-progress locale must not fail the build:\n'
+            '- ${result.errors.join("\n- ")}',
+      );
+
+      final LocaleCoverage gl =
+          result.coverage.firstWhere((LocaleCoverage c) => c.locale == 'gl');
+      expect(gl.isInProgress, isTrue);
+      expect(gl.ratio, 0.05, reason: 'coverage is still REPORTED, just not gated');
+
+      final LocaleCoverage de =
+          result.coverage.firstWhere((LocaleCoverage c) => c.locale == 'de');
+      expect(de.isInProgress, isFalse, reason: 'de has an AppLanguage constant');
+    });
+
+    test('an in-progress locale with a BROKEN placeholder still FAILS', () {
+      // Coverage is lifted; structure is not. A widened placeholder set breaks
+      // gen-l10n's generated signature for EVERY locale, in-progress or not.
+      final result = check(<String, String>{
+        'en': '{"greet": "Hi {name}", '
+            '"@greet": {"placeholders": {"name": {"type": "String"}}}, '
+            '${List<String>.generate(19, (int i) => '"k$i": "v$i"').join(",")}}',
+        'de': '{"greet": "Hallo {name}", '
+            '${List<String>.generate(19, (int i) => '"k$i": "t$i"').join(",")}}',
+        'gl': '{"greet": "Ola {name} {surprise}"}',
+      });
+
+      expect(result.errors, _hasError('app_gl.arb: greet placeholder mismatch'));
+      expect(result.errors, _hasError('{name, surprise}'));
+    });
+
+    test('an in-progress locale keeps the parse-stage structural checks', () {
+      // 10 template keys; `gl` translates 3 of them (30%), well under the floor.
+      final result = check(<String, String>{
+        'en': '{"n": "{count, plural, one{1 step} other{# steps}}", '
+            '"@n": {"placeholders": {"count": {"type": "int"}}}, '
+            '"a": "A", "b": "B", '
+            '${List<String>.generate(7, (int i) => '"k$i": "v$i"').join(",")}}',
+        'gl': '{"@@locale": "pt", '
+            '"n": "{count, plural, one{1 paso}}", '
+            '"a": "50{ por cento", '
+            '"b": "B", "b": "B de novo"}',
+      });
+
+      expect(result.errors, _hasError('app_gl.arb: @@locale is "pt"')); // 1
+      expect(result.errors, _hasError('duplicate key "b"')); // 2
+      expect(result.errors, _hasError('has no "other" branch')); // 7
+      expect(result.errors, _hasError('app_gl.arb: a: unbalanced "{"')); // 8
+      // ...and NOT a word about its 30% coverage being under the floor.
+      expect(
+        result.errors.where((String e) => e.contains('translation coverage')),
+        isEmpty,
+      );
+    });
+
+    test('an in-progress locale keeps the catalog-stage structural checks', () {
+      // A parse error short-circuits these, so they get a well-formed catalog.
+      final result = check(<String, String>{
+        'en': '{"n": "{count, plural, one{1 step} other{# steps}}", '
+            '"@n": {"placeholders": {"count": {"type": "int"}}}, '
+            '"a": "A", '
+            '${List<String>.generate(8, (int i) => '"k$i": "v$i"').join(",")}}',
+        'gl': '{"n": "{count} pasos", "a": "A", "ghost": "vello"}',
+      });
+
+      expect(result.errors, _hasError('app_gl.arb: stale key "ghost"')); // 4
+      expect(result.errors, _hasError('app_gl.arb: n plural mismatch')); // 7
+      expect(
+        result.errors.where((String e) => e.contains('translation coverage')),
+        isEmpty,
+        reason: 'coverage (30%) is lifted for an in-progress locale; '
+            'structure is not',
+      );
+    });
+
+    test('a SHIPPED locale below the floor still FAILS', () {
+      // `de` HAS an AppLanguage constant, so users can pick it: 5% German is a
+      // 95%-English UI that someone deliberately chose. Still an error.
+      final result = check(<String, String>{
+        'en': template(),
+        'de': '{"k0": "Eins"}',
+      });
+
+      expect(result.errors, _hasError('app_de.arb: translation coverage is 5.0%'));
+      expect(result.errors, _hasError('must be greater than 70.0%'));
+    });
+
+    test('an in-progress locale that crosses the floor is reported, not failed',
+        () {
+      // The successor bug to guard against: if crossing 70% turned into an
+      // error ("no AppLanguage constant offers gl"), the pull request that
+      // finally FINISHED the translation would be the one that broke the build.
+      final result = check(<String, String>{
+        'en': template(),
+        'de': translated(20),
+        'gl': translated(19), // 95%
+      });
+
+      expect(result.errors, isEmpty);
+      final LocaleCoverage gl =
+          result.coverage.firstWhere((LocaleCoverage c) => c.locale == 'gl');
+      expect(gl.isInProgress, isTrue);
+      expect(gl.ratio, greaterThan(kDefaultMinCoverage));
+    });
+
+    test('with no picker source, every locale is gated (the strict fallback)',
+        () {
+      // Nothing to tell shipped from in-progress: assume shipped, stay strict.
+      final result = _check(<String, String>{
+        'en': template(),
+        'gl': '{"k0": "Galego"}',
+      });
+
+      expect(result.errors, _hasError('app_gl.arb: translation coverage is 5.0%'));
+      expect(
+        result.coverage.firstWhere((LocaleCoverage c) => c.locale == 'gl')
+            .isInProgress,
+        isFalse,
+      );
     });
   });
 }

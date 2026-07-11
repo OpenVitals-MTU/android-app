@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
 
+import '../../app.dart';
 import '../../core/time/local_date.dart';
 import '../../di/providers.dart';
 import '../../domain/model/dashboard_query.dart';
@@ -102,7 +103,9 @@ class HomeWidgetConfigureApp extends ConsumerWidget {
       theme: AppTheme.themeFrom(AppTheme.lightScheme),
       darkTheme: AppTheme.themeFrom(AppTheme.darkScheme),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+      // Shipped locales only, same as the main app shell — an in-progress ARB
+      // must not win the platform-locale resolution here either.
+      supportedLocales: OpenVitalsApp.supportedLocales,
       locale: tag == null ? null : Locale(tag),
       home: HomeWidgetConfigurePicker(appWidgetId: appWidgetId),
     );

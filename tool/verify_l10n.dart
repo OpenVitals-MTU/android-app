@@ -12,6 +12,11 @@
 // generator to regenerate them from. `flutter gen-l10n` will happily accept a
 // stale key, a widened placeholder set, or a locale that has rotted to 12%
 // coverage, so this is the only thing standing between Weblate and `main`.
+//
+// The coverage floor applies to SHIPPED locales (those with an `AppLanguage`
+// constant). A locale with an ARB but no constant is IN PROGRESS: hosted in
+// Weblate, structurally validated here, coverage merely reported. See
+// `tool/src/l10n_checks.dart` and `docs/engineering/translations.md`.
 // The checks themselves live in `tool/src/l10n_checks.dart` so that
 // `test/l10n/verify_l10n_test.dart` runs them too: `flutter test` is a
 // translation gate, not just CI.
@@ -153,22 +158,46 @@ Future<void> main(List<String> args) async {
   final List<LocaleCoverage> coverage = result.coverage.toList()
     ..sort((LocaleCoverage a, LocaleCoverage b) {
       if (a.isTemplate != b.isTemplate) return a.isTemplate ? -1 : 1;
+      if (a.isInProgress != b.isInProgress) return a.isInProgress ? 1 : -1;
       return b.ratio.compareTo(a.ratio);
     });
+
+  final String threshold = '${(minCoverage * 100).toStringAsFixed(0)}%';
 
   stdout.writeln('Translation coverage (template: $templateFile):');
   for (final LocaleCoverage c in coverage) {
     final String pct = '${(c.ratio * 100).toStringAsFixed(1)}%';
-    final String suffix = c.isTemplate ? '  (template)' : '';
+    // An in-progress locale is hosted for translators and not offered to users,
+    // so its coverage is information, not a gate. Say which it is on every row,
+    // and say what "done" looks like — CI is where you find out it has crossed.
+    final String suffix;
+    if (c.isTemplate) {
+      suffix = '  (template)';
+    } else if (c.isInProgress && c.ratio > minCoverage) {
+      suffix = '  (in progress — READY TO SHIP: it is above $threshold, so add '
+          'an AppLanguage constant + autonym to offer it in the picker)';
+    } else if (c.isInProgress) {
+      suffix = '  (in progress — not shipped; add an AppLanguage constant + '
+          'autonym when it passes $threshold)';
+    } else {
+      suffix = '';
+    }
     stdout.writeln(
       '  ${c.locale.padRight(6)} ${pct.padLeft(6)}  '
       '${c.translated}/${c.templateTotal}$suffix',
     );
   }
+
+  final int shipped =
+      coverage.where((LocaleCoverage c) => !c.isInProgress).length;
+  final int inProgress = coverage.length - shipped;
+
   stdout.writeln('');
   stdout.writeln(
-    'Translation validation passed for ${coverage.length} locale(s) with '
-    'coverage greater than ${(minCoverage * 100).toStringAsFixed(0)}%.',
+    'Translation validation passed for $shipped shipped locale(s) with '
+    'coverage greater than $threshold'
+    '${inProgress == 0 ? '' : ', plus $inProgress in-progress locale(s) '
+        '(structurally checked, not coverage-gated)'}.',
   );
 }
 

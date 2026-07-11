@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:openvitals/app.dart';
+import 'package:openvitals/domain/preferences/app_language.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 void main() {
@@ -16,6 +18,55 @@ void main() {
         .map((locale) => locale.languageCode)
         .toSet();
     expect(codes, containsAll(<String>['en', 'de', 'es', 'it', 'et']));
+  });
+
+  // `AppLocalizations.supportedLocales` is whatever ARB files gen-l10n FOUND;
+  // `OpenVitalsApp.supportedLocales` is what the app OFFERS. They are not the
+  // same thing, because `lib/l10n` also hosts in-progress catalogs (see
+  // docs/engineering/translations.md).
+  group('the app offers only SHIPPED locales', () {
+    test('every shipped language, and nothing that has no AppLanguage constant',
+        () {
+      final tags =
+          OpenVitalsApp.supportedLocales.map((locale) => locale.toLanguageTag());
+
+      expect(tags, unorderedEquals(<String>['en', 'es', 'de', 'it', 'et']));
+      // `system` follows the platform and carries no tag of its own.
+      expect(AppLanguage.shippedLanguageTags, isNot(contains('system')));
+      expect(
+        AppLanguage.shippedLanguageTags.length,
+        AppLanguage.values.length - 1,
+      );
+    });
+
+    test('an in-progress locale is NOT offered, even once gen-l10n knows it',
+        () {
+      // Weblate will land `lib/l10n/app_gl.arb` at ~5%, which puts `gl` into
+      // `AppLocalizations.supportedLocales`. Had `MaterialApp` been given THAT
+      // list, a Galician device would resolve to a 5%-Galician / 95%-English UI
+      // with no way out, since the picker only lists `AppLanguage`. So: the
+      // offered list is derived from `AppLanguage`, and an ARB alone earns a
+      // locale nothing.
+      final generated = <Locale>[
+        ...AppLocalizations.supportedLocales,
+        const Locale('gl'), // as if the in-progress catalog were merged
+      ];
+      expect(
+        generated.map((locale) => locale.languageCode),
+        contains('gl'),
+        reason: 'premise: gen-l10n would happily list it',
+      );
+
+      expect(
+        OpenVitalsApp.supportedLocales.map((locale) => locale.languageCode),
+        isNot(contains('gl')),
+      );
+      // Stronger: NOTHING reaches the app that lacks an AppLanguage constant.
+      expect(
+        OpenVitalsApp.supportedLocales.map((locale) => locale.toLanguageTag()),
+        everyElement(isIn(AppLanguage.shippedLanguageTags)),
+      );
+    });
   });
 
   test('English and German load with distinct translations', () async {

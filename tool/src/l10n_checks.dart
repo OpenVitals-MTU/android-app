@@ -19,6 +19,19 @@
 // A locale ARB is expected to be PARTIAL: a key it omits falls back to the
 // template message at generation time. That is real coverage, and check 3 is
 // what stops it from silently rotting.
+//
+// SHIPPED vs IN PROGRESS. Weblate hosts a language from 0% and bundles every
+// changed locale into ONE pull request, so gating *hosting* on coverage would
+// let one 5%-translated newcomer block every other translation fix in that PR.
+// Hosting and shipping are therefore separate:
+//   * SHIPPED — the locale has an `AppLanguage` constant (and hence an autonym
+//     in the picker's exhaustive switch). It is offered to users, so coverage
+//     MUST be greater than the threshold (check 3).
+//   * IN PROGRESS — an ARB exists but no constant does. Translators can work on
+//     it; users never see it (`OpenVitalsApp.supportedLocales` is derived from
+//     `AppLanguage`, not from the ARBs present). Its coverage is REPORTED, not
+//     gated — but every STRUCTURAL check below still applies to it, because a
+//     broken in-progress ARB still breaks `flutter gen-l10n` for everyone.
 
 import 'dart:convert';
 
@@ -43,12 +56,18 @@ class LocaleCoverage {
     required this.translated,
     required this.templateTotal,
     required this.isTemplate,
+    this.isInProgress = false,
   });
 
   final String locale;
   final int translated;
   final int templateTotal;
   final bool isTemplate;
+
+  /// True when an ARB exists for this locale but no `AppLanguage` constant
+  /// offers it: hosted for translators, not shipped to users, so its coverage
+  /// is reported rather than gated. Always false for the template.
+  final bool isInProgress;
 
   double get ratio => templateTotal == 0 ? 1 : translated / templateTotal;
 }
@@ -112,25 +131,47 @@ L10nCheckResult checkCatalogs({
 
   final Set<String> templateKeys = template.messages.keys.toSet();
 
+  // Which locales are SHIPPED. Derived from the `AppLanguage` constants, since
+  // those are what the picker — and `OpenVitalsApp.supportedLocales` — offer.
+  // Null when the picker source was not supplied (or could not be parsed, which
+  // check 10 reports separately): with no way to tell shipped from in-progress,
+  // fall back to the strict pre-in-progress behaviour and gate EVERY locale.
+  final Map<String, String> pickerTags = appLanguageSource == null
+      ? const <String, String>{}
+      : parseAppLanguageTags(appLanguageSource);
+  final Set<String>? shippedLocales =
+      pickerTags.isEmpty ? null : pickerTags.values.toSet();
+
   for (final String locale in parsed.keys.toList()..sort()) {
     final _Catalog catalog = parsed[locale]!;
     final bool isTemplate = locale == templateLocale;
     final Set<String> localeKeys = catalog.messages.keys.toSet();
     final Set<String> shared = localeKeys.intersection(templateKeys);
 
+    // An ARB with no `AppLanguage` constant is hosted, not shipped.
+    final bool isInProgress = !isTemplate &&
+        shippedLocales != null &&
+        !shippedLocales.contains(locale);
+
     coverage.add(LocaleCoverage(
       locale: locale,
       translated: shared.length,
       templateTotal: templateKeys.length,
       isTemplate: isTemplate,
+      isInProgress: isInProgress,
     ));
 
     if (isTemplate) continue;
 
     // 3. Coverage. `<=` is deliberate: exactly the threshold FAILS.
+    //
+    // SHIPPED locales only. An in-progress locale is by definition allowed to
+    // sit at 5%: gating it would let one unfinished language block the single
+    // pull request Weblate opens for ALL locales. Everything below this line
+    // still applies to it — coverage is the only thing being lifted.
     final double ratio =
         templateKeys.isEmpty ? 1 : shared.length / templateKeys.length;
-    if (ratio <= minCoverage) {
+    if (!isInProgress && ratio <= minCoverage) {
       errors.add(
         '${catalog.fileName}: translation coverage is '
         '${_percent(ratio)} (${shared.length}/${templateKeys.length}); '
@@ -179,13 +220,12 @@ L10nCheckResult checkCatalogs({
     }
   }
 
-  // 10. Picker <-> ARB agreement.
+  // 10. Picker -> ARB agreement.
   if (appLanguageSource != null && appLanguageDropdownSource != null) {
     _checkLanguagePicker(
       appLanguageSource: appLanguageSource,
       appLanguageDropdownSource: appLanguageDropdownSource,
       arbLocales: parsed.keys.toSet(),
-      templateLocale: templateLocale,
       coverage: coverage,
       minCoverage: minCoverage,
       errors: errors,
@@ -331,9 +371,19 @@ void _checkTemplateSelfConsistency(_Catalog template, List<String> errors) {
   }
 }
 
-/// 10. Picker <-> ARB agreement, enforced in BOTH directions:
-/// an ARB exists <=> it is above the coverage threshold <=> an `AppLanguage`
-/// constant (with an autonym in the dropdown's exhaustive switch) exists for it.
+/// 10. Picker -> ARB agreement.
+///
+/// One direction only, and deliberately so:
+///   * an `AppLanguage` constant with no ARB (or an under-translated one) is an
+///     ERROR — it is a picker entry that silently does nothing, or that ships a
+///     half-English UI to whoever chooses it;
+///   * an ARB with no constant is NOT an error — that is an IN-PROGRESS locale,
+///     hosted in Weblate and invisible to users. It used to be an error, which
+///     meant a new language could not exist in the repo below 70% and so could
+///     not be translated in Weblate at all without redding the build.
+/// Crossing the threshold is surfaced in the summary (`verify_l10n.dart`), not
+/// as a build failure: an in-progress locale that reaches 71% must not suddenly
+/// break the very pull request that got it there.
 ///
 /// This is a VERIFIER, not a generator, on purpose. Kotlin could afford to
 /// codegen the language list because the JVM hands it `Locale.getDisplayName`;
@@ -344,7 +394,6 @@ void _checkLanguagePicker({
   required String appLanguageSource,
   required String appLanguageDropdownSource,
   required Set<String> arbLocales,
-  required String templateLocale,
   required List<LocaleCoverage> coverage,
   required double minCoverage,
   required List<String> errors,
@@ -375,12 +424,10 @@ void _checkLanguagePicker({
     for (final LocaleCoverage c in coverage) c.locale: c,
   };
 
-  // Direction 1: picker -> ARB. A tag with no (or an under-translated) ARB is a
-  // silent no-op today: the user picks the language and nothing changes.
-  final Map<String, String> tagToConstant = <String, String>{};
+  // Picker -> ARB. A tag with no (or an under-translated) ARB is a silent no-op
+  // today: the user picks the language and nothing changes.
   for (final MapEntry<String, String> entry in pickerTags.entries) {
     final String tag = entry.value;
-    tagToConstant[tag] = entry.key;
     if (!arbLocales.contains(tag)) {
       errors.add(
         'lib/domain/preferences/app_language.dart: AppLanguage.${entry.key} '
@@ -399,22 +446,6 @@ void _checkLanguagePicker({
         'finish the translation or remove the constant.',
       );
     }
-  }
-
-  // Direction 2: ARB -> picker. An ARB nobody can select is dead weight.
-  for (final String locale in arbLocales.toList()..sort()) {
-    if (tagToConstant.containsKey(locale)) continue;
-    final LocaleCoverage? c = byLocale[locale];
-    if (c != null && !c.isTemplate && c.ratio <= minCoverage) {
-      // Below threshold AND unlisted: the coverage error above already says it.
-      continue;
-    }
-    errors.add(
-      'lib/l10n/app_$locale.arb exists and is translated, but no AppLanguage '
-      'constant offers "$locale", so users cannot select it. Add a constant to '
-      'lib/domain/preferences/app_language.dart AND its autonym to '
-      'appLanguageLabel() in lib/ui/components/app_language_dropdown.dart.',
-    );
   }
 }
 

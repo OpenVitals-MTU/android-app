@@ -19,6 +19,21 @@ import 'ui/theme/app_theme.dart';
 class OpenVitalsApp extends ConsumerWidget {
   const OpenVitalsApp({super.key});
 
+  /// The locales the app OFFERS, derived from [AppLanguage] — deliberately NOT
+  /// from `AppLocalizations.supportedLocales`.
+  ///
+  /// gen-l10n derives its list from the ARB files that are PRESENT, and
+  /// `lib/l10n` also hosts IN-PROGRESS catalogs that Weblate is still filling
+  /// in (see `docs/engineering/translations.md`). Handing that list to
+  /// `MaterialApp` would let a 5%-translated locale win the platform-locale
+  /// resolution below, giving that user a mostly-English UI *and* no way to
+  /// choose otherwise, since the language picker only lists [AppLanguage]. A
+  /// locale therefore reaches users only once it is shipped: a constant here,
+  /// plus its autonym in `appLanguageLabel`.
+  static final List<Locale> supportedLocales = <Locale>[
+    for (final String tag in AppLanguage.shippedLanguageTags) Locale(tag),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(appThemeModeProvider);
@@ -58,7 +73,7 @@ class OpenVitalsApp extends ConsumerWidget {
           // selected [AppLanguage] drives [locale]; `system` maps to null so the
           // platform locale wins, resolved against [supportedLocales].
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
+          supportedLocales: supportedLocales,
           locale: _localeFor(language),
           routerConfig: router,
         );

@@ -10,7 +10,11 @@ Translate the app here:
 ## Where The Strings Live
 
 - `lib/l10n/app_en.arb` is the **template and source language**.
-- `lib/l10n/app_de.arb`, `app_es.arb`, `app_it.arb`, `app_et.arb` are the translations.
+- `lib/l10n/app_de.arb`, `app_es.arb`, `app_it.arb`, `app_et.arb` are the shipped
+  translations.
+- `lib/l10n/app_<lang>.arb` for any other language is an **in-progress**
+  translation: hosted so Weblate can work on it, not offered to users. See
+  [Shipping Policy](#shipping-policy).
 - `lib/l10n/app_localizations*.dart` are **generated** by `flutter gen-l10n` from
   those ARB files (config: `l10n.yaml`). They are committed, and CI fails if they
   are stale.
@@ -71,26 +75,49 @@ placeholders, plurals, and selects as ICU rather than as printf.
 
 ## Shipping Policy
 
-Existing app languages are English, Spanish, German, Italian, and Estonian.
+**Hosting a language and shipping it are two different things.**
 
-New languages can be collected in Codeberg Translate before they are ready to
-ship. A new `lib/l10n/app_<lang>.arb` can be merged once it is **more than 70%**
-translated, reviewed, and passes CI. Exactly 70.0% fails; the threshold is
-strictly greater than.
+A language is **hosted** in Codeberg Translate from **0%**. Its ARB lives in
+`lib/l10n/` like any other, so translators have somewhere to put their work.
 
-`dart run tool/verify_l10n.dart` enforces the threshold, placeholder safety,
-plural/select shape, and stale keys. It replaces the Kotlin app's
-`./gradlew verifyTranslations`.
+A language is **shipped** — offered in the in-app language picker and matched
+against the device locale — only once someone adds an `AppLanguage` constant for
+it. That is allowed only when it is **more than 70%** translated. Exactly 70.0%
+fails; the threshold is strictly greater than.
 
-### Known regression: the language picker is not automatic any more
+|                   | in progress                    | shipped                        |
+| ----------------- | ------------------------------ | ------------------------------ |
+| ARB in `lib/l10n` | yes                            | yes                            |
+| `AppLanguage` constant + autonym | no              | yes                            |
+| Coverage          | anything, reported by CI       | must be **> 70%**, enforced    |
+| Structural checks | **all of them**, enforced      | all of them, enforced          |
+| Users see it      | never                          | yes                            |
 
-In the Kotlin app, a locale that crossed the threshold appeared in the in-app
-language picker automatically, because the JVM supplies display names
-(`Locale.getDisplayName`).
+Shipped app languages today are English, Spanish, German, Italian, and Estonian.
 
-Dart ships **no ICU display-name data**, so the autonym (the language's name in
-its own language) has to be added by hand. Shipping a new locale therefore takes
-two extra edits:
+Why the split: Weblate edits the ARBs directly and opens **one pull request
+containing every changed locale**. When the coverage floor also gated *hosting*,
+a single 5%-translated newcomer failed that PR — and took an unrelated Spanish
+fix down with it. So the floor now gates only what users can actually select.
+
+The app therefore builds `supportedLocales` from `AppLanguage`, **not** from
+`AppLocalizations.supportedLocales` (which gen-l10n derives from whichever ARB
+files happen to be present). Otherwise a device set to an in-progress language
+would resolve to it and get a mostly-English UI — with no escape, since that
+language is not in the picker either.
+
+### Promoting a language to shipped
+
+`dart run tool/verify_l10n.dart` prints coverage for every locale and marks the
+in-progress ones, so CI tells you when one crosses the line:
+
+```text
+  gl      74.2%  1245/1677  (in progress — READY TO SHIP: it is above 70%, so add
+                             an AppLanguage constant + autonym to offer it in the picker)
+```
+
+Crossing 70% is a *notice*, never a failure — the pull request that finishes a
+translation must not be the one that breaks the build. Two edits promote it:
 
 1. Add the constant to `AppLanguage` in
    [`lib/domain/preferences/app_language.dart`](../../lib/domain/preferences/app_language.dart),
@@ -100,9 +127,26 @@ two extra edits:
    (e.g. `Deutsch`, not `German` — an autonym is the same in every locale, which
    is what makes a language picker recognisable).
 
-The validator reports when a locale is above threshold but missing from the
-picker, so CI tells you when this is needed. Do not route the picker labels
-through the ARB catalog.
+Both are hand edits because, unlike the Kotlin app, Dart ships **no ICU
+display-name data**: `Locale.getDisplayName` has no equivalent, so a generated
+picker entry would read `gl`. From then on the locale is gated like any other
+shipped language — if it rots back below 70%, CI fails until it is fixed or the
+constant is removed.
+
+### What is still enforced for an in-progress locale
+
+Only the *coverage* gate is lifted. `dart run tool/verify_l10n.dart` applies
+every structural check to an in-progress ARB exactly as it does to a shipped one
+— placeholder-set equality, stale keys, plural shape and `other` branch, ICU
+syntax, duplicate keys, `@@locale` agreement — because `flutter gen-l10n` reads
+every ARB in the directory, so a broken in-progress translation breaks the build
+for everybody. A half-finished translation is fine; a malformed one is not.
+
+The reverse direction is still an error: an `AppLanguage` constant whose ARB is
+missing (or under-translated) fails, because that is a picker entry that silently
+does nothing. Do not route the picker labels through the ARB catalog.
+
+`tool/verify_l10n.dart` replaces the Kotlin app's `./gradlew verifyTranslations`.
 
 ## Translator Notes
 

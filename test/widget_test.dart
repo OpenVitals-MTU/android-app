@@ -5,7 +5,7 @@
 // class (no Health Connect / HealthKit access).
 
 import 'package:drift/native.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/app.dart';
 import 'package:openvitals/data/local/open_vitals_database.dart';
 import 'package:openvitals/di/providers.dart';
+import 'package:openvitals/domain/preferences/app_language.dart';
 import 'package:openvitals/features/dashboard/dashboard_screen.dart';
 import 'package:openvitals/features/onboarding/onboarding_screen.dart';
 import 'package:openvitals/health/health_data_source.dart';
@@ -66,5 +67,21 @@ void main() {
     expect(find.byType(DashboardScreen), findsOneWidget);
     // The dashboard renders inside the adaptive scaffold's nav suite.
     expect(find.text('OpenVitals'), findsWidgets);
+  });
+
+  testWidgets('the shell offers the SHIPPED locales, not every ARB present',
+      (WidgetTester tester) async {
+    // `supportedLocales` is what the platform locale is resolved against, so
+    // this is the wiring that keeps an in-progress ARB (hosted in `lib/l10n`
+    // for Weblate, below the 70% floor) from ever reaching a user.
+    await tester.pumpWidget(await _bootstrapApp(onboardingComplete: true));
+    await tester.pumpAndSettle();
+
+    final MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.supportedLocales, same(OpenVitalsApp.supportedLocales));
+    expect(
+      app.supportedLocales.map((locale) => locale.toLanguageTag()),
+      unorderedEquals(AppLanguage.shippedLanguageTags),
+    );
   });
 }
