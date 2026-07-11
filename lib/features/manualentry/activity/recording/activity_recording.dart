@@ -401,6 +401,163 @@ ActivityRecordingState withLocationMetadata(
       errorMessage: null,
     );
 
+/// The state after a GPS fix that cleared [activityGpsFixQuality] is folded in.
+///
+/// This is the accumulator behind every number the recording screen shows —
+/// distance, elevation gain and loss, current and max speed, the route and its
+/// segment breaks, and the auto-idle clock. Keeping it a pure fold of one fix
+/// into the running state is what lets it be tested without a GPS receiver; the
+/// controller keeps only the device I/O around it (the async ellipsoid→MSL
+/// altitude hop, and the generation guards that straddle it).
+///
+/// A fix that cleared the quality gate can still be turned away here, for
+/// reasons about the *route* rather than the fix: it may not advance the clock,
+/// it may fall within the minimum sample distance or interval, or it may be an
+/// implausible jump. Each of those still yields a state, so the caller never has
+/// to know which branch it took.
+ActivityRecordingState withAcceptedLocation(
+  ActivityRecordingState state, {
+  required ExerciseRoutePoint point,
+  required double accuracyMeters,
+  required ActivityRecordingPreferences preferences,
+}) {
+  final lastPoint = state.points.isNotEmpty ? state.points.last : null;
+  if (lastPoint == null) {
+    // The first fix opens the route but closes no leg: no distance, no climb,
+    // no speed.
+    return _withAppendedPoint(
+      state,
+      point: point,
+      accuracyMeters: accuracyMeters,
+      preferences: preferences,
+    );
+  }
+
+  // A fix that does not advance the clock cannot bound an interval, so every
+  // rate below it (speed, idle) would divide by zero or run backwards.
+  if (!point.time.isAfter(lastPoint.time)) {
+    return withDroppedLocation(state, accuracyMeters,
+        locationTime: point.time, gpsStatus: ActivityGpsStatus.fix);
+  }
+
+  final elapsedMillis = (point.time.millisecondsSinceEpoch -
+          lastPoint.time.millisecondsSinceEpoch)
+      .clamp(0, 1 << 62);
+  final distanceMeters = recordingDistanceMetersTo(lastPoint, point);
+
+  // Too near or too soon to be worth a route point: keep what the fix says about
+  // the receiver, and show it live, but grow neither the route nor the totals.
+  if (distanceMeters < state.minimumSampleDistanceMeters(preferences) ||
+      elapsedMillis < preferences.recordingTimeIntervalMillis) {
+    return withLocationMetadata(
+      state,
+      accuracyMeters: accuracyMeters,
+      locationTime: point.time,
+      gpsStatus: ActivityGpsStatus.fix,
+      recordingPreferences: preferences,
+    ).copyWith(latestUiPoint: point);
+  }
+
+  // A gap wider than `routeGapMeters` is a tunnel or a recording carried between
+  // places, not a sprint: break the drawn line rather than bank a false distance.
+  final routeGap = preferences.routeGapMeters;
+  if (routeGap != null && distanceMeters > routeGap) {
+    return _withAppendedPoint(
+      state,
+      point: point,
+      accuracyMeters: accuracyMeters,
+      preferences: preferences,
+      routeBreakIndexes: [...state.routeBreakIndexes, state.points.length],
+    );
+  }
+
+  if (isImplausibleJump(
+      lastPoint, point, distanceMeters, elapsedMillis, accuracyMeters)) {
+    return withDroppedLocation(state, accuracyMeters,
+        locationTime: point.time, gpsStatus: ActivityGpsStatus.fix);
+  }
+
+  return _withAppendedPoint(
+    state,
+    point: point,
+    accuracyMeters: accuracyMeters,
+    preferences: preferences,
+    distanceIncrement: distanceMeters,
+    elevationIncrement: elevationGainMetersTo(lastPoint, point),
+    elevationLossIncrement: elevationLossMetersTo(lastPoint, point),
+    currentSpeed: distanceMeters / (elapsedMillis / 1000.0),
+    movedAt: point.time,
+  );
+}
+
+/// Appends [point] to the route and folds in whatever this fix added to the
+/// totals. The increments default to zero — the first-fix and route-break case,
+/// where the point joins the route but opens no leg.
+///
+/// [movedAt] is null when the fix is not movement (again: first fix, route
+/// break), and that is what leaves the auto-idle clock alone.
+ActivityRecordingState _withAppendedPoint(
+  ActivityRecordingState state, {
+  required ExerciseRoutePoint point,
+  required double accuracyMeters,
+  required ActivityRecordingPreferences preferences,
+  List<int>? routeBreakIndexes,
+  double distanceIncrement = 0.0,
+  double elevationIncrement = 0.0,
+  double elevationLossIncrement = 0.0,
+  double currentSpeed = 0.0,
+  DateTime? movedAt,
+}) {
+  final lastMovementAt = state.lastMovementAt ?? state.startTime ?? point.time;
+  return state.copyWith(
+    points: [...state.points, point],
+    routeBreakIndexes: routeBreakIndexes ?? state.routeBreakIndexes,
+    latestUiPoint: point,
+    distanceMeters: state.distanceMeters + distanceIncrement,
+    elevationGainedMeters: state.elevationGainedMeters + elevationIncrement,
+    elevationLostMeters: state.elevationLostMeters + elevationLossIncrement,
+    currentSpeedMetersPerSecond: currentSpeed,
+    maxSpeedMetersPerSecond: state.maxSpeedMetersPerSecond > currentSpeed
+        ? state.maxSpeedMetersPerSecond
+        : currentSpeed,
+    gpsStatus: ActivityGpsStatus.fix,
+    keepScreenOnDuringRecording: preferences.keepScreenOnDuringRecording,
+    autoIdleEnabled: preferences.autoIdleEnabled,
+    autoIdleTimeoutMillis: preferences.autoIdleTimeoutSeconds * 1000,
+    lastMovementAt: movedAt ?? lastMovementAt,
+    totalIdleMillis: movedAt == null
+        ? state.totalIdleMillis
+        : _accruedIdleMillis(
+            state,
+            lastMovementAt: lastMovementAt,
+            movedAt: movedAt,
+          ),
+    lastAccuracyMeters: accuracyMeters,
+    lastLocationTime: point.time,
+    errorMessage: null,
+  );
+}
+
+/// Idle is only charged for the stretch BEYOND the auto-idle timeout: standing
+/// still for `timeout + 30s` accrues 30s of idle, not the whole stop.
+///
+/// The timeout and the enabled flag are read from the state, not from
+/// preferences, so a preference changed mid-recording cannot retroactively
+/// re-price idle time already accrued under the old one.
+int _accruedIdleMillis(
+  ActivityRecordingState state, {
+  required DateTime lastMovementAt,
+  required DateTime movedAt,
+}) {
+  if (!state.autoIdleEnabled) return state.totalIdleMillis;
+  final idleStartedAt =
+      lastMovementAt.add(Duration(milliseconds: state.autoIdleTimeoutMillis));
+  if (!movedAt.isAfter(idleStartedAt)) return state.totalIdleMillis;
+  return state.totalIdleMillis +
+      (movedAt.millisecondsSinceEpoch - idleStartedAt.millisecondsSinceEpoch)
+          .clamp(0, 1 << 62);
+}
+
 /// Kotlin `recordingDistanceMetersTo` uses `Location.distanceBetween`, which is
 /// geodesic on the WGS84 ellipsoid — not the spherical haversine the split
 /// helpers use (they are haversine in the Kotlin app too). The live distance

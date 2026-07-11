@@ -737,6 +737,7 @@ class PreferencesRepository {
     _dynamicColor.dispose();
     _sleepRangeMode.dispose();
     _activityWeekMode.dispose();
+    _activitySplitDistanceMeters.dispose();
     _showOpenVitalsCalculatedCalories.dispose();
     _healthConnectSyncEnabled.dispose();
     _bodyEnergyCalibration.dispose();

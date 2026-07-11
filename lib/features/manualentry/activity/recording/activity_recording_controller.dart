@@ -826,88 +826,15 @@ class ActivityRecordingControllerImpl implements ActivityRecordingController {
     final accuracy = fixQuality.accuracyMeters;
     if (accuracy == null) return;
 
-    final lastPoint = current.points.isNotEmpty ? current.points.last : null;
-    var distanceIncrement = 0.0;
-    var elevationIncrement = 0.0;
-    var elevationLossIncrement = 0.0;
-    var currentSpeed = 0.0;
-    var routeBreakIndexes = current.routeBreakIndexes;
-    var lastMovementAt = current.lastMovementAt ?? current.startTime ?? point.time;
-    var totalIdleMillis = current.totalIdleMillis;
-
-    if (lastPoint != null) {
-      if (!point.time.isAfter(lastPoint.time)) {
-        _updateAndPersist(withDroppedLocation(current, accuracy,
-            locationTime: point.time, gpsStatus: ActivityGpsStatus.fix));
-        return;
-      }
-      final elapsedMillis = (point.time.millisecondsSinceEpoch -
-              lastPoint.time.millisecondsSinceEpoch)
-          .clamp(0, 1 << 62);
-      final distanceMeters = recordingDistanceMetersTo(lastPoint, point);
-      if (distanceMeters < current.minimumSampleDistanceMeters(preferences) ||
-          elapsedMillis < preferences.recordingTimeIntervalMillis) {
-        _updateAndPersist(
-          withLocationMetadata(
-            current,
-            accuracyMeters: accuracy,
-            locationTime: point.time,
-            gpsStatus: ActivityGpsStatus.fix,
-            recordingPreferences: preferences,
-          ).copyWith(latestUiPoint: point),
-        );
-        return;
-      }
-      final routeGap = preferences.routeGapMeters;
-      final startsNewSegment = routeGap != null && distanceMeters > routeGap;
-      if (startsNewSegment) {
-        routeBreakIndexes = [...routeBreakIndexes, current.points.length];
-      } else {
-        if (isImplausibleJump(
-            lastPoint, point, distanceMeters, elapsedMillis, accuracy)) {
-          _updateAndPersist(withDroppedLocation(current, accuracy,
-              locationTime: point.time, gpsStatus: ActivityGpsStatus.fix));
-          return;
-        }
-        distanceIncrement = distanceMeters;
-        elevationIncrement = elevationGainMetersTo(lastPoint, point);
-        elevationLossIncrement = elevationLossMetersTo(lastPoint, point);
-        currentSpeed = distanceMeters / (elapsedMillis / 1000.0);
-        if (current.autoIdleEnabled) {
-          final idleStartedAt = lastMovementAt
-              .add(Duration(milliseconds: current.autoIdleTimeoutMillis));
-          if (point.time.isAfter(idleStartedAt)) {
-            totalIdleMillis += (point.time.millisecondsSinceEpoch -
-                    idleStartedAt.millisecondsSinceEpoch)
-                .clamp(0, 1 << 62);
-          }
-        }
-        lastMovementAt = point.time;
-      }
-    }
-
+    // Everything a good fix implies — distance, elevation, speed, route breaks,
+    // auto-idle — is a pure fold of the fix into the state, and lives in
+    // `withAcceptedLocation`, where it is testable without a GPS receiver.
     _updateAndPersist(
-      current.copyWith(
-        points: [...current.points, point],
-        routeBreakIndexes: routeBreakIndexes,
-        latestUiPoint: point,
-        distanceMeters: current.distanceMeters + distanceIncrement,
-        elevationGainedMeters: current.elevationGainedMeters + elevationIncrement,
-        elevationLostMeters: current.elevationLostMeters + elevationLossIncrement,
-        currentSpeedMetersPerSecond: currentSpeed,
-        maxSpeedMetersPerSecond:
-            current.maxSpeedMetersPerSecond > currentSpeed
-                ? current.maxSpeedMetersPerSecond
-                : currentSpeed,
-        gpsStatus: ActivityGpsStatus.fix,
-        keepScreenOnDuringRecording: preferences.keepScreenOnDuringRecording,
-        autoIdleEnabled: preferences.autoIdleEnabled,
-        autoIdleTimeoutMillis: preferences.autoIdleTimeoutSeconds * 1000,
-        lastMovementAt: lastMovementAt,
-        totalIdleMillis: totalIdleMillis,
-        lastAccuracyMeters: accuracy,
-        lastLocationTime: point.time,
-        errorMessage: null,
+      withAcceptedLocation(
+        current,
+        point: point,
+        accuracyMeters: accuracy,
+        preferences: preferences,
       ),
     );
   }
