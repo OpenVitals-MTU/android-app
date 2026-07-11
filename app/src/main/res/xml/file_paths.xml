@@ -3,4 +3,7 @@
     <cache-path
         name="route_exports"
         path="route_exports/" />
+    <cache-path
+        name="diagnostics_exports"
+        path="diagnostics_exports/" />
 </paths>

@@ -1358,7 +1358,10 @@
     <string name="settings_privacy_on_device">Los datos permanecen en tu dispositivo</string>
     <string name="settings_privacy_read_only">Solo lectura salvo las entradas que registres explícitamente</string>
     <string name="settings_debug_logs_title">Registros de diagnóstico saneados</string>
-    <string name="settings_debug_logs_body">Guarda los registros de diagnóstico de OpenVitals en un archivo de texto. La exportación elimina u oculta identificadores, ubicaciones, fechas, URI, datos brutos de sensores y registros de otras apps antes de escribir.</string>
+    <string name="settings_debug_logs_body">Comparte o guarda los registros de diagnóstico de OpenVitals como archivo de texto. La exportación elimina u oculta identificadores, ubicaciones, fechas, URI, datos brutos de sensores y registros de otras apps antes de escribir.</string>
+    <string name="settings_debug_logs_share">Compartir registros</string>
+    <string name="settings_debug_logs_share_chooser_title">Compartir registros de diagnóstico</string>
+    <string name="settings_debug_logs_share_failed">No se pudieron compartir los registros de diagnóstico</string>
     <string name="settings_debug_logs_save">Guardar registros</string>
     <string name="settings_debug_logs_saved">Registros de depuración guardados</string>
     <string name="settings_debug_logs_save_failed">No se pudieron guardar los registros de diagnóstico</string>

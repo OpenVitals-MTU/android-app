@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -1967,6 +1968,7 @@ internal fun AppLockCard(
 @Composable
 internal fun DebugDiagnosticsCard(
     onSaveLogs: () -> Unit,
+    onShareLogs: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
@@ -1998,10 +2000,24 @@ internal fun DebugDiagnosticsCard(
                 }
             }
             OpenVitalsOutlinedButton(
-                onClick = onSaveLogs,
+                onClick = onShareLogs,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Share,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.widthIn(min = 6.dp))
+                Text(stringResource(R.string.settings_debug_logs_share))
+            }
+            OpenVitalsOutlinedButton(
+                onClick = onSaveLogs,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Download,

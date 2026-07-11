@@ -22,6 +22,7 @@ internal data class SettingsScreenActions(
     val onCopyAppleHealthError: (String) -> Unit,
     val onSaveAppleHealthReport: () -> Unit,
     val onSaveDebugLogs: () -> Unit,
+    val onShareDebugLogs: () -> Unit,
     val onOpenManualPermissionSettings: () -> Unit,
     val onGrantPermissions: (Set<String>) -> Unit,
     val onSaveBodyEnergyCalibration: (BodyEnergyCalibration) -> Unit,

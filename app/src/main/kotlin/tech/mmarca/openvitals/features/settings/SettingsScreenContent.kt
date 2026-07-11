@@ -305,6 +305,7 @@ internal fun LazyListScope.settingsScreenContent(
                 item {
                     DebugDiagnosticsCard(
                         onSaveLogs = actions.onSaveDebugLogs,
+                        onShareLogs = actions.onShareDebugLogs,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }

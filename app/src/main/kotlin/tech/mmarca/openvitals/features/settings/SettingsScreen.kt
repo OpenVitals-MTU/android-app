@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.diagnostics.CrashReportEmailActivity
 import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
+import tech.mmarca.openvitals.core.diagnostics.shareDebugDiagnosticsLog
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitImportMimeTypes
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteImportMimeTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
@@ -57,6 +58,7 @@ fun SettingsScreen(
     val reportSaveFailed = stringResource(R.string.settings_apple_health_import_report_save_failed)
     val debugLogsSaved = stringResource(R.string.settings_debug_logs_saved)
     val debugLogsSaveFailed = stringResource(R.string.settings_debug_logs_save_failed)
+    val debugLogsShareFailed = stringResource(R.string.settings_debug_logs_share_failed)
     val bodyEnergyCalibrationSaved = stringResource(R.string.body_energy_calibration_saved)
     val bodyEnergyCalibrationReset = stringResource(R.string.body_energy_calibration_reset)
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
@@ -252,6 +254,15 @@ fun SettingsScreen(
         },
         onSaveDebugLogs = {
             debugLogSaver.launch("openvitals-diagnostics-logs.txt")
+        },
+        onShareDebugLogs = {
+            coroutineScope.launch {
+                runCatching {
+                    context.shareDebugDiagnosticsLog()
+                }.onFailure {
+                    Toast.makeText(context, debugLogsShareFailed, Toast.LENGTH_SHORT).show()
+                }
+            }
         },
         onOpenManualPermissionSettings = openManualPermissionSettings,
         onGrantPermissions = requestAllPermissions::launch,

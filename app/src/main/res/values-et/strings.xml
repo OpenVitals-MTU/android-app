@@ -1167,7 +1167,10 @@
     <string name="privacy_reconsent_action">Vaata poliitika üle</string>
     <string name="dashboard_summary_today">Täna</string>
     <string name="settings_debug_logs_title">Anonümiseeritud diagnostikalogid</string>
-    <string name="settings_debug_logs_body">Salvesta OpenVitalsi diagnostikalogi kirjed tekstifaili. Eksport eemaldab või varjab identifikaatorid, asukohad, kuupäevad, URI-d, toored anduriandmed ja mitteseotud rakenduslogid enne kirjutamist.</string>
+    <string name="settings_debug_logs_body">Jaga või salvesta OpenVitalsi diagnostikalogi kirjed tekstifailina. Eksport eemaldab või varjab identifikaatorid, asukohad, kuupäevad, URI-d, toored anduriandmed ja mitteseotud rakenduslogid enne kirjutamist.</string>
+    <string name="settings_debug_logs_share">Jaga logisid</string>
+    <string name="settings_debug_logs_share_chooser_title">Jaga diagnostikalogisid</string>
+    <string name="settings_debug_logs_share_failed">Diagnostikalogide jagamine ebaõnnestus</string>
     <string name="settings_debug_logs_save">Salvesta logid</string>
     <string name="settings_debug_logs_saved">Silumislogid salvestatud</string>
     <string name="settings_debug_logs_save_failed">Diagnostikalogide salvestamine ebaõnnestus</string>

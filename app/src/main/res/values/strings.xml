@@ -1167,7 +1167,10 @@
     <string name="privacy_reconsent_action">Review policy</string>
     <string name="dashboard_summary_today">Today</string>
     <string name="settings_debug_logs_title">Sanitized diagnostics logs</string>
-    <string name="settings_debug_logs_body">Save OpenVitals diagnostics log entries to a text file. The export drops or redacts identifiers, locations, dates, URIs, raw sensor payloads, and unrelated app logs before writing.</string>
+    <string name="settings_debug_logs_body">Share or save OpenVitals diagnostics log entries as a text file. The export drops or redacts identifiers, locations, dates, URIs, raw sensor payloads, and unrelated app logs before writing.</string>
+    <string name="settings_debug_logs_share">Share logs</string>
+    <string name="settings_debug_logs_share_chooser_title">Share diagnostics logs</string>
+    <string name="settings_debug_logs_share_failed">Could not share diagnostics logs</string>
     <string name="settings_debug_logs_save">Save logs</string>
     <string name="settings_debug_logs_saved">Debug logs saved</string>
     <string name="settings_debug_logs_save_failed">Could not save diagnostics logs</string>
