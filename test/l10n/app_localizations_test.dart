@@ -104,11 +104,18 @@ void main() {
   // omits must fall back to the English template message — NOT to a blank
   // string, and NOT to a build error.
   //
-  // The sentinel below must be a key that is genuinely ABSENT from the locale ARBs.
-  // Translators can translate it at any time and silently invalidate this test's
-  // premise -- which is exactly what happened once already -- so the test verifies
-  // its own premise first and says so, instead of failing as a confusing
-  // "fallback broke".
+  // The sentinel must be a key a locale genuinely OMITS. Translators can translate
+  // it at any moment and silently invalidate the premise -- and they have, twice.
+  //
+  // So the test does NOT demand the key be missing everywhere; a locale that has
+  // translated it simply proves nothing and is skipped. It only demands that at
+  // least ONE locale still omits it, because otherwise there is no untranslated
+  // string left to demonstrate the fallback with, and the test would be silently
+  // vacuous rather than failing.
+  //
+  // (Spanish reached 100% and this test broke by requiring the key to be absent
+  // from all four locales. That was too strict: completing a translation is not a
+  // regression.)
   //
   // If a future Flutter changes `_generateBaseClassFile` so a missing message no
   // longer falls back to the template, this fails loudly instead of the app
@@ -117,23 +124,20 @@ void main() {
   String sentinel(AppLocalizations l) =>
       l.settingsAppleHealthImportProgressWithScanPercent(1, 'p', 2, 3, 4, 5, 6);
 
-  test('an untranslated key falls back to the English template message',
+  test('a key a locale omits falls back to the English template message',
       () async {
     final en = await AppLocalizations.delegate.load(const Locale('en'));
+    final proving = <String>[];
 
     for (final code in <String>['de', 'es', 'it', 'et']) {
       final arb = jsonDecode(
         await File('lib/l10n/app_$code.arb').readAsString(),
       ) as Map<String, dynamic>;
 
-      expect(
-        arb.containsKey(sentinelKey),
-        isFalse,
-        reason: '"$sentinelKey" has now been translated into $code, so it can no '
-            'longer prove the fallback. Point this test at a key that is still '
-            'untranslated (see the "N untranslated message(s)" lines from '
-            '`flutter gen-l10n`).',
-      );
+      // Translated here: nothing to prove with this locale. Not a failure --
+      // finishing a translation is the goal, not a regression.
+      if (arb.containsKey(sentinelKey)) continue;
+      proving.add(code);
 
       final l10n = await AppLocalizations.delegate.load(Locale(code));
       expect(
@@ -148,5 +152,14 @@ void main() {
             'gen-l10n fallback semantics have changed',
       );
     }
+
+    expect(
+      proving,
+      isNotEmpty,
+      reason: 'Every locale now translates "$sentinelKey", so it can no longer '
+          'demonstrate the template fallback. Point this test at a key that is '
+          'still untranslated somewhere -- see the "N untranslated message(s)" '
+          'lines that `flutter gen-l10n` prints.',
+    );
   });
 }
