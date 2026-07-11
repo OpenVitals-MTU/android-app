@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # Mirrors the Kotlin source's baseVersionName (1.9.0) and baseVersionCode
 # (107030344). On Android this drives versionName/versionCode; on iOS it drives
 # CFBundleShortVersionString/CFBundleVersion.
-version: 1.9.0+107030344
+version: 2.0.0+107030351
 
 environment:
   sdk: ^3.12.2

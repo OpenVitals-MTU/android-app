@@ -62,3 +62,12 @@ keystore.properties
 
 # Stray crash dumps
 Error in OpenVitals *.txt
+
+# Gradle/Kotlin leftovers. The Kotlin app lived at the repo root, so a stray Gradle
+# invocation here (or an old checkout) leaves these behind; Flutter's own Android
+# build stays under android/ and /build/.
+/.gradle/
+/.kotlin/
+/local.properties
+/app/build/
+/captures/

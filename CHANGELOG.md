@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.0.0 - 2026-07-11
+
+### English
+
+- Rebuild OpenVitals on Flutter. Same app, same features, same Health Connect data - and the foundation for an iOS version later.
+- Note: app settings reset with this update. Goals, custom drinks, the caffeine profile, paired sensors, reminders, and offline map packs need to be set up again. Your Health Connect data is stored outside the app and is NOT affected.
+- Make Apple Health imports much faster on large exports by skipping records in categories you did not select, and show real progress while the export is scanned instead of sitting at 0%.
+- Fix missing heart rate at the start of a recorded activity.
+- Share sanitized diagnostics logs directly from Settings.
+
+### Espanol
+
+- Reconstruye OpenVitals sobre Flutter. La misma app, las mismas funciones, los mismos datos de Health Connect, y la base para una futura version de iOS.
+- Nota: los ajustes de la app se reinician con esta actualizacion. Objetivos, bebidas personalizadas, perfil de cafeina, sensores emparejados, recordatorios y mapas sin conexion deben configurarse de nuevo. Tus datos de Health Connect se guardan fuera de la app y NO se ven afectados.
+- Acelera mucho las importaciones de Apple Health en exportaciones grandes al omitir los registros de categorias no seleccionadas, y muestra progreso real mientras se analiza la exportacion en lugar de quedarse en 0%.
+- Corrige la falta de frecuencia cardiaca al inicio de una actividad grabada.
+- Comparte registros de diagnostico saneados directamente desde Ajustes.
+
+### Deutsch
+
+- Baut OpenVitals auf Flutter neu auf. Gleiche App, gleiche Funktionen, gleiche Health-Connect-Daten - und die Grundlage fuer eine spaetere iOS-Version.
+- Hinweis: Die App-Einstellungen werden mit diesem Update zurueckgesetzt. Ziele, eigene Getraenke, Koffeinprofil, gekoppelte Sensoren, Erinnerungen und Offline-Karten muessen neu eingerichtet werden. Deine Health-Connect-Daten liegen ausserhalb der App und sind NICHT betroffen.
+- Beschleunigt Apple-Health-Importe bei grossen Exporten deutlich, indem Datensaetze nicht gewaehlter Kategorien uebersprungen werden, und zeigt echten Fortschritt waehrend des Scans statt bei 0% zu verharren.
+- Behebt fehlende Herzfrequenz zu Beginn einer aufgezeichneten Aktivitaet.
+- Teilt bereinigte Diagnoseprotokolle direkt aus den Einstellungen.
+
+### Italiano
+
+- Ricostruisce OpenVitals su Flutter. Stessa app, stesse funzioni, stessi dati di Health Connect, e la base per una futura versione iOS.
+- Nota: le impostazioni dell'app vengono azzerate con questo aggiornamento. Obiettivi, bevande personalizzate, profilo caffeina, sensori accoppiati, promemoria e mappe offline vanno riconfigurati. I tuoi dati di Health Connect sono salvati fuori dall'app e NON sono interessati.
+- Rende molto piu veloci le importazioni Apple Health su esportazioni grandi saltando i record delle categorie non selezionate, e mostra un avanzamento reale durante la scansione invece di restare a 0%.
+- Corregge la frequenza cardiaca mancante all'inizio di un'attivita registrata.
+- Condivide i log diagnostici sanificati direttamente dalle Impostazioni.
+
 ## 1.9.0 - 2026-07-09
 
 ### English

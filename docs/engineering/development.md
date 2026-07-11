@@ -148,11 +148,22 @@ Two details are load-bearing:
 
 The published app's certificate is the same one the Kotlin app shipped with. A different certificate
 means every existing user gets `INSTALL_FAILED_UPDATE_INCOMPATIBLE` and the update simply will not
-install. Before any release, check it:
+install. Before any release, check the build against the certificate that is actually live:
 
 ```bash
 apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
 ```
+
+It must print exactly:
+
+```
+certificate DN: CN=Manuel Marcatili, OU=OpenVitals, O=mmarca.tech, L=Tallinn, ST=Harjumaa, C=EE
+certificate SHA-256 digest: 0416c0651543e951ef3b6c1ed9beb13833bff3a2be9ddacf492270712861e05d
+```
+
+That fingerprint is taken from the published `v1.9.0` APK on Codeberg — the last release built from
+the Kotlin sources. If your build prints anything else, **stop**: it is signed with the wrong key and
+cannot update the installed app.
 
 ## Release Checklist
 
