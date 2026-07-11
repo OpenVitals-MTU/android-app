@@ -71,3 +71,7 @@ Error in OpenVitals *.txt
 /local.properties
 /app/build/
 /captures/
+
+# Design-system reference bundle (React/TS UI kit). Kept on disk as a design
+# reference, but not versioned in the app repo -- the Kotlin repo gitignored it too.
+docs/proposals/OpenVitals Design System/
