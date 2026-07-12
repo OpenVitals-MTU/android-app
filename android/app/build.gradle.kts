@@ -111,6 +111,21 @@ android {
             } else {
                 null
             }
+
+            // AGP 9 shrinks release builds by DEFAULT. The Kotlin app also minified,
+            // but it shipped an `app/proguard-rules.pro` alongside; the Flutter port
+            // dropped the rules file and inherited the shrinking, so every release
+            // since has been R8'd with no keep rules of our own.
+            //
+            // That is not academic: it stripped the constructor off the Glance
+            // ActionCallback the beverage widgets tap through, so both of them logged
+            // nothing in release and worked fine in debug. Stated explicitly here so
+            // the coupling is visible rather than inherited from an AGP default.
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
