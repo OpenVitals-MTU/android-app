@@ -49,6 +49,7 @@ Future<HealthHarness> bootContainer({
   Set<String>? granted,
   int sdkStatus = 3,
   Map<String, Object> prefs = const {},
+  bool allowUnimplemented = false,
 }) async {
   SharedPreferences.setMockInitialValues(prefs);
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -87,6 +88,23 @@ Future<HealthHarness> bootContainer({
   );
 
   addTearDown(() {
+    // The refusal is only loud if something LISTENS for it.
+    //
+    // `HealthConnectNativeDataSource._catch` degrades any read failure to the
+    // documented empty result, so an unimplemented host method is caught, logged,
+    // and turned into an empty list -- and the test passes against no data, having
+    // proved nothing. That is the exact failure mode this suite exists to end, and
+    // it defeated the first version of this harness.
+    if (!allowUnimplemented && hc.refused.isNotEmpty) {
+      fail(
+        'The test reached for host methods the fake does not answer, and the data '
+        'source silently degraded each one to an empty result -- so whatever this '
+        'test asserted, it asserted against NOTHING:\n'
+        '  ${hc.refused.join('\n  ')}\n'
+        'Implement them in FakeHealthConnect from the fixture, or pass '
+        'allowUnimplemented: true if the test genuinely does not care.',
+      );
+    }
     container.dispose();
     database.close();
   });

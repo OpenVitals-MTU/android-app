@@ -20,7 +20,7 @@ import 'package:health_connect_native/health_connect_native.dart';
 // the class means implementing them. Their names are Pigeon's, not ours.
 // ignore_for_file: non_constant_identifier_names
 abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
-  const ExhaustiveFakeHostApi();
+  ExhaustiveFakeHostApi();
 
   @override
   BinaryMessenger? get pigeonVar_binaryMessenger => null;
@@ -28,13 +28,29 @@ abstract class ExhaustiveFakeHostApi implements HealthConnectHostApi {
   @override
   String get pigeonVar_messageChannelSuffix => '';
 
-  /// The default answer: refuse, by name.
-  Never unimplemented(String method) => throw UnimplementedError(
-        'FakeHealthConnect does not answer $method.\n'
-        'It was not needed when the fake was written. Implement it from the fixture '
-        '-- do NOT make it return an empty list, which is how a test passes while '
-        'proving nothing.',
-      );
+  /// Every method a test reached for that the fake does not answer.
+  ///
+  /// Throwing is NOT enough, and finding that out was the whole point of building
+  /// this. `HealthConnectNativeDataSource._catch` wraps every read and degrades a
+  /// failure to the documented empty result -- so the refusal below is caught,
+  /// logged, and turned into an empty list. The test then passes, against no data,
+  /// having proved nothing. Exactly the failure mode this suite exists to end.
+  ///
+  /// So the refusals are RECORDED, and `bootContainer` fails the test if any were
+  /// hit. The throw makes the read degrade like a real failure would; the record is
+  /// what makes it impossible to ignore.
+  final Set<String> refused = {};
+
+  /// The default answer: refuse, by name, and remember it.
+  Never unimplemented(String method) {
+    refused.add(method);
+    throw UnimplementedError(
+      'FakeHealthConnect does not answer $method.\n'
+      'It was not needed when the fake was written. Implement it from the fixture '
+      '-- do NOT make it return an empty list, which is how a test passes while '
+      'proving nothing.',
+    );
+  }
 
   @override
   Future<int> getSdkStatus() => unimplemented('getSdkStatus');

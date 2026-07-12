@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:health_connect_native/health_connect_native.dart';
 
 import 'exhaustive_fake_host_api.dart';
@@ -219,6 +221,243 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
     );
   }
 
+  // ── heart: HRV, resting, aggregated buckets ─────────────────────────────────
+
+  @override
+  Future<List<HrvSampleMsg>> readHrvSamples(int startEpochMs, int endEpochMs) async {
+    calls.add('readHrvSamples');
+    return [
+      for (final r in _instantsIn('hrv', startEpochMs, endEpochMs))
+        HrvSampleMsg(
+          timeEpochMs: r['time']! as int,
+          rmssdMs: (r['v']! as num).toDouble(),
+          source: r['writer']! as String,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<DailyHrvMsg>> readDailyHRV(int startEpochMs, int endEpochMs) async {
+    calls.add('readDailyHRV');
+    return [
+      for (final e in _dailyMean('hrv', startEpochMs, endEpochMs).entries)
+        DailyHrvMsg(dateEpochMs: e.key, rmssdMs: e.value),
+    ];
+  }
+
+  @override
+  Future<List<RestingHeartRateSampleMsg>> readRestingHeartRateSamples(
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readRestingHeartRateSamples');
+    return [
+      for (final r in _instantsIn('restingHeartRate', startEpochMs, endEpochMs))
+        RestingHeartRateSampleMsg(
+          timeEpochMs: r['time']! as int,
+          beatsPerMinute: (r['v']! as num).round(),
+          source: r['writer']! as String,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<DailyRestingHRMsg>> readDailyRestingHR(
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readDailyRestingHR');
+    return [
+      for (final e
+          in _dailyMean('restingHeartRate', startEpochMs, endEpochMs).entries)
+        DailyRestingHRMsg(dateEpochMs: e.key, bpm: e.value.round()),
+    ];
+  }
+
+  @override
+  Future<List<HeartRateAggBucketMsg>> readHeartRateAggregatedBuckets(
+    int startEpochMs,
+    int endEpochMs,
+    int bucketMs,
+  ) async {
+    calls.add('readHeartRateAggregatedBuckets');
+    // Slices by TIME, not by record — which is the whole reason aggregation can see
+    // inside a 17-hour record that a windowed read of the RECORDS cannot.
+    final out = <HeartRateAggBucketMsg>[];
+    for (var t = startEpochMs; t < endEpochMs; t += bucketMs) {
+      final end = t + bucketMs > endEpochMs ? endEpochMs : t + bucketMs;
+      final vals = <double>[];
+      for (final r in fixture.records('heartRate')) {
+        for (final sample in _series(r)) {
+          if (sample.$1 >= t && sample.$1 < end) vals.add(sample.$2);
+        }
+      }
+      // Health Connect OMITS an empty bucket rather than returning a zero one, and
+      // the app branches on the difference.
+      if (vals.isEmpty) continue;
+      out.add(HeartRateAggBucketMsg(
+        startEpochMs: t,
+        avgBpm: (vals.reduce((a, b) => a + b) / vals.length).round(),
+      ));
+    }
+    return out;
+  }
+
+  // ── hydration ───────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<HydrationEntryMsg>> readHydrationEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readHydrationEntries');
+    return [
+      for (final r in fixture.records('hydration'))
+        if ((r['start']! as int) >= startEpochMs &&
+            (r['start']! as int) < endEpochMs)
+          HydrationEntryMsg(
+            startEpochMs: r['start']! as int,
+            endEpochMs: r['end']! as int,
+            liters: (r['v']! as num).toDouble(),
+            source: r['writer']! as String,
+            id: r['id']! as String,
+            clientRecordId: r['clientRecordId'] as String?,
+            isOpenVitalsEntry:
+                (r['writer']! as String).startsWith('tech.mmarca.openvitals'),
+          ),
+    ];
+  }
+
+  @override
+  Future<List<DailyHydrationMsg>> readDailyHydration(
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readDailyHydration');
+    final byDay = <int, double>{};
+    for (final r in fixture.records('hydration')) {
+      final t = r['start']! as int;
+      if (t < startEpochMs || t >= endEpochMs) continue;
+      byDay.update(_dayKey(t), (v) => v + (r['v']! as num).toDouble(),
+          ifAbsent: () => (r['v']! as num).toDouble());
+    }
+    return [
+      for (final e in byDay.entries)
+        DailyHydrationMsg(dateEpochMs: e.key, liters: e.value),
+    ];
+  }
+
+  // ── record types the fixture genuinely has none of ──────────────────────────
+  //
+  // Answering EMPTY here is honest: the export contains no nutrition, blood
+  // pressure, glucose, body-temperature or respiratory-rate records in the golden
+  // week, so "there are none" is the truth and the app's no-data branches are what
+  // gets exercised. This is NOT the same as the base class's refusal, which exists
+  // for a method nobody has thought about.
+
+  @override
+  Future<List<NutritionEntryMsg>> readNutritionEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<DailyNutritionMsg>> readDailyNutrition(
+    int startEpochMs,
+    int endEpochMs,
+    bool includeHydration,
+    bool includeCalories,
+    bool includeEstimatedCalories,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<BloodPressureEntryMsg>> readBloodPressureEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<BloodGlucoseEntryMsg>> readBloodGlucoseEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<BodyTempEntryMsg>> readBodyTemperatureEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<RespiratoryRateEntryMsg>> readRespiratoryRateEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<SpO2EntryMsg>> readSpO2Entries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  @override
+  Future<List<Vo2MaxEntryMsg>> readVo2MaxEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async =>
+      const [];
+
+  // ── aggregation ─────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<String>> aggregateGroupByDurationJson(
+    List<String> aggregateMetrics,
+    int startEpochMs,
+    int endEpochMs,
+    int bucketMinutes,
+  ) async {
+    calls.add('aggregateGroupByDurationJson');
+    final bucketMs = bucketMinutes * 60 * 1000;
+    final out = <String>[];
+    for (var t = startEpochMs; t < endEpochMs; t += bucketMs) {
+      final end = t + bucketMs > endEpochMs ? endEpochMs : t + bucketMs;
+      final values = <String, double>{};
+      for (final metric in aggregateMetrics) {
+        final kind = _metricToFixtureKind[metric];
+        if (kind == null) continue;
+        final v = _prorated(fixture.records(kind), t, end);
+        if (v != null) values[metric] = v;
+      }
+      // Sparse: HC omits a bucket with no data. The app distinguishes "no data"
+      // from "zero" and several screens branch on it.
+      if (values.isEmpty) continue;
+      out.add(jsonEncode({
+        'startEpochMs': t,
+        'endEpochMs': end,
+        'values': values,
+      }));
+    }
+    return out;
+  }
+
+  /// Wire metric name -> the fixture list that backs it. A name absent here
+  /// aggregates to nothing, which mirrors the native side skipping a metric key it
+  /// does not know.
+  static const _metricToFixtureKind = {
+    'Steps.count': 'steps',
+    'Distance.distance': 'distance',
+    'ActiveCaloriesBurned.energy': 'activeCalories',
+    'TotalCaloriesBurned.energy': 'totalCalories',
+    'ElevationGained.elevation': 'elevationGained',
+  };
+
   // ── sleep ───────────────────────────────────────────────────────────────────
 
   @override
@@ -245,6 +484,31 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
   }
 
   // ── plumbing ────────────────────────────────────────────────────────────────
+
+  /// Instantaneous records inside the window (HRV, resting heart rate).
+  List<Map<String, Object?>> _instantsIn(String kind, int start, int end) => [
+        for (final r in fixture.records(kind))
+          if ((r['time']! as int) >= start && (r['time']! as int) < end) r,
+      ];
+
+  /// The mean of an instantaneous record type, per local day.
+  Map<int, double> _dailyMean(String kind, int start, int end) {
+    final byDay = <int, List<double>>{};
+    for (final r in _instantsIn(kind, start, end)) {
+      byDay
+          .putIfAbsent(_dayKey(r['time']! as int), () => [])
+          .add((r['v']! as num).toDouble());
+    }
+    return {
+      for (final e in byDay.entries)
+        e.key: e.value.reduce((a, b) => a + b) / e.value.length,
+    };
+  }
+
+  static int _dayKey(int epochMs) {
+    final t = DateTime.fromMillisecondsSinceEpoch(epochMs, isUtc: true);
+    return DateTime.utc(t.year, t.month, t.day).millisecondsSinceEpoch;
+  }
 
   /// Delta-decoded samples: `(timeMs, value)`.
   List<(int, double)> _series(Map<String, Object?> r) {
