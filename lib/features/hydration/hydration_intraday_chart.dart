@@ -30,12 +30,16 @@ class HydrationIntradayChartCard extends StatelessWidget {
     required this.entries,
     required this.dailyGoalLiters,
     required this.formatter,
+    this.now,
   });
 
   final LocalDate selectedDate;
   final List<HydrationEntry> entries;
   final double dailyGoalLiters;
   final UnitFormatter formatter;
+
+  /// Injectable clock: today's series stops at "now", a past day's runs to midnight.
+  final DateTime? now;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +49,7 @@ class HydrationIntradayChartCard extends StatelessWidget {
 
     // Shared, because the same maths was written five times and four of them put
     // the point at the wrong hour. See [DayAxis].
-    final axis = DayAxis(selectedDate);
+    final axis = DayAxis(selectedDate, now: now);
     final isToday = axis.isToday;
     final dayStart = axis.start;
 

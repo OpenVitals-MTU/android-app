@@ -7,6 +7,7 @@ import '../../core/time/local_date.dart';
 import '../../domain/model/heart_models.dart';
 import '../../domain/model/vitals_models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../ui/charts/day_axis.dart';
 import '../../ui/charts/metric_line_plot.dart';
 import '../../ui/components/ov_card.dart';
 import '../../ui/theme/app_colors.dart';
@@ -415,11 +416,12 @@ class HeartTimelineCard extends StatelessWidget {
     final values = sorted.map((p) => p.$2).toList();
     final min = values.reduce((a, b) => a < b ? a : b);
     final max = values.reduce((a, b) => a > b ? a : b);
-    final dayStart = DateTime(date.year, date.month, date.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
-    final dayDurationMs = (dayEnd.millisecondsSinceEpoch -
-            dayStart.millisecondsSinceEpoch)
-        .clamp(1, 1 << 62);
+    // The fifth hand-rolled copy of "where does this instant sit in the day". This
+    // one had the maths right — it scaled by the whole day, not the elapsed part —
+    // but it drew its hour row without the y-axis inset, so the labels sat left of
+    // the plot they describe. Both problems are the same problem: the knowledge was
+    // not in one place. See [DayAxis].
+    final axis = DayAxis(date);
     final timeFormat = DateFormat.jm(locale);
 
     return OpenVitalsCard(
@@ -452,10 +454,7 @@ class HeartTimelineCard extends StatelessWidget {
               points: [
                 for (final (time, value) in sorted)
                   MetricLinePlotPoint(
-                    xFraction: ((time.toLocal().millisecondsSinceEpoch -
-                                dayStart.millisecondsSinceEpoch) /
-                            dayDurationMs)
-                        .clamp(0.0, 1.0),
+                    xFraction: axis.fractionOf(time),
                     value: value,
                   ),
               ],
@@ -467,17 +466,7 @@ class HeartTimelineCard extends StatelessWidget {
               pointRadius: 3,
             ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (final label in const ['00:00', '06:00', '12:00', '18:00', '24:00'])
-                  Text(
-                    label,
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-              ],
-            ),
+            DayAxisLabels(axis: axis),
             const SizedBox(height: 12),
             Text(
               l10n.summaryRecorded(

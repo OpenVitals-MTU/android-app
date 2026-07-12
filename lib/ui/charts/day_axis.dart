@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/time/local_date.dart';
 import '../../l10n/app_localizations.dart';
+import 'chart_axis.dart';
+import 'metric_line_plot.dart';
 
 /// Where a moment sits on a chart of ONE day, and the axis that says so.
 ///
@@ -67,23 +69,57 @@ class DayAxis {
 /// Evenly spaced, and TRUE: [DayAxis] spans the whole day, so the 12:00 tick
 /// really is halfway across it. That was not so when each card scaled its own x by
 /// the elapsed time and then drew this same row underneath.
+///
+/// It carries its own [inset], and that is the point. [MetricLinePlot] hands its
+/// left edge to [YAxisChart] for the value labels, so the plot starts
+/// [kChartYAxisWidth] + [kChartAxisGap] in from the card. An hour row that does not
+/// start there is not describing the chart above it: on a phone that shift lands
+/// 12:00 at about 41% of the plot instead of halfway.
+///
+/// The Kotlin app never got this wrong — every single hour row went through
+/// `ChartXAxisWithYAxis`. The port dropped the wrapper on hydration, nutrition and
+/// the heart timeline, because remembering to wrap is a thing you can forget. So
+/// the row insets itself, and there is nothing left to remember.
+///
+/// Painters that draw no y axis (the sleep lane, the body-energy strip) pass
+/// `inset: 0`.
 class DayAxisLabels extends StatelessWidget {
-  const DayAxisLabels({super.key, required this.axis});
+  const DayAxisLabels({
+    super.key,
+    required this.axis,
+    this.inset = kChartYAxisWidth + kChartAxisGap,
+  });
 
   final DayAxis axis;
+
+  /// How far the plot above starts from the left edge of the card.
+  final double inset;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        for (final label in const ['00:00', '06:00', '12:00', '18:00', '24:00'])
-          Text(
-            label,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        SizedBox(width: inset),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final label in const [
+                '00:00',
+                '06:00',
+                '12:00',
+                '18:00',
+                '24:00',
+              ])
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }

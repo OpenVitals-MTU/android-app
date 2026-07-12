@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
+import 'package:openvitals/ui/charts/chart_axis.dart';
 import 'package:openvitals/ui/charts/day_axis.dart';
 
 /// The rule every intraday chart obeys, pinned in one place.
@@ -61,19 +62,46 @@ void main() {
     });
   });
 
-  testWidgets('DayAxisLabels reads midnight to midnight', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: DayAxisLabels(axis: DayAxis(day, now: at(12, 49))),
-        ),
-      ),
-    );
+  group('DayAxisLabels', () {
+    Future<void> pump(WidgetTester tester, Widget labels) => tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: labels),
+          ),
+        );
 
-    for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00']) {
-      expect(find.text(label), findsOneWidget);
-    }
+    testWidgets('reads midnight to midnight', (tester) async {
+      await pump(tester, DayAxisLabels(axis: DayAxis(day, now: at(12, 49))));
+
+      for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00']) {
+        expect(find.text(label), findsOneWidget);
+      }
+    });
+
+    testWidgets('starts where the plot starts, not where the card does',
+        (tester) async {
+      // The row must carry the y-axis inset itself. MetricLinePlot hands its left
+      // edge to YAxisChart for the value labels, so the plot begins 64px in. Three
+      // cards drew this row flush to the card instead, which slid every hour label
+      // left of the point it names — 12:00 landed around 41% of the plot.
+      //
+      // Kotlin never got this wrong because every hour row went through
+      // ChartXAxisWithYAxis. Wrapping is a thing you can forget, so now the row
+      // insets itself and there is nothing to forget.
+      await pump(tester, DayAxisLabels(axis: DayAxis(day, now: at(12, 49))));
+
+      final midnight = tester.getTopLeft(find.text('00:00')).dx;
+      expect(midnight, greaterThanOrEqualTo(kChartYAxisWidth + kChartAxisGap));
+    });
+
+    testWidgets('a painter with no y axis can opt out', (tester) async {
+      await pump(
+        tester,
+        DayAxisLabels(axis: DayAxis(day, now: at(12, 49)), inset: 0),
+      );
+
+      expect(tester.getTopLeft(find.text('00:00')).dx, 0);
+    });
   });
 }

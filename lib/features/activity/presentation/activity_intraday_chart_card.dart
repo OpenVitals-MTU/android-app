@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/time/local_date.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../ui/charts/day_axis.dart';
 import '../../../ui/charts/chart_axis.dart';
+import '../../../ui/charts/day_axis.dart';
 import '../../../ui/charts/metric_line_plot.dart';
 import '../../../ui/components/ov_card.dart';
 import 'activity_metric_display.dart';
@@ -87,25 +87,7 @@ class IntradayActivityChartCard extends StatelessWidget {
                 valueFormatter: valueFormatter,
               ),
               const SizedBox(height: 8),
-              ChartXAxisWithYAxis(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (final label in const [
-                      '00:00',
-                      '06:00',
-                      '12:00',
-                      '18:00',
-                      '24:00',
-                    ])
-                      Text(
-                        label,
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                  ],
-                ),
-              ),
+              DayAxisLabels(axis: axis),
               const SizedBox(height: 12),
               Text(
                 l10n.summaryLastUpdate(

@@ -9,7 +9,6 @@ import '../../domain/model/body_models.dart';
 import '../../domain/query/body_period_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui/charts/day_axis.dart';
-import '../../ui/charts/chart_axis.dart';
 import '../../ui/charts/metric_line_plot.dart';
 import '../../ui/charts/period_chart.dart';
 import '../../ui/components/metric_card.dart';
@@ -583,7 +582,7 @@ class BodyIntradayMetricChartCard extends StatelessWidget {
                 valueFormatter: (value) => metricData.format(value).text,
               ),
               const SizedBox(height: 8),
-              ChartXAxisWithYAxis(child: DayAxisLabels(axis: axis)),
+              DayAxisLabels(axis: axis),
               const SizedBox(height: 12),
               Text(
                 l10n.summaryLastUpdate(
