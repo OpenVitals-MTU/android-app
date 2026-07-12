@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
@@ -27,7 +28,7 @@ class _StubDashboardDataLoader implements DashboardDataLoader {
   final DashboardData data;
 
   @override
-  Future<DashboardData> loadDashboard(DashboardQuery query) async => data;
+  Future<Result<DashboardData>> loadDashboard(DashboardQuery query) async => Ok(data);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -36,8 +37,8 @@ class _StubDashboardDataLoader implements DashboardDataLoader {
 /// A loader that cannot reach Health Connect — the pick must still be recorded.
 class _ThrowingDashboardDataLoader implements DashboardDataLoader {
   @override
-  Future<DashboardData> loadDashboard(DashboardQuery query) async =>
-      throw StateError('Health Connect is unavailable');
+  Future<Result<DashboardData>> loadDashboard(DashboardQuery query) async =>
+      Ok(throw StateError('Health Connect is unavailable'));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

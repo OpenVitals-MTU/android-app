@@ -55,20 +55,20 @@ class _PassUseCase extends LoadDashboardDayUseCase {
       gates.putIfAbsent(date, Completer<void>.new);
 
   @override
-  Future<DashboardData> call(DashboardQuery query) async {
+  Future<Result<DashboardData>> call(DashboardQuery query) async {
     queries.add(query);
     final quick = query.visibleMetrics.contains(DashboardMetric.steps);
     final dateGate = gates[query.date];
     if (dateGate != null) await dateGate.future;
     if (!quick && backgroundGate != null) await backgroundGate!.future;
-    return DashboardData(
+    return Ok(DashboardData(
       date: query.date,
       steps: quick ? 8000 : 0,
       hrvRmssdMs: quick ? null : 42,
       hrvSampleCount: quick ? 0 : 30,
       loadedMetrics: query.visibleMetrics,
       supportedMetrics: DashboardMetric.values.toSet(),
-    );
+    ));
   }
 }
 
@@ -88,8 +88,8 @@ class _ThrowingUseCase extends LoadDashboardDayUseCase {
   _ThrowingUseCase() : super(DashboardDataLoader(HealthDataSource()));
 
   @override
-  Future<DashboardData> call(DashboardQuery query) async =>
-      throw StateError('boom');
+  Future<Result<DashboardData>> call(DashboardQuery query) async =>
+      const Err(UnexpectedFailure('boom'));
 }
 
 Future<ProviderContainer> _boot({

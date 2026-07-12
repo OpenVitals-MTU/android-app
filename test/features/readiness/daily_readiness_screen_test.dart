@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/dashboard_data.dart';
@@ -23,7 +24,7 @@ class _FakeUseCase extends LoadDashboardDayUseCase {
   final DashboardData Function(DashboardQuery query) _build;
 
   @override
-  Future<DashboardData> call(DashboardQuery query) async => _build(query);
+  Future<Result<DashboardData>> call(DashboardQuery query) async => Ok(_build(query));
 }
 
 DashboardData _sampleData(DashboardQuery query) => DashboardData(

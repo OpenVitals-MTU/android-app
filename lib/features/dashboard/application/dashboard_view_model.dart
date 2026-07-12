@@ -320,29 +320,30 @@ class DashboardViewModel extends Notifier<DashboardState> {
       loadingMetrics: const <DashboardMetric>{},
     );
 
-    final DashboardData quickData;
-    try {
-      quickData = await useCase(
-        DashboardQuery(
-          date: clamped,
-          sleepRangeMode: prefs.sleepRangeMode,
-          activityWeekMode: prefs.activityWeekMode,
-          visibleMetrics: dashboardQuickMetrics,
-          refreshMode: refreshMode,
-          includeHistoricalBaselines: false,
-          includeWeeklyTrainingSignals: false,
-        ),
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        isRefreshing: false,
-        error: throwableToScreenError(error, fallback: 'Unknown error'),
-      );
-      return;
-    }
+    final quickResult = await useCase(
+      DashboardQuery(
+        date: clamped,
+        sleepRangeMode: prefs.sleepRangeMode,
+        activityWeekMode: prefs.activityWeekMode,
+        visibleMetrics: dashboardQuickMetrics,
+        refreshMode: refreshMode,
+        includeHistoricalBaselines: false,
+        includeWeeklyTrainingSignals: false,
+      ),
+    );
     if (!ref.mounted || generation != _generation) return;
+    final DashboardData quickData;
+    switch (quickResult) {
+      case Ok(:final value):
+        quickData = value;
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          isRefreshing: false,
+          error: failure.toScreenError(fallback: 'Unknown error'),
+        );
+        return;
+    }
 
     final existing = state.data;
     final merged = existing != null && existing.date == clamped
@@ -370,23 +371,21 @@ class DashboardViewModel extends Notifier<DashboardState> {
     final prefs = ref.read(preferencesRepositoryProvider);
     final useCase = ref.read(loadDashboardDayUseCaseProvider);
 
-    DashboardData? data;
-    try {
-      data = await useCase(
-        DashboardQuery(
-          date: date,
-          sleepRangeMode: prefs.sleepRangeMode,
-          activityWeekMode: prefs.activityWeekMode,
-          visibleMetrics: backgroundMetrics,
-          refreshMode: refreshMode,
-          includeHistoricalBaselines: true,
-          includeWeeklyTrainingSignals:
-              backgroundMetrics.contains(DashboardMetric.weeklyCardioLoad),
-        ),
-      );
-    } catch (_) {
-      data = null;
-    }
+    // A failing background pass leaves the quick pass on screen rather than
+    // blanking it — the same tolerance the try/catch expressed.
+    final data = (await useCase(
+      DashboardQuery(
+        date: date,
+        sleepRangeMode: prefs.sleepRangeMode,
+        activityWeekMode: prefs.activityWeekMode,
+        visibleMetrics: backgroundMetrics,
+        refreshMode: refreshMode,
+        includeHistoricalBaselines: true,
+        includeWeeklyTrainingSignals:
+            backgroundMetrics.contains(DashboardMetric.weeklyCardioLoad),
+      ),
+    ))
+        .getOrNull();
     if (!ref.mounted || generation != _generation) return;
 
     final current = state.data;

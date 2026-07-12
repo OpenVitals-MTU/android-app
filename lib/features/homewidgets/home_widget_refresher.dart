@@ -73,7 +73,7 @@ class HomeWidgetRefresher {
   /// configure launch, which never mounts the gate — do not.
   Future<DashboardData> _loadToday() async {
     (await health.refreshAvailability()).orThrow();
-    return loadDashboardDay(_todayQuery());
+    return (await loadDashboardDay(_todayQuery())).orThrow();
   }
 
   /// Loads today and pushes every widget.

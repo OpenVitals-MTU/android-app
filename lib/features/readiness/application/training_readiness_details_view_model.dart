@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../data/prefs/preferences_repository.dart';
 import '../../../di/providers.dart';
@@ -69,33 +70,30 @@ class TrainingReadinessDetailsViewModel
       error: null,
     );
 
-    // LoadDashboardDayUseCase still throws rather than returning a Result, so
-    // this is the one bridge the seam reversal cannot remove from here (the
-    // sibling DailyReadinessViewModel has the same one).
-    try {
-      final data = await useCase(
-        DashboardQuery(
-          date: clamped,
-          sleepRangeMode: prefs.sleepRangeMode,
-          activityWeekMode: prefs.activityWeekMode,
-          visibleMetrics: dailyReadinessMetrics,
-          refreshMode: refreshMode,
-        ),
-      );
-      if (!ref.mounted || generation != _generation) return;
-      final insight = calculateDailyReadiness(data, goals: goals);
-      state = state.copyWith(
-        isLoading: false,
-        insight: insight,
-        display: buildTrainingReadinessDisplay(insight),
-        error: null,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unknown error'),
-      );
+    final result = await useCase(
+      DashboardQuery(
+        date: clamped,
+        sleepRangeMode: prefs.sleepRangeMode,
+        activityWeekMode: prefs.activityWeekMode,
+        visibleMetrics: dailyReadinessMetrics,
+        refreshMode: refreshMode,
+      ),
+    );
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        final insight = calculateDailyReadiness(value, goals: goals);
+        state = state.copyWith(
+          isLoading: false,
+          insight: insight,
+          display: buildTrainingReadinessDisplay(insight),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unknown error'),
+        );
     }
   }
 

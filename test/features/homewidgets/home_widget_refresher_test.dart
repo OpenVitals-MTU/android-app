@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
@@ -24,9 +25,9 @@ class _StubDashboardDataLoader implements DashboardDataLoader {
   final List<DashboardQuery> queries = [];
 
   @override
-  Future<DashboardData> loadDashboard(DashboardQuery query) async {
+  Future<Result<DashboardData>> loadDashboard(DashboardQuery query) async {
     queries.add(query);
-    return data;
+    return Ok(data);
   }
 
   @override
@@ -35,8 +36,8 @@ class _StubDashboardDataLoader implements DashboardDataLoader {
 
 class _ThrowingDashboardDataLoader implements DashboardDataLoader {
   @override
-  Future<DashboardData> loadDashboard(DashboardQuery query) async =>
-      throw StateError('Health Connect is unavailable');
+  Future<Result<DashboardData>> loadDashboard(DashboardQuery query) async =>
+      Ok(throw StateError('Health Connect is unavailable'));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/app_failure.dart';
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/presentation/screen_error.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
@@ -32,17 +34,17 @@ class _FakeUseCase extends LoadDashboardDayUseCase {
       gates.putIfAbsent(date, Completer<void>.new);
 
   @override
-  Future<DashboardData> call(DashboardQuery query) async {
+  Future<Result<DashboardData>> call(DashboardQuery query) async {
     queries.add(query);
     final gate = gates[query.date];
     if (gate != null) await gate.future;
-    return DashboardData(
+    return Ok(DashboardData(
       date: query.date,
       avgHeartRateBpm: 72,
       restingHeartRateBpm: 55,
       restingHeartRateBaselineBpm: 54,
       loadedMetrics: query.visibleMetrics,
-    );
+    ));
   }
 }
 
@@ -50,8 +52,8 @@ class _ThrowingUseCase extends LoadDashboardDayUseCase {
   _ThrowingUseCase() : super(DashboardDataLoader(HealthDataSource()));
 
   @override
-  Future<DashboardData> call(DashboardQuery query) async =>
-      throw StateError('boom');
+  Future<Result<DashboardData>> call(DashboardQuery query) async =>
+      const Err(UnexpectedFailure('boom'));
 }
 
 Future<ProviderContainer> _boot(LoadDashboardDayUseCase useCase) async {

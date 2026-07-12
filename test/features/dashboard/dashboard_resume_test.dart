@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/dashboard/dashboard_data_loader.dart';
 import 'package:openvitals/di/providers.dart';
@@ -32,13 +33,13 @@ class _RecordingUseCase extends LoadDashboardDayUseCase {
   final List<LocalDate> loadedDates = <LocalDate>[];
 
   @override
-  Future<DashboardData> call(DashboardQuery query) async {
+  Future<Result<DashboardData>> call(DashboardQuery query) async {
     loadedDates.add(query.date);
-    return DashboardData(
+    return Ok(DashboardData(
       date: query.date,
       loadedMetrics: query.visibleMetrics,
       supportedMetrics: DashboardMetric.values.toSet(),
-    );
+    ));
   }
 }
 

@@ -17,6 +17,7 @@ import '../../../domain/model/sleep_daily_summary.dart';
 import '../../../domain/model/sleep_models.dart';
 import '../../../domain/preferences/activity_week_mode.dart';
 import '../../../domain/preferences/sleep_range_mode.dart';
+import '../impl/run_catching.dart';
 import '../../source/health/health_data_source.dart';
 import '../../source/health/health_permissions.dart';
 import '../contract/body_energy_repository.dart';
@@ -46,17 +47,23 @@ class DashboardDataLoader {
   static const int _cardioLoadHistoryPeriods = 4;
   static const int _weeklyCardioHeartRateSampleWeeks = 2;
 
-  Future<DashboardData> loadDashboard(DashboardQuery query) async {
-    final granted = await _hc.grantedIfAvailable();
-    final showEstimatedCalories =
-        _preferences?.showOpenVitalsCalculatedCaloriesListenable.value ?? false;
-    return _loadDashboardUncached(
-      query: query,
-      metrics: query.visibleMetrics,
-      granted: granted,
-      showOpenVitalsCalculatedCalories: showEstimatedCalories,
-    );
-  }
+  /// Each individual metric is already permission-gated and error-guarded by
+  /// [_metric], so one failing tile cannot blank the dashboard. The `Result`
+  /// therefore only reports the failures that sink the whole load — reading the
+  /// granted-permission set, and the assembly itself.
+  Future<Result<DashboardData>> loadDashboard(DashboardQuery query) =>
+      runCatching(() async {
+        final granted = await _hc.grantedIfAvailable();
+        final showEstimatedCalories = _preferences
+                ?.showOpenVitalsCalculatedCaloriesListenable.value ??
+            false;
+        return _loadDashboardUncached(
+          query: query,
+          metrics: query.visibleMetrics,
+          granted: granted,
+          showOpenVitalsCalculatedCalories: showEstimatedCalories,
+        );
+      });
 
   Future<T?> _metric<T>(
     bool enabled,

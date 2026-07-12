@@ -83,7 +83,7 @@ void main() {
     });
     final loader = DashboardDataLoader(source);
 
-    final data = await loader.loadDashboard(
+    final data = (await loader.loadDashboard(
       DashboardQuery(
         date: LocalDate(2026, 1, 2),
         visibleMetrics: {
@@ -94,7 +94,8 @@ void main() {
         includeHistoricalBaselines: false,
         includeWeeklyTrainingSignals: false,
       ),
-    );
+    ))
+        .orThrow();
 
     expect(data.steps, 4321);
     expect(data.distanceMeters, 5000.0);
@@ -118,7 +119,7 @@ void main() {
       ..unsupportedPermissions = {HcPermissions.readWheelchairPushes};
     final loader = DashboardDataLoader(source);
 
-    final data = await loader.loadDashboard(
+    final data = (await loader.loadDashboard(
       DashboardQuery(
         date: LocalDate(2026, 1, 2),
         visibleMetrics: {
@@ -129,7 +130,8 @@ void main() {
         includeHistoricalBaselines: false,
         includeWeeklyTrainingSignals: false,
       ),
-    );
+    ))
+        .orThrow();
 
     expect(data.missingPermissions, isEmpty);
   });
@@ -142,14 +144,15 @@ void main() {
       };
     final loader = DashboardDataLoader(source);
 
-    final data = await loader.loadDashboard(
+    final data = (await loader.loadDashboard(
       DashboardQuery(
         date: LocalDate(2026, 1, 2),
         visibleMetrics: {DashboardMetric.steps},
         includeHistoricalBaselines: false,
         includeWeeklyTrainingSignals: false,
       ),
-    );
+    ))
+        .orThrow();
 
     // Reported for every metric, not just the queried ones — the dashboard uses
     // it to decide which tiles exist at all.
@@ -175,14 +178,15 @@ void main() {
       ..unsupportedPermissions = {HcPermissions.readHeight};
     final loader = DashboardDataLoader(source);
 
-    final data = await loader.loadDashboard(
+    final data = (await loader.loadDashboard(
       DashboardQuery(
         date: LocalDate(2026, 1, 2),
         visibleMetrics: {DashboardMetric.steps},
         includeHistoricalBaselines: false,
         includeWeeklyTrainingSignals: false,
       ),
-    );
+    ))
+        .orThrow();
 
     expect(data.supportedMetrics, contains(DashboardMetric.weight));
     expect(data.supportedMetrics, isNot(contains(DashboardMetric.height)));
@@ -195,14 +199,15 @@ void main() {
       ..cachedAvailability = HealthConnectAvailability.notSupported;
     final loader = DashboardDataLoader(source);
 
-    final data = await loader.loadDashboard(
+    final data = (await loader.loadDashboard(
       DashboardQuery(
         date: LocalDate(2026, 1, 2),
         visibleMetrics: {DashboardMetric.steps},
         includeHistoricalBaselines: false,
         includeWeeklyTrainingSignals: false,
       ),
-    );
+    ))
+        .orThrow();
 
     // Availability gate short-circuits granted permissions, so nothing is read.
     expect(data.steps, 0);
@@ -212,7 +217,8 @@ void main() {
   group('body energy timeline', () {
     final date = LocalDate(2026, 1, 2);
 
-    Future<DashboardData> load(DashboardDataLoader loader) => loader.loadDashboard(
+    Future<Result<DashboardData>> load(DashboardDataLoader loader) =>
+        loader.loadDashboard(
           DashboardQuery(
             date: date,
             visibleMetrics: {DashboardMetric.bodyEnergy},
@@ -231,7 +237,7 @@ void main() {
         bodyEnergyRepository: repo,
       );
 
-      final data = await load(loader);
+      final data = (await load(loader)).orThrow();
 
       expect(repo.loaded, isTrue);
       expect(data.bodyEnergyTimeline, isNotNull);
@@ -249,7 +255,7 @@ void main() {
         bodyEnergyRepository: repo,
       );
 
-      final data = await load(loader);
+      final data = (await load(loader)).orThrow();
 
       expect(repo.loaded, isFalse);
       expect(data.bodyEnergyTimeline, isNull);
@@ -264,7 +270,7 @@ void main() {
         bodyEnergyRepository: repo,
       );
 
-      final data = await load(loader);
+      final data = (await load(loader)).orThrow();
 
       expect(repo.loaded, isFalse);
       expect(data.bodyEnergyTimeline, isNull);

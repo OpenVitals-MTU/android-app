@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/presentation/screen_error.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/local_date.dart';
 import '../../../di/providers.dart';
 import '../../../domain/insights/stress_tracking.dart';
@@ -76,29 +77,29 @@ class RecoveryViewModel extends Notifier<RecoveryState> {
       error: null,
     );
 
-    try {
-      final data = await useCase(
-        DashboardQuery(
-          date: clamped,
-          sleepRangeMode: prefs.sleepRangeMode,
-          activityWeekMode: prefs.activityWeekMode,
-          visibleMetrics: recoveryStressMetrics,
-          refreshMode: refreshMode,
-        ),
-      );
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        data: data,
-        stress: calculatePhysiologicalStress(data),
-        error: null,
-      );
-    } catch (error) {
-      if (!ref.mounted || generation != _generation) return;
-      state = state.copyWith(
-        isLoading: false,
-        error: throwableToScreenError(error, fallback: 'Unknown error'),
-      );
+    final result = await useCase(
+      DashboardQuery(
+        date: clamped,
+        sleepRangeMode: prefs.sleepRangeMode,
+        activityWeekMode: prefs.activityWeekMode,
+        visibleMetrics: recoveryStressMetrics,
+        refreshMode: refreshMode,
+      ),
+    );
+    if (!ref.mounted || generation != _generation) return;
+    switch (result) {
+      case Ok(:final value):
+        state = state.copyWith(
+          isLoading: false,
+          data: value,
+          stress: calculatePhysiologicalStress(value),
+          error: null,
+        );
+      case Err(:final failure):
+        state = state.copyWith(
+          isLoading: false,
+          error: failure.toScreenError(fallback: 'Unknown error'),
+        );
     }
   }
 

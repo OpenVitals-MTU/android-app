@@ -85,8 +85,8 @@ class _FakeNutritionRepository implements NutritionRepository {
 
 class _StubDashboardDataLoader implements DashboardDataLoader {
   @override
-  Future<DashboardData> loadDashboard(DashboardQuery query) async =>
-      DashboardData(date: LocalDate.now(), loadedMetrics: const {});
+  Future<Result<DashboardData>> loadDashboard(DashboardQuery query) async =>
+      Ok(DashboardData(date: LocalDate.now(), loadedMetrics: const {}));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
