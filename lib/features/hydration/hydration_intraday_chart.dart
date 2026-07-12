@@ -48,14 +48,22 @@ class HydrationIntradayChartCard extends StatelessWidget {
       selectedDate.month,
       selectedDate.day,
     );
-    // Today's chart ends NOW, not at midnight: a line drawn across the whole 24
-    // hours at 2pm would show a flat run into a future that has not happened.
-    final chartEnd =
-        isToday ? DateTime.now() : dayStart.add(const Duration(days: 1));
-    final elapsedMs = chartEnd
-        .difference(dayStart)
-        .inMilliseconds
-        .clamp(1, 1 << 62);
+
+    // The x axis is the WHOLE DAY, always — 00:00 to 24:00 — and a drink is placed
+    // at its real hour.
+    //
+    // Kotlin scaled x by the time ELAPSED so far, so on a chart opened at 12:49 a
+    // drink at 09:29 landed at 74% of the width... under an axis whose labels read
+    // 00:00 / 06:00 / 12:00 / 18:00. The chart said quarter-past-five. That is not a
+    // rendering nit: the only thing this chart exists to tell you is WHEN, and it
+    // was telling you the wrong hour. Porting it faithfully reproduced the lie.
+    //
+    // So the day is the day. Today's line simply stops at `now` instead of running
+    // to the right edge, which is honest — the rest of the day has not happened.
+    const dayMs = Duration.millisecondsPerDay;
+    double fractionOf(DateTime time) =>
+        (time.difference(dayStart).inMilliseconds.clamp(0, dayMs)) / dayMs;
+    final endFraction = isToday ? fractionOf(DateTime.now()) : 1.0;
 
     final points = _cumulative(entries);
     final total = points.isEmpty ? 0.0 : points.last.$2;
@@ -93,20 +101,29 @@ class HydrationIntradayChartCard extends StatelessWidget {
               )
             else ...[
               MetricLinePlot(
+                // A STEP, not a ramp. You do not sip continuously from midnight
+                // onwards: you drink nothing, then a glass, then nothing. A plain
+                // line from (0,0) to the first drink draws a diagonal that says you
+                // were drinking all morning, and the flat stretches between glasses
+                // — the part that tells you you have had nothing since nine — vanish
+                // into the slope.
+                //
+                // So each drink contributes TWO points at the same instant: the
+                // total before it, and the total after.
                 points: [
-                  // Anchored at midnight, so the climb starts where the day does.
                   const MetricLinePlotPoint(xFraction: 0, value: 0),
-                  for (final point in points)
+                  for (final (index, point) in points.indexed) ...[
                     MetricLinePlotPoint(
-                      xFraction: point.$1
-                              .difference(dayStart)
-                              .inMilliseconds
-                              .clamp(0, elapsedMs) /
-                          elapsedMs,
+                      xFraction: fractionOf(point.$1),
+                      value: index == 0 ? 0.0 : points[index - 1].$2,
+                    ),
+                    MetricLinePlotPoint(
+                      xFraction: fractionOf(point.$1),
                       value: point.$2,
                     ),
-                  // Closed at the right edge: the total holds until now.
-                  MetricLinePlotPoint(xFraction: 1, value: total),
+                  ],
+                  // Holds the total to now (today) or to midnight (a past day).
+                  MetricLinePlotPoint(xFraction: endFraction, value: total),
                 ],
                 minValue: 0,
                 maxValue: maxValue,
@@ -114,16 +131,12 @@ class HydrationIntradayChartCard extends StatelessWidget {
                 valueFormatter: (value) => formatter.hydration(value).text,
               ),
               const SizedBox(height: 8),
+              // Evenly spaced, and now TRUE: the axis spans the whole day, so the
+              // 12:00 tick really is halfway across it.
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  for (final label in [
-                    '00:00',
-                    '06:00',
-                    '12:00',
-                    '18:00',
-                    if (isToday) l10n.summaryNow else '24:00',
-                  ])
+                  for (final label in ['00:00', '06:00', '12:00', '18:00', '24:00'])
                     Text(
                       label,
                       style: theme.textTheme.labelSmall

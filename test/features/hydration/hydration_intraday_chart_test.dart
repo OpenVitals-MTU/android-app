@@ -80,6 +80,7 @@ void main() {
     // Cumulative: 0.3 then 0.8 — never the per-entry 0.3 then 0.5, which would draw
     // a line that goes DOWN after a smaller second drink.
     expect(values, containsAllInOrder([0.0, 0.3, 0.8, 0.8]));
+    expect(values.last, closeTo(0.8, 0.001));
     for (var i = 1; i < values.length; i++) {
       expect(values[i], greaterThanOrEqualTo(values[i - 1]),
           reason: 'The cumulative line went DOWN — the running total is not '
@@ -87,16 +88,43 @@ void main() {
     }
   });
 
-  testWidgets('a drink at 06:00 sits a quarter of the way across',
+  testWidgets('a drink at 06:00 sits a QUARTER of the way across the DAY',
       (tester) async {
-    // The x position IS the information. If every point landed at the same
-    // fraction, the chart would be a vertical line and tell you nothing about when.
+    // The x position IS the information, and it must agree with the axis under it.
+    // Kotlin scaled x by the time ELAPSED so far, so on a chart opened at 12:49 a
+    // drink at 09:29 landed at 74% of the width — under an axis reading 00:00 /
+    // 06:00 / 12:00 / 18:00, which put it at quarter past five. The one thing this
+    // chart exists to say is WHEN, and it said the wrong hour.
     await tester.pumpWidget(host([entry(6, 0.25), entry(18, 0.25)]));
 
     final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
-    // points[0] is the midnight anchor; [1] and [2] are the drinks.
-    expect(plot.points[1].xFraction, closeTo(0.25, 0.01));
-    expect(plot.points[2].xFraction, closeTo(0.75, 0.01));
+    final xs = plot.points.map((p) => p.xFraction).toList();
+
+    // 06:00 is a quarter of a DAY, and 18:00 is three quarters — whatever the hour
+    // happens to be when the test runs.
+    expect(xs, contains(closeTo(0.25, 0.001)));
+    expect(xs, contains(closeTo(0.75, 0.001)));
+  });
+
+  testWidgets('the line STEPS at each drink rather than ramping from midnight',
+      (tester) async {
+    // You do not sip continuously from midnight: you drink nothing, then a glass,
+    // then nothing. A plain line from (0,0) to the first drink draws a diagonal
+    // saying you drank all morning, and the flat stretches between glasses — the
+    // part that tells you you have had nothing since nine — vanish into the slope.
+    await tester.pumpWidget(host([entry(6, 0.25), entry(18, 0.25)]));
+
+    final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
+
+    // Two points share the 06:00 x: the total before the drink, and after it.
+    final atSix = plot.points.where((p) => (p.xFraction - 0.25).abs() < 0.001);
+    expect(atSix, hasLength(2));
+    expect(atSix.map((p) => p.value), containsAllInOrder([0.0, 0.25]));
+
+    // And the value is still 0 right up to that moment — no morning ramp.
+    final beforeSix =
+        plot.points.where((p) => p.xFraction < 0.25 - 0.001).map((p) => p.value);
+    expect(beforeSix, everyElement(0.0));
   });
 
   testWidgets('TODAY ends the chart at now, not at midnight', (tester) async {
@@ -129,11 +157,14 @@ void main() {
       ),
     ));
 
-    // The axis says "Now" rather than 24:00, and the elapsed day is shorter than a
-    // full one — so a 00:30 drink sits further right than the 0.02 a 24h day gives.
-    expect(find.text('24:00'), findsNothing);
+    // The axis is the whole day either way, so 00:30 sits at 1/48th of the width —
+    // near the left edge, where half past midnight belongs.
     final plot = tester.widget<MetricLinePlot>(find.byType(MetricLinePlot));
-    expect(plot.points[1].xFraction, greaterThan(0.0));
+    expect(plot.points[1].xFraction, closeTo(0.5 / 24, 0.001));
+
+    // But the line STOPS at now rather than running to the right edge: the rest of
+    // the day has not happened.
+    expect(plot.points.last.xFraction, lessThan(1.0));
   });
 
   testWidgets('a day with nothing logged says so, and draws no line',

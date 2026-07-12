@@ -592,7 +592,19 @@ class _FitSingleFileDecoder {
       durationSeconds: durationSeconds?.round(),
       distanceMeters: distanceRaw == null ? null : distanceRaw / _fitDistanceScale,
       elevationGainedMeters: ascentRaw?.toDouble(),
-      activeCaloriesKcal: caloriesRaw?.toDouble(),
+      // FIT session field 11 is `total_calories`. It was being written into ACTIVE
+      // calories -- the constant three lines up says TOTAL and the field it fed said
+      // ACTIVE, and nothing objected.
+      //
+      // The consequence was not just a mislabelled number. Nothing then filled
+      // `totalCalories`, so the form estimated one, and the estimate came out BELOW
+      // the total that was sitting in the active field -- so importing a real ride
+      // produced "Total calories cannot be lower than active calories" and would not
+      // save. A 511 kcal ride arrived as 511 active against an estimated 376 total.
+      //
+      // The FIT session message has no separate active-calorie field, so active is
+      // left unknown rather than invented. Null is honest; a number is not.
+      totalCaloriesKcal: caloriesRaw?.toDouble(),
       sport: _generic(values[_fitSessionSportFieldNumber]),
     );
   }

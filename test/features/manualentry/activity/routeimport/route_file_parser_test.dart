@@ -120,7 +120,21 @@ void main() {
       expect(result.originalPointCount, 0);
       expect(result.startTime, DateTime.utc(2026, 5, 26, 8, 30));
       expect(result.endTime, DateTime.utc(2026, 5, 26, 9, 15));
-      expect(result.activeCaloriesKcal!, closeTo(220.0, 0.001));
+
+      // FIT session field 11 is `total_calories`. This test used to assert it came
+      // out as ACTIVE calories, which is how the bug survived: the test was written
+      // to match the code rather than the format, so it locked the swap in.
+      //
+      // The consequence was not cosmetic. Nothing filled `totalCalories`, so the
+      // import form estimated one, and the estimate landed BELOW the total sitting
+      // in the active field -- a real 511 kcal ride arrived as 511 active against an
+      // estimated 376 total and refused to save: "Total calories cannot be lower
+      // than active calories."
+      expect(result.totalCaloriesKcal!, closeTo(220.0, 0.001));
+
+      // And active stays UNKNOWN. The FIT session message has no active-calorie
+      // field, so there is nothing to read; null is honest, a number would not be.
+      expect(result.activeCaloriesKcal, isNull);
     });
 
     test('parseFile imports FIT activity and ignores unusable one point route',
