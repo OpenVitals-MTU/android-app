@@ -8,8 +8,8 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/body_energy_calibration.dart';
 import 'package:openvitals/domain/preferences/body_profile.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/settings/cards/body_energy_calibration_card.dart';
-import 'package:openvitals/features/settings/cards/body_profile_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/body_energy_calibration_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/body_profile_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/state/app_providers.dart';
 

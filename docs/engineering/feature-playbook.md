@@ -34,9 +34,9 @@ Riverpod replaces Hilt; there is no annotation processor and no component.
 - Declare the notifier as a plain `NotifierProvider` at the bottom of the notifier file:
   ```dart
   final sleepNotifierProvider =
-      NotifierProvider<SleepNotifier, SleepState>(SleepNotifier.new);
+      NotifierProvider<SleepViewModel, SleepState>(SleepViewModel.new);
   ```
-  For a screen parameterized by a route argument (a metric id, an entry id), build the provider per argument so stacked routes stay independent — see `HeartMetricNotifier(metric)` and `SleepDetailNotifier(sleepId)`.
+  For a screen parameterized by a route argument (a metric id, an entry id), build the provider per argument so stacked routes stay independent — see `HeartMetricViewModel(metric)` and `SleepDetailViewModel(sleepId)`.
 - Take dependencies from `ref.read(...)` inside the notifier, not from constructor arguments reaching into globals. Repository and service providers live in `lib/di/providers.dart`; app-shell preference providers (`unitFormatterProvider`, `unitSystemProvider`, `weekPeriodModeProvider`, …) live in `lib/state/app_providers.dart`. Register anything new in whichever of the two it belongs to.
 - Route arguments come from go_router (`state.pathParameters` in `lib/navigation/app_router.dart`), not from a `SavedStateHandle` analogue. Add the path and its typed `…Location(...)` helper to `lib/navigation/app_routes.dart`.
 - Guard every load against staleness with a monotonic `_generation` counter, and check `ref.mounted` after every `await` — copy the shape in `sleep_notifier.dart`.
@@ -80,13 +80,13 @@ The sleep feature is the template for a period-based detail screen. These are th
 | File | Responsibility |
 |------|----------------|
 | `sleep_screen.dart` | Route widget: watch the notifier, wrap in `HealthConnectGate`, hand `MetricDetailScaffold` a `rangePreferenceKey` and an `onSelectionChanged`, compose the ordered sections |
-| `sleep_notifier.dart` | `SleepState` (`freezed`) + `SleepNotifier` + `sleepNotifierProvider`: loading, the raw `SleepPeriodLoadResult`, the sleep-hours goal, the `_generation` staleness guard |
+| `sleep_notifier.dart` | `SleepState` (`freezed`) + `SleepViewModel` + `sleepNotifierProvider`: loading, the raw `SleepPeriodLoadResult`, the sleep-hours goal, the `_generation` staleness guard |
 | `sleep_presentation.dart` | The presentation mapper — `buildSleepDisplay(...)` turns the raw payload into `SleepDisplay` / `SleepOverviewSummary` / `SleepDurationPoint`. **Called by the screen, not the notifier** |
 | `sleep_metric_sections.dart` | The orderable section bodies (statistics, target context, HRV insight, data confidence, session list), each a widget over a `SleepDisplay` |
 | `sleep_cards.dart` | Feature cards: session timeline, stage-share, overview tiles, statistics |
 | `sleep_schedule_chart.dart` | The week/month clock-aligned, stage-coloured schedule chart (a `CustomPainter`) |
 | `sleep_detail_screen.dart` | The single-session route (`/sleep_detail/:sleepId`): summary card, stage breakdown, the stage-lane chart, per-stage event rows |
-| `sleep_detail_notifier.dart` | `SleepDetailState` + `SleepDetailNotifier`, built per `sleepId` so stacked detail routes stay independent |
+| `sleep_detail_notifier.dart` | `SleepDetailState` + `SleepDetailViewModel`, built per `sleepId` so stacked detail routes stay independent |
 | `sleep_notifier.freezed.dart` | Generated. Never edit by hand |
 
 Two things to notice, because they differ from the Kotlin sleep feature this was ported from:

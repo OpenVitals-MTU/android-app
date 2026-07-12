@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/mindfulness/` (incl. `mindfulness/reminders/`), `lib/features/manualentry/mindfulness_entry_screen.dart` + `lib/features/manualentry/mindfulness/`, `lib/data/repository/contract/mindfulness_repository.dart` (+ `impl/mindfulness_repository_impl.dart`).
+> **Implementation:** `lib/features/mindfulness/` (incl. `mindfulness/reminders/`), `lib/features/manualentry/presentation/mindfulness_entry_screen.dart` + `lib/features/manualentry/mindfulness/`, `lib/data/repository/contract/mindfulness_repository.dart` (+ `impl/mindfulness_repository_impl.dart`).
 > **Navigation:** `/metric/MINDFULNESS`; `/manual_entry/mindfulness` (+ `/edit/:mindfulnessEntryId`); `ManualEntryWidgetId.mindfulness`.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Reminders](reminders.md).
 

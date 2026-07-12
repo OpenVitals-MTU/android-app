@@ -7,9 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/app_theme_mode.dart';
-import 'package:openvitals/features/settings/settings_screen.dart';
-import 'package:openvitals/features/settings/settings_section.dart';
-import 'package:openvitals/features/settings/settings_section_screen.dart';
+import 'package:openvitals/features/settings/presentation/settings_screen.dart';
+import 'package:openvitals/features/settings/presentation/settings_section.dart';
+import 'package:openvitals/features/settings/presentation/settings_section_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 Future<(Widget, SharedPreferences)> _bootstrap(Widget child) async {

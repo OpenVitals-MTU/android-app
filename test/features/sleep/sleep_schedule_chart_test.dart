@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/features/sleep/sleep_schedule_chart.dart';
+import 'package:openvitals/features/sleep/presentation/sleep_schedule_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// The schedule chart's axis is anchored at 18:00 so a night that crosses

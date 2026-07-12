@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/hydration/` (incl. `hydration/reminders/`), `lib/features/manualentry/hydration_entry_screen.dart`, `lib/data/repository/contract/hydration_repository.dart` (+ `impl/hydration_repository_impl.dart`).
+> **Implementation:** `lib/features/hydration/` (incl. `hydration/reminders/`), `lib/features/manualentry/presentation/hydration_entry_screen.dart`, `lib/data/repository/contract/hydration_repository.dart` (+ `impl/hydration_repository_impl.dart`).
 > **Navigation:** `/metric/HYDRATION`; `/manual_entry/hydration` (+ `/edit/:hydrationEntryId`, `/log/:hydrationDrinkId`); `ManualEntryWidgetId.hydration`.
 > **Related:** [Feature map](feature-map.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md), [Reminders](reminders.md).
 

@@ -4,7 +4,7 @@ import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/domain/model/mindfulness_models.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/mindfulness/mindfulness_intraday_chart.dart';
+import 'package:openvitals/features/mindfulness/presentation/mindfulness_intraday_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/charts/metric_line_plot.dart';
 

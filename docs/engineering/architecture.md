@@ -35,12 +35,14 @@ Body and entry/session browsing live in metric-owned detail screens. There is no
 
 New product work lives under `lib/features/<feature>/`.
 
-Each feature owns:
+Each feature owns, split into `application/` (view-model side) and `presentation/` (widget side):
 
-- its screen widgets
+- its screen widgets (`presentation/`)
 - its state class (`freezed`, e.g. `SleepState`)
-- its notifier (Riverpod `Notifier`, e.g. `SleepNotifier`) and the `NotifierProvider` that exposes it
-- its own charts, cards, rows, and presentation mapping
+- its view-model (a Riverpod `Notifier` subclass named `<X>ViewModel`, e.g. `SleepViewModel`, in `application/<x>_view_model.dart`) and the `NotifierProvider` that exposes it
+- its own charts, cards, rows, and presentation mapping (`presentation/`)
+
+Feature sub-domains keep their own subdirectory (`reminders/`, `applehealth/`, `maps/`); `homewidgets/` stays flat because it is background-isolate glue with no view-model.
 
 Shared code moves out of a feature only when it is clearly reused by more than one screen.
 
@@ -54,7 +56,7 @@ The app has a real shared shell for period-based screens, in `MetricDetailScaffo
 - date picker
 - shared loading/error framing
 
-The metric presentation stays feature-local: the sleep stage timeline and schedule chart ([`lib/features/sleep/sleep_schedule_chart.dart`](../../lib/features/sleep/sleep_schedule_chart.dart)), the activity intraday chart, heart trend cards, workout rows, body composition cards.
+The metric presentation stays feature-local: the sleep stage timeline and schedule chart ([`lib/features/sleep/presentation/sleep_schedule_chart.dart`](../../lib/features/sleep/presentation/sleep_schedule_chart.dart)), the activity intraday chart, heart trend cards, workout rows, body composition cards.
 
 There is a deliberate, bounded exception: [`lib/ui/charts/`](../../lib/ui/charts) holds *value-over-time* primitives — `PeriodHistoryChart` (which dispatches to a bar chart, a month calendar heatmap, or a year dot heatmap by selected range), plus bar/line/sparkline/heatmap/axis building blocks. These are shared because "a number per day, drawn over a period" carries no metric semantics. They are **not** a universal chart abstraction, and nothing that encodes what a metric *means* belongs there.
 
@@ -260,9 +262,9 @@ The dashboard is deliberately different from the period-based detail screens. It
 
 Current files:
 
-- [`lib/features/dashboard/dashboard_notifier.dart`](../../lib/features/dashboard/dashboard_notifier.dart)
-- [`lib/features/dashboard/dashboard_screen.dart`](../../lib/features/dashboard/dashboard_screen.dart)
-- [`lib/features/dashboard/dashboard_summary_presentation.dart`](../../lib/features/dashboard/dashboard_summary_presentation.dart)
+- [`lib/features/dashboard/application/dashboard_view_model.dart`](../../lib/features/dashboard/application/dashboard_view_model.dart)
+- [`lib/features/dashboard/presentation/dashboard_screen.dart`](../../lib/features/dashboard/presentation/dashboard_screen.dart)
+- [`lib/features/dashboard/presentation/dashboard_summary_presentation.dart`](../../lib/features/dashboard/presentation/dashboard_summary_presentation.dart)
 - [`lib/data/repository/dashboard/dashboard_data_loader.dart`](../../lib/data/repository/dashboard/dashboard_data_loader.dart)
 
 `DashboardDataLoader` assembles `DashboardData` for the visible metrics only; each metric read is permission-gated and individually error-guarded, so one failing metric does not blank the screen. The notifier loads in two passes — a fast pass for `dashboardQuickMetrics`, then a background pass merged in — mirroring the Kotlin quick/background split.
@@ -275,7 +277,7 @@ Metric cards route through **one parametric route**, `/metric/:metricId`, which 
 
 > **Correction to the Kotlin doc.** The Kotlin architecture doc instructs that "navigation should call concrete metric screen entry points such as `ProteinScreen` or `RestingHeartRateScreen`, not a public screen with a metric parameter". That rule was never adopted — not here, and not in Kotlin, which has the same `metric/{metricId}` route dispatching through `MetricRouteContent` to parametric screens. The rule that *is* real, and that both apps do honour, is the one underneath it: **a metric's detail view renders that metric**, not every metric that happens to share its repository. Keep that; ignore the file-naming half.
 
-Ids without a dedicated screen still land on `MetricScreen` → `PlaceholderScreen` ([`lib/features/dashboard/metric_screen.dart`](../../lib/features/dashboard/metric_screen.dart)). That is a known gap, not a pattern.
+Ids without a dedicated screen still land on `MetricScreen` → `PlaceholderScreen` ([`lib/features/dashboard/presentation/metric_screen.dart`](../../lib/features/dashboard/presentation/metric_screen.dart)). That is a known gap, not a pattern.
 
 There is no global records browser. Entry and session lists live behind the relevant metric card / detail screen.
 
@@ -378,7 +380,7 @@ Real seams in the current codebase. None of them blocks feature work.
 
 ### 1. No notifier precomputes a display state
 
-Every feature notifier holds the **raw** `*PeriodLoadResult` and the screen derives its display model on demand — `buildSleepDisplay(...)` is called from the sleep screen's content widget, not from `SleepNotifier`. The Kotlin ViewModels precompute a `SleepDisplayState` / `HeartDisplayState`; the port dropped that deliberately, on the grounds that the derivations are cheap, and the notifier doc comments say so.
+Every feature notifier holds the **raw** `*PeriodLoadResult` and the screen derives its display model on demand — `buildSleepDisplay(...)` is called from the sleep screen's content widget, not from `SleepViewModel`. The Kotlin ViewModels precompute a `SleepDisplayState` / `HeartDisplayState`; the port dropped that deliberately, on the grounds that the derivations are cheap, and the notifier doc comments say so.
 
 This is a systematic divergence, and it inverts the Kotlin playbook's "put expensive derived display values in the ViewModel state, not in composable getters".
 
@@ -394,7 +396,7 @@ The rule that survives is the threshold, not the blanket: **if a derived value n
 
 ### 4. Residual port stubs
 
-- `/metric/:metricId` falls through to `MetricScreen` → `PlaceholderScreen` for ids with no dedicated screen ([`metric_screen.dart`](../../lib/features/dashboard/metric_screen.dart), `TODO(phase5)`).
+- `/metric/:metricId` falls through to `MetricScreen` → `PlaceholderScreen` for ids with no dedicated screen ([`metric_screen.dart`](../../lib/features/dashboard/presentation/metric_screen.dart), `TODO(phase5)`).
 - `TopLevelDestination` in [`app_routes.dart`](../../lib/navigation/app_routes.dart) is **dead code** — a bottom-navigation / `StatefulShellRoute` design that was abandoned (the shell has no bottom nav). It has zero references in `lib/` or `test/`. Delete it when touching that file.
 - A handful of `TODO(phase6)` gaps remain in hydration quick-add, the mindfulness timer UI, and the mindfulness entry screen.
 

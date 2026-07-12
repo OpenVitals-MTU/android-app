@@ -7,8 +7,8 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/sleep_score.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/features/recovery/recovery_detail_view_model.dart';
-import 'package:openvitals/features/recovery/sleep_efficiency_detail_screen.dart';
+import 'package:openvitals/features/recovery/application/recovery_detail_view_model.dart';
+import 'package:openvitals/features/recovery/presentation/sleep_efficiency_detail_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 /// Serves a fixed [RecoveryDetailState] so the cards render deterministic

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import 'package:openvitals/features/settings/cards/debug_diagnostics_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/debug_diagnostics_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 void main() {

@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/nutrition/`, `lib/features/manualentry/carbs_entry_screen.dart`, `lib/data/repository/contract/nutrition_repository.dart` (+ `impl/nutrition_repository_impl.dart`).
+> **Implementation:** `lib/features/nutrition/`, `lib/features/manualentry/presentation/carbs_entry_screen.dart`, `lib/data/repository/contract/nutrition_repository.dart` (+ `impl/nutrition_repository_impl.dart`).
 > **Navigation:** `/nutrition` (overview); `/metric/:metricId` for `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT` (all → the parametric `NutritionMetricScreen`); `/manual_entry/carbs`.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md).
 

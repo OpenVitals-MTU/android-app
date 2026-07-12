@@ -14,7 +14,7 @@ import 'package:openvitals/domain/model/refresh_mode.dart';
 import 'package:openvitals/domain/preferences/metric_detail_section_id.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/domain/query/body_period_data.dart';
-import 'package:openvitals/features/body/body_screen.dart';
+import 'package:openvitals/features/body/presentation/body_screen.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/state/app_providers.dart';

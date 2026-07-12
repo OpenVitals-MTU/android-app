@@ -7,7 +7,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/repository/contract/activity_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/activity_models.dart';
-import 'package:openvitals/features/achievements/achievements_screen.dart';
+import 'package:openvitals/features/achievements/presentation/achievements_screen.dart';
 
 class _FakeActivityRepository implements ActivityRepository {
   _FakeActivityRepository({this.days = const <DailySteps>[]});

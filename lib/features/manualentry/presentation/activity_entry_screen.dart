@@ -6,7 +6,7 @@ import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../navigation/app_routes.dart';
 import '../../../state/app_providers.dart';
-import '../../imports/pending_route_import.dart';
+import '../../imports/application/pending_route_import.dart';
 import '../activity/activity_entry_clock.dart';
 import '../activity/activity_entry_form.dart';
 import '../activity/activity_entry_notifier.dart';

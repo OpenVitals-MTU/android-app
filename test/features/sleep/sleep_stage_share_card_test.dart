@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/core/presentation/unit_formatter.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/core/time/local_date.dart';
-import 'package:openvitals/features/sleep/sleep_cards.dart';
-import 'package:openvitals/features/sleep/sleep_stage_chart.dart';
+import 'package:openvitals/features/sleep/presentation/sleep_cards.dart';
+import 'package:openvitals/features/sleep/presentation/sleep_stage_chart.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/ov_card.dart';
 import 'package:openvitals/domain/model/sleep_models.dart';
-import 'package:openvitals/features/sleep/sleep_presentation.dart';
+import 'package:openvitals/features/sleep/presentation/sleep_presentation.dart';
 
 /// The "Share of time in bed" bars rendered as empty grey tracks in the shipped
 /// app — correct durations and percentages beside them, and no coloured fill at

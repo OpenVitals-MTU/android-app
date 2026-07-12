@@ -9,7 +9,7 @@ import 'package:openvitals/domain/insights/daily_readiness.dart';
 import 'package:openvitals/domain/insights/intensity_minutes.dart';
 import 'package:openvitals/domain/insights/stress_tracking.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
-import 'package:openvitals/features/readiness/training_readiness_details_screen.dart';
+import 'package:openvitals/features/readiness/presentation/training_readiness_details_screen.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/data_source_education_item.dart';

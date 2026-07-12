@@ -29,7 +29,7 @@ Caveat while the port completes: the docs under `docs/engineering/` still carry 
 
 ## Layout Rules
 
-Feature code lives under `lib/features/<feature>/`. A feature owns its screens, its notifier(s), its state class, and its own cards/charts/formatting. See `lib/features/sleep/` or `lib/features/heart/` for the intended shape.
+Feature code lives under `lib/features/<feature>/`, split into two subdirectories: `application/` (the view-model, its `freezed` state, and — as features migrate — the pure `build<X>Display` functions) and `presentation/` (screens, cards, charts). Feature sub-domains keep their own subdirectory (`reminders/`, `applehealth/`, `maps/`; settings cards live in `presentation/cards/`). See `lib/features/sleep/` or `lib/features/heart/` for the intended shape. `homewidgets/` is the one flat exception — background-isolate glue with no view-model.
 
 Shared code lives in:
 
@@ -43,7 +43,7 @@ Shared code lives in:
 
 ### State
 
-One notifier per screen (Riverpod `Notifier` / `AsyncNotifier`), state as a `freezed` class. A notifier owns loading state, owns the selected range/anchor date, calls repositories, and exposes UI-ready state. It must not carry large formatting blocks (that is `lib/core/presentation/`), must not re-implement period math, and must not mirror raw Health Connect record shapes when a cleaner UI model is warranted.
+One view-model per screen — a Riverpod `Notifier` / `AsyncNotifier` subclass named `<X>ViewModel` in `application/<x>_view_model.dart` — with state as a `freezed` class. (MVVM per the Flutter app-architecture guide; the Riverpod notifier IS the view-model, so nothing feature-side carries the Notifier suffix.) A view-model owns loading state, owns the selected range/anchor date, calls use-cases/repositories, and exposes UI-ready state. It must not carry large formatting blocks (that is `lib/core/presentation/`), must not re-implement period math, and must not mirror raw Health Connect record shapes when a cleaner UI model is warranted.
 
 Dependencies come from providers, not constructors reaching into globals. After editing an annotated class (`freezed`, `json_serializable`, `riverpod`, `drift`), regenerate:
 

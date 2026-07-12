@@ -5,7 +5,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
-import 'package:openvitals/features/sleep/sleep_view_model.dart';
+import 'package:openvitals/features/sleep/application/sleep_view_model.dart';
 
 import '../support/boot_container.dart';
 

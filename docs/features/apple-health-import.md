@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/imports/applehealth/`, `lib/features/settings/cards/apple_health_import_card.dart`, `lib/data/repository/contract/apple_health_import_repository.dart` (+ `impl/apple_health_import_repository_impl.dart`).
+> **Implementation:** `lib/features/imports/applehealth/`, `lib/features/settings/presentation/cards/apple_health_import_card.dart`, `lib/data/repository/contract/apple_health_import_repository.dart` (+ `impl/apple_health_import_repository_impl.dart`).
 > **Navigation:** `/settings/data_import` (`SettingsSection.dataImport`).
 > **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Permissions](../app/permissions.md).
 

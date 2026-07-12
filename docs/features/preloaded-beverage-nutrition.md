@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented reference data.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/domain/insights/caffeine_health_drink_catalog.dart` and `beverage_nutrition_defaults.dart` (seed data), `lib/data/local/beverage/beverage_store.dart` (the drift `beverages` table), `lib/features/manualentry/hydration_catalog.dart`, `lib/features/nutrition/`.
+> **Implementation:** `lib/domain/insights/caffeine_health_drink_catalog.dart` and `beverage_nutrition_defaults.dart` (seed data), `lib/data/local/beverage/beverage_store.dart` (the drift `beverages` table), `lib/features/manualentry/presentation/hydration_catalog.dart`, `lib/features/nutrition/`.
 > **Navigation:** beverage logging from `/manual_entry/hydration` and `/manual_entry/hydration/log/:hydrationDrinkId`.
 > **Related:** [Feature map](feature-map.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md), [Nutrition](nutrition.md).
 

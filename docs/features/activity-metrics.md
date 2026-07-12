@@ -35,15 +35,15 @@ Activity metric screens follow the shared period-detail model:
 - Statistics, comparisons, baselines, confidence, and source context.
 - Reorderable metric detail sections.
 
-The five movement metrics share **one parametric screen**: `ActivityMetricScreen` (`lib/features/activity/activity_metric_screen.dart`) is configured by the `ActivityMetric` enum (`activity_metric.dart`), which carries each metric's title, accent, required Health Connect permission, and value extraction. There is no `StepsScreen` or `FloorsScreen`. Calories, active calories and BMR are intercepted before that branch and render the `CaloriesScreen` aggregate.
+The five movement metrics share **one parametric screen**: `ActivityMetricScreen` (`lib/features/activity/presentation/activity_metric_screen.dart`) is configured by the `ActivityMetric` enum (`activity_metric.dart`), which carries each metric's title, accent, required Health Connect permission, and value extraction. There is no `StepsScreen` or `FloorsScreen`. Calories, active calories and BMR are intercepted before that branch and render the `CaloriesScreen` aggregate.
 
-State lives in `ActivityMetricNotifier` (a Riverpod `Notifier` over a `freezed` `ActivityMetricState`), which loads through `ActivityRepository`. Period selection is **not** owned by the notifier — `MetricDetailScaffold` owns it and hands a `PeriodSelection` down. New activity metric work should keep metric-specific charts and rows in `lib/features/activity/` and use the shared scaffold instead of adding a new screen shell.
+State lives in `ActivityMetricViewModel` (a Riverpod `Notifier` over a `freezed` `ActivityMetricState`), which loads through `ActivityRepository`. Period selection is **not** owned by the notifier — `MetricDetailScaffold` owns it and hands a `PeriodSelection` down. New activity metric work should keep metric-specific charts and rows in `lib/features/activity/` and use the shared scaffold instead of adding a new screen shell.
 
 ## Activity Detail: Where a Session's Numbers Actually Live
 
 **An `ExerciseSessionRecord` carries almost nothing.** A watch writes the activity itself as a session — little more than a type, a title and a duration — and writes its steps, distance, calories and elevation as *separate* records covering the same window. Reading the session by id therefore yields a duration and not much else, which is why a recorded walk once reported "Steps: Not available" directly above a chart of its own step cadence.
 
-The detail screen reassembles a session from three sources, in this order (`ActivityDetailNotifier`):
+The detail screen reassembles a session from three sources, in this order (`ActivityDetailViewModel`):
 
 1. **The session record** — whatever it does state is authoritative and is never overwritten.
 2. **Sibling records over the session's window** — `ActivityRepository.loadWorkoutMetrics` → the native `readExerciseSessionMetrics`, which *aggregates* `StepsRecord`, `DistanceRecord`, `TotalCaloriesBurnedRecord`, `ActiveCaloriesBurnedRecord`, `ElevationGainedRecord`, `FloorsClimbedRecord`, `WheelchairPushesRecord` and `SpeedRecord` between the session's start and end. Each metric is gated on its own read permission, so an ungranted metric costs that one number rather than failing the whole read (`ExerciseSessionMetrics`, `withSessionMetricsBackfilled`).

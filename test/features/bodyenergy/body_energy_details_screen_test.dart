@@ -8,9 +8,9 @@ import 'package:openvitals/data/repository/contract/body_energy_repository.dart'
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/insights/body_energy_timeline.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
-import 'package:openvitals/features/bodyenergy/body_energy_details_screen.dart';
-import 'package:openvitals/features/bodyenergy/body_energy_timeline_chart.dart';
-import 'package:openvitals/features/settings/cards/body_energy_calibration_card.dart';
+import 'package:openvitals/features/bodyenergy/presentation/body_energy_details_screen.dart';
+import 'package:openvitals/features/bodyenergy/presentation/body_energy_timeline_chart.dart';
+import 'package:openvitals/features/settings/presentation/cards/body_energy_calibration_card.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';

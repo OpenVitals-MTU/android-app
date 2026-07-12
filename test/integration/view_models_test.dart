@@ -5,9 +5,9 @@ import 'package:openvitals/core/period/time_range.dart';
 import 'package:openvitals/core/presentation/screen_error.dart';
 import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/features/activity/application/activities_view_model.dart';
-import 'package:openvitals/features/vitals/heart_vitals_overview_screen.dart';
-import 'package:openvitals/features/hydration/hydration_view_model.dart';
-import 'package:openvitals/features/sleep/sleep_view_model.dart';
+import 'package:openvitals/features/vitals/presentation/heart_vitals_overview_screen.dart';
+import 'package:openvitals/features/hydration/application/hydration_view_model.dart';
+import 'package:openvitals/features/sleep/application/sleep_view_model.dart';
 
 import '../support/boot_container.dart';
 

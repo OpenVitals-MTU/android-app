@@ -7,7 +7,7 @@ import 'package:openvitals/core/time/local_date.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/caffeine_preferences.dart';
-import 'package:openvitals/features/settings/cards/caffeine_preferences_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/caffeine_preferences_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 Future<(Widget, SharedPreferences)> _bootstrap(

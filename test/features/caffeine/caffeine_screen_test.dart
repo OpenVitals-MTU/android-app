@@ -10,7 +10,7 @@ import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/model/caffeine_models.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/domain/model/refresh_mode.dart';
-import 'package:openvitals/features/caffeine/caffeine_screen.dart';
+import 'package:openvitals/features/caffeine/presentation/caffeine_screen.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/data/source/health/health_permissions.dart';
 import 'package:openvitals/ui/components/health_connect_gate.dart';

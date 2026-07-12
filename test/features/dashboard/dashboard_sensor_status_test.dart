@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvitals/domain/model/ble_sensor_models.dart';
-import 'package:openvitals/features/dashboard/dashboard_sensor_status.dart';
+import 'package:openvitals/features/dashboard/presentation/dashboard_sensor_status.dart';
 
 BleSensorDevice _device({
   required String id,

@@ -57,7 +57,7 @@ before removing an override.
 Riverpod, not Hilt. There is no annotation processor in the app's critical path:
 
 - Providers live in `lib/di/providers.dart` and `lib/state/app_providers.dart`.
-- Screen state is a `Notifier` + an immutable `*State` (e.g. `lib/features/sleep/sleep_notifier.dart`).
+- Screen state is a `Notifier` + an immutable `*State` (e.g. `lib/features/sleep/application/sleep_view_model.dart`).
 - Route arguments come from go_router (`lib/navigation/app_router.dart`), not `SavedStateHandle`.
 - Tests inject fakes with `ProviderContainer(overrides: [...])` / `overrideWithValue`. That override
   seam is the reason repositories take their data source as a constructor argument — keep it.

@@ -12,8 +12,8 @@ Legend: `—` not started · `~` in progress · `x` done · `n/a` not applicable
 
 | # | Phase | Status |
 |---|-------|--------|
-| 0 | Foundations (Result, AppFailure, runCatching, CommandState, toScreenError) | ~ |
-| 1 | Rename Notifier→ViewModel + application/presentation layout everywhere | — |
+| 0 | Foundations (Result, AppFailure, runCatching, CommandState, toScreenError) | x |
+| 1 | Rename Notifier→ViewModel + application/presentation layout everywhere | x |
 | 2 | Result through repositories + use-cases | — |
 | 3 | VMs on Result + CommandState; seam reversal templates (mindfulness, sleep, manual-entry) | — |
 | 4 | Seam reversal heavy features + freezed state conversions | — |
@@ -35,27 +35,27 @@ freezed (Ph 4–5) · **VM test** = dedicated view-model unit test.
 
 | Feature | Layout | Result | VM | Display | Freezed | VM test |
 |---|---|---|---|---|---|---|
-| mindfulness | — | — | — | — | x | — |
-| cycle | — | — | — | — | x | — |
-| nutrition | — | — | — | — | x | — |
-| caffeine | — | — | — | — | x | — |
-| hydration | — | — | — | — | x | — |
-| sleep (incl. detail) | — | — | — | — | detail: — | — |
-| heart | — | — | — | — | x | — |
-| body | — | — | — | — | x | — |
-| bodyenergy | — | — | — | — | x | — |
-| vitals (Ph 5) | — | — | — | — | — | — |
+| mindfulness | x | — | — | — | x | — |
+| cycle | x | — | — | — | x | — |
+| nutrition | x | — | — | — | x | — |
+| caffeine | x | — | — | — | x | — |
+| hydration | x | — | — | — | x | — |
+| sleep (incl. detail) | x | — | — | — | detail: — | — |
+| heart | x | — | — | — | x | — |
+| body | x | — | — | — | x | — |
+| bodyenergy | x | — | — | — | x | — |
+| vitals (Ph 5) | x | — | — | — | — | — |
 | activity (metrics + sections) | x | — | — | — | x | — |
 | manualentry (forms) | x | — | — | — | x | partial |
 | manualentry/activity entry (Ph 9) | x | — | — | — | — | — |
 | recording (Ph 10) | x | — | — | — | — | — |
-| dashboard | — | — | — | — | x | — |
-| recovery (incl. details) | — | — | — | — | detail: — | — |
-| readiness (incl. training details) | — | — | — | — | x | — |
-| achievements | — | — | — | — | — | — |
-| onboarding | — | — | — | — | x | — |
-| settings (+ 11 cards) | — | — | — | — | ble: — | partial |
-| imports (route + applehealth) | — | — | — | — | — | — |
+| dashboard | x | — | — | — | x | — |
+| recovery (incl. details) | x | — | — | — | detail: — | — |
+| readiness (incl. training details) | x | — | — | — | x | — |
+| achievements | x | — | — | — | — | — |
+| onboarding | x | — | — | — | x | — |
+| settings (+ 11 cards) | x | — | — | — | ble: — | partial |
+| imports (route + applehealth) | x | — | — | — | — | — |
 | homewidgets (Ph 6 helper) | — | — | n/a | n/a | n/a | — |
 
 ## Cross-cutting items

@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/dashboard/` (ring and tile order), `lib/features/manualentry/manual_entry_screen.dart` (`ManualEntryWidgetId` order), `lib/core/presentation/metric_detail_sections.dart` + `lib/domain/preferences/metric_detail_section_id.dart` (detail-section order). All ordering is persisted in `SharedPreferences` via `lib/data/prefs/preferences_repository.dart`.
+> **Implementation:** `lib/features/dashboard/` (ring and tile order), `lib/features/manualentry/presentation/manual_entry_screen.dart` (`ManualEntryWidgetId` order), `lib/core/presentation/metric_detail_sections.dart` + `lib/domain/preferences/metric_detail_section_id.dart` (detail-section order). All ordering is persisted in `SharedPreferences` via `lib/data/prefs/preferences_repository.dart`.
 > **Navigation:** Dashboard widget customization, manual entry widget customization, metric detail section editing.
 > **Related:** [Feature map](feature-map.md), [Health Connect metrics dashboard](health-connect-metrics-dashboard.md), [Settings and preferences](settings-and-preferences.md).
 

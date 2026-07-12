@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/activity/maps/`, `lib/features/manualentry/activity/recording/`, `lib/features/settings/offline_maps_card.dart`.
+> **Implementation:** `lib/features/activity/maps/`, `lib/features/manualentry/activity/recording/`, `lib/features/settings/presentation/offline_maps_card.dart`.
 > **Navigation:** activity recording and route preview flows; settings import controls.
 > **Related:** [Feature map](feature-map.md), [Add offline maps](../how-to/offline-maps.md), [GPX/KML/KMZ route import](route-file-import.md).
 

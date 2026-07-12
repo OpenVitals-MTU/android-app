@@ -6,9 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvitals/data/prefs/preferences_repository.dart';
 import 'package:openvitals/di/providers.dart';
 import 'package:openvitals/domain/preferences/unit_system.dart';
-import 'package:openvitals/features/settings/cards/activity_recording_preferences_card.dart';
-import 'package:openvitals/features/settings/cards/activity_split_distance_card.dart';
-import 'package:openvitals/features/settings/cards/favorite_activity_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/activity_recording_preferences_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/activity_split_distance_card.dart';
+import 'package:openvitals/features/settings/presentation/cards/favorite_activity_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 
 Future<(Widget, SharedPreferences)> _bootstrap(Widget card) =>

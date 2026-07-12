@@ -3,15 +3,15 @@ import 'package:openvitals/features/activity/presentation/activities_screen.dart
 import 'package:openvitals/features/activity/presentation/activity_metric_screen.dart';
 import 'package:openvitals/features/activity/presentation/calories_screen.dart';
 import 'package:openvitals/features/activity/presentation/cardio_load_detail_screen.dart';
-import 'package:openvitals/features/body/body_screen.dart';
-import 'package:openvitals/features/caffeine/caffeine_screen.dart';
-import 'package:openvitals/features/cycle/cycle_screen.dart';
-import 'package:openvitals/features/dashboard/metric_screen.dart';
-import 'package:openvitals/features/heart/heart_metric_screen.dart';
-import 'package:openvitals/features/hydration/hydration_screen.dart';
-import 'package:openvitals/features/mindfulness/mindfulness_screen.dart';
-import 'package:openvitals/features/nutrition/nutrition_metric_screen.dart';
-import 'package:openvitals/features/sleep/sleep_screen.dart';
+import 'package:openvitals/features/body/presentation/body_screen.dart';
+import 'package:openvitals/features/caffeine/presentation/caffeine_screen.dart';
+import 'package:openvitals/features/cycle/presentation/cycle_screen.dart';
+import 'package:openvitals/features/dashboard/presentation/metric_screen.dart';
+import 'package:openvitals/features/heart/presentation/heart_metric_screen.dart';
+import 'package:openvitals/features/hydration/presentation/hydration_screen.dart';
+import 'package:openvitals/features/mindfulness/presentation/mindfulness_screen.dart';
+import 'package:openvitals/features/nutrition/presentation/nutrition_metric_screen.dart';
+import 'package:openvitals/features/sleep/presentation/sleep_screen.dart';
 import 'package:openvitals/navigation/app_router.dart';
 
 /// Pins the `/metric/:metricId` dispatch to the Kotlin `MetricRouteContent`

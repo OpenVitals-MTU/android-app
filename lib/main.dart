@@ -15,7 +15,7 @@ import 'features/homewidgets/home_widget_beverage_log.dart';
 import 'features/homewidgets/home_widget_configure.dart';
 import 'features/homewidgets/home_widget_launch.dart';
 import 'features/homewidgets/home_widget_service.dart';
-import 'features/imports/route_import_intent.dart';
+import 'features/imports/presentation/route_import_intent.dart';
 
 /// App entry point.
 ///

@@ -48,7 +48,7 @@ void main() {
     // only observable in the source.
     for (final path in const [
       'lib/navigation/app_router.dart',
-      'lib/features/settings/settings_screen.dart',
+      'lib/features/settings/presentation/settings_screen.dart',
     ]) {
       test(path, () {
         final source = File(path).readAsStringSync();

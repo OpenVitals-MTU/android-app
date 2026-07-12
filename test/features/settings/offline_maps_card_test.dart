@@ -12,7 +12,7 @@ import 'package:openvitals/domain/preferences/unit_system.dart';
 import 'package:openvitals/features/activity/maps/offline_map_import_controller.dart';
 import 'package:openvitals/features/activity/maps/offline_map_metadata_store.dart';
 import 'package:openvitals/features/activity/maps/offline_map_models.dart';
-import 'package:openvitals/features/settings/offline_maps_card.dart';
+import 'package:openvitals/features/settings/presentation/offline_maps_card.dart';
 import 'package:openvitals/l10n/app_localizations.dart';
 import 'package:openvitals/state/app_providers.dart';
 

@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:openvitals/navigation/app_router.dart';
 import 'package:openvitals/navigation/app_routes.dart';
 
-import 'package:openvitals/features/imports/pending_route_import.dart';
-import 'package:openvitals/features/imports/route_import_intent.dart';
+import 'package:openvitals/features/imports/application/pending_route_import.dart';
+import 'package:openvitals/features/imports/presentation/route_import_intent.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_notifier.dart';
 
 /// Stands in for the native side so the bootstrap can be driven without an

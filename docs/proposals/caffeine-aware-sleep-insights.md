@@ -1,6 +1,6 @@
 # Caffeine Detail And Future Sleep Insights
 
-> **Status:** Mixed current/proposed note, still accurate after the Flutter port. The standalone caffeine feature is implemented; direct sleep-detail integration is **still not implemented** — verified 2026-07-11: nothing under `lib/features/sleep/`, `lib/domain/insights/sleep_score.dart` or `lib/domain/usecase/load_sleep_period_use_case.dart` references caffeine, and `lib/domain/insights/caffeine_insight_calculator.dart` has exactly one consumer, `lib/features/caffeine/caffeine_notifier.dart`.
+> **Status:** Mixed current/proposed note, still accurate after the Flutter port. The standalone caffeine feature is implemented; direct sleep-detail integration is **still not implemented** — verified 2026-07-11: nothing under `lib/features/sleep/`, `lib/domain/insights/sleep_score.dart` or `lib/domain/usecase/load_sleep_period_use_case.dart` references caffeine, and `lib/domain/insights/caffeine_insight_calculator.dart` has exactly one consumer, `lib/features/caffeine/application/caffeine_view_model.dart`.
 > **Current behavior source:** [Beverage logging and caffeine](../features/beverage-logging-and-caffeine.md), [Sleep score and recovery](../features/sleep-score-and-recovery.md).
 > **Implementation map:** [Feature map](../features/feature-map.md).
 
@@ -41,8 +41,8 @@ Planned sleep integration should keep these rules:
 
 Relevant implemented pieces include:
 
-- [`lib/features/caffeine/caffeine_notifier.dart`](../../lib/features/caffeine/caffeine_notifier.dart): the Riverpod notifier that loads caffeine entries and preferences, estimates active caffeine, and drives the analytics ranges.
-- [`lib/features/caffeine/caffeine_screen.dart`](../../lib/features/caffeine/caffeine_screen.dart): renders setup, overview, caffeine curve, sleep-impact guidance, daily impact, distribution, and recent entries. Reached at `/metric/CAFFEINE`.
+- [`lib/features/caffeine/application/caffeine_view_model.dart`](../../lib/features/caffeine/application/caffeine_view_model.dart): the Riverpod notifier that loads caffeine entries and preferences, estimates active caffeine, and drives the analytics ranges.
+- [`lib/features/caffeine/presentation/caffeine_screen.dart`](../../lib/features/caffeine/presentation/caffeine_screen.dart): renders setup, overview, caffeine curve, sleep-impact guidance, daily impact, distribution, and recent entries. Reached at `/metric/CAFFEINE`.
 - [`lib/domain/insights/caffeine_insight_calculator.dart`](../../lib/domain/insights/caffeine_insight_calculator.dart): the active-caffeine / bedtime-impact model. This is the piece a future sleep integration should consume — it is already outside the feature, in the shared insights layer.
 - [`lib/data/repository/contract/caffeine_repository.dart`](../../lib/data/repository/contract/caffeine_repository.dart): the caffeine read API over Health Connect nutrition records.
 - [`beverage-logging-and-caffeine.md`](../features/beverage-logging-and-caffeine.md): describes the beverage logging flow that can write caffeine nutrition values.

@@ -2,7 +2,7 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `lib/features/settings/ble_devices_screen.dart` + `ble_devices_notifier.dart`, `lib/features/manualentry/activity/recording/`, `lib/data/repository/contract/ble_device_repository.dart` (+ `impl/ble_device_repository_impl.dart`), `lib/domain/model/ble_sensor_models.dart`.
+> **Implementation:** `lib/features/settings/presentation/ble_devices_screen.dart` + `ble_devices_notifier.dart`, `lib/features/manualentry/activity/recording/`, `lib/data/repository/contract/ble_device_repository.dart` (+ `impl/ble_device_repository_impl.dart`), `lib/domain/model/ble_sensor_models.dart`.
 > **Navigation:** `/settings/sensors` (the Sensors section renders `BleDevicesScreen` rather than the generic section screen), `/manual_entry/activity`.
 > **Related:** [Feature map](feature-map.md), [Recording of activity](activity-recording.md), [Permissions](../app/permissions.md).
 
