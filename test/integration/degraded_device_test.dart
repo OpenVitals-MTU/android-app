@@ -26,7 +26,7 @@ void main() {
   test('a missing Health Connect is reported as unavailable, not as an error',
       () async {
     // SDK_UNAVAILABLE = 1. The app must gate, not crash and not silently blank.
-    final h = await bootContainer(sdkStatus: 1, allowUnimplemented: true);
+    final h = await bootContainer(sdkStatus: 1);
 
     final availability =
         await h.container.read(healthRepositoryProvider).refreshAvailability();
@@ -38,7 +38,7 @@ void main() {
     // SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED = 2. The screens offer a very
     // different remedy ("update Health Connect" vs "install it"), so collapsing the
     // two would send the user somewhere useless.
-    final h = await bootContainer(sdkStatus: 2, allowUnimplemented: true);
+    final h = await bootContainer(sdkStatus: 2);
 
     final availability =
         await h.container.read(healthRepositoryProvider).refreshAvailability();
@@ -70,8 +70,7 @@ void main() {
     // not others. A screen must degrade to "no data" for what it cannot see, without
     // taking the rest of the screen down with it.
     final h = await bootContainer(
-      granted: {HcPermissions.readSleep},
-      allowUnimplemented: true,
+      granted: {HcPermissions.readSleep}
     );
 
     h.container.listen(sleepNotifierProvider, (_, _) {});
@@ -92,7 +91,7 @@ void main() {
     // resolveSupportedPermissions() diffs what the app wants against what the
     // provider will grant. On the alpha connect-client this genuinely differs, and
     // getting it wrong left onboarding stuck at 9/11 with no way forward.
-    final h = await bootContainer(allowUnimplemented: true);
+    final h = await bootContainer();
 
     final granted =
         await h.container.read(healthRepositoryProvider).grantedPermissions();
@@ -105,7 +104,7 @@ void main() {
   test('sync paused degrades reads to empty rather than failing', () async {
     // The sync gate is a user preference, and it must behave like a missing
     // permission: reads degrade, nothing throws, no screen breaks.
-    final h = await bootContainer(allowUnimplemented: true);
+    final h = await bootContainer();
     h.hc.syncEnabled = false;
 
     final samples = await h.container

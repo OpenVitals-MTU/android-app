@@ -414,6 +414,143 @@ class FakeHealthConnect extends ExhaustiveFakeHostApi {
   ) async =>
       const [];
 
+  @override
+  Future<List<HeartRateSummaryMsg>> readDailyHeartRateSummaries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readDailyHeartRateSummaries');
+    final byDay = <int, List<double>>{};
+    for (final r in fixture.records('heartRate')) {
+      for (final sample in _series(r)) {
+        if (sample.$1 < startEpochMs || sample.$1 >= endEpochMs) continue;
+        byDay.putIfAbsent(_dayKey(sample.$1), () => []).add(sample.$2);
+      }
+    }
+    return [
+      for (final e in byDay.entries)
+        HeartRateSummaryMsg(
+          dateEpochMs: e.key,
+          avgBpm: (e.value.reduce((a, b) => a + b) / e.value.length).round(),
+          minBpm: e.value.reduce((a, b) => a < b ? a : b).round(),
+          maxBpm: e.value.reduce((a, b) => a > b ? a : b).round(),
+        ),
+    ];
+  }
+
+  // ── body: BMR is real; the rest the golden week genuinely has none of ────────
+
+  @override
+  Future<List<BmrEntryMsg>> readBmrEntries(
+    int startEpochMs,
+    int endEpochMs,
+  ) async {
+    calls.add('readBmrEntries');
+    return [
+      for (final r in _instantsIn('basalMetabolicRate', startEpochMs, endEpochMs))
+        BmrEntryMsg(
+          timeEpochMs: r['time']! as int,
+          kcalPerDay: (r['v']! as num).toDouble(),
+          source: r['writer']! as String,
+        ),
+    ];
+  }
+
+  @override
+  Future<BmrEntryMsg?> readLatestBmr() async {
+    calls.add('readLatestBmr');
+    final all = fixture.records('basalMetabolicRate');
+    if (all.isEmpty) return null;
+    final latest = all.reduce(
+        (a, b) => (a['time']! as int) >= (b['time']! as int) ? a : b);
+    return BmrEntryMsg(
+      timeEpochMs: latest['time']! as int,
+      kcalPerDay: (latest['v']! as num).toDouble(),
+      source: latest['writer']! as String,
+    );
+  }
+
+  // The golden week has no weight, height, body-fat or body-composition records.
+  // "There are none" is the truth, and it is what exercises the body screens'
+  // no-data branches — which is a scenario, not a gap.
+  @override
+  Future<List<WeightEntryMsg>> readWeightEntries(int s, int e) async => const [];
+
+  @override
+  Future<WeightEntryMsg?> readLatestWeight() async => null;
+
+  @override
+  Future<List<HeightEntryMsg>> readHeightEntries(int s, int e) async => const [];
+
+  @override
+  Future<HeightEntryMsg?> readLatestHeightEntry() async => null;
+
+  @override
+  Future<List<BodyFatEntryMsg>> readBodyFatEntries(int s, int e) async => const [];
+
+  @override
+  Future<BodyFatEntryMsg?> readLatestBodyFat() async => null;
+
+  @override
+  Future<List<BodyMassEntryMsg>> readLeanBodyMassEntries(int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<BodyMassEntryMsg>> readBoneMassEntries(int s, int e) async => const [];
+
+  @override
+  Future<List<BodyMassEntryMsg>> readBodyWaterMassEntries(int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<DailyMacrosMsg>> readDailyMacros(int s, int e) async => const [];
+
+  // ── cycle: DROPPED from the fixture on purpose ──────────────────────────────
+  //
+  // Menstruation, ovulation, cervical mucus, intermenstrual bleeding, sexual
+  // activity and basal body temperature are not scrubbed out of the fixture -- they
+  // are not in it. This repository is public, and no amount of value-scrubbing makes
+  // it acceptable to derive a public artefact from a real person's records of those.
+  //
+  // So the cycle reads answer EMPTY, and that is honest rather than a shortcut: the
+  // cycle screens' no-data path is genuinely what runs here. Their WITH-data paths
+  // are the one part of this app the fixture cannot cover, and pretending otherwise
+  // would be worse than saying so.
+
+  @override
+  Future<List<MenstruationFlowEntryMsg>> readMenstruationFlowEntries(
+          int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<MenstruationPeriodEntryMsg>> readMenstruationPeriods(
+          int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<OvulationTestEntryMsg>> readOvulationTests(int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<CervicalMucusEntryMsg>> readCervicalMucusEntries(
+          int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<BasalBodyTemperatureEntryMsg>> readBasalBodyTemperatureEntries(
+          int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<IntermenstrualBleedingEntryMsg>> readIntermenstrualBleedingEntries(
+          int s, int e) async =>
+      const [];
+
+  @override
+  Future<List<SexualActivityEntryMsg>> readSexualActivityEntries(
+          int s, int e) async =>
+      const [];
+
   // ── aggregation ─────────────────────────────────────────────────────────────
 
   @override
