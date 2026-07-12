@@ -18,6 +18,7 @@ import '../../ui/components/ov_card.dart';
 import '../../ui/components/paginated_entry_list.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../data/source/health/health_permissions.dart';
+import 'hydration_intraday_chart.dart';
 import 'hydration_notifier.dart';
 import 'reminders/hydration_reminder_card.dart';
 import '../../ui/components/section_padding.dart';
@@ -145,17 +146,29 @@ List<Widget> _content(
         ],
       ),
     ),
+    // A day is not a bar. Kotlin branched here too: the DAY view draws the day's
+    // hydration accumulating through its hours, while week/month/year draw one bar
+    // per day. Rendering the bar chart for a single day gave one fat bar labelled
+    // "Sun 12" — restating a number the two cards above it already show, and
+    // throwing away the only thing the day chart is for: WHEN you drank it.
     sectionPadded(
-      MetricBarChart(
-        title: 'Hydration',
-        values: values,
-        selectedRange: state.selectedRange,
-        period: period,
-        accentColor: AppColors.hydration,
-        summaryValue: total.text,
-        weekPeriodMode: weekPeriodMode,
-        valueFormatter: (value) => formatter.hydration(value).text,
-      ),
+      state.selectedRange == TimeRange.day
+          ? HydrationIntradayChartCard(
+              selectedDate: state.selectedDate,
+              entries: state.entries,
+              dailyGoalLiters: state.dailyGoalLiters,
+              formatter: formatter,
+            )
+          : MetricBarChart(
+              title: 'Hydration',
+              values: values,
+              selectedRange: state.selectedRange,
+              period: period,
+              accentColor: AppColors.hydration,
+              summaryValue: total.text,
+              weekPeriodMode: weekPeriodMode,
+              valueFormatter: (value) => formatter.hydration(value).text,
+            ),
     ),
     sectionPadded(_HydrationGoalCard(state: state, formatter: formatter)),
     if (state.drinkBreakdown.isNotEmpty)
