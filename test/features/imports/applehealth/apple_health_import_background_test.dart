@@ -411,5 +411,18 @@ void main() {
       expect('${payload['error']}', contains('boom'));
       expect(payload['permissionDenied'], isFalse);
     });
+
+    test('a permission denial raises the flag the card acts on', () {
+      // AppleHealthImportPermissionException was defined and never thrown, so
+      // this flag could never be true: a user who had not granted the write
+      // permission got a generic error, and the "grant" button that would have
+      // fixed it never appeared. The health-access probe raises the typed
+      // exception now (apple_health_import_task_handler._resolveHealthAccess).
+      final payload = encodeAppleHealthImportError(
+        AppleHealthImportPermissionException('steps write'),
+      );
+
+      expect(payload['permissionDenied'], isTrue);
+    });
   });
 }

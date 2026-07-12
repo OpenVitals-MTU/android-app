@@ -30,6 +30,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/result/app_failure.dart';
 import '../../../bootstrap/background_health_access.dart';
 import '../../../core/result/result.dart';
 import '../../../data/repository/impl/apple_health_import_repository_impl.dart';
@@ -165,13 +166,19 @@ class AppleHealthImportTaskHandler extends TaskHandler {
   /// against `cachedAvailability == notSupported` — writing nothing while
   /// reporting success, the exact bug this call order exists to prevent.
   ///
-  /// The original throwable and its stack are rethrown unchanged, because they
-  /// are what [AppleHealthImportErrorFormatter] classifies and renders.
+  /// A permission failure is raised AS one, so the card can offer to fix it.
+  /// Anything else is rethrown unchanged, because the original throwable is
+  /// what [AppleHealthImportErrorFormatter] renders.
   Future<void> _resolveHealthAccess(HealthDataSource dataSource) async {
     final probe = await HealthRepositoryImpl(dataSource).refreshAvailability();
     switch (probe) {
       case Ok():
         return;
+      case Err(:final PermissionFailure failure):
+        throw AppleHealthImportPermissionException(
+          failure.message,
+          cause: failure.cause,
+        );
       case Err(:final failure):
         Error.throwWithStackTrace(
           failure.cause ?? StateError(failure.toString()),

@@ -24,6 +24,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import '../../../core/result/app_failure.dart';
 import '../../../core/result/result.dart';
 import '../../../data/repository/contract/apple_health_import_repository.dart';
 import 'apple_health_import_categories.dart';
@@ -47,6 +48,30 @@ typedef AppleHealthImportCheckpointCallback = void Function(
 const int _convertedBatchSize = 300;
 const int _maxRawDiagnostics = 1000;
 const int _maxDuplicateCheckSpanSeconds = 6 * 60 * 60;
+
+/// Unwraps an import write, raising a *typed* permission exception when that is
+/// what went wrong.
+///
+/// The card can offer to fix a missing permission; it cannot do anything about
+/// a malformed record. Everything else is rethrown as the original throwable,
+/// because the duplicate classifier and the error formatter are written against
+/// it.
+T _orThrowImport<T>(Result<T> result) {
+  switch (result) {
+    case Ok(:final value):
+      return value;
+    case Err(:final PermissionFailure failure):
+      throw AppleHealthImportPermissionException(
+        failure.message,
+        cause: failure.cause,
+      );
+    case Err(:final failure):
+      Error.throwWithStackTrace(
+        failure.cause ?? StateError(failure.toString()),
+        failure.stackTrace ?? StackTrace.current,
+      );
+  }
+}
 
 class AppleHealthImportService {
   AppleHealthImportService(this._repository);
@@ -571,14 +596,14 @@ class AppleHealthImportService {
           // the formatter an `AppFailure` instead, silently rewriting every
           // lookup-failure line of the report the user is asked to file bugs
           // with. The report is the product; the bridge is not in its way.
-          final matched =
-              (await _repository.findMatchingImportedClientRecordIds(
-            entry.key,
-            start,
-            end,
-            wantedIds,
-          ))
-                  .orThrow();
+          final matched = _orThrowImport(
+            await _repository.findMatchingImportedClientRecordIds(
+              entry.key,
+              start,
+              end,
+              wantedIds,
+            ),
+          );
           result.addAll(matched);
         } catch (error) {
           importLogs.add(_errorLog(
@@ -618,9 +643,8 @@ class AppleHealthImportService {
       // Unwrapping `failure.cause` instead would be the same throwable by a
       // longer route, and would also stop catching what the repository throws
       // *outside* its runCatching. Correctness beats purity here.
-      (await _repository
-              .insertImportedRecords(records.map((it) => it.record).toList()))
-          .orThrow();
+      _orThrowImport(await _repository
+          .insertImportedRecords(records.map((it) => it.record).toList()));
       for (final converted in records) {
         _stat(typeStats, converted.appleType).imported += 1;
       }
@@ -637,7 +661,8 @@ class AppleHealthImportService {
     var failed = 0;
     for (final converted in records) {
       try {
-        (await _repository.insertImportedRecords([converted.record])).orThrow();
+        _orThrowImport(
+            await _repository.insertImportedRecords([converted.record]));
         _stat(typeStats, converted.appleType).imported += 1;
         imported += 1;
       } catch (error) {

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvitals/core/result/app_failure.dart';
 import 'package:openvitals/core/result/result.dart';
 import 'package:openvitals/data/repository/contract/apple_health_import_repository.dart';
 import 'package:openvitals/features/imports/applehealth/apple_health_import_checkpoint_store.dart';
@@ -17,7 +18,11 @@ class FakeAppleHealthImportRepository implements AppleHealthImportRepository {
     this.mindfulnessAvailable = true,
     this.matchAgainstInserted = false,
     this.matcher,
+    this.insertFailure,
   });
+
+  /// When set, every insert reports this failure instead of succeeding.
+  final AppFailure? insertFailure;
 
   final bool mindfulnessAvailable;
   final bool matchAgainstInserted;
@@ -35,6 +40,7 @@ class FakeAppleHealthImportRepository implements AppleHealthImportRepository {
 
   @override
   Future<Result<void>> insertImportedRecords(List<ImportRecord> records) async {
+    if (insertFailure != null) return Err(insertFailure!);
     insertedBatches.add(records);
     for (final record in records) {
       insertedClientRecordIds.add(record.clientRecordId);
@@ -917,4 +923,5 @@ void main() {
       expect(result.importedRecords, 400);
     });
   });
+
 }
