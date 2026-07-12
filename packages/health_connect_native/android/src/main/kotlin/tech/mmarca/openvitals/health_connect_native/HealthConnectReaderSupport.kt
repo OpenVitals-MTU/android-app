@@ -22,7 +22,11 @@ import kotlinx.coroutines.withContext
  */
 internal class HealthConnectReaderSupport(
   private val clientProvider: () -> HealthConnectClient,
-  private val diagnostics: HealthConnectDiagnostics,
+  // A STRING, not HealthConnectDiagnostics. All this needs is a line to put in a
+  // log; taking the concrete class dragged an Android Context into the one part of
+  // the bridge that is otherwise pure Kotlin, and so put every reader out of reach
+  // of a plain JVM test.
+  private val diagnostics: () -> String,
   private val syncEnabled: () -> Boolean = { true },
   private val rateLimitMessage: (Long) -> String = { millis ->
     "Health Connect is rate limited. Retry in ${retryAfterMinutes(millis)} minute(s)."
@@ -32,7 +36,7 @@ internal class HealthConnectReaderSupport(
 
   fun client(): HealthConnectClient = clientProvider()
 
-  fun diagnosticsSummary(): String = diagnostics.summary()
+  fun diagnosticsSummary(): String = diagnostics()
 
   /** Gate for writes: throws [HealthConnectSyncDisabledException] while paused. */
   fun requireSyncEnabled() {

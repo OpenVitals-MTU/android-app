@@ -29,6 +29,18 @@ android {
         // the host app.
         minSdk = 26
     }
+
+    testOptions {
+        unitTests {
+            // The readers log through android.util.Log, which is an unimplemented
+            // stub on the JVM and throws "not mocked" by default. The readers are
+            // otherwise pure Kotlin (HealthConnectReaderSupport takes a `() -> String`
+            // for diagnostics precisely so it does not need a Context), so making
+            // Log a no-op is the only thing standing between them and a plain JVM
+            // test. No Robolectric, no emulator.
+            returnDefaultValues = true
+        }
+    }
 }
 
 kotlin {
@@ -51,4 +63,23 @@ dependencies {
     // grantable — that left onboarding's Activity Extras stuck at 9/11.
     implementation "androidx.health.connect:connect-client:1.2.0-alpha04"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+
+    // Tier K: the REAL readers, on the JVM, against Google's own fake.
+    //
+    // connect-testing ships FakeHealthConnectClient, which implements
+    // HealthConnectClient for real: an in-memory store, genuine time filtering and
+    // paging, and -- crucially -- setPackageName() plus
+    // MetadataTestHelper.populatedWithTestValues(id, dataOrigin, lastModifiedTime),
+    // so a test can forge WHO wrote a record and WHEN it was last touched. That is
+    // what makes multi-writer dedup and the lastModifiedTime tie-break testable at
+    // all.
+    //
+    // It does NOT implement aggregate(): all three aggregate methods throw unless
+    // you stub a response. This app aggregates everywhere, so we wrap the fake and
+    // compute those three ourselves (AggregatingFakeHealthConnectClient) -- which
+    // leaves ONE thing of ours that can be wrong, instead of all of Health Connect.
+    testImplementation "androidx.health.connect:connect-testing:1.0.0-alpha03"
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
+    testImplementation "com.google.truth:truth:1.4.4"
 }

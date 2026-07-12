@@ -133,7 +133,7 @@ class HealthConnectNativePlugin :
     availabilityService = HealthConnectAvailabilityService(context, diag)
     val support = HealthConnectReaderSupport(
       clientProvider = { client() },
-      diagnostics = diag,
+      diagnostics = diag::summary,
       syncEnabled = { syncGate.isEnabled },
     )
     readerSupport = support
