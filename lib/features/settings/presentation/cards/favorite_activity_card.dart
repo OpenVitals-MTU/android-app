@@ -1,31 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../data/prefs/preferences_repository.dart';
-import '../../../../di/providers.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../domain/model/activity_entry_types.dart';
+import '../../application/favorite_activity_view_model.dart';
 import 'settings_controls.dart';
-
-/// Holds the favorite-activity exercise type (`null` = "use latest") and writes
-/// changes back through [PreferencesRepository]. Backs [FavoriteActivityCard]
-/// only, so it stays out of the shared `SettingsState`.
-class FavoriteActivityViewModel extends Notifier<int?> {
-  PreferencesRepository get _prefs => ref.read(preferencesRepositoryProvider);
-
-  @override
-  int? build() => _prefs.favoriteActivityExerciseType;
-
-  void select(int? exerciseType) {
-    _prefs.favoriteActivityExerciseType = exerciseType;
-    state = _prefs.favoriteActivityExerciseType;
-  }
-}
-
-final favoriteActivityExerciseTypeProvider =
-    NotifierProvider<FavoriteActivityViewModel, int?>(
-  FavoriteActivityViewModel.new,
-);
 
 /// The default-activity picker card, a 1:1 port of the Kotlin
 /// `FavoriteActivityCard` (`SettingsCards.kt`): a dropdown over the GPS-route

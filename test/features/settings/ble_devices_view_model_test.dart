@@ -210,4 +210,79 @@ void main() {
     expect(repo.devices, isEmpty);
     expect(state().editingDeviceId, isNull);
   });
+
+  // The state is @freezed now (it used to be a hand-written class with an
+  // `_unset` sentinel in copyWith). These pin what the conversion had to keep.
+
+  test('the freezed state keeps its defaults and its derived getter', () {
+    const state = BleDevicesUiState();
+
+    expect(state.devices, isEmpty);
+    expect(state.discoveredDevices, isEmpty);
+    expect(state.isScanning, isFalse);
+    expect(state.showAllDevices, isFalse);
+    expect(state.selectedDevice, isNull);
+    expect(state.discoveredCapabilities, isEmpty);
+    expect(state.isDiscoveringCapabilities, isFalse);
+    expect(state.addDisplayName, '');
+    expect(state.addCapabilities, isEmpty);
+    expect(state.addWheelCircumferenceMm, '');
+    expect(state.capabilityConflicts, isEmpty);
+    expect(state.editingDeviceId, isNull);
+    expect(state.editDisplayName, '');
+    expect(state.editCapabilities, isEmpty);
+    // The one non-false default.
+    expect(state.editEnabled, isTrue);
+    expect(state.editWheelCircumferenceMm, '');
+    expect(state.errorMessage, isNull);
+    expect(state.showAddFlow, isFalse);
+    expect(state.enabledDeviceCount, 0);
+  });
+
+  test('enabledDeviceCount survives the conversion', () async {
+    await setUp0();
+    repo.addDevice(
+      displayName: 'On',
+      address: 'AA:AA:AA:AA:AA:AA',
+      bluetoothName: 'On',
+      capabilities: const {BleSensorCapability.heartRate},
+    );
+    final off = repo.addDevice(
+      displayName: 'Off',
+      address: 'BB:BB:BB:BB:BB:BB',
+      bluetoothName: 'Off',
+      capabilities: const {BleSensorCapability.heartRate},
+    );
+    notifier().setDeviceEnabled(off.id, false);
+
+    final devices = repo.devices;
+    expect(devices, hasLength(2));
+    expect(BleDevicesUiState(devices: devices).enabledDeviceCount, 1);
+  });
+
+  test('copyWith still clears a nullable field when passed null', () {
+    const state = BleDevicesUiState(
+      editingDeviceId: 'device-1',
+      errorMessage: 'boom',
+      showAddFlow: true,
+    );
+
+    // Omitted -> unchanged (what the old `_unset` sentinel bought).
+    expect(state.copyWith(showAddFlow: false).editingDeviceId, 'device-1');
+    expect(state.copyWith(showAddFlow: false).errorMessage, 'boom');
+    // Passed null -> cleared.
+    expect(state.copyWith(editingDeviceId: null).editingDeviceId, isNull);
+    expect(state.copyWith(errorMessage: null).errorMessage, isNull);
+  });
+
+  test('the freezed state compares by value', () {
+    expect(
+      const BleDevicesUiState(addDisplayName: 'TICKR'),
+      const BleDevicesUiState(addDisplayName: 'TICKR'),
+    );
+    expect(
+      const BleDevicesUiState(addDisplayName: 'TICKR'),
+      isNot(const BleDevicesUiState(addDisplayName: 'Polar')),
+    );
+  });
 }

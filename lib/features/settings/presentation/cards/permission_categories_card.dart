@@ -1,100 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/result/result.dart';
-import '../../../../di/providers.dart';
+import '../../../../core/presentation/command_state.dart';
 import '../../../../domain/model/health_connect_availability.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_card.dart';
-import '../../../../ui/components/health_connect_gate.dart';
-
-/// A single Health Connect permission category, mirroring the Kotlin
-/// `SettingsPermissionCategory` data class. Carries the permission strings that
-/// make up the category plus the subset that can only be granted manually
-/// (via the Health Connect settings screen rather than the runtime dialog).
-class PermissionCategory {
-  const PermissionCategory({
-    required this.id,
-    required this.permissions,
-    this.manualPermissions = const <String>{},
-    this.available = true,
-  });
-
-  final String id;
-  final Set<String> permissions;
-  final Set<String> manualPermissions;
-
-  /// False when the installed Health Connect version cannot support the
-  /// category (e.g. mindfulness on an older provider).
-  final bool available;
-}
-
-/// Builds the settings permission categories from the [HealthRepository]
-/// permission taxonomy. Faithful port of `SettingsViewModel.permissionCategories`
-/// — same ids, same membership, same `isNotEmpty` filter and mindfulness gate.
-final permissionCategoriesProvider = Provider<List<PermissionCategory>>((ref) {
-  final repo = ref.watch(healthRepositoryProvider);
-  final availability = ref.watch(healthConnectAvailabilityProvider).value;
-  final mindfulnessAvailable =
-      availability == HealthConnectAvailability.available &&
-          repo.isMindfulnessAvailable();
-
-  return <PermissionCategory>[
-    PermissionCategory(id: 'activity_sleep', permissions: repo.corePermissions),
-    PermissionCategory(id: 'heart_recovery', permissions: repo.heartPermissions),
-    PermissionCategory(id: 'body', permissions: repo.bodyPermissions),
-    PermissionCategory(
-      id: 'activity_extras',
-      permissions: repo.activityExtrasPermissions,
-    ),
-    PermissionCategory(
-      id: 'nutrition_hydration',
-      permissions: repo.nutritionHydrationPermissions,
-    ),
-    PermissionCategory(
-      id: 'manual_entry_write',
-      permissions: repo.requestableWritePermissions,
-    ),
-    PermissionCategory(
-      id: 'mindfulness',
-      permissions: repo.mindfulnessPermissions,
-      available: mindfulnessAvailable,
-    ),
-    PermissionCategory(
-      id: 'additional_data_access',
-      permissions: {
-        ...repo.additionalDataAccessPermissions,
-        ...repo.routePermissions,
-      },
-      manualPermissions: repo.routePermissions,
-    ),
-    PermissionCategory(id: 'vitals', permissions: repo.vitalsPermissions),
-    PermissionCategory(
-      id: 'cycle_tracking',
-      permissions: repo.cyclePermissions,
-    ),
-    // Drop a category with nothing to show — but KEEP one that is explicitly
-    // unavailable, so Settings can still say "Not supported" with a reason
-    // (Kotlin's SettingsViewModel does not filter these out; only *onboarding*
-    // does). Since Kotlin 1.9.0 (1f2b435) `mindfulnessPermissions` is correctly
-    // empty on a provider that lacks mindfulness, so filtering on emptiness
-    // alone would silently delete that row.
-  ].where((c) => c.permissions.isNotEmpty || !c.available).toList();
-});
+import '../../application/permission_categories_view_model.dart';
+import '../settings_error_text.dart';
 
 /// The per-category Health Connect permission breakdown. Self-contained port of
 /// the Kotlin `PermissionCategoryCard` list rendered by `SettingsScreenContent`
 /// for the Health Connect section: each category shows its title, a
 /// granted/partial/optional/manual status, an optional description and a
 /// Grant/Review/Open action.
+///
+/// The taxonomy and the grant action live in [PermissionCategoriesViewModel];
+/// this card only renders its state and calls its intents.
 class PermissionCategoriesCard extends ConsumerWidget {
   const PermissionCategoriesCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final availability = ref.watch(healthConnectAvailabilityProvider).value;
-    final granted = ref.watch(grantedHealthPermissionsProvider).value;
-    final categories = ref.watch(permissionCategoriesProvider);
+    final state = ref.watch(permissionCategoriesProvider);
+    final availability = state.availability;
+    final granted = state.granted;
 
     if (availability == null || granted == null) {
       return const Padding(
@@ -103,16 +32,29 @@ class PermissionCategoriesCard extends ConsumerWidget {
       );
     }
 
+    final theme = Theme.of(context);
+    final isRequesting = state.request is CommandRunning<void>;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final category in categories)
+        if (state.request case CommandFailure<void>(:final error))
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              settingsErrorText(error),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.error),
+            ),
+          ),
+        for (final category in state.categories)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: _PermissionCategoryTile(
               category: category,
               granted: granted,
               availability: availability,
+              isRequesting: isRequesting,
             ),
           ),
       ],
@@ -144,11 +86,16 @@ class _PermissionCategoryTile extends ConsumerWidget {
     required this.category,
     required this.granted,
     required this.availability,
+    required this.isRequesting,
   });
 
   final PermissionCategory category;
   final Set<String> granted;
   final HealthConnectAvailability availability;
+
+  /// A grant is already in flight (in any category) — the Kotlin launcher is
+  /// single-shot, so every Grant button waits for it.
+  final bool isRequesting;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -257,14 +204,16 @@ class _PermissionCategoryTile extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.tonal(
-                  onPressed:
-                      availability == HealthConnectAvailability.available
-                          ? () => _onGrant(
-                                ref,
-                                requestable: missingRequestable,
-                                manual: missingManual,
-                              )
-                          : null,
+                  onPressed: availability ==
+                              HealthConnectAvailability.available &&
+                          !isRequesting
+                      ? () => ref
+                          .read(permissionCategoriesProvider.notifier)
+                          .requestCategory(
+                            requestable: missingRequestable,
+                            manual: missingManual,
+                          )
+                      : null,
                   child: Text(
                     isManualGrant
                         ? l10n.actionOpen
@@ -279,20 +228,6 @@ class _PermissionCategoryTile extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _onGrant(
-    WidgetRef ref, {
-    required Set<String> requestable,
-    required Set<String> manual,
-  }) async {
-    final repo = ref.read(healthRepositoryProvider);
-    if (requestable.isNotEmpty) {
-      (await repo.requestPermissions(requestable)).orThrow();
-    } else if (manual.isNotEmpty) {
-      (await repo.openHealthConnectSettings()).orThrow();
-    }
-    ref.invalidate(grantedHealthPermissionsProvider);
   }
 
   String _title(AppLocalizations l10n, String id) => switch (id) {

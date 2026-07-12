@@ -2,34 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../di/providers.dart';
 import '../../../../domain/preferences/body_energy_calibration.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_card.dart';
+import '../../application/body_energy_calibration_view_model.dart';
 
-/// The current [BodyEnergyCalibration] from preferences, kept in sync with the
-/// repository's listenable. Reactive: re-runs (re-seeding the card) whenever the
-/// calibration is saved or reset. Self-contained to this card.
-final bodyEnergyCalibrationCardProvider =
-    Provider<BodyEnergyCalibration>((ref) {
-  final repo = ref.watch(preferencesRepositoryProvider);
-  final listenable = repo.bodyEnergyCalibrationListenable;
-  void listener() => ref.invalidateSelf();
-  listenable.addListener(listener);
-  ref.onDispose(() => listenable.removeListener(listener));
-  return listenable.value;
-});
+/// The current [BodyEnergyCalibration] on its own — the Body Energy detail
+/// screen reads it through this card's import path, so it is re-exported here.
+export '../../application/body_energy_calibration_view_model.dart'
+    show bodyEnergyCalibrationCardProvider;
 
 /// A self-contained "Body Energy calibration" settings card. 1:1 port of the
 /// Kotlin `BodyEnergyCalibrationCard` (features/bodyenergy): a "use manual
 /// zones" switch that reveals five heart-zone bpm lower-bound fields, a Save
 /// button, and a "Use automatic" reset button.
 ///
-/// Save mirrors `SettingsViewModel.updateBodyEnergyCalibration`: it forces
-/// `setupCompleted = true` on the persisted calibration. "Use automatic"
-/// mirrors `resetBodyEnergyCalibration`, persisting [BodyEnergyCalibration.automatic]
-/// (also with `setupCompleted = true`). The onboarding-only "skip" action is
-/// intentionally omitted in the settings context.
+/// The two writes live in [BodyEnergyCalibrationViewModel]; the card holds only
+/// its five zone controllers and the manual-zones switch (form state, not
+/// persisted until Save). The onboarding-only "skip" action is intentionally
+/// omitted in the settings context.
 class BodyEnergyCalibrationCard extends ConsumerStatefulWidget {
   const BodyEnergyCalibrationCard({super.key});
 
@@ -70,35 +61,26 @@ class _BodyEnergyCalibrationCardState
     _seededSignature = calibration.signature();
   }
 
-  /// Persists a calibration, forcing `setupCompleted = true` — matching the
-  /// Kotlin `SettingsViewModel.updateBodyEnergyCalibration`.
-  void _update(BodyEnergyCalibration calibration) {
-    ref
-        .read(preferencesRepositoryProvider)
-        .setBodyEnergyCalibration(calibration.copyWith(setupCompleted: true));
-  }
-
   void _save() {
-    final calibration = BodyEnergyCalibration(
-      manualZoneThresholdsBpm: HeartZoneThresholds(
-        zone1LowerBpm: int.tryParse(_zone1.text.trim()) ?? 0,
-        zone2LowerBpm: int.tryParse(_zone2.text.trim()) ?? 0,
-        zone3LowerBpm: int.tryParse(_zone3.text.trim()) ?? 0,
-        zone4LowerBpm: int.tryParse(_zone4.text.trim()) ?? 0,
-        zone5LowerBpm: int.tryParse(_zone5.text.trim()) ?? 0,
-      ),
-      useManualZones: _useManualZones,
-    ).normalized();
-    _update(calibration);
+    ref.read(bodyEnergyCalibrationSettingsProvider.notifier).save(
+          zone1: _zone1.text,
+          zone2: _zone2.text,
+          zone3: _zone3.text,
+          zone4: _zone4.text,
+          zone5: _zone5.text,
+          useManualZones: _useManualZones,
+        );
   }
 
-  void _useAutomatic() => _update(BodyEnergyCalibration.automatic);
+  void _useAutomatic() =>
+      ref.read(bodyEnergyCalibrationSettingsProvider.notifier).useAutomatic();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final calibration = ref.watch(bodyEnergyCalibrationCardProvider);
+    final calibration =
+        ref.watch(bodyEnergyCalibrationSettingsProvider).calibration;
     if (_seededSignature != calibration.signature()) {
       _seed(calibration);
     }

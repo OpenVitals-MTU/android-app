@@ -1,34 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../data/prefs/preferences_repository.dart';
-import '../../../../di/providers.dart';
 import '../../../../domain/preferences/activity_recording_preferences.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../application/activity_recording_preferences_view_model.dart';
 import 'settings_controls.dart';
-
-/// Holds the live [ActivityRecordingPreferences] and writes each change back
-/// through [PreferencesRepository]. Backs [ActivityRecordingPreferencesCard]
-/// only, so it stays out of the shared `SettingsState` (mirroring how the
-/// offline-maps / BLE cards keep their own providers).
-class ActivityRecordingPreferencesViewModel
-    extends Notifier<ActivityRecordingPreferences> {
-  PreferencesRepository get _prefs => ref.read(preferencesRepositoryProvider);
-
-  @override
-  ActivityRecordingPreferences build() => _prefs.activityRecordingPreferences();
-
-  void update(ActivityRecordingPreferences preferences) {
-    _prefs.setActivityRecordingPreferences(preferences);
-    // Read back so the state matches the repository's normalize() result.
-    state = _prefs.activityRecordingPreferences();
-  }
-}
-
-final activityRecordingPreferencesProvider = NotifierProvider<
-    ActivityRecordingPreferencesViewModel, ActivityRecordingPreferences>(
-  ActivityRecordingPreferencesViewModel.new,
-);
 
 /// Live GPS/recording tuning card, a 1:1 port of the Kotlin
 /// `ActivityRecordingPreferencesCard` (`SettingsCards.kt`). Renders the two

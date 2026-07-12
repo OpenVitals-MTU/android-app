@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../manualentry/activity/activity_entry_notifier.dart';
+import '../../manualentry/activity/activity_entry_view_model.dart';
 
 /// App-lifetime hand-off of a route file picked outside the activity-entry form
 /// (the Settings "single route import" and "FIT import" cards) into the form for

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../di/providers.dart';
 import '../../../../domain/preferences/activity_split_distance.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../state/app_providers.dart';
 import '../../../activity/presentation/activity_split_distance_label.dart';
+import '../../application/activity_split_distance_view_model.dart';
 import 'settings_controls.dart';
 
 /// Picks the distance the activity detail screen cuts splits at when the
@@ -22,10 +22,10 @@ class ActivitySplitDistanceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final prefs = ref.watch(preferencesRepositoryProvider);
     final unitSystem = ref.watch(unitSystemProvider);
     final formatter = ref.watch(unitFormatterProvider);
-    final selectedMeters = ref.watch(activitySplitDistanceMetersProvider);
+    final selectedMeters = ref.watch(activitySplitDistanceCardProvider);
+    final notifier = ref.read(activitySplitDistanceCardProvider.notifier);
     final presets = ActivitySplitDistance.presetsFor(unitSystem);
 
     return SettingsCardShell(
@@ -38,7 +38,7 @@ class ActivitySplitDistanceCard extends ConsumerWidget {
           selected:
               ActivitySplitDistance.nearestPreset(selectedMeters, unitSystem),
           labelFor: (meters) => splitDistanceLabel(l10n, formatter, meters),
-          onSelect: (meters) => prefs.activitySplitDistanceMeters = meters,
+          onSelect: notifier.select,
         ),
       ],
     );

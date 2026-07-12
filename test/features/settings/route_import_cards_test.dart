@@ -13,7 +13,7 @@ import 'package:openvitals/domain/model/activity_models.dart';
 import 'package:openvitals/domain/model/health_connect_availability.dart';
 import 'package:openvitals/features/imports/application/pending_route_import.dart';
 import 'package:openvitals/features/manualentry/activity/activity_entry_providers.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/activity/activity_entry_view_model.dart';
 import 'package:openvitals/features/manualentry/activity/routeimport/route_file_parser.dart';
 import 'package:openvitals/features/settings/presentation/cards/fit_import_card.dart';
 import 'package:openvitals/features/settings/presentation/cards/route_import_card.dart';

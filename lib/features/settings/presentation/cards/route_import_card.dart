@@ -5,18 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/result/result.dart';
-import '../../../../di/providers.dart';
-import '../../../../domain/model/health_connect_availability.dart';
+import '../../../../core/presentation/command_state.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../navigation/app_routes.dart';
-import '../../../../state/app_providers.dart';
-import '../../../../ui/components/health_connect_gate.dart';
 import '../../../../ui/components/ov_card.dart';
-import '../../../imports/application/pending_route_import.dart';
 import '../../../imports/application/route_bulk_import_view_model.dart';
-import '../../../manualentry/activity/activity_entry_notifier.dart';
-import '../../../manualentry/activity/routeimport/activity_route_import_types.dart';
+import '../../../manualentry/activity/activity_entry_view_model.dart';
+import '../../application/route_import_view_model.dart';
+import '../settings_error_text.dart';
 
 /// The Settings "Data Import" route-file card. 1:1 port of the Kotlin
 /// `RouteImportCard` (`SettingsCards.kt`): icon + title + body, a route-import
@@ -24,10 +20,10 @@ import '../../../manualentry/activity/routeimport/activity_route_import_types.da
 /// optional Grant button, a single-import (review) button and a bulk-import
 /// (direct write) button.
 ///
-/// Single import delegates to the activity-entry form for review — it sets a
-/// [pendingRouteImportProvider] handle and navigates to the entry route, exactly
-/// as the Kotlin card raised an `ExternalRouteImportRequest`. Bulk import writes
-/// every file directly through [routeBulkImportProvider].
+/// The permissions, the grant command and both import intents live in
+/// [RouteImportViewModel]; the card picks the files (a platform concern, with
+/// test seams) and navigates. Single import delegates to the activity-entry form
+/// for review, exactly as the Kotlin card raised an `ExternalRouteImportRequest`.
 class RouteImportCard extends ConsumerWidget {
   const RouteImportCard({
     super.key,
@@ -51,19 +47,18 @@ class RouteImportCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    final importPermissions =
-        ref.watch(activityRepositoryProvider).activityWritePermissions();
-    final granted = ref.watch(grantedHealthPermissionsProvider).value ??
-        const <String>{};
-    final availability = ref.watch(healthConnectAvailabilityProvider).value;
+    final state = ref.watch(routeImportCardProvider);
+    final notifier = ref.read(routeImportCardProvider.notifier);
     final bulk = ref.watch(routeBulkImportProvider);
 
-    final grantedCount =
-        importPermissions.where(granted.contains).length;
-    final missingPermissions = importPermissions.difference(granted);
-    final healthConnectAvailable =
-        availability == HealthConnectAvailability.available;
+    final importPermissions = state.importPermissions;
+    final grantedCount = state.grantedCount;
+    final missingPermissions = state.missingPermissions;
+    final healthConnectAvailable = state.healthConnectAvailable;
     final isImporting = bulk.isImporting;
+    // A grant in flight blocks the buttons too, but it is not an import — the
+    // "Importing…" label stays off.
+    final isBusy = isImporting || state.isGranting;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -126,13 +121,21 @@ class RouteImportCard extends ConsumerWidget {
                   );
                 }),
               ],
+              if (state.grant case CommandFailure<void>(:final error)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  settingsErrorText(error),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.error),
+                ),
+              ],
               if (missingPermissions.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.tonal(
-                    onPressed: healthConnectAvailable && !isImporting
-                        ? () => _grantPermissions(ref, missingPermissions)
+                    onPressed: healthConnectAvailable && !isBusy
+                        ? notifier.grantPermissions
                         : null,
                     child: Text(l10n.settingsRouteImportGrant),
                   ),
@@ -142,8 +145,9 @@ class RouteImportCard extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed:
-                      isImporting ? null : () => _importSingle(context, ref),
+                  onPressed: isBusy
+                      ? null
+                      : () => _importSingle(context, notifier),
                   icon: const Icon(Icons.folder_open_outlined, size: 18),
                   label: Text(l10n.settingsRouteImportAction),
                 ),
@@ -154,8 +158,8 @@ class RouteImportCard extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   onPressed: healthConnectAvailable &&
                           missingPermissions.isEmpty &&
-                          !isImporting
-                      ? () => _importBulk(ref)
+                          !isBusy
+                      ? () => _importBulk(notifier)
                       : null,
                   icon: const Icon(Icons.folder_open_outlined, size: 18),
                   label: Text(
@@ -172,30 +176,23 @@ class RouteImportCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _grantPermissions(
-    WidgetRef ref,
-    Set<String> permissions,
+  Future<void> _importSingle(
+    BuildContext context,
+    RouteImportViewModel notifier,
   ) async {
-    (await ref.read(healthRepositoryProvider).requestPermissions(permissions))
-        .orThrow();
-    ref.invalidate(grantedHealthPermissionsProvider);
-    ref.invalidate(healthConnectAvailabilityProvider);
-  }
-
-  Future<void> _importSingle(BuildContext context, WidgetRef ref) async {
     final file = await _pickSingle();
     if (file == null) return;
     final bytes = await file.readAsBytes();
-    ref.read(pendingRouteImportProvider.notifier).set(
-          ActivityRouteFileHandle(bytes: bytes, fileName: file.name),
-        );
+    notifier.stageSingleImport(
+      ActivityRouteFileHandle(bytes: bytes, fileName: file.name),
+    );
     if (!context.mounted) return;
     final navigate = onNavigateToEntry ??
         (ctx) => ctx.push(AppRoutes.activityEntry);
     navigate(context);
   }
 
-  Future<void> _importBulk(WidgetRef ref) async {
+  Future<void> _importBulk(RouteImportViewModel notifier) async {
     final files = await _pickMultiple();
     if (files.isEmpty) return;
     final handles = <ActivityRouteFileHandle>[];
@@ -204,10 +201,7 @@ class RouteImportCard extends ConsumerWidget {
         ActivityRouteFileHandle(bytes: await file.readAsBytes(), fileName: file.name),
       );
     }
-    await ref.read(routeBulkImportProvider.notifier).importRouteFiles(
-          handles,
-          ref.read(unitSystemProvider),
-        );
+    await notifier.importRouteFiles(handles);
   }
 
   Future<XFile?> _pickSingle() {

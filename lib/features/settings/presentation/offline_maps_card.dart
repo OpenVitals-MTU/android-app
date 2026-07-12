@@ -12,6 +12,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../ui/components/ov_card.dart';
 import '../../activity/maps/offline_map_import_controller.dart';
 import '../../activity/maps/offline_map_models.dart';
+import '../application/offline_maps_view_model.dart';
+import 'settings_error_text.dart';
 
 /// The MIME types the Kotlin picker (`OfflineMapMimeTypes`) accepts. PMTiles
 /// and Mapsforge packs frequently carry a generic `application/octet-stream`
@@ -36,7 +38,12 @@ const List<String> kOfflineMapMimeTypes = [
 /// * Kotlin's help link fires an `ACTION_VIEW` intent; the Flutter port opens
 ///   the guide URL in the browser via [openExternalUrl] (with a SnackBar
 ///   fallback when no browser can handle it).
-class OfflineMapsCard extends ConsumerStatefulWidget {
+///
+/// The import / delete / render-format actions live in [OfflineMapsViewModel];
+/// the card only picks the file (a platform concern, with a test seam) and
+/// renders the command. The imported LIBRARY is still read straight off the
+/// controller's own listenable — it is a UI listenable, not a repository.
+class OfflineMapsCard extends ConsumerWidget {
   const OfflineMapsCard({super.key, this.pickOfflineMapFile});
 
   /// Test seam for the system file picker; defaults to `file_selector`'s
@@ -44,17 +51,7 @@ class OfflineMapsCard extends ConsumerStatefulWidget {
   final Future<XFile?> Function()? pickOfflineMapFile;
 
   @override
-  ConsumerState<OfflineMapsCard> createState() => _OfflineMapsCardState();
-}
-
-class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
-  bool _importing = false;
-  OfflineMapImportProgress? _progress;
-  OfflineMapPack? _result;
-  String? _error;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(offlineMapImportControllerProvider).value;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -62,13 +59,13 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           // While the controller future resolves, render the static chrome
-          // only (header + help); the dynamic parts need the controller.
+          // only (header + help); the dynamic parts need the library.
           child: controller == null
               ? const _OfflineMapsHeader()
               : ValueListenableBuilder<OfflineMapLibraryState>(
                   valueListenable: controller.state,
                   builder: (context, library, _) =>
-                      _buildBody(context, controller, library),
+                      _buildBody(context, ref, library),
                 ),
         ),
       ),
@@ -77,12 +74,15 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
 
   Widget _buildBody(
     BuildContext context,
-    OfflineMapImportController controller,
+    WidgetRef ref,
     OfflineMapLibraryState library,
   ) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final progress = _progress ?? const OfflineMapImportProgress();
+    final state = ref.watch(offlineMapsCardProvider);
+    final notifier = ref.read(offlineMapsCardProvider.notifier);
+    final importing = state.isImporting;
+    final progress = state.progress ?? const OfflineMapImportProgress();
     final percent = progress.percent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,15 +106,18 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           )
         else ...[
-          _RenderFormatSelector(library: library, controller: controller),
+          _RenderFormatSelector(
+            library: library,
+            onSelectFormat: notifier.setActiveFormat,
+          ),
           const SizedBox(height: 12),
           for (final pack in library.mapPacks)
             _OfflineMapPackRow(
               pack: pack,
-              onDelete: () => controller.deleteMap(pack.id),
+              onDelete: () => notifier.deleteMap(pack.id),
             ),
         ],
-        if (_result case final result?) ...[
+        if (state.importedPack case final result?) ...[
           const SizedBox(height: 12),
           Text(
             l10n.settingsOfflineMapsImportResult(
@@ -125,15 +128,15 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
                 ?.copyWith(color: theme.colorScheme.primary),
           ),
         ],
-        if (_error case final error?) ...[
+        if (state.importError case final error?) ...[
           const SizedBox(height: 12),
           Text(
-            l10n.settingsOfflineMapsImportError(error),
+            l10n.settingsOfflineMapsImportError(settingsErrorText(error)),
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.error),
           ),
         ],
-        if (_importing) ...[
+        if (importing) ...[
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: percent == null ? null : percent / 100,
@@ -156,10 +159,10 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: _importing ? null : () => _pickAndImport(controller),
+            onPressed: importing ? null : () => _pickAndImport(notifier),
             icon: const Icon(Icons.folder_open_outlined, size: 18),
             label: Text(
-              _importing
+              importing
                   ? l10n.settingsOfflineMapsImporting
                   : l10n.settingsOfflineMapsImportAction,
             ),
@@ -177,45 +180,15 @@ class _OfflineMapsCardState extends ConsumerState<OfflineMapsCard> {
   /// [pickInputFile]). The extension is checked after the pick, because SAF has no
   /// MIME type for `.pmtiles`/`.map` and never filtered on it anyway.
   Future<XFile?> _pickFile() {
-    final picker = widget.pickOfflineMapFile;
+    final picker = pickOfflineMapFile;
     if (picker != null) return picker();
     return pickInputFile();
   }
 
-  Future<void> _pickAndImport(OfflineMapImportController controller) async {
+  Future<void> _pickAndImport(OfflineMapsViewModel notifier) async {
     final file = await _pickFile();
-    if (file == null || !mounted) return;
-    setState(() {
-      _importing = true;
-      _error = null;
-      _result = null;
-      _progress = const OfflineMapImportProgress();
-    });
-    try {
-      // file_selector's Android implementation copies the picked document into
-      // the app cache, so `file.path` is a plain readable file path here.
-      final pack = await controller.importMap(
-        File(file.path),
-        originalFileName: file.name,
-        onProgress: (progress) {
-          if (mounted) setState(() => _progress = progress);
-        },
-      );
-      if (mounted) setState(() => _result = pack);
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _error = error is ArgumentError ? '${error.message}' : '$error';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _importing = false;
-          _progress = null;
-        });
-      }
-    }
+    if (file == null) return;
+    await notifier.importMap(File(file.path), originalFileName: file.name);
   }
 }
 
@@ -268,11 +241,11 @@ class _OfflineMapsHeader extends StatelessWidget {
 class _RenderFormatSelector extends StatelessWidget {
   const _RenderFormatSelector({
     required this.library,
-    required this.controller,
+    required this.onSelectFormat,
   });
 
   final OfflineMapLibraryState library;
-  final OfflineMapImportController controller;
+  final ValueChanged<OfflineMapPackFormat> onSelectFormat;
 
   @override
   Widget build(BuildContext context) {
@@ -315,8 +288,7 @@ class _RenderFormatSelector extends StatelessWidget {
         ),
       ),
       selected: library.activeFormat == format,
-      onSelected:
-          packCount > 0 ? (_) => controller.setActiveFormat(format) : null,
+      onSelected: packCount > 0 ? (_) => onSelectFormat(format) : null,
     );
   }
 }

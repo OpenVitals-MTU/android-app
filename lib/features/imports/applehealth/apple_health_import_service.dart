@@ -564,6 +564,13 @@ class AppleHealthImportService {
             .reduce((a, b) => a.isAfter(b) ? a : b)
             .add(const Duration(seconds: 1));
         try {
+          // orThrow stays ON PURPOSE. The catch below writes the *original*
+          // throwable into the shareable report through
+          // `AppleHealthImportErrorFormatter`, which reads its runtime type,
+          // message and `cause` chain. Switching on the Result here would hand
+          // the formatter an `AppFailure` instead, silently rewriting every
+          // lookup-failure line of the report the user is asked to file bugs
+          // with. The report is the product; the bridge is not in its way.
           final matched =
               (await _repository.findMatchingImportedClientRecordIds(
             entry.key,
@@ -594,6 +601,23 @@ class AppleHealthImportService {
   ) async {
     if (records.isEmpty) return const _InsertionResult();
     try {
+      // Both orThrow bridges in this method stay ON PURPOSE — they are what the
+      // error handling below is written against, and that error handling *is*
+      // the importer:
+      //
+      //   * a failed batch falls back to inserting its records one by one, so a
+      //     single poisoned record cannot cost 299 good ones;
+      //   * `_isDuplicateClientRecordFailure` classifies the individual failure
+      //     by matching STRINGS in `error.toString()` — the Health Connect
+      //     provider's own wording ("clientRecordId ... already exists"), which
+      //     is the only signal it gives us. Switching on the Result would hand
+      //     that classifier an `AppFailure` whose `toString()` is
+      //     "UnexpectedFailure: …", and every duplicate would be miscounted as a
+      //     hard failure and written into the report as one.
+      //
+      // Unwrapping `failure.cause` instead would be the same throwable by a
+      // longer route, and would also stop catching what the repository throws
+      // *outside* its runCatching. Correctness beats purity here.
       (await _repository
               .insertImportedRecords(records.map((it) => it.record).toList()))
           .orThrow();

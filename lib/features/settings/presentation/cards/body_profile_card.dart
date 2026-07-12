@@ -2,37 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../di/providers.dart';
 import '../../../../domain/preferences/body_profile.dart';
 import '../../../../domain/preferences/unit_system.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../state/app_providers.dart';
 import '../../../../ui/components/ov_card.dart';
-
-/// Kilograms-to-pounds factor, matching the Kotlin `PoundsPerKilogram` constant
-/// used by `BodyProfileCard.kt` for the weight field round-trip.
-const double _poundsPerKilogram = 2.2046226218;
-
-/// The current [BodyProfile] from preferences, kept in sync with the
-/// repository's listenable. Reactive: the provider re-runs (re-seeding the card
-/// draft) whenever the profile is saved. Self-contained to this card so it does
-/// not depend on `settings_view_model.dart`.
-final bodyProfileCardProvider = Provider<BodyProfile>((ref) {
-  final repo = ref.watch(preferencesRepositoryProvider);
-  final listenable = repo.bodyProfileListenable;
-  void listener() => ref.invalidateSelf();
-  listenable.addListener(listener);
-  ref.onDispose(() => listenable.removeListener(listener));
-  return listenable.value;
-});
+import '../../application/body_profile_view_model.dart';
 
 /// A self-contained "Body profile" settings card. 1:1 port of the Kotlin
 /// `BodyProfileCard` (features/settings/BodyProfileCard.kt): four optional
 /// numeric fields (birth year, weight, resting HR, max HR) plus a Save button.
 ///
-/// Weight is shown in the active unit system (kg/lb) and stored in kg; all
-/// fields are nullable and normalised through [BodyProfile.normalized] before
-/// being persisted, mirroring the Kotlin `onSave(draft.normalized())`.
+/// Weight is shown in the active unit system (kg/lb) and stored in kg; the
+/// conversion, the parse and [BodyProfile.normalized] live in
+/// [BodyProfileViewModel] — the card only holds the four controllers and
+/// reseeds them when the stored profile (or the unit) changes.
 class BodyProfileCard extends ConsumerStatefulWidget {
   const BodyProfileCard({super.key});
 
@@ -60,28 +44,12 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
 
   void _seed(BodyProfile profile, UnitSystem unit) {
     _birthYear.text = profile.birthYear?.toString() ?? '';
-    final display = _displayWeight(profile.weightKg, unit);
+    final display = displayWeight(profile.weightKg, unit);
     _weight.text = display != null ? display.toStringAsFixed(1) : '';
     _restingHr.text = profile.restingHeartRateBpm?.toString() ?? '';
     _maxHr.text = profile.maxHeartRateBpm?.toString() ?? '';
     _seededProfile = profile;
     _seededUnit = unit;
-  }
-
-  static double? _displayWeight(double? weightKg, UnitSystem unit) {
-    if (weightKg == null) return null;
-    return switch (unit) {
-      UnitSystem.metric => weightKg,
-      UnitSystem.imperial => weightKg * _poundsPerKilogram,
-    };
-  }
-
-  static double? _storedWeightKg(double? weight, UnitSystem unit) {
-    if (weight == null) return null;
-    return switch (unit) {
-      UnitSystem.metric => weight,
-      UnitSystem.imperial => weight / _poundsPerKilogram,
-    };
   }
 
   String _weightSuffix(UnitSystem unit) => switch (unit) {
@@ -90,20 +58,20 @@ class _BodyProfileCardState extends ConsumerState<BodyProfileCard> {
       };
 
   void _save(UnitSystem unit) {
-    final profile = BodyProfile(
-      birthYear: int.tryParse(_birthYear.text.trim()),
-      weightKg: _storedWeightKg(double.tryParse(_weight.text.trim()), unit),
-      restingHeartRateBpm: int.tryParse(_restingHr.text.trim()),
-      maxHeartRateBpm: int.tryParse(_maxHr.text.trim()),
-    ).normalized();
-    ref.read(preferencesRepositoryProvider).setBodyProfile(profile);
+    ref.read(bodyProfileCardProvider.notifier).save(
+          birthYear: _birthYear.text,
+          weight: _weight.text,
+          restingHeartRate: _restingHr.text,
+          maxHeartRate: _maxHr.text,
+          unit: unit,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final profile = ref.watch(bodyProfileCardProvider);
+    final profile = ref.watch(bodyProfileCardProvider).profile;
     final unit = ref.watch(unitSystemProvider);
     if (_seededProfile != profile || _seededUnit != unit) {
       _seed(profile, unit);

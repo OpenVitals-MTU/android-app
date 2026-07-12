@@ -117,9 +117,7 @@ class AppleHealthImportTaskHandler extends TaskHandler {
           // so without this the import writes nothing and still reports success.
           // The app gets this for free from `HealthConnectGate`; this isolate
           // has no widget tree.
-          resolveHealthAccess: () async =>
-              (await HealthRepositoryImpl(dataSource).refreshAvailability())
-                  .orThrow(),
+          resolveHealthAccess: () => _resolveHealthAccess(dataSource),
           stagedFile: File(stagedPath),
           sourceKey: sourceKey,
           selectedCategories: selectedCategories,
@@ -151,6 +149,30 @@ class AppleHealthImportTaskHandler extends TaskHandler {
       _sendToMain(encodeAppleHealthImportError(error));
     } finally {
       await _finish();
+    }
+  }
+
+  /// The probe [runAppleHealthImportJob] runs before the first write.
+  ///
+  /// A failed probe MUST abort the import. `resolveHealthAccess` is a throwing
+  /// contract (`Future<void> Function()`) precisely so that it can: the job's
+  /// catch turns the throw into an error outcome, which is reported and leaves
+  /// the checkpoint intact. Swallowing an `Err` here would let the import run
+  /// against `cachedAvailability == notSupported` — writing nothing while
+  /// reporting success, the exact bug this call order exists to prevent.
+  ///
+  /// The original throwable and its stack are rethrown unchanged, because they
+  /// are what [AppleHealthImportErrorFormatter] classifies and renders.
+  Future<void> _resolveHealthAccess(HealthDataSource dataSource) async {
+    final probe = await HealthRepositoryImpl(dataSource).refreshAvailability();
+    switch (probe) {
+      case Ok():
+        return;
+      case Err(:final failure):
+        Error.throwWithStackTrace(
+          failure.cause ?? StateError(failure.toString()),
+          failure.stackTrace ?? StackTrace.current,
+        );
     }
   }
 

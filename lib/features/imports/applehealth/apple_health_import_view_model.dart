@@ -29,6 +29,7 @@ import 'dart:async';
 
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../di/providers.dart';
 import '../../../ui/components/health_connect_gate.dart';
@@ -40,6 +41,8 @@ import 'apple_health_import_models.dart';
 import 'apple_health_import_report_store.dart';
 import 'apple_health_import_service.dart';
 import 'apple_health_import_staging_store.dart';
+
+part 'apple_health_import_view_model.freezed.dart';
 
 final appleHealthImportStagingStoreProvider =
     Provider<AppleHealthImportStagingStore>(
@@ -62,55 +65,34 @@ const String kAppleHealthImportServiceBusyError =
 
 /// Immutable UI state mirroring the Apple Health fields of the Kotlin
 /// `SettingsUiState` consumed by `AppleHealthImportCard`.
-class AppleHealthImportUiState {
-  const AppleHealthImportUiState({
-    this.isAnalyzing = false,
-    this.isImporting = false,
-    this.analysisProgress,
-    this.analysis,
-    this.selectedCategories = const <AppleHealthImportCategory>{},
-    this.progress,
-    this.result,
-    this.error,
-    this.permissionDenied = false,
-  });
+///
+/// Deliberately NOT a `CommandState`: the import's whole point is the report it
+/// produces — per-record-type counts, duplicates, diagnostics — which it keeps
+/// emitting *while* it runs, from another isolate. `CommandRunning` carries no
+/// progress and `CommandSuccess` no partial outcome, so the rich progress/report
+/// model below stays exactly as it was; only its hand-written copyWith is gone.
+///
+/// Every transition that must *clear* a nullable field still constructs a fresh
+/// state rather than calling `copyWith` — the freezed copyWith could now pass an
+/// explicit null, but the call sites read better as "this is the new state".
+@freezed
+abstract class AppleHealthImportUiState with _$AppleHealthImportUiState {
+  const AppleHealthImportUiState._();
 
-  final bool isAnalyzing;
-  final bool isImporting;
-  final AppleHealthImportProgress? analysisProgress;
-  final AppleHealthImportAnalysisResult? analysis;
-  final Set<AppleHealthImportCategory> selectedCategories;
-  final AppleHealthImportProgress? progress;
-  final AppleHealthImportResult? result;
-  final String? error;
-  final bool permissionDenied;
-
-  bool get isBusy => isAnalyzing || isImporting;
-
-  /// Copy that only ever *sets* the incremental fields; state transitions that
-  /// clear a nullable field construct a fresh [AppleHealthImportUiState].
-  AppleHealthImportUiState copyWith({
-    bool? isAnalyzing,
-    bool? isImporting,
+  const factory AppleHealthImportUiState({
+    @Default(false) bool isAnalyzing,
+    @Default(false) bool isImporting,
     AppleHealthImportProgress? analysisProgress,
-    AppleHealthImportProgress? progress,
     AppleHealthImportAnalysisResult? analysis,
-    Set<AppleHealthImportCategory>? selectedCategories,
+    @Default(<AppleHealthImportCategory>{})
+    Set<AppleHealthImportCategory> selectedCategories,
+    AppleHealthImportProgress? progress,
     AppleHealthImportResult? result,
     String? error,
-    bool? permissionDenied,
-  }) =>
-      AppleHealthImportUiState(
-        isAnalyzing: isAnalyzing ?? this.isAnalyzing,
-        isImporting: isImporting ?? this.isImporting,
-        analysisProgress: analysisProgress ?? this.analysisProgress,
-        analysis: analysis ?? this.analysis,
-        selectedCategories: selectedCategories ?? this.selectedCategories,
-        progress: progress ?? this.progress,
-        result: result ?? this.result,
-        error: error ?? this.error,
-        permissionDenied: permissionDenied ?? this.permissionDenied,
-      );
+    @Default(false) bool permissionDenied,
+  }) = _AppleHealthImportUiState;
+
+  bool get isBusy => isAnalyzing || isImporting;
 }
 
 class AppleHealthImportViewModel extends Notifier<AppleHealthImportUiState> {

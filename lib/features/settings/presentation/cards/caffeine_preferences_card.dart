@@ -3,20 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/time/local_date.dart';
-import '../../../../di/providers.dart';
 import '../../../../domain/preferences/caffeine_preferences.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../ui/components/ov_card.dart';
+import '../../application/caffeine_preferences_view_model.dart';
 
 /// The caffeine-model settings card, a 1:1 port of the Kotlin
 /// `CaffeinePreferencesCard` (`SettingsCards.kt`) and the
 /// `CaffeinePreferencesEditor` it delegates to (`CaffeinePreferencesEditor.kt`).
 ///
-/// Self-contained: it reads the current [CaffeinePreferences] from the
-/// [PreferencesRepository] into a local draft, edits the draft in place, and the
-/// Save button writes the whole preferences object back through the repository
-/// (mirroring Kotlin's `onSave(draft.copy(profileCompleted = true))`). It does
-/// not touch the settings notifier.
+/// The draft and the save live in [CaffeinePreferencesViewModel]; the card owns
+/// only its text controllers and reseeds them whenever the view-model bumps
+/// `seedRevision` (a load, or a save that clamped a field).
 ///
 /// Like the Kotlin editor, the per-field labels and enum labels are literal
 /// strings (the Kotlin editor hardcodes them); only the card title/body and the
@@ -32,24 +30,12 @@ class CaffeinePreferencesCard extends ConsumerStatefulWidget {
 
 class _CaffeinePreferencesCardState
     extends ConsumerState<CaffeinePreferencesCard> {
-  late CaffeinePreferences _draft;
-  late final TextEditingController _halfLifeController;
-  late final TextEditingController _absorptionController;
-  late final TextEditingController _sleepThresholdController;
-  late final TextEditingController _bedtimeController;
+  final _halfLifeController = TextEditingController();
+  final _absorptionController = TextEditingController();
+  final _sleepThresholdController = TextEditingController();
+  final _bedtimeController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _draft = ref.read(preferencesRepositoryProvider).caffeinePreferences();
-    _halfLifeController =
-        TextEditingController(text: _draft.halfLifeMinutes.toString());
-    _absorptionController =
-        TextEditingController(text: _draft.absorptionMinutes.toString());
-    _sleepThresholdController =
-        TextEditingController(text: _draft.sleepThresholdMg.toString());
-    _bedtimeController = TextEditingController(text: _draft.bedtime.toString());
-  }
+  int? _seededRevision;
 
   @override
   void dispose() {
@@ -60,26 +46,27 @@ class _CaffeinePreferencesCardState
     super.dispose();
   }
 
-  void _updateDraft(CaffeinePreferences next) => setState(() => _draft = next);
-
-  void _save() {
-    final repo = ref.read(preferencesRepositoryProvider);
-    repo.setCaffeinePreferences(_draft.copyWith(profileCompleted: true));
-    // Reseed from the normalized (clamped) stored value so the fields reflect
-    // exactly what was persisted.
-    final saved = repo.caffeinePreferences();
-    setState(() => _draft = saved);
-    _halfLifeController.text = saved.halfLifeMinutes.toString();
-    _absorptionController.text = saved.absorptionMinutes.toString();
-    _sleepThresholdController.text = saved.sleepThresholdMg.toString();
-    _bedtimeController.text = saved.bedtime.toString();
+  void _seed(CaffeinePreferences draft, int revision) {
+    _halfLifeController.text = draft.halfLifeMinutes.toString();
+    _absorptionController.text = draft.absorptionMinutes.toString();
+    _sleepThresholdController.text = draft.sleepThresholdMg.toString();
+    _bedtimeController.text = draft.bedtime.toString();
+    _seededRevision = revision;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final bodyProfile = ref.read(preferencesRepositoryProvider).bodyProfile();
+    final cardState = ref.watch(caffeinePreferencesCardProvider);
+    final notifier = ref.read(caffeinePreferencesCardProvider.notifier);
+    final draft = cardState.draft;
+    final bodyProfile = cardState.bodyProfile;
+    if (_seededRevision != cardState.seedRevision) {
+      _seed(draft, cardState.seedRevision);
+    }
+
+    void updateDraft(CaffeinePreferences next) => notifier.updateDraft(next);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -115,99 +102,99 @@ class _CaffeinePreferencesCardState
                 suffix: 'min',
                 controller: _halfLifeController,
                 onValue: (value) =>
-                    _updateDraft(_draft.copyWith(halfLifeMinutes: value)),
+                    updateDraft(draft.copyWith(halfLifeMinutes: value)),
               ),
               _NumberField(
                 label: 'Absorption',
                 suffix: 'min',
                 controller: _absorptionController,
                 onValue: (value) =>
-                    _updateDraft(_draft.copyWith(absorptionMinutes: value)),
+                    updateDraft(draft.copyWith(absorptionMinutes: value)),
               ),
               _NumberField(
                 label: 'Sleep threshold',
                 suffix: 'mg',
                 controller: _sleepThresholdController,
                 onValue: (value) =>
-                    _updateDraft(_draft.copyWith(sleepThresholdMg: value)),
+                    updateDraft(draft.copyWith(sleepThresholdMg: value)),
               ),
               _TimeField(
                 label: 'Bedtime',
                 controller: _bedtimeController,
                 onValue: (value) =>
-                    _updateDraft(_draft.copyWith(bedtime: value)),
+                    updateDraft(draft.copyWith(bedtime: value)),
               ),
               _EnumDropdown<CaffeineSleepSensitivity>(
                 label: 'Sleep sensitivity',
-                selected: _draft.sleepSensitivity,
+                selected: draft.sleepSensitivity,
                 values: CaffeineSleepSensitivity.values,
                 labelFor: _sleepSensitivityLabel,
                 onSelect: (value) =>
-                    _updateDraft(_draft.copyWith(sleepSensitivity: value)),
+                    updateDraft(draft.copyWith(sleepSensitivity: value)),
               ),
               _EnumDropdown<CaffeineAlcoholUse>(
                 label: 'Alcohol',
-                selected: _draft.alcoholUse,
+                selected: draft.alcoholUse,
                 values: CaffeineAlcoholUse.values,
                 labelFor: _alcoholUseLabel,
                 onSelect: (value) =>
-                    _updateDraft(_draft.copyWith(alcoholUse: value)),
+                    updateDraft(draft.copyWith(alcoholUse: value)),
               ),
               _EnumDropdown<CaffeineHabituation>(
                 label: 'Caffeine habituation',
-                selected: _draft.caffeineHabituation,
+                selected: draft.caffeineHabituation,
                 values: CaffeineHabituation.values,
                 labelFor: _habituationLabel,
                 onSelect: (value) =>
-                    _updateDraft(_draft.copyWith(caffeineHabituation: value)),
+                    updateDraft(draft.copyWith(caffeineHabituation: value)),
               ),
               _EnumDropdown<CaffeineGenotype>(
                 label: 'CYP1A2',
-                selected: _draft.cyp1a2Genotype,
+                selected: draft.cyp1a2Genotype,
                 values: CaffeineGenotype.values,
                 labelFor: _genotypeLabel,
                 onSelect: (value) =>
-                    _updateDraft(_draft.copyWith(cyp1a2Genotype: value)),
+                    updateDraft(draft.copyWith(cyp1a2Genotype: value)),
               ),
               _EnumDropdown<CaffeineGenotype>(
                 label: 'AHR',
-                selected: _draft.ahrGenotype,
+                selected: draft.ahrGenotype,
                 values: CaffeineGenotype.values,
                 labelFor: _genotypeLabel,
                 onSelect: (value) =>
-                    _updateDraft(_draft.copyWith(ahrGenotype: value)),
+                    updateDraft(draft.copyWith(ahrGenotype: value)),
               ),
               _EnumDropdown<CaffeineHormonalStatus>(
                 label: 'Hormonal status',
-                selected: _draft.hormonalStatus,
+                selected: draft.hormonalStatus,
                 values: CaffeineHormonalStatus.values,
                 labelFor: _hormonalStatusLabel,
                 onSelect: (value) =>
-                    _updateDraft(_draft.copyWith(hormonalStatus: value)),
+                    updateDraft(draft.copyWith(hormonalStatus: value)),
               ),
               _SwitchRow(
                 label: 'Smoker',
-                value: _draft.smoker,
+                value: draft.smoker,
                 onChanged: (value) =>
-                    _updateDraft(_draft.copyWith(smoker: value)),
+                    updateDraft(draft.copyWith(smoker: value)),
               ),
               _SwitchRow(
                 label: 'Liver impairment',
-                value: _draft.liverImpairment,
+                value: draft.liverImpairment,
                 onChanged: (value) =>
-                    _updateDraft(_draft.copyWith(liverImpairment: value)),
+                    updateDraft(draft.copyWith(liverImpairment: value)),
               ),
               _SwitchRow(
                 label: 'Medication interaction',
-                value: _draft.medicationInteraction,
+                value: draft.medicationInteraction,
                 onChanged: (value) =>
-                    _updateDraft(_draft.copyWith(medicationInteraction: value)),
+                    updateDraft(draft.copyWith(medicationInteraction: value)),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   'Effective half-life '
-                  '${_draft.effectiveHalfLifeMinutes(bodyProfile)} min',
+                  '${draft.effectiveHalfLifeMinutes(bodyProfile)} min',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
@@ -217,7 +204,7 @@ class _CaffeinePreferencesCardState
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.tonal(
-                    onPressed: _save,
+                    onPressed: notifier.save,
                     child: Text(l10n.actionSave),
                   ),
                 ),

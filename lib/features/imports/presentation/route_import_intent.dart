@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../navigation/app_router.dart';
 import '../../../navigation/app_routes.dart';
-import '../../manualentry/activity/activity_entry_notifier.dart';
+import '../../manualentry/activity/activity_entry_view_model.dart';
 import '../application/pending_route_import.dart';
 
 /// Reads a route file handed to the app by the OS ("Open with" / "Share" on a

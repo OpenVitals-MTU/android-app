@@ -9,7 +9,7 @@ import 'package:openvitals/navigation/app_routes.dart';
 
 import 'package:openvitals/features/imports/application/pending_route_import.dart';
 import 'package:openvitals/features/imports/presentation/route_import_intent.dart';
-import 'package:openvitals/features/manualentry/activity/activity_entry_notifier.dart';
+import 'package:openvitals/features/manualentry/activity/activity_entry_view_model.dart';
 
 /// Stands in for the native side so the bootstrap can be driven without an
 /// Android host.

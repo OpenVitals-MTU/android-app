@@ -1,110 +1,49 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../di/providers.dart';
 import '../../../domain/model/ble_sensor_models.dart';
 import '../../../domain/usecase/edit_ble_device_registry_use_case.dart';
 import '../../../data/source/sensors/ble/ble_sensor_coordinator.dart';
 
-/// Sentinel so [BleDevicesUiState.copyWith] can distinguish "leave unchanged"
-/// from "set to null" on the nullable fields.
-const Object _unset = Object();
+part 'ble_devices_view_model.freezed.dart';
 
 /// Riverpod port of the Kotlin `BleDevicesUiState`.
-class BleDevicesUiState {
-  const BleDevicesUiState({
-    this.devices = const [],
-    this.discoveredDevices = const [],
-    this.isScanning = false,
-    this.showAllDevices = false,
-    this.selectedDevice,
-    this.discoveredCapabilities = const {},
-    this.isDiscoveringCapabilities = false,
-    this.addDisplayName = '',
-    this.addCapabilities = const {},
-    this.addWheelCircumferenceMm = '',
-    this.capabilityConflicts = const {},
-    this.editingDeviceId,
-    this.editDisplayName = '',
-    this.editCapabilities = const {},
-    this.editEnabled = true,
-    this.editWheelCircumferenceMm = '',
-    this.errorMessage,
-    this.showAddFlow = false,
-  });
+///
+/// Freezed's `copyWith` sets a nullable field to null when you PASS null, so the
+/// hand-written `_unset` sentinel this class used to carry is gone: `copyWith`
+/// alone now expresses both "leave unchanged" (omit) and "clear" (pass null).
+@freezed
+abstract class BleDevicesUiState with _$BleDevicesUiState {
+  const BleDevicesUiState._();
 
-  final List<BleSensorDevice> devices;
-  final List<BleDiscoveredDevice> discoveredDevices;
-  final bool isScanning;
-  final bool showAllDevices;
-  final BleDiscoveredDevice? selectedDevice;
-  final Set<BleSensorCapability> discoveredCapabilities;
-  final bool isDiscoveringCapabilities;
-  final String addDisplayName;
-  final Set<BleSensorCapability> addCapabilities;
-  final String addWheelCircumferenceMm;
-  final Map<BleSensorCapability, BleSensorDevice> capabilityConflicts;
-  final String? editingDeviceId;
-  final String editDisplayName;
-  final Set<BleSensorCapability> editCapabilities;
-  final bool editEnabled;
-  final String editWheelCircumferenceMm;
-  final String? errorMessage;
-  final bool showAddFlow;
+  const factory BleDevicesUiState({
+    @Default(<BleSensorDevice>[]) List<BleSensorDevice> devices,
+    @Default(<BleDiscoveredDevice>[])
+    List<BleDiscoveredDevice> discoveredDevices,
+    @Default(false) bool isScanning,
+    @Default(false) bool showAllDevices,
+    BleDiscoveredDevice? selectedDevice,
+    @Default(<BleSensorCapability>{})
+    Set<BleSensorCapability> discoveredCapabilities,
+    @Default(false) bool isDiscoveringCapabilities,
+    @Default('') String addDisplayName,
+    @Default(<BleSensorCapability>{}) Set<BleSensorCapability> addCapabilities,
+    @Default('') String addWheelCircumferenceMm,
+    @Default(<BleSensorCapability, BleSensorDevice>{})
+    Map<BleSensorCapability, BleSensorDevice> capabilityConflicts,
+    String? editingDeviceId,
+    @Default('') String editDisplayName,
+    @Default(<BleSensorCapability>{}) Set<BleSensorCapability> editCapabilities,
+    @Default(true) bool editEnabled,
+    @Default('') String editWheelCircumferenceMm,
+    String? errorMessage,
+    @Default(false) bool showAddFlow,
+  }) = _BleDevicesUiState;
 
   int get enabledDeviceCount => devices.where((d) => d.enabled).length;
-
-  BleDevicesUiState copyWith({
-    List<BleSensorDevice>? devices,
-    List<BleDiscoveredDevice>? discoveredDevices,
-    bool? isScanning,
-    bool? showAllDevices,
-    Object? selectedDevice = _unset,
-    Set<BleSensorCapability>? discoveredCapabilities,
-    bool? isDiscoveringCapabilities,
-    String? addDisplayName,
-    Set<BleSensorCapability>? addCapabilities,
-    String? addWheelCircumferenceMm,
-    Map<BleSensorCapability, BleSensorDevice>? capabilityConflicts,
-    Object? editingDeviceId = _unset,
-    String? editDisplayName,
-    Set<BleSensorCapability>? editCapabilities,
-    bool? editEnabled,
-    String? editWheelCircumferenceMm,
-    Object? errorMessage = _unset,
-    bool? showAddFlow,
-  }) {
-    return BleDevicesUiState(
-      devices: devices ?? this.devices,
-      discoveredDevices: discoveredDevices ?? this.discoveredDevices,
-      isScanning: isScanning ?? this.isScanning,
-      showAllDevices: showAllDevices ?? this.showAllDevices,
-      selectedDevice: selectedDevice == _unset
-          ? this.selectedDevice
-          : selectedDevice as BleDiscoveredDevice?,
-      discoveredCapabilities:
-          discoveredCapabilities ?? this.discoveredCapabilities,
-      isDiscoveringCapabilities:
-          isDiscoveringCapabilities ?? this.isDiscoveringCapabilities,
-      addDisplayName: addDisplayName ?? this.addDisplayName,
-      addCapabilities: addCapabilities ?? this.addCapabilities,
-      addWheelCircumferenceMm:
-          addWheelCircumferenceMm ?? this.addWheelCircumferenceMm,
-      capabilityConflicts: capabilityConflicts ?? this.capabilityConflicts,
-      editingDeviceId: editingDeviceId == _unset
-          ? this.editingDeviceId
-          : editingDeviceId as String?,
-      editDisplayName: editDisplayName ?? this.editDisplayName,
-      editCapabilities: editCapabilities ?? this.editCapabilities,
-      editEnabled: editEnabled ?? this.editEnabled,
-      editWheelCircumferenceMm:
-          editWheelCircumferenceMm ?? this.editWheelCircumferenceMm,
-      errorMessage:
-          errorMessage == _unset ? this.errorMessage : errorMessage as String?,
-      showAddFlow: showAddFlow ?? this.showAddFlow,
-    );
-  }
 }
 
 /// Riverpod port of the Kotlin `BleDevicesViewModel`.

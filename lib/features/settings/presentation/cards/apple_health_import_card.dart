@@ -1,25 +1,18 @@
-import 'dart:io';
-
-// Still used for SAVING the import report (getSaveLocation reads nothing, so the
-// byte-slurping bug that forced the pick path off file_selector does not apply).
-import 'package:file_selector/file_selector.dart';
-
 import '../../../../core/presentation/file_picking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
-import '../../../../core/result/result.dart';
-import '../../../../di/providers.dart';
-import '../../../../domain/model/health_connect_availability.dart';
+import '../../../../core/presentation/command_state.dart';
+import '../../../../core/presentation/screen_error.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../ui/components/health_connect_gate.dart';
 import '../../../../ui/components/ov_card.dart';
 import '../../../imports/applehealth/apple_health_import_models.dart';
 import '../../../imports/applehealth/apple_health_import_notification.dart';
 import '../../../imports/applehealth/apple_health_import_view_model.dart';
 import '../../../imports/applehealth/apple_health_import_staging_store.dart';
+import '../../application/apple_health_import_card_view_model.dart';
+import '../settings_error_text.dart';
 
 /// The Kotlin `AppleHealthExportMimeTypes` (application/zip, application/xml,
 /// text/xml, application/octet-stream, any). The trailing unconstrained group
@@ -49,10 +42,9 @@ class AppleHealthImportCard extends ConsumerWidget {
   /// be read into RAM.
   final Future<AppleHealthExportSource?> Function()? pickExportSource;
 
-  /// Test seam for the report save flow; defaults to [_defaultSaveReport].
-  /// Returns `true` on success.
-  final Future<bool> Function(String content, String suggestedName)?
-      saveReportFile;
+  /// Test seam for the report save flow; defaults to the view-model's platform
+  /// saver. Returns `true` on success.
+  final AppleHealthReportSaver? saveReportFile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,21 +53,27 @@ class AppleHealthImportCard extends ConsumerWidget {
     final state = ref.watch(appleHealthImportProvider);
     final notifier = ref.read(appleHealthImportProvider.notifier);
 
-    final availability = ref.watch(healthConnectAvailabilityProvider).value;
-    final granted =
-        ref.watch(grantedHealthPermissionsProvider).value ?? const <String>{};
-    final importPermissions =
-        ref.watch(healthRepositoryProvider).dataImportWritePermissions;
+    final card = ref.watch(appleHealthImportCardProvider);
+    final cardNotifier = ref.read(appleHealthImportCardProvider.notifier);
 
-    final grantedCount = importPermissions.where(granted.contains).length;
-    final missingPermissions = importPermissions.difference(granted);
-    final healthConnectAvailable =
-        availability == HealthConnectAvailability.available;
+    // A finished save shows exactly one snackbar, then the command rests.
+    ref.listen(
+      appleHealthImportCardProvider.select((s) => s.saveReport),
+      (previous, next) => _onSaveReportChanged(context, l10n, cardNotifier, next),
+    );
+
+    final importPermissions = card.importPermissions;
+    final grantedCount = card.grantedCount;
+    final missingPermissions = card.missingPermissions;
+    final healthConnectAvailable = card.healthConnectAvailable;
+    // The import's own busy flag drives the progress block; a grant in flight
+    // only disables the buttons (it is not an import).
     final isBusy = state.isBusy;
-    final canAnalyze = healthConnectAvailable && !isBusy;
+    final isBlocked = isBusy || card.isGranting;
+    final canAnalyze = healthConnectAvailable && !isBlocked;
     final canImportSelected = healthConnectAvailable &&
         missingPermissions.isEmpty &&
-        !isBusy &&
+        !isBlocked &&
         state.analysis != null &&
         state.selectedCategories.isNotEmpty;
 
@@ -174,7 +172,8 @@ class AppleHealthImportCard extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _saveReport(context, l10n, notifier),
+                onPressed: () =>
+                    cardNotifier.saveReport(saver: saveReportFile),
                 icon: const Icon(Icons.download_outlined, size: 18),
                 label: Text(l10n.settingsAppleHealthImportSaveReport),
               ),
@@ -243,7 +242,7 @@ class AppleHealthImportCard extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: () => _saveReport(context, l10n, notifier),
+              onPressed: () => cardNotifier.saveReport(saver: saveReportFile),
               icon: const Icon(Icons.download_outlined, size: 18),
               label: Text(l10n.settingsAppleHealthImportSaveReport),
             ),
@@ -324,6 +323,25 @@ class AppleHealthImportCard extends ConsumerWidget {
       }
     }
 
+    // A failed grant / a failed report save says so, in place.
+    void addCommandFailure(ScreenError error) {
+      children.add(Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          settingsErrorText(error),
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.error),
+        ),
+      ));
+    }
+
+    if (card.grant case CommandFailure<void>(:final error)) {
+      addCommandFailure(error);
+    }
+    if (card.saveReport case CommandFailure<bool>(:final error)) {
+      addCommandFailure(error);
+    }
+
     // Grant button (only if missing perms).
     if (missingPermissions.isNotEmpty) {
       children.add(Padding(
@@ -331,8 +349,8 @@ class AppleHealthImportCard extends ConsumerWidget {
         child: SizedBox(
           width: double.infinity,
           child: FilledButton.tonal(
-            onPressed: healthConnectAvailable && !isBusy
-                ? () => _grant(ref, missingPermissions)
+            onPressed: healthConnectAvailable && !isBlocked
+                ? cardNotifier.grantPermissions
                 : null,
             child: Text(l10n.settingsAppleHealthImportGrant),
           ),
@@ -417,18 +435,6 @@ class AppleHealthImportCard extends ConsumerWidget {
     );
   }
 
-  void _grant(WidgetRef ref, Set<String> missing) {
-    final repo = ref.read(healthRepositoryProvider);
-    // Fire the request, then refresh the granted set (mirrors the Kotlin
-    // permission launcher callback invalidating the granted permissions).
-    repo
-        .requestPermissions(missing)
-        .then((requested) => requested.orThrow())
-        .whenComplete(
-          () => ref.invalidate(grantedHealthPermissionsProvider),
-        );
-  }
-
   Future<void> _copy(
     BuildContext context,
     String text,
@@ -441,51 +447,29 @@ class AppleHealthImportCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _saveReport(
+  /// Consumes a finished report save exactly once: one snackbar, then the
+  /// command goes back to idle so re-entering the section cannot replay it. A
+  /// FAILED save is rendered in place (see the failure block) rather than
+  /// snackbarred, so the message stays readable.
+  void _onSaveReportChanged(
     BuildContext context,
     AppLocalizations l10n,
-    AppleHealthImportViewModel notifier,
-  ) async {
-    final content = notifier.reportTextForSave;
-    const suggestedName = 'openvitals-apple-health-import-report.txt';
-    final saver = saveReportFile ?? _defaultSaveReport;
-    final ok = await saver(content, suggestedName);
-    if (context.mounted) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-        content: Text(
-          ok
-              ? l10n.settingsAppleHealthImportReportSaved
-              : l10n.settingsAppleHealthImportReportSaveFailed,
-        ),
-      ));
-    }
-  }
-
-  /// Writes the report to a user-chosen location where `getSaveLocation` is
-  /// supported (desktop), falling back to the app documents directory on
-  /// platforms whose `file_selector` implementation has no save picker (Android
-  /// — the analogue of Kotlin's SAF `CreateDocument`, which has no cross-plugin
-  /// Flutter equivalent here).
-  static Future<bool> _defaultSaveReport(
-    String content,
-    String suggestedName,
-  ) async {
-    try {
-      final location = await getSaveLocation(suggestedName: suggestedName);
-      if (location == null) return false;
-      await File(location.path).writeAsString(content);
-      return true;
-    } catch (_) {
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        await File('${dir.path}/$suggestedName').writeAsString(content);
-        return true;
-      } catch (_) {
-        return false;
+    AppleHealthImportCardViewModel notifier,
+    CommandState<bool> command,
+  ) {
+    if (command case CommandSuccess<bool>(:final value)) {
+      if (context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+          content: Text(
+            value
+                ? l10n.settingsAppleHealthImportReportSaved
+                : l10n.settingsAppleHealthImportReportSaveFailed,
+          ),
+        ));
       }
+      notifier.clearSaveReport();
     }
   }
-
 }
 
 class _CategoryRow extends StatelessWidget {

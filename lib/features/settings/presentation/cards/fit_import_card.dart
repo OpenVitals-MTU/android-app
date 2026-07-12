@@ -9,7 +9,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../navigation/app_routes.dart';
 import '../../../../ui/components/ov_card.dart';
 import '../../../imports/application/pending_route_import.dart';
-import '../../../manualentry/activity/activity_entry_notifier.dart';
+import '../../../manualentry/activity/activity_entry_view_model.dart';
 import '../../../manualentry/activity/routeimport/activity_route_import_types.dart';
 import 'route_import_card.dart';
 
